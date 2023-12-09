@@ -520,3 +520,37 @@ def get_vxlan_vni_filter(interface: str) -> list:
             os_configured_vnis.append(str(vniStart))
 
     return os_configured_vnis
+
+# Calculate prefix length of an IPv6 range, where possible
+# Python-ified from source: https://gitlab.isc.org/isc-projects/dhcp/-/blob/master/keama/confparse.c#L4591
+def ipv6_prefix_length(low, high):
+    import socket
+
+    bytemasks = [0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe, 0xff]
+
+    try:
+        lo = bytearray(socket.inet_pton(socket.AF_INET6, low))
+        hi = bytearray(socket.inet_pton(socket.AF_INET6, high))
+    except:
+        return None
+
+    xor = bytearray(a ^ b for a, b in zip(lo, hi))
+        
+    plen = 0
+    while plen < 128 and xor[plen // 8] == 0:
+        plen += 8
+        
+    if plen == 128:
+        return plen
+    
+    for i in range((plen // 8) + 1, 16):
+        if xor[i] != 0:
+            return None
+    
+    for i in range(8):
+        msk = ~xor[plen // 8] & 0xff
+        
+        if msk == bytemasks[i]:
+            return plen + i + 1
+
+    return None

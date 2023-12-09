@@ -21,7 +21,6 @@ import typing
 from datetime import datetime
 from glob import glob
 from ipaddress import ip_address
-from isc_dhcp_leases import IscDhcpLeases
 from tabulate import tabulate
 
 import vyos.opmode
@@ -29,6 +28,9 @@ import vyos.opmode
 from vyos.base import Warning
 from vyos.configquery import ConfigTreeQuery
 
+from vyos.kea import kea_get_active_config
+from vyos.kea import kea_get_pool_from_subnet_id
+from vyos.kea import kea_parse_leases
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
@@ -77,67 +79,62 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     Get DHCP server leases
     :return list
     """
-    lease_file = '/config/dhcpdv6.leases' if family == 'inet6' else '/config/dhcpd.leases'
+    lease_file = '/config/dhcp6.leases' if family == 'inet6' else '/config/dhcp4.leases'
     data = []
-    leases = IscDhcpLeases(lease_file).get()
+    leases = kea_parse_leases(lease_file)
 
     if pool is None:
         pool = _get_dhcp_pools(family=family)
-        aux = False
     else:
         pool = [pool]
-        aux = True
 
-    ## Search leases for every pool
-    for pool_name in pool:
-        for lease in leases:
-            if lease.sets.get('shared-networkname', '') == pool_name or lease.sets.get('shared-networkname', '') == '':
-            #if lease.sets.get('shared-networkname', '') == pool_name:
-                data_lease = {}
-                data_lease['ip'] = lease.ip
-                data_lease['state'] = lease.binding_state
-                #data_lease['pool'] = pool_name if lease.sets.get('shared-networkname', '') != '' else 'Fail-Over Server'
-                data_lease['pool'] = lease.sets.get('shared-networkname', '')
-                data_lease['end'] = lease.end.timestamp() if lease.end else None
-                data_lease['origin'] = 'local' if data_lease['pool'] != '' else 'remote'
+    inet_suffix = '6' if family == 'inet6' else '4'
+    active_config = kea_get_active_config(inet_suffix)
 
-                if family == 'inet':
-                    data_lease['mac'] = lease.ethernet
-                    data_lease['start'] = lease.start.timestamp()
-                    data_lease['hostname'] = lease.hostname
+    for lease in leases:
+        data_lease = {}
+        data_lease['ip'] = lease['address']
+        lease_state_long = {'0': 'active', '1': 'rejected', '2': 'expired'}
+        data_lease['state'] = lease_state_long[lease['state']]
+        data_lease['pool'] = kea_get_pool_from_subnet_id(active_config, inet_suffix, lease['subnet_id']) if active_config else '-'
+        data_lease['end'] = lease['expire_timestamp'].timestamp() if lease['expire_timestamp'] else None
+        data_lease['origin'] = 'local' # TODO: Determine remote in HA
 
-                if family == 'inet6':
-                    data_lease['last_communication'] = lease.last_communication.timestamp()
-                    data_lease['iaid_duid'] = _format_hex_string(lease.host_identifier_string)
-                    lease_types_long = {'na': 'non-temporary', 'ta': 'temporary', 'pd': 'prefix delegation'}
-                    data_lease['type'] = lease_types_long[lease.type]
+        if family == 'inet':
+            data_lease['mac'] = lease['hwaddr']
+            data_lease['start'] = lease['start_timestamp']
+            data_lease['hostname'] = lease['hostname']
 
-                data_lease['remaining'] = '-'
+        if family == 'inet6':
+            data_lease['last_communication'] = lease['start_timestamp']
+            data_lease['iaid_duid'] = _format_hex_string(lease['duid'])
+            lease_types_long = {'0': 'non-temporary', '1': 'temporary', '2': 'prefix delegation'}
+            data_lease['type'] = lease_types_long[lease['lease_type']]
 
-                if lease.end:
-                    data_lease['remaining'] = lease.end - datetime.utcnow()
+        data_lease['remaining'] = '-'
 
-                    if data_lease['remaining'].days >= 0:
-                        # substraction gives us a timedelta object which can't be formatted with strftime
-                        # so we use str(), split gets rid of the microseconds
-                        data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
+        if lease['expire']:
+            data_lease['remaining'] = lease['expire_timestamp'] - datetime.utcnow()
 
-                # Do not add old leases
-                if data_lease['remaining'] != '' and data_lease['state'] != 'free':
-                    if not state or data_lease['state'] in state or state == 'all':
-                        if not origin or data_lease['origin'] in origin:
-                            if not aux or (aux and data_lease['pool'] == pool_name):
-                                data.append(data_lease)
+            if data_lease['remaining'].days >= 0:
+                # substraction gives us a timedelta object which can't be formatted with strftime
+                # so we use str(), split gets rid of the microseconds
+                data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
 
-                # deduplicate
-                checked = []
-                for entry in data:
-                    addr = entry.get('ip')
-                    if addr not in checked:
-                        checked.append(addr)
-                    else:
-                        idx = _find_list_of_dict_index(data, key='ip', value=addr)
-                        data.pop(idx)
+        # Do not add old leases
+        if data_lease['remaining'] != '' and data_lease['pool'] in pool and data_lease['state'] != 'free':
+            if not state or data_lease['state'] in state:
+                data.append(data_lease)
+
+        # deduplicate
+        checked = []
+        for entry in data:
+            addr = entry.get('ip')
+            if addr not in checked:
+                checked.append(addr)
+            else:
+                idx = _find_list_of_dict_index(data, key='ip', value=addr)
+                data.pop(idx)
 
     if sorted:
         if sorted == 'ip':
@@ -154,7 +151,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             ipaddr = lease.get('ip')
             hw_addr = lease.get('mac')
             state = lease.get('state')
-            start = lease.get('start')
+            start = lease.get('start').timestamp()
             start =  _utc_to_local(start).strftime('%Y/%m/%d %H:%M:%S')
             end = lease.get('end')
             end =  _utc_to_local(end).strftime('%Y/%m/%d %H:%M:%S') if end else '-'
@@ -171,7 +168,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
         for lease in raw_data:
             ipaddr = lease.get('ip')
             state = lease.get('state')
-            start = lease.get('last_communication')
+            start = lease.get('last_communication').timestamp()
             start =  _utc_to_local(start).strftime('%Y/%m/%d %H:%M:%S')
             end = lease.get('end')
             end =  _utc_to_local(end).strftime('%Y/%m/%d %H:%M:%S')
@@ -282,10 +279,9 @@ def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
                        sorted: typing.Optional[str], state: typing.Optional[ArgState],
                        origin: typing.Optional[ArgOrigin] ):
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
-    v = '6' if family == 'inet6' else ''
-    service_name = 'DHCPv6' if family == 'inet6' else 'DHCP'
-    if not is_systemd_service_running(f'isc-dhcp-server{v}.service'):
-        Warning(f'{service_name} server is configured but not started. Data may be stale.')
+    v = '6' if family == 'inet6' else '4'
+    if not is_systemd_service_running(f'kea-dhcp{v}-server.service'):
+        Warning('DHCP server is configured but not started. Data may be stale.')
 
     v = 'v6' if family == 'inet6' else ''
     if pool and pool not in _get_dhcp_pools(family=family):

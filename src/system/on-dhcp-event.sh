@@ -15,20 +15,20 @@ if [ $# -lt 5 ]; then
 fi
 
 action=$1
-client_name=$2
-client_ip=$3
-client_mac=$4
-domain=$5
+client_name=$LEASE4_HOSTNAME
+client_ip=$LEASE4_ADDRESS
+client_mac=$LEASE4_HWADDR
+domain=$(echo "$client_name" | cut -d"." -f2-)
 hostsd_client="/usr/bin/vyos-hostsd-client"
 
 case "$action" in
-  commit) # add mapping for new lease
+  leases4_renew|lease4_recover) # add mapping for new lease
     if [ -z "$client_name" ]; then
         logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
         client_name=$(echo "client-"$client_mac | tr : -)
     fi
 
-    if [ "$domain" == "..YYZ!" ]; then
+    if [ -z "$domain" ]; then
         client_fqdn_name=$client_name
         client_search_expr=$client_name
     else
@@ -39,7 +39,7 @@ case "$action" in
     exit 0
     ;;
 
-  release) # delete mapping for released address
+  lease4_release|lease4_expire) # delete mapping for released address)
     $hostsd_client --delete-hosts --tag "dhcp-server-$client_ip" --apply
     exit 0
     ;;

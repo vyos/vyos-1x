@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,18 +19,23 @@ import os
 from ipaddress import ip_address
 from ipaddress import ip_network
 from sys import exit
+from time import sleep
 
 from vyos.config import Config
 from vyos.template import render
 from vyos.template import is_ipv6
 from vyos.utils.process import call
+from vyos.utils.file import chmod_775
+from vyos.utils.file import write_file
 from vyos.utils.dict import dict_search
 from vyos.utils.network import is_subnet_connected
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = '/run/dhcp-server/dhcpdv6.conf'
+config_file = '/run/kea/kea-dhcp6.conf'
+ctrl_socket = '/run/kea/dhcp6-ctrl-socket'
+lease_file = '/config/dhcp6.leases'
 
 def get_config(config=None):
     if config:
@@ -110,16 +115,19 @@ def verify(dhcpv6):
 
             # Prefix delegation sanity checks
             if 'prefix_delegation' in subnet_config:
-                if 'start' not in subnet_config['prefix_delegation']:
-                    raise ConfigError('prefix-delegation start address not defined!')
+                if 'prefix' not in subnet_config['prefix_delegation']:
+                    raise ConfigError('prefix-delegation prefix not defined!')
 
-                for prefix, prefix_config in subnet_config['prefix_delegation']['start'].items():
-                    if 'stop' not in prefix_config:
-                        raise ConfigError(f'Stop address of delegated IPv6 prefix range "{prefix}" '\
+                for prefix, prefix_config in subnet_config['prefix_delegation']['prefix'].items():
+                    if 'delegated_length' not in prefix_config:
+                        raise ConfigError(f'Delegated IPv6 prefix length for "{prefix}" '\
                                           f'must be configured')
 
                     if 'prefix_length' not in prefix_config:
                         raise ConfigError('Length of delegated IPv6 prefix must be configured')
+
+                    if prefix_config['prefix_length'] > prefix_config['delegated_length']:
+                        raise ConfigError('Length of delegated IPv6 prefix must be within parent prefix')
 
             # Static mappings don't require anything (but check if IP is in subnet if it's set)
             if 'static_mapping' in subnet_config:
@@ -168,12 +176,18 @@ def generate(dhcpv6):
     if not dhcpv6 or 'disable' in dhcpv6:
         return None
 
-    render(config_file, 'dhcp-server/dhcpdv6.conf.j2', dhcpv6)
+    dhcpv6['lease_file'] = lease_file
+    dhcpv6['machine'] = os.uname().machine
+
+    if not os.path.exists(lease_file):
+        write_file(lease_file, '', user='_kea', group='vyattacfg', mode=0o755)
+
+    render(config_file, 'dhcp-server/kea-dhcp6.conf.j2', dhcpv6)
     return None
 
 def apply(dhcpv6):
     # bail out early - looks like removal from running config
-    service_name = 'isc-dhcp-server6.service'
+    service_name = 'kea-dhcp6-server.service'
     if not dhcpv6 or 'disable' in dhcpv6:
         # DHCP server is removed in the commit
         call(f'systemctl stop {service_name}')
@@ -182,6 +196,16 @@ def apply(dhcpv6):
         return None
 
     call(f'systemctl restart {service_name}')
+
+    # op-mode needs ctrl socket permission change
+    i = 0
+    while not os.path.exists(ctrl_socket):
+        if i > 15:
+            break
+        i += 1
+        sleep(1)
+    chmod_775(ctrl_socket)
+
     return None
 
 if __name__ == '__main__':

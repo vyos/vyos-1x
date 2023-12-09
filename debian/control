@@ -169,8 +169,7 @@ Depends:
 # For "service dhcp-relay"
   isc-dhcp-relay,
 # For "service dhcp-server"
-  isc-dhcp-server,
-  python3-isc-dhcp-leases,
+  kea,
 # End "service dhcp-server"
 # For "service lldp"
   lldpd,

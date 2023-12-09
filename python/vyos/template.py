@@ -791,6 +791,106 @@ def range_to_regex(num_range):
     regex = range_to_regex(num_range)
     return f'({regex})'
 
+@register_filter('kea_failover_json')
+def kea_failover_json(config):
+    from json import dumps
+
+    source_addr = config['source_address']
+    remote_addr = config['remote']
+
+    data = {
+        'this-server-name': os.uname()[1],
+        'mode': 'hot-standby',
+        'heartbeat-delay': 10000,
+        'max-response-delay': 10000,
+        'max-ack-delay': 5000,
+        'max-unacked-clients': 0,
+        'peers': [
+        {
+            'name': os.uname()[1],
+            'url': f'http://{source_addr}:647/',
+            'role': 'standby' if config['status'] == 'secondary' else 'primary',
+            'auto-failover': True
+        },
+        {
+            'name': config['name'],
+            'url': f'http://{remote_addr}:647/',
+            'role': 'primary' if config['status'] == 'secondary' else 'standby',
+            'auto-failover': True
+        }]
+    }
+
+    if 'ca_cert_file' in config:
+        data['trust-anchor'] = config['ca_cert_file']
+
+    if 'cert_file' in config:
+        data['cert-file'] = config['cert_file']
+
+    if 'cert_key_file' in config:
+        data['key-file'] = config['cert_key_file']
+
+    return dumps(data)
+
+@register_filter('kea_shared_network_json')
+def kea_shared_network_json(shared_networks):
+    from vyos.kea import kea_parse_options
+    from vyos.kea import kea_parse_subnet
+    from json import dumps
+    out = []
+
+    for name, config in shared_networks.items():
+        if 'disable' in config:
+            continue
+
+        network = {
+            'name': name,
+            'authoritative': ('authoritative' in config),
+            'subnet4': []
+        }
+        options = kea_parse_options(config)
+
+        if 'subnet' in config:
+            for subnet, subnet_config in config['subnet'].items():
+                network['subnet4'].append(kea_parse_subnet(subnet, subnet_config))
+
+        if options:
+            network['option-data'] = options
+
+        out.append(network)
+
+    return dumps(out, indent=4)
+
+@register_filter('kea6_shared_network_json')
+def kea6_shared_network_json(shared_networks):
+    from vyos.kea import kea6_parse_options
+    from vyos.kea import kea6_parse_subnet
+    from json import dumps
+    out = []
+
+    for name, config in shared_networks.items():
+        if 'disable' in config:
+            continue
+
+        network = {
+            'name': name,
+            'subnet6': []
+        }
+        options = kea6_parse_options(config)
+
+        if 'interface' in config:
+            network['interface'] = config['interface']
+
+        if 'subnet' in config:
+            for subnet, subnet_config in config['subnet'].items():
+                network['subnet6'].append(kea6_parse_subnet(subnet, subnet_config))
+
+        if options:
+            network['option-data'] = options
+
+        out.append(network)
+
+    return dumps(out, indent=4)
+
 @register_test('vyos_defined')
 def vyos_defined(value, test_value=None, var_type=None):
     """

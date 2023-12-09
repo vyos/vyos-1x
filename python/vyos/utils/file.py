@@ -141,6 +141,14 @@ def chmod_2775(path):
     bitmask = S_ISGID | S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
     chmod(path, bitmask)
 
+def chmod_775(path):
+    """ Make file executable by all """
+    from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IXOTH
+
+    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | \
+              S_IROTH | S_IXOTH
+    chmod(path, bitmask)
+
 def makedir(path, user=None, group=None):
     if os.path.exists(path):
         return

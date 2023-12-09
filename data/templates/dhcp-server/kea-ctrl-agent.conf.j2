@@ -1,0 +1,14 @@
+{
+    "Control-agent": {
+{% if failover is vyos_defined %}
+        "http-host": "{{ failover.source_address }}",
+        "http-port": 647,
+        "control-sockets": {
+            "dhcp4": {
+                "socket-type": "unix",
+                "socket-name": "/run/kea/dhcp4-ctrl-socket"
+            }
+        }
+{% endif %}
+    }
+}

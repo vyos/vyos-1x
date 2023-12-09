@@ -1,0 +1,72 @@
+{
+    "Dhcp4": {
+        "interfaces-config": {
+            "interfaces": [ "*" ],
+            "dhcp-socket-type": "raw",
+            "service-sockets-max-retries": 5,
+            "service-sockets-retry-wait-time": 5000
+        },
+        "control-socket": {
+            "socket-type": "unix",
+            "socket-name": "/run/kea/dhcp4-ctrl-socket"
+        },
+        "lease-database": {
+            "type": "memfile",
+            "persist": true,
+            "name": "{{ lease_file }}"
+        },
+        "option-def": [
+            {
+                "name": "rfc3442-static-route",
+                "code": 121,
+                "type": "record",
+                "array": true,
+                "record-types": "uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8"
+            },
+            {
+                "name": "windows-static-route",
+                "code": 249,
+                "type": "record",
+                "array": true,
+                "record-types": "uint8,uint8,uint8,uint8,uint8,uint8,uint8,uint8"
+            },
+            {
+                "name": "wpad-url",
+                "code": 252,
+                "type": "string"
+            },
+            {
+                "name": "unifi-controller",
+                "code": 1,
+                "type": "ipv4-address",
+                "space": "ubnt"
+            }
+        ],
+        "hooks-libraries": [
+{% if failover is vyos_defined %}
+            {
+                "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_ha.so",
+                "parameters": {
+                    "high-availability": [{{ failover | kea_failover_json }}]
+                }
+            },
+{% endif %}
+{% if hostfile_update is vyos_defined %}
+            {
+                "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_run_script.so",
+                "parameters": {
+                    "name": "/usr/libexec/vyos/system/on-dhcp-event.sh",
+                    "sync": false
+                }
+            },
+{% endif %}
+            {
+                "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_lease_cmds.so",
+                "parameters": {}
+            }
+        ],
+{% if shared_network_name is vyos_defined %}
+        "shared-networks": {{ shared_network_name | kea_shared_network_json }}
+{% endif %}
+    }
+}
