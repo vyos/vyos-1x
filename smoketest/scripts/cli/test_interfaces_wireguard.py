@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -90,6 +90,40 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # Delete second peer
         self.cli_delete(base_path + [interface, 'peer', 'PEER01'])
         self.cli_commit()
+
+    def test_wireguard_same_public_key(self):
+        # T5413: Test prevention of using peer own public key.
+        interface = 'wg0'
+        port = '12345'
+        pubkey_ok = 'ebFx/1G0ti8tvuZd94sEIosAZZIznX+dBAKG/8DFm0I='
+
+        public_key_path = f'/config/auth/wireguard/default/public.key'
+        with open(public_key_path, 'r') as file:
+            pubkey_fail = file.read().rstrip()
+
+        self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
+        self.cli_set(base_path + [interface, 'private-key', 'default'])
+
+        self.cli_set(
+            base_path + [interface, 'peer', 'PEER01', 'pubkey', pubkey_fail])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'port', port])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips',
+                                  '10.205.212.10/32'])
+        self.cli_set(
+            base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
+
+        # The same pubkey as the interface wg0
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path + [interface, 'peer', 'PEER01', 'pubkey', pubkey_ok])
+
+        # Commit peers
+        self.cli_commit()
+
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

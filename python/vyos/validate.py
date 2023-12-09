@@ -1,4 +1,4 @@
-# Copyright 2018-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -297,3 +297,20 @@ def has_vrf_configured(conf, intf):
 
     conf.set_level(old_level)
     return ret
+
+def is_wireguard_key_pair(private_key: str, public_key:str) -> bool:
+    """
+     Checks if public/private keys are keypair
+    :param private_key: Wireguard private key
+    :type private_key: str
+    :param public_key: Wireguard public key
+    :type public_key: str
+    :return: If public/private keys are keypair returns True else False
+    :rtype: bool
+    """
+    from vyos.util import cmd
+    gen_public_key = cmd('wg pubkey', input=private_key)
+    if gen_public_key == public_key:
+        return True
+    else:
+        return False
