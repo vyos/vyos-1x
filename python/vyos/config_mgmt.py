@@ -233,7 +233,7 @@ Proceed ?'''
         msg = ''
 
         if not self._check_revision_number(rev):
-            msg = f'Invalid revision number {rev}: must be 0 < rev < {maxrev}'
+            msg = f'Invalid revision number {rev}: must be 0 < rev < {self.max_revisions}'
             return msg, 1
 
         prompt_str = 'Proceed with reboot ?'
