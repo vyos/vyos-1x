@@ -167,10 +167,7 @@ table ip vyos_filter {
 {{ group_tmpl.groups(group, False, True) }}
 
 {% if zone is vyos_defined %}
-<<<<<<< HEAD
-{{ zone_tmpl.zone_chains(zone, False) }}
-=======
-{{ zone_tmpl.zone_chains(zone, 'ipv4', global_options.state_policy is vyos_defined) }}
+{{ zone_tmpl.zone_chains(zone, False, global_options.state_policy is vyos_defined) }}
 {% endif %}
 {% if global_options.state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
@@ -185,7 +182,6 @@ table ip vyos_filter {
 {%     endif %}
         return
     }
->>>>>>> 64ee13cf9 (T5775: firewall: re-add state-policy to firewall. These commands are now included in <set firewall global-options state-policy> node.)
 {% endif %}
 }
 
@@ -307,10 +303,7 @@ table ip6 vyos_filter {
 {{ group_tmpl.groups(group, True, True) }}
 
 {% if zone is vyos_defined %}
-<<<<<<< HEAD
-{{ zone_tmpl.zone_chains(zone, True) }}
-=======
-{{ zone_tmpl.zone_chains(zone, 'ipv6', global_options.state_policy is vyos_defined) }}
+{{ zone_tmpl.zone_chains(zone, True, global_options.state_policy is vyos_defined) }}
 {% endif %}
 {% if global_options.state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
@@ -325,7 +318,6 @@ table ip6 vyos_filter {
 {%     endif %}
         return
     }
->>>>>>> 64ee13cf9 (T5775: firewall: re-add state-policy to firewall. These commands are now included in <set firewall global-options state-policy> node.)
 {% endif %}
 
 }

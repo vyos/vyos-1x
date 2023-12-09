@@ -1,19 +1,6 @@
-<<<<<<< HEAD
-{% macro zone_chains(zone, ipv6=False) %}
+{% macro zone_chains(zone, ipv6=False, state_policy=False) %}
 {% set fw_name = 'ipv6_name' if ipv6 else 'name' %}
 {% set suffix = '6' if ipv6 else '' %}
-=======
-
-{% macro zone_chains(zone, family, state_policy=False) %}
-{% if family == 'ipv6' %}
-{%     set fw_name = 'ipv6_name' %}
-{%     set suffix = '6' %}
-{% else %}
-{%     set fw_name = 'name' %}
-{%     set suffix = '' %}
-{% endif %}
-
->>>>>>> 64ee13cf9 (T5775: firewall: re-add state-policy to firewall. These commands are now included in <set firewall global-options state-policy> node.)
     chain VYOS_ZONE_FORWARD {
         type filter hook forward priority 1; policy accept;
 {% if state_policy %}
