@@ -23,6 +23,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from base_vyostest_shim import VyOSUnitTestSHIM
 from base_vyostest_shim import ignore_warning
 from vyos.utils.file import read_file
+from vyos.utils.process import call
 from vyos.utils.process import process_named_running
 
 from vyos.configsession import ConfigSessionError
@@ -49,6 +50,23 @@ key_data = """
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
 2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
 u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
+"""
+
+# to test load config via HTTP URL
+nginx_conf_smoketest = """
+server {
+    listen 8000;
+    server_name localhost;
+
+    root /tmp;
+
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+        autoindex on;
+    }
+}
 """
 
 PROCESS_NAME = 'nginx'
@@ -375,6 +393,57 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         r = request('POST', url, verify=False, headers=headers, data=payload)
         self.assertEqual(r.status_code, 200)
 
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_config_file_load_http(self):
+        """Test load config from HTTP URL
+        """
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/config-file'
+        url_config = f'https://{address}/configure'
+        headers = {}
+        tmp_file = 'tmp-config.boot'
+        nginx_tmp_site = '/etc/nginx/sites-enabled/smoketest'
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        # load config via HTTP requires nginx config
+        call(f'sudo touch {nginx_tmp_site}')
+        call(f'sudo chown vyos:vyattacfg {nginx_tmp_site}')
+        call(f'sudo chmod +w {nginx_tmp_site}')
+
+        with open(nginx_tmp_site, 'w') as f:
+            f.write(nginx_conf_smoketest)
+        call('sudo nginx -s reload')
+
+        # save config
+        payload = {
+            'data': '{"op": "save", "file": "/tmp/tmp-config.boot"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+        # change config
+        payload = {
+            'data': '{"op": "set", "path": ["interfaces", "dummy", "dum1", "address", "192.0.2.31/32"]}',
+            'key': f'{key}',
+        }
+        r = request('POST', url_config, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+        # load config from URL
+        payload = {
+            'data': '{"op": "load", "file": "http://localhost:8000/tmp-config.boot"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+        # cleanup tmp nginx conf
+        call(f'sudo rm -rf {nginx_tmp_site}')
+        call('sudo nginx -s reload')
 
 if __name__ == '__main__':
     unittest.main(verbosity=5)
