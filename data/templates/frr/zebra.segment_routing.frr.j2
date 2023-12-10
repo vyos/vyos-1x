@@ -1,0 +1,23 @@
+!
+{% if srv6.locator is vyos_defined %}
+segment-routing
+ srv6
+  locators
+{%     for locator, locator_config in srv6.locator.items() %}
+   locator {{ locator }}
+{%         if locator_config.prefix is vyos_defined %}
+    prefix {{ locator_config.prefix }} block-len {{ locator_config.block_len }} node-len {{ locator_config.node_len }} func-bits {{ locator_config.func_bits }}
+{%         endif %}
+{%         if locator_config.behavior_usid is vyos_defined %}
+    behavior usid
+{%         endif %}
+    exit
+    !
+{%     endfor %}
+  exit
+  !
+exit
+!
+exit
+!
+{% endif %}

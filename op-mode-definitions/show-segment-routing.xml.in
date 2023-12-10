@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="segment-routing">
+        <properties>
+          <help>Show Segment Routing</help>
+        </properties>
+        <children>
+          <node name="srv6">
+            <properties>
+              <help>Segment Routing SRv6</help>
+            </properties>
+            <children>
+              <node name="locator">
+                <properties>
+                  <help>Locator Information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
