@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
@@ -88,7 +89,12 @@ def verify(dyndns):
         # If dyndns address is an interface, ensure that it exists
         # and that web-options are not set
         if config['address'] != 'web':
-            verify_interface_exists(config['address'])
+            # exclude check interface for dynamic interfaces
+            interface_filter = ('pppoe', 'sstpc')
+            if config['address'].startswith(interface_filter):
+                Warning(f'interface {config["address"]} does not exist!')
+            else:
+                verify_interface_exists(config['address'])
             if 'web_options' in config:
                 raise ConfigError(f'"web-options" is applicable only when using HTTP(S) web request to obtain the IP address')
 
