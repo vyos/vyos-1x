@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# T5034: tunnel: rename "multicast enable" CLI node to "enable-multicast"
-#        valueless node.
+# T4995: pppoe, wwan, sstpc-client rename "authentication user" CLI node
+#        to "authentication username"
 
 from sys import argv
 
@@ -30,21 +30,16 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['interfaces', 'tunnel']
 config = ConfigTree(config_file)
 
-if not config.exists(base):
-    exit(0)
-
-for ifname in config.list_nodes(base):
-    multicast_base = base + [ifname, 'multicast']
-    if config.exists(multicast_base):
-        tmp = config.return_value(multicast_base)
-        print(tmp)
-        # Delete old Config node
-        config.delete(multicast_base)
-        if tmp == 'enable':
-            config.set(base + [ifname, 'enable-multicast'])
+for type in ['pppoe', 'sstpc-client', 'wwam']:
+    base = ['interfaces', type]
+    if not config.exists(base):
+        continue
+    for interface in config.list_nodes(base):
+        auth_base = base + [interface, 'authentication', 'user']
+        if config.exists(auth_base):
+            config.rename(auth_base, 'username')
 
 try:
     with open(file_name, 'w') as f:

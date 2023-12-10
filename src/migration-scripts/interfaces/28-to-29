@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# T5286: remove XDP support in favour of VPP
+# T5034: tunnel: rename "multicast enable" CLI node to "enable-multicast"
+#        valueless node.
 
 from sys import argv
 
@@ -29,17 +30,21 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-supports_xdp = ['bonding', 'ethernet']
+base = ['interfaces', 'tunnel']
 config = ConfigTree(config_file)
 
-for if_type in supports_xdp:
-    base = ['interfaces', if_type]
-    if not config.exists(base):
-        continue
-    for interface in config.list_nodes(base):
-        if_base = base + [interface]
-        if config.exists(if_base + ['xdp']):
-            config.delete(if_base + ['xdp'])
+if not config.exists(base):
+    exit(0)
+
+for ifname in config.list_nodes(base):
+    multicast_base = base + [ifname, 'multicast']
+    if config.exists(multicast_base):
+        tmp = config.return_value(multicast_base)
+        print(tmp)
+        # Delete old Config node
+        config.delete(multicast_base)
+        if tmp == 'enable':
+            config.set(base + [ifname, 'enable-multicast'])
 
 try:
     with open(file_name, 'w') as f:
