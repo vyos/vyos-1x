@@ -53,6 +53,7 @@
 "protocols_rip.py",
 "protocols_ripng.py",
 "protocols_rpki.py",
+"protocols_segment_routing.py",
 "protocols_static.py",
 "protocols_static_multicast.py",
 "qos.py",
