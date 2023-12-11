@@ -17,8 +17,6 @@
 import os
 import unittest
 import tempfile
-import random
-import string
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -67,14 +65,12 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(name_path + [svc, 'address', interface])
             self.cli_set(name_path + [svc, 'host-name', hostname])
             self.cli_set(name_path + [svc, 'password', password])
-            self.cli_set(name_path + [svc, 'zone', zone])
-            self.cli_set(name_path + [svc, 'ttl', ttl])
             for opt, value in details.items():
                 self.cli_set(name_path + [svc, opt, value])
 
-            # 'zone' option is supported and required by 'cloudfare', but not 'freedns' and 'zoneedit'
+            # 'zone' option is supported by 'cloudfare' and 'zoneedit1', but not 'freedns'
             self.cli_set(name_path + [svc, 'zone', zone])
-            if details['protocol'] == 'cloudflare':
+            if details['protocol'] in ['cloudflare', 'zoneedit1']:
                 pass
             else:
                 # exception is raised for unsupported ones
