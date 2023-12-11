@@ -125,6 +125,7 @@ class ConfigMgmt:
                                    get_first_key=True)
 
         self.max_revisions = int(d.get('commit_revisions', 0))
+        self.num_revisions = 0
         self.locations = d.get('commit_archive', {}).get('location', [])
         self.source_address = d.get('commit_archive',
                                     {}).get('source_address', '')
@@ -233,7 +234,7 @@ Proceed ?'''
         msg = ''
 
         if not self._check_revision_number(rev):
-            msg = f'Invalid revision number {rev}: must be 0 < rev < {self.max_revisions}'
+            msg = f'Invalid revision number {rev}: must be 0 < rev < {self.num_revisions}'
             return msg, 1
 
         prompt_str = 'Proceed with reboot ?'
@@ -560,8 +561,8 @@ Proceed ?'''
         return len(l)
 
     def _check_revision_number(self, rev: int) -> bool:
-        maxrev = self._get_number_of_revisions()
-        if not 0 <= rev < maxrev:
+        self.num_revisions = self._get_number_of_revisions()
+        if not 0 <= rev < self.num_revisions:
             return False
         return True
 
