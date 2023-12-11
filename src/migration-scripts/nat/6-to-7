@@ -21,6 +21,7 @@
 # to
 #   'set nat [source|destination] rule X [inbound-interface|outbound interface] name <iface>'
 #   'set nat [source|destination] rule X [inbound-interface|outbound interface] group <iface_group>'
+# Also remove command if interface == any
 
 from sys import argv,exit
 from vyos.configtree import ConfigTree
@@ -56,8 +57,11 @@ for direction in ['source', 'destination']:
             if config.exists(base + [iface]):
                 if config.exists(base + [iface, 'interface-name']):
                     tmp = config.return_value(base + [iface, 'interface-name'])
-                    config.delete(base + [iface, 'interface-name'])
-                    config.set(base + [iface, 'name'], value=tmp)
+                    if tmp != 'any':
+                        config.delete(base + [iface, 'interface-name'])
+                        config.set(base + [iface, 'name'], value=tmp)
+                    else:
+                        config.delete(base + [iface])
 
 try:
     with open(file_name, 'w') as f:
