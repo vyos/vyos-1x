@@ -54,9 +54,6 @@ def raid_create(raid_members: list[str],
             drive: str = disk.partition_parent(part)
             command: str = f'sgdisk --typecode=3:A19D880F-05FC-4D3B-A006-743F0F84911E {drive}'
             cmd(command)
-    for part in raid_members:
-        command: str = f'mdadm --zero-superblock {part}'
-        cmd(command)
     command: str = f'mdadm --create /dev/{raid_name} -R --metadata=1.0 \
         --raid-devices={raid_devices_num} --level={raid_level} \
         {raid_members_str}'
