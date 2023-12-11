@@ -31,12 +31,17 @@ class DiskDetails:
 
 def disk_cleanup(drive_path: str) -> None:
     """Clean up disk partition table (MBR and GPT)
+    Remove partition and device signatures.
     Zeroize primary and secondary headers - first and last 17408 bytes
     (512 bytes * 34 LBA) on a drive
 
     Args:
         drive_path (str): path to a drive that needs to be cleaned
     """
+    partitions: list[str] = partition_list(drive_path)
+    for partition in partitions:
+        run(f'wipefs -af {partition}')
+    run(f'wipefs -af {drive_path}')
     run(f'sgdisk -Z {drive_path}')
 
 
