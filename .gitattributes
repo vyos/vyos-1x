@@ -73,8 +73,3 @@
 .gitkeep              export-ignore
 *.pyc          binary export-ignore
 *.pyo          binary export-ignore
-
-#
-# Enable syntax highlighting for VSCode settings
-#
-.vscode/settings.json linguist-language=jsonc

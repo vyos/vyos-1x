@@ -10,7 +10,7 @@
         "*.xml.in": "xml",
     },
     "[jinja]": {
-        "editor.wordBasedSuggestions": false
+        "editor.wordBasedSuggestions": "off"
     },
     // https://code.visualstudio.com/docs/python/settings-reference
     "python.analysis.extraPaths": [
