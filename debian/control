@@ -49,6 +49,7 @@ Depends:
   curl,
   dbus,
   ddclient (>= 3.11.1),
+  dmidecode,
   dropbear,
   easy-rsa,
   etherwake,
