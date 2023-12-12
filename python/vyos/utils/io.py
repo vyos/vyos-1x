@@ -26,13 +26,18 @@ def print_error(str='', end='\n'):
     sys.stderr.write(end)
     sys.stderr.flush()
 
-def ask_input(question, default='', numeric_only=False, valid_responses=[]):
+def ask_input(question, default='', numeric_only=False, valid_responses=[],
+              no_echo=False):
+    from getpass import getpass
     question_out = question
     if default:
         question_out += f' (Default: {default})'
     response = ''
     while True:
-        response = input(question_out + ' ').strip()
+        if not no_echo:
+            response = input(question_out + ' ').strip()
+        else:
+            response = getpass(question_out + ' ').strip()
         if not response and default:
             return default
         if numeric_only:
