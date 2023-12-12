@@ -611,7 +611,8 @@ def install_image() -> None:
         print(MSG_WARN_IMAGE_NAME_WRONG)
 
     # ask for password
-    user_password: str = ask_input(MSG_INPUT_PASSWORD, default='vyos')
+    user_password: str = ask_input(MSG_INPUT_PASSWORD, default='vyos',
+                                   no_echo=True)
 
     # ask for default console
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
