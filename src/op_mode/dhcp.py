@@ -123,7 +123,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
 
         # Do not add old leases
         if data_lease['remaining'] != '' and data_lease['pool'] in pool and data_lease['state'] != 'free':
-            if not state or data_lease['state'] in state:
+            if not state or state == 'all' or data_lease['state'] in state:
                 data.append(data_lease)
 
         # deduplicate
