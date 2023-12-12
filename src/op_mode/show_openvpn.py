@@ -63,9 +63,11 @@ def get_vpn_tunnel_address(peer, interface):
         # filter out subnet entries
         lst = [l for l in lst[1:] if '/' not in l.split(',')[0]]
 
-        tunnel_ip = lst[0].split(',')[0]
+        if lst:
+            tunnel_ip = lst[0].split(',')[0]
+            return tunnel_ip
 
-        return tunnel_ip
+        return 'n/a'
 
 def get_status(mode, interface):
     status_file = '/var/run/openvpn/{}.status'.format(interface)
