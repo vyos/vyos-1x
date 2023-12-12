@@ -102,11 +102,11 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
 
         if family == 'inet':
             data_lease['mac'] = lease['hwaddr']
-            data_lease['start'] = lease['start_timestamp']
+            data_lease['start'] = lease['start_timestamp'].timestamp()
             data_lease['hostname'] = lease['hostname']
 
         if family == 'inet6':
-            data_lease['last_communication'] = lease['start_timestamp']
+            data_lease['last_communication'] = lease['start_timestamp'].timestamp()
             data_lease['iaid_duid'] = _format_hex_string(lease['duid'])
             lease_types_long = {'0': 'non-temporary', '1': 'temporary', '2': 'prefix delegation'}
             data_lease['type'] = lease_types_long[lease['lease_type']]
@@ -151,7 +151,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             ipaddr = lease.get('ip')
             hw_addr = lease.get('mac')
             state = lease.get('state')
-            start = lease.get('start').timestamp()
+            start = lease.get('start')
             start =  _utc_to_local(start).strftime('%Y/%m/%d %H:%M:%S')
             end = lease.get('end')
             end =  _utc_to_local(end).strftime('%Y/%m/%d %H:%M:%S') if end else '-'
@@ -168,7 +168,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
         for lease in raw_data:
             ipaddr = lease.get('ip')
             state = lease.get('state')
-            start = lease.get('last_communication').timestamp()
+            start = lease.get('last_communication')
             start =  _utc_to_local(start).strftime('%Y/%m/%d %H:%M:%S')
             end = lease.get('end')
             end =  _utc_to_local(end).strftime('%Y/%m/%d %H:%M:%S')
