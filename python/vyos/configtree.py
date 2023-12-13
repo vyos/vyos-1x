@@ -160,6 +160,9 @@ class ConfigTree(object):
     def _get_config(self):
         return self.__config
 
+    def get_version_string(self):
+        return self.__version
+
     def to_string(self, ordered_values=False):
         config_string = self.__to_string(self.__config, ordered_values).decode()
         config_string = "{0}\n{1}".format(config_string, self.__version)
