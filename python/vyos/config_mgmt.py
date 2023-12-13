@@ -386,15 +386,8 @@ Proceed ?'''
             _, _, netloc = url.netloc.rpartition("@")
             redacted_location = urlunsplit(url._replace(netloc=netloc))
             print(f"  {redacted_location}", end=" ", flush=True)
-            try:
-                upload(archive_config_file, f'{location}/{remote_file}',
-                       source_host=source_address, raise_error=True)
-                print("OK")
-            except Exception as e:
-                print("FAILED!")
-                print()
-                print(indent(str(e), "   > "))
-                print()
+            upload(archive_config_file, f'{location}/{remote_file}',
+                   source_host=source_address)
 
     # op-mode functions
     #
