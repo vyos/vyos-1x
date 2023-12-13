@@ -1133,5 +1133,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' mpls bgp forwarding', frrconfig)
             self.cli_delete(['interfaces', 'ethernet', interface, 'vrf'])
 
+    def test_bgp_24_srv6_sid(self):
+        locator_name = 'VyOS_foo'
+        sid = 'auto'
+
+        self.cli_set(base_path + ['srv6', 'locator', locator_name])
+        self.cli_set(base_path + ['sid', 'vpn', 'per-vrf', 'export', sid])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' segment-routing srv6', frrconfig)
+        self.assertIn(f'  locator {locator_name}', frrconfig)
+        self.assertIn(f' sid vpn per-vrf export {sid}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

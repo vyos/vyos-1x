@@ -588,6 +588,14 @@ bgp route-reflector allow-outbound-policy
 {% if parameters.tcp_keepalive.idle is vyos_defined and parameters.tcp_keepalive.interval is vyos_defined and parameters.tcp_keepalive.probes is vyos_defined %}
  bgp tcp-keepalive {{ parameters.tcp_keepalive.idle }} {{ parameters.tcp_keepalive.interval }} {{ parameters.tcp_keepalive.probes }}
 {% endif %}
+{% if srv6.locator is vyos_defined %}
+ segment-routing srv6
+  locator {{ srv6.locator }}
+ exit
+{% endif %}
+{% if sid.vpn.per_vrf.export is vyos_defined %}
+ sid vpn per-vrf export {{ sid.vpn.per_vrf.export }}
+{% endif %}
 {% if timers.keepalive is vyos_defined and timers.holdtime is vyos_defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
 {% endif %}

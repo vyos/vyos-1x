@@ -1639,6 +1639,66 @@
     #include <include/port-number.xml.i>
   </children>
 </tagNode>
+<node name="srv6">
+  <properties>
+    <help>Segment-Routing SRv6 configuration</help>
+  </properties>
+  <children>
+    <leafNode name="locator">
+      <properties>
+        <help>Specify SRv6 locator</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>SRv6 locator name</description>
+        </valueHelp>
+        <constraint>
+          #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+        </constraint>
+      </properties>
+    </leafNode>
+  </children>
+</node>
+<node name="sid">
+  <properties>
+    <help>SID value for VRF</help>
+  </properties>
+  <children>
+    <node name="vpn">
+      <properties>
+        <help>Between current VRF and VPN</help>
+      </properties>
+      <children>
+        <node name="per-vrf">
+          <properties>
+            <help>SID per-VRF (both IPv4 and IPv6 address families)</help>
+          </properties>
+          <children>
+            <leafNode name="export">
+              <properties>
+                <help>For routes leaked from current VRF to VPN</help>
+                <completionHelp>
+                  <list>auto</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>u32:1-1048575</format>
+                  <description>SID allocation index</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>auto</format>
+                  <description>Automatically assign a label</description>
+                </valueHelp>
+                <constraint>
+                  <regex>auto</regex>
+                  <validator name="numeric" argument="--range 1-1048575"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+  </children>
+</node>
 <node name="timers">
   <properties>
     <help>BGP protocol timers</help>

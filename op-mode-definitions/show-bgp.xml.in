@@ -100,6 +100,19 @@
             </children>
           </tagNode>
           #include <include/vtysh-generic-wide.xml.i>
+          <node name="segment-routing">
+            <properties>
+              <help>BGP Segment Routing</help>
+            </properties>
+            <children>
+              <leafNode name="srv6">
+                <properties>
+                  <help>BGP Segment Routing SRv6</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

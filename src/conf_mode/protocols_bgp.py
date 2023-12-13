@@ -93,6 +93,7 @@ def get_config(config=None):
     tmp = conf.get_config_dict(['policy'])
     # Merge policy dict into "regular" config dict
     bgp = dict_merge(tmp, bgp)
+
     return bgp
 
 
