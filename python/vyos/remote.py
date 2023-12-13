@@ -452,7 +452,7 @@ def upload(local_path, urlstring, progressbar=False,
            source_host='', source_port=0, timeout=10.0):
     try:
         progressbar = progressbar and is_interactive()
-        urlc(urlstring, progressbar, source_host, source_port, timeout).upload(local_path)
+        urlc(urlstring, progressbar, False, source_host, source_port, timeout).upload(local_path)
     except Exception as err:
         print_error(f'Unable to upload "{urlstring}": {err}')
     except KeyboardInterrupt:
