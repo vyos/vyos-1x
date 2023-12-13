@@ -19,6 +19,10 @@
                     <format>txt</format>
                     <description>Dynamic DNS service name</description>
                   </valueHelp>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Dynamic DNS service name must be alphanumeric and can contain hyphens and underscores</constraintErrorMessage>
                 </properties>
                 <children>
                   #include <include/generic-description.xml.i>
