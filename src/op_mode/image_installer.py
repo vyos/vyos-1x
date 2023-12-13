@@ -22,6 +22,7 @@ from pathlib import Path
 from shutil import copy, chown, rmtree, copytree
 from glob import glob
 from sys import exit
+from os import environ
 from time import sleep
 from typing import Union
 from urllib.parse import urlparse
@@ -463,16 +464,22 @@ def validate_signature(file_path: str, sign_type: str) -> None:
         print('Signature is valid')
 
 def download_file(local_file: str, remote_path: str, vrf: str,
+                  username: str, password: str,
                   progressbar: bool = False, check_space: bool = False):
+    environ['REMOTE_USERNAME'] = username
+    environ['REMOTE_PASSWORD'] = password
     if vrf is None:
         download(local_file, remote_path, progressbar=progressbar,
                  check_space=check_space, raise_error=True)
     else:
-        vrf_cmd = f'ip vrf exec {vrf} {external_download_script} \
+        vrf_cmd = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password} \
+                ip vrf exec {vrf} {external_download_script} \
                 --local-file {local_file} --remote-path {remote_path}'
         cmd(vrf_cmd)
 
-def image_fetch(image_path: str, vrf: str = None, no_prompt: bool = False) -> Path:
+def image_fetch(image_path: str, vrf: str = None,
+                username: str = '', password: str = '',
+                no_prompt: bool = False) -> Path:
     """Fetch an ISO image
 
     Args:
@@ -486,6 +493,7 @@ def image_fetch(image_path: str, vrf: str = None, no_prompt: bool = False) -> Pa
         if urlparse(image_path).scheme:
             # download an image
             download_file(ISO_DOWNLOAD_PATH, image_path, vrf,
+                          username, password,
                           progressbar=True, check_space=True)
 
             # download a signature
@@ -493,7 +501,8 @@ def image_fetch(image_path: str, vrf: str = None, no_prompt: bool = False) -> Pa
             for sign_type in ['minisig', 'asc']:
                 try:
                     download_file(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
-                                  f'{image_path}.{sign_type}', vrf)
+                                  f'{image_path}.{sign_type}', vrf,
+                                  username, password)
                     sign_file = (True, sign_type)
                     break
                 except Exception:
@@ -744,7 +753,8 @@ def install_image() -> None:
 
 
 @compat.grub_cfg_update
-def add_image(image_path: str, vrf: str = None, no_prompt: bool = False) -> None:
+def add_image(image_path: str, vrf: str = None, username: str = '',
+              password: str = '', no_prompt: bool = False) -> None:
     """Add a new image
 
     Args:
@@ -754,7 +764,7 @@ def add_image(image_path: str, vrf: str = None, no_prompt: bool = False) -> None
         exit(MSG_ERR_LIVE)
 
     # fetch an image
-    iso_path: Path = image_fetch(image_path, vrf, no_prompt)
+    iso_path: Path = image_fetch(image_path, vrf, username, password, no_prompt)
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -858,8 +868,11 @@ def parse_arguments() -> Namespace:
                         help='vrf name for image download')
     parser.add_argument('--no-prompt', action='store_true',
                         help='perform action non-interactively')
-    parser.add_argument(
-        '--image-path',
+    parser.add_argument('--username', default='',
+                        help='username for image download')
+    parser.add_argument('--password', default='',
+                        help='password for image download')
+    parser.add_argument('--image-path',
         help='a path (HTTP or local file) to an image that needs to be installed'
     )
     # parser.add_argument('--image_new_name', help='a new name for image')
@@ -877,7 +890,8 @@ if __name__ == '__main__':
         if args.action == 'install':
             install_image()
         if args.action == 'add':
-            add_image(args.image_path, args.vrf, args.no_prompt)
+            add_image(args.image_path, args.vrf,
+                      args.username, args.password, args.no_prompt)
 
         exit()
 
