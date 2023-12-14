@@ -470,6 +470,38 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%     endfor %}
 {% endif %}
  !
+{% if bmp is vyos_defined %}
+{%     if bmp.mirror_buffer_limit is vyos_defined %}
+ bmp mirror buffer-limit {{ bmp.mirror_buffer_limit }}
+ !
+{%     endif %}
+{%     if bmp.target is vyos_defined %}
+{%         for bmp, bmp_config in bmp.target.items() %}
+ bmp targets {{ bmp }}
+{%             if bmp_config.mirror is vyos_defined %}
+  bmp mirror
+{%             endif %}
+{%             if bmp_config.monitor is vyos_defined %}
+{%                 if bmp_config.monitor.ipv4_unicast.pre_policy is vyos_defined %}
+  bmp monitor ipv4 unicast pre-policy
+{%                 endif %}
+{%                 if bmp_config.monitor.ipv4_unicast.post_policy is vyos_defined %}
+  bmp monitor ipv4 unicast post-policy
+{%                 endif %}
+{%                 if bmp_config.monitor.ipv6_unicast.pre_policy is vyos_defined %}
+  bmp monitor ipv6 unicast pre-policy
+{%                 endif %}
+{%                 if bmp_config.monitor.ipv6_unicast.post_policy is vyos_defined %}
+  bmp monitor ipv6 unicast post-policy
+{%                 endif %}
+{%             endif %}
+{%             if bmp_config.address is vyos_defined %}
+  bmp connect {{ bmp_config.address }} port {{ bmp_config.port }} min-retry {{ bmp_config.min_retry }} max-retry {{ bmp_config.max_retry }}
+{%             endif %}
+{%         endfor %}
+ exit
+{%     endif %}
+{% endif %}
 {% if peer_group is vyos_defined %}
 {%     for peer, config in peer_group.items() %}
 {{ bgp_neighbor(peer, config, true) }}

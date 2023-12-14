@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+from subprocess import run
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -1147,6 +1148,61 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' segment-routing srv6', frrconfig)
         self.assertIn(f'  locator {locator_name}', frrconfig)
         self.assertIn(f' sid vpn per-vrf export {sid}', frrconfig)
+
+    def test_bgp_25_bmp(self):
+        target_name = 'instance-bmp'
+        target_address = '127.0.0.1'
+        target_port = '5000'
+        min_retry = '1024'
+        max_retry = '2048'
+        monitor_ipv4 = 'pre-policy'
+        monitor_ipv6 = 'pre-policy'
+        mirror_buffer = '32000000'
+        bmp_path = base_path + ['bmp']
+        target_path = bmp_path + ['target', target_name]
+        bgpd_bmp_pid = process_named_running('bgpd', 'bmp')
+        command = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'restart', 'bgp']
+
+        self.cli_set(bmp_path)
+        # by default the 'bmp' module not loaded for the bgpd
+        # expect Error
+        if not bgpd_bmp_pid:
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+        # add required 'bmp' module to bgpd and restart bgpd
+        self.cli_delete(bmp_path)
+        self.cli_set(['system', 'frr', 'bmp'])
+        self.cli_commit()
+        # restart bgpd to apply "-M bmp" and update PID
+        run(command, input='Y', text=True)
+        self.daemon_pid = process_named_running(PROCESS_NAME)
+
+        # set bmp config but not set address
+        self.cli_set(target_path + ['port', target_port])
+        # address is not set, expect Error
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # config other bmp options
+        self.cli_set(target_path + ['address', target_address])
+        self.cli_set(bmp_path + ['mirror-buffer-limit', mirror_buffer])
+        self.cli_set(target_path + ['port', target_port])
+        self.cli_set(target_path + ['min-retry', min_retry])
+        self.cli_set(target_path + ['max-retry', max_retry])
+        self.cli_set(target_path + ['mirror'])
+        self.cli_set(target_path + ['monitor', 'ipv4-unicast', monitor_ipv4])
+        self.cli_set(target_path + ['monitor', 'ipv6-unicast', monitor_ipv6])
+        self.cli_commit()
+
+        # Verify bgpd bmp configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'bmp mirror buffer-limit {mirror_buffer}', frrconfig)
+        self.assertIn(f'bmp targets {target_name}', frrconfig)
+        self.assertIn(f'bmp mirror', frrconfig)
+        self.assertIn(f'bmp monitor ipv4 unicast {monitor_ipv4}', frrconfig)
+        self.assertIn(f'bmp monitor ipv6 unicast {monitor_ipv6}', frrconfig)
+        self.assertIn(f'bmp connect {target_address} port {target_port} min-retry {min_retry} max-retry {max_retry}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

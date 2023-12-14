@@ -30,6 +30,7 @@ from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.process import process_named_running
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -246,6 +247,19 @@ def verify(bgp):
 
     if 'system_as' not in bgp:
         raise ConfigError('BGP system-as number must be defined!')
+
+    # Verify BMP
+    if 'bmp' in bgp:
+        # check bmp flag "bgpd -d -F traditional --daemon -A 127.0.0.1 -M rpki -M bmp"
+        if not process_named_running('bgpd', 'bmp'):
+            raise ConfigError(
+                f'"bmp" flag is not found in bgpd. Configure "set system frr bmp" and restart bgp process'
+            )
+        # check bmp target
+        if 'target' in bgp['bmp']:
+            for target, target_config in bgp['bmp']['target'].items():
+                if 'address' not in target_config:
+                    raise ConfigError(f'BMP target "{target}" address must be defined!')
 
     # Verify vrf on interface and bgp section
     if 'interface' in bgp:
