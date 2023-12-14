@@ -115,7 +115,7 @@ class Interface(Control):
         },
         'vrf': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
-            'format': lambda j: jmespath.search('[*].master | [0]', json.loads(j)),
+            'format': lambda j: jmespath.search('[?linkinfo.info_slave_kind == `vrf`].master | [0]', json.loads(j)),
         },
     }
 
