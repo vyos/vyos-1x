@@ -19,7 +19,7 @@ from pathlib import Path
 from shutil import copy
 from dataclasses import dataclass
 
-from vyos.utils.process import cmd
+from vyos.utils.process import cmd, run
 from vyos.system import disk
 
 
@@ -44,18 +44,11 @@ def raid_create(raid_members: list[str],
     """
     raid_devices_num: int = len(raid_members)
     raid_members_str: str = ' '.join(raid_members)
-    if Path('/sys/firmware/efi').exists():
-        for part in raid_members:
-            drive: str = disk.partition_parent(part)
-            command: str = f'sgdisk --typecode=3:A19D880F-05FC-4D3B-A006-743F0F84911E {drive}'
-            cmd(command)
-    else:
-        for part in raid_members:
-            drive: str = disk.partition_parent(part)
-            command: str = f'sgdisk --typecode=3:A19D880F-05FC-4D3B-A006-743F0F84911E {drive}'
-            cmd(command)
     for part in raid_members:
-        command: str = f'mdadm --zero-superblock {part}'
+        drive: str = disk.partition_parent(part)
+        # set partition type GUID for raid member; cf.
+        # https://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_type_GUIDs
+        command: str = f'sgdisk --typecode=3:A19D880F-05FC-4D3B-A006-743F0F84911E {drive}'
         cmd(command)
     command: str = f'mdadm --create /dev/{raid_name} -R --metadata=1.0 \
         --raid-devices={raid_devices_num} --level={raid_level} \
@@ -71,6 +64,20 @@ def raid_create(raid_members: list[str],
     )
 
     return raid
+
+def clear():
+    """Deactivate all RAID arrays"""
+    command: str = 'mdadm --examine --scan'
+    raid_config = cmd(command)
+    if not raid_config:
+        return
+    command: str = 'mdadm --run /dev/md?*'
+    run(command)
+    command: str = 'mdadm --assemble --scan --auto=yes --symlink=no'
+    run(command)
+    command: str = 'mdadm --stop --scan'
+    run(command)
+
 
 def update_initramfs() -> None:
     """Update initramfs"""

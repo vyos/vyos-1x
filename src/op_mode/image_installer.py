@@ -179,6 +179,7 @@ def create_partitions(target_disk: str, target_size: int,
         rootfs_size: int = available_size
 
     print(MSG_INFO_INSTALL_PARTITONING)
+    raid.clear()
     disk.disk_cleanup(target_disk)
     disk_details: disk.DiskDetails = disk.parttable_create(target_disk,
                                                            rootfs_size)
