@@ -138,7 +138,7 @@ def version_list(root_dir: str = '') -> list[str]:
     versions_list: list[str] = []
     for file in versions_files:
         versions_list.append(file.stem)
-    versions_list.sort()
+    versions_list.sort(reverse=True)
 
     return versions_list
 
