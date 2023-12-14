@@ -279,6 +279,8 @@ Depends:
 # For "run monitor traffic"
   tcpdump,
 # End "run monitor traffic"
+# For "show hardware dmi"
+  dmidecode,
 # For "run show hardware storage smart"
   smartmontools,
 # For "run show hardware scsi"
