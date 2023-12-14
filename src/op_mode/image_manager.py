@@ -157,6 +157,8 @@ def rename_image(name_old: str, name_new: str) -> None:
 def list_images() -> None:
     """Print list of available images for CLI hints"""
     images_list: list[str] = grub.version_list()
+    image_list.sort()
+
     for image_name in images_list:
         print(image_name)
 
