@@ -83,6 +83,8 @@ DIR_KERNEL_SRC: str = '/boot/'
 FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
 ISO_DOWNLOAD_PATH: str = '/tmp/vyos_installation.iso'
 
+external_download_script = '/usr/libexec/vyos/simple-download.py'
+
 # default boot variables
 DEFAULT_BOOT_VARS: dict[str, str] = {
     'timeout': '5',
@@ -460,8 +462,17 @@ def validate_signature(file_path: str, sign_type: str) -> None:
     else:
         print('Signature is valid')
 
+def download_file(local_file: str, remote_path: str, vrf: str,
+                  progressbar: bool = False, check_space: bool = False):
+    if vrf is None:
+        download(local_file, remote_path, progressbar=progressbar,
+                 check_space=check_space, raise_error=True)
+    else:
+        vrf_cmd = f'ip vrf exec {vrf} {external_download_script} \
+                --local-file {local_file} --remote-path {remote_path}'
+        cmd(vrf_cmd)
 
-def image_fetch(image_path: str, no_prompt: bool = False) -> Path:
+def image_fetch(image_path: str, vrf: str = None, no_prompt: bool = False) -> Path:
     """Fetch an ISO image
 
     Args:
@@ -474,14 +485,15 @@ def image_fetch(image_path: str, no_prompt: bool = False) -> Path:
         # check a type of path
         if urlparse(image_path).scheme:
             # download an image
-            download(ISO_DOWNLOAD_PATH, image_path, True, True,
-                     raise_error=True)
+            download_file(ISO_DOWNLOAD_PATH, image_path, vrf,
+                          progressbar=True, check_space=True)
+
             # download a signature
             sign_file = (False, '')
             for sign_type in ['minisig', 'asc']:
                 try:
-                    download(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
-                             f'{image_path}.{sign_type}', raise_error=True)
+                    download_file(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
+                                  f'{image_path}.{sign_type}', vrf)
                     sign_file = (True, sign_type)
                     break
                 except Exception:
@@ -502,8 +514,8 @@ def image_fetch(image_path: str, no_prompt: bool = False) -> Path:
                 return local_path
             else:
                 raise FileNotFoundError
-    except Exception:
-        print(f'The image cannot be fetched from: {image_path}')
+    except Exception as e:
+        print(f'The image cannot be fetched from: {image_path} {e}')
         exit(1)
 
 
@@ -732,7 +744,7 @@ def install_image() -> None:
 
 
 @compat.grub_cfg_update
-def add_image(image_path: str, no_prompt: bool = False) -> None:
+def add_image(image_path: str, vrf: str = None, no_prompt: bool = False) -> None:
     """Add a new image
 
     Args:
@@ -742,7 +754,7 @@ def add_image(image_path: str, no_prompt: bool = False) -> None:
         exit(MSG_ERR_LIVE)
 
     # fetch an image
-    iso_path: Path = image_fetch(image_path, no_prompt)
+    iso_path: Path = image_fetch(image_path, vrf, no_prompt)
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -842,6 +854,8 @@ def parse_arguments() -> Namespace:
                         choices=['install', 'add'],
                         required=True,
                         help='action to perform with an image')
+    parser.add_argument('--vrf',
+                        help='vrf name for image download')
     parser.add_argument('--no-prompt', action='store_true',
                         help='perform action non-interactively')
     parser.add_argument(
@@ -863,7 +877,7 @@ if __name__ == '__main__':
         if args.action == 'install':
             install_image()
         if args.action == 'add':
-            add_image(args.image_path, args.no_prompt)
+            add_image(args.image_path, args.vrf, args.no_prompt)
 
         exit()
 
