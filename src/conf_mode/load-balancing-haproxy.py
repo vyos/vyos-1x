@@ -108,17 +108,19 @@ def generate(lb):
         if 'ssl' in front_config:
 
             if 'certificate' in front_config['ssl']:
-                cert_name = front_config['ssl']['certificate']
-                pki_cert = lb['pki']['certificate'][cert_name]
-                cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
-                cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
+                cert_names = front_config['ssl']['certificate']
 
-                with open(cert_file_path, 'w') as f:
-                    f.write(wrap_certificate(pki_cert['certificate']))
+                for cert_name in cert_names:
+                    pki_cert = lb['pki']['certificate'][cert_name]
+                    cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
+                    cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
 
-                if 'private' in pki_cert and 'key' in pki_cert['private']:
-                    with open(cert_key_path, 'w') as f:
-                        f.write(wrap_private_key(pki_cert['private']['key']))
+                    with open(cert_file_path, 'w') as f:
+                        f.write(wrap_certificate(pki_cert['certificate']))
+
+                    if 'private' in pki_cert and 'key' in pki_cert['private']:
+                        with open(cert_key_path, 'w') as f:
+                            f.write(wrap_private_key(pki_cert['private']['key']))
 
             if 'ca_certificate' in front_config['ssl']:
                 ca_name = front_config['ssl']['ca_certificate']
