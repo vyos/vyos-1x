@@ -33,6 +33,7 @@
       <children>
         #include <include/firewall/common-rule-ipv4.xml.i>
         #include <include/firewall/inbound-interface.xml.i>
+        #include <include/firewall/offload-target.xml.i>
         #include <include/firewall/outbound-interface.xml.i>
       </children>
     </tagNode>

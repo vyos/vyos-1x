@@ -691,5 +691,41 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         #self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
         #self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
+    def test_zone_flow_offload(self):
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
+
+        # QEMU virtual NIC does not support hw-tc-offload
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
+
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'offload-target', 'smoketest'])
+
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest', 'rule', '1', 'offload-target', 'smoketest'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain NAME_smoketest'],
+            ['flow add @VYOS_FLOWTABLE_smoketest']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+        nftables_search = [
+            ['chain NAME6_smoketest'],
+            ['flow add @VYOS_FLOWTABLE_smoketest']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        # Check conntrack
+        #self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        #self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
