@@ -40,7 +40,9 @@ def get_config(config=None):
         conf = Config()
 
     base = ['system', 'frr']
-    frr_config = conf.get_config_dict(base, get_first_key=True)
+    frr_config = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                      get_first_key=True,
+                                      with_recursive_defaults=True)
 
     return frr_config
 
