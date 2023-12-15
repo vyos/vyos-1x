@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,12 +16,12 @@
 
 import re
 import unittest
+
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.utils.file import read_file
 
 config_file = '/etc/frr/daemons'
 base_path = ['system', 'frr']
-
 
 def daemons_config_parse(daemons_config):
     # create regex for parsing daemons options
@@ -33,13 +33,20 @@ def daemons_config_parse(daemons_config):
     for daemon in regex_daemon_config.finditer(daemons_config):
         daemon_name = daemon.group('daemon_name')
         daemon_options = daemon.group('daemon_options')
-        daemons_config_dict[daemon_name] = daemon_options
+        daemons_config_dict[daemon_name] = daemon_options.lstrip()
 
     # return daemons config
     return (daemons_config_dict)
 
 
 class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestSystemFRR, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -64,7 +71,7 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
             else:
                 self.assertFalse(snmp_enabled)
 
-    def test_frr_snmp_addandremove(self):
+    def test_frr_snmp_add_remove(self):
         # test enabling and disabling of SNMP integration
         test_daemon_names = ['ospfd', 'bgpd']
         for test_daemon_name in test_daemon_names:
@@ -124,7 +131,7 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
         irdp_enabled = regex_irdp.match(daemons_config_dict['zebra'])
         self.assertTrue(irdp_enabled)
 
-    def test_frr_bmpandsnmp(self):
+    def test_frr_bmp_and_snmp(self):
         # test empty config section
         self.cli_set(base_path + ['bmp'])
         self.cli_set(base_path + ['snmp', 'bgpd'])
@@ -141,6 +148,15 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(bmp_enabled)
         self.assertTrue(snmp_enabled)
 
+    def test_frr_file_descriptors(self):
+        file_descriptors = '4096'
+
+        self.cli_set(base_path + ['descriptors', file_descriptors])
+        self.cli_commit()
+
+        # read the config file and check content
+        daemons_config = read_file(config_file)
+        self.assertIn(f'MAX_FDS={file_descriptors}', daemons_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
