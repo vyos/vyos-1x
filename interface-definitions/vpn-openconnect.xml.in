@@ -260,6 +260,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="http-security-headers">
+            <properties>
+              <help>Enable HTTP security headers</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <node name="ssl">
             <properties>
               <help>SSL Certificate, SSL Key and CA</help>
