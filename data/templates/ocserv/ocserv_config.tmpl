@@ -85,7 +85,7 @@ route = {{ route }}
 {%   endfor %}
 {% endif %}
 
-
+{% if http_security_headers is defined %}
 # HTTP security headers
 included-http-headers = Strict-Transport-Security: max-age=31536000 ; includeSubDomains
 included-http-headers = X-Frame-Options: deny
@@ -100,3 +100,4 @@ included-http-headers = Cross-Origin-Resource-Policy: same-origin
 included-http-headers = X-XSS-Protection: 0
 included-http-headers = Pragma: no-cache
 included-http-headers = Cache-control: no-store, no-cache
+{% endif %}
