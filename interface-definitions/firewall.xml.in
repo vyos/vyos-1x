@@ -393,7 +393,7 @@
             <properties>
               <help>Zone from which to filter traffic</help>
               <completionHelp>
-                <path>zone-policy zone</path>
+                <path>firewall zone</path>
               </completionHelp>
             </properties>
             <children>

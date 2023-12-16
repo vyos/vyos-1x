@@ -50,6 +50,9 @@ table ip vyos_filter {
 {%         for prior, conf in ipv4.forward.items() %}
     chain VYOS_FORWARD_{{ prior }} {
         type filter hook forward priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('FWD', prior, rule_id) }}
@@ -67,6 +70,9 @@ table ip vyos_filter {
 {%         for prior, conf in ipv4.input.items() %}
     chain VYOS_INPUT_{{ prior }} {
         type filter hook input priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('INP',prior, rule_id) }}
@@ -84,6 +90,9 @@ table ip vyos_filter {
 {%         for prior, conf in ipv4.output.items() %}
     chain VYOS_OUTPUT_{{ prior }} {
         type filter hook output priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('OUT', prior, rule_id) }}
@@ -158,7 +167,21 @@ table ip vyos_filter {
 {{ group_tmpl.groups(group, False, True) }}
 
 {% if zone is vyos_defined %}
-{{ zone_tmpl.zone_chains(zone, False) }}
+{{ zone_tmpl.zone_chains(zone, False, global_options.state_policy is vyos_defined) }}
+{% endif %}
+{% if global_options.state_policy is vyos_defined %}
+    chain VYOS_STATE_POLICY {
+{%     if global_options.state_policy.established is vyos_defined %}
+        {{ global_options.state_policy.established | nft_state_policy('established') }}
+{%     endif %}
+{%     if global_options.state_policy.invalid is vyos_defined %}
+        {{ global_options.state_policy.invalid | nft_state_policy('invalid') }}
+{%     endif %}
+{%     if global_options.state_policy.related is vyos_defined %}
+        {{ global_options.state_policy.related | nft_state_policy('related') }}
+{%     endif %}
+        return
+    }
 {% endif %}
 }
 
@@ -178,6 +201,9 @@ table ip6 vyos_filter {
 {%         for prior, conf in ipv6.forward.items() %}
     chain VYOS_IPV6_FORWARD_{{ prior }} {
         type filter hook forward priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('FWD', prior, rule_id ,'ip6') }}
@@ -195,6 +221,9 @@ table ip6 vyos_filter {
 {%         for prior, conf in ipv6.input.items() %}
     chain VYOS_IPV6_INPUT_{{ prior }} {
         type filter hook input priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('INP', prior, rule_id ,'ip6') }}
@@ -212,6 +241,9 @@ table ip6 vyos_filter {
 {%         for prior, conf in ipv6.output.items() %}
     chain VYOS_IPV6_OUTPUT_{{ prior }} {
         type filter hook output priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('OUT', prior, rule_id ,'ip6') }}
@@ -271,7 +303,21 @@ table ip6 vyos_filter {
 {{ group_tmpl.groups(group, True, True) }}
 
 {% if zone is vyos_defined %}
-{{ zone_tmpl.zone_chains(zone, True) }}
+{{ zone_tmpl.zone_chains(zone, True, global_options.state_policy is vyos_defined) }}
+{% endif %}
+{% if global_options.state_policy is vyos_defined %}
+    chain VYOS_STATE_POLICY6 {
+{%     if global_options.state_policy.established is vyos_defined %}
+        {{ global_options.state_policy.established | nft_state_policy('established') }}
+{%     endif %}
+{%     if global_options.state_policy.invalid is vyos_defined %}
+        {{ global_options.state_policy.invalid | nft_state_policy('invalid') }}
+{%     endif %}
+{%     if global_options.state_policy.related is vyos_defined %}
+        {{ global_options.state_policy.related | nft_state_policy('related') }}
+{%     endif %}
+        return
+    }
 {% endif %}
 
 }

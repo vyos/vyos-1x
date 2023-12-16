@@ -63,19 +63,11 @@ if not config.exists(base):
 
 ### Migration of state policies
 if config.exists(base + ['state-policy']):
-    for family in ['ipv4', 'ipv6']:
-        for hook in ['forward', 'input', 'output']:
-            for priority in ['filter']:
-                # Add default-action== accept for compatibility reasons:
-                config.set(base + [family, hook, priority, 'default-action'], value='accept')
-                position = 1
-                for state in config.list_nodes(base + ['state-policy']):
-                    action = config.return_value(base + ['state-policy', state, 'action'])
-                    config.set(base + [family, hook, priority, 'rule'])
-                    config.set_tag(base + [family, hook, priority, 'rule'])
-                    config.set(base + [family, hook, priority, 'rule', position, 'state', state], value='enable')
-                    config.set(base + [family, hook, priority, 'rule', position, 'action'], value=action)
-                    position = position + 1
+    for state in config.list_nodes(base + ['state-policy']):
+        action = config.return_value(base + ['state-policy', state, 'action'])
+        config.set(base + ['global-options', 'state-policy', state, 'action'], value=action)
+        if config.exists(base + ['state-policy', state, 'log']):
+            config.set(base + ['global-options', 'state-policy', state, 'log'], value='enable')
     config.delete(base + ['state-policy'])
 
 ## migration of global options:
