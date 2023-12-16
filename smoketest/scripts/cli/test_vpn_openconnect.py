@@ -141,5 +141,26 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         otp_config = read_file(otp_file)
         self.assertIn(f'HOTP/T30/6 {user} - {otp}', otp_config)
 
+
+        # Verify HTTP security headers
+        self.cli_set(base_path + ['http-security-headers'])
+        self.cli_commit()
+
+        daemon_config = read_file(config_file)
+
+        self.assertIn('included-http-headers = Strict-Transport-Security: max-age=31536000 ; includeSubDomains', daemon_config)
+        self.assertIn('included-http-headers = X-Frame-Options: deny', daemon_config)
+        self.assertIn('included-http-headers = X-Content-Type-Options: nosniff', daemon_config)
+        self.assertIn('included-http-headers = Content-Security-Policy: default-src "none"', daemon_config)
+        self.assertIn('included-http-headers = X-Permitted-Cross-Domain-Policies: none', daemon_config)
+        self.assertIn('included-http-headers = Referrer-Policy: no-referrer', daemon_config)
+        self.assertIn('included-http-headers = Clear-Site-Data: "cache","cookies","storage"', daemon_config)
+        self.assertIn('included-http-headers = Cross-Origin-Embedder-Policy: require-corp', daemon_config)
+        self.assertIn('included-http-headers = Cross-Origin-Opener-Policy: same-origin', daemon_config)
+        self.assertIn('included-http-headers = Cross-Origin-Resource-Policy: same-origin', daemon_config)
+        self.assertIn('included-http-headers = X-XSS-Protection: 0', daemon_config)
+        self.assertIn('included-http-headers = Pragma: no-cache', daemon_config)
+        self.assertIn('included-http-headers = Cache-control: no-store, no-cache', daemon_config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
