@@ -21,9 +21,26 @@
 #        to "service dns dynamic name <service> address <interface> protocol 'nsupdate'"
 # - migrate "service dns dynamic address <interface> service <service> ..."
 #        to "service dns dynamic name <service> address <interface> ..."
+# - normalize the all service names to conform with name constraints
 
 import sys
+import re
+from unicodedata import normalize
 from vyos.configtree import ConfigTree
+
+def normalize_name(name):
+    """Normalize service names to conform with name constraints.
+
+    This is necessary as part of migration because there were no constraints in
+    the old name format.
+    """
+    # Normalize unicode characters to ASCII (NFKD)
+    # Replace all separators with hypens, strip leading and trailing hyphens
+    name = normalize('NFKD', name).encode('ascii', 'ignore').decode()
+    name = re.sub(r'(\s|\W)+', '-', name).strip('-')
+
+    return name
+
 
 if len(sys.argv) < 2:
     print("Must specify file name!")
@@ -64,21 +81,35 @@ for address in config.list_nodes(address_path):
 
     for svc_type in ['service', 'rfc2136']:
         if config.exists(address_path_tag + [svc_type]):
-            # Move RFC2136 as service configuration, rename to avoid name conflict and set protocol to 'nsupdate'
+            # Set protocol to 'nsupdate' for RFC2136 configuration
             if svc_type == 'rfc2136':
-                for rfc_cfg_old in config.list_nodes(address_path_tag + ['rfc2136']):
-                    rfc_cfg_new = f'{rfc_cfg_old}-rfc2136'
-                    config.rename(address_path_tag + ['rfc2136', rfc_cfg_old], rfc_cfg_new)
-                    config.set(address_path_tag + ['rfc2136', rfc_cfg_new, 'protocol'], 'nsupdate')
+                for rfc_cfg in config.list_nodes(address_path_tag + ['rfc2136']):
+                    config.set(address_path_tag + ['rfc2136', rfc_cfg, 'protocol'], 'nsupdate')
 
             # Add address as config value in each service before moving the service path
-            # And then copy the services from 'address <interface> service <service>' to 'name <service>'
+            # And then copy the services from 'address <interface> service <service>'
+            #                              to 'name (service|rfc2136)-<service>-<address>'
+            # Note: The new service is named (service|rfc2136)-<service>-<address>
+            #       to avoid name conflict with old entries
             for svc_cfg in config.list_nodes(address_path_tag + [svc_type]):
                 config.set(address_path_tag + [svc_type, svc_cfg, 'address'], address)
-                config.copy(address_path_tag + [svc_type, svc_cfg], name_path + [svc_cfg])
+                config.copy(address_path_tag + [svc_type, svc_cfg],
+                            name_path + ['-'.join([svc_type, svc_cfg, address])])
 
 # Finally cleanup the old address path
 config.delete(address_path)
+
+# Normalize the all service names to conform with name constraints
+index = 1
+for name in config.list_nodes(name_path):
+    new_name = normalize_name(name)
+    if new_name != name:
+        # Append index if there is still a name conflicts after normalization
+        # For example, "foo-?(" and "foo-!)" both normalize to "foo-"
+        if config.exists(name_path + [new_name]):
+            new_name = f'{new_name}-{index}'
+            index += 1
+        config.rename(name_path + [name], new_name)
 
 try:
     with open(file_name, 'w') as f:
