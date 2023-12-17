@@ -60,7 +60,6 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/clear/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/clear/node.def
 	rm -f $(OP_TMPL_DIR)/delete/node.def
-	rm -f $(OP_TMPL_DIR)/set/node.def
 
 	# XXX: ping, traceroute and mtr must be able to recursivly call themselves as the
 	# options are provided from the scripts themselves

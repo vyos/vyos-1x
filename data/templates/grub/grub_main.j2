@@ -1,0 +1,7 @@
+load_env
+insmod regexp
+
+for cfgfile in ${prefix}/grub.cfg.d/*-autoload.cfg
+do
+    source ${cfgfile}
+done

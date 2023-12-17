@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Callable
+
 def print_error(str='', end='\n'):
     """
     Print `str` to stderr, terminated with `end`.
@@ -24,13 +26,18 @@ def print_error(str='', end='\n'):
     sys.stderr.write(end)
     sys.stderr.flush()
 
-def ask_input(question, default='', numeric_only=False, valid_responses=[]):
+def ask_input(question, default='', numeric_only=False, valid_responses=[],
+              no_echo=False):
+    from getpass import getpass
     question_out = question
     if default:
         question_out += f' (Default: {default})'
     response = ''
     while True:
-        response = input(question_out + ' ').strip()
+        if not no_echo:
+            response = input(question_out + ' ').strip()
+        else:
+            response = getpass(question_out + ' ').strip()
         if not response and default:
             return default
         if numeric_only:
@@ -72,3 +79,26 @@ def is_dumb_terminal():
     """Check if the current TTY is dumb, so that we can disable advanced terminal features."""
     import os
     return os.getenv('TERM') in ['vt100', 'dumb']
+
+def select_entry(l: list, list_msg: str = '', prompt_msg: str = '',
+                 list_format: Callable = None,) -> str:
+    """Select an entry from a list
+
+    Args:
+        l (list): a list of entries
+        list_msg (str): a message to print before listing the entries
+        prompt_msg (str): a message to print as prompt for selection
+
+    Returns:
+        str: a selected entry
+    """
+    en = list(enumerate(l, 1))
+    print(list_msg)
+    for i, e in en:
+        if list_format:
+            print(f'\t{i}: {list_format(e)}')
+        else:
+            print(f'\t{i}: {e}')
+    select = ask_input(prompt_msg, numeric_only=True,
+                       valid_responses=range(1, len(l)+1))
+    return next(filter(lambda x: x[0] == select, en))[1]
