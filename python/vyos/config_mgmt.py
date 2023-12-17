@@ -30,6 +30,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
+from vyos.load_config import load, LoadConfigError
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
 from vyos.utils.io import ask_yes_no
@@ -262,6 +263,23 @@ Proceed ?'''
 
         return msg, 0
 
+    def rollback_soft(self, rev: int):
+        """Rollback without reboot (rollback-soft)
+        """
+        msg = ''
+
+        if not self._check_revision_number(rev):
+            msg = f'Invalid revision number {rev}: must be 0 < rev < {self.num_revisions}'
+            return msg, 1
+
+        rollback_ct = self._get_config_tree_revision(rev)
+        try:
+            load(rollback_ct, switch='explicit')
+        except LoadConfigError as e:
+            raise ConfigMgmtError(e) from e
+
+        return msg, 0
+
     def compare(self, saved: bool=False, commands: bool=False,
                 rev1: Optional[int]=None,
                 rev2: Optional[int]=None) -> Tuple[str,int]:
@@ -456,13 +474,10 @@ Proceed ?'''
 
     # utility functions
     #
-    @staticmethod
-    def _strip_version(s):
-        return re.split(r'(^//)', s, maxsplit=1, flags=re.MULTILINE)[0]
 
     def _get_saved_config_tree(self):
         with open(config_file) as f:
-            c = self._strip_version(f.read())
+            c = f.read()
         return ConfigTree(c)
 
     def _get_file_revision(self, rev: int):
@@ -474,7 +489,7 @@ Proceed ?'''
         return r
 
     def _get_config_tree_revision(self, rev: int):
-        c = self._strip_version(self._get_file_revision(rev))
+        c = self._get_file_revision(rev)
         return ConfigTree(c)
 
     def _add_logrotate_conf(self):
@@ -696,6 +711,11 @@ def run():
                           help="Revision number for rollback")
     rollback.add_argument('-y', dest='no_prompt', action='store_true',
                           help="Excute without prompt")
+
+    rollback_soft = subparsers.add_parser('rollback_soft',
+                                     help="Rollback to earlier config")
+    rollback_soft.add_argument('--rev', type=int,
+                          help="Revision number for rollback")
 
     compare = subparsers.add_parser('compare',
                                     help="Compare config files")
