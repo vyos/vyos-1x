@@ -23,7 +23,9 @@ from vyos.template import is_ipv6
 from vyos.template import isc_static_route
 from vyos.template import netmask_from_cidr
 from vyos.utils.dict import dict_search_args
+from vyos.utils.file import file_permissions
 from vyos.utils.file import read_file
+from vyos.utils.process import cmd
 
 kea4_options = {
     'name_server': 'domain-name-servers',
@@ -119,10 +121,14 @@ def kea_parse_subnet(subnet, config):
             if 'disable' in host_config:
                 continue
 
-            reservations.append({
-                'hw-address': host_config['mac_address'],
-                'ip-address': host_config['ip_address']
-            })
+            obj = {
+                'hw-address': host_config['mac_address']
+            }
+
+            if 'ip_address' in host_config:
+                obj['ip-address'] = host_config['ip_address']
+
+            reservations.append(obj)
         out['reservations'] = reservations
 
     unifi_controller = dict_search_args(config, 'vendor_option', 'ubiquiti', 'unifi_controller')
@@ -274,6 +280,9 @@ def kea_parse_leases(lease_path):
 def _ctrl_socket_command(path, command, args=None):
     if not os.path.exists(path):
         return None
+
+    if file_permissions(path) != '0775':
+        cmd(f'sudo chmod 775 {path}')
 
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         sock.connect(path)

@@ -19,13 +19,11 @@ import os
 from ipaddress import ip_address
 from ipaddress import ip_network
 from sys import exit
-from time import sleep
 
 from vyos.config import Config
 from vyos.template import render
 from vyos.template import is_ipv6
 from vyos.utils.process import call
-from vyos.utils.file import chmod_775
 from vyos.utils.file import write_file
 from vyos.utils.dict import dict_search
 from vyos.utils.network import is_subnet_connected
@@ -196,15 +194,6 @@ def apply(dhcpv6):
         return None
 
     call(f'systemctl restart {service_name}')
-
-    # op-mode needs ctrl socket permission change
-    i = 0
-    while not os.path.exists(ctrl_socket):
-        if i > 15:
-            break
-        i += 1
-        sleep(1)
-    chmod_775(ctrl_socket)
 
     return None
 

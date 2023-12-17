@@ -149,6 +149,10 @@ def chmod_775(path):
               S_IROTH | S_IXOTH
     chmod(path, bitmask)
 
+def file_permissions(path):
+    """ Return file permissions in string format, e.g '0755' """
+    return oct(os.stat(path).st_mode)[4:]
+
 def makedir(path, user=None, group=None):
     if os.path.exists(path):
         return

@@ -21,7 +21,6 @@ from ipaddress import ip_network
 from netaddr import IPAddress
 from netaddr import IPRange
 from sys import exit
-from time import sleep
 
 from vyos.config import Config
 from vyos.pki import wrap_certificate
@@ -29,7 +28,6 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
-from vyos.utils.file import chmod_775
 from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import run
@@ -361,15 +359,6 @@ def apply(dhcp):
             action = 'stop'
 
         call(f'systemctl {action} {service}.service')
-
-    # op-mode needs ctrl socket permission change
-    i = 0
-    while not os.path.exists(ctrl_socket):
-        if i > 15:
-            break
-        i += 1
-        sleep(1)
-    chmod_775(ctrl_socket)
 
     return None
 
