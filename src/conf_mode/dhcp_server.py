@@ -18,7 +18,6 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
-from netaddr import IPAddress
 from netaddr import IPRange
 from sys import exit
 
@@ -141,7 +140,7 @@ def get_config(config=None):
                                 {'range' : new_range_dict})
 
     if dict_search('failover.certificate', dhcp):
-        dhcp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True) 
+        dhcp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
 
     return dhcp
 
@@ -226,9 +225,10 @@ def verify(dhcp):
                             raise ConfigError(f'Configured static lease address for mapping "{mapping}" is\n' \
                                               f'not within shared-network "{network}, {subnet}"!')
 
-                        if 'mac_address' not in mapping_config:
-                            raise ConfigError(f'MAC address required for static mapping "{mapping}"\n' \
-                                              f'within shared-network "{network}, {subnet}"!')
+                        if ('mac' not in mapping_config and 'duid' not in mapping_config) or \
+                            ('mac' in mapping_config and 'duid' in mapping_config):
+                            raise ConfigError(f'Either MAC address or Client identifier (DUID) is required for '
+                                              f'static mapping "{mapping}" within shared-network "{network}, {subnet}"!')
 
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!

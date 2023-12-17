@@ -121,14 +121,20 @@ def kea_parse_subnet(subnet, config):
             if 'disable' in host_config:
                 continue
 
-            obj = {
-                'hw-address': host_config['mac_address']
+            reservation = {
+                'hostname': host,
             }
 
-            if 'ip_address' in host_config:
-                obj['ip-address'] = host_config['ip_address']
+            if 'mac' in host_config:
+                reservation['hw-address'] = host_config['mac']
 
-            reservations.append(obj)
+            if 'duid' in host_config:
+                reservation['duid'] = host_config['duid']
+
+            if 'ip_address' in host_config:
+                reservation['ip-address'] = host_config['ip_address']
+
+            reservations.append(reservation)
         out['reservations'] = reservations
 
     unifi_controller = dict_search_args(config, 'vendor_option', 'ubiquiti', 'unifi_controller')
@@ -178,7 +184,7 @@ def kea6_parse_options(config):
 
         if addrs:
             options.append({'name': 'sip-server-addr', 'data': ", ".join(addrs)})
-        
+
         if hosts:
             options.append({'name': 'sip-server-dns', 'data': ", ".join(hosts)})
 
@@ -234,10 +240,15 @@ def kea6_parse_subnet(subnet, config):
             if 'disable' in host_config:
                 continue
 
-            reservation = {}
+            reservation = {
+                'hostname': host
+            }
 
-            if 'identifier' in host_config:
-                reservation['duid'] = host_config['identifier']
+            if 'mac' in host_config:
+                reservation['hw-address'] = host_config['mac']
+
+            if 'duid' in host_config:
+                reservation['duid'] = host_config['duid']
 
             if 'ipv6_address' in host_config:
                 reservation['ip-addresses'] = [ host_config['ipv6_address'] ]
@@ -305,7 +316,7 @@ def kea_get_active_config(inet):
     ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'
 
     config = _ctrl_socket_command(ctrl_socket, 'config-get')
-    
+
     if not config or 'result' not in config or config['result'] != 0:
         return None
 
