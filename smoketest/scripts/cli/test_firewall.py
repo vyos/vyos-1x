@@ -209,7 +209,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         conn_mark = '555'
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'default-log'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'source', 'address', '172.16.20.10'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'destination', 'address', '172.16.10.10'])
@@ -226,7 +226,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'ttl', 'gt', '102'])
 
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-log'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'destination', 'port', '22'])
@@ -250,7 +250,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '6', 'connection-mark', conn_mark])
 
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'default-log'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'outbound-interface', 'name', interface_inv])
@@ -291,7 +291,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         interface = 'eth0'
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'default-log'])
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'packet-length', '64'])
@@ -353,7 +353,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'address-group', 'mask_group', 'address', '1.1.1.1'])
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'default-log'])
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'destination', 'address', '0.0.1.2'])
@@ -387,7 +387,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'default-log'])
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'source', 'address', '2002::1'])
@@ -396,14 +396,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'default-action', 'accept'])
-        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'default-log'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'destination', 'port', '8888'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'inbound-interface', 'name', interface])
 
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'default-log'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'action', 'return'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'outbound-interface', 'name', interface])
@@ -446,7 +446,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         interface = 'eth0'
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'default-log'])
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'packet-length', '65'])
@@ -489,7 +489,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'ipv6-address-group', 'mask_group', 'address', '::beef'])
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'default-log'])
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'destination', 'address', '::1111:2222:3333:4444'])
@@ -569,7 +569,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         vlan_prior = '3'
 
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
-        self.cli_set(['firewall', 'bridge', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'default-log'])
         self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'source', 'mac-address', mac_address])
         self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'inbound-interface', 'name', interface_in])
@@ -577,6 +577,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-log'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
