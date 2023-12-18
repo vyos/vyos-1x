@@ -107,6 +107,13 @@ def call_dependents():
         f = l.pop(0)
         f()
 
+def called_as_dependent() -> bool:
+    st = stack()[1:]
+    for f in st:
+        if f.filename == __file__:
+            return True
+    return False
+
 def graph_from_dependency_dict(d: dict) -> dict:
     g = {}
     for k in list(d):
