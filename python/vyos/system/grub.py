@@ -19,7 +19,7 @@ from typing import Union
 from uuid import uuid5, NAMESPACE_URL, UUID
 
 from vyos.template import render
-from vyos.utils.process import cmd
+from vyos.utils.process import cmd, rc_cmd
 from vyos.system import disk
 
 # Define variables
@@ -131,14 +131,22 @@ def version_list(root_dir: str = '') -> list[str]:
 
     Returns:
         list: A list with versions names
+
+    N.B. coreutils stat reports st_birthtime, but not available in
+    Path.stat()/os.stat()
     """
     if not root_dir:
         root_dir = disk.find_persistence()
     versions_files = Path(f'{root_dir}/{GRUB_DIR_VYOS_VERS}').glob('*.cfg')
-    versions_list: list[str] = []
+    versions_order: dict[str, int] = {}
     for file in versions_files:
-        versions_list.append(file.stem)
-    versions_list.sort()
+        p = Path(root_dir).joinpath('boot').joinpath(file.stem)
+        command = f'stat -c %W {p.as_posix()}'
+        rc, out = rc_cmd(command)
+        if rc == 0:
+            versions_order[file.stem] = int(out)
+    versions_order = sorted(versions_order, key=versions_order.get, reverse=True)
+    versions_list: list[str] = list(versions_order)
 
     return versions_list
 
