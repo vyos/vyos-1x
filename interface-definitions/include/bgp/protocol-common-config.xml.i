@@ -909,6 +909,92 @@
     </node>
   </children>
 </node>
+<node name="bmp">
+  <properties>
+    <help>BGP Monitoring Protocol (BMP)</help>
+  </properties>
+  <children>
+    <leafNode name="mirror-buffer-limit">
+      <properties>
+        <help>Maximum memory used for buffered mirroring messages (in bytes)</help>
+        <valueHelp>
+          <format>u32:0-4294967294</format>
+          <description>Limit in bytes</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967294"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <tagNode name="target">
+      <properties>
+        <help>BMP target</help>
+      </properties>
+      <children>
+        #include <include/address-ipv4-ipv6-single.xml.i>
+        #include <include/port-number.xml.i>
+        <leafNode name="port">
+          <defaultValue>5000</defaultValue>
+        </leafNode>
+        <leafNode name="min-retry">
+          <properties>
+            <help>Minimum connection retry interval (in milliseconds)</help>
+            <valueHelp>
+              <format>u32:100-86400000</format>
+              <description>Minimum connection retry interval</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 100-86400000"/>
+            </constraint>
+          </properties>
+          <defaultValue>1000</defaultValue>
+        </leafNode>
+        <leafNode name="max-retry">
+          <properties>
+            <help>Maximum connection retry interval</help>
+            <valueHelp>
+              <format>u32:100-4294967295</format>
+              <description>Maximum connection retry interval</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 100-86400000"/>
+            </constraint>
+          </properties>
+          <defaultValue>2000</defaultValue>
+        </leafNode>
+        <leafNode name="mirror">
+          <properties>
+            <help>Send BMP route mirroring messages</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        <node name="monitor">
+          <properties>
+            <help>Send BMP route monitoring messages</help>
+          </properties>
+          <children>
+            <node name="ipv4-unicast">
+              <properties>
+                <help>Address family IPv4 unicast</help>
+              </properties>
+              <children>
+                #include <include/bgp/bmp-monitor-afi-policy.xml.i>
+              </children>
+            </node>
+            <node name="ipv6-unicast">
+              <properties>
+                <help>Address family IPv6 unicast</help>
+              </properties>
+              <children>
+                #include <include/bgp/bmp-monitor-afi-policy.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
+      </children>
+    </tagNode>
+  </children>
+</node>
 <tagNode name="interface">
   <properties>
     <help>Configure interface related parameters, e.g. MPLS</help>
