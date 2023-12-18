@@ -8,7 +8,7 @@
   </properties>
   <children>
     #include <include/firewall/default-action.xml.i>
-    #include <include/firewall/enable-default-log.xml.i>
+    #include <include/firewall/default-log.xml.i>
     #include <include/generic-description.xml.i>
     <leafNode name="default-jump-target">
       <properties>
