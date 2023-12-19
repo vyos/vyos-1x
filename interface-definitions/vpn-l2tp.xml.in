@@ -15,6 +15,9 @@
             <children>
               #include <include/accel-ppp/max-concurrent-sessions.xml.i>
               #include <include/accel-ppp/mtu-128-16384.xml.i>
+              <leafNode name="mtu">
+                <defaultValue>1436</defaultValue>
+              </leafNode>
               <leafNode name="outside-address">
                 <properties>
                   <help>External IP address to which VPN clients will connect</help>
@@ -120,116 +123,18 @@
               #include <include/accel-ppp/client-ipv6-pool.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/dhcp-interface.xml.i>
-              <leafNode name="idle">
-                <properties>
-                  <help>PPP idle timeout</help>
-                  <valueHelp>
-                    <format>u32:30-86400</format>
-                    <description>PPP idle timeout in seconds</description>
-                  </valueHelp>
-                    <constraint>
-                      <validator name="numeric" argument="--range 30-86400"/>
-                    </constraint>
-                </properties>
-              </leafNode>
               <node name="authentication">
                 <properties>
                   <help>Authentication for remote access L2TP VPN</help>
                 </properties>
                 <children>
-                  <leafNode name="require">
-                    <properties>
-                      <help>Authentication protocol for remote access peer L2TP VPN</help>
-                      <valueHelp>
-                        <format>pap</format>
-                        <description>Require the peer to authenticate itself using PAP [Password Authentication Protocol].</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>chap</format>
-                        <description>Require the peer to authenticate itself using CHAP [Challenge Handshake Authentication Protocol].</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>mschap</format>
-                        <description>Require the peer to authenticate itself using CHAP [Challenge Handshake Authentication Protocol].</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>mschap-v2</format>
-                        <description>Require the peer to authenticate itself using MS-CHAPv2 [Microsoft Challenge Handshake Authentication Protocol, Version 2].</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(pap|chap|mschap|mschap-v2)</regex>
-                      </constraint>
-                      <completionHelp>
-                        <list>pap chap mschap mschap-v2</list>
-                      </completionHelp>
-                      <multi />
-                    </properties>
-                  </leafNode>
-                  #include <include/accel-ppp/ppp-mppe.xml.i>
+                  #include <include/accel-ppp/auth-protocols.xml.i>
                   #include <include/accel-ppp/auth-mode.xml.i>
                   #include <include/accel-ppp/auth-local-users.xml.i>
                   #include <include/radius-auth-server-ipv4.xml.i>
+                  #include <include/accel-ppp/radius-additions.xml.i>
                   <node name="radius">
                     <children>
-                      #include <include/accel-ppp/radius-accounting-interim-interval.xml.i>
-                      <tagNode name="server">
-                        <children>
-                          #include <include/accel-ppp/radius-additions-disable-accounting.xml.i>
-                          <leafNode name="fail-time">
-                            <properties>
-                              <help>Mark server unavailable for N seconds on failure</help>
-                              <valueHelp>
-                                <format>u32:0-600</format>
-                                <description>Fail time penalty</description>
-                              </valueHelp>
-                              <constraint>
-                                <validator name="numeric" argument="--range 0-600"/>
-                              </constraint>
-                              <constraintErrorMessage>Fail time must be between 0 and 600 seconds</constraintErrorMessage>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </tagNode>
-                      <leafNode name="timeout">
-                        <properties>
-                          <help>Timeout to wait response from server (seconds)</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="acct-timeout">
-                        <properties>
-                          <help>Timeout to wait reply for Interim-Update packets</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="max-try">
-                        <properties>
-                          <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
-                        </properties>
-                      </leafNode>
-                      #include <include/radius-nas-identifier.xml.i>
-                      #include <include/radius-nas-ip-address.xml.i>
-                      <node name="dae-server">
-                        <properties>
-                          <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
-                        </properties>
-                        <children>
-                          <leafNode name="ip-address">
-                            <properties>
-                              <help>IP address for Dynamic Authorization Extension server (DM/CoA)</help>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="port">
-                            <properties>
-                              <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
-                            </properties>
-                            <defaultValue>1700</defaultValue>
-                          </leafNode>
-                          <leafNode name="secret">
-                            <properties>
-                              <help>Secret for Dynamic Authorization Extension server (DM/CoA)</help>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
                       #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
                     </children>
                   </node>
@@ -240,9 +145,12 @@
                   <help>Advanced protocol options</help>
                 </properties>
                 <children>
-                  #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
+                  #include <include/accel-ppp/ppp-mppe.xml.i>
+                  #include <include/accel-ppp/ppp-options-ipv4.xml.i>
                   #include <include/accel-ppp/ppp-options-ipv6.xml.i>
                   #include <include/accel-ppp/ppp-options-ipv6-interface-id.xml.i>
+                  #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
+                  #include <include/accel-ppp/lcp-echo-timeout.xml.i>
                 </children>
               </node>
               #include <include/accel-ppp/default-pool.xml.i>
