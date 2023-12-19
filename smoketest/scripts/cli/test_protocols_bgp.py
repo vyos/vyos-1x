@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from subprocess import run
+
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -23,6 +24,7 @@ from vyos.ifconfig import Section
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.process import process_named_running
+from vyos.utils.process import cmd
 
 PROCESS_NAME = 'bgpd'
 ASN = '64512'
@@ -1160,13 +1162,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         mirror_buffer = '32000000'
         bmp_path = base_path + ['bmp']
         target_path = bmp_path + ['target', target_name]
-        bgpd_bmp_pid = process_named_running('bgpd', 'bmp')
-        command = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'restart', 'bgp']
 
+        # by default the 'bmp' module not loaded for the bgpd expect Error
         self.cli_set(bmp_path)
-        # by default the 'bmp' module not loaded for the bgpd
-        # expect Error
-        if not bgpd_bmp_pid:
+        if not process_named_running('bgpd', 'bmp'):
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
 
@@ -1174,8 +1173,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(bmp_path)
         self.cli_set(['system', 'frr', 'bmp'])
         self.cli_commit()
+
         # restart bgpd to apply "-M bmp" and update PID
-        run(command, input='Y', text=True)
+        cmd(f'sudo kill -9 {self.daemon_pid}')
+        # let the bgpd process recover
+        sleep(10)
+        # update daemon PID - this was a planned daemon restart
         self.daemon_pid = process_named_running(PROCESS_NAME)
 
         # set bmp config but not set address
