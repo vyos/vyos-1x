@@ -244,6 +244,12 @@
             </properties>
             <command>egrep -i "kernel:.*\[NAT-[A-Z]{3,}-[0-9]+(-MASQ)?\]" $(find /var/log -maxdepth 1 -type f -name messages\* | sort -t. -k2nr)</command>
           </leafNode>
+          <leafNode name="ndp-proxy">
+            <properties>
+              <help>Show log for Neighbor Discovery Protocol (NDP) Proxy</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit ndppd.service</command>
+          </leafNode>
           <leafNode name="nhrp">
             <properties>
               <help>Show log for Next Hop Resolution Protocol (NHRP)</help>

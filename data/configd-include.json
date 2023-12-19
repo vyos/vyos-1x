@@ -63,6 +63,7 @@
 "service_ipoe-server.py",
 "service_mdns-repeater.py",
 "service_monitoring_telegraf.py",
+"service_ndp-proxy.py",
 "service_pppoe-server.py",
 "service_router-advert.py",
 "service_upnp.py",
