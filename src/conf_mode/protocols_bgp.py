@@ -50,8 +50,13 @@ def get_config(config=None):
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
-    bgp = conf.get_config_dict(base, key_mangling=('-', '_'),
-                               get_first_key=True, no_tag_node_value_mangle=True)
+    bgp = conf.get_config_dict(
+        base,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_recursive_defaults=True,
+    )
 
     bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
                                                  key_mangling=('-', '_'),
