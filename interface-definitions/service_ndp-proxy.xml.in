@@ -1,0 +1,132 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="ndp-proxy" owner="${vyos_conf_scripts_dir}/service_ndp-proxy.py">
+        <properties>
+          <help>Neighbor Discovery Protocol (NDP) Proxy</help>
+        </properties>
+        <children>
+          <leafNode name="route-refresh">
+            <properties>
+              <help>Refresh interval for IPv6 routes</help>
+              <valueHelp>
+                <format>u32:10000-120000</format>
+                <description>Time in milliseconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 10000-120000"/>
+              </constraint>
+              <constraintErrorMessage>Route-refresh must be between 10000 and 120000 milliseconds</constraintErrorMessage>
+            </properties>
+            <defaultValue>30000</defaultValue>
+          </leafNode>
+          <tagNode name="interface">
+            <properties>
+              <help>NDP proxy listener interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/generic-disable-node.xml.i>
+              <leafNode name="enable-router-bit">
+                <properties>
+                  <help>Enable router bit in Neighbor Advertisement messages</help>
+                  <valueless/>
+                  </properties>
+                </leafNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Timeout for Neighbor Advertisement after Neighbor Solicitation message</help>
+                  <valueHelp>
+                    <format>u32:500-120000</format>
+                    <description>Timeout in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 500-120000"/>
+                  </constraint>
+                  <constraintErrorMessage>Timeout must be between 500 and 120000 milliseconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>500</defaultValue>
+              </leafNode>
+              <leafNode name="ttl">
+                <properties>
+                  <help>Proxy entry cache Time-To-Live</help>
+                  <valueHelp>
+                    <format>u32:10000-120000</format>
+                    <description>Time in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10000-120000"/>
+                  </constraint>
+                  <constraintErrorMessage>TTL must be between 10000 and 120000 milliseconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>30000</defaultValue>
+              </leafNode>
+              <tagNode name="prefix">
+                <properties>
+                  <help>Prefix target addresses are matched against</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 network prefix</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Specify the running mode of the rule</help>
+                      <completionHelp>
+                        <list>static auto interface</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>static</format>
+                        <description>Immediately answer any Neighbor Solicitation Messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>auto</format>
+                        <description>Check for a matching route in /proc/net/ipv6_route</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>interface</format>
+                        <description>Forward Neighbor Solicitation message through specified interface</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(static|auto|interface)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Mode must be either one of: static, auto or interface</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>static</defaultValue>
+                  </leafNode>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Interface to forward Neighbor Solicitation message through. Required for "iface" mode</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.i>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
