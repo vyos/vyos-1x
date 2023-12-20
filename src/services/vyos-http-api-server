@@ -872,13 +872,15 @@ def initialization(session: ConfigSession, app: FastAPI = app):
     global server
     try:
         server_config = load_server_config()
-        keys = flatten_keys(server_config)
     except Exception as e:
         logger.critical(f'Failed to load the HTTP API server config: {e}')
         sys.exit(1)
 
     app.state.vyos_session = session
-    app.state.vyos_keys = keys
+    app.state.vyos_keys = []
+
+    if 'keys' in server_config:
+        app.state.vyos_keys = flatten_keys(server_config)
 
     app.state.vyos_debug = bool('debug' in server_config)
     app.state.vyos_strict = bool('strict' in server_config)
