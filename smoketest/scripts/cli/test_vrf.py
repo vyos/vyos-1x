@@ -30,6 +30,7 @@ from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.system import sysctl_read
 
 base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
@@ -58,6 +59,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         for vrf in vrfs:
             self.assertNotIn(vrf, interfaces())
+        # If there is no VRF defined, strict_mode should be off
+        self.assertEqual(sysctl_read('net.vrf.strict_mode'), '0')
 
     def test_vrf_vni_and_table_id(self):
         base_table = '1000'
@@ -130,8 +133,9 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             # Ensure VRF was created
             self.assertIn(vrf, interfaces())
             # Verify IP forwarding is 1 (enabled)
-            self.assertEqual(read_file(f'/proc/sys/net/ipv4/conf/{vrf}/forwarding'), '1')
-            self.assertEqual(read_file(f'/proc/sys/net/ipv6/conf/{vrf}/forwarding'), '1')
+            self.assertEqual(sysctl_read(f'net.ipv4.conf.{vrf}.forwarding'), '1')
+            self.assertEqual(sysctl_read(f'net.ipv6.conf.{vrf}.forwarding'), '1')
+
             # Test for proper loopback IP assignment
             for addr in loopbacks:
                 self.assertTrue(is_intf_addr_assigned(vrf, addr))
@@ -149,10 +153,11 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify VRF configuration
-        tmp = read_file('/proc/sys/net/ipv4/tcp_l3mdev_accept')
-        self.assertIn(tmp, '1')
-        tmp = read_file('/proc/sys/net/ipv4/udp_l3mdev_accept')
-        self.assertIn(tmp, '1')
+        self.assertEqual(sysctl_read('net.ipv4.tcp_l3mdev_accept'), '1')
+        self.assertEqual(sysctl_read('net.ipv4.udp_l3mdev_accept'), '1')
+
+        # If there is any VRF defined, strict_mode should be on
+        self.assertEqual(sysctl_read('net.vrf.strict_mode'), '1')
 
     def test_vrf_table_id_is_unalterable(self):
         # Linux Kernel prohibits the change of a VRF table  on the fly.
@@ -290,8 +295,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             # Ensure VRF was created
             self.assertIn(vrf, interfaces())
             # Verify IP forwarding is 0 (disabled)
-            self.assertEqual(read_file(f'/proc/sys/net/ipv4/conf/{vrf}/forwarding'), '0')
-            self.assertEqual(read_file(f'/proc/sys/net/ipv6/conf/{vrf}/forwarding'), '0')
+            self.assertEqual(sysctl_read(f'net.ipv4.conf.{vrf}.forwarding'), '0')
+            self.assertEqual(sysctl_read(f'net.ipv6.conf.{vrf}.forwarding'), '0')
 
     def test_vrf_ip_protocol_route_map(self):
         table = '6000'
