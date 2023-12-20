@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,6 +24,7 @@ from time import sleep
 import vyos.defaults
 import vyos.certbot_util
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdiff import get_config_diff
 from vyos.configverify import verify_vrf
@@ -192,6 +193,9 @@ def verify(https):
         # fail the commit if no valid key configurations are found
         if (not valid_keys_exist) and (not jwt_auth):
             raise ConfigError('At least one HTTPS API key is required unless GraphQL token authentication is enabled')
+
+        if (not valid_keys_exist) and jwt_auth:
+            Warning(f'API keys are not configured: the classic (non-GraphQL) API will be unavailable.')
 
     return None
 
