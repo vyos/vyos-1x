@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -36,7 +36,6 @@ airbag.enable()
 k_mod = ['nft_nat', 'nft_chain_nat']
 
 nftables_nat66_config = '/run/nftables_nat66.nft'
-ndppd_config = '/run/ndppd/ndppd.conf'
 
 def get_config(config=None):
     if config:
@@ -101,7 +100,6 @@ def generate(nat):
         nat['first_install'] = True
 
     render(nftables_nat66_config, 'firewall/nftables-nat66.j2', nat, permission=0o755)
-    render(ndppd_config, 'ndppd/ndppd.conf.j2', nat, permission=0o755)
     return None
 
 def apply(nat):
@@ -109,14 +107,6 @@ def apply(nat):
         return None
 
     cmd(f'nft -f {nftables_nat66_config}')
-
-    if 'deleted' in nat or not dict_search('source.rule', nat):
-        cmd('systemctl stop ndppd')
-        if os.path.isfile(ndppd_config):
-            os.unlink(ndppd_config)
-    else:
-        cmd('systemctl restart ndppd')
-
     call_dependents()
 
     return None

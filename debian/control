@@ -152,7 +152,7 @@ Depends:
   console-data,
   dropbear,
 # End "service console-server"
-# For "set service aws glb"
+# For "service aws glb"
   aws-gwlbtun,
 # For "service dns dynamic"
   ddclient (>= 3.11.1),
@@ -160,6 +160,9 @@ Depends:
 # # For "service ids"
   fastnetmon [amd64],
 # End "service ids"
+# # For "service ndp-proxy"
+  ndppd,
+# End "service ndp-proxy"
 # For "service router-advert"
   radvd,
 # End "service route-advert"
@@ -251,18 +254,15 @@ Depends:
 # For "nat64"
   jool,
 # End "nat64"
-# For nat66
-  ndppd,
-# End nat66
 # For "system ntp"
   chrony,
 # End "system ntp"
 # For "vpn openconnect"
   ocserv,
 # End "vpn openconnect"
-# For "set system flow-accounting"
+# For "system flow-accounting"
   pmacct (>= 1.6.0),
-# End "set system flow-accounting"
+# End "system flow-accounting"
 # For container
   podman,
   netavark,
