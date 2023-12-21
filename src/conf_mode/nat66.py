@@ -147,17 +147,6 @@ def apply(nat):
         return None
 
     cmd(f'nft -f {nftables_nat66_config}')
-<<<<<<< HEAD
-
-    if 'deleted' in nat or not dict_search('source.rule', nat):
-        cmd('systemctl stop ndppd')
-        if os.path.isfile(ndppd_config):
-            os.unlink(ndppd_config)
-    else:
-        cmd('systemctl restart ndppd')
-=======
-    call_dependents()
->>>>>>> 4d721a580 (T2898: add ndp-proxy service)
 
     return None
 
