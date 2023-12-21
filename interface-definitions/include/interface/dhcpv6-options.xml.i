@@ -4,18 +4,7 @@
     <help>DHCPv6 client settings/options</help>
   </properties>
   <children>
-    <leafNode name="duid">
-      <properties>
-        <help>DHCP unique identifier (DUID) to be sent by dhcpv6 client</help>
-        <valueHelp>
-          <format>duid</format>
-          <description>DHCP unique identifier (DUID)</description>
-        </valueHelp>
-        <constraint>
-          <validator name="ipv6-duid"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/interface/duid.xml.i>
     <leafNode name="parameters-only">
       <properties>
         <help>Acquire only config parameters, no address</help>
