@@ -7,7 +7,7 @@
       <description>DHCP unique identifier</description>
     </valueHelp>
     <constraint>
-      <regex>([0-9A-Fa-f]{2}:){,127}([0-9A-Fa-f]{2})</regex>
+      <regex>([0-9A-Fa-f]{2}:){0,127}([0-9A-Fa-f]{2})</regex>
     </constraint>
     <constraintErrorMessage>Invalid DUID, must be in the format h[[:h]...]</constraintErrorMessage>
   </properties>
