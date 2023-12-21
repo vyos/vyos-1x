@@ -4,7 +4,7 @@
     <help>DHCPv6 client settings/options</help>
   </properties>
   <children>
-    #include <include/duid.xml.i>
+    #include <include/interface/duid.xml.i>
     <leafNode name="parameters-only">
       <properties>
         <help>Acquire only config parameters, no address</help>
