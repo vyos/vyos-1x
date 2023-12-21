@@ -8,6 +8,54 @@
           <priority>900</priority>
         </properties>
         <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface specific Segment Routing options</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+              </constraint>
+            </properties>
+            <children>
+              <node name="srv6">
+                <properties>
+                  <help>Accept SR-enabled IPv6 packets on this interface</help>
+                </properties>
+                <children>
+                  <leafNode name="hmac">
+                    <properties>
+                      <help>Define HMAC policy for ingress SR-enabled packets on this interface</help>
+                      <completionHelp>
+                        <list>accept drop ignore</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>accept</format>
+                        <description>Accept packets without HMAC, validate packets with HMAC</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>drop</format>
+                        <description>Drop packets without HMAC, validate packets with HMAC</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ignore</format>
+                        <description>Ignore HMAC field.</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(accept|drop|ignore)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>accept</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
           <node name="srv6">
             <properties>
               <help>Segment-Routing SRv6 configuration</help>
