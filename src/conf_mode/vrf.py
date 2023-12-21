@@ -214,6 +214,18 @@ def apply(vrf):
             # Delete the VRF Kernel interface
             call(f'ip link delete dev {tmp}')
 
+    # Enable/Disable VRF strict mode
+    # When net.vrf.strict_mode=0 (default) it is possible to associate multiple
+    # VRF devices to the same table. Conversely, when net.vrf.strict_mode=1 a
+    # table can be associated to a single VRF device.
+    #
+    # A VRF table can be used by the VyOS CLI only once (ensured by verify()),
+    # this simply adds an additional Kernel safety net
+    strict_mode = '0'
+    # Set to 1 if any VRF is defined
+    if 'name' in vrf: strict_mode = '1'
+    sysctl_write('net.vrf.strict_mode', strict_mode)
+
     if 'name' in vrf:
         # Separate VRFs in conntrack table
         # check if table already exists
