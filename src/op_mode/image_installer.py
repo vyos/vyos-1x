@@ -441,10 +441,8 @@ def validate_signature(file_path: str, sign_type: str) -> None:
     signature_valid: bool = False
     # validate with minisig
     if sign_type == 'minisig':
-        for pubkey in [
-                '/usr/share/vyos/keys/vyos-release.minisign.pub',
-                '/usr/share/vyos/keys/vyos-backup.minisign.pub'
-        ]:
+        pub_key_list = glob('/usr/share/vyos/keys/*.minisign.pub')
+        for pubkey in pub_key_list:
             if run(f'minisign -V -q -p {pubkey} -m {file_path} -x {file_path}.minisig'
                   ) == 0:
                 signature_valid = True
