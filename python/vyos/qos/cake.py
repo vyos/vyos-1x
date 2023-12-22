@@ -38,6 +38,8 @@ class CAKE(QoSBase):
                 tmp += f' dual-dsthost'
             if 'dual_src_host' in config['flow_isolation']:
                 tmp += f' dual-srchost'
+            if 'triple_isolate' in config['flow_isolation']:
+                tmp += f' triple-isolate'
             if 'flow' in config['flow_isolation']:
                 tmp += f' flows'
             if 'host' in config['flow_isolation']:
