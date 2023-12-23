@@ -9,7 +9,7 @@
           <constraint>
             <regex>veth[0-9]+</regex>
           </constraint>
-          <constraintErrorMessage>Virutal Ethernet interface must be named vethN</constraintErrorMessage>
+          <constraintErrorMessage>Virtual Ethernet interface must be named vethN</constraintErrorMessage>
           <valueHelp>
             <format>vethN</format>
             <description>Virtual Ethernet interface name</description>
