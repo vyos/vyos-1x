@@ -148,6 +148,11 @@ def generate(nat64) -> None:
 
             if dict_search("translation.pool", instance):
                 pool4 = []
+                # mark
+                mark = ''
+                if dict_search("match.mark", instance):
+                    mark = instance["match"]["mark"]
+
                 for pool in instance["translation"]["pool"].values():
                     if "disable" in pool:
                         continue
@@ -159,6 +164,8 @@ def generate(nat64) -> None:
                             "prefix": pool["address"],
                             "port range": pool["port"],
                         }
+                        if mark:
+                            obj["mark"] = int(mark)
                         if "description" in pool:
                             obj["comment"] = pool["description"]
 
