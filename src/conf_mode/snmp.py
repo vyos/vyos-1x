@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -86,7 +86,7 @@ def get_config(config=None):
     return snmp
 
 def verify(snmp):
-    if not snmp:
+    if 'deleted' in snmp:
         return None
 
     if {'deleted', 'lldp_snmp'} <= set(snmp):
@@ -178,8 +178,6 @@ def verify(snmp):
     return None
 
 def generate(snmp):
-
-    #
     # As we are manipulating the snmpd user database we have to stop it first!
     # This is even save if service is going to be removed
     call(f'systemctl stop {systemd_service}')
@@ -190,7 +188,7 @@ def generate(snmp):
         if os.path.isfile(file):
             os.unlink(file)
 
-    if not snmp:
+    if 'deleted' in snmp:
         return None
 
     if 'v3' in snmp:
@@ -244,7 +242,7 @@ def apply(snmp):
     # Always reload systemd manager configuration
     call('systemctl daemon-reload')
 
-    if not snmp:
+    if 'deleted' in snmp:
         return None
 
     # start SNMP daemon
@@ -257,9 +255,7 @@ def apply(snmp):
         'bgpd', 'ospf6d', 'ospfd', 'ripd', 'ripngd', 'isisd', 'ldpd', 'zebra'
     ]
     for frr_daemon in frr_daemons_list:
-        call(
-            f'vtysh -c "configure terminal" -d {frr_daemon} -c "agentx" >/dev/null'
-        )
+        call(f'vtysh -c "configure terminal" -d {frr_daemon} -c "agentx" >/dev/null')
 
     return None
 
