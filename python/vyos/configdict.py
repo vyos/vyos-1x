@@ -143,17 +143,27 @@ def leaf_node_changed(conf, path):
 
     return None
 
-def node_changed(conf, path, key_mangling=None, recursive=False):
+def node_changed(conf, path, key_mangling=None, recursive=False, expand_nodes=None) -> list:
     """
-    Check if a leaf node was altered. If it has been altered - values has been
-    changed, or it was added/removed, we will return the old value. If nothing
-    has been changed, None is returned
+    Check if node under path (or anything under path if recursive=True) was changed. By default
+    we only check if a node or subnode (recursive) was deleted from path. If expand_nodes
+    is set to Diff.ADD we can also check if something was added to the path.
+
+    If nothing changed, an empty list is returned.
     """
-    from vyos.configdiff import get_config_diff, Diff
+    from vyos.configdiff import get_config_diff
+    from vyos.configdiff import Diff
+    # to prevent circular dependencies we assign the default here
+    if not expand_nodes: expand_nodes = Diff.DELETE
     D = get_config_diff(conf, key_mangling)
-    # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE, recursive=recursive)['delete'].keys()
-    return list(keys)
+    # get_child_nodes_diff() will return dict_keys()
+    tmp = D.get_child_nodes_diff(path, expand_nodes=expand_nodes, recursive=recursive)
+    output = []
+    if expand_nodes & Diff.DELETE:
+        output.extend(list(tmp['delete'].keys()))
+    if expand_nodes & Diff.ADD:
+        output.extend(list(tmp['add'].keys()))
+    return output
 
 def get_removed_vlans(conf, path, dict):
     """
