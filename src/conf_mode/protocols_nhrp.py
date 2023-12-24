@@ -37,7 +37,7 @@ def get_config(config=None):
 
     nhrp = conf.get_config_dict(base, key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
-    nhrp['del_tunnels'] = node_changed(conf, base + ['tunnel'], key_mangling=('-', '_'))
+    nhrp['del_tunnels'] = node_changed(conf, base + ['tunnel'])
 
     if not conf.exists(base):
         return nhrp
