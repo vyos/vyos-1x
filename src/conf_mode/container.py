@@ -238,9 +238,9 @@ def verify(container):
     # A network attached to a container can not be deleted
     if {'network_remove', 'name'} <= set(container):
         for network in container['network_remove']:
-            for container, container_config in container['name'].items():
-                if 'network' in container_config and network in container_config['network']:
-                    raise ConfigError(f'Can not remove network "{network}", used by container "{container}"!')
+            for c, c_config in container['name'].items():
+                if 'network' in c_config and network in c_config['network']:
+                    raise ConfigError(f'Can not remove network "{network}", used by container "{c}"!')
 
     if 'registry' in container:
         for registry, registry_config in container['registry'].items():
