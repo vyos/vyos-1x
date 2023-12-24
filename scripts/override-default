@@ -41,6 +41,14 @@ if debug:
 else:
     logger.setLevel(logging.INFO)
 
+def clear_empty_path(el):
+    # on the odd chance of interleaved comments
+    tmp = [l for l in el if isinstance(l.tag, str)]
+    if not tmp:
+        p = el.getparent()
+        p.remove(el)
+        clear_empty_path(p)
+
 def override_element(l: list):
     """
     Allow multiple override elements; use the final one (in document order).
@@ -59,7 +67,9 @@ def override_element(l: list):
 
     # remove all but overridden element
     for el in parents:
-        el.getparent().remove(el)
+        tmp = el.getparent()
+        tmp.remove(el)
+        clear_empty_path(tmp)
 
 def merge_remaining(l: list, elementtree):
     """
@@ -81,7 +91,9 @@ def merge_remaining(l: list, elementtree):
                 # override_element() has already run
                 for child in el:
                     rp[0].append(deepcopy(child))
-                el.getparent().remove(el)
+                tmp = el.getparent()
+                tmp.remove(el)
+                clear_empty_path(tmp)
 
 def collect_and_override(dir_name):
     """
@@ -104,7 +116,7 @@ def collect_and_override(dir_name):
 
         for k, v in defv.items():
             if len(v) > 1:
-                logger.info(f"overridding default in path '{k}'")
+                logger.info(f"overriding default in path '{k}'")
                 override_element(v)
 
         to_merge = list(defv)
