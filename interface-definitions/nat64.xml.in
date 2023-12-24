@@ -26,6 +26,25 @@
             <children>
               #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
+              <node name="match">
+                <properties>
+                  <help>Match</help>
+                </properties>
+                <children>
+                  <leafNode name="mark">
+                    <properties>
+                      <help>Match fwmark value</help>
+                      <valueHelp>
+                        <format>u32:1-2147483647</format>
+                        <description>Fwmark value to match against</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-2147483647"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="source">
                 <properties>
                   <help>IPv6 source prefix options</help>
