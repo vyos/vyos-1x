@@ -23,7 +23,7 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import node_changed
+from vyos.configdict import is_node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
@@ -133,7 +133,7 @@ def get_config(config=None):
                                     with_recursive_defaults=True)
 
 
-    firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
+    firewall['group_resync'] = bool('group' in firewall or is_node_changed(conf, base + ['group']))
     if firewall['group_resync']:
         # Update nat and policy-route as firewall groups were updated
         set_dependents('group_resync', conf)

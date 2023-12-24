@@ -104,6 +104,10 @@ def list_diff(first, second):
     return [item for item in first if item not in second]
 
 def is_node_changed(conf, path):
+   """
+   Check if any key under path has been changed and return True.
+   If nothing changed, return false
+   """
    from vyos.configdiff import get_config_diff
    D = get_config_diff(conf, key_mangling=('-', '_'))
    return D.is_node_changed(path)
