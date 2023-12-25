@@ -23,6 +23,7 @@ from vyos.utils.process import popen
 _drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront',
                                       'iavf', 'ice', 'i40e', 'hv_netvsc', 'veth', 'ixgbevf',
                                       'tun']
+_drivers_without_eee = ['vmxnet3', 'virtio_net', 'xen_netfront', 'hv_netvsc']
 
 class Ethtool:
     """
@@ -55,16 +56,18 @@ class Ethtool:
     _auto_negotiation_supported = None
     _flow_control = False
     _flow_control_enabled = None
+    _eee = False
+    _eee_enabled = None
 
     def __init__(self, ifname):
         # Get driver used for interface
-        out, err = popen(f'ethtool --driver {ifname}')
+        out, _ = popen(f'ethtool --driver {ifname}')
         driver = re.search(r'driver:\s(\w+)', out)
         if driver:
             self._driver_name = driver.group(1)
 
         # Build a dictinary of supported link-speed and dupley settings.
-        out, err = popen(f'ethtool {ifname}')
+        out, _ = popen(f'ethtool {ifname}')
         reading = False
         pattern = re.compile(r'\d+base.*')
         for line in out.splitlines()[1:]:
@@ -95,7 +98,7 @@ class Ethtool:
                 self._auto_negotiation = bool(tmp == 'on')
 
         # Now populate features dictionaty
-        out, err = popen(f'ethtool --show-features {ifname}')
+        out, _ = popen(f'ethtool --show-features {ifname}')
         # skip the first line, it only says: "Features for eth0":
         for line in out.splitlines()[1:]:
             if ":" in line:
@@ -108,7 +111,7 @@ class Ethtool:
                     'fixed' : fixed
                 }
 
-        out, err = popen(f'ethtool --show-ring {ifname}')
+        out, _ = popen(f'ethtool --show-ring {ifname}')
         # We are only interested in line 2-5 which contains the device maximum
         # ringbuffers
         for line in out.splitlines()[2:6]:
@@ -133,12 +136,21 @@ class Ethtool:
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
-        out, err = popen(f'ethtool --show-pause {ifname}')
+        out, _ = popen(f'ethtool --show-pause {ifname}')
         if len(out.splitlines()) > 1:
             self._flow_control = True
             # read current flow control setting, this returns:
             # ['Autonegotiate:', 'on']
             self._flow_control_enabled = out.splitlines()[1].split()[-1]
+
+        # Get current Energy Efficient Ethernet (EEE) settings, but this is
+        # not supported by all NICs (e.g. vmxnet3 does not support is)
+        out, _ = popen(f'ethtool --show-eee {ifname}')
+        if len(out.splitlines()) > 1:
+            self._eee = True
+            # read current EEE setting, this returns:
+            # EEE status: disabled || EEE status: enabled - inactive || EEE status: enabled - active
+            self._eee_enabled = bool('enabled' in out.splitlines()[2])
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
@@ -227,3 +239,15 @@ class Ethtool:
             raise ValueError('Interface does not support changing '\
                              'flow-control settings!')
         return self._flow_control_enabled
+
+    def check_eee(self):
+        """ Check if the NIC supports eee """
+        if self.get_driver_name() in _drivers_without_eee:
+            return False
+        return self._eee
+
+    def get_eee(self):
+        if self._eee_enabled == None:
+            raise ValueError('Interface does not support changing '\
+                             'EEE settings!')
+        return self._eee_enabled
