@@ -86,9 +86,9 @@ def verify(lldp):
                     raise ConfigError(f'Must define both longitude and latitude for "{interface}" location!')
 
     # check options
-    if 'snmp' in lldp and 'enable' in lldp['snmp']:
+    if 'snmp' in lldp:
         if 'system_snmp_enabled' not in lldp:
-            raise ConfigError('SNMP must be configured to enable LLDP SNMP')
+            raise ConfigError('SNMP must be configured to enable LLDP SNMP!')
 
 
 def generate(lldp):
@@ -121,4 +121,3 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         exit(1)
-

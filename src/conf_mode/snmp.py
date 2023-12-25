@@ -54,7 +54,7 @@ def get_config(config=None):
     if not conf.exists(base):
         snmp.update({'deleted' : ''})
 
-    if conf.exists(['service', 'lldp', 'snmp', 'enable']):
+    if conf.exists(['service', 'lldp', 'snmp']):
         snmp.update({'lldp_snmp' : ''})
 
     if 'deleted' in snmp:
