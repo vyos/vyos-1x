@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -122,6 +122,20 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'configure ports {interface} med location elin "{elin}"', config)
         self.assertIn(f'configure system interface pattern "{interface}"', config)
 
+    def test_06_lldp_snmp(self):
+        self.cli_set(base_path + ['snmp'])
+
+        # verify - can not start lldp snmp without snmp beeing configured
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['service', 'snmp'])
+        self.cli_commit()
+
+        # SNMP required process to be started with -x option
+        tmp = read_file('/etc/default/lldpd')
+        self.assertIn('-x', tmp)
+
+        self.cli_delete(['service', 'snmp'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

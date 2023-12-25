@@ -175,19 +175,12 @@
               <multi/>
             </properties>
           </leafNode>
-          <node name="snmp">
+          <leafNode name="snmp">
             <properties>
-              <help>SNMP parameters for LLDP</help>
+              <help>Enable SNMP queries of the LLDP database</help>
+              <valueless/>
             </properties>
-            <children>
-              <leafNode name="enable">
-                <properties>
-                  <help>Enable SNMP queries of the LLDP database</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          </leafNode>
         </children>
       </node>
     </children>
