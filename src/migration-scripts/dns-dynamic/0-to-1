@@ -25,8 +25,10 @@
 #        to "service dns dynamic address <address> service <config> username ..."
 # - apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
 # - apply service protocol mapping upfront, they are not 'auto-detected' anymore
+# - migrate web-options url to stricter format
 
 import sys
+import re
 from vyos.configtree import ConfigTree
 
 service_protocol_mapping = {
@@ -104,8 +106,17 @@ for address in config.list_nodes(new_base_path):
                                 new_base_path + ['web', svc_type, f'{svc_cfg}-{address}'])
 
         # Multiple web-options were not supported, so copy only the first one
+        # Also, migrate web-options url to stricter format and transition
+        # checkip.dyndns.org to https://domains.google.com/checkip for better
+        # TLS support (see: https://github.com/ddclient/ddclient/issues/597)
         if not config.exists(new_base_path + ['web', 'web-options']):
             config.copy(new_base_path + [address, 'use-web'], new_base_path + ['web', 'web-options'])
+            if config.exists(new_base_path + ['web', 'web-options', 'url']):
+                url = config.return_value(new_base_path + ['web', 'web-options', 'url'])
+                if re.search("^(https?://)?checkip\.dyndns\.org", url):
+                    config.set(new_base_path + ['web', 'web-options', 'url'], 'https://domains.google.com/checkip')
+                if not url.startswith(('http://', 'https://')):
+                    config.set(new_base_path + ['web', 'web-options', 'url'], f'https://{url}')
 
         config.delete(new_base_path + [address])
 
