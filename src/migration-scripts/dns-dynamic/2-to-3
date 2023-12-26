@@ -37,7 +37,7 @@ def normalize_name(name):
     # Normalize unicode characters to ASCII (NFKD)
     # Replace all separators with hypens, strip leading and trailing hyphens
     name = normalize('NFKD', name).encode('ascii', 'ignore').decode()
-    name = re.sub(r'(\s|\W)+', '-', name).strip('-')
+    name = re.sub(r'(\s|_|\W)+', '-', name).strip('-')
 
     return name
 
