@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-
+import re
 from sys import exit
 
 from vyos.base import Warning
@@ -102,6 +102,16 @@ def verify(dyndns):
             if 'web_options' in config:
                 raise ConfigError(f'"web-options" is applicable only when using HTTP(S) '
                                   f'web request to obtain the IP address')
+
+        # Warn if using checkip.dyndns.org, as it does not support HTTPS
+        # See: https://github.com/ddclient/ddclient/issues/597
+        if 'web_options' in config:
+            if 'url' not in config['web_options']:
+                raise ConfigError(f'"url" in "web-options" {error_msg_req} '
+                                  f'with protocol "{config["protocol"]}"')
+            elif re.search("^(https?://)?checkip\.dyndns\.org", config['web_options']['url']):
+                Warning(f'"checkip.dyndns.org" does not support HTTPS requests for IP address '
+                        f'lookup. Please use a different IP address lookup service.')
 
         # RFC2136 uses 'key' instead of 'password'
         if config['protocol'] != 'nsupdate' and 'password' not in config:
