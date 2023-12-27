@@ -33,6 +33,9 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestPolicyRoute, cls).setUpClass()
+        # Clear out current configuration to allow running this test on a live system
+        cls.cli_delete(cls, ['policy', 'route'])
+        cls.cli_delete(cls, ['policy', 'route6'])
 
         cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
         cls.cli_set(cls, ['protocols', 'static', 'table', table_id, 'route', '0.0.0.0/0', 'interface', interface])
@@ -189,6 +192,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
 
     def test_pbr_matching_criteria(self):
+        self.cli_set(['policy', 'route', 'smoketest', 'default-log'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'udp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'action', 'drop'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'mark', '2020'])
@@ -216,6 +220,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '5', 'mark', '!456-500'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '5', 'set', 'table', table_id])
 
+        self.cli_set(['policy', 'route6', 'smoketest6', 'default-log'])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'protocol', 'udp'])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'action', 'drop'])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'protocol', 'tcp'])
@@ -255,7 +260,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
             ['tcp flags syn / syn,ack', 'meta mark 0x00000002-0x00000bb8', 'meta mark set ' + mark_hex],
             ['ct state new', 'tcp dport 22', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark != 0x000001c8', 'meta mark set ' + mark_hex],
             ['log prefix "[ipv4-route-smoketest-4-A]"', 'icmp type echo-request', 'ip length { 128, 1024-2048 }', 'meta pkttype other', 'meta mark set ' + mark_hex],
-            ['ip dscp { 0x29, 0x39-0x3b }', 'meta mark != 0x000001c8-0x000001f4', 'meta mark set ' + mark_hex]
+            ['ip dscp { 0x29, 0x39-0x3b }', 'meta mark != 0x000001c8-0x000001f4', 'meta mark set ' + mark_hex],
+            ['log prefix "[ipv4-smoketest-default]"']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_mangle')
@@ -266,8 +272,9 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
             ['meta l4proto udp', 'drop'],
             ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
             ['ct state new', 'tcp dport 22', 'ip6 saddr 2001:db8::/64', 'ip6 hoplimit > 2', 'meta mark set ' + mark_hex],
-            ['log prefix "[ipv6-route6-smoketest6-4-A]"', 'icmpv6 type echo-request', 'ip6 length != { 128, 1024-2048 }', 'meta pkttype multicast', 'meta mark set ' + mark_hex],            
-            ['ip6 dscp != { 0x0e-0x13, 0x3d }', 'meta mark set ' + mark_hex]
+            ['log prefix "[ipv6-route6-smoketest6-4-A]"', 'icmpv6 type echo-request', 'ip6 length != { 128, 1024-2048 }', 'meta pkttype multicast', 'meta mark set ' + mark_hex],
+            ['ip6 dscp != { 0x0e-0x13, 0x3d }', 'meta mark set ' + mark_hex],
+            ['log prefix "[ipv6-smoketest6-default]"']
         ]
 
         self.verify_nftables(nftables6_search, 'ip6 vyos_mangle')
