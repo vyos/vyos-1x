@@ -27,9 +27,10 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
+from vyos.utils.file import chmod_775
+from vyos.utils.file import makedir
 from vyos.utils.file import write_file
 from vyos.utils.process import call
-from vyos.utils.process import run
 from vyos.utils.network import is_subnet_connected
 from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
@@ -39,8 +40,9 @@ airbag.enable()
 ctrl_config_file = '/run/kea/kea-ctrl-agent.conf'
 ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
 config_file = '/run/kea/kea-dhcp4.conf'
-lease_file = '/config/dhcp4.leases'
+lease_file = '/config/dhcp/dhcp4-leases.csv'
 systemd_override = r'/run/systemd/system/kea-ctrl-agent.service.d/10-override.conf'
+user_group = '_kea'
 
 ca_cert_file = '/run/kea/kea-failover-ca.pem'
 cert_file = '/run/kea/kea-failover.pem'
@@ -308,8 +310,15 @@ def generate(dhcp):
     dhcp['lease_file'] = lease_file
     dhcp['machine'] = os.uname().machine
 
+    # Create directory for lease file if necessary
+    lease_dir = os.path.dirname(lease_file)
+    if not os.path.isdir(lease_dir):
+        makedir(lease_dir, group='vyattacfg')
+        chmod_775(lease_dir)
+
+    # Create lease file if necessary and let kea own it - 'kea-lfc' expects it that way
     if not os.path.exists(lease_file):
-        write_file(lease_file, '', user='_kea', group='vyattacfg', mode=0o755)
+        write_file(lease_file, '', user=user_group, group=user_group, mode=0o644)
 
     for f in [cert_file, cert_key_file, ca_cert_file]:
         if os.path.exists(f):
@@ -320,8 +329,8 @@ def generate(dhcp):
             cert_name = dhcp['failover']['certificate']
             cert_data = dhcp['pki']['certificate'][cert_name]['certificate']
             key_data = dhcp['pki']['certificate'][cert_name]['private']['key']
-            write_file(cert_file, wrap_certificate(cert_data), user='_kea', mode=0o600)
-            write_file(cert_key_file, wrap_private_key(key_data), user='_kea', mode=0o600)
+            write_file(cert_file, wrap_certificate(cert_data), user=user_group, mode=0o600)
+            write_file(cert_key_file, wrap_private_key(key_data), user=user_group, mode=0o600)
 
             dhcp['failover']['cert_file'] = cert_file
             dhcp['failover']['cert_key_file'] = cert_key_file
@@ -329,14 +338,14 @@ def generate(dhcp):
         if 'ca_certificate' in dhcp['failover']:
             ca_cert_name = dhcp['failover']['ca_certificate']
             ca_cert_data = dhcp['pki']['ca'][ca_cert_name]['certificate']
-            write_file(ca_cert_file, wrap_certificate(ca_cert_data), user='_kea', mode=0o600)
+            write_file(ca_cert_file, wrap_certificate(ca_cert_data), user=user_group, mode=0o600)
 
             dhcp['failover']['ca_cert_file'] = ca_cert_file
 
         render(systemd_override, 'dhcp-server/10-override.conf.j2', dhcp)
 
-    render(ctrl_config_file, 'dhcp-server/kea-ctrl-agent.conf.j2', dhcp)
-    render(config_file, 'dhcp-server/kea-dhcp4.conf.j2', dhcp)
+    render(ctrl_config_file, 'dhcp-server/kea-ctrl-agent.conf.j2', dhcp, user=user_group, group=user_group)
+    render(config_file, 'dhcp-server/kea-dhcp4.conf.j2', dhcp, user=user_group, group=user_group)
 
     return None
 

@@ -31,9 +31,6 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.kea import kea_get_active_config
 from vyos.kea import kea_get_pool_from_subnet_id
 from vyos.kea import kea_parse_leases
-from vyos.utils.dict import dict_search
-from vyos.utils.file import read_file
-from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 
 time_string = "%a %b %d %H:%M:%S %Z %Y"
@@ -79,8 +76,8 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     Get DHCP server leases
     :return list
     """
-    lease_file = '/config/dhcp6.leases' if family == 'inet6' else '/config/dhcp4.leases'
-    data = []
+    inet_suffix = '6' if family == 'inet6' else '4'
+    lease_file = f'/config/dhcp/dhcp{inet_suffix}-leases.csv'
     leases = kea_parse_leases(lease_file)
 
     if pool is None:
@@ -88,9 +85,9 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     else:
         pool = [pool]
 
-    inet_suffix = '6' if family == 'inet6' else '4'
     active_config = kea_get_active_config(inet_suffix)
 
+    data = []
     for lease in leases:
         data_lease = {}
         data_lease['ip'] = lease['address']
