@@ -365,6 +365,7 @@ class BasicAccelPPPTest:
             first_pool = "POOL1"
             second_pool = "POOL2"
             range = "192.0.2.10-192.0.2.20"
+            range_config = "192.0.2.10-20"
 
             self.set(["gateway-address", gateway])
             self.set(["client-ip-pool", first_pool, "range", subnet])
@@ -382,7 +383,7 @@ class BasicAccelPPPTest:
             self.assertEqual(
                 f"{first_pool},next={second_pool}", conf["ip-pool"][f"{subnet},name"]
             )
-            self.assertEqual(second_pool, conf["ip-pool"][f"{range},name"])
+            self.assertEqual(second_pool, conf["ip-pool"][f"{range_config},name"])
             self.assertEqual(gateway, conf["ip-pool"]["gw-ip-address"])
             self.assertEqual(first_pool, conf[self._protocol_section]["ip-pool"])
 
