@@ -84,12 +84,6 @@ def verify_rule(config, err_msg, groups_dict):
                               'ports can only be specified when protocol is '\
                               'either tcp, udp or tcp_udp!')
 
-        if is_ip_network(dict_search('translation.address', config)):
-            raise ConfigError(f'{err_msg}\n' \
-                             'Cannot use ports with an IPv4 network as translation address as it\n' \
-                             'statically maps a whole network of addresses onto another\n' \
-                             'network of addresses')
-
     for side in ['destination', 'source']:
         if side in config:
             side_conf = config[side]

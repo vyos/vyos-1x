@@ -89,7 +89,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
             if addr and is_ip_network(addr):
                 if not ipv6:
                     map_addr =  dict_search_args(rule_conf, nat_type, 'address')
-                    translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
+                    if port:
+                        translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} . {port} }}')
+                    else:
+                        translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
                     ignore_type_addr = True
                 else:
                     translation_output.append(f'prefix to {addr}')
@@ -112,7 +115,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         if port_mapping and port_mapping != 'none':
             options.append(port_mapping)
 
-        translation_str = " ".join(translation_output) + (f':{port}' if port else '')
+        if ((not addr) or (addr and not is_ip_network(addr))) and port:
+            translation_str = " ".join(translation_output) + (f':{port}')
+        else:
+            translation_str = " ".join(translation_output)
 
         if options:
             translation_str += f' {",".join(options)}'
