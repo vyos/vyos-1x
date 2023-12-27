@@ -12,10 +12,16 @@ gw-ip-address={{ gateway_address }}
 {%     endif %}
 {%     for pool in ordered_named_pools %}
 {%         for pool_name, pool_config in pool.items() %}
+{%             set iprange_str = pool_config.range %}
+{%             set iprange_list = pool_config.range.split('-') %}
+{%             if iprange_list | length == 2 %}
+{%                 set last_ip_oct = iprange_list[1].split('.') %}
+{%                 set iprange_str = iprange_list[0] + '-' + last_ip_oct[last_ip_oct | length - 1] %}
+{%             endif %}
 {%             if pool_config.next_pool is vyos_defined %}
-{{ pool_config.range }},name={{ pool_name }},next={{ pool_config.next_pool }}
+{{ iprange_str }},name={{ pool_name }},next={{ pool_config.next_pool }}
 {%             else %}
-{{ pool_config.range }},name={{ pool_name }}
+{{ iprange_str }},name={{ pool_name }}
 {%             endif %}
 {%         endfor %}
 {%     endfor %}
