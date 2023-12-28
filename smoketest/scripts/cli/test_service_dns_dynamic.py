@@ -17,8 +17,6 @@
 import os
 import unittest
 import tempfile
-import random
-import string
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -67,14 +65,12 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(name_path + [svc, 'address', interface])
             self.cli_set(name_path + [svc, 'host-name', hostname])
             self.cli_set(name_path + [svc, 'password', password])
-            self.cli_set(name_path + [svc, 'zone', zone])
-            self.cli_set(name_path + [svc, 'ttl', ttl])
             for opt, value in details.items():
                 self.cli_set(name_path + [svc, opt, value])
 
-            # 'zone' option is supported and required by 'cloudfare', but not 'freedns' and 'zoneedit'
+            # 'zone' option is supported by 'cloudfare' and 'zoneedit1', but not 'freedns'
             self.cli_set(name_path + [svc, 'zone', zone])
-            if details['protocol'] == 'cloudflare':
+            if details['protocol'] in ['cloudflare', 'zoneedit1']:
                 pass
             else:
                 # exception is raised for unsupported ones
@@ -292,7 +288,36 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'password=\'{password}\'', ddclient_conf)
         self.assertIn(f'{hostname}', ddclient_conf)
 
-    def test_07_dyndns_vrf(self):
+    def test_07_dyndns_dynamic_interface(self):
+        # Check if DDNS service can be configured and runs
+        svc_path = name_path + ['namecheap']
+        proto = 'namecheap'
+        dyn_interface = 'pppoe587'
+
+        self.cli_set(svc_path + ['address', dyn_interface])
+        self.cli_set(svc_path + ['protocol', proto])
+        self.cli_set(svc_path + ['server', server])
+        self.cli_set(svc_path + ['username', username])
+        self.cli_set(svc_path + ['password', password])
+        self.cli_set(svc_path + ['host-name', hostname])
+
+        # Dynamic interface will raise a warning but still go through
+        # XXX: We should have idiomatic class "ConfigSessionWarning" wrapping
+        #      "Warning" similar to "ConfigSessionError".
+        # with self.assertWarns(Warning):
+        #     self.cli_commit()
+        self.cli_commit()
+
+        # Check the generating config parameters
+        ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+        self.assertIn(f'ifv4={dyn_interface}', ddclient_conf)
+        self.assertIn(f'protocol={proto}', ddclient_conf)
+        self.assertIn(f'server={server}', ddclient_conf)
+        self.assertIn(f'login={username}', ddclient_conf)
+        self.assertIn(f'password=\'{password}\'', ddclient_conf)
+        self.assertIn(f'{hostname}', ddclient_conf)
+
+    def test_08_dyndns_vrf(self):
         # Table number randomized, but should be within range 100-65535
         vrf_table = '58710'
         vrf_name = f'vyos-test-{vrf_table}'

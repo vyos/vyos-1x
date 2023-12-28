@@ -25,8 +25,10 @@
 #        to "service dns dynamic address <address> service <config> username ..."
 # - apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
 # - apply service protocol mapping upfront, they are not 'auto-detected' anymore
+# - migrate web-options url to stricter format
 
 import sys
+import re
 from vyos.configtree import ConfigTree
 
 service_protocol_mapping = {
@@ -81,20 +83,42 @@ for address in config.list_nodes(new_base_path):
                 config.rename(new_base_path + [address, 'service', svc_cfg, 'login'], 'username')
             # Apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
             if config.exists(new_base_path + [address, 'ipv6-enable']):
-                config.set(new_base_path + [address, 'service', svc_cfg, 'ip-version'],
-                           value='ipv6', replace=False)
+                config.set(new_base_path + [address, 'service', svc_cfg, 'ip-version'], 'ipv6')
                 config.delete(new_base_path + [address, 'ipv6-enable'])
             # Apply service protocol mapping upfront, they are not 'auto-detected' anymore
             if svc_cfg in service_protocol_mapping:
                 config.set(new_base_path + [address, 'service', svc_cfg, 'protocol'],
-                           value=service_protocol_mapping.get(svc_cfg), replace=False)
+                           service_protocol_mapping.get(svc_cfg))
 
-    # Migrate "service dns dynamic interface <interface> use-web"
-    #      to "service dns dynamic address <address> web-options"
-    # Also, rename <address> to 'web' literal for backward compatibility
+    # If use-web is set, then:
+    #   Move "service dns dynamic address <address> <service|rfc2136> <service> ..."
+    #     to "service dns dynamic address web <service|rfc2136> <service>-<address> ..."
+    #   Move "service dns dynamic address web use-web ..."
+    #     to "service dns dynamic address web web-options ..."
+    # Note: The config is named <service>-<address> to avoid name conflict with old entries
     if config.exists(new_base_path + [address, 'use-web']):
-        config.rename(new_base_path + [address], 'web')
-        config.rename(new_base_path + ['web', 'use-web'], 'web-options')
+        for svc_type in ['rfc2136', 'service']:
+            if config.exists(new_base_path + [address, svc_type]):
+                config.set(new_base_path + ['web', svc_type])
+                config.set_tag(new_base_path + ['web', svc_type])
+                for svc_cfg in config.list_nodes(new_base_path + [address, svc_type]):
+                    config.copy(new_base_path + [address, svc_type, svc_cfg],
+                                new_base_path + ['web', svc_type, f'{svc_cfg}-{address}'])
+
+        # Multiple web-options were not supported, so copy only the first one
+        # Also, migrate web-options url to stricter format and transition
+        # checkip.dyndns.org to https://domains.google.com/checkip for better
+        # TLS support (see: https://github.com/ddclient/ddclient/issues/597)
+        if not config.exists(new_base_path + ['web', 'web-options']):
+            config.copy(new_base_path + [address, 'use-web'], new_base_path + ['web', 'web-options'])
+            if config.exists(new_base_path + ['web', 'web-options', 'url']):
+                url = config.return_value(new_base_path + ['web', 'web-options', 'url'])
+                if re.search("^(https?://)?checkip\.dyndns\.org", url):
+                    config.set(new_base_path + ['web', 'web-options', 'url'], 'https://domains.google.com/checkip')
+                if not url.startswith(('http://', 'https://')):
+                    config.set(new_base_path + ['web', 'web-options', 'url'], f'https://{url}')
+
+        config.delete(new_base_path + [address])
 
 try:
     with open(file_name, 'w') as f:

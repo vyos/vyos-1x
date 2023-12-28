@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-
+import re
 from sys import exit
 
 from vyos.base import Warning
@@ -29,6 +29,9 @@ airbag.enable()
 
 config_file = r'/run/ddclient/ddclient.conf'
 systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
+
+# Dynamic interfaces that might not exist when the configuration is loaded
+dynamic_interfaces = ('pppoe', 'sstpc')
 
 # Protocols that require zone
 zone_necessary = ['cloudflare', 'digitalocean', 'godaddy', 'hetzner', 'gandi',
@@ -86,17 +89,29 @@ def verify(dyndns):
             if field not in config:
                 raise ConfigError(f'"{field.replace("_", "-")}" {error_msg_req}')
 
-        # If dyndns address is an interface, ensure that it exists
+        # If dyndns address is an interface, ensure
+        # that the interface exists (or just warn if dynamic interface)
         # and that web-options are not set
         if config['address'] != 'web':
             # exclude check interface for dynamic interfaces
-            interface_filter = ('pppoe', 'sstpc')
-            if config['address'].startswith(interface_filter):
-                Warning(f'interface {config["address"]} does not exist!')
+            if config['address'].startswith(dynamic_interfaces):
+                Warning(f'Interface "{config["address"]}" does not exist yet and cannot '
+                        f'be used for Dynamic DNS service "{service}" until it is up!')
             else:
                 verify_interface_exists(config['address'])
             if 'web_options' in config:
-                raise ConfigError(f'"web-options" is applicable only when using HTTP(S) web request to obtain the IP address')
+                raise ConfigError(f'"web-options" is applicable only when using HTTP(S) '
+                                  f'web request to obtain the IP address')
+
+        # Warn if using checkip.dyndns.org, as it does not support HTTPS
+        # See: https://github.com/ddclient/ddclient/issues/597
+        if 'web_options' in config:
+            if 'url' not in config['web_options']:
+                raise ConfigError(f'"url" in "web-options" {error_msg_req} '
+                                  f'with protocol "{config["protocol"]}"')
+            elif re.search("^(https?://)?checkip\.dyndns\.org", config['web_options']['url']):
+                Warning(f'"checkip.dyndns.org" does not support HTTPS requests for IP address '
+                        f'lookup. Please use a different IP address lookup service.')
 
         # RFC2136 uses 'key' instead of 'password'
         if config['protocol'] != 'nsupdate' and 'password' not in config:
@@ -124,13 +139,16 @@ def verify(dyndns):
 
         if config['ip_version'] == 'both':
             if config['protocol'] not in dualstack_supported:
-                raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} with protocol "{config["protocol"]}"')
+                raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} '
+                                  f'with protocol "{config["protocol"]}"')
             # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
             if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] not in dyndns_dualstack_servers:
-                raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} for "{config["server"]}" with protocol "{config["protocol"]}"')
+                raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} '
+                                  f'for "{config["server"]}" with protocol "{config["protocol"]}"')
 
         if {'wait_time', 'expiry_time'} <= config.keys() and int(config['expiry_time']) < int(config['wait_time']):
-                raise ConfigError(f'"expiry-time" must be greater than "wait-time" for Dynamic DNS service "{service}"')
+                raise ConfigError(f'"expiry-time" must be greater than "wait-time" for '
+                                  f'Dynamic DNS service "{service}"')
 
     return None
 
