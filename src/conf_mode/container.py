@@ -349,7 +349,7 @@ def generate_run_arguments(name, container_config):
             else:
                 ip_param += f' --ip {address}'
 
-    return f'{container_base_cmd} --net {networks} {ip_param} {entrypoint} {image} {command} {command_arguments}'.strip()
+    return f'{container_base_cmd} --no-healthcheck --net {networks} {ip_param} {entrypoint} {image} {command} {command_arguments}'.strip()
 
 def generate(container):
     # bail out early - looks like removal from running config
