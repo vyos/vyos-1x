@@ -166,7 +166,6 @@ class BasicAccelPPPTest:
             static_ip = "100.100.100.101"
             upload = "5000"
             download = "10000"
-
             self.set(
                 [
                     "authentication",
@@ -254,6 +253,9 @@ class BasicAccelPPPTest:
             radius_key = "secretVyOS"
             radius_port = "2000"
             radius_port_acc = "3000"
+            acct_interim_jitter = '10'
+            acct_interim_interval = '10'
+            acct_timeout = '30'
 
             self.set(["authentication", "mode", "radius"])
             self.set(
@@ -277,6 +279,30 @@ class BasicAccelPPPTest:
                     radius_server,
                     "acct-port",
                     radius_port_acc,
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "acct-interim-jitter",
+                    acct_interim_jitter,
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "accounting-interim-interval",
+                    acct_interim_interval,
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "acct-timeout",
+                    acct_timeout,
                 ]
             )
 
@@ -307,7 +333,9 @@ class BasicAccelPPPTest:
 
             # check auth
             self.assertTrue(conf["radius"].getboolean("verbose"))
-            self.assertEqual(conf["radius"]["acct-timeout"], "3")
+            self.assertEqual(conf["radius"]["acct-timeout"], acct_timeout)
+            self.assertEqual(conf["radius"]["acct-interim-interval"], acct_interim_interval)
+            self.assertEqual(conf["radius"]["acct-interim-jitter"], acct_interim_jitter)
             self.assertEqual(conf["radius"]["timeout"], "3")
             self.assertEqual(conf["radius"]["max-try"], "3")
 
