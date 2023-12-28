@@ -108,7 +108,6 @@ unit-cache={{ ppp_options.interface_cache }}
 [pppoe]
 verbose=1
 ac-name={{ access_concentrator }}
-
 {% if interface is vyos_defined %}
 {%     for iface, iface_config in interface.items() %}
 {%         if iface_config.vlan is not vyos_defined %}
@@ -121,11 +120,9 @@ vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
-
 {% if service_name %}
 service-name={{ service_name | join(',') }}
 {% endif %}
-
 {% if pado_delay %}
 {%     set pado_delay_param = namespace(value='0') %}
 {%     for delay in pado_delay | sort(attribute='0') %}
@@ -140,21 +137,11 @@ pado-delay={{ pado_delay_param.value }}
 {% if authentication.radius.called_sid_format is vyos_defined %}
 called-sid={{ authentication.radius.called_sid_format }}
 {% endif %}
-
-{% if authentication.mode is vyos_defined("local") or authentication.mode is vyos_defined("noauth") %}
-{%     if authentication.mode is vyos_defined("noauth") %}
+{% if authentication.mode is vyos_defined("noauth") %}
 noauth=1
-{%     endif %}
-{%     if client_ip_pool.name is vyos_defined %}
-{%         for pool, pool_config in client_ip_pool.name.items() %}
-{%             if pool_config.subnet is vyos_defined %}
-ip-pool={{ pool }}
-{%             endif %}
-{%             if pool_config.gateway_address is vyos_defined %}
-gw-ip-address={{ pool_config.gateway_address }}/{{ pool_config.subnet.split('/')[1] }}
-{%             endif %}
-{%         endfor %}
-{%     endif %}
+{% endif %}
+{% if default_pool is vyos_defined %}
+ip-pool={{ default_pool }}
 {% endif %}
 
 {% if limits is vyos_defined %}

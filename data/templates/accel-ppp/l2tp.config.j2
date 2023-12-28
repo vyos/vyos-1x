@@ -6,11 +6,9 @@ chap-secrets
 {% for proto in auth_proto %}
 {{ proto }}
 {% endfor %}
-
 {% if auth_mode == 'radius' %}
 radius
 {% endif %}
-
 ippool
 shaper
 ipv6pool
@@ -65,24 +63,15 @@ secret={{ lns_shared_secret }}
 {% if lns_host_name %}
 host-name={{ lns_host_name }}
 {% endif %}
+{% if default_pool is vyos_defined %}
+ip-pool={{ default_pool }}
+{% endif %}
 
 [client-ip-range]
 0.0.0.0/0
 
-{% if client_ip_pool or client_ip_subnets %}
-[ip-pool]
-{%     if client_ip_pool %}
-{{ client_ip_pool }}
-{%     endif %}
-{%     if client_ip_subnets %}
-{%         for sn in client_ip_subnets %}
-{{ sn }}
-{%         endfor %}
-{%     endif %}
-{% endif %}
-{% if gateway_address %}
-gw-ip-address={{ gateway_address }}
-{% endif %}
+{# Common IP pool definitions #}
+{% include 'accel-ppp/config_ip_pool.j2' %}
 
 {% if auth_mode == 'local' %}
 [chap-secrets]
@@ -115,7 +104,7 @@ nas-ip-address={{ radius_nas_ip }}
 bind={{ radius_source_address }}
 {%     endif %}
 {% endif %}
-{% if gateway_address %}
+{% if gateway_address is vyos_defined %}
 gw-ip-address={{ gateway_address }}
 {% endif %}
 

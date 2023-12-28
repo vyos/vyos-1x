@@ -55,38 +55,18 @@ noauth=1
 username=ifname
 password=csid
 {% endif %}
-{% if client_ip_pool.name is vyos_defined %}
-{%     if first_named_pool is vyos_defined %}
-ip-pool={{ first_named_pool }}
-{%     else %}
-{%         for pool, pool_options in client_ip_pool.name.items() %}
-{%             if pool_options.subnet is vyos_defined %}
-ip-pool={{ pool }}
-{%             endif %}
-{%         endfor %}
-{%     endif %}
-{%     for pool, pool_options in client_ip_pool.name.items() %}
-{%         if pool_options.gateway_address is vyos_defined %}
-gw-ip-address={{ pool_options.gateway_address }}/{{ pool_options.subnet.split('/')[1] }}
-{%         endif %}
+{% if default_pool is vyos_defined %}
+ip-pool={{ default_pool }}
+{% endif %}
+{% if gateway_address is vyos_defined %}
+{%     for gw_addr in gateway_address %}
+gw-ip-address={{ gw_addr }}
 {%     endfor %}
 {% endif %}
 proxy-arp=1
 
-{% if ordered_named_pools is vyos_defined %}
-[ip-pool]
-{%     for p in ordered_named_pools %}
-{%         for pool, pool_options in p.items() %}
-{%             set next_named_pool = ',next=' ~ pool_options.next_pool if pool_options.next_pool is vyos_defined else '' %}
-{{ pool_options.subnet }},name={{ pool }}{{ next_named_pool }}
-{%         endfor %}
-{%     endfor %}
-{%     for p in ordered_named_pools %}
-{%         for pool, pool_options in p.items() %}
-gw-ip-address={{ pool_options.gateway_address }}/{{ pool_options.subnet.split('/')[1] }}
-{%         endfor %}
-{%     endfor %}
-{% endif %}
+{# Common IP pool definitions #}
+{% include 'accel-ppp/config_ip_pool.j2' %}
 
 {# Common IPv6 pool definitions #}
 {% include 'accel-ppp/config_ipv6_pool.j2' %}

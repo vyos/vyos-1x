@@ -116,15 +116,7 @@
                 </children>
               </node>
               #include <include/accel-ppp/wins-server.xml.i>
-              <node name="client-ip-pool">
-                <properties>
-                  <help>Pool of client IP addresses (must be within a /24)</help>
-                </properties>
-                <children>
-                  #include <include/accel-ppp/client-ip-pool-start-stop.xml.i>
-                  #include <include/accel-ppp/client-ip-pool-subnet.xml.i>
-                </children>
-              </node>
+              #include <include/accel-ppp/client-ip-pool.xml.i>
               #include <include/accel-ppp/client-ipv6-pool.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/dhcp-interface.xml.i>
@@ -253,6 +245,7 @@
                   #include <include/accel-ppp/ppp-options-ipv6-interface-id.xml.i>
                 </children>
               </node>
+              #include <include/accel-ppp/default-pool.xml.i>
             </children>
           </node>
         </children>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,13 +21,15 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
 from vyos.configdict import dict_merge
-from vyos.configverify import verify_accel_ppp_base_service
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.dict import dict_search
+from vyos.accel_ppp_util import verify_accel_ppp_base_service
+from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
+from vyos.accel_ppp_util import get_pools_in_order
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.file import write_file
 from vyos import ConfigError
@@ -53,12 +55,16 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     sstp = get_accel_dict(conf, base, sstp_chap_secrets)
+    if dict_search('client_ip_pool', sstp):
+        # Multiple named pools require ordered values T5099
+        sstp['ordered_named_pools'] = get_pools_in_order(dict_search('client_ip_pool', sstp))
     if sstp:
         sstp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                            get_first_key=True,
                                            no_tag_node_value_mangle=True)
-
+    sstp['server_type'] = 'sstp'
     return sstp
+
 
 def verify(sstp):
     if not sstp:
@@ -75,6 +81,7 @@ def verify(sstp):
     if 'client_ip_pool' not in sstp and 'client_ipv6_pool' not in sstp:
         raise ConfigError('Client IP subnet required')
 
+    verify_accel_ppp_ip_pool(sstp)
     #
     # SSL certificate checks
     #

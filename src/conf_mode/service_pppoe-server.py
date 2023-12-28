@@ -21,13 +21,16 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
 from vyos.configdict import is_node_changed
-from vyos.configverify import verify_accel_ppp_base_service
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
+from vyos.accel_ppp_util import verify_accel_ppp_base_service
+from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
+from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
@@ -45,6 +48,10 @@ def get_config(config=None):
     # retrieve common dictionary keys
     pppoe = get_accel_dict(conf, base, pppoe_chap_secrets)
 
+    if dict_search('client_ip_pool', pppoe):
+        # Multiple named pools require ordered values T5099
+        pppoe['ordered_named_pools'] = get_pools_in_order(dict_search('client_ip_pool', pppoe))
+
     # reload-or-restart does not implemented in accel-ppp
     # use this workaround until it will be implemented
     # https://phabricator.accel-ppp.org/T3
@@ -53,7 +60,7 @@ def get_config(config=None):
                   is_node_changed(conf, base + ['interface'])]
     if any(conditions):
         pppoe.update({'restart_required': {}})
-
+    pppoe['server_type'] = 'pppoe'
     return pppoe
 
 def verify(pppoe):
@@ -72,12 +79,7 @@ def verify(pppoe):
     for interface in pppoe['interface']:
         verify_interface_exists(interface)
 
-    # local ippool and gateway settings config checks
-    if not (dict_search('client_ip_pool.subnet', pppoe) or
-           (dict_search('client_ip_pool.name', pppoe) or
-           (dict_search('client_ip_pool.start', pppoe) and
-            dict_search('client_ip_pool.stop', pppoe)))):
-        print('Warning: No PPPoE client pool defined')
+    verify_accel_ppp_ip_pool(pppoe)
 
     if dict_search('authentication.radius.dynamic_author.server', pppoe):
         if not dict_search('authentication.radius.dynamic_author.key', pppoe):

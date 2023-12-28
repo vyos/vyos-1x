@@ -1,24 +1,28 @@
-{% if client_ip_pool is vyos_defined %}
+{% if ordered_named_pools is vyos_defined %}
 [ip-pool]
 {%     if gateway_address is vyos_defined %}
+{%         if server_type == 'ipoe' %}
+{%             for gw in gateway_address %}
+{%                 set host_address, _ = gw.split('/') %}
+gw-ip-address={{ host_address }}
+{%             endfor %}
+{%         else %}
 gw-ip-address={{ gateway_address }}
+{%         endif %}
 {%     endif %}
-{%     if client_ip_pool.start is vyos_defined and client_ip_pool.stop is vyos_defined %}
-{{ client_ip_pool.start }}-{{ client_ip_pool.stop.split('.')[3] }}
-{%     endif %}
-{%     if client_ip_pool.subnet is vyos_defined %}
-{%         for subnet in client_ip_pool.subnet %}
-{{ subnet }}
-{%         endfor %}
-{%     endif %}
-{%     if client_ip_pool.name is vyos_defined %}
-{%         for pool, pool_config in client_ip_pool.name.items() %}
-{%             if pool_config.subnet is vyos_defined %}
-{{ pool_config.subnet }},name={{ pool }}
+{%     for pool in ordered_named_pools %}
+{%         for pool_name, pool_config in pool.items() %}
+{%             set iprange_str = pool_config.range %}
+{%             set iprange_list = pool_config.range.split('-') %}
+{%             if iprange_list | length == 2 %}
+{%                 set last_ip_oct = iprange_list[1].split('.') %}
+{%                 set iprange_str = iprange_list[0] + '-' + last_ip_oct[last_ip_oct | length - 1] %}
 {%             endif %}
-{%             if pool_config.gateway_address is vyos_defined %}
-gw-ip-address={{ pool_config.gateway_address }}
+{%             if pool_config.next_pool is vyos_defined %}
+{{ iprange_str }},name={{ pool_name }},next={{ pool_config.next_pool }}
+{%             else %}
+{{ iprange_str }},name={{ pool_name }}
 {%             endif %}
 {%         endfor %}
-{%     endif %}
+{%     endfor %}
 {% endif %}
