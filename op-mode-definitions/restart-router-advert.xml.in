@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="router-advert">
+        <properties>
+          <help>Restart IPv6 Router Advertisement service</help>
+        </properties>
+        <command>if cli-shell-api existsActive service router-advert; then sudo systemctl restart radvd.service; else echo "IPv6 Router Advertisement service not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
