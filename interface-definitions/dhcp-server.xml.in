@@ -284,11 +284,11 @@
                   </tagNode>
                   <tagNode name="static-mapping">
                     <properties>
-                      <help>Name of static mapping</help>
+                      <help>Hostname for static mapping reservation</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
+                        <validator name="fqdn"/>
                       </constraint>
-                      <constraintErrorMessage>Invalid static mapping name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid static mapping hostname</constraintErrorMessage>
                     </properties>
                     <children>
                       #include <include/generic-disable-node.xml.i>
@@ -304,18 +304,8 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="mac-address">
-                        <properties>
-                          <help>Media Access Control (MAC) address</help>
-                          <valueHelp>
-                            <format>macaddr</format>
-                            <description>Hardware (MAC) address</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="mac-address"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/interface/mac.xml.i>
+                      #include <include/interface/duid.xml.i>
                     </children>
                   </tagNode>
                   <tagNode name="static-route">
