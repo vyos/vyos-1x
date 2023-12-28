@@ -142,11 +142,17 @@ def verify(container):
                     for address in container_config['network'][network_name]['address']:
                         network = None
                         if is_ipv4(address):
-                            network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
-                            cnt_ipv4 += 1
+                            try:
+                                network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
+                                cnt_ipv4 += 1
+                            except:
+                                raise ConfigError(f'Network "{network_name}" does not contain an IPv4 prefix!')
                         elif is_ipv6(address):
-                            network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
-                            cnt_ipv6 += 1
+                            try:
+                                network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
+                                cnt_ipv6 += 1
+                            except:
+                                raise ConfigError(f'Network "{network_name}" does not contain an IPv6 prefix!')
 
                         # Specified container IP address must belong to network prefix
                         if ip_address(address) not in ip_network(network):
@@ -232,9 +238,9 @@ def verify(container):
     # A network attached to a container can not be deleted
     if {'network_remove', 'name'} <= set(container):
         for network in container['network_remove']:
-            for container, container_config in container['name'].items():
-                if 'network' in container_config and network in container_config['network']:
-                    raise ConfigError(f'Can not remove network "{network}", used by container "{container}"!')
+            for c, c_config in container['name'].items():
+                if 'network' in c_config and network in c_config['network']:
+                    raise ConfigError(f'Can not remove network "{network}", used by container "{c}"!')
 
     if 'registry' in container:
         for registry, registry_config in container['registry'].items():
