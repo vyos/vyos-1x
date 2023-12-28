@@ -15,6 +15,9 @@
             <children>
               #include <include/accel-ppp/max-concurrent-sessions.xml.i>
               #include <include/accel-ppp/mtu-128-16384.xml.i>
+              <leafNode name="mtu">
+                <defaultValue>1436</defaultValue>
+              </leafNode>
               <leafNode name="outside-address">
                 <properties>
                   <help>External IP address to which VPN clients will connect</help>
@@ -35,6 +38,9 @@
                   <leafNode name="require">
                     <properties>
                       <help>Authentication protocol for remote access peer PPTP VPN</help>
+                      <completionHelp>
+                        <list>pap chap mschap mschap-v2</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>pap</format>
                         <description>Require the peer to authenticate itself using PAP [Password Authentication Protocol].</description>
@@ -51,7 +57,11 @@
                         <format>mschap-v2</format>
                         <description>Require the peer to authenticate itself using MS-CHAPv2 [Microsoft Challenge Handshake Authentication Protocol, Version 2].</description>
                       </valueHelp>
+                      <constraint>
+                        <regex>(pap|chap|mschap|mschap-v2)</regex>
+                      </constraint>
                     </properties>
+                    <defaultValue>mschap-v2</defaultValue>
                   </leafNode>
                   <leafNode name="mppe">
                     <properties>
@@ -75,6 +85,7 @@
                         <list>deny prefer require</list>
                       </completionHelp>
                     </properties>
+                    <defaultValue>prefer</defaultValue>
                   </leafNode>
                   #include <include/accel-ppp/auth-mode.xml.i>
                   <node name="local-users">
@@ -97,6 +108,7 @@
                             <properties>
                               <help>Static client IP address</help>
                             </properties>
+                            <defaultValue>*</defaultValue>
                           </leafNode>
                         </children>
                       </tagNode>
@@ -109,6 +121,16 @@
                   </node>
                   #include <include/radius-auth-server-ipv4.xml.i>
                   #include <include/accel-ppp/radius-additions.xml.i>
+                  <node name="radius">
+                    <children>
+                      <leafNode name="timeout">
+                        <defaultValue>30</defaultValue>
+                      </leafNode>
+                      <leafNode name="acct-timeout">
+                        <defaultValue>30</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </node>
               #include <include/accel-ppp/default-pool.xml.i>
