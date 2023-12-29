@@ -104,10 +104,10 @@ def verify(nat):
 
             if 'outbound_interface' in config:
                 if 'name' in config['outbound_interface'] and 'group' in config['outbound_interface']:
-                    raise ConfigError(f'{err_msg} - Cannot specify both interface group and interface name for nat source rule "{rule}"')
+                    raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for nat source rule "{rule}"')
                 elif 'name' in config['outbound_interface']:
                     if config['outbound_interface']['name'] not in 'any' and config['outbound_interface']['name'] not in interfaces():
-                        Warning(f'{err_msg} - interface "{config["outbound_interface"]["name"]}" does not exist on this system')
+                        Warning(f'NAT66 interface "{config["outbound_interface"]["name"]}" for source NAT66 rule "{rule}" does not exist!')
 
             addr = dict_search('translation.address', config)
             if addr != None:
@@ -128,10 +128,10 @@ def verify(nat):
 
             if 'inbound_interface' in config:
                 if 'name' in config['inbound_interface'] and 'group' in config['inbound_interface']:
-                    raise ConfigError(f'{err_msg} - Cannot specify both interface group and interface name for destination nat rule "{rule}"')
+                    raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for destination nat rule "{rule}"')
                 elif 'name' in config['inbound_interface']:
                     if config['inbound_interface']['name'] not in 'any' and config['inbound_interface']['name'] not in interfaces():
-                        Warning(f'{err_msg} -  interface "{config["inbound_interface"]["name"]}" does not exist on this system')
+                        Warning(f'NAT66 interface "{config["inbound_interface"]["name"]}" for destination NAT66 rule "{rule}" does not exist!')
 
     return None
 
