@@ -61,8 +61,9 @@ def get_config(config=None):
         hosts['domain_name'] = conf.return_value(['system', 'domain-name'])
         hosts['domain_search'].append(hosts['domain_name'])
 
-    for search in conf.return_values(['system', 'domain-search', 'domain']):
-        hosts['domain_search'].append(search)
+    if conf.exists(['system', 'domain-search']):
+        for search in conf.return_values(['system', 'domain-search']):
+            hosts['domain_search'].append(search)
 
     if conf.exists(['system', 'name-server']):
         for ns in conf.return_values(['system', 'name-server']):
