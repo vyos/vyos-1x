@@ -109,10 +109,10 @@ if ! grep -q '^hostsd' /etc/group; then
     addgroup --quiet --system hostsd
 fi
 
-# add dhcpd user for dhcp-server
-if ! grep -q '^dhcpd' /etc/passwd; then
-    adduser --quiet --system --disabled-login --no-create-home --home /run/dhcp-server dhcpd
-    adduser --quiet dhcpd hostsd
+# Add _kea user for kea-dhcp{4,6}-server to vyattacfg
+# The user should exist via kea-common installed as transitive dependency
+if grep -q '^_kea' /etc/passwd; then
+    adduser --quiet _kea vyattacfg
 fi
 
 # ensure the proxy user has a proper shell
