@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -81,9 +81,13 @@ class TestVyOSTemplate(TestCase):
             self.assertEqual(vyos.template.netmask_from_cidr('2001:db8:1:/64'), 'ffff:ffff:ffff:ffff::')
 
     def test_first_host_address(self):
-        self.assertEqual(vyos.template.first_host_address('10.0.0.0/24'),  '10.0.0.1')
-        self.assertEqual(vyos.template.first_host_address('10.0.0.128/25'),  '10.0.0.129')
-        self.assertEqual(vyos.template.first_host_address('2001:db8::/64'),  '2001:db8::')
+        self.assertEqual(vyos.template.first_host_address('10.0.0.0/24'), '10.0.0.1')
+        self.assertEqual(vyos.template.first_host_address('10.0.0.10/24'), '10.0.0.1')
+        self.assertEqual(vyos.template.first_host_address('10.0.0.255/24'), '10.0.0.1')
+        self.assertEqual(vyos.template.first_host_address('10.0.0.128/25'), '10.0.0.129')
+        self.assertEqual(vyos.template.first_host_address('2001:db8::/64'), '2001:db8::1')
+        self.assertEqual(vyos.template.first_host_address('2001:db8::1000/64'), '2001:db8::1')
+        self.assertEqual(vyos.template.first_host_address('2001:db8::ffff:ffff:ffff:ffff/64'), '2001:db8::1')
 
     def test_last_host_address(self):
         self.assertEqual(vyos.template.last_host_address('10.0.0.0/24'),  '10.0.0.254')
@@ -181,4 +185,3 @@ class TestVyOSTemplate(TestCase):
         for group_name, group_config in data['ike_group'].items():
             ciphers = vyos.template.get_esp_ike_cipher(group_config)
             self.assertIn(IKEv2_DEFAULT, ','.join(ciphers))
-
