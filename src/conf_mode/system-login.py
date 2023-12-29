@@ -29,6 +29,7 @@ from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.dict import dict_search
+from vyos.utils.file import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
@@ -334,13 +335,16 @@ def apply(login):
             command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk {user}'
             try:
                 cmd(command)
-
                 # we should not rely on the value stored in
                 # user_config['home_directory'], as a crazy user will choose
                 # username root or any other system user which will fail.
                 #
                 # XXX: Should we deny using root at all?
                 home_dir = getpwnam(user).pw_dir
+                # T5875: ensure UID is properly set on home directory if user is re-added
+                if os.path.exists(home_dir):
+                    chown(home_dir, user=user, recursive=True)
+
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
                        formater=lambda _: _.replace("&quot;", '"'),
