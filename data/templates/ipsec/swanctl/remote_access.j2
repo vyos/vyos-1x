@@ -35,6 +35,11 @@
             auth = {{ rw_conf.authentication.client_mode }}
             eap_id = %any
 {% endif %}
+{% if rw_conf.authentication.client_mode is vyos_defined('eap-tls') or rw_conf.authentication.client_mode is vyos_defined('x509') %}
+{#          in the case of an intermediate/root chain, assume user wants us to valiadate against #}
+{#          the lowest specified cert in the chain (e.g. the intermediate) #}
+            cacerts = {{ rw_conf.authentication.x509.ca_certificate }}_1.pem
+{% endif %}
         }
         children {
             ikev2-vpn  {
