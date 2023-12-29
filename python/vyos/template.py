@@ -316,20 +316,15 @@ def is_ipv6(text):
     except: return False
 
 @register_filter('first_host_address')
-def first_host_address(text):
+def first_host_address(prefix):
     """ Return first usable (host) IP address from given prefix.
     Example:
       - 10.0.0.0/24 -> 10.0.0.1
       - 2001:db8::/64 -> 2001:db8::
     """
     from ipaddress import ip_interface
-    from ipaddress import IPv4Network
-    from ipaddress import IPv6Network
-
-    addr = ip_interface(text)
-    if addr.version == 4:
-        return str(addr.ip +1)
-    return str(addr.ip)
+    tmp = ip_interface(prefix).network
+    return str(tmp.network_address +1)
 
 @register_filter('last_host_address')
 def last_host_address(text):
