@@ -31,6 +31,8 @@ pools {
     {{ pool }} {
 {%         if pool_config.prefix is vyos_defined %}
         addrs = {{ pool_config.prefix }}
+{%         elif pool_config.range is vyos_defined %}
+        addrs = {{ pool_config.range.start }}-{{ pool_config.range.stop }}
 {%         endif %}
 {%         if pool_config.name_server is vyos_defined %}
         dns = {{ pool_config.name_server | join(',') }}

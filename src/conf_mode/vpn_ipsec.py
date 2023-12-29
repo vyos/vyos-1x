@@ -21,6 +21,9 @@ import jmespath
 
 from sys import exit
 from time import sleep
+from ipaddress import ip_address
+from netaddr import IPNetwork
+from netaddr import IPRange
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -304,6 +307,14 @@ def verify(ipsec):
                     if dict_search('remote_access.radius.server', ipsec) == None:
                         raise ConfigError('RADIUS authentication requires at least one server')
 
+                if 'bind' in ra_conf:
+                    if dict_search('options.disable_route_autoinstall', ipsec) == None:
+                        Warning('It\'s recommended to use ipsec vti with the next command\n[set vpn ipsec option disable-route-autoinstall]')
+
+                    vti_interface = ra_conf['bind']
+                    if not os.path.exists(f'/sys/class/net/{vti_interface}'):
+                        raise ConfigError(f'VTI interface {vti_interface} for remote-access connection {name} does not exist!')
+
                 if 'pool' in ra_conf:
                     if {'dhcp', 'radius'} <= set(ra_conf['pool']):
                         raise ConfigError(f'Can not use both DHCP and RADIUS for address allocation '\
@@ -330,26 +341,73 @@ def verify(ipsec):
                             raise ConfigError(f'Requested pool "{pool}" does not exist!')
 
         if 'pool' in ipsec['remote_access']:
+            pool_networks = []
             for pool, pool_config in ipsec['remote_access']['pool'].items():
-                if 'prefix' not in pool_config:
-                    raise ConfigError(f'Missing madatory prefix option for pool "{pool}"!')
+                if 'prefix' not in pool_config and 'range' not in pool_config:
+                    raise ConfigError(f'Mandatory prefix or range must be specified for pool "{pool}"!')
+
+                if 'prefix' in pool_config and 'range' in pool_config:
+                    raise ConfigError(f'Only one of prefix or range can be specified for pool "{pool}"!')
+
+                if 'prefix' in pool_config:
+                    range_is_ipv4 = is_ipv4(pool_config['prefix'])
+                    range_is_ipv6 = is_ipv6(pool_config['prefix'])
+
+                    net = IPNetwork(pool_config['prefix'])
+                    start = net.first
+                    stop = net.last
+                    for network in pool_networks:
+                        if start in network or stop in network:
+                            raise ConfigError(f'Prefix for pool "{pool}" is already part of another pool\'s range!')
+
+                    tmp = IPRange(start, stop)
+                    pool_networks.append(tmp)
+
+                if 'range' in pool_config:
+                    range_config = pool_config['range']
+                    if not {'start', 'stop'} <= set(range_config.keys()):
+                        raise ConfigError(f'Range start and stop address must be defined for pool "{pool}"!')
+
+                    range_both_ipv4 = is_ipv4(range_config['start']) and is_ipv4(range_config['stop'])
+                    range_both_ipv6 = is_ipv6(range_config['start']) and is_ipv6(range_config['stop'])
+
+                    if not (range_both_ipv4 or range_both_ipv6):
+                        raise ConfigError(f'Range start and stop must be of the same address family for pool "{pool}"!')
+
+                    if ip_address(range_config['stop']) < ip_address(range_config['start']):
+                        raise ConfigError(f'Range stop address must be greater or equal\n' \
+                                          'to the range\'s start address for pool "{pool}"!')
+
+                    range_is_ipv4 = is_ipv4(range_config['start'])
+                    range_is_ipv6 = is_ipv6(range_config['start'])
+
+                    start = range_config['start']
+                    stop = range_config['stop']
+                    for network in pool_networks:
+                        if start in network:
+                            raise ConfigError(f'Range "{range}" start address "{start}" already part of another pool\'s range!')
+                        if stop in network:
+                            raise ConfigError(f'Range "{range}" stop address "{stop}" already part of another pool\'s range!')
+
+                    tmp = IPRange(start, stop)
+                    pool_networks.append(tmp)
 
                 if 'name_server' in pool_config:
                     if len(pool_config['name_server']) > 2:
                         raise ConfigError(f'Only two name-servers are supported for remote-access pool "{pool}"!')
 
                     for ns in pool_config['name_server']:
-                        v4_addr_and_ns = is_ipv4(ns) and not is_ipv4(pool_config['prefix'])
-                        v6_addr_and_ns = is_ipv6(ns) and not is_ipv6(pool_config['prefix'])
+                        v4_addr_and_ns = is_ipv4(ns) and not range_is_ipv4
+                        v6_addr_and_ns = is_ipv6(ns) and not range_is_ipv6
                         if v4_addr_and_ns or v6_addr_and_ns:
-                           raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix and name-server adresses!')
+                           raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix/range and name-server addresses!')
 
                 if 'exclude' in pool_config:
                     for exclude in pool_config['exclude']:
-                        v4_addr_and_exclude = is_ipv4(exclude) and not is_ipv4(pool_config['prefix'])
-                        v6_addr_and_exclude = is_ipv6(exclude) and not is_ipv6(pool_config['prefix'])
+                        v4_addr_and_exclude = is_ipv4(exclude) and not range_is_ipv4
+                        v6_addr_and_exclude = is_ipv6(exclude) and not range_is_ipv6
                         if v4_addr_and_exclude or v6_addr_and_exclude:
-                           raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix and exclude prefixes!')
+                           raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix/range and exclude prefixes!')
 
         if 'radius' in ipsec['remote_access'] and 'server' in ipsec['remote_access']['radius']:
             for server, server_config in ipsec['remote_access']['radius']['server'].items():

@@ -854,6 +854,7 @@
                   #include <include/dhcp-interface.xml.i>
                   #include <include/ipsec/local-traffic-selector.xml.i>
                   #include <include/ipsec/replay-window.xml.i>
+                  #include <include/ipsec/bind.xml.i>
                   <leafNode name="timeout">
                     <properties>
                       <help>Timeout to close connection if no data is transmitted</help>
@@ -978,6 +979,45 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <node name="range">
+                    <properties>
+                      <help>Local IPv4 or IPv6 pool range</help>
+                    </properties>
+                    <children>
+                      <leafNode name="start">
+                        <properties>
+                          <help>First IP address for local pool range</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 start address of pool</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 start address of pool</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="stop">
+                        <properties>
+                          <help>Last IP address for local pool range</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 end address of pool</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 end address of pool</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                   #include <include/name-server-ipv4-ipv6.xml.i>
                 </children>
               </tagNode>
@@ -1201,14 +1241,7 @@
                       <help>Virtual tunnel interface</help>
                     </properties>
                     <children>
-                      <leafNode name="bind">
-                        <properties>
-                          <help>VTI tunnel interface associated with this configuration</help>
-                          <completionHelp>
-                            <path>interfaces vti</path>
-                          </completionHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/bind.xml.i>
                       #include <include/ipsec/esp-group.xml.i>
                     </children>
                   </node>
