@@ -825,6 +825,7 @@
                   #include <include/ipsec/esp-group.xml.i>
                   #include <include/ipsec/ike-group.xml.i>
                   #include <include/ipsec/local-address.xml.i>
+                  #include <include/dhcp-interface.xml.i>
                   #include <include/ipsec/local-traffic-selector.xml.i>
                   #include <include/ipsec/replay-window.xml.i>
                   <leafNode name="timeout">
