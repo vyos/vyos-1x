@@ -80,15 +80,13 @@ def verify_rule(config, err_msg, groups_dict):
         dict_search('source.port', config)):
 
         if config['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
-            raise ConfigError(f'{err_msg}\n' \
-                              'ports can only be specified when protocol is '\
-                              'either tcp, udp or tcp_udp!')
+            raise ConfigError(f'{err_msg} ports can only be specified when '\
+                              'protocol is either tcp, udp or tcp_udp!')
 
         if is_ip_network(dict_search('translation.address', config)):
-            raise ConfigError(f'{err_msg}\n' \
-                             'Cannot use ports with an IPv4 network as translation address as it\n' \
-                             'statically maps a whole network of addresses onto another\n' \
-                             'network of addresses')
+            raise ConfigError(f'{err_msg} cannot use ports with an IPv4 network as '\
+                             'translation address as it statically maps a whole network '\
+                             'of addresses onto another network of addresses!')
 
     for side in ['destination', 'source']:
         if side in config:
@@ -152,10 +150,10 @@ def verify(nat):
 
             if 'outbound_interface' in config:
                 if 'name' in config['outbound_interface'] and 'group' in config['outbound_interface']:
-                    raise ConfigError(f'{err_msg} - Cannot specify both interface group and interface name for nat source rule "{rule}"')
+                    raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for nat source rule "{rule}"')
                 elif 'name' in config['outbound_interface']:
                     if config['outbound_interface']['name'] not in 'any' and config['outbound_interface']['name'] not in interfaces():
-                        Warning(f'{err_msg} - interface "{config["outbound_interface"]["name"]}" does not exist on this system')
+                        Warning(f'NAT interface "{config["outbound_interface"]["name"]}" for source NAT rule "{rule}" does not exist!')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config):
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
@@ -176,10 +174,10 @@ def verify(nat):
 
             if 'inbound_interface' in config:
                 if 'name' in config['inbound_interface'] and 'group' in config['inbound_interface']:
-                    raise ConfigError(f'{err_msg} - Cannot specify both interface group and interface name for destination nat rule "{rule}"')
+                    raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for destination nat rule "{rule}"')
                 elif 'name' in config['inbound_interface']:
                     if config['inbound_interface']['name'] not in 'any' and config['inbound_interface']['name'] not in interfaces():
-                        Warning(f'{err_msg} -  interface "{config["inbound_interface"]["name"]}" does not exist on this system')
+                        Warning(f'NAT interface "{config["inbound_interface"]["name"]}" for destination NAT rule "{rule}" does not exist!')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config) and 'redirect' not in config['translation']:
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
@@ -193,8 +191,7 @@ def verify(nat):
             err_msg = f'Static NAT configuration error in rule {rule}:'
 
             if 'inbound_interface' not in config:
-                raise ConfigError(f'{err_msg}\n' \
-                                  'inbound-interface not specified')
+                raise ConfigError(f'{err_msg} inbound-interface not specified')
 
             # common rule verification
             verify_rule(config, err_msg, nat['firewall_group'])
