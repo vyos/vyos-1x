@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ import glob
 import json
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from ipaddress import ip_interface
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
@@ -27,8 +28,6 @@ from vyos.utils.file import read_file
 
 base_path = ['container']
 cont_image = 'busybox:stable' # busybox is included in vyos-build
-prefix = '192.168.205.0/24'
-net_name = 'NET01'
 PROCESS_NAME = 'conmon'
 PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
 
@@ -37,9 +36,7 @@ busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
 def cmd_to_json(command):
     c = cmd(command + ' --format=json')
     data = json.loads(c)[0]
-
     return data
-
 
 class TestContainer(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -51,6 +48,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             cmd(f'cat {busybox_image_path} | sudo podman load')
         except:
             cls.skipTest(cls, reason='busybox image not available')
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     @classmethod
     def tearDownClass(cls):
@@ -70,7 +71,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         units = glob.glob('/run/systemd/system/vyos-container-*')
         self.assertEqual(units, [])
 
-    def test_01_basic_container(self):
+    def test_basic(self):
         cont_name = 'c1'
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
@@ -91,24 +92,101 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertEqual(process_named_running(PROCESS_NAME), pid)
 
-    def test_02_container_network(self):
-        cont_name = 'c2'
-        cont_ip = '192.168.205.25'
-        self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
-        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
-        self.cli_set(base_path + ['name', cont_name, 'network', net_name, 'address', cont_ip])
+    def test_ipv4_network(self):
+        prefix = '192.0.2.0/24'
+        base_name = 'ipv4'
+        net_name = 'NET01'
 
-        # commit changes
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
+
+        for ii in range(1, 6):
+            name = f'{base_name}-{ii}'
+            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix).ip + ii)])
+
+        # verify() - first IP address of a prefix can not be used by a container
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        tmp = f'{base_name}-1'
+        self.cli_delete(base_path + ['name', tmp])
         self.cli_commit()
 
         n = cmd_to_json(f'sudo podman network inspect {net_name}')
-        json_subnet = n['subnets'][0]['subnet']
+        self.assertEqual(n['subnets'][0]['subnet'], prefix)
 
-        c = cmd_to_json(f'sudo podman container inspect {cont_name}')
-        json_ip = c['NetworkSettings']['Networks'][net_name]['IPAddress']
+        # skipt first container, it was never created
+        for ii in range(2, 6):
+            name = f'{base_name}-{ii}'
+            c = cmd_to_json(f'sudo podman container inspect {name}')
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['Gateway']  , str(ip_interface(prefix).ip + 1))
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['IPAddress'], str(ip_interface(prefix).ip + ii))
 
-        self.assertEqual(json_subnet, prefix)
-        self.assertEqual(json_ip, cont_ip)
+    def test_ipv6_network(self):
+        prefix = '2001:db8::/64'
+        base_name = 'ipv6'
+        net_name = 'NET02'
+
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
+
+        for ii in range(1, 6):
+            name = f'{base_name}-{ii}'
+            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix).ip + ii)])
+
+        # verify() - first IP address of a prefix can not be used by a container
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        tmp = f'{base_name}-1'
+        self.cli_delete(base_path + ['name', tmp])
+        self.cli_commit()
+
+        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        self.assertEqual(n['subnets'][0]['subnet'], prefix)
+
+        # skipt first container, it was never created
+        for ii in range(2, 6):
+            name = f'{base_name}-{ii}'
+            c = cmd_to_json(f'sudo podman container inspect {name}')
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['IPv6Gateway']      , str(ip_interface(prefix).ip + 1))
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['GlobalIPv6Address'], str(ip_interface(prefix).ip + ii))
+
+    def test_dual_stack_network(self):
+        prefix4 = '192.0.2.0/24'
+        prefix6 = '2001:db8::/64'
+        base_name = 'dual-stack'
+        net_name = 'net-4-6'
+
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix4])
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix6])
+
+        for ii in range(1, 6):
+            name = f'{base_name}-{ii}'
+            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix4).ip + ii)])
+            self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix6).ip + ii)])
+
+        # verify() - first IP address of a prefix can not be used by a container
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        tmp = f'{base_name}-1'
+        self.cli_delete(base_path + ['name', tmp])
+        self.cli_commit()
+
+        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        self.assertEqual(n['subnets'][0]['subnet'], prefix4)
+        self.assertEqual(n['subnets'][1]['subnet'], prefix6)
+
+        # skipt first container, it was never created
+        for ii in range(2, 6):
+            name = f'{base_name}-{ii}'
+            c = cmd_to_json(f'sudo podman container inspect {name}')
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['IPv6Gateway']      , str(ip_interface(prefix6).ip + 1))
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['GlobalIPv6Address'], str(ip_interface(prefix6).ip + ii))
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['Gateway']          , str(ip_interface(prefix4).ip + 1))
+            self.assertEqual(c['NetworkSettings']['Networks'][net_name]['IPAddress']        , str(ip_interface(prefix4).ip + ii))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
