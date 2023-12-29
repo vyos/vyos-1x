@@ -17,6 +17,7 @@
 import os
 import vyos.template
 
+from ipaddress import ip_network
 from unittest import TestCase
 
 class TestVyOSTemplate(TestCase):
@@ -67,6 +68,9 @@ class TestVyOSTemplate(TestCase):
             # ValueError: 2001:db8::1/48 has host bits set
             self.assertEqual(vyos.template.address_from_cidr('2001:db8::1/48'), '2001:db8::1')
 
+        network_v4 = '192.0.2.0/26'
+        self.assertEqual(vyos.template.address_from_cidr(network_v4), str(ip_network(network_v4).network_address))
+
     def test_netmask_from_cidr(self):
         self.assertEqual(vyos.template.netmask_from_cidr('192.0.2.0/24'),  '255.255.255.0')
         self.assertEqual(vyos.template.netmask_from_cidr('192.0.2.128/25'),  '255.255.255.128')
@@ -80,6 +84,9 @@ class TestVyOSTemplate(TestCase):
             # ValueError: 2001:db8:1:/64 has host bits set
             self.assertEqual(vyos.template.netmask_from_cidr('2001:db8:1:/64'), 'ffff:ffff:ffff:ffff::')
 
+        network_v4 = '192.0.2.0/26'
+        self.assertEqual(vyos.template.netmask_from_cidr(network_v4), str(ip_network(network_v4).netmask))
+
     def test_first_host_address(self):
         self.assertEqual(vyos.template.first_host_address('10.0.0.0/24'), '10.0.0.1')
         self.assertEqual(vyos.template.first_host_address('10.0.0.10/24'), '10.0.0.1')
@@ -90,22 +97,22 @@ class TestVyOSTemplate(TestCase):
         self.assertEqual(vyos.template.first_host_address('2001:db8::ffff:ffff:ffff:ffff/64'), '2001:db8::1')
 
     def test_last_host_address(self):
-        self.assertEqual(vyos.template.last_host_address('10.0.0.0/24'),  '10.0.0.254')
-        self.assertEqual(vyos.template.last_host_address('10.0.0.128/25'),  '10.0.0.254')
-        self.assertEqual(vyos.template.last_host_address('2001:db8::/64'),  '2001:db8::ffff:ffff:ffff:ffff')
+        self.assertEqual(vyos.template.last_host_address('10.0.0.0/24'), '10.0.0.254')
+        self.assertEqual(vyos.template.last_host_address('10.0.0.128/25'), '10.0.0.254')
+        self.assertEqual(vyos.template.last_host_address('2001:db8::/64'), '2001:db8::ffff:ffff:ffff:ffff')
 
     def test_increment_ip(self):
-        self.assertEqual(vyos.template.inc_ip('10.0.0.0/24', '2'),  '10.0.0.2')
-        self.assertEqual(vyos.template.inc_ip('10.0.0.0', '2'),  '10.0.0.2')
-        self.assertEqual(vyos.template.inc_ip('10.0.0.0', '10'),  '10.0.0.10')
-        self.assertEqual(vyos.template.inc_ip('2001:db8::/64', '2'),  '2001:db8::2')
-        self.assertEqual(vyos.template.inc_ip('2001:db8::', '10'),  '2001:db8::a')
+        self.assertEqual(vyos.template.inc_ip('10.0.0.0/24', '2'), '10.0.0.2')
+        self.assertEqual(vyos.template.inc_ip('10.0.0.0', '2'), '10.0.0.2')
+        self.assertEqual(vyos.template.inc_ip('10.0.0.0', '10'), '10.0.0.10')
+        self.assertEqual(vyos.template.inc_ip('2001:db8::/64', '2'), '2001:db8::2')
+        self.assertEqual(vyos.template.inc_ip('2001:db8::', '10'), '2001:db8::a')
 
     def test_decrement_ip(self):
-        self.assertEqual(vyos.template.dec_ip('10.0.0.100/24', '1'),  '10.0.0.99')
-        self.assertEqual(vyos.template.dec_ip('10.0.0.90', '10'),  '10.0.0.80')
-        self.assertEqual(vyos.template.dec_ip('2001:db8::b/64', '10'),  '2001:db8::1')
-        self.assertEqual(vyos.template.dec_ip('2001:db8::f', '5'),  '2001:db8::a')
+        self.assertEqual(vyos.template.dec_ip('10.0.0.100/24', '1'), '10.0.0.99')
+        self.assertEqual(vyos.template.dec_ip('10.0.0.90', '10'), '10.0.0.80')
+        self.assertEqual(vyos.template.dec_ip('2001:db8::b/64', '10'), '2001:db8::1')
+        self.assertEqual(vyos.template.dec_ip('2001:db8::f', '5'), '2001:db8::a')
 
     def test_is_network(self):
         self.assertFalse(vyos.template.is_ip_network('192.0.2.0'))
