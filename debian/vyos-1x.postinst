@@ -73,7 +73,7 @@ if ! grep -q '^tacacs' /etc/passwd; then
             adduser --quiet tacacs${level} frr
         fi
         level=$(( level+1 ))
-    done 2>&1 | grep -v 'User tacacs${level} already exists'
+    done 2>&1 | grep -v "User tacacs${level} already exists"
 fi
 
 # Add RADIUS operator user for RADIUS authenticated users to map to
