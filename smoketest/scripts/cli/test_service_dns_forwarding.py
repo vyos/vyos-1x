@@ -24,9 +24,10 @@ from vyos.template import bracketize_ipv6
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
-CONFIG_FILE = '/run/powerdns/recursor.conf'
-FORWARD_FILE = '/run/powerdns/recursor.forward-zones.conf'
-HOSTSD_FILE = '/run/powerdns/recursor.vyos-hostsd.conf.lua'
+PDNS_REC_RUN_DIR = '/run/pdns-recursor'
+CONFIG_FILE = f'{PDNS_REC_RUN_DIR}/recursor.conf'
+FORWARD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
+HOSTSD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
 PROCESS_NAME= 'pdns_recursor'
 
 base_path = ['service', 'dns', 'forwarding']
