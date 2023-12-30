@@ -112,7 +112,7 @@ class VXLANIf(Interface):
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
 
-        # VXLAN tunnel is always recreated on any change - see interfaces-vxlan.py
+        # VXLAN tunnel is always recreated on any change - see interfaces_vxlan.py
         if remote_list:
             for remote in remote_list:
                 cmd = f'bridge fdb append to 00:00:00:00:00:00 dst {remote} ' \

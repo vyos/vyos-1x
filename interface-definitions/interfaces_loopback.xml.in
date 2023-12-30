@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/interfaces_loopback.py">
+        <properties>
+          <help>Loopback Interface</help>
+          <priority>300</priority>
+          <constraint>
+            <regex>lo</regex>
+          </constraint>
+          <constraintErrorMessage>Loopback interface must be named lo</constraintErrorMessage>
+          <valueHelp>
+            <format>lo</format>
+            <description>Loopback interface</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/address-ipv4-ipv6.xml.i>
+          #include <include/generic-description.xml.i>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/source-validation.xml.i>
+            </children>
+          </node>
+          #include <include/interface/mirror.xml.i>
+          #include <include/interface/redirect.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

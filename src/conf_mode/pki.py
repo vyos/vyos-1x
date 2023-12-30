@@ -36,22 +36,22 @@ sync_search = [
     {
         'keys': ['certificate'],
         'path': ['service', 'https'],
-        'script': '/usr/libexec/vyos/conf_mode/https.py'
+        'script': '/usr/libexec/vyos/conf_mode/service_https.py'
     },
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['interfaces', 'ethernet'],
-        'script': '/usr/libexec/vyos/conf_mode/interfaces-ethernet.py'
+        'script': '/usr/libexec/vyos/conf_mode/interfaces_ethernet.py'
     },
     {
         'keys': ['certificate', 'ca_certificate', 'dh_params', 'shared_secret_key', 'auth_key', 'crypt_key'],
         'path': ['interfaces', 'openvpn'],
-        'script': '/usr/libexec/vyos/conf_mode/interfaces-openvpn.py'
+        'script': '/usr/libexec/vyos/conf_mode/interfaces_openvpn.py'
     },
     {
         'keys': ['ca_certificate'],
         'path': ['interfaces', 'sstpc'],
-        'script': '/usr/libexec/vyos/conf_mode/interfaces-sstpc.py'
+        'script': '/usr/libexec/vyos/conf_mode/interfaces_sstpc.py'
     },
     {
         'keys': ['certificate', 'ca_certificate', 'local_key', 'remote_key'],

@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+<!-- Policy local-route -->
+<interfaceDefinition>
+  <node name="policy">
+    <children>
+      <node name="local-route" owner="${vyos_conf_scripts_dir}/policy_local-route.py">
+        <properties>
+          <help>IPv4 policy route of local traffic</help>
+          <priority>500</priority>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Policy local-route rule set number</help>
+              <valueHelp>
+                <!-- table main with prio 32766 -->
+                <format>u32:1-32765</format>
+                <description>Local-route rule number (1-32765)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-32765"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="set">
+                <properties>
+                  <help>Packet modifications</help>
+                </properties>
+                <children>
+                  <leafNode name="table">
+                    <properties>
+                      <help>Routing table to forward packet with</help>
+                      <valueHelp>
+                        <format>u32:1-200</format>
+                        <description>Table number</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <list>main</list>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="fwmark">
+                <properties>
+                  <help>Match fwmark value</help>
+                  <valueHelp>
+                    <format>u32:1-2147483647</format>
+                    <description>Address to match against</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-2147483647"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/policy/local-route_rule_protocol.xml.i>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                  #include <include/port-number.xml.i>
+                </children>
+              </node>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                  #include <include/port-number.xml.i>
+                </children>
+              </node>
+              #include <include/interface/inbound-interface.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="local-route6" owner="${vyos_conf_scripts_dir}/policy_local-route.py">
+        <properties>
+          <help>IPv6 policy route of local traffic</help>
+          <priority>500</priority>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>IPv6 policy local-route rule set number</help>
+              <valueHelp>
+                <!-- table main with prio 32766 -->
+                <format>u32:1-32765</format>
+                <description>Local-route rule number (1-32765)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-32765"/>
+              </constraint>
+            </properties>
+            <children>
+              <node name="set">
+                <properties>
+                  <help>Packet modifications</help>
+                </properties>
+                <children>
+                  <leafNode name="table">
+                    <properties>
+                      <help>Routing table to forward packet with</help>
+                      <valueHelp>
+                        <format>u32:1-200</format>
+                        <description>Table number</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <list>main</list>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="fwmark">
+                <properties>
+                  <help>Match fwmark value</help>
+                  <valueHelp>
+                    <format>u32:1-2147483647</format>
+                    <description>Address to match against</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-2147483647"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/policy/local-route_rule_protocol.xml.i>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                  #include <include/port-number.xml.i>
+                </children>
+              </node>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                  #include <include/port-number.xml.i>
+                </children>
+              </node>
+              #include <include/interface/inbound-interface.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

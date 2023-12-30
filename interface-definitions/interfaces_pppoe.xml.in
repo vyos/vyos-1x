@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="pppoe" owner="${vyos_conf_scripts_dir}/interfaces_pppoe.py">
+        <properties>
+          <help>Point-to-Point Protocol over Ethernet (PPPoE) Interface</help>
+          <priority>322</priority>
+          <constraint>
+            <regex>pppoe[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>PPPoE interface must be named pppoeN</constraintErrorMessage>
+          <valueHelp>
+            <format>pppoeN</format>
+            <description>PPPoE dialer interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/pppoe-access-concentrator.xml.i>
+          #include <include/interface/authentication.xml.i>
+          #include <include/interface/dial-on-demand.xml.i>
+          #include <include/interface/no-default-route.xml.i>
+          #include <include/interface/default-route-distance.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          <leafNode name="idle-timeout">
+            <properties>
+              <help>Delay before disconnecting idle session (in seconds)</help>
+              <valueHelp>
+                <format>u32:0-86400</format>
+                <description>Idle timeout in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-86400"/>
+              </constraint>
+              <constraintErrorMessage>Timeout must be in range 0 to 86400</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="host-uniq">
+            <properties>
+              <help>PPPoE RFC2516 host-uniq tag</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Host-uniq tag as byte string in HEX</description>
+              </valueHelp>
+              <constraint>
+                <regex>([a-fA-F0-9][a-fA-F0-9]){1,18}</regex>
+              </constraint>
+              <constraintErrorMessage>Host-uniq must be specified as hex-adecimal byte-string (even number of HEX characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="holdoff">
+            <properties>
+              <help>Delay before re-dial to the access concentrator when PPP session terminated by peer (in seconds)</help>
+              <valueHelp>
+                <format>u32:0-86400</format>
+                <description>Holdoff time in seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-86400"/>
+              </constraint>
+              <constraintErrorMessage>Holdoff must be in range 0 to 86400</constraintErrorMessage>
+            </properties>
+            <defaultValue>30</defaultValue>
+          </leafNode>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/adjust-mss.xml.i>
+              #include <include/interface/disable-forwarding.xml.i>
+              #include <include/interface/source-validation.xml.i>
+            </children>
+          </node>
+          <node name="ipv6">
+            <properties>
+              <help>IPv6 routing parameters</help>
+            </properties>
+            <children>
+              <node name="address">
+                <properties>
+                  <help>IPv6 address configuration modes</help>
+                </properties>
+                <children>
+                  #include <include/interface/ipv6-address-autoconf.xml.i>
+                </children>
+              </node>
+              #include <include/interface/adjust-mss.xml.i>
+              #include <include/interface/disable-forwarding.xml.i>
+            </children>
+          </node>
+          #include <include/source-interface.xml.i>
+          <leafNode name="local-address">
+            <properties>
+              <help>IPv4 address of local end of the PPPoE link</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Address of local end of the PPPoE link</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          #include <include/interface/mirror.xml.i>
+          #include <include/interface/mtu-68-1500.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1492</defaultValue>
+          </leafNode>
+          <leafNode name="mru">
+            <properties>
+              <help>Maximum Receive Unit (MRU) (default: MTU value)</help>
+              <valueHelp>
+                <format>u32:128-16384</format>
+                <description>Maximum Receive Unit in byte</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 128-16384"/>
+              </constraint>
+              <constraintErrorMessage>MRU must be between 128 and 16384</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/interface/no-peer-dns.xml.i>
+          <leafNode name="remote-address">
+            <properties>
+              <help>IPv4 address of remote end of the PPPoE link</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Address of remote end of the PPPoE link</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="service-name">
+            <properties>
+              <help>Service name, only connect to access concentrators advertising this</help>
+              <constraint>
+                <regex>[a-zA-Z0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Service name must be alphanumeric only</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vrf.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

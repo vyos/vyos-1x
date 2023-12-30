@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="mdns">
+        <properties>
+          <help>Multicast DNS (mDNS) parameters</help>
+        </properties>
+        <children>
+          <node name="repeater" owner="${vyos_conf_scripts_dir}/service_mdns_repeater.py">
+            <properties>
+              <help>mDNS repeater configuration</help>
+              <priority>990</priority>
+            </properties>
+            <children>
+              #include <include/generic-disable-node.xml.i>
+              #include <include/generic-interface-multi.xml.i>
+              <leafNode name="ip-version">
+                <properties>
+                  <help>IP address version to use</help>
+                  <valueHelp>
+                    <format>_ipv4</format>
+                    <description>Use only IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>_ipv6</format>
+                    <description>Use only IPv6 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>both</format>
+                    <description>Use both IPv4 and IPv6 address</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <list>ipv4 ipv6 both</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(ipv[46]|both)</regex>
+                  </constraint>
+                  <constraintErrorMessage>IP Version must be literal 'ipv4', 'ipv6' or 'both'</constraintErrorMessage>
+                </properties>
+                <defaultValue>both</defaultValue>
+              </leafNode>
+              <leafNode name="browse-domain">
+                <properties>
+                  <help>mDNS browsing domains in addition to the default one</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>mDNS browsing domain</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="allow-service">
+                <properties>
+                  <help>Allowed mDNS services to be repeated</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>mDNS service</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[-_.a-zA-Z0-9]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Service name must be alphanumeric and can contain hyphens and underscores</constraintErrorMessage>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="vrrp-disable">
+                <properties>
+                  <help>Disables mDNS repeater on VRRP interfaces not in MASTER state</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

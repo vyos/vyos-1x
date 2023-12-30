@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <leafNode name="name-server" owner="${vyos_conf_scripts_dir}/system_host-name.py">
+        <properties>
+          <help>System Domain Name Servers (DNS)</help>
+          <priority>400</priority>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces</script>
+          </completionHelp>
+          <valueHelp>
+            <format>ipv4</format>
+            <description>Domain Name Server IPv4 address</description>
+          </valueHelp>
+          <valueHelp>
+            <format>ipv6</format>
+            <description>Domain Name Server IPv6 address</description>
+          </valueHelp>
+          <valueHelp>
+            <format>txt</format>
+            <description>Use Domain Name Server from DHCP interface</description>
+          </valueHelp>
+          <multi/>
+          <constraint>
+            <validator name="ip-address"/>
+            #include <include/constraint/interface-name.xml.i>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
