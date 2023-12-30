@@ -549,7 +549,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
 
     def test_07_ikev2_road_warrior(self):
-        # Enable PKI
+        # This is a known to be good configuration for Microsoft Windows 10 and Apple iOS 17
         self.setupPKI()
 
         ike_group = 'IKE-RW'
@@ -563,6 +563,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         ike_lifetime = '7200'
         eap_lifetime = '3600'
         local_id = 'ipsec.vyos.net'
+
+        name_servers = ['172.16.254.100', '172.16.254.101']
+        prefix = '172.16.250.0/28'
 
         # IKE
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
@@ -609,8 +612,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'local-address', local_address])
         self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'pool', ip_pool_name])
 
-        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'name-server', '172.16.254.100'])
-        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'prefix', '172.16.250.0/28'])
+        for ns in name_servers:
+            self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'name-server', ns])
+        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'prefix', prefix])
 
         self.cli_commit()
 
@@ -649,11 +653,18 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_secrets_lines:
             self.assertIn(line, swanctl_conf)
 
+        swanctl_pool_lines = [
+            f'{ip_pool_name}',
+            f'addrs = {prefix}',
+            f'dns = {",".join(name_servers)}',
+        ]
+        for line in swanctl_pool_lines:
+            self.assertIn(line, swanctl_conf)
+
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}_1.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
-        # Disable PKI
         self.tearDownPKI()
 
 if __name__ == '__main__':
