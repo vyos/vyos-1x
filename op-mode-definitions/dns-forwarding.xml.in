@@ -11,7 +11,7 @@
             <children>
               <node name="forwarding">
                 <properties>
-                  <help>Monitor last lines of DNS forwarding</help>
+                  <help>Monitor last lines of DNS Forwarding</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit pdns-recursor.service</command>
               </node>
@@ -47,12 +47,12 @@
         <children>
           <node name="forwarding">
             <properties>
-              <help>Show DNS forwarding information</help>
+              <help>Show DNS Forwarding information</help>
             </properties>
             <children>
               <leafNode name="statistics">
                 <properties>
-                  <help>Show DNS forwarding statistics</help>
+                  <help>Show DNS Forwarding statistics</help>
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/dns.py show_forwarding_statistics</command>
               </leafNode>
@@ -71,9 +71,9 @@
         <children>
           <leafNode name="forwarding">
             <properties>
-              <help>Restart DNS forwarding service</help>
+              <help>Restart DNS Forwarding service</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_restart.sh</command>
+            <command>if cli-shell-api existsActive service dns forwarding; then sudo systemctl restart pdns-recursor.service; else echo "DNS forwarding not configured"; fi</command>
           </leafNode>
         </children>
       </node>
@@ -88,19 +88,19 @@
         <children>
           <node name="forwarding">
             <properties>
-              <help>Reset DNS forwarding cache</help>
+              <help>Reset DNS Forwarding cache</help>
             </properties>
             <children>
               <tagNode name="domain">
-                <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_reset.py $5</command>
+                <command>sudo ${vyos_op_scripts_dir}/dns.py reset_forwarding --domain $5</command>
                 <properties>
-                  <help>Reset DNS forwarding cache for a domain</help>
+                  <help>Reset DNS Forwarding cache for a domain</help>
                 </properties>
               </tagNode>
               <leafNode name="all">
-                <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_reset.py --all</command>
+                <command>sudo ${vyos_op_scripts_dir}/dns.py reset_forwarding --all</command>
                 <properties>
-                  <help>Reset DNS forwarding cache</help>
+                  <help>Reset DNS Forwarding cache for all domains</help>
                 </properties>
               </leafNode>
             </children>

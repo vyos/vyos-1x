@@ -1,0 +1,8 @@
+[Unit]
+ConditionPathExists={{ config_file }}
+After=vyos-router.service
+
+[Service]
+RuntimeDirectoryPreserve=yes
+ExecStart=
+ExecStart=/usr/sbin/pdns_recursor --daemon=no --write-pid=no --disable-syslog --log-timestamp=no --config-dir={{ config_dir }}
