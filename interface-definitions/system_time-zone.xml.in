@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <leafNode name="time-zone" owner="${vyos_conf_scripts_dir}/system_timezone.py">
+        <properties>
+          <help>Local time zone (default UTC)</help>
+          <priority>100</priority>
+          <completionHelp>
+            <script>timedatectl list-timezones</script>
+          </completionHelp>
+          <constraint>
+            <validator name="timezone" argument="--validate"/>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="geneve" owner="${vyos_conf_scripts_dir}/interfaces_geneve.py">
+        <properties>
+          <help>Generic Network Virtualization Encapsulation (GENEVE) Interface</help>
+          <priority>460</priority>
+          <constraint>
+            <regex>gnv[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>GENEVE interface must be named gnvN</constraintErrorMessage>
+          <valueHelp>
+            <format>gnvN</format>
+            <description>GENEVE interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/address-ipv4-ipv6.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mac.xml.i>
+          #include <include/interface/mtu-1200-16000.xml.i>
+          <node name="parameters">
+            <properties>
+              <help>GENEVE tunnel parameters</help>
+            </properties>
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/interface/parameters-df.xml.i>
+                  #include <include/interface/parameters-tos.xml.i>
+                  #include <include/interface/parameters-ttl.xml.i>
+                  #include <include/interface/parameters-innerproto.xml.i>
+                </children>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>IPv6 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/interface/parameters-flowlabel.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          #include <include/interface/mirror.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/tunnel-remote.xml.i>
+          #include <include/vni.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

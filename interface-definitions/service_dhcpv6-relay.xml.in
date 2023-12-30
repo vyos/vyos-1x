@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!-- DHCPv6 relay configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dhcpv6-relay" owner="${vyos_conf_scripts_dir}/service_dhcpv6-relay.py">
+        <properties>
+          <help>DHCPv6 Relay Agent parameters</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          #include <include/generic-disable-node.xml.i>
+          <tagNode name="listen-interface">
+            <properties>
+              <help>Interface for DHCPv6 Relay Agent to listen for requests</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IPv6 address on listen-interface listen for requests on</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address on listen interface</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="max-hop-count">
+            <properties>
+              <help>Maximum hop count for which requests will be processed</help>
+              <valueHelp>
+                <format>u32:1-255</format>
+                <description>Hop count</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-255"/>
+              </constraint>
+              <constraintErrorMessage>max-hop-count must be a value between 1 and 255</constraintErrorMessage>
+            </properties>
+            <defaultValue>10</defaultValue>
+          </leafNode>
+          <tagNode name="upstream-interface">
+            <properties>
+              <help>Interface for DHCPv6 Relay Agent forward requests out</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IPv6 address to forward requests to</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of the DHCP server</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="use-interface-id-option">
+            <properties>
+              <help>Option to set DHCPv6 interface-ID option</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

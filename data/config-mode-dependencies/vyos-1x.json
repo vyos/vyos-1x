@@ -1,37 +1,39 @@
 {
-  "firewall": {"group_resync": ["nat", "policy-route"]},
+  "firewall": {
+    "group_resync": ["nat", "policy_route"]
+  },
   "interfaces_bonding": {
-           "ethernet": ["interfaces-ethernet"]
-         },
+    "ethernet": ["interfaces_ethernet"]
+  },
   "interfaces_bridge": {
-           "vxlan": ["interfaces-vxlan"]
-         },
+    "vxlan": ["interfaces_vxlan"]
+  },
   "pki": {
-           "ethernet": ["interfaces-ethernet"],
-           "openvpn": ["interfaces-openvpn"],
-           "https": ["https"],
-           "ipsec": ["vpn_ipsec"],
-           "openconnect": ["vpn_openconnect"],
-           "sstp": ["vpn_sstp"]
-         },
+    "ethernet": ["interfaces_ethernet"],
+    "openvpn": ["interfaces_openvpn"],
+    "https": ["service_https"],
+    "ipsec": ["vpn_ipsec"],
+    "openconnect": ["vpn_openconnect"],
+    "sstp": ["vpn_sstp"]
+  },
   "qos": {
-           "bonding": ["interfaces-bonding"],
-           "bridge": ["interfaces-bridge"],
-           "dummy": ["interfaces-dummy"],
-           "ethernet": ["interfaces-ethernet"],
-           "geneve": ["interfaces-geneve"],
-           "input": ["interfaces-input"],
-           "l2tpv3": ["interfaces-l2tpv3"],
-           "loopback": ["interfaces-loopback"],
-           "macsec": ["interfaces-macsec"],
-           "openvpn": ["interfaces-openvpn"],
-           "pppoe": ["interfaces-pppoe"],
-           "pseudo-ethernet": ["interfaces-pseudo-ethernet"],
-           "tunnel": ["interfaces-tunnel"],
-           "vti": ["interfaces-vti"],
-           "vxlan": ["interfaces-vxlan"],
-           "wireguard": ["interfaces-wireguard"],
-           "wireless": ["interfaces-wireless"],
-           "wwan": ["interfaces-wwan"]
-         }
+    "bonding": ["interfaces_bonding"],
+    "bridge": ["interfaces_bridge"],
+    "dummy": ["interfaces_dummy"],
+    "ethernet": ["interfaces_ethernet"],
+    "geneve": ["interfaces_geneve"],
+    "input": ["interfaces_input"],
+    "l2tpv3": ["interfaces_l2tpv3"],
+    "loopback": ["interfaces_loopback"],
+    "macsec": ["interfaces_macsec"],
+    "openvpn": ["interfaces_openvpn"],
+    "pppoe": ["interfaces_pppoe"],
+    "pseudo-ethernet": ["interfaces_pseudo-ethernet"],
+    "tunnel": ["interfaces_tunnel"],
+    "vti": ["interfaces_vti"],
+    "vxlan": ["interfaces_vxlan"],
+    "wireguard": ["interfaces_wireguard"],
+    "wireless": ["interfaces_wireless"],
+    "wwan": ["interfaces_wwan"]
+  }
 }

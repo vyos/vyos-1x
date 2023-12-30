@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- flow-accounting configuration -->
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="flow-accounting" owner="${vyos_conf_scripts_dir}/system_flow-accounting.py">
+        <properties>
+          <help>Flow accounting settings</help>
+          <priority>990</priority>
+        </properties>
+        <children>
+          <leafNode name="buffer-size">
+            <properties>
+              <help>Buffer size</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Buffer size in MiB</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4294967295"/>
+              </constraint>
+            </properties>
+            <defaultValue>10</defaultValue>
+          </leafNode>
+          <leafNode name="packet-length">
+            <properties>
+              <help>Specifies the maximum number of bytes to capture for each packet</help>
+              <valueHelp>
+                <format>u32:128-750</format>
+                <description>Packet length in bytes</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 128-750"/>
+              </constraint>
+            </properties>
+            <defaultValue>128</defaultValue>
+          </leafNode>
+          <leafNode name="enable-egress">
+            <properties>
+              <help>Enable egress flow accounting</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-imt">
+            <properties>
+              <help>Disable in memory table plugin</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="syslog-facility">
+            <properties>
+              <help>Syslog facility for flow-accounting</help>
+              <completionHelp>
+                <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+              </completionHelp>
+              <valueHelp>
+                <format>auth</format>
+                <description>Authentication and authorization</description>
+              </valueHelp>
+              <valueHelp>
+                <format>authpriv</format>
+                <description>Non-system authorization</description>
+              </valueHelp>
+              <valueHelp>
+                <format>cron</format>
+                <description>Cron daemon</description>
+              </valueHelp>
+              <valueHelp>
+                <format>daemon</format>
+                <description>System daemons</description>
+              </valueHelp>
+              <valueHelp>
+                <format>kern</format>
+                <description>Kernel</description>
+              </valueHelp>
+              <valueHelp>
+                <format>lpr</format>
+                <description>Line printer spooler</description>
+              </valueHelp>
+              <valueHelp>
+                <format>mail</format>
+                <description>Mail subsystem</description>
+              </valueHelp>
+              <valueHelp>
+                <format>mark</format>
+                <description>Timestamp</description>
+              </valueHelp>
+              <valueHelp>
+                <format>news</format>
+                <description>USENET subsystem</description>
+              </valueHelp>
+              <valueHelp>
+                <format>protocols</format>
+                <description>Routing protocols (local7)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>security</format>
+                <description>Authentication and authorization</description>
+              </valueHelp>
+              <valueHelp>
+                <format>syslog</format>
+                <description>Authentication and authorization</description>
+              </valueHelp>
+              <valueHelp>
+                <format>user</format>
+                <description>Application processes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>uucp</format>
+                <description>UUCP subsystem</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local0</format>
+                <description>Local facility 0</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local1</format>
+                <description>Local facility 1</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local2</format>
+                <description>Local facility 2</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local3</format>
+                <description>Local facility 3</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local4</format>
+                <description>Local facility 4</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local5</format>
+                <description>Local facility 5</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local6</format>
+                <description>Local facility 6</description>
+              </valueHelp>
+              <valueHelp>
+                <format>local7</format>
+                <description>Local facility 7</description>
+              </valueHelp>
+              <valueHelp>
+                <format>all</format>
+                <description>Authentication and authorization</description>
+              </valueHelp>
+              <constraint>
+                <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          #include <include/generic-interface-multi.xml.i>
+          <node name="netflow">
+            <properties>
+              <help>NetFlow settings</help>
+            </properties>
+            <children>
+              <leafNode name="engine-id">
+                <properties>
+                  <help>NetFlow engine-id</help>
+                  <valueHelp>
+                    <format>0-255 or 0-255:0-255</format>
+                    <description>NetFlow engine-id for v5</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32</format>
+                    <description>NetFlow engine-id for v9 / IPFIX</description>
+                  </valueHelp>
+                  <constraint>
+                   <regex>(\d|[1-9]\d{1,8}|[1-3]\d{9}|4[01]\d{8}|42[0-8]\d{7}|429[0-3]\d{6}|4294[0-8]\d{5}|42949[0-5]\d{4}|429496[0-6]\d{3}|4294967[01]\d{2}|42949672[0-8]\d|429496729[0-5])$|^(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5]):(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="max-flows">
+                <properties>
+                  <help>NetFlow maximum flows</help>
+                  <valueHelp>
+                    <format>u32</format>
+                    <description>NetFlow maximum flows</description>
+                  </valueHelp>
+                  <constraint>
+                   <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="sampling-rate">
+                <properties>
+                  <help>NetFlow sampling-rate</help>
+                  <valueHelp>
+                    <format>u32</format>
+                    <description>Sampling rate (1 in N packets)</description>
+                  </valueHelp>
+                  <constraint>
+                   <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              <leafNode name="version">
+                <properties>
+                  <help>NetFlow version to export</help>
+                  <completionHelp>
+                    <list>5 9 10</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>5</format>
+                    <description>NetFlow version 5</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>9</format>
+                    <description>NetFlow version 9</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>10</format>
+                    <description>Internet Protocol Flow Information Export (IPFIX)</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>9</defaultValue>
+              </leafNode>
+              <tagNode name="server">
+                <properties>
+                  <help>NetFlow destination server</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 server to export NetFlow</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 server to export NetFlow</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="port">
+                    <properties>
+                      <help>NetFlow port number</help>
+                      <valueHelp>
+                        <format>u32:1025-65535</format>
+                        <description>NetFlow port number</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 1025-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>2055</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="timeout">
+                <properties>
+                  <help>NetFlow timeout values</help>
+                </properties>
+                <children>
+                  <leafNode name="expiry-interval">
+                    <properties>
+                      <help>Expiry scan interval</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>Expiry scan interval</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>60</defaultValue>
+                  </leafNode>
+                  <leafNode name="flow-generic">
+                    <properties>
+                      <help>Generic flow timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>Generic flow timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>3600</defaultValue>
+                  </leafNode>
+                  <leafNode name="icmp">
+                    <properties>
+                      <help>ICMP timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>ICMP timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>300</defaultValue>
+                  </leafNode>
+                  <leafNode name="max-active-life">
+                    <properties>
+                      <help>Max active timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>Max active timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>604800</defaultValue>
+                  </leafNode>
+                  <leafNode name="tcp-fin">
+                    <properties>
+                      <help>TCP finish timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>TCP FIN timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>300</defaultValue>
+                  </leafNode>
+                  <leafNode name="tcp-generic">
+                    <properties>
+                      <help>TCP generic timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>TCP generic timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>3600</defaultValue>
+                  </leafNode>
+                  <leafNode name="tcp-rst">
+                    <properties>
+                      <help>TCP reset timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>TCP RST timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>120</defaultValue>
+                  </leafNode>
+                  <leafNode name="udp">
+                    <properties>
+                      <help>UDP timeout value</help>
+                      <valueHelp>
+                        <format>u32:0-2147483647</format>
+                        <description>UDP timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 0-2147483647"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>300</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="sflow">
+            <properties>
+              <help>sFlow settings</help>
+            </properties>
+            <children>
+              <leafNode name="agent-address">
+                <properties>
+                  <help>sFlow agent IPv4 address</help>
+                  <completionHelp>
+                    <list>auto</list>
+                    <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>sFlow IPv4 agent address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="sampling-rate">
+                <properties>
+                  <help>sFlow sampling-rate</help>
+                  <valueHelp>
+                    <format>u32</format>
+                    <description>Sampling rate (1 in N packets)</description>
+                  </valueHelp>
+                  <constraint>
+                   <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="server">
+                <properties>
+                  <help>sFlow destination server</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 server to export sFlow</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 server to export sFlow</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="port">
+                    <properties>
+                      <help>sFlow port number</help>
+                      <valueHelp>
+                        <format>u32:1025-65535</format>
+                        <description>sFlow port number</description>
+                      </valueHelp>
+                      <constraint>
+                       <validator name="numeric" argument="--range 1025-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>6343</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+            </children>
+          </node>
+          #include <include/interface/vrf.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <leafNode name="domain-search" owner="${vyos_conf_scripts_dir}/system_host-name.py">
+        <properties>
+          <help>Domain Name Server (DNS) domain completion order</help>
+          <priority>400</priority>
+          <constraint>
+            <validator name="fqdn"/>
+          </constraint>
+          <constraintErrorMessage>Invalid domain name (RFC 1123 section 2).\nMay only contain letters, numbers and period.</constraintErrorMessage>
+          <multi/>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

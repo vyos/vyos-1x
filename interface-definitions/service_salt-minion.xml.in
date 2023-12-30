@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="salt-minion" owner="${vyos_conf_scripts_dir}/service_salt-minion.py">
+        <properties>
+          <help>Salt Minion</help>
+          <priority>500</priority>
+        </properties>
+        <children>
+          <leafNode name="hash">
+            <properties>
+              <help>Hash used when discovering file on master server (default: sha256)</help>
+              <completionHelp>
+                <list>md5 sha1 sha224 sha256 sha384 sha512</list>
+              </completionHelp>
+              <constraint>
+                <regex>(md5|sha1|sha224|sha256|sha384|sha512)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>sha256</defaultValue>
+          </leafNode>
+          <leafNode name="master">
+            <properties>
+              <help>Hostname or IP address of the Salt master server</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Salt server IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Salt server IPv6 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Salt server FQDN address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-address"/>
+                <validator name="fqdn"/>
+              </constraint>
+              <constraintErrorMessage>Invalid FQDN or IP address</constraintErrorMessage>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="id">
+            <properties>
+              <help>Explicitly declare ID for this minion to use (default: hostname)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="interval">
+            <properties>
+              <help>Interval in minutes between updates (default: 60)</help>
+              <valueHelp>
+                <format>u32:1-1440</format>
+                <description>Update interval in minutes</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-1440"/>
+              </constraint>
+            </properties>
+            <defaultValue>60</defaultValue>
+          </leafNode>
+          <leafNode name="master-key">
+            <properties>
+              <help>URL with signature of master for auth reply verification</help>
+            </properties>
+          </leafNode>
+          #include <include/source-interface.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="input" owner="${vyos_conf_scripts_dir}/interfaces_input.py">
+        <properties>
+          <help>Input Functional Block (IFB) interface name</help>
+          <!-- before real devices that redirect -->
+          <priority>310</priority>
+          <constraint>
+            <regex>ifb[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>Input interface must be named ifbN</constraintErrorMessage>
+          <valueHelp>
+            <format>ifbN</format>
+            <description>Input interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/redirect.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

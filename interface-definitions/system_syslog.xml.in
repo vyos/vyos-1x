@@ -1,0 +1,155 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="syslog" owner="${vyos_conf_scripts_dir}/system_syslog.py">
+        <properties>
+          <help>System logging</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <tagNode name="user">
+            <properties>
+              <help>Logging to specific terminal of given user</help>
+              <completionHelp>
+                <path>system login user</path>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Local user account</description>
+              </valueHelp>
+              <constraint>
+                #include <include/constraint/login-username.xml.i>
+              </constraint>
+              <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/syslog-facility.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="host">
+            <properties>
+              <help>Logging to remote host</help>
+              <constraint>
+                <validator name="ip-address"/>
+                <validator name="fqdn"/>
+              </constraint>
+              <constraintErrorMessage>Invalid host (FQDN or IP address)</constraintErrorMessage>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Remote syslog server IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote syslog server IPv6 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hostname</format>
+                <description>Remote syslog server FQDN</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>514</defaultValue>
+              </leafNode>
+              #include <include/protocol-tcp-udp.xml.i>
+              #include <include/syslog-facility.xml.i>
+              <node name="format">
+                <properties>
+                  <help>Logging format</help>
+                </properties>
+                <children>
+                  <leafNode name="octet-counted">
+                    <properties>
+                      <help>Allows for the transmission of all characters inside a syslog message</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="global">
+            <properties>
+              <help>Logging to system standard location</help>
+            </properties>
+            <children>
+              #include <include/syslog-facility.xml.i>
+              <node name="marker">
+                <properties>
+                  <help>mark messages sent to syslog</help>
+                </properties>
+                <children>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>time interval how often a mark message is being sent in seconds</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>1200</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="preserve-fqdn">
+                <properties>
+                  <help>uses FQDN for logging</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="file">
+            <properties>
+              <help>Logging to a file</help>
+              <constraint>
+                <regex>[a-zA-Z0-9\-_.]{1,255}</regex>
+              </constraint>
+              <constraintErrorMessage>illegal characters in filename or filename longer than 255 characters</constraintErrorMessage>
+            </properties>
+            <children>
+              <node name="archive">
+                <properties>
+                  <help>Log file size and rotation characteristics</help>
+                </properties>
+                <children>
+                  <leafNode name="file">
+                    <properties>
+                      <help>Number of saved files</help>
+                      <constraint>
+                        <regex>[0-9]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>5</defaultValue>
+                  </leafNode>
+                  <leafNode name="size">
+                    <properties>
+                      <help>Size of log files in kbytes</help>
+                      <constraint>
+                        <regex>[0-9]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>256</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              #include <include/syslog-facility.xml.i>
+            </children>
+          </tagNode>
+          <node name="console">
+            <properties>
+              <help>logging to serial console</help>
+            </properties>
+            <children>
+              #include <include/syslog-facility.xml.i>
+            </children>
+          </node>
+          #include <include/interface/vrf.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

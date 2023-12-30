@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="vxlan" owner="${vyos_conf_scripts_dir}/interfaces_vxlan.py">
+        <properties>
+          <help>Virtual Extensible LAN (VXLAN) Interface</help>
+          <priority>460</priority>
+          <constraint>
+            <regex>vxlan[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>VXLAN interface must be named vxlanN</constraintErrorMessage>
+          <valueHelp>
+            <format>vxlanN</format>
+            <description>VXLAN interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/address-ipv4-ipv6.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          <leafNode name="gpe">
+            <properties>
+              <help>Enable Generic Protocol extension (VXLAN-GPE)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="group">
+            <properties>
+              <help>Multicast group address for VXLAN interface</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>Multicast IPv4 group address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Multicast IPv6 group address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-multicast"/>
+                <validator name="ipv6-multicast"/>
+              </constraint>
+              <constraintErrorMessage>Multicast IPv4/IPv6 address required</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mac.xml.i>
+          #include <include/interface/mtu-1200-16000.xml.i>
+          #include <include/interface/mirror.xml.i>
+          <node name="parameters">
+            <properties>
+              <help>VXLAN tunnel parameters</help>
+            </properties>
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>IPv4 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/interface/parameters-df.xml.i>
+                  #include <include/interface/parameters-tos.xml.i>
+                  #include <include/interface/parameters-ttl.xml.i>
+                  <leafNode name="ttl">
+                    <defaultValue>16</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>IPv6 specific tunnel parameters</help>
+                </properties>
+                <children>
+                  #include <include/interface/parameters-flowlabel.xml.i>
+                </children>
+              </node>
+              <leafNode name="external">
+                <properties>
+                  <help>Use external control plane</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="nolearning">
+                <properties>
+                  <help>Do not add unknown addresses into forwarding database</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="neighbor-suppress">
+                <properties>
+                  <help>Enable neighbor discovery (ARP and ND) suppression</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="vni-filter">
+                <properties>
+                  <help>Enable VNI filter support</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>4789</defaultValue>
+          </leafNode>
+          #include <include/source-address-ipv4-ipv6.xml.i>
+          #include <include/source-interface.xml.i>
+          #include <include/interface/tunnel-remote-multi.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vrf.xml.i>
+          #include <include/vni.xml.i>
+          <tagNode name="vlan-to-vni">
+            <properties>
+              <help>Configuring VLAN-to-VNI mappings for EVPN-VXLAN</help>
+              <valueHelp>
+                <format>u32:0-4094</format>
+                <description>Virtual Local Area Network (VLAN) ID</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-4094"/>
+              </constraint>
+              <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/vni.xml.i>
+            </children>
+            </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

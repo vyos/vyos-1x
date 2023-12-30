@@ -1,0 +1,126 @@
+<?xml version="1.0"?>
+<!-- DHCP relay configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dhcp-relay" owner="${vyos_conf_scripts_dir}/service_dhcp-relay.py">
+        <properties>
+          <help>Host Configuration Protocol (DHCP) relay agent</help>
+          <priority>910</priority>
+        </properties>
+        <children>
+          #include <include/generic-disable-node.xml.i>
+          #include <include/generic-interface-multi-broadcast.xml.i>
+          <leafNode name="listen-interface">
+            <properties>
+              <help>Interface for DHCP Relay Agent to listen for requests</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="upstream-interface">
+            <properties>
+              <help>Interface for DHCP Relay Agent forward requests out</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="relay-options">
+            <properties>
+              <help>Relay options</help>
+            </properties>
+            <children>
+              <leafNode name="hop-count">
+                <properties>
+                  <help>Policy to discard packets that have reached specified hop-count</help>
+                  <valueHelp>
+                    <format>u32:1-255</format>
+                    <description>Hop count</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-255"/>
+                  </constraint>
+                  <constraintErrorMessage>hop-count must be a value between 1 and 255</constraintErrorMessage>
+                </properties>
+                <defaultValue>10</defaultValue>
+              </leafNode>
+              <leafNode name="max-size">
+                <properties>
+                  <help>Maximum packet size to send to a DHCPv4/BOOTP server</help>
+                  <valueHelp>
+                    <format>u32:64-1400</format>
+                    <description>Maximum packet size</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 64-1400"/>
+                  </constraint>
+                  <constraintErrorMessage>max-size must be a value between 64 and 1400</constraintErrorMessage>
+                </properties>
+                <defaultValue>576</defaultValue>
+              </leafNode>
+              <leafNode name="relay-agents-packets">
+                <properties>
+                  <help>Policy to handle incoming DHCPv4 packets which already contain relay agent options</help>
+                  <completionHelp>
+                    <list>append replace forward discard</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>append</format>
+                    <description>append own relay options to packet</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>replace</format>
+                    <description>replace existing agent option field</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>forward</format>
+                    <description>forward packet unchanged</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>discard</format>
+                    <description>discard packet (default action if giaddr not set in packet)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(append|replace|forward|discard)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>forward</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="server">
+            <properties>
+              <help>DHCP server address</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>DHCP server IPv4 address</description>
+              </valueHelp>
+              <multi/>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
