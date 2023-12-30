@@ -29,8 +29,10 @@
 {% endif %}
         }
         remote {
+{% if rw_conf.authentication.client_mode == 'x509' %}
+            auth = pubkey
+{% elif rw_conf.authentication.client_mode.startswith("eap") %}
             auth = {{ rw_conf.authentication.client_mode }}
-{% if rw_conf.authentication.client_mode.startswith("eap") %}
             eap_id = %any
 {% endif %}
         }
