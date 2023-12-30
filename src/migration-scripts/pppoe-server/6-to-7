@@ -50,13 +50,24 @@ if not config.exists(pool_base):
     exit(0)
 default_pool = ''
 range_pool_name = 'default-range-pool'
-subnet_pool_name = 'default-subnet-pool'
+
+subnet_base_name = 'default-subnet-pool'
+number = 1
+subnet_pool_name = f'{subnet_base_name}-{number}'
+prev_subnet_pool = subnet_pool_name
 #Default nameless pools migrations
 if config.exists(pool_base + ['subnet']):
-    subnet = config.return_value(pool_base + ['subnet'])
-    config.delete(pool_base + ['subnet'])
-    config.set(pool_base + [subnet_pool_name, 'range'], value=subnet)
     default_pool = subnet_pool_name
+    for subnet in config.return_values(pool_base + ['subnet']):
+        config.set(pool_base + [subnet_pool_name, 'range'], value=subnet)
+        if prev_subnet_pool != subnet_pool_name:
+            config.set(pool_base + [prev_subnet_pool, 'next-pool'],
+                       value=subnet_pool_name)
+            prev_subnet_pool = subnet_pool_name
+        number += 1
+        subnet_pool_name = f'{subnet_base_name}-{number}'
+
+    config.delete(pool_base + ['subnet'])
 
 if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
     start_ip = config.return_value(pool_base + ['start'])
@@ -67,7 +78,7 @@ if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
     config.set(pool_base + [range_pool_name, 'range'], value=ip_range)
     if default_pool:
         config.set(pool_base + [range_pool_name, 'next-pool'],
-                   value=subnet_pool_name)
+                   value=default_pool)
     default_pool = range_pool_name
 
 gateway = ''

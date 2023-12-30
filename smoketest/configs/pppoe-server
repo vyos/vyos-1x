@@ -39,8 +39,9 @@ service {
             mode local
         }
         client-ip-pool {
-            start 192.168.0.100
-            stop 192.168.0.200
+            subnet 10.0.0.0/24
+            subnet 10.0.1.0/24
+            subnet 10.0.2.0/24
         }
         gateway-address 192.168.0.2
         interface eth1 {
