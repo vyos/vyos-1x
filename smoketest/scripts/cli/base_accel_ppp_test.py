@@ -384,9 +384,6 @@ class BasicAccelPPPTest:
             self.assertEqual(f"fail-time=0", server[5])
 
         def test_accel_ipv4_pool(self):
-            """
-            Test accel-ppp IPv4 pool
-            """
             self.basic_config(is_gateway=False, is_client_pool=False)
             gateway = "192.0.2.1"
             subnet = "172.16.0.0/24"
@@ -416,9 +413,7 @@ class BasicAccelPPPTest:
             self.assertEqual(first_pool, conf[self._protocol_section]["ip-pool"])
 
         def test_accel_next_pool(self):
-            """
-            T5099 required specific order
-            """
+            # T5099 required specific order
             self.basic_config(is_gateway=False, is_client_pool=False)
 
             gateway = "192.0.2.1"
