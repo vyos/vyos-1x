@@ -20,6 +20,7 @@ from passlib.hosts import linux_context
 from psutil import users
 from pwd import getpwall
 from pwd import getpwnam
+from pwd import getpwuid
 from sys import exit
 from time import sleep
 
@@ -342,8 +343,11 @@ def apply(login):
                 # XXX: Should we deny using root at all?
                 home_dir = getpwnam(user).pw_dir
                 # T5875: ensure UID is properly set on home directory if user is re-added
-                if os.path.exists(home_dir):
-                    chown(home_dir, user=user, recursive=True)
+                # the home directory will always exist, as it's created above by --create-home,
+                # retrieve current owner of home directory and adjust it on demand
+                dir_owner = getpwuid(os.stat(home_dir).st_uid).pw_name
+                if dir_owner != user:
+                     chown(home_dir, user=user, recursive=True)
 
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
