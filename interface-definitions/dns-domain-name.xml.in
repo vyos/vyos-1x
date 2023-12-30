@@ -45,24 +45,17 @@
           </constraint>
         </properties>
       </leafNode>
-      <node name="domain-search" owner="${vyos_conf_scripts_dir}/host_name.py">
+      <leafNode name="domain-search" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
           <help>Domain Name Server (DNS) domain completion order</help>
           <priority>400</priority>
+          <constraint>
+            <validator name="fqdn"/>
+          </constraint>
+          <constraintErrorMessage>Invalid domain name (RFC 1123 section 2).\nMay only contain letters, numbers and period.</constraintErrorMessage>
+          <multi/>
         </properties>
-        <children>
-          <leafNode name="domain">
-            <properties>
-              <help>DNS domain completion order</help>
-              <constraint>
-                <regex>[-a-zA-Z0-9.]+</regex>
-              </constraint>
-              <constraintErrorMessage>Invalid domain name</constraintErrorMessage>
-              <multi/>
-            </properties>
-          </leafNode>
-        </children>
-      </node>
+      </leafNode>
       <node name="static-host-mapping" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
           <help>Map host names to addresses</help>

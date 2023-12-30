@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T5877: migrate 'system domain-search domain' to 'system domain-search'
+
+from sys import exit, argv
+from vyos.configtree import ConfigTree
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['system', 'domain-search']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    exit(0)
+
+if config.exists(base + ['domain']):
+    entries = config.return_values(base + ['domain'])
+    config.delete(base + ['domain'])
+    for entry in entries:
+        config.set(base, value=entry, replace=False)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)
