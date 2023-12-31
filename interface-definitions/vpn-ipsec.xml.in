@@ -772,8 +772,12 @@
                         <properties>
                           <help>Client authentication mode</help>
                           <completionHelp>
-                            <list>eap-tls eap-mschapv2 eap-radius</list>
+                            <list>x509 eap-tls eap-mschapv2 eap-radius</list>
                           </completionHelp>
+                          <valueHelp>
+                            <format>x509</format>
+                            <description>Use IPsec x.509 certificate authentication</description>
+                          </valueHelp>
                           <valueHelp>
                             <format>eap-tls</format>
                             <description>Use EAP-TLS authentication</description>
@@ -787,7 +791,7 @@
                             <description>Use EAP-RADIUS authentication</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(eap-tls|eap-mschapv2|eap-radius)</regex>
+                            <regex>(x509|eap-tls|eap-mschapv2|eap-radius)</regex>
                           </constraint>
                         </properties>
                         <defaultValue>eap-mschapv2</defaultValue>
