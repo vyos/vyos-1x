@@ -24,7 +24,7 @@ from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
-from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
@@ -166,7 +166,7 @@ def verify(tunnel):
     verify_mirror_redirect(tunnel)
 
     if 'source_interface' in tunnel:
-        verify_interface_exists(tunnel['source_interface'])
+        verify_source_interface(tunnel)
 
     # TTL != 0 and nopmtudisc are incompatible, parameters and ip use default
     # values, thus the keys are always present.
