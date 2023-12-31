@@ -28,7 +28,7 @@ from vyos.utils.commit import commit_in_progress
 
 config = ConfigTreeQuery()
 base = ['service', 'dhcp-server']
-lease_file = '/config/dhcp4.leases'
+lease_file = '/config/dhcp/dhcp4-leases.csv'
 
 
 def del_lease_ip(address):
@@ -52,7 +52,6 @@ def is_ip_in_leases(address):
     Return True if address found in the lease file
     """
     leases = kea_parse_leases(lease_file)
-    lease_ips = []
     for lease in leases:
         if address == lease['address']:
             return True
