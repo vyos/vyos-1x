@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <!-- script does not use XML defaults so far -->
+      <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/system_host-name.py">
+        <properties>
+          <help>System host name (default: vyos)</help>
+          <constraint>
+            #include <include/constraint/host-name.xml.i>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

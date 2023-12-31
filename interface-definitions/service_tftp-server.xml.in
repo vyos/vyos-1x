@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!-- TFTP configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="tftp-server" owner="${vyos_conf_scripts_dir}/service_tftp-server.py">
+        <properties>
+          <help>Trivial File Transfer Protocol (TFTP) server</help>
+          <priority>990</priority>
+        </properties>
+        <children>
+          <leafNode name="directory">
+            <properties>
+              <help>Folder containing files served by TFTP</help>
+            </properties>
+          </leafNode>
+          <leafNode name="allow-upload">
+            <properties>
+              <help>Allow TFTP file uploads</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>69</defaultValue>
+          </leafNode>
+          #include <include/listen-address-vrf.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

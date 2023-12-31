@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # * Move 'api virtual-host' list to 'api-restrict virtual-host' so it
-#   is owned by https.py instead of http-api.py
+#   is owned by service_https.py
 
 import sys
 

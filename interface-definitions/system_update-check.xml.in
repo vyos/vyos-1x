@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="update-check" owner="${vyos_conf_scripts_dir}/system_update-check.py">
+        <properties>
+          <help>Check available update images</help>
+          <priority>9999</priority>
+        </properties>
+        <children>
+          <leafNode name="auto-check">
+            <properties>
+              <help>Enable auto check for new images</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          #include <include/url-http-https.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

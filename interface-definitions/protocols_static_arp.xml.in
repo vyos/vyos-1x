@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="static">
+        <children>
+          <node name="arp" owner="${vyos_conf_scripts_dir}/protocols_static_arp.py">
+            <properties>
+              <help>Static ARP translation</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Interface configuration</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Interface name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
+                </properties>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>IP address for static ARP entry</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 destination address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      #include <include/generic-description.xml.i>
+                      #include <include/interface/mac.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

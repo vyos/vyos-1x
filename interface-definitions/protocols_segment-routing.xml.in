@@ -1,0 +1,137 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+       <node name="segment-routing" owner="${vyos_conf_scripts_dir}/protocols_segment-routing.py">
+        <properties>
+          <help>Segment Routing</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface specific Segment Routing options</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+              </constraint>
+            </properties>
+            <children>
+              <node name="srv6">
+                <properties>
+                  <help>Accept SR-enabled IPv6 packets on this interface</help>
+                </properties>
+                <children>
+                  <leafNode name="hmac">
+                    <properties>
+                      <help>Define HMAC policy for ingress SR-enabled packets on this interface</help>
+                      <completionHelp>
+                        <list>accept drop ignore</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>accept</format>
+                        <description>Accept packets without HMAC, validate packets with HMAC</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>drop</format>
+                        <description>Drop packets without HMAC, validate packets with HMAC</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ignore</format>
+                        <description>Ignore HMAC field.</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(accept|drop|ignore)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>accept</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="srv6">
+            <properties>
+              <help>Segment-Routing SRv6 configuration</help>
+            </properties>
+            <children>
+              <tagNode name="locator">
+                <properties>
+                  <help>Segment Routing SRv6 locator</help>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="behavior-usid">
+                    <properties>
+                      <help>Set SRv6 behavior uSID</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>SRv6 locator prefix</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>SRv6 locator prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="block-len">
+                    <properties>
+                      <help>Configure SRv6 locator block length in bits</help>
+                      <valueHelp>
+                        <format>u32:16-64</format>
+                        <description>Specify SRv6 locator block length in bits</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 16-64"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>40</defaultValue>
+                  </leafNode>
+                  <leafNode name="func-bits">
+                    <properties>
+                      <help>Configure SRv6 locator function length in bits</help>
+                      <valueHelp>
+                        <format>u32:0-64</format>
+                        <description>Specify SRv6 locator function length in bits</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-64"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>16</defaultValue>
+                  </leafNode>
+                  <leafNode name="node-len">
+                    <properties>
+                      <help>Configure SRv6 locator node length in bits</help>
+                      <valueHelp>
+                        <format>u32:16-64</format>
+                        <description>Configure SRv6 locator node length in bits</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 16-64"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>24</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

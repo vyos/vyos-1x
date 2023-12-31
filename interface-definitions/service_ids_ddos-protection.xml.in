@@ -1,0 +1,167 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="ids">
+        <properties>
+          <help>Intrusion Detection System</help>
+        </properties>
+        <children>
+          <node name="ddos-protection" owner="${vyos_conf_scripts_dir}/service_ids_ddos-protection.py">
+            <properties>
+              <help>FastNetMon detection and protection parameters</help>
+              <priority>731</priority>
+            </properties>
+            <children>
+              <leafNode name="alert-script">
+                <properties>
+                  <help>Path to fastnetmon alert script</help>
+                </properties>
+              </leafNode>
+              <leafNode name="ban-time">
+                <properties>
+                  <help>How long we should keep an IP in blocked state</help>
+                  <valueHelp>
+                    <format>u32:1-4294967294</format>
+                    <description>Time in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967294"/>
+                  </constraint>
+                </properties>
+                <defaultValue>1900</defaultValue>
+              </leafNode>
+              <leafNode name="direction">
+                <properties>
+                  <help>Direction for processing traffic</help>
+                  <completionHelp>
+                    <list>in out</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(in|out)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="excluded-network">
+                <properties>
+                  <help>Specify IPv4 and IPv6 networks which are going to be excluded from protection</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 prefix(es) to exclude</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix(es) to exclude</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="listen-interface">
+                <properties>
+                  <help>Listen interface for mirroring traffic</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="mode">
+                <properties>
+                  <help>Traffic capture mode</help>
+                  <completionHelp>
+                    <list>mirror sflow</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>mirror</format>
+                    <description>Listen to mirrored traffic</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sflow</format>
+                    <description>Capture sFlow flows</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(mirror|sflow)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="sflow">
+                <properties>
+                  <help>Sflow settings</help>
+                </properties>
+                <children>
+                  #include <include/listen-address-ipv4-single.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>6343</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="network">
+                <properties>
+                  <help>Specify IPv4 and IPv6 networks which belong to you</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Your IPv4 prefix(es)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>Your IPv6 prefix(es)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <node name="threshold">
+                <properties>
+                  <help>Attack limits thresholds</help>
+                </properties>
+                <children>
+                  <node name="general">
+                    <properties>
+                      <help>General threshold</help>
+                    </properties>
+                    <children>
+                      #include <include/ids/threshold.xml.i>
+                    </children>
+                  </node>
+                  <node name="tcp">
+                    <properties>
+                      <help>TCP threshold</help>
+                    </properties>
+                    <children>
+                      #include <include/ids/threshold.xml.i>
+                    </children>
+                  </node>
+                  <node name="udp">
+                    <properties>
+                      <help>UDP threshold</help>
+                    </properties>
+                    <children>
+                      #include <include/ids/threshold.xml.i>
+                    </children>
+                  </node>
+                  <node name="icmp">
+                    <properties>
+                      <help>ICMP threshold</help>
+                    </properties>
+                    <children>
+                      #include <include/ids/threshold.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

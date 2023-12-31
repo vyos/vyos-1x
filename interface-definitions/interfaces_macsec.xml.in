@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="macsec" owner="${vyos_conf_scripts_dir}/interfaces_macsec.py">
+        <properties>
+          <help>MACsec Interface (802.1ae)</help>
+          <priority>461</priority>
+          <constraint>
+            <regex>macsec[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>MACsec interface must be named macsecN</constraintErrorMessage>
+          <valueHelp>
+            <format>macsecN</format>
+            <description>MACsec interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/interface/dhcp-options.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mirror.xml.i>
+          <node name="security">
+            <properties>
+              <help>Security/Encryption Settings</help>
+            </properties>
+            <children>
+              <leafNode name="cipher">
+                <properties>
+                  <help>Cipher suite used</help>
+                  <completionHelp>
+                    <list>gcm-aes-128 gcm-aes-256</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>gcm-aes-128</format>
+                    <description>Galois/Counter Mode of AES cipher with 128-bit key</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>gcm-aes-256</format>
+                    <description>Galois/Counter Mode of AES cipher with 256-bit key</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(gcm-aes-128|gcm-aes-256)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="encrypt">
+                <properties>
+                  <help>Enable optional MACsec encryption</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="static">
+                <properties>
+                  <help>Use static keys for MACsec [static Secure Authentication Key (SAK) mode]</help>
+                </properties>
+                <children>
+                  #include <include/interface/macsec-key.xml.i>
+                  <tagNode name="peer">
+                    <properties>
+                      <help>MACsec peer name</help>
+                      <constraint>
+                        <regex>[^ ]{1,100}</regex>
+                      </constraint>
+                      <constraintErrorMessage>MACsec peer name exceeds limit of 100 characters</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/generic-disable-node.xml.i>
+                      #include <include/interface/mac.xml.i>
+                      #include <include/interface/macsec-key.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="mka">
+                <properties>
+                  <help>MACsec Key Agreement protocol (MKA)</help>
+                </properties>
+                <children>
+                  <leafNode name="cak">
+                    <properties>
+                      <help>Secure Connectivity Association Key</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>16-byte (128-bit) hex-string (32 hex-digits) for gcm-aes-128 or 32-byte (256-bit) hex-string (64 hex-digits) for gcm-aes-256</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[A-Fa-f0-9]{32}</regex>
+                        <regex>[A-Fa-f0-9]{64}</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ckn">
+                    <properties>
+                      <help>Secure Connectivity Association Key Name</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>1..32-bytes (8..256 bit) hex-string (2..64 hex-digits)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[A-Fa-f0-9]{2,64}</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="priority">
+                    <properties>
+                      <help>Priority of MACsec Key Agreement protocol (MKA) actor</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>MACsec Key Agreement protocol (MKA) priority</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255" />
+                      </constraint>
+                    </properties>
+                    <defaultValue>255</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="replay-window">
+                <properties>
+                  <help>IEEE 802.1X/MACsec replay protection window</help>
+                  <valueHelp>
+                    <format>u32:0</format>
+                    <description>No replay window, strict check</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>Number of packets that could be misordered</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295" />
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/mtu-68-16000.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1460</defaultValue>
+          </leafNode>
+          #include <include/source-interface-ethernet.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vrf.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
