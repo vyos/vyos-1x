@@ -19,7 +19,7 @@
   </properties>
 </leafNode>
 #include <include/firewall/log.xml.i>
-#include <include/firewall/rule-log-options.xml.i>
+#include <include/firewall/log-options.xml.i>
 <node name="source">
   <properties>
     <help>Source parameters</help>
