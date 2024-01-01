@@ -41,9 +41,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-nat_conf_script = 'nat.py'
-policy_route_conf_script = 'policy-route.py'
-
 nftables_conf = '/run/nftables.conf'
 
 sysfs_config = {

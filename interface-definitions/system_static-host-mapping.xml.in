@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="static-host-mapping" owner="${vyos_conf_scripts_dir}/system_host-name.py">
+        <properties>
+          <help>Map host names to addresses</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <tagNode name="host-name">
+            <properties>
+              <help>Host name for static address mapping</help>
+              <constraint>
+                #include <include/constraint/host-name.xml.i>
+              </constraint>
+              <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="alias">
+                <properties>
+                  <help>Alias for this address</help>
+                  <constraint>
+                    <regex>.{1,63}</regex>
+                  </constraint>
+                  <constraintErrorMessage>invalid alias hostname, needs to be between 1 and 63 charactes</constraintErrorMessage>
+                  <multi />
+                </properties>
+              </leafNode>
+              <leafNode name="inet">
+                <properties>
+                  <help>IP Address</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

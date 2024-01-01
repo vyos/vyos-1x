@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="acceleration" owner="${vyos_conf_scripts_dir}/system_acceleration.py">
+        <properties>
+          <help>Acceleration components</help>
+          <priority>50</priority>
+        </properties>
+        <children>
+        <leafNode name="qat">
+          <properties>
+            <help>Enable Intel QAT (Quick Assist Technology) for cryptographic acceleration</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
