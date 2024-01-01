@@ -257,6 +257,15 @@ def search_previous_installation(disks: list[str]) -> None:
 
     disk.partition_umount(image_drive)
 
+def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
+    if not Path(src).is_file():
+        return
+    if Path(dst).is_dir():
+        dst = Path(dst).joinpath(Path(src).name)
+    st = Path(src).stat()
+    copy(src, dst, follow_symlinks=follow_symlinks)
+    chown(dst, user=st.st_uid)
+
 
 def copy_previous_installation_data(target_dir: str) -> None:
     if Path('/mnt/config').exists():
@@ -814,7 +823,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             chown(target_config_dir, group='vyattacfg')
             chmod_2775(target_config_dir)
             copytree('/opt/vyatta/etc/config/', target_config_dir,
-                     dirs_exist_ok=True)
+                     copy_function=copy_preserve_owner, dirs_exist_ok=True)
         else:
             Path(target_config_dir).mkdir(parents=True)
             chown(target_config_dir, group='vyattacfg')
