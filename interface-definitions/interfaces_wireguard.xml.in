@@ -44,9 +44,9 @@
             <properties>
               <help>Base64 encoded private key</help>
               <constraint>
-                <regex>[0-9a-zA-Z\+/]{43}=</regex>
+                <validator name="base64"/>
               </constraint>
-              <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
+              <constraintErrorMessage>Key is not base64-encoded</constraintErrorMessage>
             </properties>
           </leafNode>
           <tagNode name="peer">
@@ -64,18 +64,18 @@
                 <properties>
                   <help>base64 encoded public key</help>
                   <constraint>
-                    <regex>[0-9a-zA-Z\+/]{43}=</regex>
+                    <validator name="base64"/>
                   </constraint>
-                  <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
+                  <constraintErrorMessage>Key is not base64-encoded</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="preshared-key">
                 <properties>
                   <help>base64 encoded preshared key</help>
                   <constraint>
-                    <regex>[0-9a-zA-Z\+/]{43}=</regex>
+                    <validator name="base64"/>
                   </constraint>
-                  <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
+                  <constraintErrorMessage>Key is not base64-encoded</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="allowed-ips">
