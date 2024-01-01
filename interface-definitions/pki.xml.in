@@ -14,6 +14,10 @@
           <leafNode name="certificate">
             <properties>
               <help>CA certificate in PEM format</help>
+              <constraint>
+                <validator name="base64"/>
+              </constraint>
+              <constraintErrorMessage>CA certificate is not base64-encoded</constraintErrorMessage>
             </properties>
           </leafNode>
           #include <include/generic-description.xml.i>
@@ -25,6 +29,10 @@
               <leafNode name="key">
                 <properties>
                   <help>CA private key in PEM format</help>
+                  <constraint>
+                    <validator name="base64"/>
+                  </constraint>
+                  <constraintErrorMessage>CA private key is not base64-encoded</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="password-protected">
@@ -38,6 +46,10 @@
           <leafNode name="crl">
             <properties>
               <help>Certificate revocation list in PEM format</help>
+              <constraint>
+                <validator name="base64"/>
+              </constraint>
+              <constraintErrorMessage>CRL is not base64-encoded</constraintErrorMessage>
               <multi/>
             </properties>
           </leafNode>
@@ -57,6 +69,10 @@
           <leafNode name="certificate">
             <properties>
               <help>Certificate in PEM format</help>
+              <constraint>
+                <validator name="base64"/>
+              </constraint>
+              <constraintErrorMessage>Certificate is not base64-encoded</constraintErrorMessage>
             </properties>
           </leafNode>
           #include <include/generic-description.xml.i>
@@ -68,6 +84,10 @@
               <leafNode name="key">
                 <properties>
                   <help>Certificate private key in PEM format</help>
+                  <constraint>
+                    <validator name="base64"/>
+                  </constraint>
+                  <constraintErrorMessage>Certificate private key is not base64-encoded</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="password-protected">
@@ -94,6 +114,10 @@
           <leafNode name="parameters">
             <properties>
               <help>DH parameters in PEM format</help>
+              <constraint>
+                <validator name="base64"/>
+              </constraint>
+              <constraintErrorMessage>DH parameters are not base64-encoded</constraintErrorMessage>
             </properties>
           </leafNode>
         </children>
@@ -111,6 +135,10 @@
               <leafNode name="key">
                 <properties>
                   <help>Public key in PEM format</help>
+                  <constraint>
+                    <validator name="base64"/>
+                  </constraint>
+                  <constraintErrorMessage>Public key is not base64-encoded</constraintErrorMessage>
                 </properties>
               </leafNode>
             </children>
@@ -123,6 +151,10 @@
               <leafNode name="key">
                 <properties>
                   <help>Private key in PEM format</help>
+                  <constraint>
+                    <validator name="base64"/>
+                  </constraint>
+                  <constraintErrorMessage>Private key is not base64-encoded</constraintErrorMessage>
                 </properties>
               </leafNode>
               <leafNode name="password-protected">
