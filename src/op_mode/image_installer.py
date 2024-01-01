@@ -31,12 +31,14 @@ from passlib.hosts import linux_context
 from psutil import disk_partitions
 
 from vyos.configtree import ConfigTree
+from vyos.configquery import ConfigTreeQuery
 from vyos.remote import download
 from vyos.system import disk, grub, image, compat, raid, SYSTEM_CFG_VER
 from vyos.template import render
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.process import cmd, run
+from vyos.version import get_remote_version
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -486,6 +488,14 @@ def image_fetch(image_path: str, vrf: str = None,
     Returns:
         Path: a path to a local file
     """
+    # Latest version gets url from configured "system update-check url"
+    if image_path == 'latest':
+        config = ConfigTreeQuery()
+        if config.exists('system update-check url'):
+            configured_url_version = config.value('system update-check url')
+            remote_url_list = get_remote_version(configured_url_version)
+            image_path = remote_url_list[0].get('url')
+
     try:
         # check a type of path
         if urlparse(image_path).scheme:
