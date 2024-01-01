@@ -78,6 +78,7 @@
 "service_pppoe-server.py",
 "service_router-advert.py",
 "service_salt-minion.py",
+"service_sla.py",
 "service_ssh.py",
 "service_tftp-server.py",
 "service_upnp.py",
