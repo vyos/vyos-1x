@@ -84,6 +84,7 @@
 "service_upnp.py",
 "service_webproxy.py",
 "system_acceleration.py",
+"system_config-management.py",
 "system_conntrack.py",
 "system_console.py",
 "system_flow-accounting.py",
