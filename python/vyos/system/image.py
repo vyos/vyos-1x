@@ -241,7 +241,7 @@ def validate_name(image_name: str) -> bool:
     Returns:
         bool: validation result
     """
-    regex_filter = re_compile(r'^[\w\.+-]{1,32}$')
+    regex_filter = re_compile(r'^[\w\.+-]{1,64}$')
     if regex_filter.match(image_name):
         return True
     return False
