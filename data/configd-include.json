@@ -54,7 +54,6 @@
 "protocols_static_multicast.py",
 "protocols_static_neighbor-proxy.py",
 "qos.py",
-"service_aws_glb.py",
 "service_broadcast-relay.py",
 "service_config-sync.py",
 "service_conntrack-sync.py",
