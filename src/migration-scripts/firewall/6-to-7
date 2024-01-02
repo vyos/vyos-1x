@@ -73,6 +73,7 @@ icmp_translations = {
     #  Time Exceeded
     'ttl-zero-during-transit': [11, 0],
     'ttl-zero-during-reassembly': [11, 1],
+    'ttl-exceeded': 'time-exceeded',
     # Parameter Problem
     'ip-header-bad': [12, 0],
     'required-option-missing': [12, 1]
@@ -87,8 +88,14 @@ icmpv6_translations = {
     'communication-prohibited': [1, 1],
     'address-unreachble': [1, 3],
     'port-unreachable': [1, 4],
-    # Redirect
+    # nd
     'redirect': 'nd-redirect',
+    'router-solicitation': 'nd-router-solicit',
+    'router-advertisement': 'nd-router-advert',
+    'neighbour-solicitation': 'nd-neighbor-solicit',
+    'neighbor-solicitation': 'nd-neighbor-solicit',
+    'neighbour-advertisement': 'nd-neighbor-advert',
+    'neighbor-advertisement': 'nd-neighbor-advert',
     #  Time Exceeded
     'ttl-zero-during-transit': [3, 0],
     'ttl-zero-during-reassembly': [3, 1],
