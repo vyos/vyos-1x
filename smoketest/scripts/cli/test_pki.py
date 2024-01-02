@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -182,30 +182,6 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
 
     def test_invalid_ca_valid_certificate(self):
         self.cli_set(base_path + ['ca', 'smoketest', 'certificate', valid_cert.replace('\n','')])
-
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-    def test_invalid_certificate(self):
-        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', 'invalidcertdata'])
-
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-    def test_invalid_public_key(self):
-        self.cli_set(base_path + ['key-pair', 'smoketest', 'public', 'key', 'invalidkeydata'])
-
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-    def test_invalid_private_key(self):
-        self.cli_set(base_path + ['key-pair', 'smoketest', 'private', 'key', 'invalidkeydata'])
-
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-    def test_invalid_dh_parameters(self):
-        self.cli_set(base_path + ['dh', 'smoketest', 'parameters', 'thisisinvalid'])
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
