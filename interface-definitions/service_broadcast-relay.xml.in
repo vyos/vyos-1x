@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="broadcast-relay" owner="${vyos_conf_scripts_dir}/service_broadcast-relay.py">
+        <properties>
+          <help>UDP broadcast relay service</help>
+          <priority>990</priority>
+        </properties>
+        <children>
+          #include <include/generic-disable-node.xml.i>
+          <tagNode name="id">
+            <properties>
+              <help>Unique ID for each UDP port to forward</help>
+              <valueHelp>
+                <format>u32:1-99</format>
+                <description>Broadcast relay instance ID</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-99"/>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/generic-disable-node.xml.i>
+              <leafNode name="address">
+                <properties>
+                  <help>Set source IP of forwarded packets, otherwise original senders address is used</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Optional source address for forwarded packets</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+              #include <include/generic-interface-multi.xml.i>
+              #include <include/port-number.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

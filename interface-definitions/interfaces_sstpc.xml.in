@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="sstpc" owner="${vyos_conf_scripts_dir}/interfaces_sstpc.py">
+        <properties>
+          <help>Secure Socket Tunneling Protocol (SSTP) client Interface</help>
+          <priority>460</priority>
+          <constraint>
+            <regex>sstpc[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>Secure Socket Tunneling Protocol interface must be named sstpcN</constraintErrorMessage>
+          <valueHelp>
+            <format>sstpcN</format>
+            <description>Secure Socket Tunneling Protocol interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/authentication.xml.i>
+          #include <include/interface/no-default-route.xml.i>
+          #include <include/interface/default-route-distance.xml.i>
+          #include <include/interface/no-peer-dns.xml.i>
+          #include <include/interface/mtu-68-1500.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1452</defaultValue>
+          </leafNode>
+          #include <include/server-ipv4-fqdn.xml.i>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>443</defaultValue>
+          </leafNode>
+          <node name="ssl">
+            <properties>
+              <help>Secure Sockets Layer (SSL) configuration</help>
+            </properties>
+            <children>
+              #include <include/pki/ca-certificate.xml.i>
+            </children>
+          </node>
+          #include <include/interface/vrf.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

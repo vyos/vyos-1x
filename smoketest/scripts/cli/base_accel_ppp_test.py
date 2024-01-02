@@ -166,7 +166,6 @@ class BasicAccelPPPTest:
             static_ip = "100.100.100.101"
             upload = "5000"
             download = "10000"
-
             self.set(
                 [
                     "authentication",
@@ -254,6 +253,9 @@ class BasicAccelPPPTest:
             radius_key = "secretVyOS"
             radius_port = "2000"
             radius_port_acc = "3000"
+            acct_interim_jitter = '10'
+            acct_interim_interval = '10'
+            acct_timeout = '30'
 
             self.set(["authentication", "mode", "radius"])
             self.set(
@@ -277,6 +279,30 @@ class BasicAccelPPPTest:
                     radius_server,
                     "acct-port",
                     radius_port_acc,
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "acct-interim-jitter",
+                    acct_interim_jitter,
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "accounting-interim-interval",
+                    acct_interim_interval,
+                ]
+            )
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "acct-timeout",
+                    acct_timeout,
                 ]
             )
 
@@ -307,7 +333,9 @@ class BasicAccelPPPTest:
 
             # check auth
             self.assertTrue(conf["radius"].getboolean("verbose"))
-            self.assertEqual(conf["radius"]["acct-timeout"], "3")
+            self.assertEqual(conf["radius"]["acct-timeout"], acct_timeout)
+            self.assertEqual(conf["radius"]["acct-interim-interval"], acct_interim_interval)
+            self.assertEqual(conf["radius"]["acct-interim-jitter"], acct_interim_jitter)
             self.assertEqual(conf["radius"]["timeout"], "3")
             self.assertEqual(conf["radius"]["max-try"], "3")
 
@@ -356,15 +384,13 @@ class BasicAccelPPPTest:
             self.assertEqual(f"fail-time=0", server[5])
 
         def test_accel_ipv4_pool(self):
-            """
-            Test accel-ppp IPv4 pool
-            """
             self.basic_config(is_gateway=False, is_client_pool=False)
             gateway = "192.0.2.1"
             subnet = "172.16.0.0/24"
             first_pool = "POOL1"
             second_pool = "POOL2"
             range = "192.0.2.10-192.0.2.20"
+            range_config = "192.0.2.10-20"
 
             self.set(["gateway-address", gateway])
             self.set(["client-ip-pool", first_pool, "range", subnet])
@@ -382,14 +408,12 @@ class BasicAccelPPPTest:
             self.assertEqual(
                 f"{first_pool},next={second_pool}", conf["ip-pool"][f"{subnet},name"]
             )
-            self.assertEqual(second_pool, conf["ip-pool"][f"{range},name"])
+            self.assertEqual(second_pool, conf["ip-pool"][f"{range_config},name"])
             self.assertEqual(gateway, conf["ip-pool"]["gw-ip-address"])
             self.assertEqual(first_pool, conf[self._protocol_section]["ip-pool"])
 
         def test_accel_next_pool(self):
-            """
-            T5099 required specific order
-            """
+            # T5099 required specific order
             self.basic_config(is_gateway=False, is_client_pool=False)
 
             gateway = "192.0.2.1"

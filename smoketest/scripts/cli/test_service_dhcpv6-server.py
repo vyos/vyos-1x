@@ -41,6 +41,9 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestServiceDHCPv6Server, cls).setUpClass()
+        # Clear out current configuration to allow running this test on a live system
+        cls.cli_delete(cls, base_path)
+
         cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_addr])
 
     @classmethod
@@ -122,11 +125,17 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         client_base = 1
         for client in ['client1', 'client2', 'client3']:
-            cid = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{}'.format(client_base)
-            self.cli_set(pool + ['static-mapping', client, 'identifier', cid])
+            duid = f'00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{client_base:02}'
+            self.cli_set(pool + ['static-mapping', client, 'duid', duid])
             self.cli_set(pool + ['static-mapping', client, 'ipv6-address', inc_ip(subnet, client_base)])
             self.cli_set(pool + ['static-mapping', client, 'ipv6-prefix', inc_ip(subnet, client_base << 64) + '/64'])
             client_base += 1
+
+        # cannot have both mac-address and duid set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(pool + ['static-mapping', 'client1', 'mac', '00:50:00:00:00:11'])
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'client1', 'mac'])
 
         # commit changes
         self.cli_commit()
@@ -182,14 +191,14 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         client_base = 1
         for client in ['client1', 'client2', 'client3']:
-            cid = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{}'.format(client_base)
+            duid = f'00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{client_base:02}'
             ip = inc_ip(subnet, client_base)
             prefix = inc_ip(subnet, client_base << 64) + '/64'
 
             self.verify_config_object(
                     obj,
                     ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'reservations'],
-                    {'duid': cid, 'ip-addresses': [ip], 'prefixes': [prefix]})
+                    {'hostname': client, 'duid': duid, 'ip-addresses': [ip], 'prefixes': [prefix]})
 
             client_base += 1
 

@@ -316,20 +316,15 @@ def is_ipv6(text):
     except: return False
 
 @register_filter('first_host_address')
-def first_host_address(text):
+def first_host_address(prefix):
     """ Return first usable (host) IP address from given prefix.
     Example:
       - 10.0.0.0/24 -> 10.0.0.1
       - 2001:db8::/64 -> 2001:db8::
     """
     from ipaddress import ip_interface
-    from ipaddress import IPv4Network
-    from ipaddress import IPv6Network
-
-    addr = ip_interface(text)
-    if addr.version == 4:
-        return str(addr.ip +1)
-    return str(addr.ip)
+    tmp = ip_interface(prefix).network
+    return str(tmp.network_address +1)
 
 @register_filter('last_host_address')
 def last_host_address(text):
@@ -584,7 +579,7 @@ def nft_default_rule(fw_conf, fw_name, family):
     default_action = fw_conf['default_action']
     #family = 'ipv6' if ipv6 else 'ipv4'
 
-    if 'enable_default_log' in fw_conf:
+    if 'default_log' in fw_conf:
         action_suffix = default_action[:1].upper()
         output.append(f'log prefix "[{family}-{fw_name[:19]}-default-{action_suffix}]"')
 

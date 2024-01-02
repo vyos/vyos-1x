@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <leafNode name="domain-name" owner="${vyos_conf_scripts_dir}/system_host-name.py">
+        <properties>
+          <help>System domain name</help>
+          <constraint>
+            <validator name="fqdn"/>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

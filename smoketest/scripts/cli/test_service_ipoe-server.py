@@ -117,6 +117,7 @@ class TestServiceIPoEServer(BasicAccelPPPTest.TestCase):
         first_pool = "POOL1"
         second_pool = "POOL2"
         range = "192.0.2.10-192.0.2.20"
+        range_config = "192.0.2.10-20"
 
         for gw in gateway:
             self.set(["gateway-address", gw])
@@ -141,7 +142,7 @@ class TestServiceIPoEServer(BasicAccelPPPTest.TestCase):
         self.assertIn(
             f"{first_pool},next={second_pool}", conf["ip-pool"][f"{subnet},name"]
         )
-        self.assertIn(second_pool, conf["ip-pool"][f"{range},name"])
+        self.assertIn(second_pool, conf["ip-pool"][f"{range_config},name"])
 
         gw_pool_config_list = conf.get("ip-pool", "gw-ip-address")
         gw_ipoe_config_list = conf.get(self._protocol_section, "gw-ip-address")

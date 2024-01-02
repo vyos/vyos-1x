@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,16 +17,16 @@
 import os
 import tempfile
 import unittest
+import importlib
 
 from vyos import ConfigError
 
 try:
-    from src.conf_mode import task_scheduler
+    task_scheduler = importlib.import_module("src.conf_mode.system_task-scheduler")
 except ModuleNotFoundError:  # for unittest.main()
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-    from src.conf_mode import task_scheduler
-
+    task_scheduler = importlib.import_module("src.conf_mode.system_task-scheduler")
 
 class TestUpdateCrontab(unittest.TestCase):
 

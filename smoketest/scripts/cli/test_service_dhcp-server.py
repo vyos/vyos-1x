@@ -22,13 +22,10 @@ from json import loads
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
-from vyos.template import address_from_cidr
 from vyos.template import inc_ip
 from vyos.template import dec_ip
-from vyos.template import netmask_from_cidr
 
 PROCESS_NAME = 'kea-dhcp4'
 CTRL_PROCESS_NAME = 'kea-ctrl-agent'
@@ -45,6 +42,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestServiceDHCPServer, cls).setUpClass()
+       # Clear out current configuration to allow running this test on a live system
+        cls.cli_delete(cls, base_path)
 
         cidr_mask = subnet.split('/')[-1]
         cls.cli_set(cls, ['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
@@ -300,9 +299,15 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         client_base = 10
         for client in ['client1', 'client2', 'client3']:
             mac = '00:50:00:00:00:{}'.format(client_base)
-            self.cli_set(pool + ['static-mapping', client, 'mac-address', mac])
+            self.cli_set(pool + ['static-mapping', client, 'mac', mac])
             self.cli_set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
             client_base += 1
+
+        # cannot have both mac-address and duid set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(pool + ['static-mapping', 'client1', 'duid', '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:11'])
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'client1', 'duid'])
 
         # commit changes
         self.cli_commit()
@@ -337,7 +342,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             self.verify_config_object(
                     obj,
                     ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'reservations'],
-                    {'hw-address': mac, 'ip-address': ip})
+                    {'hostname': client, 'hw-address': mac, 'ip-address': ip})
 
             client_base += 1
 
@@ -373,7 +378,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             client_base = 60
             for client in ['client1', 'client2', 'client3', 'client4']:
                 mac = '02:50:00:00:00:{}'.format(client_base)
-                self.cli_set(pool + ['static-mapping', client, 'mac-address', mac])
+                self.cli_set(pool + ['static-mapping', client, 'mac', mac])
                 self.cli_set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
                 client_base += 1
 
@@ -429,7 +434,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 self.verify_config_object(
                         obj,
                         ['Dhcp4', 'shared-networks', int(network), 'subnet4', 0, 'reservations'],
-                        {'hw-address': mac, 'ip-address': ip})
+                        {'hostname': client, 'hw-address': mac, 'ip-address': ip})
 
                 client_base += 1
 

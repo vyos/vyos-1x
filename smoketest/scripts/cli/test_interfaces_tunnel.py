@@ -393,5 +393,21 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(tunnel_config['encapsulation'],    conf['linkinfo']['info_kind'])
             self.assertEqual(tunnel_config['remote'],           conf['linkinfo']['info_data']['remote'])
 
+    def test_tunnel_invalid_source_interface(self):
+        encapsulation = 'gre'
+        remote = '192.0.2.1'
+        interface = 'tun7543'
+
+        self.cli_set(self._base_path + [interface, 'encapsulation', encapsulation])
+        self.cli_set(self._base_path + [interface, 'remote', remote])
+
+        for dynamic_interface in ['l2tp0', 'ppp4220', 'sstpc0', 'ipoe654']:
+            self.cli_set(self._base_path + [interface, 'source-interface', dynamic_interface])
+            # verify() - we can not source from dynamic interfaces
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'source-interface', 'eth0'])
+        self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -281,16 +281,22 @@ def verify_source_interface(config):
     perform recurring validation of the existence of a source-interface
     required by e.g. peth/MACvlan, MACsec ...
     """
+    import re
     from netifaces import interfaces
-    if 'source_interface' not in config:
-        raise ConfigError('Physical source-interface required for '
-                          'interface "{ifname}"'.format(**config))
 
-    if config['source_interface'] not in interfaces():
-        raise ConfigError('Specified source-interface {source_interface} does '
-                          'not exist'.format(**config))
+    ifname = config['ifname']
+    if 'source_interface' not in config:
+        raise ConfigError(f'Physical source-interface required for "{ifname}"!')
 
     src_ifname = config['source_interface']
+    # We do not allow sourcing other interfaces (e.g. tunnel) from dynamic interfaces
+    tmp = re.compile(r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+')
+    if tmp.match(src_ifname):
+        raise ConfigError(f'Can not source "{ifname}" from dynamic interface "{src_ifname}"!')
+
+    if src_ifname not in interfaces():
+        raise ConfigError(f'Specified source-interface {src_ifname} does not exist')
+
     if 'source_interface_is_bridge_member' in config:
         bridge_name = next(iter(config['source_interface_is_bridge_member']))
         raise ConfigError(f'Invalid source-interface "{src_ifname}". Interface '
@@ -303,7 +309,6 @@ def verify_source_interface(config):
 
     if 'is_source_interface' in config:
         tmp = config['is_source_interface']
-        src_ifname = config['source_interface']
         raise ConfigError(f'Can not use source-interface "{src_ifname}", it already ' \
                           f'belongs to interface "{tmp}"!')
 

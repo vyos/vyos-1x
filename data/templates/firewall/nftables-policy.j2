@@ -28,6 +28,9 @@ table ip vyos_mangle {
         {{ rule_conf | nft_rule('route', route_text, rule_id, 'ip') }}
 {%             endfor %}
 {%         endif %}
+{%         if conf.default_log is vyos_defined %}
+        counter log prefix "[ipv4-{{ (route_text)[:19] }}-default]"
+{%         endif %}
     }
 {%     endfor %}
 {% endif %}
@@ -56,6 +59,9 @@ table ip6 vyos_mangle {
 {%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('route6', route_text, rule_id, 'ip6') }}
 {%             endfor %}
+{%         endif %}
+{%         if conf.default_log is vyos_defined %}
+        counter log prefix "[ipv6-{{ (route_text)[:19] }}-default]"
 {%         endif %}
     }
 {%     endfor %}

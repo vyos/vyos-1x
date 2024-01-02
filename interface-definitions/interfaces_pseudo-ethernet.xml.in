@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="pseudo-ethernet" owner="${vyos_conf_scripts_dir}/interfaces_pseudo-ethernet.py">
+        <properties>
+          <help>Pseudo Ethernet Interface (Macvlan)</help>
+          <priority>321</priority>
+          <constraint>
+            <regex>peth[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>Pseudo Ethernet interface must be named pethN</constraintErrorMessage>
+          <valueHelp>
+            <format>pethN</format>
+            <description>Pseudo Ethernet interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/dhcp-options.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
+          #include <include/interface/disable-link-detect.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/source-interface-ethernet.xml.i>
+          #include <include/interface/mac.xml.i>
+          #include <include/interface/mirror.xml.i>
+          <leafNode name="mode">
+            <properties>
+              <help>Receive mode (default: private)</help>
+              <completionHelp>
+                <list>private vepa bridge passthru</list>
+              </completionHelp>
+              <valueHelp>
+                <format>private</format>
+                <description>No communication with other pseudo-devices</description>
+              </valueHelp>
+              <valueHelp>
+                <format>vepa</format>
+                <description>Virtual Ethernet Port Aggregator reflective relay</description>
+              </valueHelp>
+              <valueHelp>
+                <format>bridge</format>
+                <description>Simple bridge between pseudo-devices</description>
+              </valueHelp>
+              <valueHelp>
+                <format>passthru</format>
+                <description>Promicious mode passthrough of underlying device</description>
+              </valueHelp>
+              <constraint>
+                <regex>(private|vepa|bridge|passthru)</regex>
+              </constraint>
+              <constraintErrorMessage>mode must be private, vepa, bridge or passthru</constraintErrorMessage>
+            </properties>
+            <defaultValue>private</defaultValue>
+          </leafNode>
+          #include <include/interface/mtu-68-16000.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vif-s.xml.i>
+          #include <include/interface/vif.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

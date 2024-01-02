@@ -1,7 +1,7 @@
 <!-- include start from accel-ppp/auth-protocols.xml.i -->
 <leafNode name="protocols">
   <properties>
-    <help>Authentication protocol for remote access peer SSTP VPN</help>
+    <help>Authentication protocol for remote access peer</help>
     <completionHelp>
       <list>pap chap mschap mschap-v2</list>
     </completionHelp>

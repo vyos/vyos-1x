@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="policy">
+    <children>
+      <tagNode name="route6" owner="${vyos_conf_scripts_dir}/policy_route.py">
+        <properties>
+          <help>Policy route rule set name for IPv6</help>
+          <constraint>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+          </constraint>
+          <priority>201</priority>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/firewall/default-log.xml.i>
+          #include <include/generic-interface-multi-wildcard.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Policy rule number</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number of policy rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Policy rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              #include <include/policy/route-common.xml.i>
+              #include <include/policy/route-ipv6.xml.i>
+              #include <include/firewall/dscp.xml.i>
+              #include <include/firewall/packet-options.xml.i>
+              #include <include/firewall/hop-limit.xml.i>
+              #include <include/firewall/connection-mark.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <tagNode name="route" owner="${vyos_conf_scripts_dir}/policy_route.py">
+        <properties>
+          <help>Policy route rule set name for IPv4</help>
+          <constraint>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+          </constraint>
+          <priority>201</priority>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/firewall/default-log.xml.i>
+          #include <include/generic-interface-multi-wildcard.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Policy rule number</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number of policy rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Policy rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              #include <include/policy/route-common.xml.i>
+              #include <include/policy/route-ipv4.xml.i>
+              #include <include/firewall/dscp.xml.i>
+              #include <include/firewall/packet-options.xml.i>
+              #include <include/firewall/ttl.xml.i>
+              #include <include/firewall/connection-mark.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

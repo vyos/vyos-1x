@@ -55,7 +55,7 @@ def connect(interface):
         if is_wwan_connected(interface):
             print(f'Interface {interface}: already connected!')
         else:
-            call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces-wwan.py')
+            call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces_wwan.py')
     else:
         print(f'Unknown interface {interface}, can not connect. Aborting!')
 
