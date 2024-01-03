@@ -38,175 +38,98 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
     def basic_protocol_specific_config(self):
         pass
 
-    def test_accel_local_authentication(self):
-        # Test configuration of local authentication
+    def test_l2tp_server_ppp_options(self):
+        # Test configuration of local authentication for PPPoE server
         self.basic_config()
-
-        # upload / download limit
-        user = "test"
-        password = "test2"
-        static_ip = "100.100.100.101"
-        upload = "5000"
-        download = "10000"
-
-        self.set(
-            [
-                "authentication",
-                "local-users",
-                "username",
-                user,
-                "password",
-                password,
-            ]
-        )
-        self.set(
-            [
-                "authentication",
-                "local-users",
-                "username",
-                user,
-                "static-ip",
-                static_ip,
-            ]
-        )
-        self.set(
-            [
-                "authentication",
-                "local-users",
-                "username",
-                user,
-                "rate-limit",
-                "upload",
-                upload,
-            ]
-        )
-        self.set(
-            [
-                "authentication",
-                "local-users",
-                "username",
-                user,
-                "rate-limit",
-                "download",
-                download,
-            ]
-        )
+        mtu = '1425'
+        lcp_echo_failure = '5'
+        lcp_echo_interval = '40'
+        lcp_echo_timeout = '3000'
+        # other settings
+        mppe = 'require'
+        self.set(['ccp-disable'])
+        self.set(['ppp-options', 'mppe', mppe])
+        self.set(['authentication', 'radius', 'preallocate-vif'])
+        self.set(['mtu', mtu])
+        self.set(['ppp-options', 'lcp-echo-failure', lcp_echo_failure])
+        self.set(['ppp-options', 'lcp-echo-interval', lcp_echo_interval])
+        self.set(['ppp-options', 'lcp-echo-timeout', lcp_echo_timeout])
 
         # commit changes
         self.cli_commit()
 
         # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(self._config_file)
-
-        # check proper path to chap-secrets file
-        self.assertEqual(conf["chap-secrets"]["chap-secrets"], self._chap_secrets)
 
         # basic verification
         self.verify(conf)
 
-        # check local users
-        tmp = cmd(f"sudo cat {self._chap_secrets}")
-        regex = f"{user}\s+\*\s+{password}\s+{static_ip}\s+{download}/{upload}"
-        tmp = re.findall(regex, tmp)
-        self.assertTrue(tmp)
+        # check ppp
+        self.assertEqual(conf['ppp']['mppe'], mppe)
+        self.assertFalse(conf['ppp'].getboolean('ccp'))
+        self.assertEqual(conf['ppp']['unit-preallocate'], '1')
+        self.assertTrue(conf['ppp'].getboolean('verbose'))
+        self.assertTrue(conf['ppp'].getboolean('check-ip'))
+        self.assertEqual(conf['ppp']['mtu'], mtu)
+        self.assertEqual(conf['ppp']['lcp-echo-interval'], lcp_echo_interval)
+        self.assertEqual(conf['ppp']['lcp-echo-timeout'], lcp_echo_timeout)
+        self.assertEqual(conf['ppp']['lcp-echo-failure'], lcp_echo_failure)
 
-        # Check local-users default value(s)
-        self.delete(["authentication", "local-users", "username", user, "static-ip"])
-        # commit changes
-        self.cli_commit()
-
-        # check local users
-        tmp = cmd(f"sudo cat {self._chap_secrets}")
-        regex = f"{user}\s+\*\s+{password}\s+\*\s+{download}/{upload}"
-        tmp = re.findall(regex, tmp)
-        self.assertTrue(tmp)
-
-    def test_accel_radius_authentication(self):
-        # Test configuration of RADIUS authentication for PPPoE server
+    def test_l2tp_server_authentication_protocols(self):
+        # Test configuration of local authentication for PPPoE server
         self.basic_config()
 
-        radius_server = "192.0.2.22"
-        radius_key = "secretVyOS"
-        radius_port = "2000"
-
-        self.set(["authentication", "mode", "radius"])
-        self.set(
-            ["authentication", "radius", "server", radius_server, "key", radius_key]
-        )
-        self.set(
-            [
-                "authentication",
-                "radius",
-                "server",
-                radius_server,
-                "port",
-                radius_port,
-            ]
-        )
-
-
-        nas_id = "VyOS-PPPoE"
-        nas_ip = "7.7.7.7"
-        self.set(["authentication", "radius", "nas-identifier", nas_id])
-        self.set(["authentication", "radius", "nas-ip-address", nas_ip])
-
-        source_address = "1.2.3.4"
-        self.set(["authentication", "radius", "source-address", source_address])
+        # explicitly test mschap-v2 - no special reason
+        self.set( ['authentication', 'protocols', 'mschap-v2'])
 
         # commit changes
         self.cli_commit()
 
         # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
+        conf = ConfigParser(allow_no_value=True)
         conf.read(self._config_file)
 
-        # basic verification
-        self.verify(conf)
+        self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
-        # check auth
-        self.assertTrue(conf["radius"].getboolean("verbose"))
-        self.assertEqual(conf["radius"]["acct-timeout"], "3")
-        self.assertEqual(conf["radius"]["timeout"], "3")
-        self.assertEqual(conf["radius"]["max-try"], "3")
+    def test_l2tp_server_client_ipv6_pool(self):
+        # Test configuration of IPv6 client pools
+        self.basic_config()
 
-        self.assertEqual(conf["radius"]["nas-identifier"], nas_id)
-        self.assertEqual(conf["radius"]["nas-ip-address"], nas_ip)
-        self.assertEqual(conf["radius"]["bind"], source_address)
+        # Enable IPv6
+        allow_ipv6 = 'allow'
+        random = 'random'
+        self.set(['ppp-options', 'ipv6', allow_ipv6])
+        self.set(['ppp-options', 'ipv6-intf-id', random])
+        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
+        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
 
-        server = conf["radius"]["server"].split(",")
-        self.assertEqual(radius_server, server[0])
-        self.assertEqual(radius_key, server[1])
-        self.assertEqual(f"auth-port={radius_port}", server[2])
-        self.assertEqual(f"req-limit=0", server[4])
-        self.assertEqual(f"fail-time=0", server[5])
+        prefix = '2001:db8:ffff::/64'
+        prefix_mask = '128'
+        client_prefix = f'{prefix},{prefix_mask}'
+        self.set(['client-ipv6-pool', 'prefix', prefix, 'mask', prefix_mask])
 
-        #
-        # Disable Radius Accounting
-        #
-        self.set(
-            [
-                "authentication",
-                "radius",
-                "server",
-                radius_server,
-                "disable-accounting",
-            ]
-        )
+        delegate_prefix = '2001:db8::/40'
+        delegate_mask = '56'
+        self.set(['client-ipv6-pool', 'delegate', delegate_prefix, 'delegation-prefix', delegate_mask])
 
         # commit changes
         self.cli_commit()
 
+        # Validate configuration values
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(self._config_file)
 
-        server = conf["radius"]["server"].split(",")
-        self.assertEqual(radius_server, server[0])
-        self.assertEqual(radius_key, server[1])
-        self.assertEqual(f"auth-port={radius_port}", server[2])
-        self.assertEqual(f"acct-port=0", server[3])
-        self.assertEqual(f"req-limit=0", server[4])
-        self.assertEqual(f"fail-time=0", server[5])
+        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
+            self.assertEqual(conf['modules'][tmp], None)
 
+        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
+        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
+        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
+        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
+
+        self.assertEqual(conf['ipv6-pool'][client_prefix], None)
+        self.assertEqual(conf['ipv6-pool']['delegate'], f'{delegate_prefix},{delegate_mask}')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
