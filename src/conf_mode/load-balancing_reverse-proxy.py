@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -43,17 +43,14 @@ def get_config(config=None):
         conf = Config()
 
     base = ['load-balancing', 'reverse-proxy']
+    if not conf.exists(base):
+        return None
     lb = conf.get_config_dict(base,
                               get_first_key=True,
                               key_mangling=('-', '_'),
-                              no_tag_node_value_mangle=True)
-
-    if lb:
-        lb['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                    get_first_key=True, no_tag_node_value_mangle=True)
-
-    if lb:
-        lb = conf.merge_defaults(lb, recursive=True)
+                              no_tag_node_value_mangle=True,
+                              with_recursive_defaults=True,
+                              with_pki=True)
 
     return lb
 

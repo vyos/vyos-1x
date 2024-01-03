@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -54,14 +54,11 @@ def get_config(config=None):
         return None
 
     # retrieve common dictionary keys
-    sstp = get_accel_dict(conf, base, sstp_chap_secrets)
+    sstp = get_accel_dict(conf, base, sstp_chap_secrets, with_pki=True)
     if dict_search('client_ip_pool', sstp):
         # Multiple named pools require ordered values T5099
         sstp['ordered_named_pools'] = get_pools_in_order(dict_search('client_ip_pool', sstp))
-    if sstp:
-        sstp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                           get_first_key=True,
-                                           no_tag_node_value_mangle=True)
+
     sstp['server_type'] = 'sstp'
     return sstp
 
