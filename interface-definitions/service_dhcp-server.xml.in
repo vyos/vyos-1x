@@ -38,7 +38,7 @@
                 <properties>
                   <help>Peer name used to identify connection</help>
                   <constraint>
-                    <regex>[-_a-zA-Z0-9.]+</regex>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
                   </constraint>
                   <constraintErrorMessage>Invalid failover peer name. May only contain letters, numbers and .-_</constraintErrorMessage>
                 </properties>
@@ -78,7 +78,7 @@
             <properties>
               <help>Name of DHCP shared network</help>
               <constraint>
-                <regex>[-_a-zA-Z0-9.]+</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
               <constraintErrorMessage>Invalid shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
             </properties>
@@ -251,7 +251,7 @@
                     <properties>
                       <help>DHCP lease range</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
                       </constraint>
                       <constraintErrorMessage>Invalid range name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
                     </properties>

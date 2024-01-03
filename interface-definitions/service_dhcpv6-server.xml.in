@@ -34,7 +34,7 @@
             <properties>
               <help>DHCPv6 shared network name</help>
               <constraint>
-                <regex>[-_a-zA-Z0-9.]+</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
               <constraintErrorMessage>Invalid DHCPv6 shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
             </properties>
@@ -185,7 +185,7 @@
                     <properties>
                       <help>NIS domain name for client to use</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
                       </constraint>
                       <constraintErrorMessage>Invalid NIS domain name</constraintErrorMessage>
                     </properties>
@@ -207,7 +207,7 @@
                     <properties>
                       <help>NIS+ domain name for client to use</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
                       </constraint>
                       <constraintErrorMessage>Invalid NIS+ domain name. May only contain letters, numbers and .-_</constraintErrorMessage>
                     </properties>
