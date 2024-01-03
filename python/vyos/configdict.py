@@ -163,6 +163,9 @@ def node_changed(conf, path, key_mangling=None, recursive=False, expand_nodes=No
         output.extend(list(tmp['delete'].keys()))
     if expand_nodes & Diff.ADD:
         output.extend(list(tmp['add'].keys()))
+
+    # remove duplicate keys from list, this happens when a node (e.g. description) is altered
+    output = list(dict.fromkeys(output))
     return output
 
 def get_removed_vlans(conf, path, dict):
