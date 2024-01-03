@@ -4,7 +4,7 @@
     <children>
       <node name="wireguard">
         <properties>
-          <help>Generate WireGuard keys</help>
+          <help>Generate WireGuard client config QR code</help>
         </properties>
         <children>
           <tagNode name="client-config">
