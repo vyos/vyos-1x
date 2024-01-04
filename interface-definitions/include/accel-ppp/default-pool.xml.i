@@ -7,7 +7,7 @@
       <description>Default IP pool</description>
     </valueHelp>
     <constraint>
-      <regex>[-_a-zA-Z0-9.]+</regex>
+      #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
     </constraint>
   </properties>
 </leafNode>

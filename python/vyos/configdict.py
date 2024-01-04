@@ -163,6 +163,9 @@ def node_changed(conf, path, key_mangling=None, recursive=False, expand_nodes=No
         output.extend(list(tmp['delete'].keys()))
     if expand_nodes & Diff.ADD:
         output.extend(list(tmp['add'].keys()))
+
+    # remove duplicate keys from list, this happens when a node (e.g. description) is altered
+    output = list(dict.fromkeys(output))
     return output
 
 def get_removed_vlans(conf, path, dict):
@@ -424,7 +427,7 @@ def get_pppoe_interfaces(conf, vrf=None):
 
     return pppoe_interfaces
 
-def get_interface_dict(config, base, ifname='', recursive_defaults=True):
+def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pki=False):
     """
     Common utility function to retrieve and mangle the interfaces configuration
     from the CLI input nodes. All interfaces have a common base where value
@@ -456,7 +459,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True):
                                       get_first_key=True,
                                       no_tag_node_value_mangle=True,
                                       with_defaults=True,
-                                      with_recursive_defaults=recursive_defaults)
+                                      with_recursive_defaults=recursive_defaults,
+                                      with_pki=with_pki)
 
         # If interface does not request an IPv4 DHCP address there is no need
         # to keep the dhcp-options key
@@ -620,7 +624,7 @@ def get_vlan_ids(interface):
 
     return vlan_ids
 
-def get_accel_dict(config, base, chap_secrets):
+def get_accel_dict(config, base, chap_secrets, with_pki=False):
     """
     Common utility function to retrieve and mangle the Accel-PPP configuration
     from different CLI input nodes. All Accel-PPP services have a common base
@@ -635,7 +639,8 @@ def get_accel_dict(config, base, chap_secrets):
     dict = config.get_config_dict(base, key_mangling=('-', '_'),
                                   get_first_key=True,
                                   no_tag_node_value_mangle=True,
-                                  with_recursive_defaults=True)
+                                  with_recursive_defaults=True,
+                                  with_pki=with_pki)
 
     # set CPUs cores to process requests
     dict.update({'thread_count' : get_half_cpus()})

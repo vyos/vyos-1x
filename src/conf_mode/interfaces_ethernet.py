@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -150,18 +150,11 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    # This must be called prior to get_interface_dict(), as this function will
-    # alter the config level (config.set_level())
-    pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                               get_first_key=True, no_tag_node_value_mangle=True)
-
     base = ['interfaces', 'ethernet']
-    ifname, ethernet = get_interface_dict(conf, base)
+    ifname, ethernet = get_interface_dict(conf, base, with_pki=True)
+
     if 'is_bond_member' in ethernet:
         update_bond_options(conf, ethernet)
-
-    if 'deleted' not in ethernet:
-       if pki: ethernet['pki'] = pki
 
     tmp = is_node_changed(conf, base + [ifname, 'speed'])
     if tmp: ethernet.update({'speed_duplex_changed': {}})
@@ -170,8 +163,6 @@ def get_config(config=None):
     if tmp: ethernet.update({'speed_duplex_changed': {}})
 
     return ethernet
-
-
 
 def verify_speed_duplex(ethernet: dict, ethtool: Ethtool):
     """

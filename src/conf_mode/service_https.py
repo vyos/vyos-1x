@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -78,12 +78,7 @@ def get_config(config=None):
 
     diff = get_config_diff(conf)
 
-    https = conf.get_config_dict(base, get_first_key=True)
-
-    if https:
-        https['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                            no_tag_node_value_mangle=True,
-                                            get_first_key=True)
+    https = conf.get_config_dict(base, get_first_key=True, with_pki=True)
 
     https['children_changed'] = diff.node_changed_children(base)
     https['api_add_or_delete'] = diff.node_changed_presence(base + ['api'])
@@ -119,7 +114,7 @@ def verify(https):
 
         if 'certificate' in certificates:
             if not https['pki']:
-                raise ConfigError("PKI is not configured")
+                raise ConfigError('PKI is not configured')
 
             cert_name = certificates['certificate']
 

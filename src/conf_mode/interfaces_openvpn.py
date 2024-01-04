@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -89,15 +89,11 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'openvpn']
 
-    ifname, openvpn = get_interface_dict(conf, base)
+    ifname, openvpn = get_interface_dict(conf, base, with_pki=True)
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
 
     if 'deleted' in openvpn:
         return openvpn
-
-    openvpn['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                        get_first_key=True,
-                                        no_tag_node_value_mangle=True)
 
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
@@ -167,9 +163,10 @@ def verify_pki(openvpn):
             raise ConfigError(f'Invalid shared-secret on openvpn interface {interface}')
 
         # If PSK settings are correct, warn about its deprecation
-        DeprecationWarning("OpenVPN shared-secret support will be removed in future VyOS versions.\n\
-        Please migrate your site-to-site tunnels to TLS.\n\
-        You can use self-signed certificates with peer fingerprint verification, consult the documentation for details.")
+        DeprecationWarning('OpenVPN shared-secret support will be removed in future '\
+                           'VyOS versions. Please migrate your site-to-site tunnels to '\
+                           'TLS. You can use self-signed certificates with peer fingerprint '\
+                           'verification, consult the documentation for details.')
 
     if tls:
         if (mode in ['server', 'client']) and ('ca_certificate' not in tls):
@@ -729,4 +726,3 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         exit(1)
-
