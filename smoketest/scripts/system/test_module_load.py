@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,7 +18,7 @@ import unittest
 from vyos.utils.process import cmd
 
 modules = {
-    "intel": ["e1000", "e1000e", "igb", "ixgb", "ixgbe", "ixgbevf", "i40e",
+    "intel": ["e1000", "e1000e", "igb", "ixgbe", "ixgbevf", "i40e",
               "i40evf", "iavf"],
     "intel_qat": ["qat_200xx", "qat_200xxvf", "qat_c3xxx", "qat_c3xxxvf",
                   "qat_c62x", "qat_c62xvf", "qat_d15xx", "qat_d15xxvf",
