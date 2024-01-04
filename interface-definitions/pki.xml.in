@@ -9,6 +9,9 @@
       <tagNode name="ca">
         <properties>
           <help>Certificate Authority</help>
+          <constraint>
+            #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+          </constraint>
         </properties>
         <children>
           <leafNode name="certificate">
@@ -64,6 +67,9 @@
       <tagNode name="certificate">
         <properties>
           <help>Certificate</help>
+          <constraint>
+            #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+          </constraint>
         </properties>
         <children>
           <leafNode name="certificate">
@@ -109,6 +115,9 @@
       <tagNode name="dh">
         <properties>
           <help>Diffie-Hellman parameters</help>
+          <constraint>
+            #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+          </constraint>
         </properties>
         <children>
           <leafNode name="parameters">

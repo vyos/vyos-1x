@@ -395,8 +395,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
     @ignore_warning(InsecureRequestWarning)
     def test_api_config_file_load_http(self):
-        """Test load config from HTTP URL
-        """
+        # Test load config from HTTP URL
         address = '127.0.0.1'
         key = 'VyOS-key'
         url = f'https://{address}/config-file'

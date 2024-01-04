@@ -56,12 +56,8 @@ def get_config(config=None):
 
     ocserv = conf.get_config_dict(base, key_mangling=('-', '_'),
                                   get_first_key=True,
-                                  with_recursive_defaults=True)
-
-    if ocserv:
-        ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                             no_tag_node_value_mangle=True,
-                                             get_first_key=True)
+                                  with_recursive_defaults=True,
+                                  with_pki=True)
 
     return ocserv
 

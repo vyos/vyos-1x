@@ -29,7 +29,7 @@ There are multiple types of config tree nodes in VyOS, each requires
 its own set of operations.
 
 *Leaf nodes* (such as "address" in interfaces) can have values, but cannot
-have children. 
+have children.
 Leaf nodes can have one value, multiple values, or no values at all.
 
 For example, "system host-name" is a single-value leaf node,
@@ -258,7 +258,9 @@ class Config(object):
     def get_config_dict(self, path=[], effective=False, key_mangling=None,
                         get_first_key=False, no_multi_convert=False,
                         no_tag_node_value_mangle=False,
-                        with_defaults=False, with_recursive_defaults=False):
+                        with_defaults=False,
+                        with_recursive_defaults=False,
+                        with_pki=False):
         """
         Args:
             path (str list): Configuration tree path, can be empty
@@ -274,6 +276,7 @@ class Config(object):
         del kwargs['no_multi_convert']
         del kwargs['with_defaults']
         del kwargs['with_recursive_defaults']
+        del kwargs['with_pki']
 
         lpath = self._make_path(path)
         root_dict = self.get_cached_root_dict(effective)
@@ -297,6 +300,13 @@ class Config(object):
             conf_dict = config_dict_merge(defaults, conf_dict)
         else:
             conf_dict = ConfigDict(conf_dict)
+
+        if with_pki and conf_dict:
+            pki_dict = self.get_config_dict(['pki'], key_mangling=('-', '_'),
+                                            no_tag_node_value_mangle=True,
+                                            get_first_key=True)
+            if pki_dict:
+                conf_dict['pki'] = pki_dict
 
         # save optional args for a call to get_config_defaults
         setattr(conf_dict, '_dict_kwargs', kwargs)

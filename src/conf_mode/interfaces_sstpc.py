@@ -45,7 +45,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'sstpc']
-    ifname, sstpc = get_interface_dict(conf, base)
+    ifname, sstpc = get_interface_dict(conf, base, with_pki=True)
 
     # We should only terminate the SSTP client session if critical parameters
     # change. All parameters that can be changed on-the-fly (like interface
@@ -57,10 +57,6 @@ def get_config(config=None):
             # bail out early - no need to further process other nodes
             break
 
-    # Load PKI certificates for later processing
-    sstpc['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                        get_first_key=True,
-                                        no_tag_node_value_mangle=True)
     return sstpc
 
 def verify(sstpc):
