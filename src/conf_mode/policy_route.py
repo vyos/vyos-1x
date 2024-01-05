@@ -53,6 +53,10 @@ def get_config(config=None):
     policy['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
+    # Remove dynamic firewall groups if present:
+    if 'dynamic_group' in policy['firewall_group']:
+        del policy['firewall_group']['dynamic_group']
+
     return policy
 
 def verify_rule(policy, name, rule_conf, ipv6, rule_id):
