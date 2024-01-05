@@ -18,12 +18,7 @@ server {
 
         root /srv/localui;
 
-{%     if server.certbot %}
-        ssl_certificate {{ server.certbot_dir }}/live/{{ server.certbot_domain_dir }}/fullchain.pem;
-        ssl_certificate_key {{ server.certbot_dir }}/live/{{ server.certbot_domain_dir }}/privkey.pem;
-        include {{ server.certbot_dir }}/options-ssl-nginx.conf;
-        ssl_dhparam {{ server.certbot_dir }}/ssl-dhparams.pem;
-{%     elif server.vyos_cert %}
+{%     if server.vyos_cert %}
         ssl_certificate {{ server.vyos_cert.crt }};
         ssl_certificate_key {{ server.vyos_cert.key }};
 {%     else %}
@@ -33,7 +28,12 @@ server {
         #
         include snippets/snakeoil.conf;
 {%     endif %}
+        ssl_session_cache shared:le_nginx_SSL:10m;
+        ssl_session_timeout 1440m;
+        ssl_session_tickets off;
+
         ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK';
 
         # proxy settings for HTTP API, if enabled; 503, if not
         location ~ ^/(retrieve|configure|config-file|image|container-image|generate|show|reboot|reset|poweroff|docs|openapi.json|redoc|graphql) {

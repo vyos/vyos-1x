@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5886: Add support for ACME protocol (LetsEncrypt), migrate https certbot
+#        to new "pki certificate" CLI tree
+
+import os
+import sys
+
+from vyos.configtree import ConfigTree
+from vyos.defaults import directories
+
+vyos_certbot_dir = directories['certbot']
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+base = ['service', 'https', 'certificates']
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+
+# both domain-name and email must be set on CLI - ensured by previous verify()
+domain_names = config.return_values(base + ['certbot', 'domain-name'])
+email = config.return_value(base + ['certbot', 'email'])
+config.delete(base)
+
+# Set default certname based on domain-name
+cert_name = 'https-' + domain_names[0].split('.')[0]
+# Overwrite certname from previous certbot calls if available
+if os.path.exists(f'{vyos_certbot_dir}/live'):
+    for cert in [f.path.split('/')[-1] for f in os.scandir(f'{vyos_certbot_dir}/live') if f.is_dir()]:
+        cert_name = cert
+        break
+
+for domain in domain_names:
+    config.set(['pki', 'certificate', cert_name, 'acme', 'domain-name'], value=domain, replace=False)
+    config.set(['pki', 'certificate', cert_name, 'acme', 'email'], value=email)
+
+# Update Webserver certificate
+config.set(base + ['certificate'], value=cert_name)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)

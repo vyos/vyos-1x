@@ -192,24 +192,6 @@
             <children>
               #include <include/pki/ca-certificate.xml.i>
               #include <include/pki/certificate.xml.i>
-              <node name="certbot" owner="${vyos_conf_scripts_dir}/service_https_certificates_certbot.py">
-                <properties>
-                  <help>Request or apply a letsencrypt certificate for domain-name</help>
-                </properties>
-                <children>
-                  <leafNode name="domain-name">
-                    <properties>
-                      <help>Domain name(s) for which to obtain certificate</help>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="email">
-                    <properties>
-                      <help>Email address to associate with certificate</help>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
             </children>
           </node>
           #include <include/interface/vrf.xml.i>
