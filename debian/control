@@ -39,6 +39,7 @@ Depends:
   beep,
   bmon,
   bsdmainutils,
+  certbot,
   charon-systemd,
   conntrack,
   conntrackd,

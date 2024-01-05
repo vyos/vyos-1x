@@ -92,6 +92,38 @@ def config_dict_merge(src: dict, dest: Union[dict, ConfigDict]) -> ConfigDict:
         dest = ConfigDict(dest)
     return ext_dict_merge(src, dest)
 
+def config_dict_mangle_acme(name, cli_dict):
+    """
+    Load CLI PKI dictionary and if an ACME certificate is used, load it's content
+    and place it into the CLI dictionary as it would be a "regular" CLI PKI based
+    certificate with private key
+    """
+    from vyos.base import ConfigError
+    from vyos.defaults import directories
+    from vyos.utils.file import read_file
+    from vyos.pki import encode_certificate
+    from vyos.pki import encode_private_key
+    from vyos.pki import load_certificate
+    from vyos.pki import load_private_key
+
+    try:
+        vyos_certbot_dir = directories['certbot']
+
+        if 'acme' in cli_dict:
+            tmp = read_file(f'{vyos_certbot_dir}/live/{name}/cert.pem')
+            tmp = load_certificate(tmp, wrap_tags=False)
+            cert_base64 = "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
+
+            tmp = read_file(f'{vyos_certbot_dir}/live/{name}/privkey.pem')
+            tmp = load_private_key(tmp, wrap_tags=False)
+            key_base64 = "".join(encode_private_key(tmp).strip().split("\n")[1:-1])
+            # install ACME based PEM keys into "regular" CLI config keys
+            cli_dict.update({'certificate' : cert_base64, 'private' : {'key' : key_base64}})
+    except:
+        raise ConfigError(f'Unable to load ACME certificates for "{name}"!')
+
+    return cli_dict
+
 class Config(object):
     """
     The class of config access objects.
@@ -306,6 +338,11 @@ class Config(object):
                                             no_tag_node_value_mangle=True,
                                             get_first_key=True)
             if pki_dict:
+                if 'certificate' in pki_dict:
+                    for certificate in pki_dict['certificate']:
+                        pki_dict['certificate'][certificate] = config_dict_mangle_acme(
+                            certificate, pki_dict['certificate'][certificate])
+
                 conf_dict['pki'] = pki_dict
 
         # save optional args for a call to get_config_defaults
