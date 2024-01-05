@@ -694,6 +694,34 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="dont-throttle-netmasks">
+                <properties>
+                  <help>IP address or subnet</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 prefix to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <multi/>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-address"/>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
             </children>
           </node>
         </children>

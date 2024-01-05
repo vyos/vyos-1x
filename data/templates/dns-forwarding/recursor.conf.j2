@@ -40,6 +40,11 @@ dnssec={{ dnssec }}
 dns64-prefix={{ dns64_prefix }}
 {% endif %}
 
+{% if dont_throttle_netmasks is vyos_defined %}
+# dont-throttle-netmasks
+dont-throttle-netmasks={{ dont_throttle_netmasks | join(',') }}
+{% endif %}
+
 # serve rfc1918 records
 serve-rfc1918={{ 'no' if no_serve_rfc1918 is vyos_defined else 'yes' }}
 

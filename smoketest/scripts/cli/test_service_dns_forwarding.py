@@ -239,6 +239,29 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('dns64-prefix')
         self.assertEqual(tmp, dns_prefix)
 
+    def test_dont_throttle_netmasks(self):
+        dont_throttle_netmasks_examples = [
+            '192.168.128.255',
+            '10.0.0.0/25',
+            '2001:db8:85a3:8d3:1319:8a2e:370:7348',
+            '64:ff9b::/96'
+        ]
+
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        for dont_throttle_netmasks in dont_throttle_netmasks_examples:
+            self.cli_set(base_path + ['dont-throttle-netmasks', dont_throttle_netmasks])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify dont-throttle-netmasks configuration
+        tmp = get_config_value('dont-throttle-netmasks')
+        self.assertEqual(tmp, ','.join(dont_throttle_netmasks_examples))
+
     def test_listening_port(self):
         # We can listen on a different port compared to '53' but only one at a time
         for port in ['1053', '5353']:
