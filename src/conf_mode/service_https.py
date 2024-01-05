@@ -22,7 +22,6 @@ from copy import deepcopy
 from time import sleep
 
 import vyos.defaults
-import vyos.certbot_util
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -33,8 +32,6 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.utils.process import is_systemd_service_running
-from vyos.utils.process import is_systemd_service_active
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.file import write_file
@@ -46,12 +43,11 @@ config_file = '/etc/nginx/sites-available/default'
 systemd_override = r'/run/systemd/system/nginx.service.d/override.conf'
 cert_dir = '/etc/ssl/certs'
 key_dir = '/etc/ssl/private'
-certbot_dir = vyos.defaults.directories['certbot']
 
 api_config_state = '/run/http-api-state'
 systemd_service = '/run/systemd/system/vyos-http-api.service'
 
-# https config needs to coordinate several subsystems: api, certbot,
+# https config needs to coordinate several subsystems: api,
 # self-signed certificate, as well as the virtual hosts defined within the
 # https config definition itself. Consequently, one needs a general dict,
 # encompassing the https and other configs, and a list of such virtual hosts
@@ -63,7 +59,6 @@ default_server_block = {
     'name'      : ['_'],
     'api'       : False,
     'vyos_cert' : {},
-    'certbot'   : False
 }
 
 def get_config(config=None):
@@ -80,7 +75,6 @@ def get_config(config=None):
 
     https = conf.get_config_dict(base, get_first_key=True, with_pki=True)
 
-    https['children_changed'] = diff.node_changed_children(base)
     https['api_add_or_delete'] = diff.node_changed_presence(base + ['api'])
 
     if 'api' not in https:
@@ -100,7 +94,6 @@ def get_config(config=None):
         http_api['vrf'] = conf.return_value(vrf_path)
 
     https['api'] = http_api
-
     return https
 
 def verify(https):
@@ -119,25 +112,17 @@ def verify(https):
             cert_name = certificates['certificate']
 
             if cert_name not in https['pki']['certificate']:
-                raise ConfigError("Invalid certificate on https configuration")
+                raise ConfigError('Invalid certificate on https configuration')
 
             pki_cert = https['pki']['certificate'][cert_name]
 
             if 'certificate' not in pki_cert:
-                raise ConfigError("Missing certificate on https configuration")
+                raise ConfigError('Missing certificate on https configuration')
 
             if 'private' not in pki_cert or 'key' not in pki_cert['private']:
                 raise ConfigError("Missing certificate private key on https configuration")
-
-        if 'certbot' in https['certificates']:
-            vhost_names = []
-            for _, vh_conf in https.get('virtual-host', {}).items():
-                vhost_names += vh_conf.get('server-name', [])
-            domains = https['certificates']['certbot'].get('domain-name', [])
-            domains_found = [domain for domain in domains if domain in vhost_names]
-            if not domains_found:
-                raise ConfigError("At least one 'virtual-host <id> server-name' "
-                              "matching the 'certbot domain-name' is required.")
+    else:
+        Warning('No certificate specified, using buildin self-signed certificates!')
 
     server_block_list = []
 
@@ -255,22 +240,6 @@ def generate(https):
         for block in server_block_list:
             block['vyos_cert'] = vyos_cert_data
 
-    # letsencrypt certificate using certbot
-
-    certbot = False
-    cert_domains = cert_dict.get('certbot', {}).get('domain-name', [])
-    if cert_domains:
-        certbot = True
-        for domain in cert_domains:
-            sub_list = vyos.certbot_util.choose_server_block(server_block_list,
-                                                             domain)
-            if sub_list:
-                for sb in sub_list:
-                    sb['certbot'] = True
-                    sb['certbot_dir'] = certbot_dir
-                    # certbot organizes certificates by first domain
-                    sb['certbot_domain_dir'] = cert_domains[0]
-
     if 'api' in list(https):
         vhost_list = https.get('api-restrict', {}).get('virtual-host', [])
         if not vhost_list:
@@ -283,7 +252,6 @@ def generate(https):
 
     data = {
         'server_block_list': server_block_list,
-        'certbot': certbot
     }
 
     render(config_file, 'https/nginx.default.j2', data)
@@ -297,27 +265,18 @@ def apply(https):
     https_service_name = 'nginx.service'
 
     if https is None:
-        if is_systemd_service_active(f'{http_api_service_name}'):
-            call(f'systemctl stop {http_api_service_name}')
+        call(f'systemctl stop {http_api_service_name}')
         call(f'systemctl stop {https_service_name}')
         return
 
-    if 'api' in https['children_changed']:
-        if 'api' in https:
-            if is_systemd_service_running(f'{http_api_service_name}'):
-                call(f'systemctl reload {http_api_service_name}')
-            else:
-                call(f'systemctl restart {http_api_service_name}')
-            # Let uvicorn settle before (possibly) restarting nginx
-            sleep(1)
-        else:
-            if is_systemd_service_active(f'{http_api_service_name}'):
-                call(f'systemctl stop {http_api_service_name}')
+    if 'api' in https:
+        call(f'systemctl reload-or-restart {http_api_service_name}')
+        # Let uvicorn settle before (possibly) restarting nginx
+        sleep(1)
+    else:
+        call(f'systemctl stop {http_api_service_name}')
 
-    if (not is_systemd_service_running(f'{https_service_name}') or
-        https['api_add_or_delete'] or
-        set(https['children_changed']) - set(['api'])):
-        call(f'systemctl restart {https_service_name}')
+    call(f'systemctl reload-or-restart {https_service_name}')
 
 if __name__ == '__main__':
     try:

@@ -43,7 +43,6 @@ Depends:
 ## End of Fundamentals
 ## Python libraries used in multiple modules and scripts
   python3,
-  python3-certbot-nginx,
   python3-cryptography,
   python3-hurry.filesize,
   python3-inotify,
