@@ -146,6 +146,9 @@ Depends:
 # For "protocols igmp-proxy"
   igmpproxy,
 # End "protocols igmp-proxy"
+# For "pki"
+  certbot,
+# End "pki"
 # For "service console-server"
   conserver-client,
   conserver-server,
