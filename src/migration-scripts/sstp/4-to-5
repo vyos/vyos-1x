@@ -43,21 +43,12 @@ if not config.exists(base):
 if not config.exists(pool_base):
     exit(0)
 
-subnet_base_name = 'default-subnet-pool'
-number = 1
-subnet_pool_name = f'{subnet_base_name}-{number}'
-prev_subnet_pool = subnet_pool_name
-if config.exists(pool_base + ['subnet']):
-    default_pool = subnet_pool_name
-    for subnet in config.return_values(pool_base + ['subnet']):
-        config.set(pool_base + [subnet_pool_name, 'range'], value=subnet)
-        if prev_subnet_pool != subnet_pool_name:
-            config.set(pool_base + [prev_subnet_pool, 'next-pool'],
-                       value=subnet_pool_name)
-            prev_subnet_pool = subnet_pool_name
-        number += 1
-        subnet_pool_name = f'{subnet_base_name}-{number}'
+range_pool_name = 'default-range-pool'
 
+if config.exists(pool_base + ['subnet']):
+    default_pool = range_pool_name
+    for subnet in config.return_values(pool_base + ['subnet']):
+        config.set(pool_base + [range_pool_name, 'range'], value=subnet, replace=False)
     config.delete(pool_base + ['subnet'])
     config.set(base + ['default-pool'], value=default_pool)
 # format as tag node
