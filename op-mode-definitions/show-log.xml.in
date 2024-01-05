@@ -38,6 +38,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --quiet SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
           </leafNode>
+          <leafNode name="certbot">
+            <properties>
+              <help>Show log for certbot</help>
+            </properties>
+            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+          </leafNode>
           <leafNode name="cluster">
             <properties>
               <help>Show log for Cluster</help>
