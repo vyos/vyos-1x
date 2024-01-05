@@ -292,5 +292,25 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
 
+    def test_snat_net_port_map(self):
+        self.cli_set(src_path + ['rule', '10', 'protocol', 'tcp_udp'])
+        self.cli_set(src_path + ['rule', '10', 'source', 'address', '100.64.0.0/25'])
+        self.cli_set(src_path + ['rule', '10', 'translation', 'address', '203.0.113.0/25'])
+        self.cli_set(src_path + ['rule', '10', 'translation', 'port', '1025-3072'])
+
+        self.cli_set(src_path + ['rule', '20', 'protocol', 'tcp_udp'])
+        self.cli_set(src_path + ['rule', '20', 'source', 'address', '100.64.0.128/25'])
+        self.cli_set(src_path + ['rule', '20', 'translation', 'address', '203.0.113.128/25'])
+        self.cli_set(src_path + ['rule', '20', 'translation', 'port', '1025-3072'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['meta l4proto { tcp, udp }', 'snat ip prefix to ip saddr map { 100.64.0.0/25 : 203.0.113.0/25 . 1025-3072 }', 'comment "SRC-NAT-10"'],
+            ['meta l4proto { tcp, udp }', 'snat ip prefix to ip saddr map { 100.64.0.128/25 : 203.0.113.128/25 . 1025-3072 }', 'comment "SRC-NAT-20"']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
