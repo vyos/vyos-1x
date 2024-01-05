@@ -29,7 +29,7 @@ import os
 from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
-
+from vyos.base import Warning
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -48,38 +48,35 @@ if not config.exists(base):
 
 if not config.exists(pool_base):
     exit(0)
+
 default_pool = ''
 range_pool_name = 'default-range-pool'
 
-subnet_base_name = 'default-subnet-pool'
-number = 1
-subnet_pool_name = f'{subnet_base_name}-{number}'
-prev_subnet_pool = subnet_pool_name
 #Default nameless pools migrations
-if config.exists(pool_base + ['subnet']):
-    default_pool = subnet_pool_name
-    for subnet in config.return_values(pool_base + ['subnet']):
-        config.set(pool_base + [subnet_pool_name, 'range'], value=subnet)
-        if prev_subnet_pool != subnet_pool_name:
-            config.set(pool_base + [prev_subnet_pool, 'next-pool'],
-                       value=subnet_pool_name)
-            prev_subnet_pool = subnet_pool_name
-        number += 1
-        subnet_pool_name = f'{subnet_base_name}-{number}'
-
-    config.delete(pool_base + ['subnet'])
-
 if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
+    def is_legalrange(ip1: str, ip2: str, mask: str):
+        from ipaddress import IPv4Interface
+        interface1 = IPv4Interface(f'{ip1}/{mask}')
+        interface2 = IPv4Interface(f'{ip2}/{mask}')
+        return interface1.network.network_address == interface2.network.network_address and interface2.ip > interface1.ip
+
     start_ip = config.return_value(pool_base + ['start'])
     stop_ip = config.return_value(pool_base + ['stop'])
-    ip_range = f'{start_ip}-{stop_ip}'
+    if is_legalrange(start_ip, stop_ip, '24'):
+        ip_range = f'{start_ip}-{stop_ip}'
+        config.set(pool_base + [range_pool_name, 'range'], value=ip_range, replace=False)
+        default_pool = range_pool_name
+    else:
+        Warning(
+            f'PPPoE client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} can not be migrated.')
     config.delete(pool_base + ['start'])
     config.delete(pool_base + ['stop'])
-    config.set(pool_base + [range_pool_name, 'range'], value=ip_range)
-    if default_pool:
-        config.set(pool_base + [range_pool_name, 'next-pool'],
-                   value=default_pool)
+
+if config.exists(pool_base + ['subnet']):
     default_pool = range_pool_name
+    for subnet in config.return_values(pool_base + ['subnet']):
+        config.set(pool_base + [range_pool_name, 'range'], value=subnet, replace=False)
+    config.delete(pool_base + ['subnet'])
 
 gateway = ''
 if config.exists(base + ['gateway-address']):
@@ -97,7 +94,7 @@ if config.exists(namedpools_base):
         pool_path = namedpools_base + [pool_name]
         if config.exists(pool_path + ['subnet']):
             subnet = config.return_value(pool_path + ['subnet'])
-            config.set(pool_base + [pool_name, 'range'], value=subnet)
+            config.set(pool_base + [pool_name, 'range'], value=subnet, replace=False)
         if config.exists(pool_path + ['next-pool']):
             next_pool = config.return_value(pool_path + ['next-pool'])
             config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
