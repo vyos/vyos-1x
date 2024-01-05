@@ -574,4 +574,14 @@
       </node>
     </children>
   </node>
+  <node name="renew">
+    <children>
+      <leafNode name="certbot">
+        <properties>
+          <help>Start manual certbot renewal</help>
+        </properties>
+        <command>sudo systemctl start certbot.service</command>
+      </leafNode>
+    </children>
+  </node>
 </interfaceDefinition>
