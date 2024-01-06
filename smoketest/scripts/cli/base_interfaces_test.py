@@ -127,9 +127,9 @@ class BasicInterfaceTest:
                 # by also checking the cmd arguments passed to the daemon
                 if self._interfaces:
                     for tmp in self._interfaces:
-                        self.assertFalse(process_named_running(daemon, tmp))
+                        self.assertFalse(process_named_running(daemon, tmp, timeout=10))
                 else:
-                    self.assertFalse(process_named_running(daemon))
+                    self.assertFalse(process_named_running(daemon, timeout=10))
 
         def test_dhcp_disable_interface(self):
             if not self._test_dhcp:
@@ -179,7 +179,7 @@ class BasicInterfaceTest:
 
             for interface in self._interfaces:
                 # Check if dhclient process runs
-                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface)
+                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface, timeout=10)
                 self.assertTrue(dhclient_pid)
 
                 dhclient_config = read_file(f'{dhclient_base_dir}/dhclient_{interface}.conf')
@@ -216,7 +216,7 @@ class BasicInterfaceTest:
                 self.assertEqual(tmp, vrf_name)
 
                 # Check if dhclient process runs
-                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface)
+                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface, timeout=10)
                 self.assertTrue(dhclient_pid)
                 # .. inside the appropriate VRF instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
@@ -251,7 +251,7 @@ class BasicInterfaceTest:
                 self.assertEqual(tmp, vrf_name)
 
                 # Check if dhclient process runs
-                tmp = process_named_running(dhcp6c_process_name, cmdline=interface)
+                tmp = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
@@ -941,7 +941,7 @@ class BasicInterfaceTest:
                 duid_base += 1
 
                 # Better ask the process about it's commandline in the future
-                pid = process_named_running(dhcp6c_process_name, cmdline=interface)
+                pid = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
                 self.assertTrue(pid)
 
                 dhcp6c_options = read_file(f'/proc/{pid}/cmdline')
@@ -1000,7 +1000,7 @@ class BasicInterfaceTest:
                     address = str(int(address) + 1)
 
                 # Check for running process
-                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface))
+                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
@@ -1066,7 +1066,7 @@ class BasicInterfaceTest:
                     address = str(int(address) + 1)
 
                 # Check for running process
-                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface))
+                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
