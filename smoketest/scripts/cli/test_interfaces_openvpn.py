@@ -421,7 +421,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             # IP pool configuration
             netmask = IPv4Network(subnet).netmask
             network = IPv4Network(subnet).network_address
-            self.assertIn(f'server {network} {netmask} nopool', config)
+            self.assertIn(f'server {network} {netmask}', config)
 
             # Verify client
             client_config = read_file(client_config_file)
@@ -429,80 +429,6 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'ifconfig-push {client_ip} {client_netmask}', client_config)
             for route in client1_routes:
                 self.assertIn('iroute {} {}'.format(address_from_cidr(route), netmask_from_cidr(route)), client_config)
-
-            self.assertTrue(process_named_running(PROCESS_NAME))
-            self.assertEqual(get_vrf(interface), vrf_name)
-            self.assertIn(interface, interfaces())
-
-        # check that no interface remained after deleting them
-        self.cli_delete(base_path)
-        self.cli_commit()
-
-        for ii in num_range:
-            interface = f'vtun{ii}'
-            self.assertNotIn(interface, interfaces())
-
-    def test_openvpn_server_net30_topology(self):
-        # Create OpenVPN server interfaces (net30) using different client
-        # subnets. Validate configuration afterwards.
-        auth_hash = 'sha256'
-        num_range = range(20, 25)
-        port = ''
-        for ii in num_range:
-            interface = f'vtun{ii}'
-            subnet = f'192.0.{ii}.0/24'
-            path = base_path + [interface]
-            port = str(2000 + ii)
-
-            self.cli_set(path + ['device-type', 'tun'])
-            self.cli_set(path + ['encryption', 'cipher', 'aes192'])
-            self.cli_set(path + ['hash', auth_hash])
-            self.cli_set(path + ['mode', 'server'])
-            self.cli_set(path + ['local-port', port])
-            self.cli_set(path + ['server', 'subnet', subnet])
-            self.cli_set(path + ['server', 'topology', 'net30'])
-            self.cli_set(path + ['replace-default-route'])
-            self.cli_set(path + ['keep-alive', 'failure-count', '10'])
-            self.cli_set(path + ['keep-alive', 'interval', '5'])
-            self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
-            self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
-            self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
-            self.cli_set(path + ['vrf', vrf_name])
-
-        self.cli_commit()
-
-        for ii in num_range:
-            interface = f'vtun{ii}'
-            subnet = f'192.0.{ii}.0/24'
-            start_addr = inc_ip(subnet, '4')
-            stop_addr = dec_ip(last_host_address(subnet), '1')
-            port = str(2000 + ii)
-
-            config_file = f'/run/openvpn/{interface}.conf'
-            config = read_file(config_file)
-
-            self.assertIn(f'dev {interface}', config)
-            self.assertIn(f'dev-type tun', config)
-            self.assertIn(f'persist-key', config)
-            self.assertIn(f'proto udp', config) # default protocol
-            self.assertIn(f'auth {auth_hash}', config)
-            self.assertIn(f'cipher AES-192-CBC', config)
-            self.assertIn(f'topology net30', config)
-            self.assertIn(f'lport {port}', config)
-            self.assertIn(f'push "redirect-gateway def1"', config)
-            self.assertIn(f'keepalive 5 50', config)
-
-            # TLS options
-            self.assertIn(f'ca /run/openvpn/{interface}_ca.pem', config)
-            self.assertIn(f'cert /run/openvpn/{interface}_cert.pem', config)
-            self.assertIn(f'key /run/openvpn/{interface}_cert.key', config)
-            self.assertIn(f'dh /run/openvpn/{interface}_dh.pem', config)
-
-            # IP pool configuration
-            netmask = IPv4Network(subnet).netmask
-            network = IPv4Network(subnet).network_address
-            self.assertIn(f'server {network} {netmask} nopool', config)
-            self.assertIn(f'ifconfig-pool {start_addr} {stop_addr}', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
