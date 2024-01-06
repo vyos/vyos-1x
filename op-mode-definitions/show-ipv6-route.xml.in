@@ -82,6 +82,23 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6 --vrf $5</command>
                   </node>
+                  <node name="node.tag">
+                    <properties>
+                      <help>Show IPv6 routes of given address or prefix</help>
+                      <completionHelp>
+                        <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <children>
+                      <node name="longer-prefixes">
+                        <properties>
+                          <help>Show longer prefixes of routes for given prefix</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                      </node>
+                    </children>
+                  </node>
                   #include <include/show-route-bgp.xml.i>
                   #include <include/show-route-connected.xml.i>
                   #include <include/show-route-isis.xml.i>
@@ -103,6 +120,7 @@
                 <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
               </completionHelp>
             </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             <children>
               <node name="longer-prefixes">
                 <properties>
@@ -111,7 +129,6 @@
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </node>
             </children>
-            <command>vtysh -c "show ipv6 route $4"</command>
           </tagNode>
         </children>
       </node>
