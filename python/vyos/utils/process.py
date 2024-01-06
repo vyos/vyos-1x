@@ -204,17 +204,32 @@ def process_running(pid_file):
         pid = f.read().strip()
     return pid_exists(int(pid))
 
-def process_named_running(name, cmdline: str=None):
+def process_named_running(name, cmdline: str=None, timeout=0):
     """ Checks if process with given name is running and returns its PID.
     If Process is not running, return None
     """
     from psutil import process_iter
-    for p in process_iter(['name', 'pid', 'cmdline']):
-        if cmdline:
-            if p.info['name'] == name and cmdline in p.info['cmdline']:
+    def check_process(name, cmdline):
+        for p in process_iter(['name', 'pid', 'cmdline']):
+            if cmdline:
+                if name in p.info['name'] and cmdline in p.info['cmdline']:
+                    return p.info['pid']
+            elif name in p.info['name']:
                 return p.info['pid']
-        elif p.info['name'] == name:
-            return p.info['pid']
+        return None
+    if timeout:
+        import time
+        time_expire = time.time() + timeout
+        while True:
+            tmp = check_process(name, cmdline)
+            if not tmp:
+                if time.time() > time_expire:
+                    break
+                time.sleep(0.100) # wait 250ms
+                continue
+            return tmp
+    else:
+        return check_process(name, cmdline)
     return None
 
 def is_systemd_service_active(service):
