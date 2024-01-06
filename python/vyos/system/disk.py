@@ -78,7 +78,7 @@ def parttable_create(drive_path: str, root_size: int) -> None:
     run(command)
     # update partitons in kernel
     sync()
-    run(f'partprobe {drive_path}')
+    run(f'partx -u {drive_path}')
 
     partitions: list[str] = partition_list(drive_path)
 
