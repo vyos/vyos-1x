@@ -262,6 +262,21 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('dont-throttle-netmasks')
         self.assertEqual(tmp, ','.join(dont_throttle_netmasks_examples))
 
+    def test_serve_stale_extensions(self):
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        self.cli_set(base_path + ['serve-stale-extensions', '20'])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        tmp = get_config_value('serve-stale-extensions')
+        self.assertEqual(tmp, '20')
+
     def test_listening_port(self):
         # We can listen on a different port compared to '53' but only one at a time
         for port in ['1053', '5353']:

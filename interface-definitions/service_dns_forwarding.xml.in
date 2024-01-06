@@ -670,6 +670,19 @@
                 </properties>
                 <defaultValue>3600</defaultValue>
               </leafNode>
+              <leafNode name="serve-stale-extensions">
+                <properties>
+                  <help>Maximum number of times an expired record’s TTL is extended by 30s when serving stale</help>
+                  <valueHelp>
+                    <format>u32:0-65535</format>
+                    <description>Number of times to extend the TTL</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>0</defaultValue>
+              </leafNode>
               <leafNode name="timeout">
                 <properties>
                   <help>Number of milliseconds to wait for a remote authoritative server to respond</help>
