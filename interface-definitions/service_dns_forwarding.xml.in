@@ -670,9 +670,9 @@
                 </properties>
                 <defaultValue>3600</defaultValue>
               </leafNode>
-              <leafNode name="serve-stale-extensions">
+              <leafNode name="serve-stale-extension">
                 <properties>
-                  <help>Maximum number of times an expired record’s TTL is extended by 30s when serving stale</help>
+                  <help>Number of times the expired TTL of a record is extended by 30 seconds when serving stale</help>
                   <valueHelp>
                     <format>u32:0-65535</format>
                     <description>Number of times to extend the TTL</description>
@@ -707,7 +707,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="dont-throttle-netmasks">
+              <leafNode name="exclude-throttle-address">
                 <properties>
                   <help>IP address or subnet</help>
                   <valueHelp>

@@ -239,8 +239,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('dns64-prefix')
         self.assertEqual(tmp, dns_prefix)
 
-    def test_dont_throttle_netmasks(self):
-        dont_throttle_netmasks_examples = [
+    def test_exclude_throttle_adress(self):
+        exclude_throttle_adress_examples = [
             '192.168.128.255',
             '10.0.0.0/25',
             '2001:db8:85a3:8d3:1319:8a2e:370:7348',
@@ -252,29 +252,29 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         for address in listen_adress:
             self.cli_set(base_path + ['listen-address', address])
 
-        for dont_throttle_netmasks in dont_throttle_netmasks_examples:
-            self.cli_set(base_path + ['dont-throttle-netmasks', dont_throttle_netmasks])
+        for exclude_throttle_adress in exclude_throttle_adress_examples:
+            self.cli_set(base_path + ['exclude-throttle-address', exclude_throttle_adress])
 
         # commit changes
         self.cli_commit()
 
         # verify dont-throttle-netmasks configuration
-        tmp = get_config_value('dont-throttle-netmasks')
-        self.assertEqual(tmp, ','.join(dont_throttle_netmasks_examples))
+        tmp = get_config_value('exclude-throttle-address')
+        self.assertEqual(tmp, ','.join(exclude_throttle_adress_examples))
 
-    def test_serve_stale_extensions(self):
+    def test_serve_stale_extension(self):
         for network in allow_from:
             self.cli_set(base_path + ['allow-from', network])
         for address in listen_adress:
             self.cli_set(base_path + ['listen-address', address])
 
-        self.cli_set(base_path + ['serve-stale-extensions', '20'])
+        self.cli_set(base_path + ['serve-stale-extension', '20'])
 
         # commit changes
         self.cli_commit()
 
         # verify configuration
-        tmp = get_config_value('serve-stale-extensions')
+        tmp = get_config_value('serve-stale-extension')
         self.assertEqual(tmp, '20')
 
     def test_listening_port(self):
