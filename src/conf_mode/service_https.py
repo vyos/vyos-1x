@@ -15,51 +15,41 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import socket
 import sys
 import json
 
-from copy import deepcopy
 from time import sleep
-
-import vyos.defaults
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.config import config_dict_merge
 from vyos.configdiff import get_config_diff
 from vyos.configverify import verify_vrf
-from vyos import ConfigError
+from vyos.defaults import api_config_state
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
+from vyos.pki import wrap_dh_parameters
+from vyos.pki import load_dh_parameters
 from vyos.template import render
+from vyos.utils.dict import dict_search
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.file import write_file
-
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = '/etc/nginx/sites-available/default'
+config_file = '/etc/nginx/sites-enabled/default'
 systemd_override = r'/run/systemd/system/nginx.service.d/override.conf'
-cert_dir = '/etc/ssl/certs'
-key_dir = '/etc/ssl/private'
+cert_dir = '/run/nginx/certs'
 
-api_config_state = '/run/http-api-state'
-systemd_service = '/run/systemd/system/vyos-http-api.service'
+user = 'www-data'
+group = 'www-data'
 
-# https config needs to coordinate several subsystems: api,
-# self-signed certificate, as well as the virtual hosts defined within the
-# https config definition itself. Consequently, one needs a general dict,
-# encompassing the https and other configs, and a list of such virtual hosts
-# (server blocks in nginx terminology) to pass to the jinja2 template.
-default_server_block = {
-    'id'        : '',
-    'address'   : '*',
-    'port'      : '443',
-    'name'      : ['_'],
-    'api'       : False,
-    'vyos_cert' : {},
-}
+systemd_service_api = '/run/systemd/system/vyos-http-api.service'
 
 def get_config(config=None):
     if config:
@@ -71,83 +61,70 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    diff = get_config_diff(conf)
+    https = conf.get_config_dict(base, get_first_key=True,
+                                 key_mangling=('-', '_'),
+                                 with_pki=True)
 
-    https = conf.get_config_dict(base, get_first_key=True, with_pki=True)
+    # store path to API config file for later use in templates
+    https['api_config_state'] = api_config_state
+    # get fully qualified system hsotname
+    https['hostname'] = socket.getfqdn()
 
-    https['api_add_or_delete'] = diff.node_changed_presence(base + ['api'])
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = conf.get_config_defaults(**https.kwargs, recursive=True)
+    if 'api' not in https or 'graphql' not in https['api']:
+        del default_values['api']
 
-    if 'api' not in https:
-        return https
-
-    http_api = conf.get_config_dict(base + ['api'], key_mangling=('-', '_'),
-                                    no_tag_node_value_mangle=True,
-                                    get_first_key=True,
-                                    with_recursive_defaults=True)
-
-    if http_api.from_defaults(['graphql']):
-        del http_api['graphql']
-
-    # Do we run inside a VRF context?
-    vrf_path = ['service', 'https', 'vrf']
-    if conf.exists(vrf_path):
-        http_api['vrf'] = conf.return_value(vrf_path)
-
-    https['api'] = http_api
+    # merge CLI and default dictionary
+    https = config_dict_merge(default_values, https)
     return https
 
 def verify(https):
-    from vyos.utils.dict import dict_search
-
     if https is None:
         return None
 
-    if 'certificates' in https:
-        certificates = https['certificates']
+    if 'certificates' in https and 'certificate' in https['certificates']:
+        cert_name = https['certificates']['certificate']
+        if 'pki' not in https:
+            raise ConfigError('PKI is not configured!')
 
-        if 'certificate' in certificates:
-            if not https['pki']:
-                raise ConfigError('PKI is not configured')
+        if cert_name not in https['pki']['certificate']:
+            raise ConfigError('Invalid certificate in configuration!')
 
-            cert_name = certificates['certificate']
+        pki_cert = https['pki']['certificate'][cert_name]
 
-            if cert_name not in https['pki']['certificate']:
-                raise ConfigError('Invalid certificate on https configuration')
+        if 'certificate' not in pki_cert:
+            raise ConfigError('Missing certificate in configuration!')
 
-            pki_cert = https['pki']['certificate'][cert_name]
+        if 'private' not in pki_cert or 'key' not in pki_cert['private']:
+            raise ConfigError('Missing certificate private key in configuration!')
 
-            if 'certificate' not in pki_cert:
-                raise ConfigError('Missing certificate on https configuration')
+        if 'dh_params' in https['certificates']:
+            dh_name = https['certificates']['dh_params']
+            if dh_name not in https['pki']['dh']:
+                raise ConfigError('Invalid DH parameter in configuration!')
 
-            if 'private' not in pki_cert or 'key' not in pki_cert['private']:
-                raise ConfigError("Missing certificate private key on https configuration")
+            pki_dh = https['pki']['dh'][dh_name]
+            dh_params = load_dh_parameters(pki_dh['parameters'])
+            dh_numbers = dh_params.parameter_numbers()
+            dh_bits = dh_numbers.p.bit_length()
+            if dh_bits < 2048:
+                raise ConfigError(f'Minimum DH key-size is 2048 bits')
+
     else:
-        Warning('No certificate specified, using buildin self-signed certificates!')
+        Warning('No certificate specified, using build-in self-signed certificates. '\
+                'Do not use them in a production environment!')
 
-    server_block_list = []
+    # Check if server port is already in use by a different appliaction
+    listen_address = ['0.0.0.0']
+    port = int(https['port'])
+    if 'listen_address' in https:
+        listen_address = https['listen_address']
 
-    # organize by vhosts
-    vhost_dict = https.get('virtual-host', {})
-
-    if not vhost_dict:
-        # no specified virtual hosts (server blocks); use default
-        server_block_list.append(default_server_block)
-    else:
-        for vhost in list(vhost_dict):
-            server_block = deepcopy(default_server_block)
-            data = vhost_dict.get(vhost, {})
-            server_block['address'] = data.get('listen-address', '*')
-            server_block['port'] = data.get('port', '443')
-            server_block_list.append(server_block)
-
-    for entry in server_block_list:
-        _address = entry.get('address')
-        _address = '0.0.0.0' if _address == '*' else _address
-        _port = entry.get('port')
-        proto = 'tcp'
-        if check_port_availability(_address, int(_port), proto) is not True and \
-                not is_listen_port_bind_service(int(_port), 'nginx'):
-            raise ConfigError(f'"{proto}" port "{_port}" is used by another service')
+    for address in listen_address:
+        if not check_port_availability(address, port, 'tcp') and not is_listen_port_bind_service(port, 'nginx'):
+            raise ConfigError(f'TCP port "{port}" is used by another service!')
 
     verify_vrf(https)
 
@@ -172,89 +149,61 @@ def verify(https):
         # If only key-based methods are enabled,
         # fail the commit if no valid key configurations are found
         if (not valid_keys_exist) and (not jwt_auth):
-            raise ConfigError('At least one HTTPS API key is required unless GraphQL token authentication is enabled')
+            raise ConfigError('At least one HTTPS API key is required unless GraphQL token authentication is enabled!')
 
         if (not valid_keys_exist) and jwt_auth:
-            Warning(f'API keys are not configured: the classic (non-GraphQL) API will be unavailable.')
+            Warning(f'API keys are not configured: classic (non-GraphQL) API will be unavailable!')
 
     return None
 
 def generate(https):
     if https is None:
+        for file in [systemd_service_api, config_file, systemd_override]:
+            if os.path.exists(file):
+                os.unlink(file)
         return None
 
-    if 'api' not in https:
-        if os.path.exists(systemd_service):
-            os.unlink(systemd_service)
-    else:
-        render(systemd_service, 'https/vyos-http-api.service.j2', https['api'])
+    if 'api' in https:
+        render(systemd_service_api, 'https/vyos-http-api.service.j2', https)
         with open(api_config_state, 'w') as f:
             json.dump(https['api'], f, indent=2)
-
-    server_block_list = []
-
-    # organize by vhosts
-
-    vhost_dict = https.get('virtual-host', {})
-
-    if not vhost_dict:
-        # no specified virtual hosts (server blocks); use default
-        server_block_list.append(default_server_block)
     else:
-        for vhost in list(vhost_dict):
-            server_block = deepcopy(default_server_block)
-            server_block['id'] = vhost
-            data = vhost_dict.get(vhost, {})
-            server_block['address'] = data.get('listen-address', '*')
-            server_block['port'] = data.get('port', '443')
-            name = data.get('server-name', ['_'])
-            server_block['name'] = name
-            allow_client = data.get('allow-client', {})
-            server_block['allow_client'] = allow_client.get('address', [])
-            server_block_list.append(server_block)
+        if os.path.exists(systemd_service_api):
+            os.unlink(systemd_service_api)
 
     # get certificate data
-
-    cert_dict = https.get('certificates', {})
-
-    if 'certificate' in cert_dict:
-        cert_name = cert_dict['certificate']
+    if 'certificates' in https and 'certificate' in https['certificates']:
+        cert_name = https['certificates']['certificate']
         pki_cert = https['pki']['certificate'][cert_name]
 
-        cert_path = os.path.join(cert_dir, f'{cert_name}.pem')
-        key_path = os.path.join(key_dir, f'{cert_name}.pem')
+        cert_path = os.path.join(cert_dir, f'{cert_name}_cert.pem')
+        key_path = os.path.join(cert_dir, f'{cert_name}_key.pem')
 
         server_cert = str(wrap_certificate(pki_cert['certificate']))
-        if 'ca-certificate' in cert_dict:
-            ca_cert = cert_dict['ca-certificate']
+
+        # Append CA certificate if specified to form a full chain
+        if 'ca_certificate' in https['certificates']:
+            ca_cert = https['certificates']['ca_certificate']
             server_cert += '\n' + str(wrap_certificate(https['pki']['ca'][ca_cert]['certificate']))
 
-        write_file(cert_path, server_cert)
-        write_file(key_path, wrap_private_key(pki_cert['private']['key']))
+        write_file(cert_path, server_cert, user=user, group=group, mode=0o644)
+        write_file(key_path, wrap_private_key(pki_cert['private']['key']),
+                    user=user, group=group, mode=0o600)
 
-        vyos_cert_data = {
-            'crt': cert_path,
-            'key': key_path
-        }
+        tmp_path = {'cert_path': cert_path, 'key_path': key_path}
 
-        for block in server_block_list:
-            block['vyos_cert'] = vyos_cert_data
+        if 'dh_params' in https['certificates']:
+            dh_name = https['certificates']['dh_params']
+            pki_dh = https['pki']['dh'][dh_name]
+            if 'parameters' in pki_dh:
+                dh_path = os.path.join(cert_dir, f'{dh_name}_dh.pem')
+                write_file(dh_path, wrap_dh_parameters(pki_dh['parameters']),
+                           user=user, group=group, mode=0o600)
+                tmp_path.update({'dh_file' : dh_path})
 
-    if 'api' in list(https):
-        vhost_list = https.get('api-restrict', {}).get('virtual-host', [])
-        if not vhost_list:
-            for block in server_block_list:
-                block['api'] = True
-        else:
-            for block in server_block_list:
-                if block['id'] in vhost_list:
-                    block['api'] = True
+        https['certificates'].update(tmp_path)
 
-    data = {
-        'server_block_list': server_block_list,
-    }
-
-    render(config_file, 'https/nginx.default.j2', data)
+    render(config_file, 'https/nginx.default.j2', https)
     render(systemd_override, 'https/override.conf.j2', https)
     return None
 
@@ -273,7 +222,7 @@ def apply(https):
         call(f'systemctl reload-or-restart {http_api_service_name}')
         # Let uvicorn settle before (possibly) restarting nginx
         sleep(1)
-    else:
+    elif is_systemd_service_active(http_api_service_name):
         call(f'systemctl stop {http_api_service_name}')
 
     call(f'systemctl reload-or-restart {https_service_name}')

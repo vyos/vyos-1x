@@ -29,6 +29,7 @@ service {
             allow-client {
                 address 192.168.0.0/16
             }
+            listen-address "*"
             listen-port 6666
             server-name baz
         }

@@ -37,6 +37,7 @@ directories = {
 }
 
 config_status = '/tmp/vyos-config-status'
+api_config_state = '/run/http-api-state'
 
 cfg_group = 'vyattacfg'
 
@@ -45,14 +46,3 @@ cfg_vintage = 'vyos'
 commit_lock = '/opt/vyatta/config/.lock'
 
 component_version_json = os.path.join(directories['data'], 'component-versions.json')
-
-https_data = {
-    'listen_addresses' : { '*': ['_'] }
-}
-
-vyos_cert_data = {
-    'conf' : '/etc/nginx/snippets/vyos-cert.conf',
-    'crt' : '/etc/ssl/certs/vyos-selfsigned.crt',
-    'key' : '/etc/ssl/private/vyos-selfsign',
-    'lifetime' : '365',
-}
