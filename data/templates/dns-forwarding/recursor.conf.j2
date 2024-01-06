@@ -40,12 +40,12 @@ dnssec={{ dnssec }}
 dns64-prefix={{ dns64_prefix }}
 {% endif %}
 
-{% if dont_throttle_netmasks is vyos_defined %}
+{% if exclude_throttle_address is vyos_defined %}
 # dont-throttle-netmasks
 dont-throttle-netmasks={{ exclude_throttle_address | join(',') }}
 {% endif %}
 
-{% if serve_stale_extensions is vyos_defined %}
+{% if serve_stale_extension is vyos_defined %}
 # serve-stale-extensions
 serve-stale-extensions={{ serve_stale_extension }}
 {% endif %}

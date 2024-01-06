@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -43,7 +43,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestServicePowerDNS, cls).setUpClass()
-
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -259,23 +258,24 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify dont-throttle-netmasks configuration
-        tmp = get_config_value('exclude-throttle-address')
+        tmp = get_config_value('dont-throttle-netmasks')
         self.assertEqual(tmp, ','.join(exclude_throttle_adress_examples))
 
     def test_serve_stale_extension(self):
+        server_stale = '20'
         for network in allow_from:
             self.cli_set(base_path + ['allow-from', network])
         for address in listen_adress:
             self.cli_set(base_path + ['listen-address', address])
 
-        self.cli_set(base_path + ['serve-stale-extension', '20'])
+        self.cli_set(base_path + ['serve-stale-extension', server_stale])
 
         # commit changes
         self.cli_commit()
 
         # verify configuration
-        tmp = get_config_value('serve-stale-extension')
-        self.assertEqual(tmp, '20')
+        tmp = get_config_value('serve-stale-extensions')
+        self.assertEqual(tmp, server_stale)
 
     def test_listening_port(self):
         # We can listen on a different port compared to '53' but only one at a time
