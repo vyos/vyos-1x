@@ -3,6 +3,7 @@
 Description=VyOS HTTP API service
 After=vyos-router.service
 Requires=vyos-router.service
+ConditionPathExists={{ api_config_state }}
 
 [Service]
 ExecStart={{ vrf_command }}/usr/libexec/vyos/services/vyos-http-api-server
@@ -20,4 +21,3 @@ Group=vyattacfg
 
 [Install]
 WantedBy=vyos.target
-
