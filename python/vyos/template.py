@@ -786,6 +786,23 @@ def range_to_regex(num_range):
     regex = range_to_regex(num_range)
     return f'({regex})'
 
+@register_filter('kea_address_json')
+def kea_address_json(addresses):
+    from json import dumps
+    from vyos.utils.network import is_addr_assigned
+
+    out = []
+
+    for address in addresses:
+        ifname = is_addr_assigned(address, return_ifname=True)
+
+        if not ifname:
+            continue
+
+        out.append(f'{ifname}/{address}')
+
+    return dumps(out)
+
 @register_filter('kea_failover_json')
 def kea_failover_json(config):
     from json import dumps

@@ -308,7 +308,7 @@ def is_ipv6_link_local(addr):
 
     return False
 
-def is_addr_assigned(ip_address, vrf=None) -> bool:
+def is_addr_assigned(ip_address, vrf=None, return_ifname=False) -> bool | str:
     """ Verify if the given IPv4/IPv6 address is assigned to any interface """
     from netifaces import interfaces
     from vyos.utils.network import get_interface_config
@@ -323,7 +323,7 @@ def is_addr_assigned(ip_address, vrf=None) -> bool:
             continue
 
         if is_intf_addr_assigned(interface, ip_address):
-            return True
+            return interface if return_ifname else True
 
     return False
 

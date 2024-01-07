@@ -1,8 +1,16 @@
 {
     "Dhcp4": {
         "interfaces-config": {
+{% if listen_address is vyos_defined %}
+            "interfaces": {{ listen_address | kea_address_json }},
+            "dhcp-socket-type": "udp",
+{% elif listen_interface is vyos_defined %}
+            "interfaces": {{ listen_interface | tojson }},
+            "dhcp-socket-type": "raw",
+{% else %}
             "interfaces": [ "*" ],
             "dhcp-socket-type": "raw",
+{% endif %}
             "service-sockets-max-retries": 5,
             "service-sockets-retry-wait-time": 5000
         },

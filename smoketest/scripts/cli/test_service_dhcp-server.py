@@ -32,6 +32,7 @@ CTRL_PROCESS_NAME = 'kea-ctrl-agent'
 KEA4_CONF = '/run/kea/kea-dhcp4.conf'
 KEA4_CTRL = '/run/kea/dhcp4-ctrl-socket'
 base_path = ['service', 'dhcp-server']
+interface = 'dum8765'
 subnet = '192.0.2.0/25'
 router = inc_ip(subnet, 1)
 dns_1 = inc_ip(subnet, 2)
@@ -46,11 +47,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
 
         cidr_mask = subnet.split('/')[-1]
-        cls.cli_set(cls, ['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
+        cls.cli_set(cls, ['interfaces', 'dummy', interface, 'address', f'{router}/{cidr_mask}'])
 
     @classmethod
     def tearDownClass(cls):
-        cls.cli_delete(cls, ['interfaces', 'dummy', 'dum8765'])
+        cls.cli_delete(cls, ['interfaces', 'dummy', interface])
         super(TestServiceDHCPServer, cls).tearDownClass()
 
     def tearDown(self):
@@ -95,6 +96,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_1_start = inc_ip(subnet, 40)
         range_1_stop  = inc_ip(subnet, 50)
 
+        self.cli_set(base_path + ['listen-interface', interface])
+
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['option', 'default-router', router])
@@ -116,6 +119,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         config = read_file(KEA4_CONF)
         obj = loads(config)
 
+        self.verify_config_value(obj, ['Dhcp4', 'interfaces-config'], 'interfaces', [interface])
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'valid-lifetime', 86400)
@@ -607,6 +611,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         config = read_file(KEA4_CONF)
         obj = loads(config)
 
+        self.verify_config_value(obj, ['Dhcp4', 'interfaces-config'], 'interfaces', [f'{interface}/{router}'])
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', 'RELAY')
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', relay_subnet)
 

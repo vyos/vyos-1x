@@ -31,6 +31,7 @@ from vyos.utils.file import chmod_775
 from vyos.utils.file import makedir
 from vyos.utils.file import write_file
 from vyos.utils.process import call
+from vyos.utils.network import interface_exists
 from vyos.utils.network import is_subnet_connected
 from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
@@ -294,11 +295,17 @@ def verify(dhcp):
         else:
             raise ConfigError(f'listen-address "{address}" not configured on any interface')
 
-
     if not listen_ok:
         raise ConfigError('None of the configured subnets have an appropriate primary IP address on any\n'
                           'broadcast interface configured, nor was there an explicit listen-address\n'
                           'configured for serving DHCP relay packets!')
+
+    if 'listen_address' in dhcp and 'listen_interface' in dhcp:
+        raise ConfigError(f'Cannot define listen-address and listen-interface at the same time')
+
+    for interface in (dict_search('listen_interface', dhcp) or []):
+        if not interface_exists(interface):
+            raise ConfigError(f'listen-interface "{interface}" does not exist')
 
     return None
 
