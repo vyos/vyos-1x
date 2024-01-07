@@ -81,6 +81,60 @@
               <constraintErrorMessage>Certificate is not base64-encoded</constraintErrorMessage>
             </properties>
           </leafNode>
+          <node name="acme">
+            <properties>
+              <help>Automatic Certificate Management Environment (ACME) request</help>
+            </properties>
+            <children>
+              #include <include/url-http-https.xml.i>
+              <leafNode name="url">
+                <defaultValue>https://acme-v02.api.letsencrypt.org/directory</defaultValue>
+              </leafNode>
+              <leafNode name="domain-name">
+                <properties>
+                  <help>Domain Name</help>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid domain name (RFC 1123 section 2).\nMay only contain letters, numbers and .-_</constraintErrorMessage>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="email">
+                <properties>
+                  <help>Email address to associate with certificate</help>
+                  <constraint>
+                    #include <include/constraint/email.xml.i>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/listen-address-ipv4-single.xml.i>
+              <leafNode name="rsa-key-size">
+                <properties>
+                  <help>Size of the RSA key</help>
+                  <completionHelp>
+                    <list>2048 3072 4096</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>2048</format>
+                    <description>RSA key length 2048 bit</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>3072</format>
+                    <description>RSA key length 3072 bit</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>4096</format>
+                    <description>RSA key length 4096 bit</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(2048|3072|4096)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>2048</defaultValue>
+              </leafNode>
+            </children>
+          </node>
           #include <include/generic-description.xml.i>
           <node name="private">
             <properties>

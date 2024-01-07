@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,6 +25,7 @@ from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
 from vyos.config import Config
+from vyos.config import config_dict_mangle_acme
 from vyos.pki import encode_certificate, encode_public_key, encode_private_key, encode_dh_parameters
 from vyos.pki import get_certificate_fingerprint
 from vyos.pki import create_certificate, create_certificate_request, create_certificate_revocation_list
@@ -79,9 +80,14 @@ def get_config_certificate(name=None):
         if not conf.exists(base + ['private', 'key']) or not conf.exists(base + ['certificate']):
             return False
 
-    return conf.get_config_dict(base, key_mangling=('-', '_'),
+    pki = conf.get_config_dict(base, key_mangling=('-', '_'),
                                 get_first_key=True,
                                 no_tag_node_value_mangle=True)
+    if pki:
+        for certificate in pki:
+            pki[certificate] = config_dict_mangle_acme(certificate, pki[certificate])
+
+    return pki
 
 def get_certificate_ca(cert, ca_certs):
     # Find CA certificate for given certificate
@@ -1073,7 +1079,9 @@ if __name__ == '__main__':
                 show_crl(None if args.crl == 'all' else args.crl, args.pem)
             else:
                 show_certificate_authority()
+                print('\n')
                 show_certificate()
+                print('\n')
                 show_crl()
     except KeyboardInterrupt:
         print("Aborted")
