@@ -43,6 +43,7 @@ from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.template import render
 from vyos.utils.network import is_ipv6_link_local
+from vyos.utils.network import interface_exists
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call
@@ -65,11 +66,11 @@ default_install_routes = 'yes'
 
 vici_socket = '/var/run/charon.vici'
 
-CERT_PATH = f'{swanctl_dir}/x509/'
+CERT_PATH   = f'{swanctl_dir}/x509/'
 PUBKEY_PATH = f'{swanctl_dir}/pubkey/'
-KEY_PATH  = f'{swanctl_dir}/private/'
-CA_PATH   = f'{swanctl_dir}/x509ca/'
-CRL_PATH  = f'{swanctl_dir}/x509crl/'
+KEY_PATH    = f'{swanctl_dir}/private/'
+CA_PATH     = f'{swanctl_dir}/x509ca/'
+CRL_PATH    = f'{swanctl_dir}/x509crl/'
 
 DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_waiting'
 
@@ -394,7 +395,7 @@ def verify(ipsec):
 
                 if 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
-                    if not os.path.exists(f'/sys/class/net/{vti_interface}'):
+                    if not interface_exists(vti_interface):
                         raise ConfigError(f'VTI interface {vti_interface} for site-to-site peer {peer} does not exist!')
 
             if 'vti' not in peer_conf and 'tunnel' not in peer_conf:
