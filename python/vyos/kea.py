@@ -92,17 +92,28 @@ def kea_parse_options(config):
         options.append({'name': 'pcode', 'data': tz_string})
         options.append({'name': 'tcode', 'data': config['time_zone']})
 
+    unifi_controller = dict_search_args(config, 'vendor_option', 'ubiquiti', 'unifi_controller')
+    if unifi_controller:
+        options.append({
+            'name': 'unifi-controller',
+            'data': unifi_controller,
+            'space': 'ubnt'
+        })
+
     return options
 
 def kea_parse_subnet(subnet, config):
     out = {'subnet': subnet}
-    options = kea_parse_options(config)
+    options = []
 
-    if 'bootfile_name' in config:
-        out['boot-file-name'] = config['bootfile_name']
+    if 'option' in config:
+        out['option-data'] = kea_parse_options(config['option'])
 
-    if 'bootfile_server' in config:
-        out['next-server'] = config['bootfile_server']
+        if 'bootfile_name' in config['option']:
+            out['boot-file-name'] = config['option']['bootfile_name']
+
+        if 'bootfile_server' in config['option']:
+            out['next-server'] = config['option']['bootfile_server']
 
     if 'lease' in config:
         out['valid-lifetime'] = int(config['lease'])
@@ -112,7 +123,20 @@ def kea_parse_subnet(subnet, config):
         pools = []
         for num, range_config in config['range'].items():
             start, stop = range_config['start'], range_config['stop']
-            pools.append({'pool': f'{start} - {stop}'})
+            pool = {
+                'pool': f'{start} - {stop}'
+            }
+
+            if 'option' in range_config:
+                pool['option-data'] = kea_parse_options(range_config['option'])
+
+                if 'bootfile_name' in range_config['option']:
+                    pool['boot-file-name'] = range_config['option']['bootfile_name']
+
+                if 'bootfile_server' in range_config['option']:
+                    pool['next-server'] = range_config['option']['bootfile_server']
+
+            pools.append(pool)
         out['pools'] = pools
 
     if 'static_mapping' in config:
@@ -134,19 +158,17 @@ def kea_parse_subnet(subnet, config):
             if 'ip_address' in host_config:
                 reservation['ip-address'] = host_config['ip_address']
 
+            if 'option' in host_config:
+                reservation['option-data'] = kea_parse_options(host_config['option'])
+
+                if 'bootfile_name' in host_config['option']:
+                    reservation['boot-file-name'] = host_config['option']['bootfile_name']
+
+                if 'bootfile_server' in host_config['option']:
+                    reservation['next-server'] = host_config['option']['bootfile_server']
+
             reservations.append(reservation)
         out['reservations'] = reservations
-
-    unifi_controller = dict_search_args(config, 'vendor_option', 'ubiquiti', 'unifi_controller')
-    if unifi_controller:
-        options.append({
-            'name': 'unifi-controller',
-            'data': unifi_controller,
-            'space': 'ubnt'
-        })
-
-    if options:
-        out['option-data'] = options
 
     return out
 

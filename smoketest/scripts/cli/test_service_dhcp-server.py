@@ -97,10 +97,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.cli_set(pool + ['default-router', router])
-        self.cli_set(pool + ['name-server', dns_1])
-        self.cli_set(pool + ['name-server', dns_2])
-        self.cli_set(pool + ['domain-name', domain_name])
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'domain-name', domain_name])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
@@ -165,29 +165,26 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.cli_set(pool + ['default-router', router])
-        self.cli_set(pool + ['name-server', dns_1])
-        self.cli_set(pool + ['name-server', dns_2])
-        self.cli_set(pool + ['domain-name', domain_name])
-        self.cli_set(pool + ['ip-forwarding'])
-        self.cli_set(pool + ['smtp-server', smtp_server])
-        self.cli_set(pool + ['pop-server', smtp_server])
-        self.cli_set(pool + ['time-server', time_server])
-        self.cli_set(pool + ['tftp-server-name', tftp_server])
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'domain-name', domain_name])
+        self.cli_set(pool + ['option', 'ip-forwarding'])
+        self.cli_set(pool + ['option', 'smtp-server', smtp_server])
+        self.cli_set(pool + ['option', 'pop-server', smtp_server])
+        self.cli_set(pool + ['option', 'time-server', time_server])
+        self.cli_set(pool + ['option', 'tftp-server-name', tftp_server])
         for search in search_domains:
-            self.cli_set(pool + ['domain-search', search])
-        self.cli_set(pool + ['bootfile-name', bootfile_name])
-        self.cli_set(pool + ['bootfile-server', bootfile_server])
-        self.cli_set(pool + ['wpad-url', wpad])
-        self.cli_set(pool + ['server-identifier', server_identifier])
+            self.cli_set(pool + ['option', 'domain-search', search])
+        self.cli_set(pool + ['option', 'bootfile-name', bootfile_name])
+        self.cli_set(pool + ['option', 'bootfile-server', bootfile_server])
+        self.cli_set(pool + ['option', 'wpad-url', wpad])
+        self.cli_set(pool + ['option', 'server-identifier', server_identifier])
 
-        self.cli_set(pool + ['static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1'])
-        self.cli_set(pool + ['ipv6-only-preferred', ipv6_only_preferred])
-        self.cli_set(pool + ['time-zone', 'Europe/London'])
+        self.cli_set(pool + ['option', 'static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1'])
+        self.cli_set(pool + ['option', 'ipv6-only-preferred', ipv6_only_preferred])
+        self.cli_set(pool + ['option', 'time-zone', 'Europe/London'])
 
-        # check validate() - No DHCP address range or active static-mapping set
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
@@ -281,16 +278,81 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_dhcp_single_pool_options_scoped(self):
+        shared_net_name = 'SMOKE-2'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+
+        range_router = inc_ip(subnet, 5)
+        range_dns_1 = inc_ip(subnet, 6)
+        range_dns_2 = inc_ip(subnet, 7)
+
+        shared_network = base_path + ['shared-network-name', shared_net_name]
+        pool = shared_network + ['subnet', subnet]
+        # we use the first subnet IP address as default gateway
+        self.cli_set(shared_network + ['option', 'default-router', router])
+        self.cli_set(shared_network + ['option', 'name-server', dns_1])
+        self.cli_set(shared_network + ['option', 'name-server', dns_2])
+        self.cli_set(shared_network + ['option', 'domain-name', domain_name])
+
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['range', '0', 'option', 'default-router', range_router])
+        self.cli_set(pool + ['range', '0', 'option', 'name-server', range_dns_1])
+        self.cli_set(pool + ['range', '0', 'option', 'name-server', range_dns_2])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'valid-lifetime', 86400)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'max-valid-lifetime', 86400)
+
+        # Verify shared-network options
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'option-data'],
+                {'name': 'domain-name', 'data': domain_name})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'option-data'],
+                {'name': 'domain-name-servers', 'data': f'{dns_1}, {dns_2}'})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'option-data'],
+                {'name': 'routers', 'data': router})
+
+        # Verify range options
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools', 0, 'option-data'],
+                {'name': 'domain-name-servers', 'data': f'{range_dns_1}, {range_dns_2}'})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools', 0, 'option-data'],
+                {'name': 'routers', 'data': range_router})
+
+        # Verify pool
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'], 'pool', f'{range_0_start} - {range_0_stop}')
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
     def test_dhcp_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
         domain_name = 'private'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.cli_set(pool + ['default-router', router])
-        self.cli_set(pool + ['name-server', dns_1])
-        self.cli_set(pool + ['name-server', dns_2])
-        self.cli_set(pool + ['domain-name', domain_name])
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'domain-name', domain_name])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
@@ -365,9 +427,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
             pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
             # we use the first subnet IP address as default gateway
-            self.cli_set(pool + ['default-router', router])
-            self.cli_set(pool + ['name-server', dns_1])
-            self.cli_set(pool + ['domain-name', domain_name])
+            self.cli_set(pool + ['option', 'default-router', router])
+            self.cli_set(pool + ['option', 'name-server', dns_1])
+            self.cli_set(pool + ['option', 'domain-name', domain_name])
             self.cli_set(pool + ['lease', lease_time])
 
             self.cli_set(pool + ['range', '0', 'start', range_0_start])
@@ -448,7 +510,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_stop  = inc_ip(subnet, 20)
 
         pool = base_path + ['shared-network-name', 'EXCLUDE-TEST', 'subnet', subnet]
-        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['exclude', router])
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
@@ -490,7 +552,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_start_excl = inc_ip(exclude_addr, 1)
 
         pool = base_path + ['shared-network-name', 'EXCLUDE-TEST-2', 'subnet', subnet]
-        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['exclude', exclude_addr])
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
@@ -535,7 +597,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_stop  = '10.0.250.255'
 
         pool = base_path + ['shared-network-name', 'RELAY', 'subnet', relay_subnet]
-        self.cli_set(pool + ['default-router', relay_router])
+        self.cli_set(pool + ['option', 'default-router', relay_router])
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
@@ -572,7 +634,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
-        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['option', 'default-router', router])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):

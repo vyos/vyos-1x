@@ -842,14 +842,21 @@ def kea_shared_network_json(shared_networks):
             'authoritative': ('authoritative' in config),
             'subnet4': []
         }
-        options = kea_parse_options(config)
+
+        if 'option' in config:
+            network['option-data'] = kea_parse_options(config['option'])
+
+            if 'bootfile_name' in config['option']:
+                network['boot-file-name'] = config['option']['bootfile_name']
+
+            if 'bootfile_server' in config['option']:
+                network['next-server'] = config['option']['bootfile_server']
 
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
+                if 'disable' in subnet_config:
+                    continue
                 network['subnet4'].append(kea_parse_subnet(subnet, subnet_config))
-
-        if options:
-            network['option-data'] = options
 
         out.append(network)
 
