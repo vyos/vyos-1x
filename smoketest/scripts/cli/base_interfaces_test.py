@@ -127,9 +127,9 @@ class BasicInterfaceTest:
                 # by also checking the cmd arguments passed to the daemon
                 if self._interfaces:
                     for tmp in self._interfaces:
-                        self.assertFalse(process_named_running(daemon, tmp, timeout=10))
+                        self.assertFalse(process_named_running(daemon, tmp))
                 else:
-                    self.assertFalse(process_named_running(daemon, timeout=10))
+                    self.assertFalse(process_named_running(daemon))
 
         def test_dhcp_disable_interface(self):
             if not self._test_dhcp:

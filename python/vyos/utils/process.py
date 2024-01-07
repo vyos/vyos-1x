@@ -204,7 +204,7 @@ def process_running(pid_file):
         pid = f.read().strip()
     return pid_exists(int(pid))
 
-def process_named_running(name, cmdline: str=None, timeout=0):
+def process_named_running(name: str, cmdline: str=None, timeout: int=0):
     """ Checks if process with given name is running and returns its PID.
     If Process is not running, return None
     """
