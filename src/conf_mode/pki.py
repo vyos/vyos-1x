@@ -104,10 +104,10 @@ def certbot_request(name: str, config: dict, dry_run: bool=True):
         return
 
     domains = '--domains ' + ' --domains '.join(config['domain_name'])
-    tmp = f'certbot certonly --config-dir {vyos_certbot_dir} --cert-name {name} '\
-            f'--non-interactive --standalone --agree-tos --no-eff-email --expand '\
-            f'--server {config["url"]} --email {config["email"]} '\
-            f'--key-type rsa --rsa-key-size {config["rsa_key_size"]} {domains}'
+    tmp = f'certbot certonly --non-interactive --config-dir {vyos_certbot_dir} --cert-name {name} '\
+          f'--standalone --agree-tos --no-eff-email --expand --server {config["url"]} '\
+          f'--email {config["email"]} --key-type rsa --rsa-key-size {config["rsa_key_size"]} '\
+          f'{domains}'
     if 'listen_address' in config:
         tmp += f' --http-01-address {config["listen_address"]}'
     # verify() does not need to actually request a cert but only test for plausability
@@ -135,8 +135,7 @@ def get_config(config=None):
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'ca' : tmp})
 
-    tmp = node_changed(conf, base + ['certificate'], key_mangling=('-', '_'),
-                       recursive=True, expand_nodes=Diff.ADD|Diff.DELETE)
+    tmp = node_changed(conf, base + ['certificate'], key_mangling=('-', '_'), recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'certificate' : tmp})
@@ -211,7 +210,7 @@ def get_config(config=None):
                         if found_name == item_name:
                             path = search['path']
                             path_str = ' '.join(path + found_path)
-                            print(f'pki: Updating config: {path_str} {found_name}')
+                            print(f'PKI: Updating config: {path_str} {found_name}')
 
                             if path[0] == 'interfaces':
                                 ifname = found_path[0]
@@ -371,21 +370,29 @@ def generate(pki):
     if 'certbot_renew' in pki:
         return None
 
-    # list of certificates issued via certbot
     certbot_list = []
+    certbot_list_on_disk = []
+    if os.path.exists(f'{vyos_certbot_dir}/live'):
+        certbot_list_on_disk = [f.path.split('/')[-1] for f in os.scandir(f'{vyos_certbot_dir}/live') if f.is_dir()]
+
     if 'certificate' in pki:
+        changed_certificates = dict_search('changed.certificate', pki)
         for name, cert_conf in pki['certificate'].items():
             if 'acme' in cert_conf:
                 certbot_list.append(name)
-                # when something for the certificate changed, we should delete it
-                if name in dict_search('changed.certificate', pki):
-                    certbot_delete(name)
+                # generate certificate if not found on disk
+                if name not in certbot_list_on_disk:
+                    certbot_request(name, cert_conf['acme'], dry_run=False)
+                elif changed_certificates != None and name in changed_certificates:
+                    # when something for the certificate changed, we should delete it
+                    if name in certbot_list_on_disk:
+                        certbot_delete(name)
                     certbot_request(name, cert_conf['acme'], dry_run=False)
 
     # Cleanup certbot configuration and certificates if no longer in use by CLI
     # Get foldernames under vyos_certbot_dir which each represent a certbot cert
     if os.path.exists(f'{vyos_certbot_dir}/live'):
-        for cert in [f.path.split('/')[-1] for f in os.scandir(f'{vyos_certbot_dir}/live') if f.is_dir()]:
+        for cert in certbot_list_on_disk:
             if cert not in certbot_list:
                 # certificate is no longer active on the CLI - remove it
                 certbot_delete(cert)
