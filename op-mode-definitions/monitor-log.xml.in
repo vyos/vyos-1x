@@ -30,6 +30,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="certbot">
+            <properties>
+              <help>Monitor last lines of certbot log</help>
+            </properties>
+            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo tail --follow=name /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+          </leafNode>
           <leafNode name="conntrack-sync">
             <properties>
               <help>Monitor last lines of conntrack-sync log</help>

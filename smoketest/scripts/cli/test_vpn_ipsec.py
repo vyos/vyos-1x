@@ -115,6 +115,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, ['pki'])
 
         cls.cli_set(cls, base_path + ['interface', f'{interface}.{vif}'])
 

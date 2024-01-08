@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,59 +14,66 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
+from sys import argv
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdep import set_dependents, call_dependents
+from vyos.config import config_dict_merge
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import node_changed
+from vyos.configdiff import Diff
+from vyos.defaults import directories
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
 from vyos.pki import load_public_key
 from vyos.pki import load_private_key
 from vyos.pki import load_crl
 from vyos.pki import load_dh_parameters
+from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.process import call
+from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_active
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-# keys to recursively search for under specified path, script to call if update required
+vyos_certbot_dir = directories['certbot']
+
+# keys to recursively search for under specified path
 sync_search = [
     {
         'keys': ['certificate'],
         'path': ['service', 'https'],
-        'script': '/usr/libexec/vyos/conf_mode/service_https.py'
     },
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['interfaces', 'ethernet'],
-        'script': '/usr/libexec/vyos/conf_mode/interfaces_ethernet.py'
     },
     {
         'keys': ['certificate', 'ca_certificate', 'dh_params', 'shared_secret_key', 'auth_key', 'crypt_key'],
         'path': ['interfaces', 'openvpn'],
-        'script': '/usr/libexec/vyos/conf_mode/interfaces_openvpn.py'
     },
     {
         'keys': ['ca_certificate'],
         'path': ['interfaces', 'sstpc'],
-        'script': '/usr/libexec/vyos/conf_mode/interfaces_sstpc.py'
     },
     {
         'keys': ['certificate', 'ca_certificate', 'local_key', 'remote_key'],
         'path': ['vpn', 'ipsec'],
-        'script': '/usr/libexec/vyos/conf_mode/vpn_ipsec.py'
     },
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['vpn', 'openconnect'],
-        'script': '/usr/libexec/vyos/conf_mode/vpn_openconnect.py'
     },
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['vpn', 'sstp'],
-        'script': '/usr/libexec/vyos/conf_mode/vpn_sstp.py'
     }
 ]
 
@@ -82,6 +89,33 @@ sync_translate = {
     'crypt_key': 'openvpn'
 }
 
+def certbot_delete(certificate):
+    if not boot_configuration_complete():
+        return
+    if os.path.exists(f'{vyos_certbot_dir}/renewal/{certificate}.conf'):
+        cmd(f'certbot delete --non-interactive --config-dir {vyos_certbot_dir} --cert-name {certificate}')
+
+def certbot_request(name: str, config: dict, dry_run: bool=True):
+    # We do not call certbot when booting the system - there is no need to do so and
+    # request new certificates during boot/image upgrade as the certbot configuration
+    # is stored persistent under /config - thus we do not open the door to transient
+    # errors
+    if not boot_configuration_complete():
+        return
+
+    domains = '--domains ' + ' --domains '.join(config['domain_name'])
+    tmp = f'certbot certonly --non-interactive --config-dir {vyos_certbot_dir} --cert-name {name} '\
+          f'--standalone --agree-tos --no-eff-email --expand --server {config["url"]} '\
+          f'--email {config["email"]} --key-type rsa --rsa-key-size {config["rsa_key_size"]} '\
+          f'{domains}'
+    if 'listen_address' in config:
+        tmp += f' --http-01-address {config["listen_address"]}'
+    # verify() does not need to actually request a cert but only test for plausability
+    if dry_run:
+        tmp += ' --dry-run'
+
+    cmd(tmp, raising=ConfigError, message=f'ACME certbot request failed for "{name}"!')
+
 def get_config(config=None):
     if config:
         conf = config
@@ -93,25 +127,61 @@ def get_config(config=None):
                                      get_first_key=True,
                                      no_tag_node_value_mangle=True)
 
-    pki['changed'] = {}
+    if len(argv) > 1 and argv[1] == 'certbot_renew':
+        pki['certbot_renew'] = {}
+
     tmp = node_changed(conf, base + ['ca'], key_mangling=('-', '_'), recursive=True)
-    if tmp: pki['changed'].update({'ca' : tmp})
+    if tmp:
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'ca' : tmp})
 
     tmp = node_changed(conf, base + ['certificate'], key_mangling=('-', '_'), recursive=True)
-    if tmp: pki['changed'].update({'certificate' : tmp})
+    if tmp:
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'certificate' : tmp})
 
     tmp = node_changed(conf, base + ['dh'], key_mangling=('-', '_'), recursive=True)
-    if tmp: pki['changed'].update({'dh' : tmp})
+    if tmp:
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'dh' : tmp})
 
     tmp = node_changed(conf, base + ['key-pair'], key_mangling=('-', '_'), recursive=True)
-    if tmp: pki['changed'].update({'key_pair' : tmp})
+    if tmp:
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'key_pair' : tmp})
 
-    tmp = node_changed(conf, base + ['openvpn', 'shared-secret'], key_mangling=('-', '_'), recursive=True)
-    if tmp: pki['changed'].update({'openvpn' : tmp})
+    tmp = node_changed(conf, base + ['openvpn', 'shared-secret'], key_mangling=('-', '_'),
+                       recursive=True)
+    if tmp:
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'openvpn' : tmp})
 
     # We only merge on the defaults of there is a configuration at all
     if conf.exists(base):
-        pki = conf.merge_defaults(pki, recursive=True)
+        # We have gathered the dict representation of the CLI, but there are default
+        # options which we need to update into the dictionary retrived.
+        default_values = conf.get_config_defaults(**pki.kwargs, recursive=True)
+        # remove ACME default configuration if unused by CLI
+        if 'certificate' in pki:
+            for name, cert_config in pki['certificate'].items():
+                if 'acme' not in cert_config:
+                    # Remove ACME default values
+                    del default_values['certificate'][name]['acme']
+
+        # merge CLI and default dictionary
+        pki = config_dict_merge(default_values, pki)
+
+    # Certbot triggered an external renew of the certificates.
+    # Mark all ACME based certificates as "changed" to trigger
+    # update of dependent services
+    if 'certificate' in pki and 'certbot_renew' in pki:
+        renew = []
+        for name, cert_config in pki['certificate'].items():
+            if 'acme' in cert_config:
+                renew.append(name)
+        # If triggered externally by certbot, certificate key is not present in changed
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'certificate' : renew})
 
     # We need to get the entire system configuration to verify that we are not
     # deleting a certificate that is still referenced somewhere!
@@ -119,38 +189,34 @@ def get_config(config=None):
                                          get_first_key=True,
                                          no_tag_node_value_mangle=True)
 
-    if 'changed' in pki:
-        for search in sync_search:
-            for key in search['keys']:
-                changed_key = sync_translate[key]
+    for search in sync_search:
+        for key in search['keys']:
+            changed_key = sync_translate[key]
+            if 'changed' not in pki or changed_key not in pki['changed']:
+                continue
 
-                if changed_key not in pki['changed']:
-                    continue
+            for item_name in pki['changed'][changed_key]:
+                node_present = False
+                if changed_key == 'openvpn':
+                    node_present = dict_search_args(pki, 'openvpn', 'shared_secret', item_name)
+                else:
+                    node_present = dict_search_args(pki, changed_key, item_name)
 
-                for item_name in pki['changed'][changed_key]:
-                    node_present = False
-                    if changed_key == 'openvpn':
-                        node_present = dict_search_args(pki, 'openvpn', 'shared_secret', item_name)
-                    else:
-                        node_present = dict_search_args(pki, changed_key, item_name)
+                if node_present:
+                    search_dict = dict_search_args(pki['system'], *search['path'])
+                    if not search_dict:
+                        continue
+                    for found_name, found_path in dict_search_recursive(search_dict, key):
+                        if found_name == item_name:
+                            path = search['path']
+                            path_str = ' '.join(path + found_path)
+                            print(f'PKI: Updating config: {path_str} {found_name}')
 
-                    if node_present:
-                        search_dict = dict_search_args(pki['system'], *search['path'])
-
-                        if not search_dict:
-                            continue
-
-                        for found_name, found_path in dict_search_recursive(search_dict, key):
-                            if found_name == item_name:
-                                path = search['path']
-                                path_str = ' '.join(path + found_path)
-                                print(f'pki: Updating config: {path_str} {found_name}')
-
-                                if path[0] == 'interfaces':
-                                    ifname = found_path[0]
-                                    set_dependents(path[1], conf, ifname)
-                                else:
-                                    set_dependents(path[1], conf)
+                            if path[0] == 'interfaces':
+                                ifname = found_path[0]
+                                set_dependents(path[1], conf, ifname)
+                            else:
+                                set_dependents(path[1], conf)
 
     return pki
 
@@ -223,6 +289,22 @@ def verify(pki):
                 if not is_valid_private_key(private['key'], protected):
                     raise ConfigError(f'Invalid private key on certificate "{name}"')
 
+            if 'acme' in cert_conf:
+                if 'domain_name' not in cert_conf['acme']:
+                    raise ConfigError(f'At least one domain-name is required to request '\
+                                    f'certificate for "{name}" via ACME!')
+
+                if 'email' not in cert_conf['acme']:
+                    raise ConfigError(f'An email address is required to request '\
+                                    f'certificate for "{name}" via ACME!')
+
+                if 'certbot_renew' not in pki:
+                    # Only run the ACME command if something on this entity changed,
+                    # as this is time intensive
+                    tmp = dict_search('changed.certificate', pki)
+                    if tmp != None and name in tmp:
+                        certbot_request(name, cert_conf['acme'])
+
     if 'dh' in pki:
         for name, dh_conf in pki['dh'].items():
             if 'parameters' in dh_conf:
@@ -283,11 +365,57 @@ def generate(pki):
     if not pki:
         return None
 
+    # Certbot renewal only needs to re-trigger the services to load up the
+    # new PEM file
+    if 'certbot_renew' in pki:
+        return None
+
+    certbot_list = []
+    certbot_list_on_disk = []
+    if os.path.exists(f'{vyos_certbot_dir}/live'):
+        certbot_list_on_disk = [f.path.split('/')[-1] for f in os.scandir(f'{vyos_certbot_dir}/live') if f.is_dir()]
+
+    if 'certificate' in pki:
+        changed_certificates = dict_search('changed.certificate', pki)
+        for name, cert_conf in pki['certificate'].items():
+            if 'acme' in cert_conf:
+                certbot_list.append(name)
+                # generate certificate if not found on disk
+                if name not in certbot_list_on_disk:
+                    certbot_request(name, cert_conf['acme'], dry_run=False)
+                elif changed_certificates != None and name in changed_certificates:
+                    # when something for the certificate changed, we should delete it
+                    if name in certbot_list_on_disk:
+                        certbot_delete(name)
+                    certbot_request(name, cert_conf['acme'], dry_run=False)
+
+    # Cleanup certbot configuration and certificates if no longer in use by CLI
+    # Get foldernames under vyos_certbot_dir which each represent a certbot cert
+    if os.path.exists(f'{vyos_certbot_dir}/live'):
+        for cert in certbot_list_on_disk:
+            if cert not in certbot_list:
+                # certificate is no longer active on the CLI - remove it
+                certbot_delete(cert)
+
     return None
 
 def apply(pki):
+    systemd_certbot_name = 'certbot.timer'
     if not pki:
+        call(f'systemctl stop {systemd_certbot_name}')
         return None
+
+    has_certbot = False
+    if 'certificate' in pki:
+        for name, cert_conf in pki['certificate'].items():
+            if 'acme' in cert_conf:
+                has_certbot = True
+                break
+
+    if not has_certbot:
+        call(f'systemctl stop {systemd_certbot_name}')
+    elif has_certbot and not is_systemd_service_active(systemd_certbot_name):
+        call(f'systemctl restart {systemd_certbot_name}')
 
     if 'changed' in pki:
         call_dependents()
