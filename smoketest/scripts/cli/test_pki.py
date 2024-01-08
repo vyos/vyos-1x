@@ -205,7 +205,7 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['service', 'https', 'certificates', 'certificate'])
 
     def test_certificate_https_update(self):
-        cert_name = 'smoketest'
+        cert_name = 'smoke-test_foo'
         cert_path = f'/run/nginx/certs/{cert_name}_cert.pem'
         self.cli_set(base_path + ['certificate', cert_name, 'certificate', valid_ca_cert.replace('\n','')])
         self.cli_set(base_path + ['certificate', cert_name, 'private', 'key', valid_ca_private_key.replace('\n','')])

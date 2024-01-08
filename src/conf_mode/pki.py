@@ -130,28 +130,27 @@ def get_config(config=None):
     if len(argv) > 1 and argv[1] == 'certbot_renew':
         pki['certbot_renew'] = {}
 
-    tmp = node_changed(conf, base + ['ca'], key_mangling=('-', '_'), recursive=True)
+    tmp = node_changed(conf, base + ['ca'], recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'ca' : tmp})
 
-    tmp = node_changed(conf, base + ['certificate'], key_mangling=('-', '_'), recursive=True)
+    tmp = node_changed(conf, base + ['certificate'], recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'certificate' : tmp})
 
-    tmp = node_changed(conf, base + ['dh'], key_mangling=('-', '_'), recursive=True)
+    tmp = node_changed(conf, base + ['dh'], recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'dh' : tmp})
 
-    tmp = node_changed(conf, base + ['key-pair'], key_mangling=('-', '_'), recursive=True)
+    tmp = node_changed(conf, base + ['key-pair'], recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'key_pair' : tmp})
 
-    tmp = node_changed(conf, base + ['openvpn', 'shared-secret'], key_mangling=('-', '_'),
-                       recursive=True)
+    tmp = node_changed(conf, base + ['openvpn', 'shared-secret'], recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'openvpn' : tmp})
