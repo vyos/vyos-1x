@@ -405,7 +405,7 @@ def generate(container):
                     cmd = f'podman login --username {username} --password {password} {registry}'
                     rc, out = rc_cmd(cmd)
                     if rc != 0:
-                        raise ConfigError(out)
+                        Warning(f'Cannot connect to registry "{registry}" {out}')
 
     render(config_containers, 'container/containers.conf.j2', container)
     render(config_registry, 'container/registries.conf.j2', container)
