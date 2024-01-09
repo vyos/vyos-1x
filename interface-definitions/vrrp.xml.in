@@ -16,6 +16,7 @@
               <help>VRRP global parameters</help>
             </properties>
             <children>
+              #include <include/vrrp/garp.xml.i>
               <leafNode name="startup-delay">
                 <properties>
                   <help>Time VRRP startup process (in seconds)</help>
@@ -51,6 +52,7 @@
               <help>VRRP group</help>
             </properties>
             <children>
+              #include <include/vrrp/garp.xml.i>
               <leafNode name="interface">
                 <properties>
                   <help>Network interface</help>

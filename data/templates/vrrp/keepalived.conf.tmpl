@@ -12,6 +12,25 @@ global_defs {
 {%     if global_parameters.version is defined %}
     vrrp_version {{ global_parameters.version }}
 {%     endif %}
+
+{%     if global_parameters.garp is defined %}
+{%         if global_parameters.garp.interval is defined %}
+    vrrp_garp_interval {{ global_parameters.garp.interval }}
+{%         endif %}
+{%         if global_parameters.garp.master_delay is defined %}
+    vrrp_garp_master_delay {{ global_parameters.garp.master_delay }}
+{%         endif %}
+{%         if global_parameters.garp.master_refresh is defined %}
+    vrrp_garp_master_refresh {{ global_parameters.garp.master_refresh }}
+{%         endif %}
+{%         if global_parameters.garp.master_refresh_repeat is defined %}
+    vrrp_garp_master_refresh_repeat {{ global_parameters.garp.master_refresh_repeat }}
+{%         endif %}
+{%         if global_parameters.garp.master_repeat is defined %}
+    vrrp_garp_master_repeat {{ global_parameters.garp.master_repeat }}
+{%         endif %}
+{%     endif %}
+
 {% endif %}
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
@@ -36,6 +55,25 @@ vrrp_instance {{ name }} {
     virtual_router_id {{ group_config.vrid }}
     priority {{ group_config.priority }}
     advert_int {{ group_config.advertise_interval }}
+
+{%     if group_config.garp is defined %}
+{%         if group_config.garp.interval is defined %}
+    garp_interval {{ group_config.garp.interval }}
+{%         endif %}
+{%         if group_config.garp.master_delay is defined %}
+    garp_master_delay {{ group_config.garp.master_delay }}
+{%         endif %}
+{%         if group_config.garp.master_repeat is defined %}
+    garp_master_repeat {{ group_config.garp.master_repeat }}
+{%         endif %}
+{%         if group_config.garp.master_refresh is defined %}
+    garp_master_refresh {{ group_config.garp.master_refresh }}
+{%         endif %}
+{%         if group_config.garp.master_refresh_repeat is defined %}
+    garp_master_refresh_repeat {{ group_config.garp.master_refresh_repeat }}
+{%         endif %}
+{%     endif %}
+
 {%     if group_config.track is defined and group_config.track.exclude_vrrp_interface is defined %}
     dont_track_primary
 {%     endif %}
