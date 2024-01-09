@@ -102,7 +102,8 @@ def failsafe(config_file_name):
                                       'authentication',
                                       'encrypted-password'])
 
-    cmd(f"useradd -s /bin/bash -G 'users,sudo' -m -N -p '{passwd}' vyos")
+    cmd(f"useradd --create-home --no-user-group --shell /bin/vbash --password '{passwd}' "\
+        "--groups frr,frrvty,vyattacfg,sudo,adm,dip,disk vyos")
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
