@@ -25,7 +25,7 @@ from vyos.template import netmask_from_cidr
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import file_permissions
 from vyos.utils.file import read_file
-from vyos.utils.process import cmd
+from vyos.utils.process import run
 
 kea4_options = {
     'name_server': 'domain-name-servers',
@@ -315,7 +315,7 @@ def _ctrl_socket_command(path, command, args=None):
         return None
 
     if file_permissions(path) != '0775':
-        cmd(f'sudo chmod 775 {path}')
+        run(f'sudo chmod 775 {path}')
 
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         sock.connect(path)

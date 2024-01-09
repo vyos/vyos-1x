@@ -17,6 +17,32 @@ fi
 action=$1
 hostsd_client="/usr/bin/vyos-hostsd-client"
 
+get_subnet_domain_name () {
+  python3 <<EOF
+from vyos.kea import kea_get_active_config
+from vyos.utils.dict import dict_search_args
+
+config = kea_get_active_config('4')
+shared_networks = dict_search_args(config, 'arguments', f'Dhcp4', 'shared-networks')
+
+found = False
+
+if shared_networks:
+  for network in shared_networks:
+    for subnet in network[f'subnet4']:
+      if subnet['id'] == $1:
+        for option in subnet['option-data']:
+          if option['name'] == 'domain-name':
+            print(option['data'])
+            found = True
+
+        if not found:
+          for option in network['option-data']:
+            if option['name'] == 'domain-name':
+              print(option['data'])
+EOF
+}
+
 case "$action" in
   lease4_renew|lease4_recover)
     exit 0
@@ -43,6 +69,12 @@ case "$action" in
       if [ -z "$client_name" ]; then
           logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
           client_name=$(echo "host-$client_mac" | tr : -)
+      fi
+
+      client_domain=$(get_subnet_domain_name $client_subnet_id)
+
+      if [ -n "$client_domain" ]; then
+        client_name="$client_name.$client_domain"
       fi
 
       $hostsd_client --add-hosts "$client_name,$client_ip" --tag "dhcp-server-$client_ip" --apply
