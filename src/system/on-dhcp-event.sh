@@ -15,28 +15,39 @@ if [ $# -lt 1 ]; then
 fi
 
 action=$1
-client_name=$LEASE4_HOSTNAME
-client_ip=$LEASE4_ADDRESS
-client_mac=$LEASE4_HWADDR
 hostsd_client="/usr/bin/vyos-hostsd-client"
 
 case "$action" in
-  lease4_renew|lease4_recover) # add mapping for new/recovered lease address
-    if [ -z "$client_name" ]; then
-        logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
-        client_name=$(echo "host-$client_mac" | tr : -)
-    fi
-
-    $hostsd_client --add-hosts "$client_name,$client_ip" --tag "dhcp-server-$client_ip" --apply
+  lease4_renew|lease4_recover)
     exit 0
     ;;
 
   lease4_release|lease4_expire|lease4_decline) # delete mapping for released/declined address
+    client_ip=$LEASE4_ADDRESS
     $hostsd_client --delete-hosts --tag "dhcp-server-$client_ip" --apply
     exit 0
     ;;
 
-  leases4_committed) # nothing to do
+  leases4_committed) # process committed leases (added/renewed/recovered)
+    for ((i = 0; i < $LEASES4_SIZE; i++)); do
+      client_ip_var="LEASES4_AT${i}_ADDRESS"
+      client_mac_var="LEASES4_AT${i}_HWADDR"
+      client_name_var="LEASES4_AT${i}_HOSTNAME"
+      client_subnet_id_var="LEASES4_AT${i}_SUBNET_ID"
+
+      client_ip=${!client_ip_var}
+      client_mac=${!client_mac_var}
+      client_name=${!client_name_var}
+      client_subnet_id=${!client_subnet_id_var}
+
+      if [ -z "$client_name" ]; then
+          logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
+          client_name=$(echo "host-$client_mac" | tr : -)
+      fi
+
+      $hostsd_client --add-hosts "$client_name,$client_ip" --tag "dhcp-server-$client_ip" --apply
+    done
+
     exit 0
     ;;
 
