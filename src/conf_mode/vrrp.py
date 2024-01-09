@@ -57,6 +57,8 @@ def get_config(config=None):
     # options which we need to update into the dictionary retrived.
     if 'group' in vrrp:
         default_values = defaults(base + ['group'])
+        if 'garp' in default_values:
+            del default_values['garp']
         for group in vrrp['group']:
             vrrp['group'][group] = dict_merge(default_values, vrrp['group'][group])
 
