@@ -4,15 +4,11 @@ set interfaces loopback lo
 set service ntp server time1.vyos.net
 set service ntp server time2.vyos.net
 set service ntp server time3.vyos.net
+set service https allow-client address '172.16.0.0/12'
+set service https allow-client address '192.168.0.0/16'
+set service https allow-client address '10.0.0.0/8'
+set service https allow-client address '2001:db8::/32'
 set service https api keys id 1 key 'S3cur3'
-set service https virtual-host bar allow-client address '172.16.0.0/12'
-set service https virtual-host bar port '5555'
-set service https virtual-host foo allow-client address '10.0.0.0/8'
-set service https virtual-host foo allow-client address '2001:db8::/32'
-set service https virtual-host foo port '7777'
-set service https virtual-host baz allow-client address '192.168.0.0/16'
-set service https virtual-host baz port '6666'
-set service https virtual-host baz server-name 'baz'
 set system config-management commit-revisions '100'
 set system host-name 'vyos'
 set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
