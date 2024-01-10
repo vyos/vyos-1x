@@ -786,6 +786,23 @@ def range_to_regex(num_range):
     regex = range_to_regex(num_range)
     return f'({regex})'
 
+@register_filter('kea_address_json')
+def kea_address_json(addresses):
+    from json import dumps
+    from vyos.utils.network import is_addr_assigned
+
+    out = []
+
+    for address in addresses:
+        ifname = is_addr_assigned(address, return_ifname=True)
+
+        if not ifname:
+            continue
+
+        out.append(f'{ifname}/{address}')
+
+    return dumps(out)
+
 @register_filter('kea_failover_json')
 def kea_failover_json(config):
     from json import dumps
@@ -842,14 +859,21 @@ def kea_shared_network_json(shared_networks):
             'authoritative': ('authoritative' in config),
             'subnet4': []
         }
-        options = kea_parse_options(config)
+
+        if 'option' in config:
+            network['option-data'] = kea_parse_options(config['option'])
+
+            if 'bootfile_name' in config['option']:
+                network['boot-file-name'] = config['option']['bootfile_name']
+
+            if 'bootfile_server' in config['option']:
+                network['next-server'] = config['option']['bootfile_server']
 
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
+                if 'disable' in subnet_config:
+                    continue
                 network['subnet4'].append(kea_parse_subnet(subnet, subnet_config))
-
-        if options:
-            network['option-data'] = options
 
         out.append(network)
 

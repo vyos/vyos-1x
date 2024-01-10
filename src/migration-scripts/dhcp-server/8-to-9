@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3316:
+# - Migrate dhcp options under new option node
+
+import sys
+import re
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['service', 'dhcp-server', 'shared-network-name']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+
+option_nodes = ['bootfile-name', 'bootfile-server', 'bootfile-size', 'captive-portal',
+                'client-prefix-length', 'default-router', 'domain-name', 'domain-search',
+                'name-server', 'ip-forwarding', 'ipv6-only-preferred', 'ntp-server',
+                'pop-server', 'server-identifier', 'smtp-server', 'static-route',
+                'tftp-server-name', 'time-offset', 'time-server', 'time-zone',
+                'vendor-option', 'wins-server', 'wpad-url']
+
+for network in config.list_nodes(base):
+    for option in option_nodes:
+        if config.exists(base + [network, option]):
+            config.set(base + [network, 'option'])
+            config.copy(base + [network, option], base + [network, 'option', option])
+            config.delete(base + [network, option])
+
+    if config.exists(base + [network, 'subnet']):
+        for subnet in config.list_nodes(base + [network, 'subnet']):
+            base_subnet = base + [network, 'subnet', subnet]
+            
+            for option in option_nodes:
+                if config.exists(base + [network, 'subnet', subnet, option]):
+                    config.set(base + [network, 'subnet', subnet, 'option'])
+                    config.copy(base + [network, 'subnet', subnet, option], base + [network, 'subnet', subnet, 'option', option])
+                    config.delete(base + [network, 'subnet', subnet, option])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
