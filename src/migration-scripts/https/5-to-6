@@ -16,12 +16,14 @@
 
 # T5886: Add support for ACME protocol (LetsEncrypt), migrate https certbot
 #        to new "pki certificate" CLI tree
+# T5902: Remove virtual-host
 
 import os
 import sys
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
+from vyos.utils.process import cmd
 
 vyos_certbot_dir = directories['certbot']
 
@@ -36,30 +38,68 @@ with open(file_name, 'r') as f:
 
 config = ConfigTree(config_file)
 
-base = ['service', 'https', 'certificates']
+base = ['service', 'https']
 if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 
-# both domain-name and email must be set on CLI - ensured by previous verify()
-domain_names = config.return_values(base + ['certbot', 'domain-name'])
-email = config.return_value(base + ['certbot', 'email'])
-config.delete(base)
+if config.exists(base + ['certificates']):
+    # both domain-name and email must be set on CLI - ensured by previous verify()
+    domain_names = config.return_values(base + ['certificates', 'certbot', 'domain-name'])
+    email = config.return_value(base + ['certificates', 'certbot', 'email'])
+    config.delete(base + ['certificates'])
 
-# Set default certname based on domain-name
-cert_name = 'https-' + domain_names[0].split('.')[0]
-# Overwrite certname from previous certbot calls if available
-if os.path.exists(f'{vyos_certbot_dir}/live'):
-    for cert in [f.path.split('/')[-1] for f in os.scandir(f'{vyos_certbot_dir}/live') if f.is_dir()]:
-        cert_name = cert
-        break
+    # Set default certname based on domain-name
+    cert_name = 'https-' + domain_names[0].split('.')[0]
+    # Overwrite certname from previous certbot calls if available
+    # We can not use python code like os.scandir due to filesystem permissions.
+    # This must be run as root
+    certbot_live = f'{vyos_certbot_dir}/live/' # we need the trailing /
+    if os.path.exists(certbot_live):
+        tmp = cmd(f'sudo find {certbot_live} -maxdepth 1 -type d')
+        tmp = tmp.split() # tmp = ['/config/auth/letsencrypt/live', '/config/auth/letsencrypt/live/router.vyos.net']
+        tmp.remove(certbot_live)
+        cert_name = tmp[0].replace(certbot_live, '')
 
-for domain in domain_names:
-    config.set(['pki', 'certificate', cert_name, 'acme', 'domain-name'], value=domain, replace=False)
     config.set(['pki', 'certificate', cert_name, 'acme', 'email'], value=email)
+    config.set_tag(['pki', 'certificate'])
+    for domain in domain_names:
+        config.set(['pki', 'certificate', cert_name, 'acme', 'domain-name'], value=domain, replace=False)
 
-# Update Webserver certificate
-config.set(base + ['certificate'], value=cert_name)
+    # Update Webserver certificate
+    config.set(base + ['certificates', 'certificate'], value=cert_name)
+
+if config.exists(base + ['virtual-host']):
+    allow_client = []
+    listen_port = []
+    listen_address = []
+    for virtual_host in config.list_nodes(base + ['virtual-host']):
+        allow_path = base + ['virtual-host', virtual_host, 'allow-client', 'address']
+        if config.exists(allow_path):
+            tmp = config.return_values(allow_path)
+            allow_client.extend(tmp)
+
+        port_path = base + ['virtual-host', virtual_host, 'listen-port']
+        if config.exists(port_path):
+            tmp = config.return_value(port_path)
+            listen_port.append(tmp)
+
+        listen_address_path = base + ['virtual-host', virtual_host, 'listen-address']
+        if config.exists(listen_address_path):
+            tmp = config.return_value(listen_address_path)
+            listen_address.append(tmp)
+
+    config.delete(base + ['virtual-host'])
+    for client in allow_client:
+        config.set(base + ['allow-client', 'address'], value=client, replace=False)
+
+    #  clear listen-address if "all" were specified
+    if '*' in listen_address:
+        listen_address = []
+    for address in listen_address:
+        config.set(base + ['listen-address'], value=address, replace=False)
+
+
 
 try:
     with open(file_name, 'w') as f:

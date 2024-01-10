@@ -736,14 +736,7 @@
               </leafNode>
               #include <include/pki/certificate.xml.i>
               #include <include/pki/ca-certificate-multi.xml.i>
-              <leafNode name="dh-params">
-                <properties>
-                  <help>Diffie Hellman parameters (server only)</help>
-                  <completionHelp>
-                    <path>pki dh</path>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/pki/dh-params.xml.i>
               <leafNode name="crypt-key">
                 <properties>
                   <help>Static key to use to authenticate control channel</help>

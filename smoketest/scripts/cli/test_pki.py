@@ -19,6 +19,8 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 
+from vyos.utils.file import read_file
+
 base_path = ['pki']
 
 valid_ca_cert = """
@@ -153,10 +155,10 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestPKI, cls).setUpClass()
-
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, ['service', 'https'])
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -181,68 +183,72 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_invalid_ca_valid_certificate(self):
-        self.cli_set(base_path + ['ca', 'smoketest', 'certificate', valid_cert.replace('\n','')])
+        self.cli_set(base_path + ['ca', 'invalid-ca', 'certificate', valid_cert.replace('\n','')])
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
     def test_certificate_in_use(self):
-        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_ca_cert.replace('\n','')])
-        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_ca_private_key.replace('\n','')])
+        cert_name = 'smoketest'
+
+        self.cli_set(base_path + ['certificate', cert_name, 'certificate', valid_ca_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'private', 'key', valid_ca_private_key.replace('\n','')])
         self.cli_commit()
 
-        self.cli_set(['service', 'https', 'certificates', 'certificate', 'smoketest'])
+        self.cli_set(['service', 'https', 'certificates', 'certificate', cert_name])
         self.cli_commit()
 
-        self.cli_delete(base_path + ['certificate', 'smoketest'])
+        self.cli_delete(base_path + ['certificate', cert_name])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
         self.cli_delete(['service', 'https', 'certificates', 'certificate'])
 
     def test_certificate_https_update(self):
-        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_ca_cert.replace('\n','')])
-        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_ca_private_key.replace('\n','')])
+        cert_name = 'smoke-test_foo'
+        cert_path = f'/run/nginx/certs/{cert_name}_cert.pem'
+        self.cli_set(base_path + ['certificate', cert_name, 'certificate', valid_ca_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'private', 'key', valid_ca_private_key.replace('\n','')])
         self.cli_commit()
 
-        self.cli_set(['service', 'https', 'certificates', 'certificate', 'smoketest'])
+        self.cli_set(['service', 'https', 'certificates', 'certificate', cert_name])
         self.cli_commit()
 
         cert_data = None
 
-        with open('/etc/ssl/certs/smoketest.pem') as f:
-            cert_data = f.read()
+        cert_data = read_file(cert_path)
 
-        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_update_cert.replace('\n','')])
-        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_update_private_key.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'certificate', valid_update_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'private', 'key', valid_update_private_key.replace('\n','')])
         self.cli_commit()
 
-        with open('/etc/ssl/certs/smoketest.pem') as f:
-            self.assertNotEqual(cert_data, f.read())
+        self.assertNotEqual(cert_data, read_file(cert_path))
 
         self.cli_delete(['service', 'https', 'certificates', 'certificate'])
 
     def test_certificate_eapol_update(self):
-        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_ca_cert.replace('\n','')])
-        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_ca_private_key.replace('\n','')])
+        cert_name = 'eapol'
+        interface = 'eth1'
+        self.cli_set(base_path + ['certificate', cert_name, 'certificate', valid_ca_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'private', 'key', valid_ca_private_key.replace('\n','')])
         self.cli_commit()
 
-        self.cli_set(['interfaces', 'ethernet', 'eth1', 'eapol', 'certificate', 'smoketest'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'eapol', 'certificate', cert_name])
         self.cli_commit()
 
         cert_data = None
 
-        with open('/run/wpa_supplicant/eth1_cert.pem') as f:
+        with open(f'/run/wpa_supplicant/{interface}_cert.pem') as f:
             cert_data = f.read()
 
-        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_update_cert.replace('\n','')])
-        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_update_private_key.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'certificate', valid_update_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', cert_name, 'private', 'key', valid_update_private_key.replace('\n','')])
         self.cli_commit()
 
-        with open('/run/wpa_supplicant/eth1_cert.pem') as f:
+        with open(f'/run/wpa_supplicant/{interface}_cert.pem') as f:
             self.assertNotEqual(cert_data, f.read())
 
-        self.cli_delete(['interfaces', 'ethernet', 'eth1', 'eapol'])
+        self.cli_delete(['interfaces', 'ethernet', interface, 'eapol'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
