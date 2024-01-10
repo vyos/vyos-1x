@@ -63,6 +63,7 @@ def verify(dhcpv6):
 
     # Inspect shared-network/subnet
     subnets = []
+    subnet_ids = []
     listen_ok = False
     for network, network_config in dhcpv6['shared_network_name'].items():
         # A shared-network requires a subnet definition
@@ -72,6 +73,14 @@ def verify(dhcpv6):
                               'each shared network!')
 
         for subnet, subnet_config in network_config['subnet'].items():
+            if 'subnet_id' not in subnet_config:
+                raise ConfigError(f'Unique subnet ID not specified for subnet "{subnet}"')
+
+            if subnet_config['subnet_id'] in subnet_ids:
+                raise ConfigError(f'Subnet ID for subnet "{subnet}" is not unique')
+
+            subnet_ids.append(subnet_config['subnet_id'])
+
             if 'address_range' in subnet_config:
                 if 'start' in subnet_config['address_range']:
                     range6_start = []

@@ -217,7 +217,7 @@ def kea6_parse_options(config):
     return options
 
 def kea6_parse_subnet(subnet, config):
-    out = {'subnet': subnet}
+    out = {'subnet': subnet, 'id': int(config['subnet_id'])}
     options = kea6_parse_options(config)
 
     if 'address_range' in config:
