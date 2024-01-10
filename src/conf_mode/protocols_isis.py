@@ -48,7 +48,8 @@ def get_config(config=None):
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'isis'] or base_path
     isis = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True)
+                                get_first_key=True,
+                                no_tag_node_value_mangle=True)
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
@@ -219,6 +220,38 @@ def verify(isis):
                 if ("explicit_null" in prefix_config['index']) and ("no_php_flag" in prefix_config['index']):
                     raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
                                       f'and no-php-flag configured at the same time.')
+                
+    # Check for LFA tiebreaker index duplication
+    if dict_search('fast_reroute.lfa.local.tiebreaker', isis):
+        comparison_dictionary = {}
+        for item, item_options in isis['fast_reroute']['lfa']['local']['tiebreaker'].items():
+            for index, index_options in item_options.items():
+                for index_value, index_value_options in index_options.items():
+                    if index_value not in comparison_dictionary.keys():
+                        comparison_dictionary[index_value] = [item]
+                    else:
+                        comparison_dictionary[index_value].append(item)
+        for index, index_length in comparison_dictionary.items():
+            if int(len(index_length)) > 1:
+                raise ConfigError(f'LFA index {index} cannot have more than one tiebreaker configured.')
+
+    # Check for LFA priority-limit configured multiple times per level
+    if dict_search('fast_reroute.lfa.local.priority_limit', isis):
+        comparison_dictionary = {}
+        for priority, priority_options in isis['fast_reroute']['lfa']['local']['priority_limit'].items():
+            for level, level_options in priority_options.items():
+                if level not in comparison_dictionary.keys():
+                    comparison_dictionary[level] = [priority]
+                else:
+                    comparison_dictionary[level].append(priority)
+            for level, level_length in comparison_dictionary.items():
+                if int(len(level_length)) > 1:
+                    raise ConfigError(f'LFA priority-limit on {level.replace("_", "-")} cannot have more than one priority configured.')
+
+    # Check for LFA remote prefix list configured with more than one list
+    if dict_search('fast_reroute.lfa.remote.prefix_list', isis):
+        if int(len(isis['fast_reroute']['lfa']['remote']['prefix_list'].items())) > 1:
+            raise ConfigError(f'LFA remote prefix-list has more than one configured. Cannot have more than one configured.')
 
     return None
 

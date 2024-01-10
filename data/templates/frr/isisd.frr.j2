@@ -165,6 +165,48 @@ advertise-passive-only
 {%         endfor %}
 {%     endfor %}
 {% endif %}
+{% if fast_reroute.lfa is vyos_defined %}
+{%     if fast_reroute.lfa.local is vyos_defined %}
+{%         if fast_reroute.lfa.local.load_sharing.disable.level_1 is vyos_defined %}
+ fast-reroute load-sharing disable level-1
+{%         elif fast_reroute.lfa.local.load_sharing.disable.level_2 is vyos_defined %}
+ fast-reroute load-sharing disable level-2
+{%         elif fast_reroute.lfa.local.load_sharing.disable is vyos_defined %}
+ fast-reroute load-sharing disable
+{%         endif %}
+{%         if fast_reroute.lfa.local.priority_limit is vyos_defined %}
+{%             for priority, priority_limit_options in fast_reroute.lfa.local.priority_limit.items() %}
+{%                 for level in priority_limit_options %}
+ fast-reroute priority-limit {{ priority }} {{ level | replace('_', '-') }}
+{%                 endfor %}                   
+{%             endfor %}
+{%         endif %}
+{%         if fast_reroute.lfa.local.tiebreaker is vyos_defined %}
+{%             for tiebreaker, tiebreaker_options in fast_reroute.lfa.local.tiebreaker.items() %}
+{%                 for index, index_options in tiebreaker_options.items() %}
+{%                     for index_value, index_value_options in index_options.items() %}
+{%                         for level in index_value_options %}
+ fast-reroute lfa tiebreaker {{ tiebreaker | replace('_', '-') }} index {{ index_value }} {{ level | replace('_', '-') }}
+{%                         endfor %}
+{%                     endfor %}
+{%                 endfor %}
+{%             endfor %}
+{%         endif %}
+{%     endif %}
+{%     if fast_reroute.lfa.remote.prefix_list is vyos_defined %}
+{%         for prefix_list, prefix_list_options in fast_reroute.lfa.remote.prefix_list.items() %}
+{%             if prefix_list_options.level_1 is vyos_defined %}
+fast-reroute remote-lfa prefix-list {{ prefix_list }} level-1
+{%             endif %}
+{%             if prefix_list_options.level_2 is vyos_defined %}
+fast-reroute remote-lfa prefix-list {{ prefix_list }} level-2
+{%             endif %}
+{%             if prefix_list is vyos_defined and prefix_list_options.level_1 is not vyos_defined and prefix_list_options.level_2 is not vyos_defined %}
+fast-reroute remote-lfa prefix-list {{ prefix_list }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+{% endif %}
 {% if redistribute.ipv4 is vyos_defined %}
 {%     for protocol, protocol_options in redistribute.ipv4.items() %}
 {%         for level, level_config in protocol_options.items() %}
