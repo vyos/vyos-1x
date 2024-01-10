@@ -1151,7 +1151,43 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  locator {locator_name}', frrconfig)
         self.assertIn(f' sid vpn per-vrf export {sid}', frrconfig)
 
-    def test_bgp_25_bmp(self):
+    def test_bgp_25_ipv4_ipv6_labeled_unicast_peer_group(self):
+        pg_ipv4 = 'foo4'
+        pg_ipv6 = 'foo6'
+
+        ipv4_max_prefix = '20'
+        ipv6_max_prefix = '200'
+        ipv4_prefix = '192.0.2.0/24'
+        ipv6_prefix = '2001:db8:1000::/64'
+
+        self.cli_set(base_path + ['listen', 'range', ipv4_prefix, 'peer-group', pg_ipv4])
+        self.cli_set(base_path + ['listen', 'range', ipv6_prefix, 'peer-group', pg_ipv6])
+
+        self.cli_set(base_path + ['peer-group', pg_ipv4, 'address-family', 'ipv4-labeled-unicast', 'maximum-prefix', ipv4_max_prefix])
+        self.cli_set(base_path + ['peer-group', pg_ipv4, 'remote-as', 'external'])
+        self.cli_set(base_path + ['peer-group', pg_ipv6, 'address-family', 'ipv6-labeled-unicast', 'maximum-prefix', ipv6_max_prefix])
+        self.cli_set(base_path + ['peer-group', pg_ipv6, 'remote-as', 'external'])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {pg_ipv4} peer-group', frrconfig)
+        self.assertIn(f' neighbor {pg_ipv4} remote-as external', frrconfig)
+        self.assertIn(f' neighbor {pg_ipv6} peer-group', frrconfig)
+        self.assertIn(f' neighbor {pg_ipv6} remote-as external', frrconfig)
+        self.assertIn(f' bgp listen range {ipv4_prefix} peer-group {pg_ipv4}', frrconfig)
+        self.assertIn(f' bgp listen range {ipv6_prefix} peer-group {pg_ipv6}', frrconfig)
+
+        afiv4_config = self.getFRRconfig(' address-family ipv4 labeled-unicast')
+        self.assertIn(f'  neighbor {pg_ipv4} activate', afiv4_config)
+        self.assertIn(f'  neighbor {pg_ipv4} maximum-prefix {ipv4_max_prefix}', afiv4_config)
+
+        afiv6_config = self.getFRRconfig(' address-family ipv6 labeled-unicast')
+        self.assertIn(f'  neighbor {pg_ipv6} activate', afiv6_config)
+        self.assertIn(f'  neighbor {pg_ipv6} maximum-prefix {ipv6_max_prefix}', afiv6_config)
+
+    def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
         target_port = '5000'
