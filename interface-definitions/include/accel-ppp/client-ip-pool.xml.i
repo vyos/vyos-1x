@@ -27,11 +27,15 @@
           <validator name="ipv4-host"/>
           <validator name="ipv4-range-mask"  argument="-m 24 -r"/>
         </constraint>
+        <multi/>
       </properties>
     </leafNode>
     <leafNode name="next-pool">
       <properties>
         <help>Next pool name</help>
+        <completionHelp>
+          <path>${COMP_WORDS[@]:1:${#COMP_WORDS[@]}-4}</path>
+        </completionHelp>
         <valueHelp>
           <format>txt</format>
           <description>Name of IP pool</description>
