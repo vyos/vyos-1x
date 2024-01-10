@@ -103,7 +103,7 @@ def kea_parse_options(config):
     return options
 
 def kea_parse_subnet(subnet, config):
-    out = {'subnet': subnet}
+    out = {'subnet': subnet, 'id': int(config['subnet_id'])}
     options = []
 
     if 'option' in config:

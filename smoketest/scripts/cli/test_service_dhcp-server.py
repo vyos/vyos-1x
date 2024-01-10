@@ -99,6 +99,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['listen-interface', interface])
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['option', 'name-server', dns_1])
@@ -122,6 +123,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_value(obj, ['Dhcp4', 'interfaces-config'], 'interfaces', [interface])
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'valid-lifetime', 86400)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'max-valid-lifetime', 86400)
 
@@ -168,6 +170,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         ipv6_only_preferred = '300'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['option', 'name-server', dns_1])
@@ -294,6 +297,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         shared_network = base_path + ['shared-network-name', shared_net_name]
         pool = shared_network + ['subnet', subnet]
+
+        self.cli_set(pool + ['subnet-id', '1'])
+
         # we use the first subnet IP address as default gateway
         self.cli_set(shared_network + ['option', 'default-router', router])
         self.cli_set(shared_network + ['option', 'name-server', dns_1])
@@ -352,6 +358,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         domain_name = 'private'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['option', 'name-server', dns_1])
@@ -390,6 +397,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'valid-lifetime', 86400)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'max-valid-lifetime', 86400)
 
@@ -437,6 +445,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             range_1_stop  = inc_ip(subnet, 40)
 
             pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+            self.cli_set(pool + ['subnet-id', str(int(network) + 1)])
             # we use the first subnet IP address as default gateway
             self.cli_set(pool + ['option', 'default-router', router])
             self.cli_set(pool + ['option', 'name-server', dns_1])
@@ -474,6 +483,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
             self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
             self.verify_config_value(obj, ['Dhcp4', 'shared-networks', int(network), 'subnet4'], 'subnet', subnet)
+            self.verify_config_value(obj, ['Dhcp4', 'shared-networks', int(network), 'subnet4'], 'id', int(network) + 1)
             self.verify_config_value(obj, ['Dhcp4', 'shared-networks', int(network), 'subnet4'], 'valid-lifetime', int(lease_time))
             self.verify_config_value(obj, ['Dhcp4', 'shared-networks', int(network), 'subnet4'], 'max-valid-lifetime', int(lease_time))
 
@@ -521,6 +531,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_stop  = inc_ip(subnet, 20)
 
         pool = base_path + ['shared-network-name', 'EXCLUDE-TEST', 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['exclude', router])
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
@@ -563,6 +574,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_start_excl = inc_ip(exclude_addr, 1)
 
         pool = base_path + ['shared-network-name', 'EXCLUDE-TEST-2', 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['exclude', exclude_addr])
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
@@ -608,6 +620,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_stop  = '10.0.250.255'
 
         pool = base_path + ['shared-network-name', 'RELAY', 'subnet', relay_subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         self.cli_set(pool + ['option', 'default-router', relay_router])
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
@@ -645,6 +658,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_stop  = inc_ip(subnet, 20)
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['option', 'default-router', router])
 

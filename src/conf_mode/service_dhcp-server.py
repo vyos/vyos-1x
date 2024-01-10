@@ -165,6 +165,7 @@ def verify(dhcp):
     shared_networks =  len(dhcp['shared_network_name'])
     disabled_shared_networks = 0
 
+    subnet_ids = []
 
     # A shared-network requires a subnet definition
     for network, network_config in dhcp['shared_network_name'].items():
@@ -176,6 +177,14 @@ def verify(dhcp):
                               'lease subnet must be configured.')
 
         for subnet, subnet_config in network_config['subnet'].items():
+            if 'subnet_id' not in subnet_config:
+                raise ConfigError(f'Unique subnet ID not specified for subnet "{subnet}"')
+
+            if subnet_config['subnet_id'] in subnet_ids:
+                raise ConfigError(f'Subnet ID for subnet "{subnet}" is not unique')
+
+            subnet_ids.append(subnet_config['subnet_id'])
+
             # All delivered static routes require a next-hop to be set
             if 'static_route' in subnet_config:
                 for route, route_option in subnet_config['static_route'].items():

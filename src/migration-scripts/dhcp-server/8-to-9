@@ -16,6 +16,7 @@
 
 # T3316:
 # - Migrate dhcp options under new option node
+# - Add subnet IDs to existing subnets
 
 import sys
 import re
@@ -44,6 +45,8 @@ option_nodes = ['bootfile-name', 'bootfile-server', 'bootfile-size', 'captive-po
                 'tftp-server-name', 'time-offset', 'time-server', 'time-zone',
                 'vendor-option', 'wins-server', 'wpad-url']
 
+subnet_id = 1
+
 for network in config.list_nodes(base):
     for option in option_nodes:
         if config.exists(base + [network, option]):
@@ -56,10 +59,13 @@ for network in config.list_nodes(base):
             base_subnet = base + [network, 'subnet', subnet]
             
             for option in option_nodes:
-                if config.exists(base + [network, 'subnet', subnet, option]):
-                    config.set(base + [network, 'subnet', subnet, 'option'])
-                    config.copy(base + [network, 'subnet', subnet, option], base + [network, 'subnet', subnet, 'option', option])
-                    config.delete(base + [network, 'subnet', subnet, option])
+                if config.exists(base_subnet + [option]):
+                    config.set(base_subnet + ['option'])
+                    config.copy(base_subnet + [option], base_subnet + ['option', option])
+                    config.delete(base_subnet + [option])
+
+            config.set(base_subnet + ['subnet-id'], value=subnet_id)
+            subnet_id += 1
 
 try:
     with open(file_name, 'w') as f:
