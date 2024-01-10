@@ -159,7 +159,7 @@ def verify(ipsec):
                 if 'id' not in psk_config or 'secret' not in psk_config:
                     raise ConfigError(f'Authentication psk "{psk}" missing "id" or "secret"')
 
-    if 'interfaces' in ipsec :
+    if 'interface' in ipsec:
         for ifname in ipsec['interface']:
             verify_interface_exists(ifname)
 
