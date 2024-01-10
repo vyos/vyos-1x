@@ -80,12 +80,27 @@ for option in ['all-ping', 'broadcast-ping', 'config-trap', 'ip-src-route', 'ipv
         config.delete(base + [option])
 
 ### Migration of firewall name and ipv6-name
+### Also migrate legacy 'accept' behaviour
 if config.exists(base + ['name']):
     config.set(['firewall', 'ipv4', 'name'])
     config.set_tag(['firewall', 'ipv4', 'name'])
 
     for ipv4name in config.list_nodes(base + ['name']):
         config.copy(base + ['name', ipv4name], base + ['ipv4', 'name', ipv4name])
+
+        if config.exists(base + ['ipv4', 'name', ipv4name, 'default-action']):
+            action = config.return_value(base + ['ipv4', 'name', ipv4name, 'default-action'])
+
+            if action == 'accept':
+                config.set(base + ['ipv4', 'name', ipv4name, 'default-action'], value='return')
+
+        if config.exists(base + ['ipv4', 'name', ipv4name, 'rule']):
+            for rule_id in config.list_nodes(base + ['ipv4', 'name', ipv4name, 'rule']):
+                action = config.return_value(base + ['ipv4', 'name', ipv4name, 'rule', rule_id, 'action'])
+
+                if action == 'accept':
+                    config.set(base + ['ipv4', 'name', ipv4name, 'rule', rule_id, 'action'], value='return')
+
     config.delete(base + ['name'])
 
 if config.exists(base + ['ipv6-name']):
@@ -94,6 +109,20 @@ if config.exists(base + ['ipv6-name']):
 
     for ipv6name in config.list_nodes(base + ['ipv6-name']):
         config.copy(base + ['ipv6-name', ipv6name], base + ['ipv6', 'name', ipv6name])
+
+        if config.exists(base + ['ipv6', 'name', ipv6name, 'default-action']):
+            action = config.return_value(base + ['ipv6', 'name', ipv6name, 'default-action'])
+
+            if action == 'accept':
+                config.set(base + ['ipv6', 'name', ipv6name, 'default-action'], value='return')
+
+        if config.exists(base + ['ipv6', 'name', ipv6name, 'rule']):
+            for rule_id in config.list_nodes(base + ['ipv6', 'name', ipv6name, 'rule']):
+                action = config.return_value(base + ['ipv6', 'name', ipv6name, 'rule', rule_id, 'action'])
+
+                if action == 'accept':
+                    config.set(base + ['ipv6', 'name', ipv6name, 'rule', rule_id, 'action'], value='return')
+
     config.delete(base + ['ipv6-name'])
 
 ### Migration of firewall interface
@@ -102,8 +131,8 @@ if config.exists(base + ['interface']):
     inp_ipv4_rule = 5
     fwd_ipv6_rule = 5
     inp_ipv6_rule = 5
-    for iface in config.list_nodes(base + ['interface']):
-        for direction in ['in', 'out', 'local']:
+    for direction in ['in', 'out', 'local']:
+        for iface in config.list_nodes(base + ['interface']):
             if config.exists(base + ['interface', iface, direction]):
                 if config.exists(base + ['interface', iface, direction, 'name']):
                     target = config.return_value(base + ['interface', iface, direction, 'name'])
