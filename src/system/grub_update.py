@@ -68,7 +68,8 @@ if __name__ == '__main__':
         'default': grub.gen_version_uuid(default_entry['version']),
         'bootmode': default_entry['bootmode'],
         'console_type': default_entry['console_type'],
-        'console_num': default_entry['console_num']
+        'console_num': default_entry['console_num'],
+        'console_speed': '115200'
     }
     vars.update(default_settings)
 
