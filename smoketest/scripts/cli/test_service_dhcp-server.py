@@ -202,6 +202,13 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             self.cli_set(pool + ['static-mapping', client, 'ip-address', inc_ip(subnet, client_base)])
             client_base += 1
 
+        # cannot have mappings with duplicate IP addresses
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(pool + ['static-mapping', 'dupe1', 'mac', '00:50:00:00:00:01'])
+            self.cli_set(pool + ['static-mapping', 'dupe1', 'ip-address', inc_ip(subnet, 10)])
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'dupe1'])
+
         # commit changes
         self.cli_commit()
 
