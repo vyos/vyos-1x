@@ -71,7 +71,7 @@ def verify(l2tp):
             raise ConfigError('DA/CoE server key required!')
 
     if dict_search('authentication.mode', l2tp) in ['local', 'noauth']:
-        if not l2tp['client_ip_pool'] and not l2tp['client_ipv6_pool']:
+        if not dict_search('client_ip_pool', l2tp) and not dict_search('client_ipv6_pool', l2tp):
             raise ConfigError(
                 "L2TP local auth mode requires local client-ip-pool or client-ipv6-pool to be configured!")
         if dict_search('client_ip_pool', l2tp) and not dict_search('default_pool', l2tp):
