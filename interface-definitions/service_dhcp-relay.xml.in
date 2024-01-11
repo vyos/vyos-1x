@@ -119,6 +119,12 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="vrrp-disable">
+            <properties>
+              <help>Disable DHCP relay on VRRP listen-interfaces not in the MASTER state</help>
+              <valueless/>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
