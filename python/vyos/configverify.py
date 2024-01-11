@@ -1,4 +1,4 @@
-# Copyright 2020-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,9 @@
 from vyos import ConfigError
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_recursive
+
+# pattern re-used in ipsec migration script
+dynamic_interface_pattern = r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+'
 
 def verify_mtu(config):
     """
@@ -290,7 +293,7 @@ def verify_source_interface(config):
 
     src_ifname = config['source_interface']
     # We do not allow sourcing other interfaces (e.g. tunnel) from dynamic interfaces
-    tmp = re.compile(r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+')
+    tmp = re.compile(dynamic_interface_pattern)
     if tmp.match(src_ifname):
         raise ConfigError(f'Can not source "{ifname}" from dynamic interface "{src_ifname}"!')
 
