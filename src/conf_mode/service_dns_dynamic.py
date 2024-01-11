@@ -21,17 +21,16 @@ from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import dynamic_interface_pattern
 from vyos.template import render
 from vyos.utils.process import call
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 config_file = r'/run/ddclient/ddclient.conf'
 systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
-
-# Dynamic interfaces that might not exist when the configuration is loaded
-dynamic_interfaces = ('pppoe', 'sstpc')
 
 # Protocols that require zone
 zone_necessary = ['cloudflare', 'digitalocean', 'godaddy', 'hetzner', 'gandi',
@@ -81,7 +80,6 @@ def verify(dyndns):
 
     # Dynamic DNS service provider - configuration validation
     for service, config in dyndns['name'].items():
-
         error_msg_req = f'is required for Dynamic DNS service "{service}"'
         error_msg_uns = f'is not supported for Dynamic DNS service "{service}"'
 
@@ -93,10 +91,12 @@ def verify(dyndns):
         # that the interface exists (or just warn if dynamic interface)
         # and that web-options are not set
         if config['address'] != 'web':
+            tmp = re.compile(dynamic_interface_pattern)
             # exclude check interface for dynamic interfaces
-            if config['address'].startswith(dynamic_interfaces):
-                Warning(f'Interface "{config["address"]}" does not exist yet and cannot '
-                        f'be used for Dynamic DNS service "{service}" until it is up!')
+            if tmp.match(config["address"]):
+                if not interface_exists(config["address"]):
+                    Warning(f'Interface "{config["address"]}" does not exist yet and cannot '
+                            f'be used for Dynamic DNS service "{service}" until it is up!')
             else:
                 verify_interface_exists(config['address'])
             if 'web_options' in config:

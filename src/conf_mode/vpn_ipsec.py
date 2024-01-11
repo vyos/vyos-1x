@@ -27,6 +27,7 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import dynamic_interface_pattern
 from vyos.defaults import directories
 from vyos.ifconfig import Interface
 from vyos.pki import encode_certificate
@@ -160,8 +161,15 @@ def verify(ipsec):
                     raise ConfigError(f'Authentication psk "{psk}" missing "id" or "secret"')
 
     if 'interface' in ipsec:
-        for ifname in ipsec['interface']:
-            verify_interface_exists(ifname)
+        tmp = re.compile(dynamic_interface_pattern)
+        for interface in ipsec['interface']:
+            # exclude check interface for dynamic interfaces
+            if tmp.match(interface):
+                if not interface_exists(interface):
+                    Warning(f'Interface "{interface}" does not exist yet and cannot be used '
+                            f'for IPsec until it is up!')
+            else:
+                verify_interface_exists(interface)
 
     if 'l2tp' in ipsec:
         if 'esp_group' in ipsec['l2tp']:
