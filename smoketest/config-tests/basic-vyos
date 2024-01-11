@@ -24,12 +24,13 @@ set protocols static arp interface eth2.200.202 address 100.64.202.30 mac '00:50
 set protocols static arp interface eth2.200.202 address 100.64.202.40 mac '00:50:00:00:00:40'
 set protocols static route 0.0.0.0/0 next-hop 100.64.0.1
 set service dhcp-server shared-network-name LAN authoritative
-set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 default-router '192.168.0.1'
-set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 domain-name 'vyos.net'
-set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 domain-search 'vyos.net'
-set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 name-server '192.168.0.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option default-router '192.168.0.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option domain-name 'vyos.net'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option domain-search 'vyos.net'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option name-server '192.168.0.1'
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 range LANDynamic start '192.168.0.20'
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 range LANDynamic stop '192.168.0.240'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 subnet-id '1'
 set service dns forwarding allow-from '192.168.0.0/16'
 set service dns forwarding cache-size '10000'
 set service dns forwarding dnssec 'off'

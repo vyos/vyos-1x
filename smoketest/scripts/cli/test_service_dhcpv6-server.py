@@ -102,7 +102,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
 
         self.cli_set(base_path + ['preference', preference])
-
+        self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['name-server', dns_1])
         self.cli_set(pool + ['name-server', dns_2])
@@ -145,6 +145,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'id', 1)
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'valid-lifetime', int(lease_time))
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'min-valid-lifetime', int(min_lease_time))
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'max-valid-lifetime', int(max_lease_time))
@@ -215,7 +216,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         prefix_len = '56'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
-
+        self.cli_set(pool + ['subnet-id', '1'])
         self.cli_set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
         self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'delegated-length', delegate_len])
         self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'prefix-length', prefix_len])
@@ -250,7 +251,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['global-parameters', 'name-server', ns_global_1])
         self.cli_set(base_path + ['global-parameters', 'name-server', ns_global_2])
-        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet])
+        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet, 'subnet-id', '1'])
 
         # commit changes
         self.cli_commit()
@@ -260,6 +261,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'id', 1)
 
         self.verify_config_object(
                 obj,

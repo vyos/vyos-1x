@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3316:
-# - Migrate dhcp options under new option node
 # - Add subnet IDs to existing subnets
 
 import sys
@@ -31,38 +30,19 @@ file_name = sys.argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['service', 'dhcp-server', 'shared-network-name']
+base = ['service', 'dhcpv6-server', 'shared-network-name']
 config = ConfigTree(config_file)
 
 if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 
-option_nodes = ['bootfile-name', 'bootfile-server', 'bootfile-size', 'captive-portal',
-                'client-prefix-length', 'default-router', 'domain-name', 'domain-search',
-                'name-server', 'ip-forwarding', 'ipv6-only-preferred', 'ntp-server',
-                'pop-server', 'server-identifier', 'smtp-server', 'static-route',
-                'tftp-server-name', 'time-offset', 'time-server', 'time-zone',
-                'vendor-option', 'wins-server', 'wpad-url']
-
 subnet_id = 1
 
 for network in config.list_nodes(base):
-    for option in option_nodes:
-        if config.exists(base + [network, option]):
-            config.set(base + [network, 'option'])
-            config.copy(base + [network, option], base + [network, 'option', option])
-            config.delete(base + [network, option])
-
     if config.exists(base + [network, 'subnet']):
         for subnet in config.list_nodes(base + [network, 'subnet']):
             base_subnet = base + [network, 'subnet', subnet]
-            
-            for option in option_nodes:
-                if config.exists(base_subnet + [option]):
-                    config.set(base_subnet + ['option'])
-                    config.copy(base_subnet + [option], base_subnet + ['option', option])
-                    config.delete(base_subnet + [option])
 
             config.set(base_subnet + ['subnet-id'], value=subnet_id)
             subnet_id += 1
