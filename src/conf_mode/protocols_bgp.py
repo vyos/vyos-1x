@@ -206,6 +206,10 @@ def verify_remote_as(peer_config, bgp_config):
         if 'v6only' in peer_config['interface']:
             if 'remote_as' in peer_config['interface']['v6only']:
                 return peer_config['interface']['v6only']['remote_as']
+            if 'peer_group' in peer_config['interface']['v6only']:
+                peer_group_name = peer_config['interface']['v6only']['peer_group']
+                tmp = dict_search(f'peer_group.{peer_group_name}.remote_as', bgp_config)
+                if tmp: return tmp
 
     return None
 
