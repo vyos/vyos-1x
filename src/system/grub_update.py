@@ -69,7 +69,7 @@ if __name__ == '__main__':
         'bootmode': default_entry['bootmode'],
         'console_type': default_entry['console_type'],
         'console_num': default_entry['console_num'],
-        'console_speed': '115200'
+        'console_speed': default_entry['console_speed']
     }
     vars.update(default_settings)
 
