@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2023 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -93,6 +93,13 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         interface_cache = '128000'
         self.set(['ppp-options', 'interface-cache', interface_cache])
 
+        # ipv6
+        allow_ipv6 = 'allow'
+        random = 'random'
+        self.set(['ppp-options', 'ipv6', allow_ipv6])
+        self.set(['ppp-options', 'ipv6-intf-id', random])
+        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
+        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
         # commit changes
         self.cli_commit()
 
@@ -117,6 +124,15 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         # check interface-cache
         self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
+
+        #check ipv6
+        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
+            self.assertEqual(conf['modules'][tmp], None)
+
+        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
+        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
+        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
+        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
 
     def test_pppoe_server_authentication_protocols(self):
         # Test configuration of local authentication for PPPoE server
@@ -153,45 +169,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         self.assertEqual(conf['shaper']['fwmark'], fwmark)
         self.assertEqual(conf['shaper']['down-limiter'], limiter)
-
-    def test_pppoe_server_client_ipv6_pool(self):
-        # Test configuration of IPv6 client pools
-        self.basic_config()
-
-        # Enable IPv6
-        allow_ipv6 = 'allow'
-        random = 'random'
-        self.set(['ppp-options', 'ipv6', allow_ipv6])
-        self.set(['ppp-options', 'ipv6-intf-id', random])
-        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
-        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
-
-        prefix = '2001:db8:ffff::/64'
-        prefix_mask = '128'
-        client_prefix = f'{prefix},{prefix_mask}'
-        self.set(['client-ipv6-pool', 'prefix', prefix, 'mask', prefix_mask])
-
-        delegate_prefix = '2001:db8::/40'
-        delegate_mask = '56'
-        self.set(['client-ipv6-pool', 'delegate', delegate_prefix, 'delegation-prefix', delegate_mask])
-
-        # commit changes
-        self.cli_commit()
-
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(self._config_file)
-
-        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
-            self.assertEqual(conf['modules'][tmp], None)
-
-        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
-        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
-        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
-        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
-
-        self.assertEqual(conf['ipv6-pool'][client_prefix], None)
-        self.assertEqual(conf['ipv6-pool']['delegate'], f'{delegate_prefix},{delegate_mask}')
 
     def test_accel_radius_authentication(self):
         radius_called_sid = 'ifname:mac'

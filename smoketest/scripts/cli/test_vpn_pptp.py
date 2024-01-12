@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -217,6 +217,10 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(f"acct-port=0", server[3])
         self.assertEqual(f"req-limit=0", server[4])
         self.assertEqual(f"fail-time=0", server[5])
+
+    @unittest.skip("IPv6 is not implemented in PPTP")
+    def test_accel_ipv6_pool(self):
+        pass
 
 
 if __name__ == '__main__':

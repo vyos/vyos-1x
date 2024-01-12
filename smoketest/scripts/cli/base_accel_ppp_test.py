@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -440,4 +440,55 @@ class BasicAccelPPPTest:
 {third_subnet},name={third_pool}
 {second_subnet},name={second_pool},next={third_pool}
 {first_subnet},name={first_pool},next={second_pool}"""
+            self.assertIn(pool_config, config)
+
+        def test_accel_ipv6_pool(self):
+            # Test configuration of IPv6 client pools
+            self.basic_config(is_gateway=False, is_client_pool=False)
+
+            # Enable IPv6
+            allow_ipv6 = 'allow'
+            self.set(['ppp-options', 'ipv6', allow_ipv6])
+
+            pool_name = 'ipv6_test_pool'
+            prefix_1 = '2001:db8:fffe::/56'
+            prefix_mask = '64'
+            prefix_2 = '2001:db8:ffff::/56'
+            client_prefix_1 = f'{prefix_1},{prefix_mask}'
+            client_prefix_2 = f'{prefix_2},{prefix_mask}'
+            self.set(
+                ['client-ipv6-pool', pool_name, 'prefix', prefix_1, 'mask',
+                 prefix_mask])
+            self.set(
+                ['client-ipv6-pool', pool_name, 'prefix', prefix_2, 'mask',
+                 prefix_mask])
+
+            delegate_1_prefix = '2001:db8:fff1::/56'
+            delegate_2_prefix = '2001:db8:fff2::/56'
+            delegate_mask = '64'
+            self.set(
+                ['client-ipv6-pool', pool_name, 'delegate', delegate_1_prefix,
+                 'delegation-prefix', delegate_mask])
+            self.set(
+                ['client-ipv6-pool', pool_name, 'delegate', delegate_2_prefix,
+                 'delegation-prefix', delegate_mask])
+
+            # commit changes
+            self.cli_commit()
+
+            # Validate configuration values
+            conf = ConfigParser(allow_no_value=True, delimiters='=',
+                                strict=False)
+            conf.read(self._config_file)
+
+            for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
+                self.assertEqual(conf['modules'][tmp], None)
+
+            self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
+
+            config = self.getConfig("ipv6-pool")
+            pool_config = f"""{client_prefix_1},name={pool_name}
+{client_prefix_2},name={pool_name}
+delegate={delegate_1_prefix},{delegate_mask},name={pool_name}
+delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             self.assertIn(pool_config, config)

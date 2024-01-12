@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -55,6 +55,13 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         self.set(['ppp-options', 'lcp-echo-interval', lcp_echo_interval])
         self.set(['ppp-options', 'lcp-echo-timeout', lcp_echo_timeout])
 
+        allow_ipv6 = 'allow'
+        random = 'random'
+        self.set(['ppp-options', 'ipv6', allow_ipv6])
+        self.set(['ppp-options', 'ipv6-intf-id', random])
+        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
+        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
+
         # commit changes
         self.cli_commit()
 
@@ -76,6 +83,13 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['ppp']['lcp-echo-timeout'], lcp_echo_timeout)
         self.assertEqual(conf['ppp']['lcp-echo-failure'], lcp_echo_failure)
 
+        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
+            self.assertEqual(conf['modules'][tmp], None)
+        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
+        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
+        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
+        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
+
     def test_l2tp_server_authentication_protocols(self):
         # Test configuration of local authentication for PPPoE server
         self.basic_config()
@@ -92,44 +106,6 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
 
         self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
-    def test_l2tp_server_client_ipv6_pool(self):
-        # Test configuration of IPv6 client pools
-        self.basic_config()
-
-        # Enable IPv6
-        allow_ipv6 = 'allow'
-        random = 'random'
-        self.set(['ppp-options', 'ipv6', allow_ipv6])
-        self.set(['ppp-options', 'ipv6-intf-id', random])
-        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
-        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
-
-        prefix = '2001:db8:ffff::/64'
-        prefix_mask = '128'
-        client_prefix = f'{prefix},{prefix_mask}'
-        self.set(['client-ipv6-pool', 'prefix', prefix, 'mask', prefix_mask])
-
-        delegate_prefix = '2001:db8::/40'
-        delegate_mask = '56'
-        self.set(['client-ipv6-pool', 'delegate', delegate_prefix, 'delegation-prefix', delegate_mask])
-
-        # commit changes
-        self.cli_commit()
-
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(self._config_file)
-
-        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
-            self.assertEqual(conf['modules'][tmp], None)
-
-        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
-        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
-        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
-        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
-
-        self.assertEqual(conf['ipv6-pool'][client_prefix], None)
-        self.assertEqual(conf['ipv6-pool']['delegate'], f'{delegate_prefix},{delegate_mask}')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -74,11 +74,8 @@ def verify(sstp):
         raise ConfigError(f'"{proto}" port "{port}" is used by another service')
 
     verify_accel_ppp_base_service(sstp)
-
-    if 'client_ip_pool' not in sstp and 'client_ipv6_pool' not in sstp:
-        raise ConfigError('Client IP subnet required')
-
     verify_accel_ppp_ip_pool(sstp)
+
     #
     # SSL certificate checks
     #
