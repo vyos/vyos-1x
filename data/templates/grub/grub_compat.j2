@@ -22,13 +22,13 @@
 {%- endmacro %}
 {% macro console_opts(type) -%}
 {% if type == 'tty' -%}
-    console=ttyS0,115200 console=tty0
+    console=ttyS0,{{ console_speed }} console=tty0
 {%- elif type == 'ttyS' -%}
-    console=tty0 console=ttyS0,115200
+    console=tty0 console=ttyS0,{{ console_speed }}
 {%- elif type == 'ttyUSB' -%}
     console=tty0 console=ttyUSB0,115200
 {%- else -%}
-    console=tty0 console=ttyS0,115200
+    console=tty0 console=ttyS0,{{ console_speed }}
 {%- endif %}
 {%- endmacro %}
 {% macro passwd_opts(mode) -%}
@@ -39,9 +39,13 @@
 set default={{ default }}
 set timeout={{ timeout }}
 {% if console_type == 'ttyS' %}
+{%     if console_num == '0' %}
+serial --unit=0 --speed={{ console_speed }}
+{%     else %}
 serial --unit={{ console_num }} --speed=115200
+{%     endif %}
 {% else %}
-serial --unit=0 --speed=115200
+serial --unit=0 --speed={{ console_speed }}
 {% endif %}
 terminal_output --append serial
 terminal_input serial console
