@@ -175,16 +175,6 @@ def kea_parse_subnet(subnet, config):
 def kea6_parse_options(config):
     options = []
 
-    if 'common_options' in config:
-        common_opt = config['common_options']
-
-        for node, option_name in kea6_options.items():
-            if node not in common_opt:
-                continue
-
-            value = ", ".join(common_opt[node]) if isinstance(common_opt[node], list) else common_opt[node]
-            options.append({'name': option_name, 'data': value})
-
     for node, option_name in kea6_options.items():
         if node not in config:
             continue
@@ -218,20 +208,27 @@ def kea6_parse_options(config):
 
 def kea6_parse_subnet(subnet, config):
     out = {'subnet': subnet, 'id': int(config['subnet_id'])}
-    options = kea6_parse_options(config)
 
-    if 'address_range' in config:
-        addr_range = config['address_range']
+    if 'option' in config:
+        out['option-data'] = kea6_parse_options(config['option'])
+
+    if 'range' in config:
         pools = []
+        for num, range_config in config['range'].items():
+            pool = {}
 
-        if 'prefix' in addr_range:
-            for prefix in addr_range['prefix']:
-                pools.append({'pool': prefix})
+            if 'prefix' in range_config:
+                pool['pool'] = range_config['prefix']
 
-        if 'start' in addr_range:
-            for start, range_conf in addr_range['start'].items():
-                stop = range_conf['stop']
-                pools.append({'pool': f'{start} - {stop}'})
+            if 'start' in range_config:
+                start = range_config['start']
+                stop = range_config['stop']
+                pool['pool'] = f'{start} - {stop}'
+
+            if 'option' in range_config:
+                pool['option-data'] = kea6_parse_options(range_config['option'])
+
+            pools.append(pool)
 
         out['pools'] = pools
 
@@ -278,12 +275,12 @@ def kea6_parse_subnet(subnet, config):
             if 'ipv6_prefix' in host_config:
                 reservation['prefixes'] = [ host_config['ipv6_prefix'] ]
 
+            if 'option' in host_config:
+                reservation['option-data'] = kea6_parse_options(host_config['option'])
+
             reservations.append(reservation)
 
         out['reservations'] = reservations
-
-    if options:
-        out['option-data'] = options
 
     return out
 

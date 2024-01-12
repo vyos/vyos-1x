@@ -894,7 +894,9 @@ def kea6_shared_network_json(shared_networks):
             'name': name,
             'subnet6': []
         }
-        options = kea6_parse_options(config)
+
+        if 'common_options' in config:
+            network['option-data'] = kea6_parse_options(config['common_options'])
 
         if 'interface' in config:
             network['interface'] = config['interface']
@@ -902,9 +904,6 @@ def kea6_shared_network_json(shared_networks):
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
                 network['subnet6'].append(kea6_parse_subnet(subnet, subnet_config))
-
-        if options:
-            network['option-data'] = options
 
         out.append(network)
 

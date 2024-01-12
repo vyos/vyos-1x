@@ -194,14 +194,11 @@ def _get_pool_size(pool, family='inet'):
     size = 0
     subnets = config.list_nodes(f'{base} subnet')
     for subnet in subnets:
-        if family == 'inet6':
-            ranges = config.list_nodes(f'{base} subnet {subnet} address-range start')
-        else:
-            ranges = config.list_nodes(f'{base} subnet {subnet} range')
+        ranges = config.list_nodes(f'{base} subnet {subnet} range')
         for range in ranges:
             if family == 'inet6':
-                start = config.list_nodes(f'{base} subnet {subnet} address-range start')[0]
-                stop = config.value(f'{base} subnet {subnet} address-range start {start} stop')
+                start = config.value(f'{base} subnet {subnet} range {range} start')
+                stop = config.value(f'{base} subnet {subnet} range {range} stop')
             else:
                 start = config.value(f'{base} subnet {subnet} range {range} start')
                 stop = config.value(f'{base} subnet {subnet} range {range} stop')

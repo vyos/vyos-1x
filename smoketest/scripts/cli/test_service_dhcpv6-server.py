@@ -104,24 +104,25 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['preference', preference])
         self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
-        self.cli_set(pool + ['name-server', dns_1])
-        self.cli_set(pool + ['name-server', dns_2])
-        self.cli_set(pool + ['name-server', dns_2])
         self.cli_set(pool + ['lease-time', 'default', lease_time])
         self.cli_set(pool + ['lease-time', 'maximum', max_lease_time])
         self.cli_set(pool + ['lease-time', 'minimum', min_lease_time])
-        self.cli_set(pool + ['nis-domain', domain])
-        self.cli_set(pool + ['nisplus-domain', domain])
-        self.cli_set(pool + ['sip-server', sip_server])
-        self.cli_set(pool + ['sntp-server', sntp_server])
-        self.cli_set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'nis-domain', domain])
+        self.cli_set(pool + ['option', 'nisplus-domain', domain])
+        self.cli_set(pool + ['option', 'sip-server', sip_server])
+        self.cli_set(pool + ['option', 'sntp-server', sntp_server])
+        self.cli_set(pool + ['range', '1', 'start', range_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_stop])
 
         for server in nis_servers:
-            self.cli_set(pool + ['nis-server', server])
-            self.cli_set(pool + ['nisplus-server', server])
+            self.cli_set(pool + ['option', 'nis-server', server])
+            self.cli_set(pool + ['option', 'nisplus-server', server])
 
         for search in search_domains:
-            self.cli_set(pool + ['domain-search', search])
+            self.cli_set(pool + ['option', 'domain-search', search])
 
         client_base = 1
         for client in ['client1', 'client2', 'client3']:
@@ -217,7 +218,8 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
-        self.cli_set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
+        self.cli_set(pool + ['range', '1', 'start', range_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_stop])
         self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'delegated-length', delegate_len])
         self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'prefix-length', prefix_len])
 

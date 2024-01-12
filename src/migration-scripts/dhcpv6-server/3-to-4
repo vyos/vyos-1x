@@ -16,6 +16,8 @@
 
 # T3316:
 # - Add subnet IDs to existing subnets
+# - Move options to option node
+# - Migrate address-range to range tagNode
 
 import sys
 import re
@@ -37,12 +39,45 @@ if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 
+option_nodes = ['captive-portal', 'domain-search', 'name-server',
+                'nis-domain', 'nis-server', 'nisplus-domain', 'nisplus-server',
+                'sip-server', 'sntp-server', 'vendor-option']
+
 subnet_id = 1
 
 for network in config.list_nodes(base):
     if config.exists(base + [network, 'subnet']):
         for subnet in config.list_nodes(base + [network, 'subnet']):
             base_subnet = base + [network, 'subnet', subnet]
+
+            if config.exists(base_subnet + ['address-range']):
+                config.set(base_subnet + ['range'])
+                config.set_tag(base_subnet + ['range'])
+
+                range_id = 1
+
+                if config.exists(base_subnet + ['address-range', 'prefix']):
+                    for prefix in config.return_values(base_subnet + ['address-range', 'prefix']):
+                        config.set(base_subnet + ['range', range_id, 'prefix'], value=prefix)
+
+                        range_id += 1
+
+                if config.exists(base_subnet + ['address-range', 'start']):
+                    for start in config.list_nodes(base_subnet + ['address-range', 'start']):
+                        stop = config.return_value(base_subnet + ['address-range', 'start', start, 'stop'])
+
+                        config.set(base_subnet + ['range', range_id, 'start'], value=start)
+                        config.set(base_subnet + ['range', range_id, 'stop'], value=stop)
+
+                        range_id += 1
+
+                config.delete(base_subnet + ['address-range'])
+
+            for option in option_nodes:
+                if config.exists(base_subnet + [option]):
+                    config.set(base_subnet + ['option'])
+                    config.copy(base_subnet + [option], base_subnet + ['option', option])
+                    config.delete(base_subnet + [option])
 
             config.set(base_subnet + ['subnet-id'], value=subnet_id)
             subnet_id += 1
