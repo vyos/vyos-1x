@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -70,14 +70,8 @@ def verify(l2tp):
         if not dict_search('authentication.radius.dynamic_author.key', l2tp):
             raise ConfigError('DA/CoE server key required!')
 
-    if dict_search('authentication.mode', l2tp) in ['local', 'noauth']:
-        if not dict_search('client_ip_pool', l2tp) and not dict_search('client_ipv6_pool', l2tp):
-            raise ConfigError(
-                "L2TP local auth mode requires local client-ip-pool or client-ipv6-pool to be configured!")
-        if dict_search('client_ip_pool', l2tp) and not dict_search('default_pool', l2tp):
-            Warning("'default-pool' is not defined")
-
     verify_accel_ppp_ip_pool(l2tp)
+
 
     if 'wins_server' in l2tp and len(l2tp['wins_server']) > 2:
         raise ConfigError(

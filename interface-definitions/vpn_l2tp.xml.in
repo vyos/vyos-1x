@@ -154,6 +154,7 @@
                 </children>
               </node>
               #include <include/accel-ppp/default-pool.xml.i>
+              #include <include/accel-ppp/default-ipv6-pool.xml.i>
             </children>
           </node>
         </children>

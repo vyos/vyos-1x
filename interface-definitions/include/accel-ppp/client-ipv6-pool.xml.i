@@ -1,7 +1,14 @@
 <!-- include start from accel-ppp/client-ipv6-pool.xml.i -->
-<node name="client-ipv6-pool">
+<tagNode name="client-ipv6-pool">
   <properties>
     <help>Pool of client IPv6 addresses</help>
+    <valueHelp>
+      <format>txt</format>
+      <description>Name of IPv6 pool</description>
+    </valueHelp>
+    <constraint>
+      #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+    </constraint>
   </properties>
   <children>
     <tagNode name="prefix">
@@ -58,5 +65,5 @@
       </children>
     </tagNode>
   </children>
-</node>
+</tagNode>
 <!-- include end -->
