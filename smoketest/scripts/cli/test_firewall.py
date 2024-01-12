@@ -642,8 +642,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 ### Zone
     def test_zone_basic(self):
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketestv6', 'default-action', 'drop'])
         self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'interface', 'eth0'])
         self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-local', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'intra-zone-filtering', 'firewall', 'ipv6-name', 'smoketestv6'])
         self.cli_set(['firewall', 'zone', 'smoketest-local', 'local-zone'])
         self.cli_set(['firewall', 'zone', 'smoketest-local', 'from', 'smoketest-eth0', 'firewall', 'name', 'smoketest'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
@@ -675,15 +677,30 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state related', 'accept']
         ]
 
-        nftables_output = cmd('sudo nft list table ip vyos_filter')
+        nftables_search_v6 = [
+            ['chain VYOS_ZONE_FORWARD'],
+            ['type filter hook forward priority filter + 1'],
+            ['chain VYOS_ZONE_OUTPUT'],
+            ['type filter hook output priority filter + 1'],
+            ['chain VYOS_ZONE_LOCAL'],
+            ['type filter hook input priority filter + 1'],
+            ['chain VZONE_smoketest-eth0'],
+            ['chain VZONE_smoketest-local_IN'],
+            ['chain VZONE_smoketest-local_OUT'],
+            ['oifname "eth0"', 'jump VZONE_smoketest-eth0'],
+            ['jump VZONE_smoketest-local_IN'],
+            ['jump VZONE_smoketest-local_OUT'],
+            ['iifname "eth0"', 'jump NAME6_smoketestv6'],
+            ['jump VYOS_STATE_POLICY6'],
+            ['chain VYOS_STATE_POLICY6'],
+            ['ct state established', 'log prefix "[STATE-POLICY-EST-A]"', 'accept'],
+            ['ct state invalid', 'drop'],
+            ['ct state related', 'accept']
+        ]
 
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(matched)
+        nftables_output = cmd('sudo nft list table ip vyos_filter')
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
 
     def test_flow_offload(self):
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
