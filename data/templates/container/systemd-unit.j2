@@ -13,5 +13,5 @@ ExecStop=/usr/bin/podman stop --ignore --cidfile %t/%n.cid -t 5
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/%n.cid
 ExecStopPost=/bin/rm -f %t/%n.cid
 PIDFile=%t/%n.pid
-KillMode=none
+KillMode=control-group
 Type=forking
