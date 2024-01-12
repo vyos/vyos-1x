@@ -32,6 +32,7 @@ def _verify(func):
     def _wrapper(*args, **kwargs):
         config = ConfigTreeQuery()
         if not config.exists(['interfaces', 'wireless']):
+            unconf_message = 'No Wireless interfaces configured'
             raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
         return func(*args, **kwargs)
     return _wrapper
