@@ -1,13 +1,6 @@
-
-{% macro zone_chains(zone, family, state_policy=False) %}
-{% if family == 'ipv6' %}
-{%     set fw_name = 'ipv6_name' %}
-{%     set suffix = '6' %}
-{% else %}
-{%     set fw_name = 'name' %}
-{%     set suffix = '' %}
-{% endif %}
-
+{% macro zone_chains(zone, ipv6=False, state_policy=False) %}
+{% set fw_name = 'ipv6_name' if ipv6 else 'name' %}
+{% set suffix = '6' if ipv6 else '' %}
     chain VYOS_ZONE_FORWARD {
         type filter hook forward priority 1; policy accept;
 {% if state_policy %}
