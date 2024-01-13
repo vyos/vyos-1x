@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -33,9 +33,11 @@ if __name__ == '__main__':
     if not config.exists(base):
         # Nothing to do
         sys.exit(0)
+
     for interface in config.list_nodes(base):
-        private_key_name = config.return_value(
-            base + [interface, 'private-key'])
+        private_key_name = 'default'
+        if config.exists(base + [interface, 'private-key']):
+            private_key_name = config.return_value(base + [interface, 'private-key'])
         private_key_path = f'/config/auth/wireguard/{private_key_name}/private.key'
         with open(private_key_path, 'r') as file:
             private_key = file.read().rstrip()
