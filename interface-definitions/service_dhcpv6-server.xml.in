@@ -9,6 +9,7 @@
         </properties>
         <children>
           #include <include/generic-disable-node.xml.i>
+          #include <include/listen-interface-multi-broadcast.xml.i>
           <node name="global-parameters">
             <properties>
               <help>Additional global parameters for DHCPv6 server</help>
@@ -89,11 +90,17 @@
                   </constraint>
                 </properties>
                 <children>
-                  <node name="address-range">
+                  #include <include/dhcp/option-v6.xml.i>
+                  <tagNode name="range">
                     <properties>
                       <help>Parameters setting ranges for assigning IPv6 addresses</help>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Invalid range name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
                     </properties>
                     <children>
+                      #include <include/dhcp/option-v6.xml.i>
                       <leafNode name="prefix">
                         <properties>
                           <help>IPv6 prefix defining range of addresses to assign</help>
@@ -104,10 +111,9 @@
                           <constraint>
                             <validator name="ipv6-prefix"/>
                           </constraint>
-                          <multi/>
                         </properties>
                       </leafNode>
-                      <tagNode name="start">
+                      <leafNode name="start">
                         <properties>
                           <help>First in range of consecutive IPv6 addresses to assign</help>
                           <valueHelp>
@@ -118,25 +124,21 @@
                             <validator name="ipv6-address"/>
                           </constraint>
                         </properties>
-                        <children>
-                          <leafNode name="stop">
-                            <properties>
-                              <help>Last in range of consecutive IPv6 addresses</help>
-                              <valueHelp>
-                                <format>ipv6</format>
-                                <description>IPv6 address</description>
-                              </valueHelp>
-                              <constraint>
-                                <validator name="ipv6-address"/>
-                              </constraint>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </tagNode>
+                      </leafNode>
+                      <leafNode name="stop">
+                        <properties>
+                          <help>Last in range of consecutive IPv6 addresses</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
                     </children>
-                  </node>
-                  #include <include/dhcp/captive-portal.xml.i>
-                  #include <include/dhcp/domain-search.xml.i>
+                  </tagNode>
                   <node name="lease-time">
                     <properties>
                       <help>Parameters relating to the lease time</help>
@@ -180,51 +182,6 @@
                       </leafNode>
                     </children>
                   </node>
-                  #include <include/name-server-ipv6.xml.i>
-                  <leafNode name="nis-domain">
-                    <properties>
-                      <help>NIS domain name for client to use</help>
-                      <constraint>
-                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
-                      </constraint>
-                      <constraintErrorMessage>Invalid NIS domain name</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nis-server">
-                    <properties>
-                      <help>IPv6 address of a NIS Server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of NIS server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nisplus-domain">
-                    <properties>
-                      <help>NIS+ domain name for client to use</help>
-                      <constraint>
-                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
-                      </constraint>
-                      <constraintErrorMessage>Invalid NIS+ domain name. May only contain letters, numbers and .-_</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nisplus-server">
-                    <properties>
-                      <help>IPv6 address of a NIS+ Server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of NIS+ server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
                   <node name="prefix-delegation">
                     <properties>
                       <help>Parameters relating to IPv6 prefix delegation</help>
@@ -272,33 +229,6 @@
                       </tagNode>
                     </children>
                   </node>
-                  <leafNode name="sip-server">
-                    <properties>
-                      <help>IPv6 address of SIP server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of SIP server</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>hostname</format>
-                        <description>FQDN of SIP server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                        <validator name="fqdn"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="sntp-server">
-                    <properties>
-                      <help>IPv6 address of an SNTP server for client to use</help>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
                   <tagNode name="static-mapping">
                     <properties>
                       <help>Hostname for static mapping reservation</help>
@@ -308,6 +238,7 @@
                       <constraintErrorMessage>Invalid static mapping hostname</constraintErrorMessage>
                     </properties>
                     <children>
+                      #include <include/dhcp/option-v6.xml.i>
                       #include <include/generic-disable-node.xml.i>
                       #include <include/interface/mac.xml.i>
                       #include <include/interface/duid.xml.i>
@@ -349,33 +280,6 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <node name="vendor-option">
-                    <properties>
-                      <help>Vendor Specific Options</help>
-                    </properties>
-                    <children>
-                      <node name="cisco">
-                        <properties>
-                          <help>Cisco specific parameters</help>
-                        </properties>
-                        <children>
-                          <leafNode name="tftp-server">
-                            <properties>
-                              <help>TFTP server name</help>
-                              <valueHelp>
-                                <format>ipv6</format>
-                                <description>TFTP server IPv6 address</description>
-                              </valueHelp>
-                              <constraint>
-                                <validator name="ipv6-address"/>
-                              </constraint>
-                              <multi/>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
-                    </children>
-                  </node>
                 </children>
               </tagNode>
             </children>

@@ -81,26 +81,29 @@ def verify(dhcpv6):
 
             subnet_ids.append(subnet_config['subnet_id'])
 
-            if 'address_range' in subnet_config:
-                if 'start' in subnet_config['address_range']:
-                    range6_start = []
-                    range6_stop = []
-                    for start, start_config in subnet_config['address_range']['start'].items():
-                        if 'stop' not in start_config:
-                            raise ConfigError(f'address-range stop address for start "{start}" is not defined!')
-                        stop = start_config['stop']
+            if 'range' in subnet_config:
+                range6_start = []
+                range6_stop = []
+
+                for num, range_config in subnet_config['range'].items():
+                    if 'start' in range_config:
+                        start = range_config['start']
+
+                        if 'stop' not in range_config:
+                            raise ConfigError(f'Range stop address for start "{start}" is not defined!')
+                        stop = range_config['stop']
 
                         # Start address must be inside network
                         if not ip_address(start) in ip_network(subnet):
-                            raise ConfigError(f'address-range start address "{start}" is not in subnet "{subnet}"!')
+                            raise ConfigError(f'Range start address "{start}" is not in subnet "{subnet}"!')
 
                         # Stop address must be inside network
                         if not ip_address(stop) in ip_network(subnet):
-                             raise ConfigError(f'address-range stop address "{stop}" is not in subnet "{subnet}"!')
+                             raise ConfigError(f'Range stop address "{stop}" is not in subnet "{subnet}"!')
 
                         # Stop address must be greater or equal to start address
                         if not ip_address(stop) >= ip_address(start):
-                            raise ConfigError(f'address-range stop address "{stop}" must be greater then or equal ' \
+                            raise ConfigError(f'Range stop address "{stop}" must be greater then or equal ' \
                                               f'to the range start address "{start}"!')
 
                         # DHCPv6 range start address must be unique - two ranges can't
@@ -108,6 +111,7 @@ def verify(dhcpv6):
                         if start in range6_start:
                             raise ConfigError(f'Conflicting DHCPv6 lease range: '\
                                               f'Pool start address "{start}" defined multipe times!')
+
                         range6_start.append(start)
 
                         # DHCPv6 range stop address must be unique - two ranges can't
@@ -115,12 +119,14 @@ def verify(dhcpv6):
                         if stop in range6_stop:
                             raise ConfigError(f'Conflicting DHCPv6 lease range: '\
                                               f'Pool stop address "{stop}" defined multipe times!')
+
                         range6_stop.append(stop)
 
-                if 'prefix' in subnet_config:
-                    for prefix in subnet_config['prefix']:
-                        if ip_network(prefix) not in ip_network(subnet):
-                            raise ConfigError(f'address-range prefix "{prefix}" is not in subnet "{subnet}""')
+                    if 'prefix' in range_config:
+                        prefix = range_config['prefix']
+
+                        if not ip_network(prefix).subnet_of(ip_network(subnet)):
+                            raise ConfigError(f'Range prefix "{prefix}" is not in subnet "{subnet}"')
 
             # Prefix delegation sanity checks
             if 'prefix_delegation' in subnet_config:
@@ -151,13 +157,15 @@ def verify(dhcpv6):
                             raise ConfigError(f'Either MAC address or Client identifier (DUID) is required for '
                                               f'static mapping "{mapping}" within shared-network "{network}, {subnet}"!')
 
-            if 'vendor_option' in subnet_config:
-                if len(dict_search('vendor_option.cisco.tftp_server', subnet_config)) > 2:
-                    raise ConfigError(f'No more then two Cisco tftp-servers should be defined for subnet "{subnet}"!')
+            if 'option' in subnet_config:
+                if 'vendor_option' in subnet_config['option']:
+                    if len(dict_search('option.vendor_option.cisco.tftp_server', subnet_config)) > 2:
+                        raise ConfigError(f'No more then two Cisco tftp-servers should be defined for subnet "{subnet}"!')
 
             # Subnets must be unique
             if subnet in subnets:
                 raise ConfigError(f'DHCPv6 subnets must be unique! Subnet {subnet} defined multiple times!')
+
             subnets.append(subnet)
 
         # DHCPv6 requires at least one configured address range or one static mapping

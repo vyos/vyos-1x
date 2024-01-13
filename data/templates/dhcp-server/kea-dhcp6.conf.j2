@@ -1,7 +1,11 @@
 {
     "Dhcp6": {
         "interfaces-config": {
+{% if listen_interface is vyos_defined %}
+            "interfaces": {{ listen_interface | tojson }},
+{% else %}
             "interfaces": [ "*" ],
+{% endif %}
             "service-sockets-max-retries": 5,
             "service-sockets-retry-wait-time": 5000
         },

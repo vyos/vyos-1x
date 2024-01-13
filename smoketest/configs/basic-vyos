@@ -95,10 +95,15 @@ service {
         shared-network-name LAN6 {
             subnet fe88::/56 {
                 address-range {
-                    prefix fe88::/56 {
+                    prefix fe88::/60 {
                         temporary
                     }
+                    start fe88:0000:0000:fe:: {
+                        stop fe88:0000:0000:ff::
+                    }
                 }
+                domain-search vyos.net
+                name-server fe88::1
                 prefix-delegation {
                     start fe88:0000:0000:0001:: {
                         prefix-length 64
