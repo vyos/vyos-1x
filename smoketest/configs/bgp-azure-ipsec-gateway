@@ -226,6 +226,31 @@ protocols {
     }
 }
 service {
+    snmp {
+        v3 {
+            engineid 0xff42
+            group default {
+                mode ro
+                seclevel priv
+                view default
+            }
+            user VyOS {
+                auth {
+                    encrypted-key 0x1ad73f4620b8c0dd2de066622f875b161a14adad
+                    type sha
+                }
+                group default
+                privacy {
+                    encrypted-key 0x1ad73f4620b8c0dd2de066622f875b16
+                    type aes
+                }
+            }
+            view default {
+                oid 1 {
+                }
+            }
+        }
+    }
     ssh {
         disable-host-validation
         port 22
