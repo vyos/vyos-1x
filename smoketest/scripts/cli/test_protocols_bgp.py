@@ -1139,6 +1139,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_24_srv6_sid(self):
         locator_name = 'VyOS_foo'
         sid = 'auto'
+        nexthop_ipv4 = '192.0.0.1'
+        nexthop_ipv6 = '2001:db8:100:200::2'
 
         self.cli_set(base_path + ['srv6', 'locator', locator_name])
         self.cli_set(base_path + ['sid', 'vpn', 'per-vrf', 'export', sid])
@@ -1158,7 +1160,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # Now test AFI SID
         self.cli_delete(base_path + ['sid'])
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'sid', 'vpn', 'export', sid])
+        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'nexthop', 'vpn', 'export', nexthop_ipv4])
         self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'sid', 'vpn', 'export', sid])
+        self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'nexthop', 'vpn', 'export', nexthop_ipv6])
 
         self.cli_commit()
 
@@ -1169,8 +1173,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
         self.assertIn(f' sid vpn export {sid}', afiv4_config)
+        self.assertIn(f' nexthop vpn export {nexthop_ipv4}', afiv4_config)
         afiv6_config = self.getFRRconfig(' address-family ipv6 unicast')
         self.assertIn(f' sid vpn export {sid}', afiv6_config)
+        self.assertIn(f' nexthop vpn export {nexthop_ipv6}', afiv4_config)
 
     def test_bgp_25_ipv4_ipv6_labeled_unicast_peer_group(self):
         pg_ipv4 = 'foo4'
