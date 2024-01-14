@@ -402,6 +402,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         if afi_config.flooding.head_end_replication is vyos_defined %}
   flooding head-end-replication
 {%         endif %}
+{%         if afi_config.nexthop.vpn.export is vyos_defined %}
+  nexthop vpn export {{ afi_config.nexthop.vpn.export }}
+{%         endif %}
 {%         if afi_config.rd.vpn.export is vyos_defined %}
   rd vpn export {{ afi_config.rd.vpn.export }}
 {%         endif %}

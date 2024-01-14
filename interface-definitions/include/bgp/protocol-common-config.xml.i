@@ -120,6 +120,7 @@
         #include <include/bgp/afi-rd.xml.i>
         #include <include/bgp/afi-route-map-vpn.xml.i>
         #include <include/bgp/afi-route-target-vpn.xml.i>
+        #include <include/bgp/afi-nexthop-vpn-export.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>
@@ -496,6 +497,7 @@
         #include <include/bgp/afi-rd.xml.i>
         #include <include/bgp/afi-route-map-vpn.xml.i>
         #include <include/bgp/afi-route-target-vpn.xml.i>
+        #include <include/bgp/afi-nexthop-vpn-export.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>
