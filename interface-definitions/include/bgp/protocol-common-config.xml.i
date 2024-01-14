@@ -188,6 +188,7 @@
             </leafNode>
           </children>
         </node>
+        #include <include/bgp/afi-sid.xml.i>
       </children>
     </node>
     <node name="ipv4-multicast">
@@ -555,6 +556,7 @@
             </leafNode>
           </children>
         </node>
+        #include <include/bgp/afi-sid.xml.i>
       </children>
     </node>
     <node name="ipv6-multicast">

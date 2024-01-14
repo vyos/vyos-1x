@@ -436,6 +436,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         if afi_config.route_map.vpn.import is vyos_defined %}
   route-map vpn import {{ afi_config.route_map.vpn.import }}
 {%         endif %}
+{%         if afi_config.sid.vpn.export is vyos_defined %}
+ sid vpn export {{ afi_config.sid.vpn.export }}
+{%         endif %}
 {%         if afi_config.vni is vyos_defined %}
 {%             for vni, vni_config in afi_config.vni.items() %}
   vni {{ vni }}
