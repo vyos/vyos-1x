@@ -71,10 +71,6 @@ if __name__ == '__main__':
                 conf_lines[i] = line.replace(old_ip, new_ip)
                 found = True
 
-        for i, line in enumerate(secrets_lines):
-            if line.find(to_match) > 0:
-                secrets_lines[i] = line.replace(old_ip, new_ip)
-
         if found:
             write_file(SWANCTL_CONF, conf_lines)
             ipsec_down(old_ip)
