@@ -542,6 +542,10 @@ def verify(bgp):
                     tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
                     if tmp: verify_route_map(tmp, bgp)
 
+                # per-vrf sid and per-af sid are mutually exclusive
+                if 'sid' in afi_config and 'sid' in bgp:
+                    raise ConfigError('SID per VRF and SID per address-family are mutually exclusive!')
+
             # Checks only required for L2VPN EVPN
             if afi in ['l2vpn_evpn']:
                 if 'vni' in afi_config:
