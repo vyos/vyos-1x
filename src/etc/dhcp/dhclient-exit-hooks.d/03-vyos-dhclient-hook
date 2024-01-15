@@ -29,6 +29,7 @@ fi
 
 if [ "$RUN" = "yes" ]; then
         BASE_PATH=$(python3 -c "from vyos.defaults import directories; print(directories['isc_dhclient_dir'])")
+        mkdir -p ${BASE_PATH}
         LOG=${BASE_PATH}/dhclient_"$interface"."$proto"lease
         echo `date` > $LOG
 
