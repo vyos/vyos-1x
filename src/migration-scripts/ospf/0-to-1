@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,7 @@ def ospf_passive_migration(config, ospf_base):
                     default = True
                     continue
                 config.set(ospf_base + ['interface', interface, 'passive'])
+                config.set_tag(ospf_base + ['interface'])
 
             config.delete(ospf_base + ['passive-interface'])
             config.set(ospf_base + ['passive-interface'], value='default')
@@ -35,6 +36,7 @@ def ospf_passive_migration(config, ospf_base):
         if config.exists(ospf_base + ['passive-interface-exclude']):
             for interface in config.return_values(ospf_base + ['passive-interface-exclude']):
                 config.set(ospf_base + ['interface', interface, 'passive', 'disable'])
+                config.set_tag(ospf_base + ['interface'])
             config.delete(ospf_base + ['passive-interface-exclude'])
 
 if len(argv) < 2:

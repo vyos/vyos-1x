@@ -1,13 +1,63 @@
 interfaces {
     dummy dum0 {
-        address 172.18.254.201/32
+        address 172.18.254.200/32
     }
     ethernet eth0 {
         duplex auto
         smp-affinity auto
         speed auto
         vif 201 {
-            address 172.18.201.10/24
+            address 172.18.201.9/24
+            ip {
+                ospf {
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key OSPFVyOSNET
+                            }
+                        }
+                    }
+                    dead-interval 40
+                    hello-interval 10
+                    priority 1
+                    retransmit-interval 5
+                    transmit-delay 1
+                }
+            }
+            ipv6 {
+                ospfv3 {
+                    bfd
+                    cost 40
+                }
+            }
+        }
+        vif 202 {
+            address 172.18.202.9/24
+            ip {
+                ospf {
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key OSPFVyOSNET
+                            }
+                        }
+                    }
+                    dead-interval 40
+                    hello-interval 10
+                    priority 1
+                    retransmit-interval 5
+                    transmit-delay 1
+                }
+            }
+            ipv6 {
+                ospfv3 {
+                    bfd
+                    cost 40
+                }
+            }
+        }
+        vif 203 {
+            address 172.18.203.9/24
             ip {
                 ospf {
                     authentication {
@@ -51,48 +101,31 @@ protocols {
     ospf {
         area 0 {
             network 172.18.201.0/24
-            network 172.18.254.201/32
+            network 172.18.202.0/24
+            network 172.18.203.0/24
+            network 172.18.254.200/32
         }
         log-adjacency-changes {
         }
         parameters {
             abr-type cisco
-            router-id 172.18.254.201
+            router-id 172.18.254.200
         }
         passive-interface default
         passive-interface-exclude eth0.201
+        passive-interface-exclude eth0.202
+        passive-interface-exclude eth0.203
     }
     ospfv3 {
         area 0.0.0.0 {
-            interface eth0
+            interface eth0.201
+            interface eth0.202
+            interface eth0.203
             interface eth1
-            interface eth2
-        }
-    }
-    static {
-        route 0.0.0.0/0 {
-            next-hop 172.18.201.254 {
-                distance 10
-            }
         }
     }
 }
 service {
-    lldp {
-        interface all {
-        }
-        snmp {
-            enable
-        }
-    }
-    snmp {
-        community public {
-            authorization ro
-            network 172.16.100.0/24
-        }
-        contact "VyOS maintainers and contributors <maintainers@vyos.io>"
-        location "Jenkins"
-    }
     ssh {
         disable-host-validation
         port 22
@@ -120,11 +153,9 @@ system {
     }
     name-server 172.16.254.30
     ntp {
-        server 0.pool.ntp.org {
+        server time1.vyos.net {
         }
-        server 1.pool.ntp.org {
-        }
-        server 2.pool.ntp.org {
+        server time2.vyos.net {
         }
     }
     sysctl {
