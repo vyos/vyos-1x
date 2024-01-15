@@ -191,7 +191,7 @@ def main():
                         nargs="*",
                         metavar="HH:MM")
 
-    action.add_argument("--reboot_in", "-i",
+    action.add_argument("--reboot-in", "-i",
                         help="Reboot the system",
                         nargs="*",
                         metavar="Minutes")
