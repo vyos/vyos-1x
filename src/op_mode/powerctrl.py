@@ -214,7 +214,7 @@ def main():
         if args.reboot is not None:
             for r in args.reboot:
                 if ':' not in r and '/' not in r and '.' not in r:
-                    print("Incorrect  format! Use HH:MM")
+                    print("Incorrect format! Use HH:MM")
                     exit(1)
             execute_shutdown(args.reboot, reboot=True, ask=args.yes)
         if args.reboot_in is not None:
