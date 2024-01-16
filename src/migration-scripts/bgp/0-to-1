@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# T3417: migrate IS-IS tagNode to node as we can only have one IS-IS process
+# T3417: migrate BGP tagNode to node as we can only have one BGP process
 
 from sys import argv
 from sys import exit

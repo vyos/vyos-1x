@@ -1,0 +1,73 @@
+set interfaces dummy dum0 address '1.1.1.1/32'
+set interfaces dummy dum0 address '2001:db8::1/128'
+set interfaces ethernet eth0 address 'fd52:100:200:fffe::1/64'
+set interfaces ethernet eth0 address '192.168.253.1/24'
+set interfaces ethernet eth1
+set interfaces ethernet eth2
+set policy route-map BGP-IN rule 10 action 'permit'
+set policy route-map BGP-OUT rule 10 action 'permit'
+set policy route-map BGP-REDISTRIBUTE rule 10 action 'deny'
+set policy route-map DEFAULT-ZEBRA-IN rule 10 action 'deny'
+set protocols bgp address-family ipv4-unicast redistribute connected route-map 'BGP-REDISTRIBUTE'
+set protocols bgp address-family ipv4-unicast redistribute static route-map 'BGP-REDISTRIBUTE'
+set protocols bgp address-family ipv6-unicast redistribute connected route-map 'BGP-REDISTRIBUTE'
+set protocols bgp neighbor 192.168.253.14 peer-group 'WDC07'
+set protocols bgp neighbor 192.168.253.16 peer-group 'WDC07'
+set protocols bgp neighbor 192.168.253.17 peer-group 'WDC07'
+set protocols bgp neighbor 192.168.253.18 peer-group 'WDC07'
+set protocols bgp neighbor 192.168.253.19 peer-group 'WDC07'
+set protocols bgp neighbor eth1 interface v6only peer-group 'BACKBONE'
+set protocols bgp neighbor eth1 interface v6only remote-as '666'
+set protocols bgp neighbor eth2 interface v6only peer-group 'BACKBONE'
+set protocols bgp neighbor eth2 interface v6only remote-as '666'
+set protocols bgp neighbor fd52:100:200:fffe::14 address-family ipv6-unicast
+set protocols bgp neighbor fd52:100:200:fffe::14 peer-group 'WDC07v6'
+set protocols bgp neighbor fd52:100:200:fffe::16 address-family ipv6-unicast
+set protocols bgp neighbor fd52:100:200:fffe::16 peer-group 'WDC07v6'
+set protocols bgp neighbor fd52:100:200:fffe::17 address-family ipv6-unicast
+set protocols bgp neighbor fd52:100:200:fffe::17 peer-group 'WDC07v6'
+set protocols bgp neighbor fd52:100:200:fffe::18 address-family ipv6-unicast
+set protocols bgp neighbor fd52:100:200:fffe::18 peer-group 'WDC07v6'
+set protocols bgp neighbor fd52:100:200:fffe::19 address-family ipv6-unicast
+set protocols bgp neighbor fd52:100:200:fffe::19 peer-group 'WDC07v6'
+set protocols bgp parameters bestpath as-path confed
+set protocols bgp parameters bestpath as-path multipath-relax
+set protocols bgp parameters confederation identifier '696'
+set protocols bgp parameters confederation peers '668'
+set protocols bgp parameters confederation peers '669'
+set protocols bgp parameters confederation peers '666'
+set protocols bgp parameters graceful-restart
+set protocols bgp parameters router-id '192.168.253.15'
+set protocols bgp peer-group BACKBONE address-family ipv4-unicast nexthop-self
+set protocols bgp peer-group BACKBONE address-family ipv4-unicast route-map export 'BGP-OUT'
+set protocols bgp peer-group BACKBONE address-family ipv4-unicast route-map import 'BGP-IN'
+set protocols bgp peer-group BACKBONE address-family ipv4-unicast soft-reconfiguration inbound
+set protocols bgp peer-group BACKBONE address-family ipv6-unicast nexthop-self
+set protocols bgp peer-group BACKBONE address-family ipv6-unicast route-map export 'BGP-OUT'
+set protocols bgp peer-group BACKBONE address-family ipv6-unicast route-map import 'BGP-IN'
+set protocols bgp peer-group BACKBONE address-family ipv6-unicast soft-reconfiguration inbound
+set protocols bgp peer-group BACKBONE capability extended-nexthop
+set protocols bgp peer-group WDC07 address-family ipv4-unicast default-originate
+set protocols bgp peer-group WDC07 address-family ipv4-unicast nexthop-self
+set protocols bgp peer-group WDC07 address-family ipv4-unicast route-map export 'BGP-OUT'
+set protocols bgp peer-group WDC07 address-family ipv4-unicast route-map import 'BGP-IN'
+set protocols bgp peer-group WDC07 address-family ipv4-unicast soft-reconfiguration inbound
+set protocols bgp peer-group WDC07 remote-as '670'
+set protocols bgp peer-group WDC07 update-source 'dum0'
+set protocols bgp peer-group WDC07v6 address-family ipv6-unicast default-originate
+set protocols bgp peer-group WDC07v6 address-family ipv6-unicast nexthop-self
+set protocols bgp peer-group WDC07v6 address-family ipv6-unicast route-map export 'BGP-OUT'
+set protocols bgp peer-group WDC07v6 address-family ipv6-unicast route-map import 'BGP-IN'
+set protocols bgp peer-group WDC07v6 address-family ipv6-unicast soft-reconfiguration inbound
+set protocols bgp peer-group WDC07v6 remote-as '670'
+set protocols bgp peer-group WDC07v6 update-source 'dum0'
+set protocols bgp system-as '670'
+set system config-management commit-revisions '200'
+set system console device ttyS0 speed '115200'
+set system domain-name 'vyos.net'
+set system host-name 'vyos'
+set system ip protocol bgp route-map 'DEFAULT-ZEBRA-IN'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'notice'
+set system syslog global facility local7 level 'debug'
