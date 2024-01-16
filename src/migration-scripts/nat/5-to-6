@@ -51,8 +51,9 @@ for direction in ['source', 'destination']:
         for iface in ['inbound-interface','outbound-interface']:
             if config.exists(base + [iface]):
                 tmp = config.return_value(base + [iface])
-                config.delete(base + [iface])
-                config.set(base + [iface, 'interface-name'], value=tmp)
+                if tmp:
+                    config.delete(base + [iface])
+                    config.set(base + [iface, 'interface-name'], value=tmp)
 
 try:
     with open(file_name, 'w') as f:
