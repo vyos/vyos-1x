@@ -220,9 +220,12 @@ def verify_afi(peer_config, bgp_config):
 
     # If address_family configured under peer-group
     # if neighbor interface configured
-    peer_group_name = ''
+    peer_group_name = None
     if dict_search('interface.peer_group', peer_config):
         peer_group_name = peer_config['interface']['peer_group']
+    elif dict_search('interface.v6only.peer_group', peer_config):
+        peer_group_name = peer_config['interface']['v6only']['peer_group']
+
     # if neighbor IP configured.
     if 'peer_group' in peer_config:
         peer_group_name = peer_config['peer_group']

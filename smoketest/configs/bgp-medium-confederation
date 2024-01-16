@@ -1,0 +1,247 @@
+interfaces {
+    dummy dum0 {
+        address 1.1.1.1/32
+        address 2001:db8::1/128
+    }
+    ethernet eth0 {
+        address 192.168.253.1/24
+        address fd52:100:200:fffe::1/64
+    }
+    ethernet eth1 {
+    }
+    ethernet eth2 {
+    }
+}
+policy {
+    route-map BGP-IN {
+        rule 10 {
+            action permit
+        }
+    }
+    route-map BGP-OUT {
+        rule 10 {
+            action permit
+        }
+    }
+    route-map BGP-REDISTRIBUTE {
+        rule 10 {
+            action deny
+        }
+    }
+    route-map DEFAULT-ZEBRA-IN {
+        rule 10 {
+            action deny
+        }
+    }
+}
+protocols {
+  bgp 670 {
+        address-family {
+            ipv4-unicast {
+                redistribute {
+                    connected {
+                        route-map BGP-REDISTRIBUTE
+                    }
+                    static {
+                        route-map BGP-REDISTRIBUTE
+                    }
+                }
+            }
+            ipv6-unicast {
+                redistribute {
+                    connected {
+                        route-map BGP-REDISTRIBUTE
+                    }
+                }
+            }
+        }
+        neighbor 192.168.253.14 {
+            peer-group WDC07
+        }
+        neighbor 192.168.253.16 {
+            peer-group WDC07
+        }
+        neighbor 192.168.253.17 {
+            peer-group WDC07
+        }
+        neighbor 192.168.253.18 {
+            peer-group WDC07
+        }
+        neighbor 192.168.253.19 {
+            peer-group WDC07
+        }
+        neighbor eth1 {
+            interface {
+                v6only {
+                    peer-group BACKBONE
+                    remote-as 666
+                }
+            }
+        }
+        neighbor eth2 {
+            interface {
+                v6only {
+                    peer-group BACKBONE
+                    remote-as 666
+                }
+            }
+        }
+        neighbor fd52:100:200:fffe::14 {
+            address-family {
+                ipv6-unicast {
+                    peer-group WDC07v6
+                }
+            }
+        }
+        neighbor fd52:100:200:fffe::16 {
+            address-family {
+                ipv6-unicast {
+                    peer-group WDC07v6
+                }
+            }
+        }
+        neighbor fd52:100:200:fffe::17 {
+            address-family {
+                ipv6-unicast {
+                    peer-group WDC07v6
+                }
+            }
+        }
+        neighbor fd52:100:200:fffe::18 {
+            address-family {
+                ipv6-unicast {
+                    peer-group WDC07v6
+                }
+            }
+        }
+        neighbor fd52:100:200:fffe::19 {
+            address-family {
+                ipv6-unicast {
+                    peer-group WDC07v6
+                }
+            }
+        }
+        parameters {
+            bestpath {
+                as-path {
+                    confed
+                    multipath-relax
+                }
+            }
+            confederation {
+                identifier 696
+                peers 668
+                peers 669
+                peers 666
+            }
+            default {
+                no-ipv4-unicast
+            }
+            graceful-restart {
+            }
+            router-id 192.168.253.15
+        }
+        peer-group BACKBONE {
+            address-family {
+                ipv4-unicast {
+                    nexthop-self {
+                    }
+                    route-map {
+                        export BGP-OUT
+                        import BGP-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+                ipv6-unicast {
+                    nexthop-self {
+                    }
+                    route-map {
+                        export BGP-OUT
+                        import BGP-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            capability {
+                extended-nexthop
+            }
+        }
+        peer-group WDC07 {
+            address-family {
+                ipv4-unicast {
+                    default-originate {
+                    }
+                    nexthop-self {
+                    }
+                    route-map {
+                        export BGP-OUT
+                        import BGP-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            remote-as 670
+            update-source dum0
+        }
+        peer-group WDC07v6 {
+            address-family {
+                ipv6-unicast {
+                    default-originate {
+                    }
+                    nexthop-self {
+                    }
+                    route-map {
+                        export BGP-OUT
+                        import BGP-IN
+                    }
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            remote-as 670
+            update-source dum0
+        }
+        route-map DEFAULT-ZEBRA-IN
+    }
+}
+system {
+    config-management {
+        commit-revisions 200
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level notice
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@22:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.5
