@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3741: no-ipv4-unicast is now enabled by default
+# T5937: Migrate IPv6 BGP Neighbor Peer Groups
 
 from sys import argv
 from sys import exit
@@ -65,6 +66,15 @@ else:
             afi_ipv4 = base + ['neighbor', neighbor, 'address-family', 'ipv4-unicast']
             if not config.exists(afi_ipv4):
                 config.set(afi_ipv4)
+
+# Migrate IPv6 AFI peer-group
+if config.exists(base + ['neighbor']):
+    for neighbor in config.list_nodes(base + ['neighbor']):
+        tmp_path = base + ['neighbor', neighbor, 'address-family', 'ipv6-unicast', 'peer-group']
+        if config.exists(tmp_path):
+            peer_group = config.return_value(tmp_path)
+            config.set(base + ['neighbor', neighbor, 'peer-group'], value=peer_group)
+            config.delete(tmp_path)
 
 try:
     with open(file_name, 'w') as f:
