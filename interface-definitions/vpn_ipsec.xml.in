@@ -280,10 +280,10 @@
                     <properties>
                       <help>Keep-alive failure action</help>
                       <completionHelp>
-                        <list>hold clear restart</list>
+                        <list>trap clear restart</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>hold</format>
+                        <format>trap</format>
                         <description>Attempt to re-negotiate the connection when matching traffic is seen</description>
                       </valueHelp>
                       <valueHelp>
@@ -295,7 +295,7 @@
                         <description>Attempt to re-negotiate the connection immediately</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(hold|clear|restart)</regex>
+                        <regex>(trap|clear|restart)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>clear</defaultValue>
