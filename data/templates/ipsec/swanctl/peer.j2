@@ -83,8 +83,7 @@
                 start_action = none
 {%     endif %}
 {%     if ike.dead_peer_detection is vyos_defined %}
-{%         set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'restart'} %}
-                dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
+                dpd_action = {{ ike.dead_peer_detection.action }}
 {%     endif %}
                 close_action = {{ {'none': 'none', 'hold': 'trap', 'restart': 'start'}[ike.close_action] }}
             }
@@ -134,8 +133,7 @@
                 start_action = none
 {%         endif %}
 {%         if ike.dead_peer_detection is vyos_defined %}
-{%             set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'restart'} %}
-                dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
+                dpd_action = {{ ike.dead_peer_detection.action }}
 {%         endif %}
                 close_action = {{ {'none': 'none', 'hold': 'trap', 'restart': 'start'}[ike.close_action] }}
 {%         if peer_conf.vti.bind is vyos_defined %}
