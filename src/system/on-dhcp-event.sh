@@ -63,7 +63,7 @@ case "$action" in
 
       client_ip=${!client_ip_var}
       client_mac=${!client_mac_var}
-      client_name=${!client_name_var}
+      client_name=${!client_name_var//./}
       client_subnet_id=${!client_subnet_id_var}
 
       if [ -z "$client_name" ]; then
