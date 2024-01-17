@@ -36,6 +36,7 @@
             <defaultValue>443</defaultValue>
           </leafNode>
           #include <include/accel-ppp/default-pool.xml.i>
+          #include <include/accel-ppp/default-ipv6-pool.xml.i>
           <node name="ppp-options">
             <properties>
               <help>PPP (Point-to-Point Protocol) settings</help>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -79,9 +79,6 @@ def verify(ipoe):
             if 'key' not in radius_config:
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
-    if 'client_ipv6_pool' in ipoe:
-        if 'delegate' in ipoe['client_ipv6_pool'] and 'prefix' not in ipoe['client_ipv6_pool']:
-            raise ConfigError('IPoE IPv6 deletate-prefix requires IPv6 prefix to be configured!')
 
     return None
 

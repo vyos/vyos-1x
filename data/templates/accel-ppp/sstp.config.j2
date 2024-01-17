@@ -39,6 +39,10 @@ ssl-keyfile=/run/accel-pppd/sstp-cert.key
 {% if default_pool is vyos_defined %}
 ip-pool={{ default_pool }}
 {% endif %}
+{% if default_ipv6_pool is vyos_defined %}
+ipv6-pool={{ default_ipv6_pool }}
+ipv6-pool-delegate={{ default_ipv6_pool }}
+{% endif %}
 
 {# Common IP pool definitions #}
 {% include 'accel-ppp/config_ip_pool.j2' %}
