@@ -27,7 +27,7 @@ TMPL_GRUB_COMPAT: str = 'grub/grub_compat.j2'
 # define regexes and variables
 REGEX_VERSION = r'^menuentry "[^\n]*{\n[^}]*\s+linux /boot/(?P<version>\S+)/[^}]*}'
 REGEX_MENUENTRY = r'^menuentry "[^\n]*{\n[^}]*\s+linux /boot/(?P<version>\S+)/vmlinuz (?P<options>[^\n]+)\n[^}]*}'
-REGEX_CONSOLE = r'^.*console=(?P<console_type>[^\s\d]+)(?P<console_num>[\d]+).*$'
+REGEX_CONSOLE = r'^.*console=(?P<console_type>[^\s\d]+)(?P<console_num>[\d]+)(,(?P<console_speed>[\d]+))?.*$'
 REGEX_SANIT_CONSOLE = r'\ ?console=[^\s\d]+[\d]+(,\d+)?\ ?'
 REGEX_SANIT_INIT = r'\ ?init=\S*\ ?'
 REGEX_SANIT_QUIET = r'\ ?quiet\ ?'
@@ -131,6 +131,8 @@ def parse_entry(entry: tuple) -> dict:
     # find console type and number
     regex_filter = compile(REGEX_CONSOLE)
     entry_dict.update(regex_filter.match(entry[1]).groupdict())
+    speed = entry_dict.get('console_speed', None)
+    entry_dict['console_speed'] = speed if speed is not None else '115200'
     entry_dict['boot_opts'] = sanitize_boot_opts(entry[1])
 
     return entry_dict
@@ -271,9 +273,11 @@ def grub_cfg_fields(root_dir: str = '') -> dict:
         root_dir = disk.find_persistence()
 
     grub_cfg_main = f'{root_dir}/{grub.GRUB_CFG_MAIN}'
+    grub_vars = f'{root_dir}/{grub.CFG_VYOS_VARS}'
 
-    fields = {'default': 0, 'timeout': 5}
-    # 'default' and 'timeout' from legacy grub.cfg
+    fields = grub.vars_read(grub_vars)
+    # 'default' and 'timeout' from legacy grub.cfg resets 'default' to
+    # index, rather than uuid
     fields |= grub.vars_read(grub_cfg_main)
 
     fields['tools_version'] = SYSTEM_CFG_VER

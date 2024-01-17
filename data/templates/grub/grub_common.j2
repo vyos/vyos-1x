@@ -8,7 +8,11 @@ fi
 function setup_serial {
     # initialize the first serial port by default
     if [ "${console_type}" == "ttyS" ]; then
-        serial --unit=${console_num} --speed=${console_speed}
+        if [ "${console_num}" == "0" ]; then
+          serial --unit=0 --speed=${console_speed}
+        else
+          serial --unit=${console_num} --speed=115200
+        fi
     else
         serial --unit=0 --speed=${console_speed}
     fi

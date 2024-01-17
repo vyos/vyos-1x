@@ -346,5 +346,18 @@ def set_console_type(console_type: str, root_dir: str = '') -> None:
     vars_current['console_type'] = str(console_type)
     vars_write(vars_file, vars_current)
 
-def set_raid(root_dir: str = '') -> None:
-    pass
+def set_console_speed(console_speed: str, root_dir: str = '') -> None:
+    """Write default console speed to GRUB configuration
+
+    Args:
+        console_speed (str): default console speed
+        root_dir (str, optional): an optional path to the root directory.
+        Defaults to empty.
+    """
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    vars_file: str = f'{root_dir}/{CFG_VYOS_VARS}'
+    vars_current: dict[str, str] = vars_read(vars_file)
+    vars_current['console_speed'] = str(console_speed)
+    vars_write(vars_file, vars_current)
