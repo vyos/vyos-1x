@@ -85,7 +85,7 @@
 {%     if ike.dead_peer_detection is vyos_defined %}
                 dpd_action = {{ ike.dead_peer_detection.action }}
 {%     endif %}
-                close_action = {{ {'none': 'none', 'hold': 'trap', 'restart': 'start'}[ike.close_action] }}
+                close_action = {{ ike.close_action }}
             }
 {% elif peer_conf.tunnel is vyos_defined %}
 {%     for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
@@ -135,7 +135,7 @@
 {%         if ike.dead_peer_detection is vyos_defined %}
                 dpd_action = {{ ike.dead_peer_detection.action }}
 {%         endif %}
-                close_action = {{ {'none': 'none', 'hold': 'trap', 'restart': 'start'}[ike.close_action] }}
+                close_action = {{ ike.close_action }}
 {%         if peer_conf.vti.bind is vyos_defined %}
 {#             The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
 {#             Thus we simply shift the key by one to also support a vti0 interface #}

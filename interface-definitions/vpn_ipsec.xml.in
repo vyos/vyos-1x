@@ -251,22 +251,22 @@
                 <properties>
                   <help>Action to take if a child SA is unexpectedly closed</help>
                   <completionHelp>
-                    <list>none hold restart</list>
+                    <list>none trap start</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
                     <description>Do nothing</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>hold</format>
+                    <format>trap</format>
                     <description>Attempt to re-negotiate when matching traffic is seen</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>restart</format>
+                    <format>start</format>
                     <description>Attempt to re-negotiate the connection immediately</description>
                   </valueHelp>
                   <constraint>
-                    <regex>(none|hold|restart)</regex>
+                    <regex>(none|trap|start)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>none</defaultValue>

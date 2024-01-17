@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Changed value of dead-peer-detection.action from hold to trap
+# Changed value of close-action from hold to trap and from restart to start
 
 import re
 
@@ -41,8 +42,14 @@ if not config.exists(base):
 else:
     for ike_group in config.list_nodes(base):
         base_dpd_action = base + [ike_group, 'dead-peer-detection', 'action']
+        base_close_action = base + [ike_group, 'close-action']
         if config.exists(base_dpd_action) and config.return_value(base_dpd_action) == 'hold':
             config.set(base_dpd_action, 'trap', replace=True)
+        if config.exists(base_close_action):
+            if config.return_value(base_close_action) == 'hold':
+                config.set(base_close_action, 'trap', replace=True)
+            if config.return_value(base_close_action) == 'restart':
+                config.set(base_close_action, 'start', replace=True)
 
 try:
     with open(file_name, 'w') as f:
