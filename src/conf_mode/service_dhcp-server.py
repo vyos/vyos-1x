@@ -233,6 +233,7 @@ def verify(dhcp):
             if 'static_mapping' in subnet_config:
                 # Static mappings require just a MAC address (will use an IP from the dynamic pool if IP is not set)
                 used_ips = []
+                used_mac = []
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
                     if 'ip_address' in mapping_config:
                         if ip_address(mapping_config['ip_address']) not in ip_network(subnet):
@@ -247,7 +248,11 @@ def verify(dhcp):
                         if mapping_config['ip_address'] in used_ips:
                             raise ConfigError(f'Configured IP address for static mapping "{mapping}" exists on another static mapping')
 
+                        if mapping_config['mac'] in used_mac:
+                            raise ConfigError(f'Configured MAC address for static mapping "{mapping}" exists on another static mapping')
+
                         used_ips.append(mapping_config['ip_address'])
+                        used_mac.append(mapping_config['mac'])
 
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!
