@@ -44,6 +44,38 @@ case "$action" in
     exit 0
     ;;
 
+<<<<<<< HEAD
+=======
+  leases4_committed) # process committed leases (added/renewed/recovered)
+    for ((i = 0; i < $LEASES4_SIZE; i++)); do
+      client_ip_var="LEASES4_AT${i}_ADDRESS"
+      client_mac_var="LEASES4_AT${i}_HWADDR"
+      client_name_var="LEASES4_AT${i}_HOSTNAME"
+      client_subnet_id_var="LEASES4_AT${i}_SUBNET_ID"
+
+      client_ip=${!client_ip_var}
+      client_mac=${!client_mac_var}
+      client_name=${!client_name_var//./}
+      client_subnet_id=${!client_subnet_id_var}
+
+      if [ -z "$client_name" ]; then
+          logger -s -t on-dhcp-event "Client name was empty, using MAC \"$client_mac\" instead"
+          client_name=$(echo "host-$client_mac" | tr : -)
+      fi
+
+      client_domain=$(get_subnet_domain_name $client_subnet_id)
+
+      if [ -n "$client_domain" ]; then
+        client_name="$client_name.$client_domain"
+      fi
+
+      $hostsd_client --add-hosts "$client_name,$client_ip" --tag "dhcp-server-$client_ip" --apply
+    done
+
+    exit 0
+    ;;
+
+>>>>>>> 2da78b428 (dhcp: T5948: Strip trailing dot from hostnames)
   *)
     logger -s -t on-dhcp-event "Invalid command \"$1\""
     exit 1
