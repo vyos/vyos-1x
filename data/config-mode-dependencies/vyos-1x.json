@@ -48,5 +48,8 @@
         "wireguard": ["interfaces_wireguard"],
         "wireless": ["interfaces_wireless"],
         "wwan": ["interfaces_wwan"]
+    },
+    "service_dns_dynamic": {
+        "ethernet": ["interfaces_ethernet"]
     }
 }
