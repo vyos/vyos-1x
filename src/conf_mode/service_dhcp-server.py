@@ -247,12 +247,13 @@ def verify(dhcp):
 
                         if mapping_config['ip_address'] in used_ips:
                             raise ConfigError(f'Configured IP address for static mapping "{mapping}" exists on another static mapping')
+                        used_ips.append(mapping_config['ip_address'])
 
+                    if 'mac' in mapping_config:
                         if mapping_config['mac'] in used_mac:
                             raise ConfigError(f'Configured MAC address for static mapping "{mapping}" exists on another static mapping')
-
-                        used_ips.append(mapping_config['ip_address'])
                         used_mac.append(mapping_config['mac'])
+
 
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!
