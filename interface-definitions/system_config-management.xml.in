@@ -51,15 +51,7 @@
                   <multi/>
                 </properties>
               </leafNode>
-              <leafNode name="source-address">
-                <properties>
-                  <help>Source address or interface for archive server connections</help>
-                  <constraint>
-                    <validator name="ip-address"/>
-                    #include <include/constraint/interface-name.xml.i>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
             </children>
           </node>
           <leafNode name="commit-revisions">
