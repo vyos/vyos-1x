@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -383,11 +383,29 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(pool + ['static-mapping', 'client1', 'duid'])
 
         # cannot have mappings with duplicate IP addresses
+        self.cli_set(pool + ['static-mapping', 'dupe1', 'mac', '00:50:00:00:fe:ff'])
+        self.cli_set(pool + ['static-mapping', 'dupe1', 'ip-address', inc_ip(subnet, 10)])
         with self.assertRaises(ConfigSessionError):
-            self.cli_set(pool + ['static-mapping', 'dupe1', 'mac', '00:50:00:00:00:01'])
-            self.cli_set(pool + ['static-mapping', 'dupe1', 'ip-address', inc_ip(subnet, 10)])
             self.cli_commit()
         self.cli_delete(pool + ['static-mapping', 'dupe1'])
+
+        # cannot have mappings with duplicate MAC addresses
+        self.cli_set(pool + ['static-mapping', 'dupe2', 'mac', '00:50:00:00:00:10'])
+        self.cli_set(pool + ['static-mapping', 'dupe2', 'ip-address', inc_ip(subnet, 120)])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'dupe2'])
+
+
+        # cannot have mappings with duplicate MAC addresses
+        self.cli_set(pool + ['static-mapping', 'dupe3', 'duid', '00:01:02:03:04:05:06:07:aa:aa:aa:aa:aa:01'])
+        self.cli_set(pool + ['static-mapping', 'dupe3', 'ip-address', inc_ip(subnet, 121)])
+        self.cli_set(pool + ['static-mapping', 'dupe4', 'duid', '00:01:02:03:04:05:06:07:aa:aa:aa:aa:aa:01'])
+        self.cli_set(pool + ['static-mapping', 'dupe4', 'ip-address', inc_ip(subnet, 121)])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'dupe3'])
+        self.cli_delete(pool + ['static-mapping', 'dupe4'])
 
         # commit changes
         self.cli_commit()

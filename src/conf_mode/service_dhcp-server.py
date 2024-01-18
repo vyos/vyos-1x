@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -234,6 +234,7 @@ def verify(dhcp):
                 # Static mappings require just a MAC address (will use an IP from the dynamic pool if IP is not set)
                 used_ips = []
                 used_mac = []
+                used_duid = []
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
                     if 'ip_address' in mapping_config:
                         if ip_address(mapping_config['ip_address']) not in ip_network(subnet):
@@ -246,14 +247,18 @@ def verify(dhcp):
                                               f'static mapping "{mapping}" within shared-network "{network}, {subnet}"!')
 
                         if mapping_config['ip_address'] in used_ips:
-                            raise ConfigError(f'Configured IP address for static mapping "{mapping}" exists on another static mapping')
+                            raise ConfigError(f'Configured IP address for static mapping "{mapping}" already exists on another static mapping')
                         used_ips.append(mapping_config['ip_address'])
 
                     if 'mac' in mapping_config:
                         if mapping_config['mac'] in used_mac:
-                            raise ConfigError(f'Configured MAC address for static mapping "{mapping}" exists on another static mapping')
+                            raise ConfigError(f'Configured MAC address for static mapping "{mapping}" already exists on another static mapping')
                         used_mac.append(mapping_config['mac'])
 
+                    if 'duid' in mapping_config:
+                        if mapping_config['duid'] in used_duid:
+                            raise ConfigError(f'Configured DUID for static mapping "{mapping}" already exists on another static mapping')
+                        used_duid.append(mapping_config['duid'])
 
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!
