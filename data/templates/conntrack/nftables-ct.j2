@@ -1,48 +1,160 @@
 #!/usr/sbin/nft -f
 
-{% set nft_ct_ignore_name = 'VYOS_CT_IGNORE' %}
-{% set nft_ct_timeout_name = 'VYOS_CT_TIMEOUT' %}
+{% import 'conntrack/nftables-helpers.j2' as helper_tmpl %}
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
-# we first flush all chains and render the content from scratch - this makes
-# any delta check obsolete
-flush chain raw {{ nft_ct_ignore_name }}
-flush chain raw {{ nft_ct_timeout_name }}
-
-table raw {
-    chain {{ nft_ct_ignore_name }} {
-{% if ignore.rule is vyos_defined %}
-{%     for rule, rule_config in ignore.rule.items() %}
+{% if first_install is not vyos_defined %}
+delete table ip vyos_conntrack
+{% endif %}
+table ip vyos_conntrack {
+    chain VYOS_CT_IGNORE {
+{% if ignore.ipv4.rule is vyos_defined %}
+{%     for rule, rule_config in ignore.ipv4.rule.items() %}
         # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
-{%         set nft_command = '' %}
-{%         if rule_config.inbound_interface is vyos_defined %}
-{%             set nft_command = nft_command ~ ' iifname ' ~ rule_config.inbound_interface %}
-{%         endif %}
-{%         if rule_config.protocol is vyos_defined %}
-{%             set nft_command = nft_command ~ ' ip protocol ' ~ rule_config.protocol %}
-{%         endif %}
-{%         if rule_config.destination.address is vyos_defined %}
-{%             set nft_command = nft_command ~ ' ip daddr ' ~ rule_config.destination.address %}
-{%         endif %}
-{%         if rule_config.destination.port is vyos_defined %}
-{%             set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' dport { ' ~ rule_config.destination.port ~ ' }' %}
-{%         endif %}
-{%         if rule_config.source.address is vyos_defined %}
-{%             set nft_command = nft_command ~ ' ip saddr ' ~ rule_config.source.address %}
-{%         endif %}
-{%         if rule_config.source.port is vyos_defined %}
-{%             set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' sport { ' ~ rule_config.source.port ~ ' }' %}
-{%         endif %}
-       {{ nft_command }} counter notrack comment ignore-{{ rule }}
+        {{ rule_config | conntrack_rule(rule, 'ignore', ipv6=False) }}
+{%     endfor %}
+{% endif %}
+         return
+    }
+    chain VYOS_CT_TIMEOUT {
+{% if timeout.custom.ipv4.rule is vyos_defined %}
+{%     for rule, rule_config in timeout.custom.ipv4.rule.items() %}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
+        {{ rule_config | conntrack_rule(rule, 'timeout', ipv6=False) }}
 {%     endfor %}
 {% endif %}
         return
     }
-    chain {{ nft_ct_timeout_name }} {
-{% if timeout.custom.rule is vyos_defined %}
-{%     for rule, rule_config in timeout.custom.rule.items() %}
+
+{% if timeout.custom.ipv4.rule is vyos_defined %}
+{%     for rule, rule_config in timeout.custom.ipv4.rule.items() %}
+    ct timeout ct-timeout-{{ rule }} {
+        l3proto ip;
+{%         for protocol, protocol_config in rule_config.protocol.items() %}
+        protocol {{ protocol }};
+        policy = { {{ protocol_config | conntrack_ct_policy() }} }
+{%         endfor %}
+    }
+{%     endfor %}
+{% endif %}
+
+    chain PREROUTING {
+        type filter hook prerouting priority -300; policy accept;
+{% if ipv4_firewall_action == 'accept' or ipv4_nat_action == 'accept' %}
+        counter jump VYOS_CT_HELPER
+{% endif %}
+        counter jump VYOS_CT_IGNORE
+        counter jump VYOS_CT_TIMEOUT
+        counter jump FW_CONNTRACK
+        counter jump NAT_CONNTRACK
+        counter jump WLB_CONNTRACK
+        notrack
+    }
+
+    chain OUTPUT {
+        type filter hook output priority -300; policy accept;
+{% if ipv4_firewall_action == 'accept' or ipv4_nat_action == 'accept' %}
+        counter jump VYOS_CT_HELPER
+{% endif %}
+        counter jump VYOS_CT_IGNORE
+        counter jump VYOS_CT_TIMEOUT
+        counter jump FW_CONNTRACK
+        counter jump NAT_CONNTRACK
+{% if wlb_local_action %}
+        counter jump WLB_CONNTRACK
+{% endif %}
+        notrack
+    }
+
+{{ helper_tmpl.conntrack_helpers(module_map, modules, ipv4=True) }}
+
+    chain FW_CONNTRACK {
+        {{ ipv4_firewall_action }}
+    }
+
+    chain NAT_CONNTRACK {
+        {{ ipv4_nat_action }}
+    }
+
+    chain WLB_CONNTRACK {
+        {{ wlb_action }}
+    }
+
+{% if firewall.group is vyos_defined %}
+{{ group_tmpl.groups(firewall.group, False, True) }}
+{% endif %}
+}
+
+{% if first_install is not vyos_defined %}
+delete table ip6 vyos_conntrack
+{% endif %}
+table ip6 vyos_conntrack {
+    chain VYOS_CT_IGNORE {
+{% if ignore.ipv6.rule is vyos_defined %}
+{%     for rule, rule_config in ignore.ipv6.rule.items() %}
         # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
+       {{ rule_config | conntrack_rule(rule, 'ignore', ipv6=True) }}
 {%     endfor %}
 {% endif %}
         return
     }
+    chain VYOS_CT_TIMEOUT {
+{% if timeout.custom.ipv6.rule is vyos_defined %}
+{%     for rule, rule_config in timeout.custom.ipv6.rule.items() %}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
+        {{ rule_config | conntrack_rule(rule, 'timeout', ipv6=True) }}
+{%     endfor %}
+{% endif %}
+        return
+    }
+
+{% if timeout.custom.ipv6.rule is vyos_defined %}
+{%     for rule, rule_config in timeout.custom.ipv6.rule.items() %}
+    ct timeout ct-timeout-{{ rule }} {
+        l3proto ip;
+{%         for protocol, protocol_config in rule_config.protocol.items() %}
+        protocol {{ protocol }};
+        policy = { {{ protocol_config | conntrack_ct_policy() }} }
+{%         endfor %}
+    }
+{%     endfor %}
+{% endif %}
+
+    chain PREROUTING {
+        type filter hook prerouting priority -300; policy accept;
+{% if ipv6_firewall_action == 'accept' or ipv6_nat_action == 'accept' %}
+        counter jump VYOS_CT_HELPER
+{% endif %}
+        counter jump VYOS_CT_IGNORE
+        counter jump VYOS_CT_TIMEOUT
+        counter jump FW_CONNTRACK
+        counter jump NAT_CONNTRACK
+        notrack
+    }
+
+    chain OUTPUT {
+        type filter hook output priority -300; policy accept;
+{% if ipv6_firewall_action == 'accept' or ipv6_nat_action == 'accept' %}
+        counter jump VYOS_CT_HELPER
+{% endif %}
+        counter jump VYOS_CT_IGNORE
+        counter jump VYOS_CT_TIMEOUT
+        counter jump FW_CONNTRACK
+        counter jump NAT_CONNTRACK
+        notrack
+    }
+
+{{ helper_tmpl.conntrack_helpers(module_map, modules, ipv4=False) }}
+
+    chain FW_CONNTRACK {
+        {{ ipv6_firewall_action }}
+    }
+
+    chain NAT_CONNTRACK {
+        {{ ipv6_nat_action }}
+    }
+
+{% if firewall.group is vyos_defined %}
+{{ group_tmpl.groups(firewall.group, True, True) }}
+{% endif %}
 }
