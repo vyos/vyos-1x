@@ -31,6 +31,14 @@ def get_sysctl(parameter):
     return read_file(f'/proc/sys/{tmp}')
 
 class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestSystemConntrack, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
