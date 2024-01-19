@@ -44,7 +44,7 @@
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
 {%         endif %}
-        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
     chain VZONE_{{ zone_name }}_OUT {
         oifname lo counter return
@@ -54,7 +54,7 @@
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
 {%         endif %}
-        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
 {%     else %}
     chain VZONE_{{ zone_name }} {
@@ -70,7 +70,7 @@
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
-        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
 {%     endif %}
 {% endfor %}

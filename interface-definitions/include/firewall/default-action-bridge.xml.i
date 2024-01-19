@@ -1,7 +1,7 @@
-<!-- include start from firewall/default-action-bridge.xml.i -->
+<!-- include start from firewall/default-action.xml.i -->
 <leafNode name="default-action">
   <properties>
-    <help>Default action for rule-set</help>
+    <help>Default-action for rule-set</help>
     <completionHelp>
       <list>drop jump return accept continue</list>
     </completionHelp>

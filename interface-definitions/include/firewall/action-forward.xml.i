@@ -3,7 +3,7 @@
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept continue jump reject return drop queue offload</list>
+      <list>accept continue jump reject return drop queue offload synproxy</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
@@ -37,8 +37,12 @@
       <format>offload</format>
       <description>Offload packet via flowtable</description>
     </valueHelp>
+    <valueHelp>
+      <format>synproxy</format>
+      <description>Synproxy connections</description>
+    </valueHelp>
     <constraint>
-      <regex>(accept|continue|jump|reject|return|drop|queue|offload)</regex>
+      <regex>(accept|continue|jump|reject|return|drop|queue|offload|synproxy)</regex>
     </constraint>
   </properties>
 </leafNode>

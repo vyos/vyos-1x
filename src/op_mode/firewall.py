@@ -113,19 +113,14 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
 
     if hook in ['input', 'forward', 'output']:
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'accept'
-        row = ['default', def_action, 'all']
-        rule_details = details['default-action']
-        row.append(rule_details.get('packets', 0))
-        row.append(rule_details.get('bytes', 0))
-        rows.append(row)
+    else:
+        def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'drop'
+    row = ['default', def_action, 'all']
+    rule_details = details['default-action']
+    row.append(rule_details.get('packets', 0))
+    row.append(rule_details.get('bytes', 0))
 
-    elif 'default_action' in firewall_conf and not single_rule_id:
-        row = ['default', firewall_conf['default_action'], 'all']
-        if 'default-action' in details:
-            rule_details = details['default-action']
-            row.append(rule_details.get('packets', 0))
-            row.append(rule_details.get('bytes', 0))
-        rows.append(row)
+    rows.append(row)
 
     if rows:
         header = ['Rule', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
@@ -314,7 +309,7 @@ def show_firewall_group(name=None):
             family = ['ipv6']
             group_type = 'network_group'
         else:
-            family = ['ipv4', 'ipv6']
+            family = ['ipv4', 'ipv6', 'bridge']
 
         for item in family:
             # Look references in firewall

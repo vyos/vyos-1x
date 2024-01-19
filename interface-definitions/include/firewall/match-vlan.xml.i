@@ -6,14 +6,14 @@
   <children>
     <leafNode name="id">
       <properties>
-        <help>VLAN id</help>
+        <help>Vlan id</help>
         <valueHelp>
           <format>u32:0-4096</format>
-          <description>VLAN id</description>
+          <description>Vlan id</description>
         </valueHelp>
         <valueHelp>
           <format>&lt;start-end&gt;</format>
-          <description>VLAN id range to match</description>
+          <description>Vlan id range to match</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--allow-range --range 0-4095"/>
@@ -22,14 +22,14 @@
     </leafNode>
     <leafNode name="priority">
       <properties>
-        <help>VLAN priority(pcp)</help>
+        <help>Vlan priority(pcp)</help>
         <valueHelp>
           <format>u32:0-7</format>
-          <description>VLAN priority</description>
+          <description>Vlan priority</description>
         </valueHelp>
         <valueHelp>
           <format>&lt;start-end&gt;</format>
-          <description>VLAN priority range to match</description>
+          <description>Vlan priority range to match</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--allow-range --range 0-7"/>

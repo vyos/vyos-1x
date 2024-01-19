@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -277,6 +277,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['type filter hook output priority filter; policy accept;'],
             ['meta l4proto gre', f'oifname != "{interface}"', 'drop'],
             ['meta l4proto icmp', f'ct mark {mark_hex}', 'return'],
+            ['log prefix "[ipv4-OUT-filter-default-D]"','OUT-filter default-action drop', 'drop'],
             ['chain NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[ipv4-NAM-smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
@@ -345,6 +346,31 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+    def test_ipv4_synproxy(self):
+        tcp_mss = '1460'
+        tcp_wscale = '7'
+        dport = '22'
+
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'destination', 'port', dport])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'synproxy', 'tcp', 'mss', tcp_mss])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'synproxy', 'tcp', 'window-scale', tcp_wscale])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'action', 'synproxy'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'tcp dport {dport} ct state invalid,untracked', f'synproxy mss {tcp_mss} wscale {tcp_wscale} timestamp sack-perm']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
 
     def test_ipv4_mask(self):
         name = 'smoketest-mask'
@@ -463,6 +489,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'default-action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'source', 'address', '2001:db8::/64'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'mark', '!6655-7766'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'jump-target', name])
 
@@ -474,7 +501,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip6 length 1-1999', 'ip6 length != 60000-65535', 'ip6 dscp 0x04-0x0e', 'ip6 dscp != 0x1f-0x23', 'accept'],
             ['chain VYOS_IPV6_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
-            ['ip6 saddr 2001:db8::/64', f'jump NAME6_{name}'],
+            ['ip6 saddr 2001:db8::/64', 'meta mark != 0x000019ff-0x00001e56', f'jump NAME6_{name}'],
             [f'chain NAME6_{name}'],
             ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'accept'],
             [f'log prefix "[ipv6-{name}-default-D]"', 'drop']
@@ -558,8 +585,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
         # Check conntrack
-        self.verify_nftables_chain([['accept']], 'raw', 'FW_CONNTRACK')
-        self.verify_nftables_chain([['return']], 'ip6 raw', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['return']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
     def test_bridge_basic_rules(self):
         name = 'smoketest'
@@ -588,11 +615,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
-            ['type filter hook forward priority filter; policy drop;'],
+            ['type filter hook forward priority filter; policy accept;'],
             [f'vlan id {vlan_id}', 'accept'],
             [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
+            ['log prefix "[bri-FWD-filter-default-D]"', 'drop', 'FWD-filter default-action drop'],
             [f'chain NAME_{name}'],
-            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept']
+            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept'],
+            ['accept', f'{name} default-action accept']
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
@@ -737,8 +766,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
         # Check conntrack
-        #self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
-        #self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
     def test_zone_flow_offload(self):
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
@@ -773,8 +802,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
         # Check conntrack
-        #self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
-        #self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

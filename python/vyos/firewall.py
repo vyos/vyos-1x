@@ -87,6 +87,7 @@ def nft_action(vyos_action):
 
 def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     output = []
+
     if ip_name == 'ip6':
         def_suffix = '6'
         family = 'ipv6'
@@ -260,6 +261,9 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                         group_name = group_name[1:]
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
+
+    if dict_search_args(rule_conf, 'action') == 'synproxy':
+        output.append('ct state invalid,untracked')
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
@@ -439,6 +443,15 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if 'queue_options' in rule_conf:
                     queue_opts = ','.join(rule_conf['queue_options'])
                     output.append(f'{queue_opts}')
+
+        # Synproxy
+        if 'synproxy' in rule_conf:
+            synproxy_mss = dict_search_args(rule_conf, 'synproxy', 'tcp', 'mss')
+            if synproxy_mss:
+                output.append(f'mss {synproxy_mss}')
+            synproxy_ws = dict_search_args(rule_conf, 'synproxy', 'tcp', 'window_scale')
+            if synproxy_ws:
+                output.append(f'wscale {synproxy_ws} timestamp sack-perm')
 
     else:
         output.append('return')

@@ -9,7 +9,12 @@
     #include <include/firewall/mac-address.xml.i>
   </children>
 </node>
-#include <include/generic-disable-node.xml.i>
+<leafNode name="disable">
+  <properties>
+    <help>Option to disable firewall rule</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <leafNode name="jump-target">
   <properties>
     <help>Set jump target. Action jump must be defined to use this setting</help>

@@ -2,9 +2,8 @@
 {% set ns = namespace(sets=[]) %}
 {% if bridge.forward is vyos_defined %}
 {%     for prior, conf in bridge.forward.items() %}
-{%         set def_action = conf.default_action %}
     chain VYOS_FORWARD_{{ prior }} {
-        type filter hook forward priority {{ prior }}; policy {{ def_action }};
+        type filter hook forward priority {{ prior }}; policy accept;
 {%         if conf.rule is vyos_defined %}
 {%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
     {{ rule_conf | nft_rule('FWD', prior, rule_id, 'bri') }}
@@ -13,6 +12,7 @@
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
+    {{ conf | nft_default_rule('FWD-filter', 'bri') }}
     }
 {%     endfor %}
 {% endif %}
@@ -28,7 +28,7 @@
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
-    {{ conf | nft_default_rule(name_text) }}
+    {{ conf | nft_default_rule(name_text, 'bri') }}
     }
 {%     endfor %}
 {% endif %}
