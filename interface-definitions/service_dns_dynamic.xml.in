@@ -38,42 +38,29 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="address">
+                  <node name="address">
                     <properties>
                       <help>Obtain IP address to send Dynamic DNS update for</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Use interface to obtain the IP address</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>web</format>
-                        <description>Use HTTP(S) web request to obtain the IP address</description>
-                      </valueHelp>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces</script>
-                        <list>web</list>
-                      </completionHelp>
-                      <constraint>
-                        #include <include/constraint/interface-name.xml.i>
-                        <regex>web</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <node name="web-options">
-                    <properties>
-                      <help>Options when using HTTP(S) web request to obtain the IP address</help>
                     </properties>
                     <children>
-                      #include <include/url-http-https.xml.i>
-                      <leafNode name="skip">
+                      #include <include/generic-interface.xml.i>
+                      <node name="web">
                         <properties>
-                          <help>Pattern to skip from the HTTP(S) respose</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Pattern to skip from the HTTP(S) respose to extract the external IP address</description>
-                          </valueHelp>
+                          <help>HTTP(S) web request to use</help>
                         </properties>
-                      </leafNode>
+                        <children>
+                          #include <include/url-http-https.xml.i>
+                          <leafNode name="skip">
+                            <properties>
+                              <help>Pattern to skip from the HTTP(S) respose</help>
+                              <valueHelp>
+                                <format>txt</format>
+                                <description>Pattern to skip from the HTTP(S) respose to extract the external IP address</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
                     </children>
                   </node>
                   <leafNode name="ip-version">
