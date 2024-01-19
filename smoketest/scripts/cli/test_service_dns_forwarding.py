@@ -280,7 +280,7 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
     def test_listening_port(self):
         # We can listen on a different port compared to '53' but only one at a time
-        for port in ['1053', '5353']:
+        for port in ['10053', '10054']:
             self.cli_set(base_path + ['port', port])
             for network in allow_from:
                 self.cli_set(base_path + ['allow-from', network])
