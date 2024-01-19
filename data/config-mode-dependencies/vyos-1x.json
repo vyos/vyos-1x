@@ -1,6 +1,7 @@
 {
   "firewall": {
-    "group_resync": ["nat", "policy_route"]
+    "conntrack": ["system_conntrack"],
+    "group_resync": ["system_conntrack", "nat", "policy_route"]
   },
   "interfaces_bonding": {
     "ethernet": ["interfaces_ethernet"]

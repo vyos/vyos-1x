@@ -9,6 +9,12 @@
           <priority>218</priority>
         </properties>
         <children>
+          <leafNode name="flow-accounting">
+            <properties>
+              <help>Enable connection tracking flow accounting</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="expect-table-size">
             <properties>
               <help>Size of connection tracking expect table</help>
@@ -40,82 +46,179 @@
               <help>Customized rules to ignore selective connection tracking</help>
             </properties>
             <children>
-              <tagNode name="rule">
+              <node name="ipv4">
                 <properties>
-                  <help>Rule number</help>
-                  <valueHelp>
-                    <format>u32:1-999999</format>
-                    <description>Number of conntrack ignore rule</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-999999"/>
-                  </constraint>
-                  <constraintErrorMessage>Ignore rule number must be between 1 and 999999</constraintErrorMessage>
+                  <help>IPv4 rules</help>
                 </properties>
                 <children>
-                  #include <include/generic-description.xml.i>
-                  <node name="destination">
+                  <tagNode name="rule">
                     <properties>
-                      <help>Destination parameters</help>
-                    </properties>
-                    <children>
-                      #include <include/nat-address.xml.i>
-                      #include <include/nat-port.xml.i>
-                    </children>
-                  </node>
-                  <leafNode name="inbound-interface">
-                    <properties>
-                      <help>Interface to ignore connections tracking on</help>
-                      <completionHelp>
-                        <list>any</list>
-                        <script>${vyos_completion_dir}/list_interfaces</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
-                  #include <include/ip-protocol.xml.i>
-                  <leafNode name="protocol">
-                    <properties>
-                      <help>Protocol to match (protocol name, number, or "all")</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_protocols.sh</script>
-                        <list>all tcp_udp</list>
-                      </completionHelp>
+                      <help>Rule number</help>
                       <valueHelp>
-                        <format>all</format>
-                        <description>All IP protocols</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>tcp_udp</format>
-                        <description>Both TCP and UDP</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>u32:0-255</format>
-                        <description>IP protocol number</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>&lt;protocol&gt;</format>
-                        <description>IP protocol name</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>!&lt;protocol&gt;</format>
-                        <description>IP protocol name</description>
+                        <format>u32:1-999999</format>
+                        <description>Number of conntrack ignore rule</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="ip-protocol"/>
+                        <validator name="numeric" argument="--range 1-999999"/>
                       </constraint>
-                    </properties>
-                  </leafNode>
-                  <node name="source">
-                    <properties>
-                      <help>Source parameters</help>
+                      <constraintErrorMessage>Ignore rule number must be between 1 and 999999</constraintErrorMessage>
                     </properties>
                     <children>
-                      #include <include/nat-address.xml.i>
-                      #include <include/nat-port.xml.i>
+                      #include <include/generic-description.xml.i>
+                      <node name="destination">
+                        <properties>
+                          <help>Destination parameters</help>
+                        </properties>
+                        <children>
+                          #include <include/firewall/source-destination-group-ipv4.xml.i>
+                          #include <include/nat-address.xml.i>
+                          #include <include/nat-port.xml.i>
+                        </children>
+                      </node>
+                      <leafNode name="inbound-interface">
+                        <properties>
+                          <help>Interface to ignore connections tracking on</help>
+                          <completionHelp>
+                            <list>any</list>
+                            <script>${vyos_completion_dir}/list_interfaces</script>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      #include <include/ip-protocol.xml.i>
+                      <leafNode name="protocol">
+                        <properties>
+                          <help>Protocol to match (protocol name, number, or "all")</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_protocols.sh</script>
+                            <list>all tcp_udp</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>All IP protocols</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>tcp_udp</format>
+                            <description>Both TCP and UDP</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>u32:0-255</format>
+                            <description>IP protocol number</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>&lt;protocol&gt;</format>
+                            <description>IP protocol name</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>!&lt;protocol&gt;</format>
+                            <description>IP protocol name</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-protocol"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <node name="source">
+                        <properties>
+                          <help>Source parameters</help>
+                        </properties>
+                        <children>
+                          #include <include/firewall/source-destination-group-ipv4.xml.i>
+                          #include <include/nat-address.xml.i>
+                          #include <include/nat-port.xml.i>
+                        </children>
+                      </node>
+                      #include <include/firewall/tcp-flags.xml.i>
                     </children>
-                  </node>
+                  </tagNode>
                 </children>
-              </tagNode>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>IPv6 rules</help>
+                </properties>
+                <children>
+                  <tagNode name="rule">
+                    <properties>
+                      <help>Rule number</help>
+                      <valueHelp>
+                        <format>u32:1-999999</format>
+                        <description>Number of conntrack ignore rule</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-999999"/>
+                      </constraint>
+                      <constraintErrorMessage>Ignore rule number must be between 1 and 999999</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/generic-description.xml.i>
+                      <node name="destination">
+                        <properties>
+                          <help>Destination parameters</help>
+                        </properties>
+                        <children>
+                          #include <include/firewall/address-ipv6.xml.i>
+                          #include <include/firewall/source-destination-group-ipv6.xml.i>
+                          #include <include/nat-port.xml.i>
+                        </children>
+                      </node>
+                      <leafNode name="inbound-interface">
+                        <properties>
+                          <help>Interface to ignore connections tracking on</help>
+                          <completionHelp>
+                            <list>any</list>
+                            <script>${vyos_completion_dir}/list_interfaces</script>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      #include <include/ip-protocol.xml.i>
+                      <leafNode name="protocol">
+                        <properties>
+                          <help>Protocol to match (protocol name, number, or "all")</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_protocols.sh</script>
+                            <list>all tcp_udp</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>All IP protocols</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>tcp_udp</format>
+                            <description>Both TCP and UDP</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>u32:0-255</format>
+                            <description>IP protocol number</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>&lt;protocol&gt;</format>
+                            <description>IP protocol name</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>!&lt;protocol&gt;</format>
+                            <description>IP protocol name</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-protocol"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <node name="source">
+                        <properties>
+                          <help>Source parameters</help>
+                        </properties>
+                        <children>
+                          #include <include/firewall/address-ipv6.xml.i>
+                          #include <include/firewall/source-destination-group-ipv6.xml.i>
+                          #include <include/nat-port.xml.i>
+                        </children>
+                      </node>
+                      #include <include/firewall/tcp-flags.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+
             </children>
           </node>
           <node name="log">
@@ -282,58 +385,122 @@
                   <help>Define custom timeouts per connection</help>
                 </properties>
                 <children>
-                  <tagNode name="rule">
+                  <node name="ipv4">
                     <properties>
-                      <help>Rule number</help>
-                      <valueHelp>
-                        <format>u32:1-999999</format>
-                        <description>Number of conntrack rule</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-999999"/>
-                      </constraint>
-                      <constraintErrorMessage>Ignore rule number must be between 1 and 999999</constraintErrorMessage>
+                      <help>IPv4 rules</help>
                     </properties>
                     <children>
-                      #include <include/generic-description.xml.i>
-                      <node name="destination">
+                      <tagNode name="rule">
                         <properties>
-                          <help>Destination parameters</help>
+                          <help>Rule number</help>
+                          <valueHelp>
+                            <format>u32:1-999999</format>
+                            <description>Number of conntrack rule</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-999999"/>
+                          </constraint>
+                          <constraintErrorMessage>Ignore rule number must be between 1 and 999999</constraintErrorMessage>
                         </properties>
                         <children>
-                          #include <include/nat-address.xml.i>
-                          #include <include/nat-port.xml.i>
+                          #include <include/generic-description.xml.i>
+                          <node name="destination">
+                            <properties>
+                              <help>Destination parameters</help>
+                            </properties>
+                            <children>
+                              #include <include/nat-address.xml.i>
+                              #include <include/nat-port.xml.i>
+                            </children>
+                          </node>
+                          <leafNode name="inbound-interface">
+                            <properties>
+                              <help>Interface to ignore connections tracking on</help>
+                              <completionHelp>
+                                <list>any</list>
+                                <script>${vyos_completion_dir}/list_interfaces</script>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                          <node name="protocol">
+                            <properties>
+                              <help>Customize protocol specific timers, one protocol configuration per rule</help>
+                            </properties>
+                            <children>
+                              #include <include/conntrack/timeout-custom-protocols.xml.i>
+                            </children>
+                          </node>
+                          <node name="source">
+                            <properties>
+                              <help>Source parameters</help>
+                            </properties>
+                            <children>
+                              #include <include/nat-address.xml.i>
+                              #include <include/nat-port.xml.i>
+                            </children>
+                          </node>
                         </children>
-                      </node>
-                      <leafNode name="inbound-interface">
-                        <properties>
-                          <help>Interface to ignore connections tracking on</help>
-                          <completionHelp>
-                            <list>any</list>
-                            <script>${vyos_completion_dir}/list_interfaces</script>
-                          </completionHelp>
-                        </properties>
-                      </leafNode>
-                      #include <include/ip-protocol.xml.i>
-                      <node name="protocol">
-                        <properties>
-                          <help>Customize protocol specific timers, one protocol configuration per rule</help>
-                        </properties>
-                        <children>
-                          #include <include/conntrack/timeout-common-protocols.xml.i>
-                        </children>
-                      </node>
-                      <node name="source">
-                        <properties>
-                          <help>Source parameters</help>
-                        </properties>
-                        <children>
-                          #include <include/nat-address.xml.i>
-                          #include <include/nat-port.xml.i>
-                        </children>
-                      </node>
+                      </tagNode>
                     </children>
-                  </tagNode>
+                  </node>
+                  <node name="ipv6">
+                    <properties>
+                      <help>IPv6 rules</help>
+                    </properties>
+                    <children>
+                      <tagNode name="rule">
+                        <properties>
+                          <help>Rule number</help>
+                          <valueHelp>
+                            <format>u32:1-999999</format>
+                            <description>Number of conntrack rule</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-999999"/>
+                          </constraint>
+                          <constraintErrorMessage>Ignore rule number must be between 1 and 999999</constraintErrorMessage>
+                        </properties>
+                        <children>
+                          #include <include/generic-description.xml.i>
+                          <node name="destination">
+                            <properties>
+                              <help>Destination parameters</help>
+                            </properties>
+                            <children>
+                              #include <include/firewall/address-ipv6.xml.i>
+                              #include <include/nat-port.xml.i>
+                            </children>
+                          </node>
+                          <leafNode name="inbound-interface">
+                            <properties>
+                              <help>Interface to ignore connections tracking on</help>
+                              <completionHelp>
+                                <list>any</list>
+                                <script>${vyos_completion_dir}/list_interfaces</script>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                          <node name="protocol">
+                            <properties>
+                              <help>Customize protocol specific timers, one protocol configuration per rule</help>
+                            </properties>
+                            <children>
+                              #include <include/conntrack/timeout-custom-protocols.xml.i>
+                            </children>
+                          </node>
+                          <node name="source">
+                            <properties>
+                              <help>Source parameters</help>
+                            </properties>
+                            <children>
+                              #include <include/firewall/address-ipv6.xml.i>
+                              #include <include/nat-port.xml.i>
+                            </children>
+                          </node>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
                 </children>
               </node>
               #include <include/conntrack/timeout-common-protocols.xml.i>
