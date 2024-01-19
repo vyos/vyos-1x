@@ -1,4 +1,4 @@
-# Copyright 2022-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -166,14 +166,17 @@ class QoSBase:
         }
 
         if rate == 'auto' or rate.endswith('%'):
-            speed = 10
+            speed = 1000
+            default_speed = speed
             # Not all interfaces have valid entries in the speed file. PPPoE
             # interfaces have the appropriate speed file, but you can not read it:
             # cat: /sys/class/net/pppoe7/speed: Invalid argument
             try:
                 speed = read_file(f'/sys/class/net/{self._interface}/speed')
                 if not speed.isnumeric():
-                    Warning('Interface speed cannot be determined (assuming 10 Mbit/s)')
+                    Warning('Interface speed cannot be determined (assuming 1000 Mbit/s)')
+                if int(speed) < 1:
+                    speed = default_speed
                 if rate.endswith('%'):
                     percent = rate.rstrip('%')
                     speed = int(speed) * int(percent) // 100
