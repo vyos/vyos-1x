@@ -7,7 +7,7 @@ use{{ ipv }}={{ address if address == 'web' else 'if' }}{{ ipv }}, \
 web{{ ipv }}={{ web_options.url }}, \
 {%         endif %}
 {%         if web_options.skip is vyos_defined %}
-web-skip{{ ipv }}='{{ web_options.skip }}', \
+web{{ ipv }}-skip='{{ web_options.skip }}', \
 {%         endif %}
 {%     else %}
 if{{ ipv }}={{ address }}, \
@@ -45,9 +45,12 @@ use=no
                                        else ['']) %}
 {%             set password = config.key if config.protocol == 'nsupdate'
                               else config.password %}
+{%             set address = 'web' if config.address.web is vyos_defined
+                              else config.address.interface %}
+{%             set web_options = config.address.web | default({}) %}
 
 # Web service dynamic DNS configuration for {{ service }}: [{{ config.protocol }}, {{ host }}]
-{{ render_config(host, config.address, config.web_options, ip_suffixes,
+{{ render_config(host, address, web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
                  login=config.username, password=password, ttl=config.ttl,
                  min_interval=config.wait_time, max_interval=config.expiry_time) }}
