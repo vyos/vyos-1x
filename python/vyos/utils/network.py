@@ -159,7 +159,9 @@ def is_wwan_connected(interface):
     """ Determine if a given WWAN interface, e.g. wwan0 is connected to the
     carrier network or not """
     import json
+    from vyos.utils.dict import dict_search
     from vyos.utils.process import cmd
+    from vyos.utils.process import is_systemd_service_active
 
     if not interface.startswith('wwan'):
         raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
