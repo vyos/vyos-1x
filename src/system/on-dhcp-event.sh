@@ -63,7 +63,7 @@ case "$action" in
 
       client_ip=${!client_ip_var}
       client_mac=${!client_mac_var}
-      client_name=${!client_name_var//./}
+      client_name=${!client_name_var%.}
       client_subnet_id=${!client_subnet_id_var}
 
       if [ -z "$client_name" ]; then
@@ -73,7 +73,7 @@ case "$action" in
 
       client_domain=$(get_subnet_domain_name $client_subnet_id)
 
-      if [ -n "$client_domain" ]; then
+      if [[ -n "$client_domain" ]] && ! [[ $client_name =~ .*$client_domain$ ]]; then
         client_name="$client_name.$client_domain"
       fi
 
