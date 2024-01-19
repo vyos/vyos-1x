@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -87,31 +87,36 @@ def verify(dyndns):
             if field not in config:
                 raise ConfigError(f'"{field.replace("_", "-")}" {error_msg_req}')
 
-        # If dyndns address is an interface, ensure
-        # that the interface exists (or just warn if dynamic interface)
-        # and that web-options are not set
-        if config['address'] != 'web':
+        if not any(x in config['address'] for x in ['interface', 'web']):
+            raise ConfigError(f'Either "interface" or "web" {error_msg_req} '
+                              f'with protocol "{config["protocol"]}"')
+        if all(x in config['address'] for x in ['interface', 'web']):
+            raise ConfigError(f'Both "interface" and "web" at the same time {error_msg_uns} '
+                              f'with protocol "{config["protocol"]}"')
+
+        # If dyndns address is an interface, ensure that the interface exists
+        # and warn if a non-active dynamic interface is used
+        if 'interface' in config['address']:
             tmp = re.compile(dynamic_interface_pattern)
             # exclude check interface for dynamic interfaces
-            if tmp.match(config["address"]):
-                if not interface_exists(config["address"]):
-                    Warning(f'Interface "{config["address"]}" does not exist yet and cannot '
-                            f'be used for Dynamic DNS service "{service}" until it is up!')
+            if tmp.match(config['address']['interface']):
+                if not interface_exists(config['address']['interface']):
+                    Warning(f'Interface "{config["address"]["interface"]}" does not exist yet and '
+                            f'cannot be used for Dynamic DNS service "{service}" until it is up!')
             else:
-                verify_interface_exists(config['address'])
-            if 'web_options' in config:
-                raise ConfigError(f'"web-options" is applicable only when using HTTP(S) '
-                                  f'web request to obtain the IP address')
+                verify_interface_exists(config['address']['interface'])
 
-        # Warn if using checkip.dyndns.org, as it does not support HTTPS
-        # See: https://github.com/ddclient/ddclient/issues/597
-        if 'web_options' in config:
-            if 'url' not in config['web_options']:
-                raise ConfigError(f'"url" in "web-options" {error_msg_req} '
+        if 'web' in config['address']:
+            # If 'skip' is specified, 'url' is required as well
+            if 'skip' in config['address']['web'] and 'url' not in config['address']['web']:
+                raise ConfigError(f'"url" along with "skip" {error_msg_req} '
                                   f'with protocol "{config["protocol"]}"')
-            elif re.search("^(https?://)?checkip\.dyndns\.org", config['web_options']['url']):
-                Warning(f'"checkip.dyndns.org" does not support HTTPS requests for IP address '
-                        f'lookup. Please use a different IP address lookup service.')
+            if 'url' in config['address']['web']:
+                # Warn if using checkip.dyndns.org, as it does not support HTTPS
+                # See: https://github.com/ddclient/ddclient/issues/597
+                if re.search("^(https?://)?checkip\.dyndns\.org", config['address']['web']['url']):
+                    Warning(f'"checkip.dyndns.org" does not support HTTPS requests for IP address '
+                            f'lookup. Please use a different IP address lookup service.')
 
         # RFC2136 uses 'key' instead of 'password'
         if config['protocol'] != 'nsupdate' and 'password' not in config:
