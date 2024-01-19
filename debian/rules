@@ -24,7 +24,7 @@ DEB_TARGET_ARCH := $(shell dpkg-architecture -qDEB_TARGET_ARCH)
 override_dh_strip_nondeterminism:
 
 override_dh_gencontrol:
-	dh_gencontrol -- -v$(shell (git describe --tags --long --match 'vyos/*' --dirty 2>/dev/null || echo 0.0-no.git.tag) | sed -E 's%vyos/%%' | sed -E 's%-dirty%+dirty%')
+	dh_gencontrol -- -v$(shell (git describe --tags --long --match 'vyos/*' --match '1.4.*' --dirty 2>/dev/null || echo 0.0-no.git.tag) | sed -E 's%vyos/%%' | sed -E 's%-dirty%+dirty%')
 
 override_dh_auto_build:
 	make all
