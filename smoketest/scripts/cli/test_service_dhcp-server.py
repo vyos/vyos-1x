@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -203,11 +203,18 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             client_base += 1
 
         # cannot have mappings with duplicate IP addresses
+        self.cli_set(pool + ['static-mapping', 'dupe1', 'mac-address', '00:50:00:00:fe:ff'])
+        self.cli_set(pool + ['static-mapping', 'dupe1', 'ip-address', inc_ip(subnet, 10)])
         with self.assertRaises(ConfigSessionError):
-            self.cli_set(pool + ['static-mapping', 'dupe1', 'mac', '00:50:00:00:00:01'])
-            self.cli_set(pool + ['static-mapping', 'dupe1', 'ip-address', inc_ip(subnet, 10)])
             self.cli_commit()
         self.cli_delete(pool + ['static-mapping', 'dupe1'])
+
+        # cannot have mappings with duplicate MAC addresses
+        self.cli_set(pool + ['static-mapping', 'dupe2', 'mac-address', '00:50:00:00:00:10'])
+        self.cli_set(pool + ['static-mapping', 'dupe2', 'ip-address', inc_ip(subnet, 120)])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'dupe2'])
 
         # commit changes
         self.cli_commit()
