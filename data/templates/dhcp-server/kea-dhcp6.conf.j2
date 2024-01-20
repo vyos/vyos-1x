@@ -19,6 +19,15 @@
             "name": "{{ lease_file }}"
         },
         "hooks-libraries": [
+{% if disable_route_autoinstall is not vyos_defined %}
+            {
+                "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_run_script.so",
+                "parameters": {
+                    "name": "/usr/libexec/vyos/system/on-dhcpv6-event.sh",
+                    "sync": false
+                }
+            },
+{% endif %}
             {
                 "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_lease_cmds.so",
                 "parameters": {}

@@ -10,6 +10,12 @@
         <children>
           #include <include/generic-disable-node.xml.i>
           #include <include/listen-interface-multi-broadcast.xml.i>
+          <leafNode name="disable-route-autoinstall">
+            <properties>
+              <help>Do not install routes for delegated prefixes</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <node name="global-parameters">
             <properties>
               <help>Additional global parameters for DHCPv6 server</help>
