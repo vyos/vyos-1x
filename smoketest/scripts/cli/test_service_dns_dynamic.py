@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -62,7 +62,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
                     'zoneedit': {'protocol': 'zoneedit1', 'username': username}}
 
         for svc, details in services.items():
-            self.cli_set(name_path + [svc, 'address', interface])
+            self.cli_set(name_path + [svc, 'address', 'interface', interface])
             self.cli_set(name_path + [svc, 'host-name', hostname])
             self.cli_set(name_path + [svc, 'password', password])
             for opt, value in details.items():
@@ -118,7 +118,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         expiry_time_bad = '360'
 
         self.cli_set(base_path + ['interval', interval])
-        self.cli_set(svc_path + ['address', interface])
+        self.cli_set(svc_path + ['address', 'interface', interface])
         self.cli_set(svc_path + ['ip-version', ip_version])
         self.cli_set(svc_path + ['protocol', proto])
         self.cli_set(svc_path + ['server', server])
@@ -156,7 +156,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         ip_version = 'both'
 
         for name, details in services.items():
-            self.cli_set(name_path + [name, 'address', interface])
+            self.cli_set(name_path + [name, 'address', 'interface', interface])
             self.cli_set(name_path + [name, 'host-name', hostname])
             self.cli_set(name_path + [name, 'password', password])
             for opt, value in details.items():
@@ -201,7 +201,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         with tempfile.NamedTemporaryFile(prefix='/config/auth/') as key_file:
             key_file.write(b'S3cretKey')
 
-            self.cli_set(svc_path + ['address', interface])
+            self.cli_set(svc_path + ['address', 'interface', interface])
             self.cli_set(svc_path + ['protocol', proto])
             self.cli_set(svc_path + ['server', server])
             self.cli_set(svc_path + ['zone', zone])
@@ -229,7 +229,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         hostnames = ['@', 'www', hostname, f'@.{hostname}']
 
         for name in hostnames:
-            self.cli_set(svc_path + ['address', interface])
+            self.cli_set(svc_path + ['address', 'interface', interface])
             self.cli_set(svc_path + ['protocol', proto])
             self.cli_set(svc_path + ['server', server])
             self.cli_set(svc_path + ['username', username])
@@ -251,38 +251,38 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         # Check if DDNS service can be configured and runs
         svc_path = name_path + ['cloudflare']
         proto = 'cloudflare'
-        web_url_good = 'https://ifconfig.me/ip'
-        web_url_bad = 'http:/ifconfig.me/ip'
+        web_url = 'https://ifconfig.me/ip'
+        web_skip = 'Current IP Address:'
 
         self.cli_set(svc_path + ['protocol', proto])
         self.cli_set(svc_path + ['zone', zone])
         self.cli_set(svc_path + ['password', password])
         self.cli_set(svc_path + ['host-name', hostname])
-        self.cli_set(svc_path + ['web-options', 'url', web_url_good])
 
-        # web-options is supported only with web service based address lookup
-        # exception is raised for interface based address lookup
+        # not specifying either 'interface' or 'web' will raise an exception
         with self.assertRaises(ConfigSessionError):
-            self.cli_set(svc_path + ['address', interface])
             self.cli_commit()
         self.cli_set(svc_path + ['address', 'web'])
 
-        # commit changes
+        # specifying both 'interface' and 'web' will raise an exception as well
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(svc_path + ['address', 'interface', interface])
+            self.cli_commit()
+        self.cli_delete(svc_path + ['address', 'interface'])
         self.cli_commit()
 
-        # web-options must be a valid URL
+        # web option 'skip' is useless without the option 'url'
         with self.assertRaises(ConfigSessionError):
-            self.cli_set(svc_path + ['web-options', 'url', web_url_bad])
+            self.cli_set(svc_path + ['address', 'web', 'skip', web_skip])
             self.cli_commit()
-        self.cli_set(svc_path + ['web-options', 'url', web_url_good])
-
-        # commit changes
+        self.cli_set(svc_path + ['address', 'web', 'url', web_url])
         self.cli_commit()
 
         # Check the generating config parameters
         ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
         self.assertIn(f'usev4=webv4', ddclient_conf)
-        self.assertIn(f'webv4={web_url_good}', ddclient_conf)
+        self.assertIn(f'webv4={web_url}', ddclient_conf)
+        self.assertIn(f'webv4-skip=\'{web_skip}\'', ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
         self.assertIn(f'zone={zone}', ddclient_conf)
         self.assertIn(f'password=\'{password}\'', ddclient_conf)
@@ -294,7 +294,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         proto = 'namecheap'
         dyn_interface = 'pppoe587'
 
-        self.cli_set(svc_path + ['address', dyn_interface])
+        self.cli_set(svc_path + ['address', 'interface', dyn_interface])
         self.cli_set(svc_path + ['protocol', proto])
         self.cli_set(svc_path + ['server', server])
         self.cli_set(svc_path + ['username', username])
@@ -327,7 +327,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['vrf', 'name', vrf_name, 'table', vrf_table])
         self.cli_set(base_path + ['vrf', vrf_name])
 
-        self.cli_set(svc_path + ['address', interface])
+        self.cli_set(svc_path + ['address', 'interface', interface])
         self.cli_set(svc_path + ['protocol', proto])
         self.cli_set(svc_path + ['host-name', hostname])
         self.cli_set(svc_path + ['zone', zone])
