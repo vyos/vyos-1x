@@ -1,4 +1,4 @@
-# Copyright 2022-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -81,7 +81,7 @@ class InternalError(Error):
 
 
 def _is_op_mode_function_name(name):
-    if re.match(r"^(show|clear|reset|restart|add|delete|generate|set)", name):
+    if re.match(r"^(show|clear|reset|restart|add|update|delete|generate|set)", name):
         return True
     else:
         return False
@@ -275,4 +275,3 @@ def run(module):
         # Other functions should not return anything,
         # although they may print their own warnings or status messages
         func(**args)
-
