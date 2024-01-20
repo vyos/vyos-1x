@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import jmespath
 
 from vyos.base import Warning
 from vyos.utils.process import cmd
@@ -226,6 +227,9 @@ class QoSBase:
                         if 'mark' in match_config:
                             mark = match_config['mark']
                             filter_cmd += f' handle {mark} fw'
+                        if 'vif' in match_config:
+                            vif = match_config['vif']
+                            filter_cmd += f' basic match "meta(vlan mask 0xfff eq {vif})"'
 
                         for af in ['ip', 'ipv6']:
                             tc_af = af
@@ -301,23 +305,28 @@ class QoSBase:
                                 filter_cmd += f' flowid {self._parent:x}:{cls:x}'
                                 self._cmd(filter_cmd)
 
+                    vlan_expression = "match.*.vif"
+                    match_vlan = jmespath.search(vlan_expression, cls_config)
+
                     if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config):
-                        filter_cmd += f' action police'
+                        # For "vif" "basic match" is used instead of "action police" T5961
+                        if not match_vlan:
+                            filter_cmd += f' action police'
 
-                        if 'exceed' in cls_config:
-                            action = cls_config['exceed']
-                            filter_cmd += f' conform-exceed {action}'
-                        if 'not_exceed' in cls_config:
-                            action = cls_config['not_exceed']
-                            filter_cmd += f'/{action}'
+                            if 'exceed' in cls_config:
+                                action = cls_config['exceed']
+                                filter_cmd += f' conform-exceed {action}'
+                            if 'not_exceed' in cls_config:
+                                action = cls_config['not_exceed']
+                                filter_cmd += f'/{action}'
 
-                        if 'bandwidth' in cls_config:
-                            rate = self._rate_convert(cls_config['bandwidth'])
-                            filter_cmd += f' rate {rate}'
+                            if 'bandwidth' in cls_config:
+                                rate = self._rate_convert(cls_config['bandwidth'])
+                                filter_cmd += f' rate {rate}'
 
-                        if 'burst' in cls_config:
-                            burst = cls_config['burst']
-                            filter_cmd += f' burst {burst}'
+                            if 'burst' in cls_config:
+                                burst = cls_config['burst']
+                                filter_cmd += f' burst {burst}'
                         cls = int(cls)
                         filter_cmd += f' flowid {self._parent:x}:{cls:x}'
                         self._cmd(filter_cmd)
