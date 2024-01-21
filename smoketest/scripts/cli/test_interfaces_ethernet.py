@@ -141,15 +141,18 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
         # Verify that no address remains on the system as this is an eternal
         # interface.
-        for intf in self._interfaces:
-            self.assertNotIn(AF_INET, ifaddresses(intf))
+        for interface in self._interfaces:
+            self.assertNotIn(AF_INET, ifaddresses(interface))
             # required for IPv6 link-local address
-            self.assertIn(AF_INET6, ifaddresses(intf))
-            for addr in ifaddresses(intf)[AF_INET6]:
+            self.assertIn(AF_INET6, ifaddresses(interface))
+            for addr in ifaddresses(interface)[AF_INET6]:
                 # checking link local addresses makes no sense
                 if is_ipv6_link_local(addr['addr']):
                     continue
-                self.assertFalse(is_intf_addr_assigned(intf, addr['addr']))
+                self.assertFalse(is_intf_addr_assigned(interface, addr['addr']))
+            # Ensure no VLAN interfaces are left behind
+            tmp = [x for x in Section.interfaces('ethernet') if x.startswith(f'{interface}.')]
+            self.assertListEqual(tmp, [])
 
     def test_offloading_rps(self):
         # enable RPS on all available CPUs, RPS works with a CPU bitmask,
