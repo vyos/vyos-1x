@@ -22,6 +22,7 @@ from netaddr import IPAddress
 from netaddr import IPRange
 from sys import exit
 
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.template import render
 from vyos.utils.dict import dict_search
@@ -149,9 +150,15 @@ def verify(dhcp):
     shared_networks =  len(dhcp['shared_network_name'])
     disabled_shared_networks = 0
 
+    common_deprecation_msg = 'are subject of removal in VyOS 1.5! Please raise a feature request for proper CLI nodes!'
+    if 'global_parameters' in dhcp:
+        DeprecationWarning(f'Additional global parameters {common_deprecation_msg}')
 
     # A shared-network requires a subnet definition
     for network, network_config in dhcp['shared_network_name'].items():
+        if 'shared_network_parameters' in network_config:
+            DeprecationWarning(f'Additional shared network parameters in "{network}" {common_deprecation_msg}')
+
         if 'disable' in network_config:
             disabled_shared_networks += 1
 
@@ -160,6 +167,9 @@ def verify(dhcp):
                               'lease subnet must be configured.')
 
         for subnet, subnet_config in network_config['subnet'].items():
+            if 'subnet_parameters' in subnet_config:
+                DeprecationWarning(f'Additional subnet parameters in "{subnet}" {common_deprecation_msg}')
+
             # All delivered static routes require a next-hop to be set
             if 'static_route' in subnet_config:
                 for route, route_option in subnet_config['static_route'].items():
