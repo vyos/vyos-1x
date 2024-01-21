@@ -271,8 +271,8 @@ SOCKET_PATH = "ipc://" + os.path.join(RUN_DIR, 'vyos-hostsd.sock')
 RESOLV_CONF_FILE = '/etc/resolv.conf'
 HOSTS_FILE = '/etc/hosts'
 
-PDNS_REC_USER = PDNS_REC_GROUP = 'pdns'
-PDNS_REC_RUN_DIR = '/run/powerdns'
+PDNS_REC_USER_GROUP = 'pdns'
+PDNS_REC_RUN_DIR = '/run/pdns-recursor'
 PDNS_REC_LUA_CONF_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
 PDNS_REC_ZONES_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
 
@@ -436,18 +436,18 @@ def make_hosts(state):
 def make_pdns_rec_conf(state):
     logger.info(f"Writing {PDNS_REC_LUA_CONF_FILE}")
 
-    # on boot, /run/powerdns does not exist, so create it
-    makedir(PDNS_REC_RUN_DIR, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
+    # on boot, /run/pdns-recursor does not exist, so create it
+    makedir(PDNS_REC_RUN_DIR, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
     chmod_755(PDNS_REC_RUN_DIR)
 
     render(PDNS_REC_LUA_CONF_FILE,
             'dns-forwarding/recursor.vyos-hostsd.conf.lua.j2',
-            state, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
+            state, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
 
     logger.info(f"Writing {PDNS_REC_ZONES_FILE}")
     render(PDNS_REC_ZONES_FILE,
             'dns-forwarding/recursor.forward-zones.conf.j2',
-            state, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
+            state, user=PDNS_REC_USER_GROUP, group=PDNS_REC_USER_GROUP)
 
 def set_host_name(state, data):
     if data['host_name']:
