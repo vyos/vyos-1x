@@ -19,6 +19,7 @@ import re
 from glob import glob
 
 from vyos.ethtool import Ethtool
+from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
 from vyos.util import dict_search
@@ -90,6 +91,10 @@ class EthernetIf(Interface):
             # interface is placed in A/D state when removed from config! It
             # will remain visible for the operating system.
             self.set_admin_state('down')
+
+        # Remove all VLAN subinterfaces - filter with the VLAN dot
+        for vlan in [x for x in Section.interfaces(self.iftype) if x.startswith(f'{self.ifname}.')]:
+            Interface(vlan).remove()
 
         super().remove()
 
