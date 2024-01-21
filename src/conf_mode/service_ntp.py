@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -42,7 +42,7 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, with_defaults=True)
     ntp['config_file'] = config_file
     ntp['user'] = user_group
 

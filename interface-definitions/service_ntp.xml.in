@@ -9,6 +9,38 @@
           <priority>900</priority>
         </properties>
         <children>
+          #include <include/allow-client.xml.i>
+          #include <include/generic-interface.xml.i>
+          #include <include/listen-address.xml.i>
+          #include <include/interface/vrf.xml.i>
+          <leafNode name="leap-second">
+            <properties>
+              <help>Leap second behavior</help>
+              <completionHelp>
+                <list>ignore smear system timezone</list>
+              </completionHelp>
+              <valueHelp>
+                <format>ignore</format>
+                <description>No correction is applied to the clock for the leap second</description>
+              </valueHelp>
+              <valueHelp>
+                <format>smear</format>
+                <description>Correct served time slowly be slewing instead of stepping</description>
+              </valueHelp>
+              <valueHelp>
+                <format>system</format>
+                <description>Kernel steps the system clock forward or backward</description>
+              </valueHelp>
+              <valueHelp>
+                <format>timezone</format>
+                <description>Use UTC timezone database to determine when will the next leap second occur</description>
+              </valueHelp>
+              <constraint>
+                <regex>(ignore|smear|system|timezone)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>timezone</defaultValue>
+          </leafNode>
           <tagNode name="server">
             <properties>
               <help>Network Time Protocol (NTP) server</help>
@@ -56,10 +88,6 @@
               </leafNode>
             </children>
           </tagNode>
-          #include <include/allow-client.xml.i>
-          #include <include/generic-interface.xml.i>
-          #include <include/listen-address.xml.i>
-          #include <include/interface/vrf.xml.i>
         </children>
       </node>
     </children>
