@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -43,7 +43,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.assertFalse(process_named_running(PROCESS_NAME))
 
-    def test_01_ntp_options(self):
+    def test_base_options(self):
         # Test basic NTP support with multiple servers and their options
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['nts', 'noselect', 'prefer']
@@ -77,7 +77,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for pool in pools:
             self.assertIn(f'pool {pool} iburst', config)
 
-    def test_02_ntp_clients(self):
+    def test_clients(self):
         # Test the allowed-networks statement
         listen_address = ['127.0.0.1', '::1']
         for listen in listen_address:
@@ -107,7 +107,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for listen in listen_address:
             self.assertIn(f'bindaddress {listen}', config)
 
-    def test_03_ntp_interface(self):
+    def test_interface(self):
         interfaces = ['eth0']
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface])
@@ -124,7 +124,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.assertIn(f'binddevice {interface}', config)
 
-    def test_04_ntp_vrf(self):
+    def test_vrf(self):
         vrf_name = 'vyos-mgmt'
 
         self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
@@ -141,6 +141,29 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(PROCESS_NAME, tmp)
 
         self.cli_delete(['vrf', 'name', vrf_name])
+
+    def test_leap_seconds(self):
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        # Check generated client address configuration
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn('leapsectz right/UTC', config) # CLI default
+
+        for mode in ['ignore', 'system', 'smear']:
+            self.cli_set(base_path + ['leap-second', mode])
+            self.cli_commit()
+            config = cmd(f'sudo cat {NTP_CONF}')
+            if mode != 'smear':
+                self.assertIn(f'leapsecmode {mode}', config)
+            else:
+                self.assertIn(f'leapsecmode slew', config)
+                self.assertIn(f'maxslewrate 1000', config)
+                self.assertIn(f'smoothtime 400 0.001024 leaponly', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

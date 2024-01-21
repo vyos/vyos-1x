@@ -21,7 +21,17 @@ ntsdumpdir /run/chrony
 pidfile {{ config_file | replace('.conf', '.pid') }}
 
 # Determine when will the next leap second occur and what is the current offset
+{% if leap_second is vyos_defined('timezone') %}
 leapsectz right/UTC
+{% elif leap_second is vyos_defined('ignore') %}
+leapsecmode ignore
+{% elif leap_second is vyos_defined('smear') %}
+leapsecmode slew
+maxslewrate 1000
+smoothtime 400 0.001024 leaponly
+{% elif leap_second is vyos_defined('system') %}
+leapsecmode system
+{% endif %}
 
 user {{ user }}
 
