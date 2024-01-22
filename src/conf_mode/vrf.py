@@ -33,8 +33,6 @@ from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
 from vyos.utils.process import cmd
-from vyos.utils.process import popen
-from vyos.utils.process import run
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import frr
@@ -42,8 +40,6 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
-nft_vrf_config = '/tmp/nftables-vrf-zones'
-
 k_mod = ['vrf']
 
 def has_rule(af : str, priority : int, table : str):
@@ -176,8 +172,6 @@ def verify(vrf):
 def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
-    # Render nftables zones config
-    render(nft_vrf_config, 'firewall/nftables-vrf-zones.j2', vrf)
     # Render VRF Kernel/Zebra route-map filters
     vrf['frr_zebra_config'] = render_to_string('frr/zebra.vrf.route-map.frr.j2', vrf)
 
@@ -230,14 +224,6 @@ def apply(vrf):
     sysctl_write('net.vrf.strict_mode', strict_mode)
 
     if 'name' in vrf:
-        # Separate VRFs in conntrack table
-        # check if table already exists
-        _, err = popen('nft list table inet vrf_zones')
-        # If not, create a table
-        if err and os.path.exists(nft_vrf_config):
-            cmd(f'nft -f {nft_vrf_config}')
-            os.unlink(nft_vrf_config)
-
         # Linux routing uses rules to find tables - routing targets are then
         # looked up in those tables. If the lookup got a matching route, the
         # process ends.
@@ -320,13 +306,6 @@ def apply(vrf):
     if 'frr_zebra_config' in vrf:
         frr_cfg.add_before(frr.default_add_before, vrf['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
-
-    # return to default lookup preference when no VRF is configured
-    if 'name' not in vrf:
-        # Remove VRF zones table from nftables
-        tmp = run('nft list table inet vrf_zones')
-        if tmp == 0:
-            cmd('nft delete table inet vrf_zones')
 
     return None
 
