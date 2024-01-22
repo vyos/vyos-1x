@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="multicast">
+            <properties>
+              <help>Show IP multicast</help>
+            </properties>
+            <children>
+              <node name="group">
+                <properties>
+                  <help>Show IP multicast group membership</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/multicast.py show_group --family inet</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show IP multicast group membership of specific interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/multicast.py show_group --family inet --interface "$6"</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+      <node name="ipv6">
+        <children>
+          <node name="multicast">
+            <properties>
+              <help>Show IPv6 multicast</help>
+            </properties>
+            <children>
+              <node name="group">
+                <properties>
+                  <help>Show IPv6 multicast group membership</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/multicast.py show_group --family inet6</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show IP multicast group membership of specific interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/multicast.py show_group --family inet6 --interface "$6"</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
