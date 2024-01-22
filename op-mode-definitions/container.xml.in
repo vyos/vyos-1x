@@ -154,6 +154,9 @@
     </children>
   </node>
   <node name="update">
+    <properties>
+      <help>Update data for a service</help>
+    </properties>
     <children>
       <node name="container">
         <properties>
