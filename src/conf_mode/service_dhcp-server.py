@@ -236,11 +236,12 @@ def verify(dhcp):
                             raise ConfigError(f'MAC address required for static mapping "{mapping}"\n' \
                                               f'within shared-network "{network}, {subnet}"!')
 
-                        if mapping_config['ip_address'] in used_ips:
-                            raise ConfigError(f'Configured IP address for static mapping "{mapping}" already exists on another static mapping')
-                        used_ips.append(mapping_config['ip_address'])
+                        if 'disable' not in mapping_config:
+                            if mapping_config['ip_address'] in used_ips:
+                                raise ConfigError(f'Configured IP address for static mapping "{mapping}" already exists on another static mapping')
+                            used_ips.append(mapping_config['ip_address'])
 
-                    if 'mac_address' in mapping_config:
+                    if 'mac_address' in mapping_config and 'disable' not in mapping_config:
                         if mapping_config['mac_address'] in used_mac:
                             raise ConfigError(f'Configured MAC address for static mapping "{mapping}" already exists on another static mapping')
                         used_mac.append(mapping_config['mac_address'])
