@@ -5,9 +5,6 @@
       <node name="ip">
         <children>
           <node name="multicast">
-            <properties>
-              <help>Show IP multicast</help>
-            </properties>
             <children>
               <leafNode name="interface">
                 <properties>
