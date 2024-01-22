@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from time import sleep
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
@@ -26,12 +27,11 @@ from vyos.utils.file import read_file
 
 PROCESS_NAME = 'hsflowd'
 base_path = ['system', 'sflow']
+vrf = 'mgmt'
 
 hsflowd_conf = '/run/sflow/hsflowd.conf'
 
-
 class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
-
     @classmethod
     def setUpClass(cls):
         super(TestSystemFlowAccounting, cls).setUpClass()
@@ -45,6 +45,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
         self.cli_delete(base_path)
+        self.cli_delete(['vrf', 'name', vrf])
         self.cli_commit()
 
         # after service removal process must no longer run
@@ -96,6 +97,27 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         for interface in Section.interfaces('ethernet'):
             self.assertIn(f'pcap {{ dev={interface} }}', hsflowd)
 
+    def test_vrf(self):
+        interface = 'eth0'
+        server = '192.0.2.1'
+
+        # Check if sFlow service can be bound to given VRF
+        self.cli_set(['vrf', 'name', vrf, 'table', '10100'])
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['server', server])
+        self.cli_set(base_path + ['vrf', vrf])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        hsflowd = read_file(hsflowd_conf)
+        self.assertIn(f'collector {{ ip = {server} udpport = 6343 }}', hsflowd) # default port
+        self.assertIn(f'pcap {{ dev=eth0 }}', hsflowd)
+
+        # Check for process in VRF
+        tmp = cmd(f'ip vrf pids {vrf}')
+        self.assertIn(PROCESS_NAME, tmp)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
