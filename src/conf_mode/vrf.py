@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,6 +27,7 @@ from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
+from vyos.utils.kernel import check_kmod
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
@@ -42,6 +43,8 @@ airbag.enable()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 nft_vrf_config = '/tmp/nftables-vrf-zones'
+
+k_mod = ['vrf']
 
 def has_rule(af : str, priority : int, table : str):
     """ Check if a given ip rule exists """
@@ -329,6 +332,7 @@ def apply(vrf):
 
 if __name__ == '__main__':
     try:
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
