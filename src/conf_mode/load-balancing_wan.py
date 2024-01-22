@@ -21,6 +21,7 @@ from shutil import rmtree
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.process import cmd
 from vyos.template import render
 from vyos import ConfigError
@@ -48,6 +49,8 @@ def get_config(config=None):
     for rule in lb.get('rule', []):
         if lb.from_defaults(['rule', rule, 'limit']):
             del lb['rule'][rule]['limit']
+
+    set_dependents('conntrack', conf)
 
     return lb
 
@@ -131,6 +134,8 @@ def apply(lb):
     else:
         cmd('sudo sysctl -w net.netfilter.nf_conntrack_acct=1')
         cmd(f'systemctl restart {systemd_service}')
+
+    call_dependents()
 
     return None
 

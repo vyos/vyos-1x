@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,6 +39,7 @@ from vyos.utils.process import process_named_running
 from vyos.utils.process import rc_cmd
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 nftables_conf = '/run/nftables.conf'
@@ -98,7 +99,7 @@ def geoip_updated(conf, firewall):
         elif (path[0] == 'ipv6'):
             set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
             out['ipv6_name'].append(set_name)
-            
+
         updated = True
 
     if 'delete' in node_diff:
@@ -138,6 +139,8 @@ def get_config(config=None):
 
     fqdn_config_parse(firewall)
 
+    set_dependents('conntrack', conf)
+
     return firewall
 
 def verify_rule(firewall, rule_conf, ipv6):
@@ -166,6 +169,16 @@ def verify_rule(firewall, rule_conf, ipv6):
 
         if not dict_search_args(firewall, 'flowtable', offload_target):
             raise ConfigError(f'Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
+
+    if rule_conf['action'] != 'synproxy' and 'synproxy' in rule_conf:
+        raise ConfigError('"synproxy" option allowed only for action synproxy')
+    if rule_conf['action'] == 'synproxy':
+        if 'state' in rule_conf:
+            raise ConfigError('For action "synproxy" state cannot be defined')
+        if not rule_conf.get('synproxy', {}).get('tcp'):
+            raise ConfigError('synproxy TCP MSS is not defined')
+        if rule_conf.get('protocol', {}) != 'tcp':
+            raise ConfigError('For action "synproxy" the protocol must be set to TCP')
 
     if 'queue_options' in rule_conf:
         if 'queue' not in rule_conf['action']:
@@ -434,17 +447,6 @@ def generate(firewall):
                 if local_zone in zone_conf['from']:
                     local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
 
-    # Determine if conntrack is needed
-    firewall['ipv4_conntrack_action'] = 'return'
-    firewall['ipv6_conntrack_action'] = 'return'
-
-    for rules, path in dict_search_recursive(firewall, 'rule'):
-        if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
-            if path[0] == 'ipv4':
-                firewall['ipv4_conntrack_action'] = 'accept'
-            elif path[0] == 'ipv6':
-                firewall['ipv6_conntrack_action'] = 'accept'
-
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None
 
@@ -474,8 +476,7 @@ def apply(firewall):
 
     apply_sysfs(firewall)
 
-    if firewall['group_resync']:
-        call_dependents()
+    call_dependents()
 
     # T970 Enable a resolver (systemd daemon) that checks
     # domain-group/fqdn addresses and update entries for domains by timeout

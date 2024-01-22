@@ -7,7 +7,12 @@
 #include <include/firewall/connection-mark.xml.i>
 #include <include/firewall/conntrack-helper.xml.i>
 #include <include/firewall/nft-queue.xml.i>
-#include <include/generic-disable-node.xml.i>
+<leafNode name="disable">
+  <properties>
+    <help>Option to disable firewall rule</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <node name="fragment">
   <properties>
     <help>IP fragment match</help>
@@ -179,8 +184,10 @@
     </leafNode>
   </children>
 </node>
+#include <include/firewall/synproxy.xml.i>
 #include <include/firewall/state.xml.i>
 #include <include/firewall/tcp-flags.xml.i>
+#include <include/firewall/tcp-mss.xml.i>
 <node name="time">
   <properties>
     <help>Time to match rule</help>

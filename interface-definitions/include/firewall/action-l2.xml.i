@@ -1,4 +1,4 @@
-<!-- include start from firewall/action-l2.xml.i -->
+<!-- include start from firewall/action.xml.i -->
 <leafNode name="action">
   <properties>
     <help>Rule action</help>
