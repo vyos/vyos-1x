@@ -280,7 +280,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 operator = '!='
                 iiface = iiface[1:]
             output.append(f'iifname {operator} {{{iiface}}}')
-        else:
+        elif 'group' in rule_conf['inbound_interface']:
             iiface = rule_conf['inbound_interface']['group']
             if iiface[0] == '!':
                 operator = '!='
@@ -295,7 +295,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 operator = '!='
                 oiface = oiface[1:]
             output.append(f'oifname {operator} {{{oiface}}}')
-        else:
+        elif 'group' in rule_conf['outbound_interface']:
             oiface = rule_conf['outbound_interface']['group']
             if oiface[0] == '!':
                 operator = '!='
