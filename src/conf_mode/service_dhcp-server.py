@@ -246,19 +246,21 @@ def verify(dhcp):
                             raise ConfigError(f'Either MAC address or Client identifier (DUID) is required for '
                                               f'static mapping "{mapping}" within shared-network "{network}, {subnet}"!')
 
-                        if mapping_config['ip_address'] in used_ips:
-                            raise ConfigError(f'Configured IP address for static mapping "{mapping}" already exists on another static mapping')
-                        used_ips.append(mapping_config['ip_address'])
+                        if 'disable' not in mapping_config:
+                            if mapping_config['ip_address'] in used_ips:
+                                raise ConfigError(f'Configured IP address for static mapping "{mapping}" already exists on another static mapping')
+                            used_ips.append(mapping_config['ip_address'])
 
-                    if 'mac' in mapping_config:
-                        if mapping_config['mac'] in used_mac:
-                            raise ConfigError(f'Configured MAC address for static mapping "{mapping}" already exists on another static mapping')
-                        used_mac.append(mapping_config['mac'])
+                    if 'disable' not in mapping_config:
+                        if 'mac' in mapping_config:
+                            if mapping_config['mac'] in used_mac:
+                                raise ConfigError(f'Configured MAC address for static mapping "{mapping}" already exists on another static mapping')
+                            used_mac.append(mapping_config['mac'])
 
-                    if 'duid' in mapping_config:
-                        if mapping_config['duid'] in used_duid:
-                            raise ConfigError(f'Configured DUID for static mapping "{mapping}" already exists on another static mapping')
-                        used_duid.append(mapping_config['duid'])
+                        if 'duid' in mapping_config:
+                            if mapping_config['duid'] in used_duid:
+                                raise ConfigError(f'Configured DUID for static mapping "{mapping}" already exists on another static mapping')
+                            used_duid.append(mapping_config['duid'])
 
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!

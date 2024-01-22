@@ -387,6 +387,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['static-mapping', 'dupe1', 'ip-address', inc_ip(subnet, 10)])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+        # Should allow disabled duplicate
+        self.cli_set(pool + ['static-mapping', 'dupe1', 'disable'])
+        self.cli_commit()
         self.cli_delete(pool + ['static-mapping', 'dupe1'])
 
         # cannot have mappings with duplicate MAC addresses
