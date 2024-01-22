@@ -149,7 +149,7 @@ def verify(qos):
                 if 'class' in policy_config:
                     for cls, cls_config in policy_config['class'].items():
                         # bandwidth is not mandatory for priority-queue - that is why this is on the exception list
-                        if 'bandwidth' not in cls_config and policy_type not in ['priority_queue', 'round_robin']:
+                        if 'bandwidth' not in cls_config and policy_type not in ['priority_queue', 'round_robin', 'shaper_hfsc']:
                             raise ConfigError(f'Bandwidth must be defined for policy "{policy}" class "{cls}"!')
                     if 'match' in cls_config:
                         for match, match_config in cls_config['match'].items():
@@ -173,7 +173,7 @@ def verify(qos):
                     if 'default' not in policy_config:
                         raise ConfigError(f'Policy {policy} misses "default" class!')
                 if 'default' in policy_config:
-                    if 'bandwidth' not in policy_config['default'] and policy_type not in ['priority_queue', 'round_robin']:
+                    if 'bandwidth' not in policy_config['default'] and policy_type not in ['priority_queue', 'round_robin', 'shaper_hfsc']:
                         raise ConfigError('Bandwidth not defined for default traffic!')
 
     # we should check interface ingress/egress configuration after verifying that
