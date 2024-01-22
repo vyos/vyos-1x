@@ -42,14 +42,26 @@ airbag.enable()
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 k_mod = ['vrf']
 
-def has_rule(af : str, priority : int, table : str):
-    """ Check if a given ip rule exists """
+def has_rule(af : str, priority : int, table : str=None):
+    """
+    Check if a given ip rule exists
+    $ ip --json -4 rule show
+    [{'l3mdev': None, 'priority': 1000, 'src': 'all'},
+    {'action': 'unreachable', 'l3mdev': None, 'priority': 2000, 'src': 'all'},
+    {'priority': 32765, 'src': 'all', 'table': 'local'},
+    {'priority': 32766, 'src': 'all', 'table': 'main'},
+    {'priority': 32767, 'src': 'all', 'table': 'default'}]
+    """
     if af not in ['-4', '-6']:
         raise ValueError()
-    command = f'ip -j {af} rule show'
+    command = f'ip --detail --json {af} rule show'
     for tmp in loads(cmd(command)):
-        if {'priority', 'table'} <= set(tmp):
+        if 'priority' in tmp and 'table' in tmp:
             if tmp['priority'] == priority and tmp['table'] == table:
+                return True
+        elif 'priority' in tmp and table in tmp:
+            # l3mdev table has a different layout
+            if tmp['priority'] == priority:
                 return True
     return False
 
