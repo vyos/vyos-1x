@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.network import is_addr_assigned
@@ -46,7 +47,6 @@ def get_config(config=None):
 
     return sflow
 
-
 def verify(sflow):
     if not sflow:
         return None
@@ -68,9 +68,8 @@ def verify(sflow):
     if 'server' not in sflow:
         raise ConfigError('You need to configure at least one sFlow server!')
 
-    # return True if all checks were passed
-    return True
-
+    verify_vrf(sflow)
+    return None
 
 def generate(sflow):
     if not sflow:
@@ -80,7 +79,6 @@ def generate(sflow):
     render(systemd_override, 'sflow/override.conf.j2', sflow)
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
-
 
 def apply(sflow):
     if not sflow:
@@ -92,7 +90,6 @@ def apply(sflow):
 
     # Start/reload flow-accounting daemon
     call(f'systemctl restart {systemd_service}')
-
 
 if __name__ == '__main__':
     try:
