@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,6 +15,7 @@
 
 from pathlib import Path
 from re import compile as re_compile
+from functools import wraps
 from tempfile import TemporaryDirectory
 from typing import TypedDict
 
@@ -261,6 +262,16 @@ def is_live_boot() -> bool:
         if boot_type == 'live':
             return True
     return False
+
+def if_not_live_boot(func):
+    """Decorator to call function only if not live boot"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not is_live_boot():
+            ret = func(*args, **kwargs)
+            return ret
+        return None
+    return wrapper
 
 def is_running_as_container() -> bool:
     if Path('/.dockerenv').exists():

@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -246,13 +246,17 @@ def update_version_list(root_dir: str = '') -> list[dict]:
         menu_entries = list(filter(lambda x: x.get('version') != ver,
                                    menu_entries))
 
+    # reset boot_opts in case of config update
+    for entry in menu_entries:
+        entry['boot_opts'] = grub.get_boot_opts(entry['version'])
+
     add = list(set(current_versions) - set(menu_versions))
     for ver in add:
         last = menu_entries[0].get('version')
         new = deepcopy(list(filter(lambda x: x.get('version') == last,
                                    menu_entries)))
         for e in new:
-            boot_opts = e.get('boot_opts').replace(last, ver)
+            boot_opts = grub.get_boot_opts(ver)
             e.update({'version': ver, 'boot_opts': boot_opts})
 
         menu_entries = new + menu_entries
