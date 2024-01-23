@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -43,10 +43,14 @@ TMPL_GRUB_MODULES: str = 'grub/grub_modules.j2'
 TMPL_GRUB_OPTS: str = 'grub/grub_options.j2'
 TMPL_GRUB_COMMON: str = 'grub/grub_common.j2'
 
+# default boot options
+BOOT_OPTS_STEM: str = 'boot=live rootdelay=5 noautologin net.ifnames=0 biosdevname=0 vyos-union=/boot/'
+
 # prepare regexes
 REGEX_GRUB_VARS: str = r'^set (?P<variable_name>.+)=[\'"]?(?P<variable_value>.*)(?<![\'"])[\'"]?$'
 REGEX_GRUB_MODULES: str = r'^insmod (?P<module_name>.+)$'
 REGEX_KERNEL_CMDLINE: str = r'^BOOT_IMAGE=/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
+REGEX_GRUB_BOOT_OPTS: str = r'^\s*set boot_opts="(?P<boot_opts>[^$]+)"$'
 
 
 def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS') -> None:
@@ -87,7 +91,8 @@ def gen_version_uuid(version_name: str) -> str:
 
 def version_add(version_name: str,
                 root_dir: str = '',
-                boot_opts: str = '') -> None:
+                boot_opts: str = '',
+                boot_opts_config = None) -> None:
     """Add a new VyOS version to GRUB loader configuration
 
     Args:
@@ -104,7 +109,9 @@ def version_add(version_name: str,
         version_config, TMPL_VYOS_VERSION, {
             'version_name': version_name,
             'version_uuid': gen_version_uuid(version_name),
-            'boot_opts': boot_opts
+            'boot_opts_default': BOOT_OPTS_STEM + version_name,
+            'boot_opts': boot_opts,
+            'boot_opts_config': boot_opts_config
         })
 
 
@@ -286,12 +293,43 @@ def vars_write(grub_cfg: str, grub_vars: dict[str, str]) -> None:
     """
     render(grub_cfg, TMPL_GRUB_VARS, {'vars': grub_vars})
 
+def get_boot_opts(version_name: str, root_dir: str = '') -> str:
+    """Read boot_opts setting from version file; return default setting on
+    any failure.
+
+    Args:
+        version_name (str): version name
+        root_dir (str, optional): an optional path to the root directory.
+        Defaults to empty.
+    """
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    boot_opts_default: str = BOOT_OPTS_STEM + version_name
+    boot_opts: str = ''
+    regex_filter = re_compile(REGEX_GRUB_BOOT_OPTS)
+    version_config: str = f'{root_dir}/{GRUB_DIR_VYOS_VERS}/{version_name}.cfg'
+    try:
+        config_text: list[str] = Path(version_config).read_text().splitlines()
+    except FileNotFoundError:
+        return boot_opts_default
+    for line in config_text:
+        search_result = regex_filter.fullmatch(line)
+        if search_result:
+            search_dict = search_result.groupdict()
+            boot_opts = search_dict.get('boot_opts', '')
+            break
+
+    if not boot_opts:
+        boot_opts = boot_opts_default
+
+    return boot_opts
 
 def set_default(version_name: str, root_dir: str = '') -> None:
     """Set version as default boot entry
 
     Args:
-        version_name (str): versio name
+        version_name (str): version name
         root_dir (str, optional): an optional path to the root directory.
         Defaults to empty.
     """
@@ -361,3 +399,18 @@ def set_console_speed(console_speed: str, root_dir: str = '') -> None:
     vars_current: dict[str, str] = vars_read(vars_file)
     vars_current['console_speed'] = str(console_speed)
     vars_write(vars_file, vars_current)
+
+def set_kernel_cmdline_options(cmdline_options: str, version_name: str,
+                               root_dir: str = '') -> None:
+    """Write additional cmdline options to GRUB configuration
+
+    Args:
+        cmdline_options (str): cmdline options to add to default boot line
+        version_name (str): image version name
+        root_dir (str, optional): an optional path to the root directory.
+    """
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    version_add(version_name=version_name, root_dir=root_dir,
+                boot_opts_config=cmdline_options)

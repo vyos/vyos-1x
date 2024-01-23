@@ -1,5 +1,10 @@
-{% set boot_opts_default = "boot=live rootdelay=5 noautologin net.ifnames=0 biosdevname=0 vyos-union=/boot/" + version_name %}
-{% if boot_opts != '' %}
+{% if boot_opts_config is vyos_defined %}
+{%     if boot_opts_config %}
+{%         set boot_opts_rendered = boot_opts_default + " " + boot_opts_config %}
+{%     else %}
+{%         set boot_opts_rendered = boot_opts_default %}
+{%     endif %}
+{% elif boot_opts != '' %}
 {%     set boot_opts_rendered = boot_opts %}
 {% else %}
 {%     set boot_opts_rendered = boot_opts_default %}
