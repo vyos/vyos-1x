@@ -32,6 +32,7 @@ peers = {
         'multihop'   : '',
         'source_addr': '192.0.2.254',
         'profile'    : 'foo-bar-baz',
+        'minimum_ttl': '20',
     },
     '192.0.2.20' : {
         'echo_mode'  : '',
@@ -63,6 +64,7 @@ profiles = {
         'intv_rx'    : '222',
         'intv_tx'    : '333',
         'shutdown'   : '',
+        'minimum_ttl': '40',
         },
     'foo-bar-baz' : {
         'intv_mult'  : '4',
@@ -109,6 +111,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer', peer, 'interval', 'receive', peer_config["intv_rx"]])
             if 'intv_tx' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'interval', 'transmit', peer_config["intv_tx"]])
+            if 'minimum_ttl' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'minimum-ttl', peer_config["minimum_ttl"]])
             if 'multihop' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'multihop'])
             if 'passive' in peer_config:
@@ -152,6 +156,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'receive-interval {peer_config["intv_rx"]}', peerconfig)
             if 'intv_tx' in peer_config:
                 self.assertIn(f'transmit-interval {peer_config["intv_tx"]}', peerconfig)
+            if 'minimum_ttl' in peer_config:
+                self.assertIn(f'minimum-ttl {peer_config["minimum_ttl"]}', peerconfig)
             if 'passive' in peer_config:
                 self.assertIn(f'passive-mode', peerconfig)
             if 'shutdown' in peer_config:
@@ -173,6 +179,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['profile', profile, 'interval', 'receive', profile_config["intv_rx"]])
             if 'intv_tx' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'interval', 'transmit', profile_config["intv_tx"]])
+            if 'minimum_ttl' in profile_config:
+                self.cli_set(base_path + ['profile', profile, 'minimum-ttl', profile_config["minimum_ttl"]])
             if 'passive' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'passive'])
             if 'shutdown' in profile_config:
@@ -210,6 +218,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f' receive-interval {profile_config["intv_rx"]}', config)
             if 'intv_tx' in profile_config:
                 self.assertIn(f' transmit-interval {profile_config["intv_tx"]}', config)
+            if 'minimum_ttl' in profile_config:
+                self.assertIn(f' minimum-ttl {profile_config["minimum_ttl"]}', config)
             if 'passive' in profile_config:
                 self.assertIn(f' passive-mode', config)
             if 'shutdown' in profile_config:

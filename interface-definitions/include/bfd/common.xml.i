@@ -63,6 +63,18 @@
     </leafNode>
   </children>
 </node>
+<leafNode name="minimum-ttl">
+  <properties>
+    <help>Expect packets with at least this TTL</help>
+    <valueHelp>
+      <format>u32:1-254</format>
+      <description>Minimum TTL expected</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-254"/>
+    </constraint>
+  </properties>
+</leafNode>
 <leafNode name="passive">
   <properties>
     <help>Do not attempt to start sessions</help>
