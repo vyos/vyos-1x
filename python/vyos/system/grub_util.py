@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.system import disk, grub, compat
+from vyos.system import disk, grub, image, compat
 
 @compat.grub_cfg_update
 def set_console_speed(console_speed: str, root_dir: str = '') -> None:
@@ -29,6 +29,7 @@ def set_console_speed(console_speed: str, root_dir: str = '') -> None:
 
     grub.set_console_speed(console_speed, root_dir)
 
+@image.if_not_live_boot
 def update_console_speed(console_speed: str, root_dir: str = '') -> None:
     """Update console_speed if different from current value"""
 
@@ -40,3 +41,30 @@ def update_console_speed(console_speed: str, root_dir: str = '') -> None:
     console_speed_current = vars_current.get('console_speed', None)
     if console_speed != console_speed_current:
         set_console_speed(console_speed, root_dir)
+
+@compat.grub_cfg_update
+def set_kernel_cmdline_options(cmdline_options: str, version: str = '',
+                               root_dir: str = '') -> None:
+    """Write Kernel CLI cmdline options to GRUB configuration"""
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    if not version:
+        version = image.get_running_image()
+
+    grub.set_kernel_cmdline_options(cmdline_options, version, root_dir)
+
+@image.if_not_live_boot
+def update_kernel_cmdline_options(cmdline_options: str,
+                                  root_dir: str = '') -> None:
+    """Update Kernel custom cmdline options"""
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    version = image.get_running_image()
+
+    boot_opts_current = grub.get_boot_opts(version, root_dir)
+    boot_opts_proposed = grub.BOOT_OPTS_STEM + f'{version} {cmdline_options}'
+
+    if boot_opts_proposed != boot_opts_current:
+        set_kernel_cmdline_options(cmdline_options, version, root_dir)

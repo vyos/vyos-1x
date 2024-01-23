@@ -32,6 +32,19 @@
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
            </leafNode>
+           <node name="kernel">
+             <properties>
+               <help>Kernel boot parameters</help>
+             </properties>
+             <children>
+               <leafNode name="disable-mitigations">
+                 <properties>
+                   <help>Disable all optional CPU mitigations</help>
+                   <valueless/>
+                 </properties>
+               </leafNode>
+             </children>
+           </node>
            <leafNode name="keyboard-layout">
              <properties>
                <help>System keyboard layout, type ISO2</help>
