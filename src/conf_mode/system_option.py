@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ from time import sleep
 
 from vyos.config import Config
 from vyos.configverify import verify_source_interface
+from vyos.system import grub_util
 from vyos.template import render
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
@@ -38,7 +39,6 @@ time_format_to_locale = {
     '12-hour': 'en_US.UTF-8',
     '24-hour': 'en_GB.UTF-8'
 }
-
 
 def get_config(config=None):
     if config:
@@ -87,6 +87,13 @@ def verify(options):
 def generate(options):
     render(curlrc_config, 'system/curlrc.j2', options)
     render(ssh_config, 'system/ssh_config.j2', options)
+
+    cmdline_options = []
+    if 'kernel' in options:
+        if 'disable_mitigations' in options['kernel']:
+            cmdline_options.append('mitigations=off')
+    grub_util.update_kernel_cmdline_options(' '.join(cmdline_options))
+
     return None
 
 def apply(options):
