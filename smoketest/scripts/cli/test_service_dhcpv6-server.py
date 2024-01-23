@@ -215,6 +215,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         delegate_start = '2001:db8:ee::'
         delegate_len = '64'
         prefix_len = '56'
+        exclude_len = '66'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
@@ -222,6 +223,8 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['range', '1', 'stop', range_stop])
         self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'delegated-length', delegate_len])
         self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'prefix-length', prefix_len])
+        self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'excluded-prefix', delegate_start])
+        self.cli_set(pool + ['prefix-delegation', 'prefix', delegate_start, 'excluded-prefix-length', exclude_len])
 
         # commit changes
         self.cli_commit()
@@ -241,7 +244,13 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.verify_config_object(
                 obj,
                 ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'pd-pools'],
-                {'prefix': delegate_start, 'prefix-len': int(prefix_len), 'delegated-len': int(delegate_len)})
+                {
+                    'prefix': delegate_start,
+                    'prefix-len': int(prefix_len),
+                    'delegated-len': int(delegate_len),
+                    'excluded-prefix': delegate_start,
+                    'excluded-prefix-len': int(exclude_len)
+                })
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
