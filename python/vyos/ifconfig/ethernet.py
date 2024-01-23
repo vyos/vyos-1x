@@ -452,7 +452,7 @@ class EthernetIf(Interface):
         self.set_gso(dict_search('offload.gso', config) != None)
 
         # GSO (generic segmentation offload)
-        self.set_hw_tc_offload(dict_search('offload.hw-tc-offload', config) != None)
+        self.set_hw_tc_offload(dict_search('offload.hw_tc_offload', config) != None)
 
         # LRO (large receive offload)
         self.set_lro(dict_search('offload.lro', config) != None)
