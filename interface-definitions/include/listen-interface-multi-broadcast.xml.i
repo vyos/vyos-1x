@@ -1,7 +1,7 @@
 <!-- include start from listen-interface-multi-broadcast.xml.i -->
 <leafNode name="listen-interface">
   <properties>
-    <help>Interface for DHCP Relay Agent to listen for requests</help>
+    <help>Interface to listen on</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
     </completionHelp>
