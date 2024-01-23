@@ -99,7 +99,11 @@ class TrafficShaper(QoSBase):
                 self._cmd(tmp)
 
         if 'default' in config:
-                rate = self._rate_convert(config['default']['bandwidth'])
+                if config['default']['bandwidth'].endswith('%'):
+                    percent = config['default']['bandwidth'].rstrip('%')
+                    rate = self._rate_convert(config['bandwidth']) * int(percent) // 100
+                else:
+                    rate = self._rate_convert(config['default']['bandwidth'])
                 burst = config['default']['burst']
                 quantum = config['default']['codel_quantum']
                 tmp = f'tc class replace dev {self._interface} parent {self._parent:x}:1 classid {self._parent:x}:{default_minor_id:x} htb rate {rate} burst {burst} quantum {quantum}'
@@ -107,7 +111,11 @@ class TrafficShaper(QoSBase):
                     priority = config['default']['priority']
                     tmp += f' prio {priority}'
                 if 'ceiling' in config['default']:
-                    f_ceil = self._rate_convert(config['default']['ceiling'])
+                    if config['default']['ceiling'].endswith('%'):
+                        percent = config['default']['ceiling'].rstrip('%')
+                        f_ceil = self._rate_convert(config['bandwidth']) * int(percent) // 100
+                    else:
+                        f_ceil = self._rate_convert(config['default']['ceiling'])
                     tmp += f' ceil {f_ceil}'
                 self._cmd(tmp)
 
