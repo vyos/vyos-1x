@@ -32,25 +32,6 @@
     </leafNode>
   </children>
 </node>
-<node name="ipsec">
-  <properties>
-    <help>Inbound IPsec packets</help>
-  </properties>
-  <children>
-    <leafNode name="match-ipsec">
-      <properties>
-        <help>Inbound IPsec packets</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-    <leafNode name="match-none">
-      <properties>
-        <help>Inbound non-IPsec packets</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
 <node name="limit">
   <properties>
     <help>Rate limit using a token bucket filter</help>
