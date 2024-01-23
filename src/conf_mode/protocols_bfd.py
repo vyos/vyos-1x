@@ -72,6 +72,9 @@ def verify(bfd):
                 if 'source' in peer_config and 'interface' in peer_config['source']:
                     raise ConfigError('BFD multihop and source interface cannot be used together')
 
+            if 'minimum_ttl' in peer_config and 'multihop' not in peer_config:
+                raise ConfigError('Minimum TTL is only available for multihop BFD sessions!')
+
             if 'profile' in peer_config:
                 profile_name = peer_config['profile']
                 if 'profile' not in bfd or profile_name not in bfd['profile']:

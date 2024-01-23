@@ -13,6 +13,9 @@ bfd
 {%             if profile_config.echo_mode is vyos_defined %}
   echo-mode
 {%             endif %}
+{%             if profile_config.minimum_ttl is vyos_defined %}
+  minimum-ttl {{ profile_config.minimum_ttl }}
+{%             endif %}
 {%             if profile_config.passive is vyos_defined %}
   passive-mode
 {%             endif %}
@@ -37,6 +40,9 @@ bfd
 {%             endif %}
 {%             if peer_config.echo_mode is vyos_defined %}
   echo-mode
+{%             endif %}
+{%             if peer_config.minimum_ttl is vyos_defined %}
+  minimum-ttl {{ peer_config.minimum_ttl }}
 {%             endif %}
 {%             if peer_config.passive is vyos_defined %}
   passive-mode
