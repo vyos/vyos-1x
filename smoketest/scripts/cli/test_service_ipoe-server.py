@@ -228,5 +228,9 @@ delegate={delegate_1_prefix},{delegate_mask},name={pool_name}
 delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.assertIn(pool_config, config)
 
+    @unittest.skip("PPP is not a part of IPoE")
+    def test_accel_ppp_options(self):
+        pass
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
