@@ -65,30 +65,8 @@ ipv6-pool-delegate={{ default_ipv6_pool }}
 {# Common chap-secrets and RADIUS server/option definitions #}
 {% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
-[ppp]
-verbose=1
-check-ip=1
-single-session=replace
-lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
-lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}
-lcp-echo-failure={{ ppp_options.lcp_echo_failure }}
-{# MTU #}
-mtu={{ mtu }}
-ipv6={{ 'allow' if ppp_options.ipv6 is vyos_defined("deny") and client_ipv6_pool is vyos_defined else ppp_options.ipv6 }}
-ipv4={{ ppp_options.ipv4 }}
-mppe={{ ppp_options.mppe }}
-{% if ccp_disable is vyos_defined %}
-ccp=0
-{% endif %}
-unit-preallocate={{ "1" if authentication.radius.preallocate_vif is vyos_defined else "0" }}
-
-{% if ppp_options.ipv6_intf_id is vyos_defined %}
-ipv6-intf-id={{ ppp_options.ipv6_intf_id }}
-{% endif %}
-{% if ppp_options.ipv6_peer_intf_id is vyos_defined %}
-ipv6-peer-intf-id={{ ppp_options.ipv6_peer_intf_id }}
-{% endif %}
-ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_intf_id is vyos_defined else "0" }}
+{# Common ppp-options definitions #}
+{% include 'accel-ppp/ppp-options.j2' %}
 
 {# Common IPv6 pool definitions #}
 {% include 'accel-ppp/config_ipv6_pool.j2' %}
@@ -98,5 +76,4 @@ ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_intf_id is vyos_
 
 [cli]
 tcp=127.0.0.1:2004
-sessions-columns=ifname,username,calling-sid,ip,{{ ip6_column | join(',') }}{{ ',' if ip6_column }}rate-limit,type,comp,state,rx-bytes,tx-bytes,uptime
 

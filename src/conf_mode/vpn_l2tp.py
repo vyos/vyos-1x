@@ -51,11 +51,6 @@ def get_config(config=None):
         # Multiple named pools require ordered values T5099
         l2tp['ordered_named_pools'] = get_pools_in_order(
             dict_search('client_ip_pool', l2tp))
-    l2tp['ip6_column'] = []
-    if dict_search('client_ipv6_pool.prefix', l2tp):
-        l2tp['ip6_column'].append('ipv6')
-    if dict_search('client_ipv6_pool.delegate', l2tp):
-        l2tp['ip6_column'].append('ip6-db')
     l2tp['server_type'] = 'l2tp'
     return l2tp
 

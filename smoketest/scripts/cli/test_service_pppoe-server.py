@@ -59,9 +59,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertTrue(conf['ppp'].getboolean('verbose'))
         self.assertTrue(conf['ppp'].getboolean('check-ip'))
         self.assertEqual(conf['ppp']['mtu'], mtu)
-        self.assertEqual(conf['ppp']['lcp-echo-interval'], '30')
-        self.assertEqual(conf['ppp']['lcp-echo-timeout'], '0')
-        self.assertEqual(conf['ppp']['lcp-echo-failure'], '3')
 
         super().verify(conf)
 
@@ -70,69 +67,13 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.set(['access-concentrator', ac_name])
         self.set(['interface', interface])
 
-
-    def test_pppoe_server_ppp_options(self):
-        # Test configuration of local authentication for PPPoE server
+    def test_pppoe_limits(self):
         self.basic_config()
-
-        # other settings
-        mppe = 'require'
-        self.set(['ppp-options', 'ccp'])
-        self.set(['ppp-options', 'mppe', mppe])
         self.set(['limits', 'connection-limit', '20/min'])
-
-        # min-mtu
-        min_mtu = '1400'
-        self.set(['ppp-options', 'min-mtu', min_mtu])
-
-        # mru
-        mru = '9000'
-        self.set(['ppp-options', 'mru', mru])
-
-        # interface-cache
-        interface_cache = '128000'
-        self.set(['ppp-options', 'interface-cache', interface_cache])
-
-        # ipv6
-        allow_ipv6 = 'allow'
-        random = 'random'
-        self.set(['ppp-options', 'ipv6', allow_ipv6])
-        self.set(['ppp-options', 'ipv6-intf-id', random])
-        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
-        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
-        # commit changes
         self.cli_commit()
-
-        # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(self._config_file)
-
-        # basic verification
-        self.verify(conf)
-
-        self.assertEqual(conf['chap-secrets']['gw-ip-address'], self._gateway)
-
-        # check ppp
-        self.assertEqual(conf['ppp']['mppe'], mppe)
-        self.assertEqual(conf['ppp']['min-mtu'], min_mtu)
-        self.assertEqual(conf['ppp']['mru'], mru)
-
-        self.assertTrue(conf['ppp'].getboolean('ccp'))
-
-        # check other settings
         self.assertEqual(conf['connlimit']['limit'], '20/min')
-
-        # check interface-cache
-        self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
-
-        #check ipv6
-        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
-            self.assertEqual(conf['modules'][tmp], None)
-
-        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
-        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
-        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
-        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
 
     def test_pppoe_server_authentication_protocols(self):
         # Test configuration of local authentication for PPPoE server

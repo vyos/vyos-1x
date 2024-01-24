@@ -40,25 +40,6 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
     def basic_protocol_specific_config(self):
         pass
 
-    def test_accel_name_servers(self):
-        # Verify proper Name-Server configuration for IPv4
-        self.basic_config()
-
-        nameserver = ["192.0.2.1", "192.0.2.2"]
-        for ns in nameserver:
-            self.set(["name-server", ns])
-
-        # commit changes
-        self.cli_commit()
-
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
-        conf.read(self._config_file)
-
-        # IPv4 and IPv6 nameservers must be checked individually
-        for ns in nameserver:
-            self.assertIn(ns, [conf["dns"]["dns1"], conf["dns"]["dns2"]])
-
     def test_accel_local_authentication(self):
         # Test configuration of local authentication
         self.basic_config()
@@ -217,10 +198,6 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(f"acct-port=0", server[3])
         self.assertEqual(f"req-limit=0", server[4])
         self.assertEqual(f"fail-time=0", server[5])
-
-    @unittest.skip("IPv6 is not implemented in PPTP")
-    def test_accel_ipv6_pool(self):
-        pass
 
 
 if __name__ == '__main__':
