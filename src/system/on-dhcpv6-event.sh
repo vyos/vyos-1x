@@ -31,16 +31,23 @@ case "$action" in
 
   lease6_release|lease6_expire|lease6_decline)
     ifname=$QUERY6_IFACE_NAME
-    client_ip=$LEASE6_ADDRESS
-    client_prefix_len=$LEASE6_PREFIX_LEN
+    lease_addr=$LEASE6_ADDRESS
+    lease_prefix_len=$LEASE6_PREFIX_LEN
 
     if [[ "$LEASE6_TYPE" != "IA_PD" ]]; then
       exit 0
     fi
 
-    sudo -n /sbin/ip -6 route del ${client_ip}/${client_prefix_len} \
-      dev ${ifname} \
-      proto static
+    logger -s -t on-dhcpv6-event "Processing route deletion for ${lease_addr}/${lease_prefix_len}"
+    route_cmd="sudo -n /sbin/ip -6 route del ${lease_addr}/${lease_prefix_len}"
+
+    # the ifname is not always present, like in LEASE6_VALID_LIFETIME=0 updates,
+    # but 'route del' works either way. Use interface only if there is one.
+    if [[ "$ifname" != "" ]]; then
+        route_cmd+=" dev ${ifname}"
+    fi
+    route_cmd+=" proto static"
+    eval "$route_cmd"
 
     exit 0
     ;;
@@ -49,20 +56,22 @@ case "$action" in
     for ((i = 0; i < $LEASES6_SIZE; i++)); do
       ifname=$QUERY6_IFACE_NAME
       requester_link_local=$QUERY6_REMOTE_ADDR
-      client_type_var="LEASES6_AT${i}_TYPE"
-      client_ip_var="LEASES6_AT${i}_ADDRESS"
-      client_prefix_len_var="LEASES6_AT${i}_PREFIX_LEN"
+      lease_type_var="LEASES6_AT${i}_TYPE"
+      lease_ip_var="LEASES6_AT${i}_ADDRESS"
+      lease_prefix_len_var="LEASES6_AT${i}_PREFIX_LEN"
 
-      client_type=${!client_type_var}
+      lease_type=${!lease_type_var}
 
-      if [[ "$client_type" != "IA_PD" ]]; then
+      if [[ "$lease_type" != "IA_PD" ]]; then
         continue
       fi
 
-      client_ip=${!client_ip_var}
-      client_prefix_len=${!client_prefix_len_var}
+      lease_ip=${!lease_ip_var}
+      lease_prefix_len=${!lease_prefix_len_var}
+
+      logger -s -t on-dhcpv6-event "Processing PD route for ${lease_addr}/${lease_prefix_len}. Link local: ${requester_link_local} ifname: ${ifname}"
       
-      sudo -n /sbin/ip -6 route replace ${client_ip}/${client_prefix_len} \
+      sudo -n /sbin/ip -6 route replace ${lease_ip}/${lease_prefix_len} \
         via ${requester_link_local} \
         dev ${ifname} \
         proto static
