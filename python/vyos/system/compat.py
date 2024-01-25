@@ -170,9 +170,12 @@ def prune_vyos_versions(root_dir: str = '') -> None:
     if not root_dir:
         root_dir = disk.find_persistence()
 
-    for version in grub.version_list():
+    version_files = Path(f'{root_dir}/{grub.GRUB_DIR_VYOS_VERS}').glob('*.cfg')
+
+    for file in version_files:
+        version = Path(file).stem
         if not Path(f'{root_dir}/boot/{version}').is_dir():
-            grub.version_del(version)
+            grub.version_del(version, root_dir)
 
 
 def update_cfg_ver(root_dir:str = '') -> int:
