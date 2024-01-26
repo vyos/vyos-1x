@@ -117,9 +117,7 @@ clean_ruleset_threshold=10
 clean_ruleset_interval=600
 
 # Anchor name in pf (default is miniupnpd)
-# Something wrong with this option "anchor", comment it out
-#   vyos@r14# miniupnpd -vv -f /run/upnp/miniupnp.conf
-#   invalid option in file /run/upnp/miniupnp.conf line 74 : anchor=VyOS
+# pf(4) does not apply to Linux, hence must be commented out here.
 #anchor=VyOS
 
 uuid={{ uuid }}
