@@ -69,8 +69,8 @@ MSG_WARN_ISO_SIGN_INVALID: str = 'Signature is not valid. Do you want to continu
 MSG_WARN_ISO_SIGN_UNAVAL: str = 'Signature is not available. Do you want to continue with installation?'
 MSG_WARN_ROOT_SIZE_TOOBIG: str = 'The size is too big. Try again.'
 MSG_WARN_ROOT_SIZE_TOOSMALL: str = 'The size is too small. Try again'
-MSG_WARN_IMAGE_NAME_WRONG: str = 'The suggested name is unsupported!\n'
-'It must be between 1 and 32 characters long and contains only the next characters: .+-_ a-z A-Z 0-9'
+MSG_WARN_IMAGE_NAME_WRONG: str = 'The suggested name is unsupported!\n'\
+'It must be between 1 and 64 characters long and contains only the next characters: .+-_ a-z A-Z 0-9'
 CONST_MIN_DISK_SIZE: int = 2147483648  # 2 GB
 CONST_MIN_ROOT_SIZE: int = 1610612736  # 1.5 GB
 # a reserved space: 2MB for header, 1 MB for BIOS partition, 256 MB for EFI
@@ -812,7 +812,11 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 f'Adding image would downgrade image tools to v.{cfg_ver}; disallowed')
 
         if not no_prompt:
-            image_name: str = ask_input(MSG_INPUT_IMAGE_NAME, version_name)
+            while True:
+                image_name: str = ask_input(MSG_INPUT_IMAGE_NAME, version_name)
+                if image.validate_name(image_name):
+                    break
+                print(MSG_WARN_IMAGE_NAME_WRONG)
             set_as_default: bool = ask_yes_no(MSG_INPUT_IMAGE_DEFAULT, default=True)
         else:
             image_name: str = version_name
@@ -867,7 +871,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     except Exception as err:
         # unmount an ISO and cleanup
         cleanup([str(iso_path)])
-        exit(f'Whooops: {err}')
+        exit(f'Error: {err}')
 
 
 def parse_arguments() -> Namespace:
