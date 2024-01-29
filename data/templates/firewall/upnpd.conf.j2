@@ -3,11 +3,40 @@
 # WAN network interface
 ext_ifname={{ wan_interface }}
 {% if wan_ip is vyos_defined %}
+
+# if the WAN network interface for IPv6 is different than for IPv4,
+# set ext_ifname6
+#ext_ifname6=eth2
+
 # If the WAN interface has several IP addresses, you
-# can specify the one to use below
+# can specify the one to use below.
+# Setting ext_ip is also useful in double NAT setup, you can declare here
+# the public IP address.
 {%     for addr in wan_ip %}
 ext_ip={{ addr }}
 {%     endfor  %}
+{% endif %}
+
+{% if stun is vyos_defined %}
+# WAN interface must have public IP address. Otherwise it is behind NAT
+# and port forwarding is impossible. In some cases WAN interface can be
+# behind unrestricted full-cone NAT 1:1 when all incoming traffic is NAT-ed and
+# routed to WAN interfaces without any filtering. In this cases miniupnpd
+# needs to know public IP address and it can be learnt by asking external
+# server via STUN protocol. Following option enable retrieving external
+# public IP address from STUN server and detection of NAT type. You need
+# to specify also external STUN server in stun_host option below.
+# This option is disabled by default.
+ext_perform_stun=yes
+# Specify STUN server, either hostname or IP address
+# Some public STUN servers:
+#  stun.stunprotocol.org
+#  stun.sipgate.net
+#  stun.xten.com
+#  stun.l.google.com (on non standard port 19302)
+ext_stun_host={{ stun.host }}
+# Specify STUN UDP port, by default it is standard port 3478.
+ext_stun_port={{ stun.port }}
 {% endif %}
 
 # LAN network interfaces IPs / networks
@@ -20,6 +49,9 @@ ext_ip={{ addr }}
 # When MULTIPLE_EXTERNAL_IP is enabled, the external IP
 # address associated with the subnet follows. For example:
 #  listening_ip=192.168.0.1/24 88.22.44.13
+# When MULTIPLE_EXTERNAL_IP is disabled, you can list associated network
+# interfaces (for bridges)
+#  listening_ip=bridge0 em0 wlan0
 {%     for addr in listen %}
 {%         if addr | is_ipv4  %}
 listening_ip={{ addr }}
@@ -65,6 +97,18 @@ min_lifetime={{ pcp_lifetime.min }}
 {%     endif %}
 {% endif %}
 
+# table names for netfilter nft. Default is "filter" for both
+#upnp_table_name=
+#upnp_nat_table_name=
+# chain names for netfilter and netfilter nft
+# netfilter : default are MINIUPNPD, MINIUPNPD, MINIUPNPD-POSTROUTING
+# netfilter nft : default are miniupnpd, prerouting_miniupnpd, postrouting_miniupnpd
+#upnp_forward_chain=forwardUPnP
+#upnp_nat_chain=UPnP
+#upnp_nat_postrouting_chain=UPnP-Postrouting
+
+# Lease file location
+lease_file=/config/upnp.leases
 
 # To enable the next few runtime options, see compile time
 # ENABLE_MANUFACTURER_INFO_CONFIGURATION (config.h)
@@ -89,6 +133,11 @@ model_description=Vyos open source enterprise router/firewall operating system
 # Model URL, default is URL of OS vendor
 model_url=https://vyos.io/
 
+# Bitrates reported by daemon in bits per second
+# by default miniupnpd tries to get WAN interface speed
+#bitrate_up=1000000
+#bitrate_down=10000000
+
 {% if secure_mode is vyos_defined %}
 # Secure Mode, UPnP clients can only add mappings to their own IP
 secure_mode=yes
@@ -108,6 +157,10 @@ secure_mode=no
 # Report system uptime instead of daemon uptime
 system_uptime=yes
 
+# Notify interval in seconds. default is 30 seconds.
+#notify_interval=240
+notify_interval=60
+
 # Unused rules cleaning.
 # never remove any rule before this threshold for the number
 # of redirections is exceeded. default to 20
@@ -116,23 +169,46 @@ clean_ruleset_threshold=10
 # a 600 seconds (10 minutes) interval makes sense
 clean_ruleset_interval=600
 
+############################################################################
+## The next 5 config parameters (packet_log, anchor, queue, tag, quickrules)
+## are specific to BSD's pf(4) packet filter and hence cannot be enabled in
+## VyOS.
+# Log packets in pf (default is no)
+#packet_log=no
+
 # Anchor name in pf (default is miniupnpd)
-# pf(4) does not apply to Linux, hence must be commented out here.
-#anchor=VyOS
+#anchor=miniupnpd
 
+# ALTQ queue in pf
+# Filter rules must be used for this to be used.
+# compile with PF_ENABLE_FILTER_RULES (see config.h file)
+#queue=queue_name1
+
+# Tag name in pf
+#tag=tag_name1
+
+# Make filter rules in pf quick or not. default is yes
+# active when compiled with PF_ENABLE_FILTER_RULES (see config.h file)
+#quickrules=no
+##
+## End of pf(4)-specific configuration not to be set in VyOS.
+############################################################################
+
+# UUID, generate your own UUID with "make genuuid"
 uuid={{ uuid }}
-
-# Lease file location
-lease_file=/config/upnp.leases
 
 # Daemon's serial and model number when reporting to clients
 # (in XML description)
 #serial=12345678
 #model_number=1
 
+# If compiled with IGD_V2 defined, force reporting IGDv1 in rootDesc (default
+# is no)
+#force_igd_desc_v1=no
+
 {% if rule is vyos_defined %}
-# UPnP permission rules
-# (allow|deny) (external port range) IP/mask (internal port range)
+# UPnP permission rules (also enforced for NAT-PMP and PCP)
+# (allow|deny) (external port range) IP/mask (internal port range) (optional regex filter)
 # A port range is <min port>-<max port> or <port> if there is only
 # one port in the range.
 # IP/mask format must be nnn.nnn.nnn.nnn/nn
@@ -148,26 +224,4 @@ lease_file=/config/upnp.leases
 {{ config.action }} {{ config.external_port_range }} {{ config.ip }}{{ '/32' if '/' not in config.ip else '' }} {{ config.internal_port_range }}
 {%         endif %}
 {%     endfor %}
-{% endif %}
-
-{% if stun is vyos_defined %}
-# WAN interface must have public IP address. Otherwise it is behind NAT
-# and port forwarding is impossible. In some cases WAN interface can be
-# behind unrestricted NAT 1:1 when all incoming traffic is NAT-ed and
-# routed to WAN interfaces without any filtering. In this cases miniupnpd
-# needs to know public IP address and it can be learnt by asking external
-# server via STUN protocol. Following option enable retrieving external
-# public IP address from STUN server and detection of NAT type. You need
-# to specify also external STUN server in stun_host option below.
-# This option is disabled by default.
-ext_perform_stun=yes
-# Specify STUN server, either hostname or IP address
-# Some public STUN servers:
-#  stun.stunprotocol.org
-#  stun.sipgate.net
-#  stun.xten.com
-#  stun.l.google.com (on non standard port 19302)
-ext_stun_host={{ stun.host }}
-# Specify STUN UDP port, by default it is standard port 3478.
-ext_stun_port={{ stun.port }}
 {% endif %}
