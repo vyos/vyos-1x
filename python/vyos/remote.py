@@ -148,7 +148,7 @@ class FtpC:
             # Almost all FTP servers support the `SIZE' command.
             size = conn.size(self.path)
             if self.check_space:
-                check_storage(path, size)
+                check_storage(location, size)
             # No progressbar if we can't determine the size or if the file is too small.
             if self.progressbar and size and size > CHUNK_SIZE:
                 with Progressbar(CHUNK_SIZE / size) as p:
