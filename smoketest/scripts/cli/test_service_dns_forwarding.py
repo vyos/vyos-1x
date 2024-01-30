@@ -59,6 +59,12 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertFalse(process_named_running(PROCESS_NAME))
 
+    def _set_required_options(self):
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
     def test_basic_forwarding(self):
         # Check basic DNS forwarding settings
         cache_size = '20'
@@ -293,6 +299,48 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             # verify local-port configuration
             tmp = get_config_value('local-port')
             self.assertEqual(tmp, port)
+
+    def test_ecs_add_for(self):
+        self._set_required_options()
+
+        options = ['0.0.0.0/0', '!10.0.0.0/8', 'fc00::/7', '!fe80::/10']
+        for param in options:
+            self.cli_set(base_path + ['options', 'ecs-add-for', param])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify ecs_add_for configuration
+        tmp = get_config_value('ecs-add-for')
+        self.assertEqual(tmp, ','.join(options))
+
+    def test_ecs_ipv4_bits(self):
+        self._set_required_options()
+
+        option_value = '24'
+        self.cli_set(base_path + ['options', 'ecs-ipv4-bits', option_value])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify ecs_ipv4_bits configuration
+        tmp = get_config_value('ecs-ipv4-bits')
+        self.assertEqual(tmp, option_value)
+
+    def test_edns_subnet_allow_list(self):
+        self._set_required_options()
+
+        options = ['192.0.2.1/32', 'example.com', 'fe80::/10']
+        for param in options:
+            self.cli_set(base_path + ['options', 'edns-subnet-allow-list', param])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify edns_subnet_allow_list configuration
+        tmp = get_config_value('edns-subnet-allow-list')
+        self.assertEqual(tmp, ','.join(options))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
