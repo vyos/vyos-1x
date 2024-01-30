@@ -7,6 +7,15 @@
           <help>Show RPKI (Resource Public Key Infrastructure) information</help>
         </properties>
         <children>
+          <tagNode name="as-number">
+             <properties>
+               <help>Lookup by ASN in prefix table</help>
+               <completionHelp>
+                 <list>&lt;ASNUM&gt;</list>
+               </completionHelp>
+             </properties>
+             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </tagNode>
           <leafNode name="cache-connection">
             <properties>
               <help>Show RPKI cache connections</help>
@@ -19,6 +28,26 @@
              </properties>
              <command>vtysh -c "show rpki cache-server"</command>
           </leafNode>
+          <tagNode name="prefix">
+             <properties>
+               <help>Lookup IP prefix and optionally ASN in prefix table</help>
+               <completionHelp>
+                 <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+               </completionHelp>
+             </properties>
+             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+             <children>
+               <tagNode name="as-number">
+                <properties>
+                  <help>AS Number</help>
+                  <completionHelp>
+                    <list>&lt;ASNUM&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $(echo $@ | sed -e "s/as-number //g")</command>
+              </tagNode>
+             </children>
+          </tagNode>
           <leafNode name="prefix-table">
              <properties>
                <help>Show RPKI-validated prefixes</help>
