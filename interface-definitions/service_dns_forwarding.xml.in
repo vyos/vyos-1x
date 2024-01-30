@@ -14,6 +14,52 @@
               <priority>918</priority>
             </properties>
             <children>
+              <node name="options">
+                <properties>
+                  <help>DNS forwarding options</help>
+                </properties>
+                <children>
+                  <leafNode name="ecs-add-for">
+                    <properties>
+                      <help>List of client netmasks for which EDNS Client Subnet will be added</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 address and prefix length</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 address and prefix length</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ecs-ipv4-bits">
+                    <properties>
+                      <help>Number of bits of client IPv4 address</help>
+                      <valueHelp>
+                        <format>u32:0-32</format>
+                        <description>Number of bits of IPv4 address to pass for EDNS Client Subnet</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-32"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="edns-subnet-allow-list">
+                    <properties>
+                      <help>List of netmasks and domains that we should enable EDNS subnet for</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Netmask or domain</description>
+                      </valueHelp>
+                      <multi/>
+                      <constraint>
+                        <validator name="fqdn"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="cache-size">
                 <properties>
                   <help>DNS forwarding cache size</help>
