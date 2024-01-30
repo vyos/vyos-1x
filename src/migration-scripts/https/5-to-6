@@ -43,11 +43,11 @@ if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 
-if config.exists(base + ['certificates']):
+if config.exists(base + ['certificates', 'certbot']):
     # both domain-name and email must be set on CLI - ensured by previous verify()
     domain_names = config.return_values(base + ['certificates', 'certbot', 'domain-name'])
     email = config.return_value(base + ['certificates', 'certbot', 'email'])
-    config.delete(base + ['certificates'])
+    config.delete(base + ['certificates', 'certbot'])
 
     # Set default certname based on domain-name
     cert_name = 'https-' + domain_names[0].split('.')[0]
