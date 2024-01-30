@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,13 +27,12 @@ from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
+from vyos.utils.kernel import check_kmod
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
 from vyos.utils.process import cmd
-from vyos.utils.process import popen
-from vyos.utils.process import run
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import frr
@@ -41,16 +40,28 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
-nft_vrf_config = '/tmp/nftables-vrf-zones'
+k_mod = ['vrf']
 
-def has_rule(af : str, priority : int, table : str):
-    """ Check if a given ip rule exists """
+def has_rule(af : str, priority : int, table : str=None):
+    """
+    Check if a given ip rule exists
+    $ ip --json -4 rule show
+    [{'l3mdev': None, 'priority': 1000, 'src': 'all'},
+    {'action': 'unreachable', 'l3mdev': None, 'priority': 2000, 'src': 'all'},
+    {'priority': 32765, 'src': 'all', 'table': 'local'},
+    {'priority': 32766, 'src': 'all', 'table': 'main'},
+    {'priority': 32767, 'src': 'all', 'table': 'default'}]
+    """
     if af not in ['-4', '-6']:
         raise ValueError()
-    command = f'ip -j {af} rule show'
+    command = f'ip --detail --json {af} rule show'
     for tmp in loads(cmd(command)):
-        if {'priority', 'table'} <= set(tmp):
+        if 'priority' in tmp and 'table' in tmp:
             if tmp['priority'] == priority and tmp['table'] == table:
+                return True
+        elif 'priority' in tmp and table in tmp:
+            # l3mdev table has a different layout
+            if tmp['priority'] == priority:
                 return True
     return False
 
@@ -173,8 +184,6 @@ def verify(vrf):
 def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
-    # Render nftables zones config
-    render(nft_vrf_config, 'firewall/nftables-vrf-zones.j2', vrf)
     # Render VRF Kernel/Zebra route-map filters
     vrf['frr_zebra_config'] = render_to_string('frr/zebra.vrf.route-map.frr.j2', vrf)
 
@@ -227,14 +236,6 @@ def apply(vrf):
     sysctl_write('net.vrf.strict_mode', strict_mode)
 
     if 'name' in vrf:
-        # Separate VRFs in conntrack table
-        # check if table already exists
-        _, err = popen('nft list table inet vrf_zones')
-        # If not, create a table
-        if err and os.path.exists(nft_vrf_config):
-            cmd(f'nft -f {nft_vrf_config}')
-            os.unlink(nft_vrf_config)
-
         # Linux routing uses rules to find tables - routing targets are then
         # looked up in those tables. If the lookup got a matching route, the
         # process ends.
@@ -318,17 +319,11 @@ def apply(vrf):
         frr_cfg.add_before(frr.default_add_before, vrf['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
-    # return to default lookup preference when no VRF is configured
-    if 'name' not in vrf:
-        # Remove VRF zones table from nftables
-        tmp = run('nft list table inet vrf_zones')
-        if tmp == 0:
-            cmd('nft delete table inet vrf_zones')
-
     return None
 
 if __name__ == '__main__':
     try:
+        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
