@@ -118,7 +118,7 @@
               <description>Exactly URL</description>
             </valueHelp>
             <constraint>
-              <regex>^\/[\w\-.\/]+$</regex>
+              <regex>^\/[\w\-.\/]*$</regex>
             </constraint>
             <constraintErrorMessage>Incorrect URL format</constraintErrorMessage>
             <multi/>
