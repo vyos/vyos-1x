@@ -294,5 +294,58 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value('local-port')
             self.assertEqual(tmp, port)
 
+    def test_ecs_add_for(self):
+
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        options = ['0.0.0.0/0', '!100.64.0.0/10', '!fe80::/10', 'fc00::/7']
+        for option in options:
+            self.cli_set(base_path + ['options', 'ecs-add-for', option])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        tmp = get_config_value('ecs-add-for')
+        self.assertEqual(tmp, ','.join(options))
+
+    def test_ecs_ipv4_bits(self):
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        ecs_ipv4_bits = '32'
+        self.cli_set(base_path + ['options', 'ecs-ipv4-bits', ecs_ipv4_bits])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        tmp = get_config_value('ecs-ipv4-bits')
+        self.assertEqual(tmp, ecs_ipv4_bits)
+
+    def test_edns_subnet_allow_list(self):
+
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        options = ['example.com', '192.168.1.1/10', 'fc00::/7']
+        for option in options:
+            self.cli_set(base_path + ['options', 'edns-subnet-allow-list', option])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        tmp = get_config_value('edns-subnet-allow-list')
+        self.assertEqual(tmp, ','.join(options))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
