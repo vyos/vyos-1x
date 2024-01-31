@@ -742,7 +742,7 @@
                 <children>
                   <leafNode name="ecs-add-for">
                     <properties>
-                      <help>List of client netmasks for which EDNS Client Subnet will be added</help>
+                      <help>Client netmask for which EDNS Client Subnet will be added</help>
                       <valueHelp>
                         <format>ipv4net</format>
                         <description>IP addresses or subnets, negation supported</description>
@@ -768,7 +768,7 @@
                   </leafNode>
                   <leafNode name="edns-subnet-allow-list">
                     <properties>
-                      <help>List of netmasks and domains that we should enable EDNS subnet for</help>
+                      <help>Netmask or domain that we should enable EDNS subnet for</help>
                       <valueHelp>
                         <format>txt</format>
                         <description>Netmask or domain</description>
