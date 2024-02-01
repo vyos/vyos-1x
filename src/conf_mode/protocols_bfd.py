@@ -51,6 +51,7 @@ def get_bfd_peer_config(peer, conf_mode="proposed"):
         'multihop': False,
         'echo_interval': '',
         'echo_mode': False,
+        'minimum_ttl': None,
     }
 
     # Check if individual peer is disabled
@@ -113,6 +114,12 @@ def get_bfd_peer_config(peer, conf_mode="proposed"):
     if conf_mode == "proposed" and conf.exists('echo-mode'):
         bfd_peer['echo_mode'] = True
 
+    # Enables or disables the echo transmission mode
+    if conf_mode == "effective" and conf.exists_effective('minimum-ttl'):
+        bfd_peer['minimum_ttl'] = conf.return_effective_value('minimum-ttl')
+    if conf_mode == "proposed" and conf.exists('minimum-ttl'):
+        bfd_peer['minimum_ttl'] = conf.return_value('minimum-ttl')
+
     return bfd_peer
 
 def get_config():
@@ -172,6 +179,9 @@ def verify(bfd):
         # echo interval can be configured only with enabled echo-mode
         if peer['echo_interval'] != '' and not peer['echo_mode']:
             raise ConfigError('echo-interval can be configured only with enabled echo-mode')
+
+        if peer['minimum_ttl'] != None and peer['multihop'] != True:
+            raise ConfigError('Minimum TTL is only available for multihop BFD sessions!')
 
     # check if we deleted peers are not used in configuration
     if conf.exists('protocols bgp'):
