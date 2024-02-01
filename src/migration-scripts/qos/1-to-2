@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -40,7 +40,53 @@ with open(file_name, 'r') as f:
 base = ['traffic-policy']
 config = ConfigTree(config_file)
 
+
+def delete_orphaned_interface_policy(config, iftype, ifname, vif=None, vifs=None, vifc=None):
+    """Delete unexpected traffic-policy on interfaces in cases when
+       policy does not exist but inreface has a policy configuration
+       Example T5941:
+         set interfaces bonding bond0 vif 995 traffic-policy
+    """
+    if_path = ['interfaces', iftype, ifname]
+
+    if vif:
+        if_path += ['vif', vif]
+    elif vifs:
+        if_path += ['vif-s', vifs]
+        if vifc:
+            if_path += ['vif-c', vifc]
+
+    if not config.exists(if_path + ['traffic-policy']):
+        return
+
+    config.delete(if_path + ['traffic-policy'])
+
+
 if not config.exists(base):
+    # Delete orphaned nodes on interfaces T5941
+    for iftype in config.list_nodes(['interfaces']):
+        for ifname in config.list_nodes(['interfaces', iftype]):
+            delete_orphaned_interface_policy(config, iftype, ifname)
+
+            if config.exists(['interfaces', iftype, ifname, 'vif']):
+                for vif in config.list_nodes(['interfaces', iftype, ifname, 'vif']):
+                    delete_orphaned_interface_policy(config, iftype, ifname, vif=vif)
+
+            if config.exists(['interfaces', iftype, ifname, 'vif-s']):
+                for vifs in config.list_nodes(['interfaces', iftype, ifname, 'vif-s']):
+                    delete_orphaned_interface_policy(config, iftype, ifname, vifs=vifs)
+
+                    if config.exists(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                        for vifc in config.list_nodes(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                            delete_orphaned_interface_policy(config, iftype, ifname, vifs=vifs, vifc=vifc)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)
+
     # Nothing to do
     exit(0)
 
