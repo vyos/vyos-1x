@@ -28,6 +28,7 @@
             #include <include/firewall/action-forward.xml.i>
             #include <include/firewall/common-rule-ipv4.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
+            #include <include/firewall/match-ipsec.xml.i>
             #include <include/firewall/offload-target.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
           </children>
