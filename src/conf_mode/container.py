@@ -214,6 +214,10 @@ def verify(container):
             if {'allow_host_networks', 'network'} <= set(container_config):
                 raise ConfigError(f'"allow-host-networks" and "network" for "{name}" cannot be both configured at the same time!')
 
+            # gid cannot be set without uid
+            if 'gid' in container_config and 'uid' not in container_config:
+                raise ConfigError(f'Cannot set "gid" without "uid" for container')
+
     # Add new network
     if 'network' in container:
         for network, network_config in container['network'].items():
@@ -308,6 +312,14 @@ def generate_run_arguments(name, container_config):
                 # If listen_addresses is empty, just include the standard publish command
                 port += f' --publish {sport}:{dport}/{protocol}'
 
+    # Set uid and gid
+    uid = ''
+    if 'uid' in container_config:
+        uid = container_config['uid']
+        if 'gid' in container_config:
+            uid += ':' + container_config['gid']
+        uid = f'--user {uid}'
+
     # Bind volume
     volume = ''
     if 'volume' in container_config:
@@ -320,7 +332,7 @@ def generate_run_arguments(name, container_config):
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label}'
+                         f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:
