@@ -745,12 +745,26 @@
                       <help>Client netmask for which EDNS Client Subnet will be added</help>
                       <valueHelp>
                         <format>ipv4net</format>
-                        <description>IP addresses or subnets, negation supported</description>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv4net</format>
+                        <description>Match everything except the specified IPv4 prefix</description>
                       </valueHelp>
                       <valueHelp>
                         <format>ipv6net</format>
-                        <description>IPv6 addresses or subnets, negation supported</description>
+                        <description>IPv6 prefix to match</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6net</format>
+                        <description>Match everything except the specified IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-prefix-exclude"/>
+                        <validator name="ipv6-prefix"/>
+                        <validator name="ipv6-prefix-exclude"/>
+                      </constraint>
                       <multi/>
                     </properties>
                   </leafNode>
