@@ -1,6 +1,29 @@
 <!-- include start from firewall/common-rule-ipv6.xml.i -->
 #include <include/firewall/common-rule-inet.xml.i>
 #include <include/firewall/hop-limit.xml.i>
+<node name="add-address-to-group">
+  <properties>
+    <help>Add ipv6 address to dynamic ipv6-address-group</help>
+  </properties>
+  <children>
+    <node name="source-address">
+      <properties>
+        <help>Add source ipv6 addresses to dynamic ipv6-address-group</help>
+      </properties>
+      <children>
+        #include <include/firewall/add-dynamic-ipv6-address-groups.xml.i>
+      </children>
+    </node>
+    <node name="destination-address">
+      <properties>
+        <help>Add destination ipv6 addresses to dynamic ipv6-address-group</help>
+      </properties>
+      <children>
+        #include <include/firewall/add-dynamic-ipv6-address-groups.xml.i>
+      </children>
+    </node>
+  </children>
+</node>
 <node name="destination">
   <properties>
     <help>Destination parameters</help>
@@ -13,6 +36,7 @@
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
+    #include <include/firewall/source-destination-dynamic-group-ipv6.xml.i>
   </children>
 </node>
 <node name="icmpv6">
@@ -67,6 +91,7 @@
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
     #include <include/firewall/source-destination-group-ipv6.xml.i>
+    #include <include/firewall/source-destination-dynamic-group-ipv6.xml.i>
   </children>
 </node>
 <!-- include end -->

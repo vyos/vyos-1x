@@ -98,5 +98,26 @@
     }
 {%         endfor %}
 {%     endif %}
+
+{%     if group.dynamic_group is vyos_defined %}
+{%         if group.dynamic_group.address_group is vyos_defined and not is_ipv6 and is_l3 %}
+{%             for group_name, group_conf in group.dynamic_group.address_group.items() %}
+    set DA_{{ group_name }} {
+        type {{ ip_type }}
+        flags dynamic, timeout
+    }
+{%             endfor %}
+{%         endif %}
+
+{%         if group.dynamic_group.ipv6_address_group is vyos_defined and is_ipv6 and is_l3 %}
+{%             for group_name, group_conf in group.dynamic_group.ipv6_address_group.items() %}
+    set DA6_{{ group_name }} {
+        type {{ ip_type }}
+        flags dynamic, timeout
+    }
+{%             endfor %}
+{%         endif %}
+{%     endif %}
+
 {% endif %}
 {% endmacro %}

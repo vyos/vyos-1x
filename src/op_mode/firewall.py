@@ -327,6 +327,8 @@ def show_firewall_group(name=None):
                             dest_group = dict_search_args(rule_conf, 'destination', 'group', group_type)
                             in_interface = dict_search_args(rule_conf, 'inbound_interface', 'group')
                             out_interface = dict_search_args(rule_conf, 'outbound_interface', 'group')
+                            dyn_group_source = dict_search_args(rule_conf, 'add_address_to_group', 'source_address', group_type)
+                            dyn_group_dst = dict_search_args(rule_conf, 'add_address_to_group', 'destination_address', group_type)
                             if source_group:
                                 if source_group[0] == "!":
                                     source_group = source_group[1:]
@@ -347,6 +349,14 @@ def show_firewall_group(name=None):
                                     out_interface = out_interface[1:]
                                 if group_name == out_interface:
                                     out.append(f'{item}-{name_type}-{priority}-{rule_id}')
+
+                            if dyn_group_source:
+                                if group_name == dyn_group_source:
+                                    out.append(f'{item}-{name_type}-{priority}-{rule_id}')
+                            if dyn_group_dst:
+                                if group_name == dyn_group_dst:
+                                    out.append(f'{item}-{name_type}-{priority}-{rule_id}')
+
 
             # Look references in route | route6
             for name_type in ['route', 'route6']:
@@ -423,26 +433,37 @@ def show_firewall_group(name=None):
     rows = []
 
     for group_type, group_type_conf in firewall['group'].items():
-        for group_name, group_conf in group_type_conf.items():
-            if name and name != group_name:
-                continue
+        ##
+        if group_type != 'dynamic_group':
 
-            references = find_references(group_type, group_name)
-            row = [group_name, group_type, '\n'.join(references) or 'N/D']
-            if 'address' in group_conf:
-                row.append("\n".join(sorted(group_conf['address'])))
-            elif 'network' in group_conf:
-                row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
-            elif 'mac_address' in group_conf:
-                row.append("\n".join(sorted(group_conf['mac_address'])))
-            elif 'port' in group_conf:
-                row.append("\n".join(sorted(group_conf['port'])))
-            elif 'interface' in group_conf:
-                row.append("\n".join(sorted(group_conf['interface'])))
-            else:
-                row.append('N/D')
-            rows.append(row)
+            for group_name, group_conf in group_type_conf.items():
+                if name and name != group_name:
+                    continue
 
+                references = find_references(group_type, group_name)
+                row = [group_name, group_type, '\n'.join(references) or 'N/D']
+                if 'address' in group_conf:
+                    row.append("\n".join(sorted(group_conf['address'])))
+                elif 'network' in group_conf:
+                    row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
+                elif 'mac_address' in group_conf:
+                    row.append("\n".join(sorted(group_conf['mac_address'])))
+                elif 'port' in group_conf:
+                    row.append("\n".join(sorted(group_conf['port'])))
+                elif 'interface' in group_conf:
+                    row.append("\n".join(sorted(group_conf['interface'])))
+                else:
+                    row.append('N/D')
+                rows.append(row)
+
+        else:
+            for dynamic_type in ['address_group', 'ipv6_address_group']:
+                if dynamic_type in firewall['group']['dynamic_group']:
+                    for dynamic_name, dynamic_conf in firewall['group']['dynamic_group'][dynamic_type].items():
+                        references = find_references(dynamic_type, dynamic_name)
+                        row = [dynamic_name, dynamic_type + '(dynamic)', '\n'.join(references) or 'N/D']
+                        row.append('N/D')
+                        rows.append(row)
 
     if rows:
         print('Firewall Groups\n')
