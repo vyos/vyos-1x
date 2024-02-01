@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -509,6 +509,14 @@ def verify(bgp):
                     if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
                         raise ConfigError(
                             'Command "import vrf" conflicts with "route-target vpn both" command!')
+                    if dict_search('route_target.vpn.export', afi_config):
+                        raise ConfigError(
+                            'Command "route-target vpn export" conflicts '\
+                            'with "route-target vpn both" command!')
+                    if dict_search('route_target.vpn.import', afi_config):
+                        raise ConfigError(
+                            'Command "route-target vpn import" conflicts '\
+                            'with "route-target vpn both" command!')
 
                 if dict_search('route_target.vpn.import', afi_config):
                     if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
