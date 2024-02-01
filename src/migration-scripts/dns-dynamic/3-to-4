@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5966:
+# - migrate "service dns dynamic name <service> address <interface>"
+#        to "service dns dynamic name <service> address interface <interface>"
+#      when <interface> != 'web'
+# - migrate "service dns dynamic name <service> web-options ..."
+#        to "service dns dynamic name <service> address web ..."
+#      when <interface> == 'web'
+
+import sys
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+base_path = ['service', 'dns', 'dynamic', 'name']
+
+if not config.exists(base_path):
+    # Nothing to do
+    sys.exit(0)
+
+for service in config.list_nodes(base_path):
+
+    service_path = base_path + [service]
+
+    if config.exists(service_path + ['address']):
+        address = config.return_value(service_path + ['address'])
+        # 'address' is not a leaf node anymore, delete it first
+        config.delete(service_path + ['address'])
+
+        # When address is an interface (not 'web'), move it to 'address interface'
+        if address != 'web':
+            config.set(service_path + ['address', 'interface'], address)
+
+        else: # address == 'web'
+            # Relocate optional 'web-options' directly under 'address web'
+            if config.exists(service_path + ['web-options']):
+                # config.copy does not recursively create a path, so initialize it
+                config.set(service_path + ['address'])
+                config.copy(service_path + ['web-options'],
+                            service_path + ['address', 'web'])
+                config.delete(service_path + ['web-options'])
+
+            # ensure that valueless 'address web' still exists even if there are no 'web-options'
+            if not config.exists(service_path + ['address', 'web']):
+                config.set(service_path + ['address', 'web'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)
