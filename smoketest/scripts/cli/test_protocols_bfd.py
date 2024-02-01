@@ -32,6 +32,7 @@ neighbor_config = {
         'intv_rx'    : '500',
         'intv_tx'    : '600',
         'multihop'   : '',
+        'minimum_ttl': '50',
         'source_addr': '192.0.2.254',
         },
     '192.0.2.20' : {
@@ -86,6 +87,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer', peer, 'interval', 'transmit', peer_config["intv_tx"]])
             if 'multihop' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'multihop'])
+            if 'minimum_ttl' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'minimum-ttl', peer_config["minimum_ttl"]])
             if 'shutdown' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'shutdown'])
             if 'source_addr' in peer_config:
@@ -112,6 +115,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
             if 'echo_mode' in peer_config:
                 self.assertIn(f' echo-mode', peerconfig)
+            if 'minimum_ttl' in peer_config:
+                self.assertIn(f' minimum-ttl {peer_config["minimum_ttl"]}', peerconfig)
             if 'intv_echo' in peer_config:
                 self.assertIn(f' echo-interval {peer_config["intv_echo"]}', peerconfig)
             if 'intv_mult' in peer_config:

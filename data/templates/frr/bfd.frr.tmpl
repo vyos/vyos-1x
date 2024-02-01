@@ -14,6 +14,9 @@ bfd
 {% if peer.echo_mode %}
  echo-mode
 {% endif %}
+{% if peer.minimum_ttl %}
+  minimum-ttl {{ peer.minimum_ttl }}
+{% endif %}
 {% if peer.echo_interval != '' %}
  echo-interval {{ peer.echo_interval }}
 {% endif %}
