@@ -80,12 +80,6 @@ def verify(pptp):
                 raise ConfigError(
                     f'Missing RADIUS secret key for server "{server}"')
 
-    if auth_mode == 'local' or auth_mode == 'noauth':
-        if not dict_search('client_ip_pool', pptp):
-            raise ConfigError(
-                'PPTP local auth mode requires local client-ip-pool '
-                'to be configured!')
-
     verify_accel_ppp_ip_pool(pptp)
 
     if 'name_server' in pptp:

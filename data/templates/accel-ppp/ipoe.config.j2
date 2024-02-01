@@ -58,6 +58,10 @@ password=csid
 {% if default_pool is vyos_defined %}
 ip-pool={{ default_pool }}
 {% endif %}
+{% if default_ipv6_pool is vyos_defined %}
+ipv6-pool={{ default_ipv6_pool }}
+ipv6-pool-delegate={{ default_ipv6_pool }}
+{% endif %}
 {% if gateway_address is vyos_defined %}
 {%     for gw_addr in gateway_address %}
 gw-ip-address={{ gw_addr }}

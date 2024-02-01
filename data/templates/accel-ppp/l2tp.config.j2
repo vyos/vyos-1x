@@ -51,6 +51,10 @@ host-name={{ lns.host_name }}
 {% if default_pool is vyos_defined %}
 ip-pool={{ default_pool }}
 {% endif %}
+{% if default_ipv6_pool is vyos_defined %}
+ipv6-pool={{ default_ipv6_pool }}
+ipv6-pool-delegate={{ default_ipv6_pool }}
+{% endif %}
 
 [client-ip-range]
 0.0.0.0/0

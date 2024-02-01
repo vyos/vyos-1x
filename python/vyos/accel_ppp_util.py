@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,8 +22,8 @@
 # makes use of it!
 
 from vyos import ConfigError
+from vyos.base import Warning
 from vyos.utils.dict import dict_search
-
 
 def get_pools_in_order(data: dict) -> list:
     """Return a list of dictionaries representing pool data in the order
@@ -156,38 +156,47 @@ def verify_accel_ppp_base_service(config, local_users=True):
                 "Not more then three IPv6 DNS name-servers " "can be configured"
             )
 
-    if "client_ipv6_pool" in config:
-        ipv6_pool = config["client_ipv6_pool"]
-        if "delegate" in ipv6_pool:
-            if "prefix" not in ipv6_pool:
-                raise ConfigError(
-                    'IPv6 "delegate" also requires "prefix" to be defined!'
-                )
-
-            for delegate in ipv6_pool["delegate"]:
-                if "delegation_prefix" not in ipv6_pool["delegate"][delegate]:
-                    raise ConfigError("delegation-prefix length required!")
 
 
 def verify_accel_ppp_ip_pool(vpn_config):
     """
     Common helper function which must be used by Accel-PPP
     services (pptp, l2tp, sstp, pppoe) to verify client-ip-pool
+    and client-ipv6-pool
     """
     if dict_search("client_ip_pool", vpn_config):
         for pool_name, pool_config in vpn_config["client_ip_pool"].items():
             next_pool = dict_search(f"next_pool", pool_config)
             if next_pool:
                 if next_pool not in vpn_config["client_ip_pool"]:
-                    raise ConfigError(f'Next pool "{next_pool}" does not exist')
+                    raise ConfigError(
+                        f'Next pool "{next_pool}" does not exist')
                 if not dict_search(f"range", pool_config):
                     raise ConfigError(
                         f'Pool "{pool_name}" does not contain range but next-pool exists'
                     )
-
     if not dict_search("gateway_address", vpn_config):
-        raise ConfigError("Server requires gateway-address to be configured!")
+        Warning("IPv4 Server requires gateway-address to be configured!")
+
     default_pool = dict_search("default_pool", vpn_config)
     if default_pool:
         if default_pool not in dict_search("client_ip_pool", vpn_config):
             raise ConfigError(f'Default pool "{default_pool}" does not exists')
+
+    if 'client_ipv6_pool' in vpn_config:
+        for ipv6_pool, ipv6_pool_config in vpn_config['client_ipv6_pool'].items():
+            if 'delegate' in ipv6_pool_config and 'prefix' not in ipv6_pool_config:
+                raise ConfigError(
+                    f'IPoE IPv6 deletate-prefix requires IPv6 prefix to be configured in "{ipv6_pool}"!')
+
+    if dict_search('authentication.mode', vpn_config) in ['local', 'noauth']:
+        if not dict_search('client_ip_pool', vpn_config) and not dict_search(
+                'client_ipv6_pool', vpn_config):
+            raise ConfigError(
+                "L2TP local auth mode requires local client-ip-pool or client-ipv6-pool to be configured!")
+        if dict_search('client_ip_pool', vpn_config) and not dict_search(
+                'default_pool', vpn_config):
+            Warning("'default-pool' is not defined")
+        if dict_search('client_ipv6_pool', vpn_config) and not dict_search(
+                'default_ipv6_pool', vpn_config):
+            Warning("'default-ipv6-pool' is not defined")
