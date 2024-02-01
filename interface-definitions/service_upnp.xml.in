@@ -205,6 +205,7 @@
                   <constraint>
                     <validator name="ipv4-address"/>
                     <validator name="ipv4-host"/>
+                    <validator name="ipv4-prefix"/>
                   </constraint>
                 </properties>
               </leafNode>
