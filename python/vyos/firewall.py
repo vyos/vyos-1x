@@ -226,6 +226,14 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                         operator = '!=' if exclude else '=='
                         operator = f'& {address_mask} {operator}'
                     output.append(f'{ip_name} {prefix}addr {operator} @A{def_suffix}_{group_name}')
+                elif 'dynamic_address_group' in group:
+                    group_name = group['dynamic_address_group']
+                    operator = ''
+                    exclude = group_name[0] == "!"
+                    if exclude:
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} @DA{def_suffix}_{group_name}')
                 # Generate firewall group domain-group
                 elif 'domain_group' in group:
                     group_name = group['domain_group']
@@ -418,6 +426,18 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     output.append(f'snaplen {log_snaplen}')
 
     output.append('counter')
+
+    if 'add_address_to_group' in rule_conf:
+        for side in ['destination_address', 'source_address']:
+            if side in rule_conf['add_address_to_group']:
+                prefix = side[0]
+                side_conf = rule_conf['add_address_to_group'][side]
+                dyn_group = side_conf['address_group']
+                if 'timeout' in side_conf:
+                    timeout_value = side_conf['timeout']
+                    output.append(f'set update ip{def_suffix} {prefix}addr timeout {timeout_value} @DA{def_suffix}_{dyn_group}')
+                else:
+                    output.append(f'set update ip{def_suffix} saddr @DA{def_suffix}_{dyn_group}')
 
     if 'set' in rule_conf:
         output.append(parse_policy_set(rule_conf['set'], def_suffix))

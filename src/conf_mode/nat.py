@@ -69,6 +69,10 @@ def get_config(config=None):
     nat['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
+    # Remove dynamic firewall groups if present:
+    if 'dynamic_group' in nat['firewall_group']:
+        del nat['firewall_group']['dynamic_group']
+
     return nat
 
 def verify_rule(config, err_msg, groups_dict):

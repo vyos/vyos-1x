@@ -115,6 +115,35 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+          <node name="dynamic-group">
+            <properties>
+              <help>Firewall dynamic group</help>
+            </properties>
+            <children>
+              <tagNode name="address-group">
+                <properties>
+                  <help>Firewall dynamic address group</help>
+                  <constraint>
+                    <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
+              <tagNode name="ipv6-address-group">
+                <properties>
+                  <help>Firewall dynamic IPv6 address group</help>
+                  <constraint>
+                    <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           <tagNode name="interface-group">
             <properties>
               <help>Firewall interface-group</help>
