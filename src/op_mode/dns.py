@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,17 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import typing
 import sys
-
-from tabulate import tabulate
-
-from vyos.configquery import ConfigTreeQuery
-from vyos.utils.process import cmd
-
 import vyos.opmode
 
+from tabulate import tabulate
+from vyos.configquery import ConfigTreeQuery
+from vyos.utils.process import cmd, rc_cmd
 
-def _data_to_dict(data, sep="\t") -> dict:
+
+def _forwarding_data_to_dict(data, sep="\t") -> dict:
     """
     Return dictionary from plain text
     separated by tab
@@ -52,15 +51,15 @@ def _data_to_dict(data, sep="\t") -> dict:
     return dictionary
 
 
-def _get_raw_forwarding_statistics() -> dict:
-    command = cmd('rec_control --socket-dir=/run/powerdns get-all')
-    data = _data_to_dict(command)
+def _get_forwarding_statistics_raw() -> dict:
+    command = cmd('rec_control get-all')
+    data = _forwarding_data_to_dict(command)
     data['cache-size'] = "{0:.2f}".format( int(
-        cmd('rec_control --socket-dir=/run/powerdns get cache-bytes')) / 1024 )
+        cmd('rec_control get cache-bytes')) / 1024 )
     return data
 
 
-def _get_formatted_forwarding_statistics(data):
+def _get_forwarding_statistics_formatted(data):
     cache_entries = data.get('cache-entries')
     max_cache_entries = data.get('max-cache-entries')
     cache_size = data.get('cache-size')
@@ -69,19 +68,48 @@ def _get_formatted_forwarding_statistics(data):
     output = tabulate(data_entries, headers, numalign="left")
     return output
 
+def _verify_forwarding(func):
+    """Decorator checks if DNS Forwarding config exists"""
+    from functools import wraps
 
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        config = ConfigTreeQuery()
+        if not config.exists('service dns forwarding'):
+            raise vyos.opmode.UnconfiguredSubsystem('DNS Forwarding is not configured')
+        return func(*args, **kwargs)
+    return _wrapper
+
+@_verify_forwarding
 def show_forwarding_statistics(raw: bool):
-
-    config = ConfigTreeQuery()
-    if not config.exists('service dns forwarding'):
-        raise vyos.opmode.UnconfiguredSubsystem('DNS forwarding is not configured')
-
-    dns_data = _get_raw_forwarding_statistics()
+    dns_data = _get_forwarding_statistics_raw()
     if raw:
         return dns_data
     else:
-        return _get_formatted_forwarding_statistics(dns_data)
+        return _get_forwarding_statistics_formatted(dns_data)
 
+@_verify_forwarding
+def reset_forwarding(all: bool, domain: typing.Optional[str]):
+    """
+    Reset DNS Forwarding cache
+
+    :param all (bool): reset cache all domains
+    :param domain (str): reset cache for specified domain
+    """
+    if all:
+        rc, output = rc_cmd('rec_control wipe-cache ".$"')
+        if rc != 0:
+            print(output)
+            return None
+        print('DNS Forwarding cache reset for all domains!')
+        return output
+    elif domain:
+        rc, output = rc_cmd(f'rec_control wipe-cache "{domain}$"')
+        if rc != 0:
+            print(output)
+            return None
+        print(f'DNS Forwarding cache reset for domain "{domain}"!')
+        return output
 
 if __name__ == '__main__':
     try:

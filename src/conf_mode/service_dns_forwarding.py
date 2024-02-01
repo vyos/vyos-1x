@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,18 +26,18 @@ from vyos.template import render
 from vyos.template import bracketize_ipv6
 from vyos.utils.process import call
 from vyos.utils.permission import chown
-from vyos.utils.dict import dict_search
 
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-pdns_rec_user = pdns_rec_group = 'pdns'
-pdns_rec_run_dir = '/run/powerdns'
+pdns_rec_user_group = 'pdns'
+pdns_rec_run_dir = '/run/pdns-recursor'
 pdns_rec_lua_conf_file = f'{pdns_rec_run_dir}/recursor.conf.lua'
 pdns_rec_hostsd_lua_conf_file = f'{pdns_rec_run_dir}/recursor.vyos-hostsd.conf.lua'
 pdns_rec_hostsd_zones_file = f'{pdns_rec_run_dir}/recursor.forward-zones.conf'
 pdns_rec_config_file = f'{pdns_rec_run_dir}/recursor.conf'
+pdns_rec_systemd_override = '/run/systemd/system/pdns-recursor.service.d/override.conf'
 
 hostsd_tag = 'static'
 
@@ -54,6 +54,9 @@ def get_config(config=None):
                                no_tag_node_value_mangle=True,
                                get_first_key=True,
                                with_recursive_defaults=True)
+
+    dns['config_file'] = pdns_rec_config_file
+    dns['config_dir'] = os.path.dirname(pdns_rec_config_file)
 
     # some additions to the default dictionary
     if 'system' in dns:
@@ -251,11 +254,16 @@ def generate(dns):
     if not dns:
         return None
 
-    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.j2',
-            dns, user=pdns_rec_user, group=pdns_rec_group)
+    render(pdns_rec_systemd_override, 'dns-forwarding/override.conf.j2', dns)
 
-    render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.j2',
-            dns, user=pdns_rec_user, group=pdns_rec_group)
+    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.j2', dns,
+           user=pdns_rec_user_group, group=pdns_rec_user_group)
+
+    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.j2', dns,
+           user=pdns_rec_user_group, group=pdns_rec_user_group)
+
+    render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.j2', dns,
+           user=pdns_rec_user_group, group=pdns_rec_user_group)
 
     for zone_filename in glob(f'{pdns_rec_run_dir}/zone.*.conf'):
         os.unlink(zone_filename)
@@ -263,21 +271,25 @@ def generate(dns):
     if 'authoritative_zones' in dns:
         for zone in dns['authoritative_zones']:
             render(zone['file'], 'dns-forwarding/recursor.zone.conf.j2',
-                    zone, user=pdns_rec_user, group=pdns_rec_group)
+                    zone, user=pdns_rec_user_group, group=pdns_rec_user_group)
 
 
     # if vyos-hostsd didn't create its files yet, create them (empty)
     for file in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:
         with open(file, 'a'):
             pass
-        chown(file, user=pdns_rec_user, group=pdns_rec_group)
+        chown(file, user=pdns_rec_user_group, group=pdns_rec_user_group)
 
     return None
 
 def apply(dns):
+    systemd_service = 'pdns-recursor.service'
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
     if not dns:
         # DNS forwarding is removed in the commit
-        call('systemctl stop pdns-recursor.service')
+        call(f'systemctl stop {systemd_service}')
 
         if os.path.isfile(pdns_rec_config_file):
             os.unlink(pdns_rec_config_file)
@@ -345,7 +357,7 @@ def apply(dns):
         hc.apply()
 
         ### finally (re)start pdns-recursor
-        call('systemctl restart pdns-recursor.service')
+        call(f'systemctl reload-or-restart {systemd_service}')
 
 if __name__ == '__main__':
     try:

@@ -5,4 +5,4 @@
 dofile("/usr/share/pdns-recursor/lua-config/rootkeys.lua")
 
 -- Load lua from vyos-hostsd --
-dofile("recursor.vyos-hostsd.conf.lua")
+dofile("{{ config_dir }}/recursor.vyos-hostsd.conf.lua")

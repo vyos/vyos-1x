@@ -12,7 +12,7 @@ allow-from={{ allow_from | join(',') }}
 log-common-errors=yes
 non-local-bind=yes
 query-local-address={{ source_address | join(',') }}
-lua-config-file=recursor.conf.lua
+lua-config-file={{ config_dir }}/recursor.conf.lua
 
 # cache-size
 max-cache-entries={{ cache_size }}
@@ -56,4 +56,4 @@ serve-rfc1918={{ 'no' if no_serve_rfc1918 is vyos_defined else 'yes' }}
 # zones
 auth-zones={% for z in authoritative_zones %}{{ z.name }}={{ z.file }}{{- "," if not loop.last -}}{% endfor %}
 
-forward-zones-file=recursor.forward-zones.conf
+forward-zones-file={{ config_dir }}/recursor.forward-zones.conf
