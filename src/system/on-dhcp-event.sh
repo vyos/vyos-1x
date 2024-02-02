@@ -1,12 +1,20 @@
 #!/bin/bash
-
-# This script came from ubnt.com forum user "bradd" in the following post
-# http://community.ubnt.com/t5/EdgeMAX/Automatic-DNS-resolution-of-DHCP-client-names/td-p/651311
-# It has been modified by Ubiquiti to update the /etc/host file
-# instead of adding to the CLI.
-# Thanks to forum user "itsmarcos" for bug fix & improvements
-# Thanks to forum user "ruudboon" for multiple domain fix
-# Thanks to forum user "chibby85" for expire patch and static-mapping
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
 
 if [ $# -lt 1 ]; then
   echo Invalid args

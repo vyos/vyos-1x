@@ -10,6 +10,12 @@
         <children>
           #include <include/generic-disable-node.xml.i>
           #include <include/listen-interface-multi-broadcast.xml.i>
+          <leafNode name="disable-route-autoinstall">
+            <properties>
+              <help>Do not install routes for delegated prefixes</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <node name="global-parameters">
             <properties>
               <help>Additional global parameters for DHCPv6 server</help>
@@ -223,6 +229,31 @@
                                 <validator name="numeric" argument="--range 32-96"/>
                               </constraint>
                               <constraintErrorMessage>Delegated prefix length must be between 32 and 96</constraintErrorMessage>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="excluded-prefix">
+                            <properties>
+                              <help>IPv6 prefix to be excluded from prefix delegation</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>IPv6 prefix excluded from prefix delegation</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="excluded-prefix-length">
+                            <properties>
+                              <help>Length in bits of excluded prefix</help>
+                              <valueHelp>
+                                <format>u32:33-64</format>
+                                <description>Excluded prefix length (33-128)</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 33-128"/>
+                              </constraint>
+                              <constraintErrorMessage>Prefix length must be between 33 and 128</constraintErrorMessage>
                             </properties>
                           </leafNode>
                         </children>

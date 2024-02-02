@@ -237,11 +237,17 @@ def kea6_parse_subnet(subnet, config):
 
         if 'prefix' in config['prefix_delegation']:
             for prefix, pd_conf in config['prefix_delegation']['prefix'].items():
-                pd_pools.append({
+                pd_pool = {
                     'prefix': prefix,
                     'prefix-len': int(pd_conf['prefix_length']),
                     'delegated-len': int(pd_conf['delegated_length'])
-                })
+                }
+
+                if 'excluded_prefix' in pd_conf:
+                    pd_pool['excluded-prefix'] = pd_conf['excluded_prefix']
+                    pd_pool['excluded-prefix-len'] = int(pd_conf['excluded_prefix_length'])
+
+                pd_pools.append(pd_pool)
 
         out['pd-pools'] = pd_pools
 

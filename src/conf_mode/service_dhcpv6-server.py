@@ -144,6 +144,23 @@ def verify(dhcpv6):
                     if prefix_config['prefix_length'] > prefix_config['delegated_length']:
                         raise ConfigError('Length of delegated IPv6 prefix must be within parent prefix')
 
+                    if 'excluded_prefix' in prefix_config:
+                        if 'excluded_prefix_length' not in prefix_config:
+                            raise ConfigError('Length of excluded IPv6 prefix must be configured')
+
+                        prefix_len = prefix_config['prefix_length']
+                        prefix_obj = ip_network(f'{prefix}/{prefix_len}')
+
+                        excluded_prefix = prefix_config['excluded_prefix']
+                        excluded_len = prefix_config['excluded_prefix_length']
+                        excluded_obj = ip_network(f'{excluded_prefix}/{excluded_len}')
+
+                        if excluded_len <= prefix_config['delegated_length']:
+                            raise ConfigError('Excluded IPv6 prefix must be smaller than delegated prefix')
+
+                        if not excluded_obj.subnet_of(prefix_obj):
+                            raise ConfigError(f'Excluded prefix "{excluded_prefix}" does not exist in the prefix')
+
             # Static mappings don't require anything (but check if IP is in subnet if it's set)
             if 'static_mapping' in subnet_config:
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
