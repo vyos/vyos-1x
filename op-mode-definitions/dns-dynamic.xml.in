@@ -4,7 +4,7 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Clear Domain Name System</help>
+          <help>Clear Domain Name System (DNS) related service state</help>
         </properties>
         <children>
           <node name="dynamic">
@@ -30,7 +30,7 @@
         <children>
           <node name="dns">
             <properties>
-              <help>Monitor last lines of Domain Name System related services</help>
+              <help>Monitor last lines of Domain Name System (DNS) related services</help>
             </properties>
             <children>
               <node name="dynamic">
@@ -51,7 +51,7 @@
         <children>
           <node name="dns">
             <properties>
-              <help>Show log for Domain Name System related services</help>
+              <help>Show log for Domain Name System (DNS) related services</help>
             </properties>
             <children>
               <node name="dynamic">
@@ -66,7 +66,7 @@
       </node>
       <node name="dns">
         <properties>
-          <help>Show Domain Name System related information</help>
+          <help>Show Domain Name System (DNS) related information</help>
         </properties>
         <children>
           <node name="dynamic">
@@ -78,7 +78,7 @@
                 <properties>
                   <help>Show Dynamic DNS status</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dns_dynamic.py --status</command>
+                <command>sudo ${vyos_op_scripts_dir}/dns.py show_dynamic_status</command>
               </leafNode>
             </children>
           </node>
@@ -90,34 +90,31 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Restart specific Domain Name System related service</help>
+          <help>Restart specific Domain Name System (DNS) related service</help>
         </properties>
         <children>
           <node name="dynamic">
             <properties>
               <help>Restart Dynamic DNS service</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dns_dynamic.py --update</command>
+            <command>if cli-shell-api existsActive service dns dynamic; then sudo systemctl restart ddclient.service; else echo "Dynamic DNS not configured"; fi</command>
           </node>
         </children>
       </node>
     </children>
   </node>
-  <node name="update">
-    <properties>
-      <help>Update data for a service</help>
-    </properties>
+  <node name="reset">
     <children>
       <node name="dns">
         <properties>
-          <help>Update Domain Name System related information</help>
+          <help>Reset Domain Name System (DNS) related service state</help>
         </properties>
         <children>
           <node name="dynamic">
             <properties>
-              <help>Update Dynamic DNS information</help>
+              <help>Reset Dynamic DNS information</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dns_dynamic.py --update</command>
+            <command>sudo ${vyos_op_scripts_dir}/dns.py reset_dynamic</command>
           </node>
         </children>
       </node>

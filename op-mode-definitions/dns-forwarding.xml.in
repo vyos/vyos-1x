@@ -11,7 +11,7 @@
             <children>
               <node name="forwarding">
                 <properties>
-                  <help>Monitor last lines of DNS Forwarding</help>
+                  <help>Monitor last lines of DNS Forwarding service</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit pdns-recursor.service</command>
               </node>
