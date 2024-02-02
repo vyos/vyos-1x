@@ -56,18 +56,8 @@ ipv6-pool-delegate={{ default_ipv6_pool }}
 {# Common chap-secrets and RADIUS server/option definitions #}
 {% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
-[ppp]
-verbose=1
-check-ip=1
-{# MTU #}
-mtu={{ mtu }}
-unit-preallocate={{ "1" if authentication.radius.preallocate_vif is vyos_defined else "0" }}
-ipv6={{ 'allow' if ppp_options.ipv6 is vyos_defined("deny") and client_ipv6_pool is vyos_defined else ppp_options.ipv6 }}
-ipv4={{ ppp_options.ipv4 }}
-mppe={{ ppp_options.mppe }}
-lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
-lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}
-lcp-echo-failure={{ ppp_options.lcp_echo_failure }}
+{# Common ppp-options definitions #}
+{% include 'accel-ppp/ppp-options.j2' %}
 
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}

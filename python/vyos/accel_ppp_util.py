@@ -187,13 +187,13 @@ def verify_accel_ppp_ip_pool(vpn_config):
         for ipv6_pool, ipv6_pool_config in vpn_config['client_ipv6_pool'].items():
             if 'delegate' in ipv6_pool_config and 'prefix' not in ipv6_pool_config:
                 raise ConfigError(
-                    f'IPoE IPv6 deletate-prefix requires IPv6 prefix to be configured in "{ipv6_pool}"!')
+                    f'IPv6 delegate-prefix requires IPv6 prefix to be configured in "{ipv6_pool}"!')
 
     if dict_search('authentication.mode', vpn_config) in ['local', 'noauth']:
         if not dict_search('client_ip_pool', vpn_config) and not dict_search(
                 'client_ipv6_pool', vpn_config):
             raise ConfigError(
-                "L2TP local auth mode requires local client-ip-pool or client-ipv6-pool to be configured!")
+                "Local auth mode requires local client-ip-pool or client-ipv6-pool to be configured!")
         if dict_search('client_ip_pool', vpn_config) and not dict_search(
                 'default_pool', vpn_config):
             Warning("'default-pool' is not defined")

@@ -20,7 +20,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
-from vyos.configdict import dict_merge
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render

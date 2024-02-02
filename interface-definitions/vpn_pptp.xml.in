@@ -27,7 +27,7 @@
                 </properties>
               </leafNode>
               #include <include/accel-ppp/gateway-address.xml.i>
-              #include <include/name-server-ipv4.xml.i>
+              #include <include/name-server-ipv4-ipv6.xml.i>
               #include <include/accel-ppp/wins-server.xml.i>
               #include <include/accel-ppp/client-ip-pool.xml.i>
               <node name="authentication">
@@ -62,30 +62,6 @@
                       </constraint>
                     </properties>
                     <defaultValue>mschap-v2</defaultValue>
-                  </leafNode>
-                  <leafNode name="mppe">
-                    <properties>
-                      <help>Specifies mppe negotioation preference. (default require mppe 128-bit stateless</help>
-                      <valueHelp>
-                        <format>deny</format>
-                        <description>deny mppe</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>prefer</format>
-                        <description>ask client for mppe, if it rejects do not fail</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>require</format>
-                        <description>ask client for mppe, if it rejects drop connection</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(deny|prefer|require)</regex>
-                      </constraint>
-                      <completionHelp>
-                        <list>deny prefer require</list>
-                      </completionHelp>
-                    </properties>
-                    <defaultValue>prefer</defaultValue>
                   </leafNode>
                   #include <include/accel-ppp/auth-mode.xml.i>
                   <node name="local-users">
@@ -134,7 +110,9 @@
                 </children>
               </node>
               #include <include/accel-ppp/default-pool.xml.i>
+              #include <include/accel-ppp/client-ipv6-pool.xml.i>
               #include <include/accel-ppp/default-ipv6-pool.xml.i>
+              #include <include/accel-ppp/ppp-options.xml.i>
             </children>
           </node>
         </children>

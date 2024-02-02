@@ -1,0 +1,39 @@
+#ppp options
+[ppp]
+verbose=1
+check-ip=1
+ccp={{ "0" if ppp_options.disable_ccp is vyos_defined else "1" }}
+unit-preallocate={{ "1" if authentication.radius.preallocate_vif is vyos_defined else "0" }}
+{% if ppp_options.min_mtu is vyos_defined %}
+min-mtu={{ ppp_options.min_mtu }}
+{% endif %}
+{% if ppp_options.mru is vyos_defined %}
+mru={{ ppp_options.mru }}
+{% endif %}
+mppe={{ ppp_options.mppe }}
+lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
+lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}
+lcp-echo-failure={{ ppp_options.lcp_echo_failure }}
+{% if ppp_options.ipv4 is vyos_defined %}
+ipv4={{ ppp_options.ipv4 }}
+{% endif %}
+{# IPv6 #}
+{% if ppp_options.ipv6 is vyos_defined %}
+ipv6={{ ppp_options.ipv6 }}
+{%     if ppp_options.ipv6_interface_id is vyos_defined %}
+ipv6-intf-id={{ ppp_options.ipv6_interface_id }}
+{%     endif %}
+{%     if ppp_options.ipv6_peer_interface_id is vyos_defined %}
+{%         if ppp_options.ipv6_peer_interface_id == 'ipv4-addr' %}
+ipv6-peer-intf-id=ipv4
+{%         else %}
+ipv6-peer-intf-id={{ ppp_options.ipv6_peer_interface_id }}
+{%         endif %}
+{%     endif %}
+ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_interface_id is vyos_defined else "0" }}
+{% endif %}
+{# MTU #}
+mtu={{ mtu }}
+{% if ppp_options.interface_cache is vyos_defined %}
+unit-cache={{ ppp_options.interface_cache }}
+{% endif %}

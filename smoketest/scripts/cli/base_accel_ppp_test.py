@@ -492,3 +492,70 @@ class BasicAccelPPPTest:
 delegate={delegate_1_prefix},{delegate_mask},name={pool_name}
 delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             self.assertIn(pool_config, config)
+
+        def test_accel_ppp_options(self):
+            # Test configuration of local authentication for PPPoE server
+            self.basic_config()
+
+            # other settings
+            mppe = 'require'
+            self.set(['ppp-options', 'disable-ccp'])
+            self.set(['ppp-options', 'mppe', mppe])
+
+            # min-mtu
+            min_mtu = '1400'
+            self.set(['ppp-options', 'min-mtu', min_mtu])
+
+            # mru
+            mru = '9000'
+            self.set(['ppp-options', 'mru', mru])
+
+            # interface-cache
+            interface_cache = '128000'
+            self.set(['ppp-options', 'interface-cache', interface_cache])
+
+            # ipv6
+            allow_ipv6 = 'allow'
+            allow_ipv4 = 'require'
+            random = 'random'
+            lcp_failure = '4'
+            lcp_interval = '40'
+            lcp_timeout = '100'
+            self.set(['ppp-options', 'ipv4', allow_ipv4])
+            self.set(['ppp-options', 'ipv6', allow_ipv6])
+            self.set(['ppp-options', 'ipv6-interface-id', random])
+            self.set(['ppp-options', 'ipv6-accept-peer-interface-id'])
+            self.set(['ppp-options', 'ipv6-peer-interface-id', random])
+            self.set(['ppp-options', 'lcp-echo-failure', lcp_failure])
+            self.set(['ppp-options', 'lcp-echo-interval', lcp_interval])
+            self.set(['ppp-options', 'lcp-echo-timeout', lcp_timeout])
+            # commit changes
+            self.cli_commit()
+
+            # Validate configuration values
+            conf = ConfigParser(allow_no_value=True, delimiters='=')
+            conf.read(self._config_file)
+
+            self.assertEqual(conf['chap-secrets']['gw-ip-address'], self._gateway)
+
+            # check ppp
+            self.assertEqual(conf['ppp']['mppe'], mppe)
+            self.assertEqual(conf['ppp']['min-mtu'], min_mtu)
+            self.assertEqual(conf['ppp']['mru'], mru)
+
+            self.assertEqual(conf['ppp']['ccp'],'0')
+
+            # check interface-cache
+            self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
+
+            #check ipv6
+            for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
+                self.assertEqual(conf['modules'][tmp], None)
+
+            self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
+            self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
+            self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
+            self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
+            self.assertEqual(conf['ppp']['lcp-echo-failure'], lcp_failure)
+            self.assertEqual(conf['ppp']['lcp-echo-interval'], lcp_interval)
+            self.assertEqual(conf['ppp']['lcp-echo-timeout'], lcp_timeout)
