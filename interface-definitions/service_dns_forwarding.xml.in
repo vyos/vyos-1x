@@ -735,6 +735,63 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <node name="options">
+                <properties>
+                  <help>DNS server options</help>
+                </properties>
+                <children>
+                  <leafNode name="ecs-add-for">
+                    <properties>
+                      <help>Client netmask for which EDNS Client Subnet will be added</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv4net</format>
+                        <description>Match everything except the specified IPv4 prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6net</format>
+                        <description>Match everything except the specified IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-prefix-exclude"/>
+                        <validator name="ipv6-prefix"/>
+                        <validator name="ipv6-prefix-exclude"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ecs-ipv4-bits">
+                    <properties>
+                      <help>Number of bits of IPv4 address to pass for EDNS Client Subnet</help>
+                      <valueHelp>
+                        <format>u32:0-32</format>
+                        <description>Number of bits of IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-32"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="edns-subnet-allow-list">
+                    <properties>
+                      <help>Netmask or domain that we should enable EDNS subnet for</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Netmask or domain</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
         </children>
