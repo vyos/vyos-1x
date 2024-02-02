@@ -49,12 +49,6 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="ccp-disable">
-                <properties>
-                  <help>Disable Compression Control Protocol (CCP)</help>
-                  <valueless />
-                </properties>
-              </leafNode>
               <node name="ipsec-settings">
                 <properties>
                   <help>Internet Protocol Security (IPsec) for remote access L2TP VPN</help>
@@ -140,19 +134,7 @@
                   </node>
                 </children>
               </node>
-              <node name="ppp-options">
-                <properties>
-                  <help>Advanced protocol options</help>
-                </properties>
-                <children>
-                  #include <include/accel-ppp/ppp-mppe.xml.i>
-                  #include <include/accel-ppp/ppp-options-ipv4.xml.i>
-                  #include <include/accel-ppp/ppp-options-ipv6.xml.i>
-                  #include <include/accel-ppp/ppp-options-ipv6-interface-id.xml.i>
-                  #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
-                  #include <include/accel-ppp/lcp-echo-timeout.xml.i>
-                </children>
-              </node>
+              #include <include/accel-ppp/ppp-options.xml.i>
               #include <include/accel-ppp/default-pool.xml.i>
               #include <include/accel-ppp/default-ipv6-pool.xml.i>
             </children>

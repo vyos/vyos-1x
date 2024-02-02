@@ -6,6 +6,8 @@ shaper
 {# Common authentication backend definitions #}
 {% include 'accel-ppp/config_modules_auth_mode.j2' %}
 ippool
+{# Common IPv6 definitions #}
+{% include 'accel-ppp/config_modules_ipv6.j2' %}
 {# Common authentication protocols (pap, chap ...) #}
 {% if authentication.require is vyos_defined %}
 {%     if authentication.require == 'chap' %}
@@ -40,7 +42,6 @@ wins{{ loop.index }}={{ server }}
 {%     endfor %}
 {% endif %}
 
-
 [pptp]
 ifname=pptp%d
 {% if outside_address is vyos_defined %}
@@ -54,6 +55,10 @@ echo-failure=3
 {% if default_pool is vyos_defined %}
 ip-pool={{ default_pool }}
 {% endif %}
+{% if default_ipv6_pool is vyos_defined %}
+ipv6-pool={{ default_ipv6_pool }}
+ipv6-pool-delegate={{ default_ipv6_pool }}
+{% endif %}
 
 [client-ip-range]
 0.0.0.0/0
@@ -61,10 +66,11 @@ ip-pool={{ default_pool }}
 {# Common IP pool definitions #}
 {% include 'accel-ppp/config_ip_pool.j2' %}
 
-[ppp]
-verbose=5
-check-ip=1
-single-session=replace
+{# Common IPv6 pool definitions #}
+{% include 'accel-ppp/config_ipv6_pool.j2' %}
+
+{# Common ppp-options definitions #}
+{% include 'accel-ppp/ppp-options.j2' %}
 
 {# Common chap-secrets and RADIUS server/option definitions #}
 {% include 'accel-ppp/config_chap_secrets_radius.j2' %}

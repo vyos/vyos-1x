@@ -37,18 +37,7 @@
           </leafNode>
           #include <include/accel-ppp/default-pool.xml.i>
           #include <include/accel-ppp/default-ipv6-pool.xml.i>
-          <node name="ppp-options">
-            <properties>
-              <help>PPP (Point-to-Point Protocol) settings</help>
-            </properties>
-            <children>
-              #include <include/accel-ppp/ppp-mppe.xml.i>
-              #include <include/accel-ppp/ppp-options-ipv4.xml.i>
-              #include <include/accel-ppp/ppp-options-ipv6.xml.i>
-              #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
-              #include <include/accel-ppp/lcp-echo-timeout.xml.i>
-            </children>
-          </node>
+          #include <include/accel-ppp/ppp-options.xml.i>
           <node name="ssl">
             <properties>
               <help>SSL Certificate, SSL Key and CA</help>

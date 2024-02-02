@@ -38,58 +38,6 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
     def basic_protocol_specific_config(self):
         pass
 
-    def test_l2tp_server_ppp_options(self):
-        # Test configuration of local authentication for PPPoE server
-        self.basic_config()
-        mtu = '1425'
-        lcp_echo_failure = '5'
-        lcp_echo_interval = '40'
-        lcp_echo_timeout = '3000'
-        # other settings
-        mppe = 'require'
-        self.set(['ccp-disable'])
-        self.set(['ppp-options', 'mppe', mppe])
-        self.set(['authentication', 'radius', 'preallocate-vif'])
-        self.set(['mtu', mtu])
-        self.set(['ppp-options', 'lcp-echo-failure', lcp_echo_failure])
-        self.set(['ppp-options', 'lcp-echo-interval', lcp_echo_interval])
-        self.set(['ppp-options', 'lcp-echo-timeout', lcp_echo_timeout])
-
-        allow_ipv6 = 'allow'
-        random = 'random'
-        self.set(['ppp-options', 'ipv6', allow_ipv6])
-        self.set(['ppp-options', 'ipv6-intf-id', random])
-        self.set(['ppp-options', 'ipv6-accept-peer-intf-id'])
-        self.set(['ppp-options', 'ipv6-peer-intf-id', random])
-
-        # commit changes
-        self.cli_commit()
-
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(self._config_file)
-
-        # basic verification
-        self.verify(conf)
-
-        # check ppp
-        self.assertEqual(conf['ppp']['mppe'], mppe)
-        self.assertFalse(conf['ppp'].getboolean('ccp'))
-        self.assertEqual(conf['ppp']['unit-preallocate'], '1')
-        self.assertTrue(conf['ppp'].getboolean('verbose'))
-        self.assertTrue(conf['ppp'].getboolean('check-ip'))
-        self.assertEqual(conf['ppp']['mtu'], mtu)
-        self.assertEqual(conf['ppp']['lcp-echo-interval'], lcp_echo_interval)
-        self.assertEqual(conf['ppp']['lcp-echo-timeout'], lcp_echo_timeout)
-        self.assertEqual(conf['ppp']['lcp-echo-failure'], lcp_echo_failure)
-
-        for tmp in ['ipv6pool', 'ipv6_nd', 'ipv6_dhcp']:
-            self.assertEqual(conf['modules'][tmp], None)
-        self.assertEqual(conf['ppp']['ipv6'], allow_ipv6)
-        self.assertEqual(conf['ppp']['ipv6-intf-id'], random)
-        self.assertEqual(conf['ppp']['ipv6-peer-intf-id'], random)
-        self.assertTrue(conf['ppp'].getboolean('ipv6-accept-peer-intf-id'))
-
     def test_l2tp_server_authentication_protocols(self):
         # Test configuration of local authentication for PPPoE server
         self.basic_config()

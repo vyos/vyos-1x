@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
+from vyos.accel_ppp_util import verify_accel_ppp_base_service
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
@@ -58,35 +59,9 @@ def get_config(config=None):
 def verify(pptp):
     if not pptp:
         return None
-    auth_mode = dict_search('authentication.mode', pptp)
-    if auth_mode == 'local':
-        if not dict_search('authentication.local_users', pptp):
-            raise ConfigError(
-                'PPTP local auth mode requires local users to be configured!')
 
-        for user in dict_search('authentication.local_users.username', pptp):
-            user_config = pptp['authentication']['local_users']['username'][
-                user]
-            if 'password' not in user_config:
-                raise ConfigError(f'Password required for local user "{user}"')
-
-    elif auth_mode == 'radius':
-        if not dict_search('authentication.radius.server', pptp):
-            raise ConfigError(
-                'RADIUS authentication requires at least one server')
-        for server in dict_search('authentication.radius.server', pptp):
-            radius_config = pptp['authentication']['radius']['server'][server]
-            if 'key' not in radius_config:
-                raise ConfigError(
-                    f'Missing RADIUS secret key for server "{server}"')
-
+    verify_accel_ppp_base_service(pptp)
     verify_accel_ppp_ip_pool(pptp)
-
-    if 'name_server' in pptp:
-        if len(pptp['name_server']) > 2:
-            raise ConfigError(
-                'Not more then two IPv4 DNS name-servers can be configured'
-            )
 
     if 'wins_server' in pptp and len(pptp['wins_server']) > 2:
         raise ConfigError(
@@ -104,6 +79,7 @@ def generate(pptp):
                pptp, permission=0o640)
 
     return None
+
 
 def apply(pptp):
     if not pptp:
