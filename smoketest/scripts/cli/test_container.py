@@ -188,5 +188,27 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(c['NetworkSettings']['Networks'][net_name]['Gateway']          , str(ip_interface(prefix4).ip + 1))
             self.assertEqual(c['NetworkSettings']['Networks'][net_name]['IPAddress']        , str(ip_interface(prefix4).ip + ii))
 
+    def test_uid_gid(self):
+        cont_name = 'uid-test'
+        gid = '100'
+        uid = '1001'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'gid', gid])
+
+        # verify() - GID can only be set if UID is set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['name', cont_name, 'uid', uid])
+
+        self.cli_commit()
+
+        # verify
+        tmp = cmd(f'sudo podman exec -it {cont_name} id -u')
+        self.assertEqual(tmp, uid)
+        tmp = cmd(f'sudo podman exec -it {cont_name} id -g')
+        self.assertEqual(tmp, gid)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

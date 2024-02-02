@@ -316,6 +316,30 @@
             </properties>
             <defaultValue>on-failure</defaultValue>
           </leafNode>
+          <leafNode name="uid">
+            <properties>
+              <help>User ID this container will run as</help>
+              <valueHelp>
+                <format>u32:0-65535</format>
+                <description>User ID this container will run as</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="gid">
+            <properties>
+              <help>Group ID this container will run as</help>
+              <valueHelp>
+                <format>u32:0-65535</format>
+                <description>Group ID this container will run as</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-65535"/>
+              </constraint>
+            </properties>
+          </leafNode>
           <tagNode name="volume">
             <properties>
               <help>Mount a volume into the container</help>
