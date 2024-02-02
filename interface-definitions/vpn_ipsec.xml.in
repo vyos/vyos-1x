@@ -826,6 +826,7 @@
                   #include <include/ipsec/ike-group.xml.i>
                   #include <include/ipsec/local-address.xml.i>
                   #include <include/ipsec/local-traffic-selector.xml.i>
+                  #include <include/ipsec/replay-window.xml.i>
                   <leafNode name="timeout">
                     <properties>
                       <help>Timeout to close connection if no data is transmitted</help>
@@ -1100,6 +1101,7 @@
                   </leafNode>
                   #include <include/ipsec/local-address.xml.i>
                   #include <include/ipsec/remote-address.xml.i>
+                  #include <include/ipsec/replay-window.xml.i>
                   <tagNode name="tunnel">
                     <properties>
                       <help>Peer tunnel</help>
