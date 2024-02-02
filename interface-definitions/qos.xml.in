@@ -122,13 +122,19 @@
                   </leafNode>
                   <leafNode name="dual-src-host">
                     <properties>
-                      <help>Flows are defined by the 5-tuple, and fairness is applied first over source addresses, then over individual flows</help>
+                      <help>Flows are defined by the 5-tuple, fairness is applied first over source addresses, then over individual flows</help>
                       <valueless/>
                     </properties>
                   </leafNode>
                   <leafNode name="dual-dst-host">
                     <properties>
-                      <help>Flows are defined by the 5-tuple, and fairness is applied first over destination addresses, then over individual flows</help>
+                      <help>Flows are defined by the 5-tuple, fairness is applied first over destination addresses, then over individual flows</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="triple-isolate">
+                    <properties>
+                      <help>Flows are defined by the 5-tuple, fairness is applied over source and destination addresses and also over individual flows (default)</help>
                       <valueless/>
                     </properties>
                   </leafNode>
