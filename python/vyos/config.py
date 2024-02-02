@@ -343,7 +343,7 @@ class Config(object):
                         pki_dict['certificate'][certificate] = config_dict_mangle_acme(
                             certificate, pki_dict['certificate'][certificate])
 
-                conf_dict['pki'] = pki_dict
+            conf_dict['pki'] = pki_dict
 
         # save optional args for a call to get_config_defaults
         setattr(conf_dict, '_dict_kwargs', kwargs)
