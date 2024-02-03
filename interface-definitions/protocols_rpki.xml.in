@@ -46,14 +46,6 @@
                   <help>RPKI SSH connection settings</help>
                 </properties>
                 <children>
-                  <leafNode name="known-hosts-file">
-                    <properties>
-                      <help>RPKI SSH known hosts file</help>
-                      <constraint>
-                        <validator name="file-path"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
                   <leafNode name="private-key-file">
                     <properties>
                       <help>RPKI SSH private key file</help>
