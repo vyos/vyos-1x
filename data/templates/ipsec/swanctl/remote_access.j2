@@ -43,6 +43,9 @@
                 rand_time = 540s
                 dpd_action = clear
                 inactivity = {{ rw_conf.timeout }}
+{% if rw_conf.replay_window is vyos_defined %}
+                replay_window = {{ rw_conf.replay_window }}
+{% endif %}
 {% set local_prefix = rw_conf.local.prefix if rw_conf.local.prefix is vyos_defined else ['0.0.0.0/0', '::/0'] %}
 {% set local_port = rw_conf.local.port if rw_conf.local.port is vyos_defined else '' %}
 {% set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}

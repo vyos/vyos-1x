@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -155,7 +155,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def tearDownPKI(self):
         self.cli_delete(['pki'])
 
-    def test_01_dhcp_fail_handling(self):
+    def test_dhcp_fail_handling(self):
         # Skip process check - connection is not created for this test
         self.skip_process_check = True
 
@@ -185,7 +185,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
 
-    def test_02_site_to_site(self):
+    def test_site_to_site(self):
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
         local_address = '192.0.2.10'
@@ -248,6 +248,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'remote_ts = 10.2.0.0/16',
             f'priority = {priority}',
             f'mode = tunnel',
+            f'replay_window = 32',
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
@@ -263,7 +264,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertRegex(swanctl_conf, fr'{line}')
 
 
-    def test_03_site_to_site_vti(self):
+    def test_site_to_site_vti(self):
         local_address = '192.0.2.10'
         vti = 'vti10'
         # IKE
@@ -317,6 +318,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'remote_ts = 172.17.10.0/24,172.17.11.0/24',
             f'ipcomp = yes',
             f'start_action = none',
+            f'replay_window = 32',
             f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
             f'if_id_out = {if_id}',
             f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
@@ -333,7 +335,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertRegex(swanctl_conf, fr'{line}')
 
 
-    def test_04_dmvpn(self):
+    def test_dmvpn(self):
         tunnel_if = 'tun100'
         nhrp_secret = 'secret'
         ike_lifetime = '3600'
@@ -396,7 +398,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # There is only one NHRP test so no need to delete this globally in tearDown()
         self.cli_delete(nhrp_path)
 
-    def test_05_x509_site2site(self):
+    def test_site_to_site_x509(self):
         # Enable PKI
         self.setupPKI()
 
@@ -474,7 +476,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.tearDownPKI()
 
 
-    def test_06_flex_vpn_vips(self):
+    def test_flex_vpn_vips(self):
         local_address = '192.0.2.5'
         local_id = 'vyos-r1'
         remote_id = 'vyos-r2'
@@ -549,7 +551,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, charon_conf)
 
 
-    def test_07_ikev2_road_warrior(self):
+    def test_remote_access(self):
         # This is a known to be good configuration for Microsoft Windows 10 and Apple iOS 17
         self.setupPKI()
 
@@ -640,6 +642,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'rekey_time = {eap_lifetime}s',
             f'rand_time = 540s',
             f'dpd_action = clear',
+            f'replay_window = 32',
             f'inactivity = 28800',
             f'local_ts = 0.0.0.0/0,::/0',
         ]
@@ -668,7 +671,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.tearDownPKI()
 
-    def test_08_ikev2_road_warrior_client_auth_eap_tls(self):
+    def test_remote_access_eap_tls(self):
         # This is a known to be good configuration for Microsoft Windows 10 and Apple iOS 17
         self.setupPKI()
 
@@ -780,7 +783,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.tearDownPKI()
 
-    def test_09_ikev2_road_warrior_client_auth_x509(self):
+    def test_remote_access_x509(self):
         # This is a known to be good configuration for Microsoft Windows 10 and Apple iOS 17
         self.setupPKI()
 
