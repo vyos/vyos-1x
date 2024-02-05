@@ -19,6 +19,7 @@ import json
 
 from requests import request
 from urllib3.exceptions import InsecureRequestWarning
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from base_vyostest_shim import ignore_warning
@@ -305,6 +306,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
         self.cli_commit()
+        sleep(2)
 
         r = request('POST', url, verify=False, headers=headers, data=payload)
         # api configured; expect 200
