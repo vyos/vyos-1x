@@ -29,6 +29,9 @@
         "openconnect": ["vpn_openconnect"],
         "sstp": ["vpn_sstp"]
     },
+    "vpn_l2tp": {
+        "ipsec": ["vpn_ipsec"]
+    },
     "qos": {
         "bonding": ["interfaces_bonding"],
         "bridge": ["interfaces_bridge"],

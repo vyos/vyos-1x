@@ -19,6 +19,7 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import call_dependents, set_dependents
 from vyos.configdict import get_accel_dict
 from vyos.template import render
 from vyos.utils.process import call
@@ -42,6 +43,9 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['vpn', 'l2tp', 'remote-access']
+
+    set_dependents('ipsec', conf)
+
     if not conf.exists(base):
         return None
 
@@ -94,10 +98,10 @@ def apply(l2tp):
         for file in [l2tp_chap_secrets, l2tp_conf]:
             if os.path.exists(file):
                 os.unlink(file)
+    else:
+        call('systemctl restart accel-ppp@l2tp.service')
 
-        return None
-
-    call('systemctl restart accel-ppp@l2tp.service')
+    call_dependents()
 
 
 if __name__ == '__main__':
