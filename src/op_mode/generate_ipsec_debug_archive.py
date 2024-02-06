@@ -24,7 +24,6 @@ from vyos.utils.process import rc_cmd
 
 # define a list of commands that needs to be executed
 CMD_LIST: list[str] = [
-    'ipsec status',
     'swanctl -L',
     'swanctl -l',
     'swanctl -P',
@@ -36,7 +35,7 @@ CMD_LIST: list[str] = [
     'ip route | head -100',
     'ip route show table 220'
 ]
-JOURNALCTL_CMD: str = 'journalctl -b -n 10000 /usr/lib/ipsec/charon'
+JOURNALCTL_CMD: str = 'journalctl --no-hostname --boot --unit strongswan.service'
 
 # execute a command and save the output to a file
 def save_stdout(command: str, file: Path) -> None:
