@@ -60,7 +60,7 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="address">
+              <tagNode name="address">
                 <properties>
                   <help>Address-group member</help>
                   <valueHelp>
@@ -75,9 +75,11 @@
                     <validator name="ipv4-address"/>
                     <validator name="ipv4-range"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another address-group</help>
@@ -99,7 +101,7 @@
               <constraintErrorMessage>Name of domain-group can only contain alpha-numeric letters, hyphen, underscores and not start with numeric</constraintErrorMessage>
             </properties>
             <children>
-              <leafNode name="address">
+              <tagNode name="address">
                 <properties>
                   <help>Domain-group member</help>
                   <valueHelp>
@@ -109,9 +111,11 @@
                   <constraint>
                     <validator name="fqdn"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
@@ -152,15 +156,17 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="interface">
+              <tagNode name="interface">
                 <properties>
                   <help>Interface-group member</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another interface-group</help>
@@ -181,7 +187,7 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="address">
+              <tagNode name="address">
                 <properties>
                   <help>Address-group member</help>
                   <valueHelp>
@@ -196,9 +202,11 @@
                     <validator name="ipv6-address"/>
                     <validator name="ipv6-range"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another ipv6-address-group</help>
@@ -220,7 +228,7 @@
             </properties>
             <children>
               #include <include/generic-description.xml.i>
-              <leafNode name="network">
+              <tagNode name="network">
                 <properties>
                   <help>Network-group member</help>
                   <valueHelp>
@@ -230,9 +238,11 @@
                   <constraint>
                     <validator name="ipv6-prefix"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another ipv6-network-group</help>
@@ -253,7 +263,7 @@
             </properties>
             <children>
               #include <include/generic-description.xml.i>
-              <leafNode name="mac-address">
+              <tagNode name="mac-address">
                 <properties>
                   <help>Mac-group member</help>
                   <valueHelp>
@@ -263,9 +273,11 @@
                   <constraint>
                     <validator name="mac-address"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another mac-group</help>
@@ -286,7 +298,7 @@
             </properties>
             <children>
               #include <include/generic-description.xml.i>
-              <leafNode name="network">
+              <tagNode name="network">
                 <properties>
                   <help>Network-group member</help>
                   <valueHelp>
@@ -296,9 +308,11 @@
                   <constraint>
                     <validator name="ipv4-prefix"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another network-group</help>
@@ -319,7 +333,7 @@
             </properties>
             <children>
               #include <include/generic-description.xml.i>
-              <leafNode name="port">
+              <tagNode name="port">
                 <properties>
                   <help>Port-group member</help>
                   <valueHelp>
@@ -334,12 +348,14 @@
                     <format>start-end</format>
                     <description>Numbered port range (e.g. 1001-1050)</description>
                   </valueHelp>
-                  <multi/>
                   <constraint>
                     <validator name="port-range"/>
                   </constraint>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-description.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="include">
                 <properties>
                   <help>Include another port-group</help>

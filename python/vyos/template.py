@@ -630,24 +630,22 @@ def nft_intra_zone_action(zone_conf, ipv6=False):
     return 'return'
 
 @register_filter('nft_nested_group')
-def nft_nested_group(out_list, includes, groups, key):
-    if not vyos_defined(out_list):
-        out_list = []
+def nft_nested_group(out_dict, includes, groups, key):
+    if not vyos_defined(out_dict):
+        out_dict = {}
 
     def add_includes(name):
-        if key in groups[name]:
-            for item in groups[name][key]:
-                if item in out_list:
-                    continue
-                out_list.append(item)
+        for item in groups[name].get(key, []):
+            if item not in out_dict:
+                out_dict[item] = groups[name][key].get(item)
 
-        if 'include' in groups[name]:
-            for name_inc in groups[name]['include']:
-                add_includes(name_inc)
+        for name_inc in groups[name].get('include', []):
+            add_includes(name_inc)
 
     for name in includes:
         add_includes(name)
-    return out_list
+
+    return list(out_dict.keys())
 
 @register_filter('nat_rule')
 def nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
