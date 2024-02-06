@@ -448,12 +448,14 @@ start ()
     restore_if_missing_postconfig_script
 
     run_postconfig_scripts
+    vtysh -c "rpki start"
 }
 
 stop()
 {
     local -i status=0
     log_daemon_msg "Stopping VyOS router"
+    vtysh -c "rpki stop"
     for ((i=${#sub_inits[@]} - 1; i >= 0; i--)) ; do
     s=${subinit[$i]}
     log_progress_msg $s
