@@ -591,6 +591,8 @@ def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
         print('Unmounting target filesystems')
         for mountpoint in mounts:
             disk.partition_umount(mountpoint)
+        for mountpoint in mounts:
+            disk.wait_for_umount(mountpoint)
     if remove_items:
         print('Removing temporary files')
         for remove_item in remove_items:
@@ -598,7 +600,8 @@ def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
                 if Path(remove_item).is_file():
                     Path(remove_item).unlink()
                 if Path(remove_item).is_dir():
-                    rmtree(remove_item)
+                    rmtree(remove_item, ignore_errors=True)
+
 
 def cleanup_raid(details: raid.RaidDetails) -> None:
     efiparts = []

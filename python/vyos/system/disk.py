@@ -16,6 +16,7 @@
 from json import loads as json_loads
 from os import sync
 from dataclasses import dataclass
+from time import sleep
 
 from psutil import disk_partitions
 
@@ -207,11 +208,23 @@ def find_device(mountpoint: str) -> str:
     Returns:
         str: Path to device, Empty if not found
     """
-    mounted_partitions = disk_partitions()
+    mounted_partitions = disk_partitions(all=True)
     for partition in mounted_partitions:
         if partition.mountpoint == mountpoint:
             return partition.mountpoint
     return ''
+
+
+def wait_for_umount(mountpoint: str = '') -> None:
+    """Wait (within reason) for umount to complete
+    """
+    i = 0
+    while find_device(mountpoint):
+        i += 1
+        if i == 5:
+            print(f'Warning: {mountpoint} still mounted')
+            break
+        sleep(1)
 
 
 def disks_size() -> dict[str, int]:
