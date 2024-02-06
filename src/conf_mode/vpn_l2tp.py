@@ -25,7 +25,12 @@ from time import sleep
 from ipaddress import ip_network
 
 from vyos.config import Config
+<<<<<<< HEAD
 from vyos.template import is_ipv4
+=======
+from vyos.configdep import call_dependents, set_dependents
+from vyos.configdict import get_accel_dict
+>>>>>>> e697ed1e7 (vpn: T3843: l2tp configuration not cleared after delete)
 from vyos.template import render
 from vyos.util import call, get_half_cpus
 from vyos import ConfigError
@@ -76,8 +81,16 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+<<<<<<< HEAD
     base_path = ['vpn', 'l2tp', 'remote-access']
     if not conf.exists(base_path):
+=======
+    base = ['vpn', 'l2tp', 'remote-access']
+
+    set_dependents('ipsec', conf)
+
+    if not conf.exists(base):
+>>>>>>> e697ed1e7 (vpn: T3843: l2tp configuration not cleared after delete)
         return None
 
     conf.set_level(base_path)
@@ -384,10 +397,10 @@ def apply(l2tp):
         for file in [l2tp_chap_secrets, l2tp_conf]:
             if os.path.exists(file):
                 os.unlink(file)
+    else:
+        call('systemctl restart accel-ppp@l2tp.service')
 
-        return None
-
-    call('systemctl restart accel-ppp@l2tp.service')
+    call_dependents()
 
 if __name__ == '__main__':
     try:
