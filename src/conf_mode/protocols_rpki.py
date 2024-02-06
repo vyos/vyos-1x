@@ -63,11 +63,11 @@ def verify(rpki):
                 preferences.append(preference)
 
             if 'ssh' in peer_config:
-                files = ['private_key_file', 'public_key_file', 'known_hosts_file']
+                files = ['private_key_file', 'public_key_file']
                 for file in files:
                     if file not in peer_config['ssh']:
-                        raise ConfigError('RPKI+SSH requires username, public/private ' \
-                                          'keys and known-hosts file to be defined!')
+                        raise ConfigError('RPKI+SSH requires username and public/private ' \
+                                          'key file to be defined!')
 
                     filename = peer_config['ssh'][file]
                     if not os.path.exists(filename):
