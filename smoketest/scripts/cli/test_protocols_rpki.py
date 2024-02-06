@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,7 +26,6 @@ from vyos.utils.process import process_named_running
 base_path = ['protocols', 'rpki']
 PROCESS_NAME = 'bgpd'
 
-rpki_known_hosts = '/config/auth/known_hosts'
 rpki_ssh_key = '/config/auth/id_rsa_rpki'
 rpki_ssh_pub = f'{rpki_ssh_key}.pub'
 
@@ -91,7 +90,6 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'rpki cache {peer} {port} preference {preference}', frrconfig)
 
     def test_rpki_ssh(self):
-        self.skipTest('Currently untested, see: https://github.com/FRRouting/frr/issues/7978')
         polling = '7200'
         cache = {
             '192.0.2.3' : {
@@ -114,7 +112,6 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['cache', peer, 'ssh', 'username', peer_config['username']])
             self.cli_set(base_path + ['cache', peer, 'ssh', 'public-key-file', rpki_ssh_pub])
             self.cli_set(base_path + ['cache', peer, 'ssh', 'private-key-file', rpki_ssh_key])
-            self.cli_set(base_path + ['cache', peer, 'ssh', 'known-hosts-file', rpki_known_hosts])
 
         # commit changes
         self.cli_commit()
@@ -127,7 +124,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
             port = peer_config['port']
             preference = peer_config['preference']
             username = peer_config['username']
-            self.assertIn(f'rpki cache {peer} {port} {username} {rpki_ssh_key} {rpki_known_hosts} preference {preference}', frrconfig)
+            self.assertIn(f'rpki cache {peer} {port} {username} {rpki_ssh_key} {rpki_ssh_pub} preference {preference}', frrconfig)
 
 
     def test_rpki_verify_preference(self):
@@ -155,8 +152,5 @@ if __name__ == '__main__':
     # Create OpenSSH keypair used in RPKI tests
     if not os.path.isfile(rpki_ssh_key):
         cmd(f'ssh-keygen -t rsa -f {rpki_ssh_key} -N ""')
-
-    if not os.path.isfile(rpki_known_hosts):
-        cmd(f'touch {rpki_known_hosts}')
 
     unittest.main(verbosity=2)
