@@ -91,7 +91,7 @@ def verify(ocserv):
                 if not ocserv["authentication"]['radius']['server']:
                     raise ConfigError('Openconnect authentication mode radius requires at least one RADIUS server')
             if "local" in ocserv["authentication"]["mode"]:
-                if not ocserv["authentication"]["local_users"]:
+                if not ocserv.get("authentication", {}).get("local_users"):
                     raise ConfigError('openconnect mode local required at least one user')
                 if not ocserv["authentication"]["local_users"]["username"]:
                     raise ConfigError('openconnect mode local required at least one user')
