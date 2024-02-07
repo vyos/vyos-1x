@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -31,4 +31,9 @@ def read_saved_value(path: list):
     if not ct.exists(path):
         return ''
     res = ct.return_values(path)
-    return res[0] if len(res) == 1 else res
+    if len(res) == 1:
+        return res[0]
+    res = ct.list_nodes(path)
+    if len(res) == 1:
+        return ' '.join(res)
+    return res

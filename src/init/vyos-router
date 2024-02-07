@@ -448,6 +448,10 @@ start ()
     restore_if_missing_postconfig_script
 
     run_postconfig_scripts
+    tmp=$(${vyos_libexec_dir}/read-saved-value.py --path "protocols rpki cache")
+    if [ ! -z $tmp ]; then
+        vtysh -c "rpki start"
+    fi
 }
 
 stop()
