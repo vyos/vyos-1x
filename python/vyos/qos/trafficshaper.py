@@ -39,7 +39,7 @@ class TrafficShaper(QoSBase):
 
         # need a bigger r2q if going fast than 16 mbits/sec
         if (speed_bps // r2q) >= MAXQUANTUM: # integer division
-            r2q = ceil(speed_bps // MAXQUANTUM)
+            r2q = ceil(speed_bps / MAXQUANTUM)
         else:
             # if there is a slow class then may need smaller value
             if 'class' in config:
