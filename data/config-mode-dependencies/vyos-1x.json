@@ -48,5 +48,8 @@
         "wireguard": ["interfaces_wireguard"],
         "wireless": ["interfaces_wireless"],
         "wwan": ["interfaces_wwan"]
+    },
+    "vpn_l2tp": {
+        "ipsec": ["vpn_ipsec"]
     }
 }

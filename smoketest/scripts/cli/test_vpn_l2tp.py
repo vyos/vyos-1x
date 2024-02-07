@@ -54,6 +54,41 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
 
         self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
+    def test_l2tp_config_apply_ipsec(self):
+        # preset configuration
+        self.basic_config(is_gateway=False, is_client_pool=False)
+        self.cli_set(['interfaces', 'dummy', 'dum0', 'address', '203.0.113.1/32'])
+        self.cli_set(['vpn', 'ipsec', 'interface', 'eth0'])
+        self.cli_commit()
+
+        # verify strongSwan is not configured
+        self.assertEqual('', cmd('sudo swanctl -L'))
+
+        # set l2tp configuration
+        self.set(['authentication', 'local-users', 'username', 'alice', 'password', 'notsecure'])
+        self.set(['authentication', 'mode', 'local'])
+        self.set(['client-ip-pool', 'test', 'range', '10.1.1.0/24'])
+        self.set(['gateway-address', '10.1.1.1'])
+        self.set(['ipsec-settings', 'authentication', 'mode', 'pre-shared-secret'])
+        self.set(['ipsec-settings', 'authentication', 'pre-shared-secret', 'not-so-secret'])
+        self.set(['outside-address', '192.168.1.1'])
+
+        self.cli_commit()
+
+        # verify ipsec configuration of l2tp was added to swanctl
+        self.assertIn('l2tp_remote_access' in cmd('sudo swanctl -L'))
+
+        # delete configuration
+        self.delete([])
+        self.cli_commit()
+
+        # verify configuration was deleted from swanctl
+        self.assertEqual('', cmd('sudo swanctl -L'))
+
+        # for tearDown test
+        self.basic_config()
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
