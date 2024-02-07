@@ -1219,6 +1219,12 @@
     <help>BGP parameters</help>
   </properties>
   <children>
+    <leafNode name="allow-martian-nexthop">
+      <properties>
+        <help>Allow Martian nexthops to be received in the NLRI from a peer</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="always-compare-med">
       <properties>
         <help>Always compare MEDs from different neighbors</help>
@@ -1574,6 +1580,35 @@
       <properties>
         <help>Graceful shutdown</help>
         <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="no-hard-administrative-reset">
+      <properties>
+        <help>Do not send hard reset CEASE Notification for 'Administrative Reset'</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="labeled-unicast">
+      <properties>
+        <help>BGP Labeled-unicast options</help>
+        <completionHelp>
+          <list>explicit-null ipv4-explicit-null ipv6-explicit-null</list>
+        </completionHelp>
+        <valueHelp>
+          <format>explicit-null</format>
+          <description>Use explicit-null label values for all local prefixes</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ipv4-explicit-null</format>
+          <description>Use IPv4 explicit-null label value for IPv4 local prefixes</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ipv6-explicit-null</format>
+          <description>Use IPv6 explicit-null label value for IPv4 local prefixes</description>
+        </valueHelp>
+        <constraint>
+          <regex>(explicit-null|ipv4-explicit-null|ipv6-explicit-null)</regex>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="log-neighbor-changes">

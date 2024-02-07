@@ -1,5 +1,4 @@
 <!-- include start from bgp/neighbor-afi-ipv4-ipv6-common.xml.i -->
-
 <leafNode name="addpath-tx-all">
   <properties>
     <help>Use addpath to advertise all paths to a neighbor</help>
