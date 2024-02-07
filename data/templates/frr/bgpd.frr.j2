@@ -225,10 +225,10 @@
   neighbor {{ neighbor }} route-map {{ afi_config.route_map.import }} in
 {%         endif %}
 {%         if afi_config.prefix_list.export is vyos_defined %}
-  neighbor {{ neighbor }} prefix-list  {{ afi_config.prefix_list.export }} out
+  neighbor {{ neighbor }} prefix-list {{ afi_config.prefix_list.export }} out
 {%         endif %}
 {%         if afi_config.prefix_list.import is vyos_defined %}
-  neighbor {{ neighbor }} prefix-list  {{ afi_config.prefix_list.import }} in
+  neighbor {{ neighbor }} prefix-list {{ afi_config.prefix_list.import }} in
 {%         endif %}
 {%         if afi_config.soft_reconfiguration.inbound is vyos_defined %}
   neighbor {{ neighbor }} soft-reconfiguration inbound
@@ -237,10 +237,10 @@
   neighbor {{ neighbor }} unsuppress-map {{ afi_config.unsuppress_map }}
 {%         endif %}
 {%         if afi_config.disable_send_community.extended is vyos_defined %}
- no neighbor {{ neighbor }} send-community extended
+  no neighbor {{ neighbor }} send-community extended
 {%         endif %}
 {%         if afi_config.disable_send_community.standard is vyos_defined %}
- no neighbor {{ neighbor }} send-community standard
+  no neighbor {{ neighbor }} send-community standard
 {%         endif %}
   neighbor {{ neighbor }} activate
  exit-address-family
@@ -473,6 +473,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%             endfor %}
 {%         endif %}
  exit-address-family
+ !
 {%     endfor %}
 {% endif %}
  !
@@ -529,6 +530,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
  bgp listen range {{ prefix }} peer-group {{ options.peer_group }}
 {%         endif %}
 {%     endfor %}
+{% endif %}
+{% if parameters.allow_martian_nexthop is vyos_defined %}
+ bgp allow-martian-nexthop
 {% endif %}
 {% if parameters.always_compare_med is vyos_defined %}
  bgp always-compare-med
@@ -589,6 +593,12 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% endif %}
 {% if parameters.graceful_shutdown is vyos_defined %}
  bgp graceful-shutdown
+{% endif %}
+{% if parameters.no_hard_administrative_reset is vyos_defined %}
+ no bgp hard-administrative-reset
+{% endif %}
+{% if parameters.labeled_unicast is vyos_defined %}
+ bgp labeled-unicast {{ parameters.labeled_unicast }}
 {% endif %}
 {% if parameters.log_neighbor_changes is vyos_defined %}
  bgp log-neighbor-changes

@@ -319,8 +319,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         tcp_keepalive_interval = '77'
         tcp_keepalive_probes = '22'
 
-        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['parameters', 'allow-martian-nexthop'])
+        self.cli_set(base_path + ['parameters', 'no-hard-administrative-reset'])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
+        self.cli_set(base_path + ['parameters', 'labeled-unicast', 'explicit-null'])
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
 
         # System AS number MUST be defined - as this is set in setUp() we remove
         # this once for testing of the proper error
@@ -367,12 +370,15 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(f'router bgp {ASN}')
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
+        self.assertIn(f' bgp allow-martian-nexthop', frrconfig)
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
         self.assertIn(f' bgp conditional-advertisement timer {cond_adv_timer}', frrconfig)
         self.assertIn(f' bgp fast-convergence', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
+        self.assertIn(f' no bgp hard-administrative-reset', frrconfig)
+        self.assertIn(f' bgp labeled-unicast explicit-null', frrconfig)
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
         self.assertIn(f' bgp bestpath bandwidth default-weight-for-missing', frrconfig)
         self.assertIn(f' bgp bestpath compare-routerid', frrconfig)
@@ -1178,22 +1184,15 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' sid vpn export {sid}', afiv6_config)
         self.assertIn(f' nexthop vpn export {nexthop_ipv6}', afiv4_config)
 
-    def test_bgp_25_ipv4_ipv6_labeled_unicast_peer_group(self):
+    def test_bgp_25_ipv4_labeled_unicast_peer_group(self):
         pg_ipv4 = 'foo4'
-        pg_ipv6 = 'foo6'
-
         ipv4_max_prefix = '20'
-        ipv6_max_prefix = '200'
         ipv4_prefix = '192.0.2.0/24'
-        ipv6_prefix = '2001:db8:1000::/64'
 
         self.cli_set(base_path + ['listen', 'range', ipv4_prefix, 'peer-group', pg_ipv4])
-        self.cli_set(base_path + ['listen', 'range', ipv6_prefix, 'peer-group', pg_ipv6])
-
+        self.cli_set(base_path + ['parameters', 'labeled-unicast', 'ipv4-explicit-null'])
         self.cli_set(base_path + ['peer-group', pg_ipv4, 'address-family', 'ipv4-labeled-unicast', 'maximum-prefix', ipv4_max_prefix])
         self.cli_set(base_path + ['peer-group', pg_ipv4, 'remote-as', 'external'])
-        self.cli_set(base_path + ['peer-group', pg_ipv6, 'address-family', 'ipv6-labeled-unicast', 'maximum-prefix', ipv6_max_prefix])
-        self.cli_set(base_path + ['peer-group', pg_ipv6, 'remote-as', 'external'])
 
         self.cli_commit()
 
@@ -1201,14 +1200,32 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {pg_ipv4} peer-group', frrconfig)
         self.assertIn(f' neighbor {pg_ipv4} remote-as external', frrconfig)
-        self.assertIn(f' neighbor {pg_ipv6} peer-group', frrconfig)
-        self.assertIn(f' neighbor {pg_ipv6} remote-as external', frrconfig)
         self.assertIn(f' bgp listen range {ipv4_prefix} peer-group {pg_ipv4}', frrconfig)
-        self.assertIn(f' bgp listen range {ipv6_prefix} peer-group {pg_ipv6}', frrconfig)
+        self.assertIn(f' bgp labeled-unicast ipv4-explicit-null', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 labeled-unicast')
         self.assertIn(f'  neighbor {pg_ipv4} activate', afiv4_config)
         self.assertIn(f'  neighbor {pg_ipv4} maximum-prefix {ipv4_max_prefix}', afiv4_config)
+
+    def test_bgp_26_ipv6_labeled_unicast_peer_group(self):
+        pg_ipv6 = 'foo6'
+        ipv6_max_prefix = '200'
+        ipv6_prefix = '2001:db8:1000::/64'
+
+        self.cli_set(base_path + ['listen', 'range', ipv6_prefix, 'peer-group', pg_ipv6])
+        self.cli_set(base_path + ['parameters', 'labeled-unicast', 'ipv6-explicit-null'])
+
+        self.cli_set(base_path + ['peer-group', pg_ipv6, 'address-family', 'ipv6-labeled-unicast', 'maximum-prefix', ipv6_max_prefix])
+        self.cli_set(base_path + ['peer-group', pg_ipv6, 'remote-as', 'external'])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {pg_ipv6} peer-group', frrconfig)
+        self.assertIn(f' neighbor {pg_ipv6} remote-as external', frrconfig)
+        self.assertIn(f' bgp listen range {ipv6_prefix} peer-group {pg_ipv6}', frrconfig)
+        self.assertIn(f' bgp labeled-unicast ipv6-explicit-null', frrconfig)
 
         afiv6_config = self.getFRRconfig(' address-family ipv6 labeled-unicast')
         self.assertIn(f'  neighbor {pg_ipv6} activate', afiv6_config)
