@@ -39,7 +39,7 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         pass
 
     def test_l2tp_server_authentication_protocols(self):
-        # Test configuration of local authentication for PPPoE server
+        # Test configuration of local authentication protocols
         self.basic_config()
 
         # explicitly test mschap-v2 - no special reason

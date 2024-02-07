@@ -144,6 +144,10 @@ def verify_accel_ppp_base_service(config, local_users=True):
             if "key" not in radius_config:
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
+    if dict_search('authentication.radius.dynamic_author.server', config):
+        if not dict_search('authentication.radius.dynamic_author.key', config):
+            raise ConfigError('DAE/CoA server key required!')
+
     if "name_server_ipv4" in config:
         if len(config["name_server_ipv4"]) > 2:
             raise ConfigError(

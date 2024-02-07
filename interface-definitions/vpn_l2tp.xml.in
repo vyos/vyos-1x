@@ -13,6 +13,23 @@
               <help>Remote access L2TP VPN</help>
             </properties>
             <children>
+              <node name="authentication">
+                <properties>
+                  <help>Authentication for remote access L2TP VPN</help>
+                </properties>
+                <children>
+                  #include <include/accel-ppp/auth-local-users.xml.i>
+                  #include <include/accel-ppp/auth-mode.xml.i>
+                  #include <include/accel-ppp/auth-protocols.xml.i>
+                  #include <include/radius-auth-server-ipv4.xml.i>
+                  #include <include/accel-ppp/radius-additions.xml.i>
+                  <node name="radius">
+                    <children>
+                      #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
               #include <include/accel-ppp/max-concurrent-sessions.xml.i>
               #include <include/accel-ppp/mtu-128-16384.xml.i>
               <leafNode name="mtu">
@@ -117,23 +134,6 @@
               #include <include/accel-ppp/client-ipv6-pool.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/dhcp-interface.xml.i>
-              <node name="authentication">
-                <properties>
-                  <help>Authentication for remote access L2TP VPN</help>
-                </properties>
-                <children>
-                  #include <include/accel-ppp/auth-protocols.xml.i>
-                  #include <include/accel-ppp/auth-mode.xml.i>
-                  #include <include/accel-ppp/auth-local-users.xml.i>
-                  #include <include/radius-auth-server-ipv4.xml.i>
-                  #include <include/accel-ppp/radius-additions.xml.i>
-                  <node name="radius">
-                    <children>
-                      #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
-                    </children>
-                  </node>
-                </children>
-              </node>
               #include <include/accel-ppp/ppp-options.xml.i>
               #include <include/accel-ppp/default-pool.xml.i>
               #include <include/accel-ppp/default-ipv6-pool.xml.i>

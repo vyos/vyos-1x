@@ -26,7 +26,6 @@ from vyos.utils.dict import dict_search
 from vyos.accel_ppp_util import verify_accel_ppp_base_service
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import get_pools_in_order
-from vyos.base import Warning
 from vyos import ConfigError
 
 from vyos import airbag
@@ -60,13 +59,7 @@ def verify(l2tp):
         return None
 
     verify_accel_ppp_base_service(l2tp)
-
-    if dict_search('authentication.radius.dynamic_author.server', l2tp):
-        if not dict_search('authentication.radius.dynamic_author.key', l2tp):
-            raise ConfigError('DA/CoE server key required!')
-
     verify_accel_ppp_ip_pool(l2tp)
-
 
     if 'wins_server' in l2tp and len(l2tp['wins_server']) > 2:
         raise ConfigError(
