@@ -4,7 +4,7 @@
     <children>
       <node name="frr" owner="${vyos_conf_scripts_dir}/system_frr.py">
         <properties>
-          <help>Configure FRR parameters</help>
+          <help>Configure FRRouting parameters</help>
           <!-- Before components that use FRR -->
           <priority>150</priority>
         </properties>

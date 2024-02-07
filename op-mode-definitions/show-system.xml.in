@@ -150,7 +150,7 @@
                     </children>
                   </tagNode>
                 </children>
-              </node>              
+              </node>
               <node name="users">
                 <properties>
                   <help>Show user account information</help>
@@ -239,7 +239,7 @@
           </node>
           <leafNode name="routing-daemons">
             <properties>
-              <help>Show Quagga routing daemons</help>
+              <help>Show FRRouting daemons</help>
             </properties>
             <command>vtysh -c "show daemons"</command>
           </leafNode>
