@@ -9,15 +9,7 @@ ippool
 {# Common IPv6 definitions #}
 {% include 'accel-ppp/config_modules_ipv6.j2' %}
 {# Common authentication protocols (pap, chap ...) #}
-{% if authentication.require is vyos_defined %}
-{%     if authentication.require == 'chap' %}
-auth_chap_md5
-{%     elif authentication.require == 'mschap' %}
-auth_mschap_v1
-{%     else %}
-auth_{{ authentication.require.replace('-', '_') }}
-{%     endif %}
-{% endif %}
+{% include 'accel-ppp/config_modules_auth_protocols.j2' %}
 
 [core]
 thread-count={{ thread_count }}

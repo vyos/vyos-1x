@@ -26,6 +26,7 @@ from vyos.utils.process import call
 from vyos.utils.dict import dict_search
 from vyos.accel_ppp_util import get_pools_in_order
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
+from vyos.accel_ppp_util import verify_accel_ppp_base_service
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -68,17 +69,8 @@ def verify(ipoe):
             raise ConfigError('Option "client-subnet" incompatible with "vlan"!'
                               'Use "ipoe client-ip-pool" instead.')
 
+    verify_accel_ppp_base_service(ipoe, local_users=False)
     verify_accel_ppp_ip_pool(ipoe)
-
-    if dict_search('authentication.mode', ipoe) == 'radius':
-        if not dict_search('authentication.radius.server', ipoe):
-            raise ConfigError('RADIUS authentication requires at least one server')
-
-        for server in dict_search('authentication.radius.server', ipoe):
-            radius_config = ipoe['authentication']['radius']['server'][server]
-            if 'key' not in radius_config:
-                raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
-
 
     return None
 
