@@ -53,14 +53,17 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(VRFTest, cls).setUpClass()
 
+    def setUp(self):
+        # VRF strict_most ist always enabled
+        tmp = read_file('/proc/sys/net/vrf/strict_mode')
+        self.assertEqual(tmp, '1')
+
     def tearDown(self):
         # delete all VRFs
         self.cli_delete(base_path)
         self.cli_commit()
         for vrf in vrfs:
             self.assertNotIn(vrf, interfaces())
-        # If there is no VRF defined, strict_mode should be off
-        self.assertEqual(sysctl_read('net.vrf.strict_mode'), '0')
 
     def test_vrf_vni_and_table_id(self):
         base_table = '1000'

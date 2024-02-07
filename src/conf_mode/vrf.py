@@ -27,7 +27,6 @@ from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
-from vyos.utils.kernel import check_kmod
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
@@ -223,18 +222,6 @@ def apply(vrf):
             # Delete the VRF Kernel interface
             call(f'ip link delete dev {tmp}')
 
-    # Enable/Disable VRF strict mode
-    # When net.vrf.strict_mode=0 (default) it is possible to associate multiple
-    # VRF devices to the same table. Conversely, when net.vrf.strict_mode=1 a
-    # table can be associated to a single VRF device.
-    #
-    # A VRF table can be used by the VyOS CLI only once (ensured by verify()),
-    # this simply adds an additional Kernel safety net
-    strict_mode = '0'
-    # Set to 1 if any VRF is defined
-    if 'name' in vrf: strict_mode = '1'
-    sysctl_write('net.vrf.strict_mode', strict_mode)
-
     if 'name' in vrf:
         # Linux routing uses rules to find tables - routing targets are then
         # looked up in those tables. If the lookup got a matching route, the
@@ -323,7 +310,6 @@ def apply(vrf):
 
 if __name__ == '__main__':
     try:
-        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
