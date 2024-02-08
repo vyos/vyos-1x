@@ -68,6 +68,7 @@ def verify(pppoe):
         return None
 
     verify_accel_ppp_base_service(pppoe)
+    verify_accel_ppp_ip_pool(pppoe)
 
     if 'wins_server' in pppoe and len(pppoe['wins_server']) > 2:
         raise ConfigError('Not more then two WINS name-servers can be configured')
@@ -78,13 +79,6 @@ def verify(pppoe):
     # Check is interface exists in the system
     for interface in pppoe['interface']:
         verify_interface_exists(interface)
-
-    verify_accel_ppp_ip_pool(pppoe)
-
-    if dict_search('authentication.radius.dynamic_author.server', pppoe):
-        if not dict_search('authentication.radius.dynamic_author.key', pppoe):
-            raise ConfigError('DA/CoE server key required!')
-
 
     return None
 
