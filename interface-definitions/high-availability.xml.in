@@ -276,8 +276,17 @@
                     <format>ipv6net</format>
                     <description>IPv6 address and prefix length</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ip-host"/>
+                    <validator name="ip-address"/>
                   </constraint>
                 </properties>
                 <children>
