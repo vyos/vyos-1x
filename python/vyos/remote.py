@@ -54,7 +54,7 @@ class InteractivePolicy(MissingHostKeyPolicy):
     def missing_host_key(self, client, hostname, key):
         print_error(f"Host '{hostname}' not found in known hosts.")
         print_error('Fingerprint: ' + key.get_fingerprint().hex())
-        if is_interactive() and ask_yes_no('Do you wish to continue?'):
+        if sys.stdin.isatty() and ask_yes_no('Do you wish to continue?'):
             if client._host_keys_filename\
                and ask_yes_no('Do you wish to permanently add this host/key pair to known hosts?'):
                 client._host_keys.add(hostname, key.get_name(), key)
@@ -445,8 +445,10 @@ def download(local_path, urlstring, progressbar=False, check_space=False,
         if raise_error:
             raise
         print_error(f'Unable to download "{urlstring}": {err}')
+        sys.exit(1)
     except KeyboardInterrupt:
         print_error('\nDownload aborted by user.')
+        sys.exit(1)
 
 def upload(local_path, urlstring, progressbar=False,
            source_host='', source_port=0, timeout=10.0):
@@ -455,8 +457,10 @@ def upload(local_path, urlstring, progressbar=False,
         urlc(urlstring, progressbar, False, source_host, source_port, timeout).upload(local_path)
     except Exception as err:
         print_error(f'Unable to upload "{urlstring}": {err}')
+        sys.exit(1)
     except KeyboardInterrupt:
         print_error('\nUpload aborted by user.')
+        sys.exit(1)
 
 def get_remote_config(urlstring, source_host='', source_port=0):
     """
