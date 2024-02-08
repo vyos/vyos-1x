@@ -52,27 +52,28 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
 
     def test_rpki(self):
-        polling = '7200'
+        expire_interval = '3600'
+        polling_period = '600'
+        retry_interval = '300'
         cache = {
             '192.0.2.1' : {
                 'port' : '8080',
-                'preference' : '1'
-            },
-            '192.0.2.2' : {
-                'port' : '9090',
-                'preference' : '2'
+                'preference' : '10'
             },
             '2001:db8::1' : {
                 'port' : '1234',
-                'preference' : '3'
+                'preference' : '30'
             },
-            '2001:db8::2' : {
+            'rpki.vyos.net' : {
                 'port' : '5678',
-                'preference' : '4'
+                'preference' : '40'
             },
         }
 
-        self.cli_set(base_path + ['polling-period', polling])
+        self.cli_set(base_path + ['expire-interval', expire_interval])
+        self.cli_set(base_path + ['polling-period', polling_period])
+        self.cli_set(base_path + ['retry-interval', retry_interval])
+
         for peer, peer_config in cache.items():
             self.cli_set(base_path + ['cache', peer, 'port', peer_config['port']])
             self.cli_set(base_path + ['cache', peer, 'preference', peer_config['preference']])
@@ -82,7 +83,9 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR configuration
         frrconfig = self.getFRRconfig('rpki')
-        self.assertIn(f'rpki polling_period {polling}', frrconfig)
+        self.assertIn(f'rpki expire_interval {expire_interval}', frrconfig)
+        self.assertIn(f'rpki polling_period {polling_period}', frrconfig)
+        self.assertIn(f'rpki retry_interval {retry_interval}', frrconfig)
 
         for peer, peer_config in cache.items():
             port = peer_config['port']
