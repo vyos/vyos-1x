@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -36,7 +36,7 @@ from vyos.qos import RateLimiter
 from vyos.qos import RoundRobin
 from vyos.qos import TrafficShaper
 from vyos.qos import TrafficShaperHFSC
-from vyos.utils.process import call
+from vyos.utils.process import run
 from vyos.utils.dict import dict_search_recursive
 from vyos import ConfigError
 from vyos import airbag
@@ -205,8 +205,8 @@ def apply(qos):
     # Always delete "old" shapers first
     for interface in interfaces():
         # Ignore errors (may have no qdisc)
-        call(f'tc qdisc del dev {interface} parent ffff:')
-        call(f'tc qdisc del dev {interface} root')
+        run(f'tc qdisc del dev {interface} parent ffff:')
+        run(f'tc qdisc del dev {interface} root')
 
     call_dependents()
 
