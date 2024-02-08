@@ -237,5 +237,58 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'track_interface', config)
         self.assertIn(f'    {none_vrrp_interface}', config)
 
+    def test_check_health_script(self):
+        sync_group = 'VyOS'
+
+        for group in groups:
+            vlan_id = group.lstrip('VLAN')
+            vip = f'100.64.{vlan_id}.1/24'
+            group_base = base_path + ['vrrp', 'group', group]
+
+            self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', inc_ip(vip, 1) + '/' + vip.split('/')[-1]])
+
+            self.cli_set(group_base + ['interface', f'{vrrp_interface}.{vlan_id}'])
+            self.cli_set(group_base + ['address', vip])
+            self.cli_set(group_base + ['vrid', vlan_id])
+
+            self.cli_set(group_base + ['health-check', 'ping', '127.0.0.1'])
+
+        # commit changes
+        self.cli_commit()
+
+        for group in groups:
+            config = getConfig(f'vrrp_instance {group}')
+            self.assertIn(f'track_script', config)
+
+        self.cli_set(base_path + ['vrrp', 'sync-group', sync_group, 'member', groups[0]])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path + ['vrrp', 'group', groups[0], 'health-check'])
+        self.cli_commit()
+
+        for group in groups[1:]:
+            config = getConfig(f'vrrp_instance {group}')
+            self.assertIn(f'track_script', config)
+
+        config = getConfig(f'vrrp_instance {groups[0]}')
+        self.assertNotIn(f'track_script', config)
+
+        config = getConfig(f'vrrp_sync_group {sync_group}')
+        self.assertNotIn(f'track_script', config)
+
+        self.cli_set(base_path + ['vrrp', 'sync-group', sync_group, 'health-check', 'ping', '127.0.0.1'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = getConfig(f'vrrp_instance {groups[0]}')
+        self.assertNotIn(f'track_script', config)
+
+        config = getConfig(f'vrrp_sync_group {sync_group}')
+        self.assertIn(f'track_script', config)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
