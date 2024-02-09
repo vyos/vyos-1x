@@ -43,39 +43,30 @@ from vyos.utils.file import write_file
 
 SWANCTL_CONF="/etc/swanctl/swanctl.conf"
 
-def ipsec_down(ip_address):
-    # This prevents the need to restart ipsec and kill all active connections, only the stale connection is closed
-    status = cmd('sudo ipsec statusall')
-    connection_name = None
-    for line in status.split("\n"):
-        if line.find(ip_address) > 0:
-            regex_match = re.search(r'(peer_[^:\[]+)', line)
-            if regex_match:
-                connection_name = regex_match[1]
-                break
-    if connection_name:
-        call(f'sudo ipsec down {connection_name}')
-
 if __name__ == '__main__':
     interface = os.getenv('interface')
     new_ip = os.getenv('new_ip_address')
     old_ip = os.getenv('old_ip_address')
 
     if os.path.exists(SWANCTL_CONF):
-        conf_lines = read_file(SWANCTL_CONF)
+        conf_lines = read_file(SWANCTL_CONF).split("\n")
         found = False
+        reset_conns = set()
         to_match = f'# dhcp:{interface}'
 
         for i, line in enumerate(conf_lines):
             if line.find(to_match) > 0:
                 conf_lines[i] = line.replace(old_ip, new_ip)
                 found = True
+                regex_match = re.search(r'#.* reset:([-_a-zA-Z0-9|@]+)', line)
+                if regex_match:
+                   connection_name = regex_match[1]
+                   reset_conns.add(connection_name)
 
         if found:
-            write_file(SWANCTL_CONF, conf_lines)
-            ipsec_down(old_ip)
-            call('sudo ipsec rereadall')
-            call('sudo ipsec reload')
+            write_file(SWANCTL_CONF, "\n".join(conf_lines))
+            for connection_name in reset_conns:
+                call(f'sudo swanctl -t -i {connection_name}')
             call('sudo swanctl -q')
 
     exit(0)

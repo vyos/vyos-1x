@@ -8,7 +8,7 @@
 {% if peer_conf.virtual_address is vyos_defined %}
         vips = {{ peer_conf.virtual_address | join(', ') }}
 {% endif %}
-        local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%any' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
+        local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%any' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }} reset:{{ name }}
         remote_addrs = {{ peer_conf.remote_address | join(",") if peer_conf.remote_address is vyos_defined and 'any' not in peer_conf.remote_address else '%any' }}
 {% if peer_conf.authentication.mode is vyos_defined('x509') %}
         send_cert = always
