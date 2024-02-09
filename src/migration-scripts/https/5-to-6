@@ -79,7 +79,7 @@ if config.exists(base + ['virtual-host']):
             tmp = config.return_values(allow_path)
             allow_client.extend(tmp)
 
-        port_path = base + ['virtual-host', virtual_host, 'listen-port']
+        port_path = base + ['virtual-host', virtual_host, 'port']
         if config.exists(port_path):
             tmp = config.return_value(port_path)
             listen_port.append(tmp)
@@ -98,8 +98,6 @@ if config.exists(base + ['virtual-host']):
         listen_address = []
     for address in listen_address:
         config.set(base + ['listen-address'], value=address, replace=False)
-
-
 
 try:
     with open(file_name, 'w') as f:
