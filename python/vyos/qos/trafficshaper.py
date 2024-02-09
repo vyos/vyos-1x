@@ -29,8 +29,9 @@ class TrafficShaper(QoSBase):
         class_id_max = 0
         if 'class' in config:
             tmp = list(config['class'])
-            tmp.sort()
-            class_id_max = tmp[-1]
+            # Convert strings to integers
+            tmp = [int(x) for x in tmp]
+            class_id_max = max(tmp)
 
         r2q = 10
         # bandwidth is a mandatory CLI node
