@@ -11,8 +11,14 @@ rpki
 {%         endif %}
 {%     endfor %}
 {% endif %}
+{% if expire_interval is vyos_defined %}
+ rpki expire_interval {{ expire_interval }}
+{% endif %}
 {% if polling_period is vyos_defined %}
  rpki polling_period {{ polling_period }}
+{% endif %}
+{% if retry_interval is vyos_defined %}
+ rpki retry_interval {{ retry_interval }}
 {% endif %}
 exit
 !
