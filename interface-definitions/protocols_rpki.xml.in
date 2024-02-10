@@ -4,7 +4,8 @@
     <children>
       <node name="rpki" owner="${vyos_conf_scripts_dir}/protocols_rpki.py">
         <properties>
-          <help>BGP prefix origin validation</help>
+          <help>Resource Public Key Infrastructure (RPKI)</help>
+          <priority>819</priority>
         </properties>
         <children>
           <tagNode name="cache">
