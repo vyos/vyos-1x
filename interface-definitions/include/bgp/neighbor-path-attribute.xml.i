@@ -14,6 +14,7 @@
         <constraint>
           <validator name="numeric" argument="--range 1-255"/>
         </constraint>
+        <multi/>
       </properties>
     </leafNode>
     <leafNode name="treat-as-withdraw">
