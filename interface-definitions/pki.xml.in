@@ -14,36 +14,15 @@
           </constraint>
         </properties>
         <children>
-          <leafNode name="certificate">
-            <properties>
-              <help>CA certificate in PEM format</help>
-              <constraint>
-                <validator name="base64"/>
-              </constraint>
-              <constraintErrorMessage>CA certificate is not base64-encoded</constraintErrorMessage>
-            </properties>
-          </leafNode>
+          #include <include/pki/cli-certificate-base64.xml.i>
           #include <include/generic-description.xml.i>
           <node name="private">
             <properties>
               <help>CA private key in PEM format</help>
             </properties>
             <children>
-              <leafNode name="key">
-                <properties>
-                  <help>CA private key in PEM format</help>
-                  <constraint>
-                    <validator name="base64"/>
-                  </constraint>
-                  <constraintErrorMessage>CA private key is not base64-encoded</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="password-protected">
-                <properties>
-                  <help>CA private key is password protected</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/pki/cli-private-key-base64.xml.i>
+              #include <include/pki/password-protected.xml.i>
             </children>
           </node>
           <leafNode name="crl">
@@ -56,12 +35,7 @@
               <multi/>
             </properties>
           </leafNode>
-          <leafNode name="revoke">
-            <properties>
-              <help>If parent CA is present, this CA certificate will be included in generated CRLs</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/pki/cli-revoke.xml.i>
         </children>
       </tagNode>
       <tagNode name="certificate">
@@ -72,15 +46,7 @@
           </constraint>
         </properties>
         <children>
-          <leafNode name="certificate">
-            <properties>
-              <help>Certificate in PEM format</help>
-              <constraint>
-                <validator name="base64"/>
-              </constraint>
-              <constraintErrorMessage>Certificate is not base64-encoded</constraintErrorMessage>
-            </properties>
-          </leafNode>
+          #include <include/pki/cli-certificate-base64.xml.i>
           <node name="acme">
             <properties>
               <help>Automatic Certificate Management Environment (ACME) request</help>
@@ -141,29 +107,11 @@
               <help>Certificate private key</help>
             </properties>
             <children>
-              <leafNode name="key">
-                <properties>
-                  <help>Certificate private key in PEM format</help>
-                  <constraint>
-                    <validator name="base64"/>
-                  </constraint>
-                  <constraintErrorMessage>Certificate private key is not base64-encoded</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="password-protected">
-                <properties>
-                  <help>Certificate private key is password protected</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/pki/cli-private-key-base64.xml.i>
+              #include <include/pki/password-protected.xml.i>
             </children>
           </node>
-          <leafNode name="revoke">
-            <properties>
-              <help>If CA is present, this certificate will be included in generated CRLs</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/pki/cli-revoke.xml.i>
         </children>
       </tagNode>
       <tagNode name="dh">
@@ -195,15 +143,7 @@
               <help>Public key</help>
             </properties>
             <children>
-              <leafNode name="key">
-                <properties>
-                  <help>Public key in PEM format</help>
-                  <constraint>
-                    <validator name="base64"/>
-                  </constraint>
-                  <constraintErrorMessage>Public key is not base64-encoded</constraintErrorMessage>
-                </properties>
-              </leafNode>
+              #include <include/pki/cli-public-key-base64.xml.i>
             </children>
           </node>
           <node name="private">
@@ -211,21 +151,32 @@
               <help>Private key</help>
             </properties>
             <children>
-              <leafNode name="key">
-                <properties>
-                  <help>Private key in PEM format</help>
-                  <constraint>
-                    <validator name="base64"/>
-                  </constraint>
-                  <constraintErrorMessage>Private key is not base64-encoded</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="password-protected">
-                <properties>
-                  <help>Private key is password protected</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/pki/cli-private-key-base64.xml.i>
+              #include <include/pki/password-protected.xml.i>
+            </children>
+          </node>
+        </children>
+      </tagNode>
+      <tagNode name="openssh">
+        <properties>
+          <help>OpenSSH public and private keys</help>
+        </properties>
+        <children>
+          <node name="public">
+            <properties>
+              <help>Public key</help>
+            </properties>
+            <children>
+              #include <include/pki/cli-public-key-base64.xml.i>
+            </children>
+          </node>
+          <node name="private">
+            <properties>
+              <help>Private key</help>
+            </properties>
+            <children>
+              #include <include/pki/cli-private-key-base64.xml.i>
+              #include <include/pki/password-protected.xml.i>
             </children>
           </node>
         </children>
