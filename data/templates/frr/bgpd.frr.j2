@@ -390,7 +390,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         endif %}
 {%         if afi_config.ead_es_route_target.export is vyos_defined %}
 {%             for route_target in afi_config.ead_es_route_target.export %}
- ead-es-route-target export {{ route_target }}
+  ead-es-route-target export {{ route_target }}
 {%             endfor %}
 {%         endif %}
 {%         if afi_config.rt_auto_derive is vyos_defined %}
@@ -401,6 +401,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         endif %}
 {%         if afi_config.flooding.head_end_replication is vyos_defined %}
   flooding head-end-replication
+{%         endif %}
+{%         if afi_config.mac_vrf.soo is vyos_defined %}
+  mac-vrf soo {{ afi_config.mac_vrf.soo }}
 {%         endif %}
 {%         if afi_config.nexthop.vpn.export is vyos_defined %}
   nexthop vpn export {{ afi_config.nexthop.vpn.export }}
