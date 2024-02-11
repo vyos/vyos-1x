@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,7 +20,9 @@ import ipaddress
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.x509.extensions import ExtensionNotFound
-from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID, ExtensionOID
+from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import ExtendedKeyUsageOID
+from cryptography.x509.oid import ExtensionOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh
@@ -45,6 +47,8 @@ DH_BEGIN='-----BEGIN DH PARAMETERS-----\n'
 DH_END='\n-----END DH PARAMETERS-----'
 OVPN_BEGIN = '-----BEGIN OpenVPN Static key V{0}-----\n'
 OVPN_END = '\n-----END OpenVPN Static key V{0}-----'
+OPENSSH_KEY_BEGIN='-----BEGIN OPENSSH PRIVATE KEY-----\n'
+OPENSSH_KEY_END='\n-----END OPENSSH PRIVATE KEY-----'
 
 # Print functions
 
@@ -229,6 +233,12 @@ def wrap_public_key(raw_data):
 def wrap_private_key(raw_data, passphrase=None):
     return (KEY_ENC_BEGIN if passphrase else KEY_BEGIN) + raw_data + (KEY_ENC_END if passphrase else KEY_END)
 
+def wrap_openssh_public_key(raw_data, type):
+    return f'{type} {raw_data}'
+
+def wrap_openssh_private_key(raw_data):
+    return OPENSSH_KEY_BEGIN + raw_data +  OPENSSH_KEY_END
+
 def wrap_certificate_request(raw_data):
     return CSR_BEGIN + raw_data + CSR_END
 
@@ -245,7 +255,6 @@ def wrap_openvpn_key(raw_data, version='1'):
     return OVPN_BEGIN.format(version) + raw_data + OVPN_END.format(version)
 
 # Load functions
-
 def load_public_key(raw_data, wrap_tags=True):
     if wrap_tags:
         raw_data = wrap_public_key(raw_data)
@@ -264,6 +273,21 @@ def load_private_key(raw_data, passphrase=None, wrap_tags=True):
 
     try:
         return serialization.load_pem_private_key(bytes(raw_data, 'utf-8'), password=passphrase)
+    except ValueError:
+        return False
+
+def load_openssh_public_key(raw_data, type):
+    try:
+        return serialization.load_ssh_public_key(bytes(f'{type} {raw_data}', 'utf-8'))
+    except ValueError:
+        return False
+
+def load_openssh_private_key(raw_data, passphrase=None, wrap_tags=True):
+    if wrap_tags:
+        raw_data = wrap_openssh_private_key(raw_data)
+
+    try:
+        return serialization.load_ssh_private_key(bytes(raw_data, 'utf-8'), password=passphrase)
     except ValueError:
         return False
 
@@ -429,4 +453,3 @@ def sort_ca_chain(ca_names, pki_node):
 
     from functools import cmp_to_key
     return sorted(ca_names, key=cmp_to_key(lambda cert1, cert2: ca_cmp(cert1, cert2, pki_node)))
-

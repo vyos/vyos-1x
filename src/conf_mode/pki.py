@@ -29,6 +29,8 @@ from vyos.defaults import directories
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
 from vyos.pki import load_public_key
+from vyos.pki import load_openssh_public_key
+from vyos.pki import load_openssh_private_key
 from vyos.pki import load_private_key
 from vyos.pki import load_crl
 from vyos.pki import load_dh_parameters
@@ -150,6 +152,11 @@ def get_config(config=None):
         if 'changed' not in pki: pki.update({'changed':{}})
         pki['changed'].update({'key_pair' : tmp})
 
+    tmp = node_changed(conf, base + ['openssh'], recursive=True)
+    if tmp:
+        if 'changed' not in pki: pki.update({'changed':{}})
+        pki['changed'].update({'openssh' : tmp})
+
     tmp = node_changed(conf, base + ['openvpn', 'shared-secret'], recursive=True)
     if tmp:
         if 'changed' not in pki: pki.update({'changed':{}})
@@ -241,6 +248,17 @@ def is_valid_private_key(raw_data, protected=False):
         return True
     return load_private_key(raw_data, passphrase=None, wrap_tags=True)
 
+def is_valid_openssh_public_key(raw_data, type):
+    # If it loads correctly we're good, or return False
+    return load_openssh_public_key(raw_data, type)
+
+def is_valid_openssh_private_key(raw_data, protected=False):
+    # If it loads correctly we're good, or return False
+    # With encrypted private keys, we always return true as we cannot ask for password to verify
+    if protected:
+        return True
+    return load_openssh_private_key(raw_data, passphrase=None, wrap_tags=True)
+
 def is_valid_crl(raw_data):
     # If it loads correctly we're good, or return False
     return load_crl(raw_data, wrap_tags=True)
@@ -321,6 +339,20 @@ def verify(pki):
                 protected = 'password_protected' in private
                 if not is_valid_private_key(private['key'], protected):
                     raise ConfigError(f'Invalid private key on key-pair "{name}"')
+
+    if 'openssh' in pki:
+        for name, key_conf in pki['openssh'].items():
+            if 'public' in key_conf and 'key' in key_conf['public']:
+                if 'type' not in key_conf['public']:
+                    raise ConfigError(f'Must define OpenSSH public key type for "{name}"')
+                if not is_valid_openssh_public_key(key_conf['public']['key'], key_conf['public']['type']):
+                    raise ConfigError(f'Invalid OpenSSH public key "{name}"')
+
+            if 'private' in key_conf and 'key' in key_conf['private']:
+                private = key_conf['private']
+                protected = 'password_protected' in private
+                if not is_valid_openssh_private_key(private['key'], protected):
+                    raise ConfigError(f'Invalid OpenSSH private key "{name}"')
 
     if 'x509' in pki:
         if 'default' in pki['x509']:
