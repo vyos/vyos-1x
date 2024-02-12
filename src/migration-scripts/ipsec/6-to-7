@@ -63,7 +63,7 @@ if config.exists(ipsec_site_base):
         changes_made = True
 
         peer_x509_base = ipsec_site_base + [peer, 'authentication', 'x509']
-        pki_name = 'peer_' + peer.replace(".", "-")
+        pki_name = 'peer_' + peer.replace(".", "-").replace("@", "")
 
         if config.exists(peer_x509_base + ['cert-file']):
             cert_file = config.return_value(peer_x509_base + ['cert-file'])
