@@ -24,7 +24,6 @@ from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configdict import node_changed
-from vyos.configdiff import Diff
 from vyos.defaults import directories
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
@@ -66,6 +65,10 @@ sync_search = [
         'path': ['interfaces', 'sstpc'],
     },
     {
+        'keys': ['key'],
+        'path': ['protocols', 'rpki', 'cache'],
+    },
+    {
         'keys': ['certificate', 'ca_certificate', 'local_key', 'remote_key'],
         'path': ['vpn', 'ipsec'],
     },
@@ -88,7 +91,8 @@ sync_translate = {
     'remote_key': 'key_pair',
     'shared_secret_key': 'openvpn',
     'auth_key': 'openvpn',
-    'crypt_key': 'openvpn'
+    'crypt_key': 'openvpn',
+    'key': 'openssh',
 }
 
 def certbot_delete(certificate):
