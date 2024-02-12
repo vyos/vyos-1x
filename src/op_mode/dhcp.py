@@ -112,6 +112,10 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
             data_lease['duid'] = _format_hex_string(lease['duid'])
             data_lease['type'] = lease['type']
 
+            if lease['type'] == 'IA_PD':
+                prefix_len = lease['prefix-len']
+                data_lease['ip'] += f'/{prefix_len}'
+
         data_lease['remaining'] = '-'
 
         if lease['valid-lft'] > 0:
