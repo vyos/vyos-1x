@@ -14,6 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
+from glob import glob
 from sys import exit
 
 from vyos.config import Config
@@ -26,6 +29,8 @@ from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
+
+rpki_ssh_key_base = '/run/frr/id_rpki'
 
 def get_config(config=None):
     if config:
@@ -77,6 +82,9 @@ def verify(rpki):
     return None
 
 def generate(rpki):
+    for key in glob(f'{rpki_ssh_key_base}*'):
+        os.unlink(key)
+
     if not rpki:
         return
 
@@ -88,8 +96,8 @@ def generate(rpki):
                 public_key_type = dict_search_args(rpki['pki'], 'openssh', key_name, 'public', 'type')
                 private_key_data = dict_search_args(rpki['pki'], 'openssh', key_name, 'private', 'key')
 
-                cache_config['ssh']['public_key_file'] = f'/run/frr/id_rpki_{cache}.pub'
-                cache_config['ssh']['private_key_file'] = f'/run/frr/id_rpki_{cache}'
+                cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
+                cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
 
                 write_file(cache_config['ssh']['public_key_file'], wrap_openssh_public_key(public_key_data, public_key_type))
                 write_file(cache_config['ssh']['private_key_file'], wrap_openssh_private_key(private_key_data))
