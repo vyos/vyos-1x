@@ -76,7 +76,7 @@
  neighbor {{ neighbor }} password {{ config.password }}
 {% endif %}
 {% if config.path_attribute.discard is vyos_defined %}
- neighbor {{ neighbor }} path-attribute discard {{ config.path_attribute.discard }}
+ neighbor {{ neighbor }} path-attribute discard {{ config.path_attribute.discard | join(' ') }}
 {% endif %}
 {% if config.path_attribute.treat_as_withdraw is vyos_defined %}
  neighbor {{ neighbor }} path-attribute treat-as-withdraw {{ config.path_attribute.treat_as_withdraw }}

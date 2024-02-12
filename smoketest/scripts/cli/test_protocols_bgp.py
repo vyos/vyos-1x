@@ -60,7 +60,7 @@ neighbor_config = {
         'route_map_out'    : route_map_out,
         'no_send_comm_ext' : '',
         'addpath_all'      : '',
-        'p_attr_discard'   : '123',
+        'p_attr_discard'   : ['10', '20', '30', '40', '50'],
         },
     '192.0.2.2' : {
         'bfd_profile'      : bfd_profile,
@@ -137,7 +137,7 @@ peer_group_config = {
         'cap_over'         : '',
         'ttl_security'     : '5',
         'disable_conn_chk' : '',
-        'p_attr_discard'   : '250',
+        'p_attr_discard'   : ['100', '150', '200'],
         },
     'bar' : {
         'remote_as'        : '111',
@@ -284,7 +284,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         if 'addpath_all' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
         if 'p_attr_discard' in peer_config:
-            self.assertIn(f' neighbor {peer} path-attribute discard {peer_config["p_attr_discard"]}', frrconfig)
+            tmp = ' '.join(peer_config["p_attr_discard"])
+            self.assertIn(f' neighbor {peer} path-attribute discard {tmp}', frrconfig)
         if 'p_attr_taw' in peer_config:
             self.assertIn(f' neighbor {peer} path-attribute treat-as-withdraw {peer_config["p_attr_taw"]}', frrconfig)
         if 'addpath_per_as' in peer_config:
@@ -460,7 +461,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'update_src' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'update-source', peer_config["update_src"]])
             if 'p_attr_discard' in peer_config:
-                self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'discard', peer_config["p_attr_discard"]])
+                for attribute in peer_config['p_attr_discard']:
+                    self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'discard', attribute])
             if 'p_attr_taw' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'treat-as-withdraw', peer_config["p_attr_taw"]])
             if 'route_map_in' in peer_config:
@@ -584,7 +586,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'disable_conn_chk' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'disable-connected-check'])
             if 'p_attr_discard' in config:
-                self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'discard', config["p_attr_discard"]])
+                for attribute in config['p_attr_discard']:
+                    self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'discard', attribute])
             if 'p_attr_taw' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'treat-as-withdraw', config["p_attr_taw"]])
 
