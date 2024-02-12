@@ -4,6 +4,8 @@ interfaces {
         speed auto
         address 192.0.2.1/24
     }
+    loopback lo {
+    }
 }
 protocols {
     rpki {
@@ -26,6 +28,11 @@ protocols {
 system {
     config-management {
         commit-revisions 200
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
     }
     conntrack {
         modules {
