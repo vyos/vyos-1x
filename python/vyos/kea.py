@@ -17,8 +17,6 @@ import json
 import os
 import socket
 
-from datetime import datetime
-
 from vyos.template import is_ipv6
 from vyos.template import isc_static_route
 from vyos.template import netmask_from_cidr
@@ -290,29 +288,6 @@ def kea6_parse_subnet(subnet, config):
 
     return out
 
-def kea_parse_leases(lease_path):
-    contents = read_file(lease_path)
-    lines = contents.split("\n")
-    output = []
-
-    if len(lines) < 2:
-        return output
-
-    headers = lines[0].split(",")
-
-    for line in lines[1:]:
-        line_out = dict(zip(headers, line.split(",")))
-
-        lifetime = int(line_out['valid_lifetime'])
-        expiry = int(line_out['expire'])
-
-        line_out['start_timestamp'] = datetime.utcfromtimestamp(expiry - lifetime)
-        line_out['expire_timestamp'] = datetime.utcfromtimestamp(expiry) if expiry else None
-
-        output.append(line_out)
-
-    return output
-
 def _ctrl_socket_command(path, command, args=None):
     if not os.path.exists(path):
         return None
@@ -336,6 +311,16 @@ def _ctrl_socket_command(path, command, args=None):
                 break
 
         return json.loads(result.decode('utf-8'))
+
+def kea_get_leases(inet):
+    ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'
+
+    leases = _ctrl_socket_command(ctrl_socket, f'lease{inet}-get-all')
+
+    if not leases or 'result' not in leases or leases['result'] != 0:
+        return []
+
+    return leases['arguments']['leases']
 
 def kea_get_active_config(inet):
     ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'

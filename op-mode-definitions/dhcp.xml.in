@@ -130,7 +130,7 @@
                     <properties>
                       <help>Show DHCPv6 server leases sorted by the specified key</help>
                       <completionHelp>
-                        <list>end iaid_duid ip last_communication pool remaining state type</list>
+                        <list>end duid ip last_communication pool remaining state type</list>
                       </completionHelp>
                     </properties>
                     <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6 --sort $6</command>

@@ -29,8 +29,8 @@ from vyos.base import Warning
 from vyos.configquery import ConfigTreeQuery
 
 from vyos.kea import kea_get_active_config
+from vyos.kea import kea_get_leases
 from vyos.kea import kea_get_pool_from_subnet_id
-from vyos.kea import kea_parse_leases
 from vyos.utils.process import is_systemd_service_running
 
 time_string = "%a %b %d %H:%M:%S %Z %Y"
@@ -38,7 +38,7 @@ time_string = "%a %b %d %H:%M:%S %Z %Y"
 config = ConfigTreeQuery()
 lease_valid_states = ['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
 sort_valid_inet = ['end', 'mac', 'hostname', 'ip', 'pool', 'remaining', 'start', 'state']
-sort_valid_inet6 = ['end', 'iaid_duid', 'ip', 'last_communication', 'pool', 'remaining', 'state', 'type']
+sort_valid_inet6 = ['end', 'duid', 'ip', 'last_communication', 'pool', 'remaining', 'state', 'type']
 
 ArgFamily = typing.Literal['inet', 'inet6']
 ArgState = typing.Literal['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
@@ -77,8 +77,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     :return list
     """
     inet_suffix = '6' if family == 'inet6' else '4'
-    lease_file = f'/config/dhcp/dhcp{inet_suffix}-leases.csv'
-    leases = kea_parse_leases(lease_file)
+    leases = kea_get_leases(inet_suffix)
 
     if pool is None:
         pool = _get_dhcp_pools(family=family)
@@ -89,28 +88,33 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
 
     data = []
     for lease in leases:
+        lifetime = lease['valid-lft']
+        expiry = (lease['cltt'] + lifetime)
+
+        lease['start_timestamp'] = datetime.utcfromtimestamp(expiry - lifetime)
+        lease['expire_timestamp'] = datetime.utcfromtimestamp(expiry) if expiry else None
+
         data_lease = {}
-        data_lease['ip'] = lease['address']
-        lease_state_long = {'0': 'active', '1': 'rejected', '2': 'expired'}
+        data_lease['ip'] = lease['ip-address']
+        lease_state_long = {0: 'active', 1: 'rejected', 2: 'expired'}
         data_lease['state'] = lease_state_long[lease['state']]
-        data_lease['pool'] = kea_get_pool_from_subnet_id(active_config, inet_suffix, lease['subnet_id']) if active_config else '-'
+        data_lease['pool'] = kea_get_pool_from_subnet_id(active_config, inet_suffix, lease['subnet-id']) if active_config else '-'
         data_lease['end'] = lease['expire_timestamp'].timestamp() if lease['expire_timestamp'] else None
         data_lease['origin'] = 'local' # TODO: Determine remote in HA
 
         if family == 'inet':
-            data_lease['mac'] = lease['hwaddr']
+            data_lease['mac'] = lease['hw-address']
             data_lease['start'] = lease['start_timestamp'].timestamp()
             data_lease['hostname'] = lease['hostname']
 
         if family == 'inet6':
             data_lease['last_communication'] = lease['start_timestamp'].timestamp()
-            data_lease['iaid_duid'] = _format_hex_string(lease['duid'])
-            lease_types_long = {'0': 'non-temporary', '1': 'temporary', '2': 'prefix delegation'}
-            data_lease['type'] = lease_types_long[lease['lease_type']]
+            data_lease['duid'] = _format_hex_string(lease['duid'])
+            data_lease['type'] = lease['type']
 
         data_lease['remaining'] = '-'
 
-        if lease['expire']:
+        if lease['valid-lft'] > 0:
             data_lease['remaining'] = lease['expire_timestamp'] - datetime.utcnow()
 
             if data_lease['remaining'].days >= 0:
@@ -172,11 +176,11 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             remain = lease.get('remaining')
             lease_type = lease.get('type')
             pool = lease.get('pool')
-            host_identifier = lease.get('iaid_duid')
+            host_identifier = lease.get('duid')
             data_entries.append([ipaddr, state, start, end, remain, lease_type, pool, host_identifier])
 
         headers = ['IPv6 address', 'State', 'Last communication', 'Lease expiration', 'Remaining', 'Type', 'Pool',
-                   'IAID_DUID']
+                   'DUID']
 
     output = tabulate(data_entries, headers, numalign='left')
     return output
