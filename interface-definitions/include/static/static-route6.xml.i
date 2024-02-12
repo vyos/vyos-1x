@@ -31,6 +31,7 @@
       <children>
         #include <include/generic-disable-node.xml.i>
         #include <include/static/static-route-distance.xml.i>
+        #include <include/static/static-route-segments.xml.i>
         #include <include/static/static-route-vrf.xml.i>
       </children>
     </tagNode>
@@ -47,13 +48,13 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
+        #include <include/static/static-route-bfd.xml.i>
         #include <include/static/static-route-distance.xml.i>
         #include <include/static/static-route-interface.xml.i>
+        #include <include/static/static-route-segments.xml.i>
         #include <include/static/static-route-vrf.xml.i>
-        #include <include/static/static-route-bfd.xml.i>
       </children>
     </tagNode>
   </children>
 </tagNode>
 <!-- include end -->
-

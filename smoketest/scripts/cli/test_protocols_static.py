@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -55,13 +55,13 @@ routes = {
         'blackhole' : { 'distance' : '90' },
     },
     '100.64.0.0/16' : {
-        'blackhole' : { },
+        'blackhole' : {},
     },
     '100.65.0.0/16' : {
         'reject'    : { 'distance' : '10', 'tag' : '200' },
     },
     '100.66.0.0/16' : {
-        'blackhole' : { },
+        'blackhole' : {},
         'reject'    : { 'distance' : '10', 'tag' : '200' },
     },
     '2001:db8:100::/40' : {
@@ -88,8 +88,28 @@ routes = {
     '2001:db8:300::/40' : {
         'reject'    : { 'distance' : '250', 'tag' : '500' },
     },
+    '2001:db8:400::/40' : {
+        'next_hop' : {
+            '2001:db8::400' : { 'segments' : '2001:db8:aaaa::400/2002::400/2003::400/2004::400' },
+        },
+    },
+    '2001:db8:500::/40' : {
+        'next_hop' : {
+            '2001:db8::500' : { 'segments' : '2001:db8:aaaa::500/2002::500/2003::500/2004::500' },
+        },
+    },
+    '2001:db8:600::/40' : {
+        'interface' : {
+            'eth0'  : { 'segments' : '2001:db8:aaaa::600/2002::600' },
+        },
+    },
+    '2001:db8:700::/40' : {
+        'interface' : {
+            'eth1'  : { 'segments' : '2001:db8:aaaa::700' },
+        },
+    },
     '2001:db8::/32' : {
-        'blackhole' : { 'distance' : '200', 'tag' : '600' },
+        'blackhole' : { 'distance' : '200', 'tag' : '600' }
     },
 }
 
@@ -108,17 +128,13 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         super(TestProtocolsStatic, cls).tearDownClass()
 
     def tearDown(self):
-        for route, route_config in routes.items():
-            route_type = 'route'
-            if is_ipv6(route):
-                route_type = 'route6'
-            self.cli_delete(base_path + [route_type, route])
-
-        for table in tables:
-            self.cli_delete(base_path + ['table', table])
-
-        tmp = self.getFRRconfig('', end='')
+        self.cli_delete(base_path)
         self.cli_commit()
+
+        v4route = self.getFRRconfig('ip route', end='')
+        self.assertFalse(v4route)
+        v6route = self.getFRRconfig('ipv6 route', end='')
+        self.assertFalse(v6route)
 
     def test_01_static(self):
         bfd_profile = 'vyos-test'
@@ -142,7 +158,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', bfd_profile ])
                     if 'bfd_source' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source', next_hop_config['bfd_source'], 'profile', bfd_profile])
-
+                    if 'segments' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'segments', next_hop_config['segments']])
 
             if 'interface' in route_config:
                 for interface, interface_config in route_config['interface'].items():
@@ -153,6 +170,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(base + ['interface', interface, 'distance', interface_config['distance']])
                     if 'vrf' in interface_config:
                         self.cli_set(base + ['interface', interface, 'vrf', interface_config['vrf']])
+                    if 'segments' in interface_config:
+                        self.cli_set(base + ['interface', interface, 'segments', interface_config['segments']])
 
             if 'blackhole' in route_config:
                 self.cli_set(base + ['blackhole'])
@@ -200,6 +219,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         tmp += ' bfd profile ' + bfd_profile
                     if 'bfd_source' in next_hop_config:
                         tmp += ' bfd multi-hop source ' + next_hop_config['bfd_source'] + ' profile ' + bfd_profile
+                    if 'segments' in next_hop_config:
+                        tmp += ' segments ' + next_hop_config['segments']
 
                     if 'disable' in next_hop_config:
                         self.assertNotIn(tmp, frrconfig)
@@ -215,6 +236,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         tmp += ' ' + interface_config['distance']
                     if 'vrf' in interface_config:
                         tmp += ' nexthop-vrf ' + interface_config['vrf']
+                    if 'segments' in interface_config:
+                        tmp += ' segments ' + interface_config['segments']
 
                     if 'disable' in interface_config:
                         self.assertNotIn(tmp, frrconfig)
@@ -369,7 +392,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                             self.cli_set(route_base_path + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
                         if 'vrf' in next_hop_config:
                             self.cli_set(route_base_path + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
-
+                        if 'segments' in next_hop_config:
+                            self.cli_set(route_base_path + ['next-hop', next_hop, 'segments', next_hop_config['segments']])
 
                 if 'interface' in route_config:
                     for interface, interface_config in route_config['interface'].items():
@@ -380,6 +404,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                             self.cli_set(route_base_path + ['interface', interface, 'distance', interface_config['distance']])
                         if 'vrf' in interface_config:
                             self.cli_set(route_base_path + ['interface', interface, 'vrf', interface_config['vrf']])
+                        if 'segments' in interface_config:
+                            self.cli_set(route_base_path + ['interface', interface, 'segments', interface_config['segments']])
 
                 if 'blackhole' in route_config:
                     self.cli_set(route_base_path + ['blackhole'])
@@ -417,6 +443,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                             tmp += ' ' + next_hop_config['distance']
                         if 'vrf' in next_hop_config:
                             tmp += ' nexthop-vrf ' + next_hop_config['vrf']
+                        if 'segments' in next_hop_config:
+                            tmp += ' segments ' + next_hop_config['segments']
 
                         if 'disable' in next_hop_config:
                             self.assertNotIn(tmp, frrconfig)
@@ -432,6 +460,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                             tmp += ' ' + interface_config['distance']
                         if 'vrf' in interface_config:
                             tmp += ' nexthop-vrf ' + interface_config['vrf']
+                        if 'segments' in interface_config:
+                            tmp += ' segments ' + interface_config['segments']
 
                         if 'disable' in interface_config:
                             self.assertNotIn(tmp, frrconfig)
