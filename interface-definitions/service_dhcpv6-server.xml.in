@@ -97,6 +97,21 @@
                 </properties>
                 <children>
                   #include <include/dhcp/option-v6.xml.i>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Optional interface for this subnet to accept requests from</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.i>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <tagNode name="range">
                     <properties>
                       <help>Parameters setting ranges for assigning IPv6 addresses</help>

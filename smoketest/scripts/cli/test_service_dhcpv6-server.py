@@ -102,6 +102,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
 
         self.cli_set(base_path + ['preference', preference])
+        self.cli_set(pool + ['interface', interface])
         self.cli_set(pool + ['subnet-id', '1'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['lease-time', 'default', lease_time])
@@ -146,6 +147,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
 
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'interface', interface)
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'id', 1)
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'valid-lifetime', int(lease_time))
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'min-valid-lifetime', int(min_lease_time))

@@ -212,6 +212,9 @@ def kea6_parse_subnet(subnet, config):
     if 'option' in config:
         out['option-data'] = kea6_parse_options(config['option'])
 
+    if 'interface' in config:
+        out['interface'] = config['interface']
+
     if 'range' in config:
         pools = []
         for num, range_config in config['range'].items():
