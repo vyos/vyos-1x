@@ -106,7 +106,26 @@ def get_pools_in_order(data: dict) -> list:
     return pools
 
 
-def verify_accel_ppp_base_service(config, local_users=True):
+def verify_accel_ppp_name_servers(config):
+    if "name_server_ipv4" in config:
+        if len(config["name_server_ipv4"]) > 2:
+            raise ConfigError(
+                "Not more then two IPv4 DNS name-servers " "can be configured"
+            )
+    if "name_server_ipv6" in config:
+        if len(config["name_server_ipv6"]) > 3:
+            raise ConfigError(
+                "Not more then three IPv6 DNS name-servers " "can be configured"
+            )
+
+
+def verify_accel_ppp_wins_servers(config):
+    if 'wins_server' in config and len(config['wins_server']) > 2:
+        raise ConfigError(
+            'Not more then two WINS name-servers can be configured')
+
+
+def verify_accel_ppp_authentication(config, local_users=True):
     """
     Common helper function which must be used by all Accel-PPP services based
     on get_config_dict()
@@ -148,17 +167,6 @@ def verify_accel_ppp_base_service(config, local_users=True):
         if not dict_search('authentication.radius.dynamic_author.key', config):
             raise ConfigError('DAE/CoA server key required!')
 
-    if "name_server_ipv4" in config:
-        if len(config["name_server_ipv4"]) > 2:
-            raise ConfigError(
-                "Not more then two IPv4 DNS name-servers " "can be configured"
-            )
-
-    if "name_server_ipv6" in config:
-        if len(config["name_server_ipv6"]) > 3:
-            raise ConfigError(
-                "Not more then three IPv6 DNS name-servers " "can be configured"
-            )
 
 
 

@@ -1,0 +1,12 @@
+{% if limits is vyos_defined %}
+[connlimit]
+{%     if limits.connection_limit is vyos_defined %}
+limit={{ limits.connection_limit }}
+{%     endif %}
+{%     if limits.burst is vyos_defined %}
+burst={{ limits.burst }}
+{%     endif %}
+{%     if limits.timeout is vyos_defined %}
+timeout={{ limits.timeout }}
+{%     endif %}
+{% endif %}
