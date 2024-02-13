@@ -751,7 +751,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
     def test_bgp_07_l2vpn_evpn(self):
         vnis = ['10010', '10020', '10030']
-        neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
+        soo = '1.2.3.4:10000'
         evi_limit = '1000'
         route_targets = ['1.1.1.1:100', '1.1.1.1:200', '1.1.1.1:300']
 
@@ -763,6 +763,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'default-originate', 'ipv6'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'disable-ead-evi-rx'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'disable-ead-evi-tx'])
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'mac-vrf', 'soo', soo])
         for vni in vnis:
             self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni, 'advertise-default-gw'])
             self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni, 'advertise-svi-ip'])
@@ -786,6 +787,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  disable-ead-evi-rx', frrconfig)
         self.assertIn(f'  disable-ead-evi-tx', frrconfig)
         self.assertIn(f'  flooding disable', frrconfig)
+        self.assertIn(f'  mac-vrf soo {soo}', frrconfig)
         for vni in vnis:
             vniconfig = self.getFRRconfig(f'  vni {vni}')
             self.assertIn(f'vni {vni}', vniconfig)
