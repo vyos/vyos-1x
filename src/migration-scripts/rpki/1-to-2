@@ -19,7 +19,11 @@
 
 from sys import exit
 from sys import argv
+
 from vyos.configtree import ConfigTree
+from vyos.pki import OPENSSH_KEY_BEGIN
+from vyos.pki import OPENSSH_KEY_END
+from vyos.utils.file import read_file
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -42,6 +46,24 @@ if config.exists(base + ['cache']):
         ssh_node = base + ['cache', cache, 'ssh']
         if config.exists(ssh_node + ['known-hosts-file']):
             config.delete(ssh_node + ['known-hosts-file'])
+
+        if config.exists(base + ['cache', cache, 'ssh']):
+            private_key_node = base + ['cache', cache, 'ssh', 'private-key-file']
+            private_key_file = config.return_value(private_key_node)
+            private_key = read_file(private_key_file).replace(OPENSSH_KEY_BEGIN, '').replace(OPENSSH_KEY_END, '').replace('\n','')
+
+            public_key_node = base + ['cache', cache, 'ssh', 'public-key-file']
+            public_key_file = config.return_value(public_key_node)
+            public_key = read_file(public_key_file).split()
+
+            config.set(['pki', 'openssh', f'rpki-{cache}', 'private', 'key'], value=private_key)
+            config.set(['pki', 'openssh', f'rpki-{cache}', 'public', 'key'], value=public_key[1])
+            config.set(['pki', 'openssh', f'rpki-{cache}', 'public', 'type'], value=public_key[0])
+            config.set_tag(['pki', 'openssh'])
+            config.set(ssh_node + ['key'], value=f'rpki-{cache}')
+
+            config.delete(private_key_node)
+            config.delete(public_key_node)
 
 try:
     with open(file_name, 'w') as f:
