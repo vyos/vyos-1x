@@ -39,6 +39,7 @@ config = ConfigTreeQuery()
 lease_valid_states = ['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
 sort_valid_inet = ['end', 'mac', 'hostname', 'ip', 'pool', 'remaining', 'start', 'state']
 sort_valid_inet6 = ['end', 'duid', 'ip', 'last_communication', 'pool', 'remaining', 'state', 'type']
+mapping_sort_valid = ['mac', 'ip', 'pool', 'duid']
 
 ArgFamily = typing.Literal['inet', 'inet6']
 ArgState = typing.Literal['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
@@ -249,6 +250,47 @@ def _get_formatted_pool_statistics(pool_data, family='inet'):
     output = tabulate(data_entries, headers, numalign='left')
     return output
 
+def _get_raw_server_static_mappings(family='inet', pool=None, sorted=None):
+    if pool is None:
+        pool = _get_dhcp_pools(family=family)
+    else:
+        pool = [pool]
+
+    v = 'v6' if family == 'inet6' else ''
+    mappings = []
+    for p in pool:
+        pool_config = config.get_config_dict(['service', f'dhcp{v}-server', 'shared-network-name', p],
+                                             get_first_key=True)
+        if 'subnet' in pool_config:
+            for subnet, subnet_config in pool_config['subnet'].items():
+                if 'static-mapping' in subnet_config:
+                    for name, mapping_config in subnet_config['static-mapping'].items():
+                        mapping = {'pool': p, 'subnet': subnet, 'name': name}
+                        mapping.update(mapping_config)
+                        mappings.append(mapping)
+
+    if sorted:
+        if sorted == 'ip':
+            data.sort(key = lambda x:ip_address(x['ip-address']))
+        else:
+            data.sort(key = lambda x:x[sorted])
+    return mappings
+
+def _get_formatted_server_static_mappings(raw_data, family='inet'):
+    data_entries = []
+    for entry in raw_data:
+        pool = entry.get('pool')
+        subnet = entry.get('subnet')
+        name = entry.get('name')
+        ip_addr = entry.get('ip-address', 'N/A')
+        mac_addr = entry.get('mac', 'N/A')
+        duid = entry.get('duid', 'N/A')
+        description = entry.get('description', 'N/A')
+        data_entries.append([pool, subnet, name, ip_addr, mac_addr, duid, description])
+
+    headers = ['Pool', 'Subnet', 'Name', 'IP Address', 'MAC Address', 'DUID', 'Description']
+    output = tabulate(data_entries, headers, numalign='left')
+    return output
 
 def _verify(func):
     """Decorator checks if DHCP(v6) config exists"""
@@ -302,6 +344,21 @@ def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
     else:
         return _get_formatted_server_leases(lease_data, family=family)
 
+@_verify
+def show_server_static_mappings(raw: bool, family: ArgFamily, pool: typing.Optional[str],
+                                sorted: typing.Optional[str]):
+    v = 'v6' if family == 'inet6' else ''
+    if pool and pool not in _get_dhcp_pools(family=family):
+        raise vyos.opmode.IncorrectValue(f'DHCP{v} pool "{pool}" does not exist!')
+
+    if sorted and sorted not in mapping_sort_valid:
+        raise vyos.opmode.IncorrectValue(f'DHCP{v} sort "{sorted}" is invalid!')
+
+    static_mappings = _get_raw_server_static_mappings(family=family, pool=pool, sorted=sorted)
+    if raw:
+        return static_mappings
+    else:
+        return _get_formatted_server_static_mappings(static_mappings, family=family)
 
 def _get_raw_client_leases(family='inet', interface=None):
     from time import mktime
