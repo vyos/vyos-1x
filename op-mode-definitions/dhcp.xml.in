@@ -80,6 +80,32 @@
                   </tagNode>
                 </children>
               </node>
+              <node name="static-mappings">
+                <properties>
+                  <help>Show DHCP server static mappings</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_server_static_mappings --family inet</command>
+                <children>
+                  <tagNode name="pool">
+                    <properties>
+                      <help>Show DHCP server static mappings for a specific pool</help>
+                      <completionHelp>
+                        <path>service dhcp-server shared-network-name</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_static_mappings --family inet --pool $6</command>
+                  </tagNode>
+                  <tagNode name="sort">
+                    <properties>
+                      <help>Show DHCP server static mappings sorted by the specified key</help>
+                      <completionHelp>
+                        <list>ip mac duid pool</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_static_mappings --family inet --sort $6</command>
+                  </tagNode>
+                </children>
+              </node>
               <node name="statistics">
                 <properties>
                   <help>Show DHCP server statistics</help>
@@ -130,7 +156,7 @@
                     <properties>
                       <help>Show DHCPv6 server leases sorted by the specified key</help>
                       <completionHelp>
-                        <list>end iaid_duid ip last_communication pool remaining state type</list>
+                        <list>end duid ip last_communication pool remaining state type</list>
                       </completionHelp>
                     </properties>
                     <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6 --sort $6</command>
@@ -143,6 +169,32 @@
                       </completionHelp>
                     </properties>
                     <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6 --state $6</command>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="static-mappings">
+                <properties>
+                  <help>Show DHCPv6 server static mappings</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_server_static_mappings --family inet6</command>
+                <children>
+                  <tagNode name="pool">
+                    <properties>
+                      <help>Show DHCPv6 server static mappings for a specific pool</help>
+                      <completionHelp>
+                        <path>service dhcp-server shared-network-name</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_static_mappings --family inet6 --pool $6</command>
+                  </tagNode>
+                  <tagNode name="sort">
+                    <properties>
+                      <help>Show DHCPv6 server static mappings sorted by the specified key</help>
+                      <completionHelp>
+                        <list>ip mac duid pool</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_static_mappings --family inet6 --sort $6</command>
                   </tagNode>
                 </children>
               </node>
