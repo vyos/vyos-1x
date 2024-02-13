@@ -968,3 +968,26 @@ def get_vrf_members(vrf: str) -> list:
         if 'ifname' in data:
             interfaces.append(data.get('ifname'))
     return interfaces
+
+def read_saved_value(path: list):
+    from vyos.defaults import directories
+    config_file = os.path.join(directories['config'], 'config.boot')
+
+    if not isinstance(path, list) or not path:
+        return ''
+    from vyos.configtree import ConfigTree
+    try:
+        with open(config_file) as f:
+            config_string = f.read()
+        ct = ConfigTree(config_string)
+    except Exception:
+        return ''
+    if not ct.exists(path):
+        return ''
+    res = ct.return_values(path)
+    if len(res) == 1:
+        return res[0]
+    res = ct.list_nodes(path)
+    if len(res) == 1:
+        return ' '.join(res)
+    return res
