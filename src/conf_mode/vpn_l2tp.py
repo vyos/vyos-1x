@@ -24,7 +24,9 @@ from vyos.configdict import get_accel_dict
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.accel_ppp_util import verify_accel_ppp_base_service
+from vyos.accel_ppp_util import verify_accel_ppp_name_servers
+from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
+from vyos.accel_ppp_util import verify_accel_ppp_authentication
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
@@ -62,12 +64,10 @@ def verify(l2tp):
     if not l2tp:
         return None
 
-    verify_accel_ppp_base_service(l2tp)
+    verify_accel_ppp_authentication(l2tp)
     verify_accel_ppp_ip_pool(l2tp)
-
-    if 'wins_server' in l2tp and len(l2tp['wins_server']) > 2:
-        raise ConfigError(
-            'Not more then two WINS name-servers can be configured')
+    verify_accel_ppp_name_servers(l2tp)
+    verify_accel_ppp_wins_servers(l2tp)
 
     return None
 

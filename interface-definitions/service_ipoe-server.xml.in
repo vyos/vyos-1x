@@ -177,13 +177,18 @@
               #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>
-          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
-          #include <include/name-server-ipv4-ipv6.xml.i>
           #include <include/accel-ppp/client-ip-pool.xml.i>
-          #include <include/accel-ppp/gateway-address-multi.xml.i>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           #include <include/accel-ppp/default-pool.xml.i>
           #include <include/accel-ppp/default-ipv6-pool.xml.i>
+          #include <include/accel-ppp/extended-scripts.xml.i>
+          #include <include/accel-ppp/gateway-address-multi.xml.i>
+          #include <include/accel-ppp/limits.xml.i>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+          #include <include/accel-ppp/shaper.xml.i>
+          #include <include/accel-ppp/snmp.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
         </children>
       </node>
     </children>

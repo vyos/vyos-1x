@@ -30,42 +30,6 @@
                   </node>
                 </children>
               </node>
-              #include <include/accel-ppp/max-concurrent-sessions.xml.i>
-              #include <include/accel-ppp/mtu-128-16384.xml.i>
-              <leafNode name="mtu">
-                <defaultValue>1436</defaultValue>
-              </leafNode>
-              <leafNode name="outside-address">
-                <properties>
-                  <help>External IP address to which VPN clients will connect</help>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              #include <include/accel-ppp/gateway-address.xml.i>
-              #include <include/name-server-ipv4-ipv6.xml.i>
-              <node name="lns">
-                <properties>
-                  <help>L2TP Network Server (LNS)</help>
-                </properties>
-                <children>
-                  <leafNode name="shared-secret">
-                    <properties>
-                      <help>Tunnel password used to authenticate the client (LAC)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="host-name">
-                    <properties>
-                      <help>Sent to the client (LAC) in the Host-Name attribute</help>
-                      <constraint>
-                        #include <include/constraint/host-name.xml.i>
-                      </constraint>
-                      <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               <node name="ipsec-settings">
                 <properties>
                   <help>Internet Protocol Security (IPsec) for remote access L2TP VPN</help>
@@ -129,14 +93,53 @@
                   #include <include/ipsec/ike-group.xml.i>
                 </children>
               </node>
-              #include <include/accel-ppp/wins-server.xml.i>
+              <node name="lns">
+                <properties>
+                  <help>L2TP Network Server (LNS)</help>
+                </properties>
+                <children>
+                  <leafNode name="shared-secret">
+                    <properties>
+                      <help>Tunnel password used to authenticate the client (LAC)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="host-name">
+                    <properties>
+                      <help>Sent to the client (LAC) in the Host-Name attribute</help>
+                      <constraint>
+                        #include <include/constraint/host-name.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="outside-address">
+                <properties>
+                  <help>External IP address to which VPN clients will connect</help>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               #include <include/accel-ppp/client-ip-pool.xml.i>
               #include <include/accel-ppp/client-ipv6-pool.xml.i>
-              #include <include/generic-description.xml.i>
-              #include <include/dhcp-interface.xml.i>
-              #include <include/accel-ppp/ppp-options.xml.i>
               #include <include/accel-ppp/default-pool.xml.i>
               #include <include/accel-ppp/default-ipv6-pool.xml.i>
+              #include <include/accel-ppp/extended-scripts.xml.i>
+              #include <include/accel-ppp/gateway-address.xml.i>
+              #include <include/accel-ppp/limits.xml.i>
+              #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+              #include <include/accel-ppp/mtu-128-16384.xml.i>
+              <leafNode name="mtu">
+                <defaultValue>1436</defaultValue>
+              </leafNode>
+              #include <include/accel-ppp/ppp-options.xml.i>
+              #include <include/accel-ppp/shaper.xml.i>
+              #include <include/accel-ppp/snmp.xml.i>
+              #include <include/accel-ppp/wins-server.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/name-server-ipv4-ipv6.xml.i>
             </children>
           </node>
         </children>
