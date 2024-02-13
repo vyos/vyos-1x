@@ -328,10 +328,10 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['ct timeout ct-timeout-1 {'],
             ['protocol tcp'],
-            ['policy = { syn_sent : 77, established : 99, close : 88 }'],
+            ['policy = { syn_sent : 1m17s, established : 1m39s, close : 1m28s }'],
             ['ct timeout ct-timeout-2 {'],
             ['protocol udp'],
-            ['policy = { unreplied : 55 }'],
+            ['policy = { unreplied : 55s }'],
             ['chain VYOS_CT_TIMEOUT {'],
             ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'ct timeout set "ct-timeout-1"'],
             ['iifname "eth1"', 'meta l4proto udp', 'ip saddr 198.51.100.1', 'ct timeout set "ct-timeout-2"']
@@ -340,7 +340,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         nftables6_search = [
             ['ct timeout ct-timeout-1 {'],
             ['protocol tcp'],
-            ['policy = { last_ack : 33, time_wait : 22 }'],
+            ['policy = { last_ack : 33s, time_wait : 22s }'],
             ['chain VYOS_CT_TIMEOUT {'],
             ['iifname "eth2"', 'meta l4proto tcp', 'ip6 saddr 2001:db8::1', 'ct timeout set "ct-timeout-1"']
         ]
