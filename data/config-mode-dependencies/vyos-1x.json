@@ -27,6 +27,7 @@
         "https": ["service_https"],
         "ipsec": ["vpn_ipsec"],
         "openconnect": ["vpn_openconnect"],
+        "rpki": ["protocols_rpki"],
         "sstp": ["vpn_sstp"]
     },
     "vpn_l2tp": {

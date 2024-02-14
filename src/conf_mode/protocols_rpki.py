@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,15 +16,21 @@
 
 import os
 
+from glob import glob
 from sys import exit
 
 from vyos.config import Config
+from vyos.pki import wrap_openssh_public_key
+from vyos.pki import wrap_openssh_private_key
 from vyos.template import render_to_string
-from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
+from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
+
+rpki_ssh_key_base = '/run/frr/id_rpki'
 
 def get_config(config=None):
     if config:
@@ -33,7 +39,8 @@ def get_config(config=None):
         conf = Config()
     base = ['protocols', 'rpki']
 
-    rpki = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    rpki = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                get_first_key=True, with_pki=True)
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         rpki.update({'deleted' : ''})
@@ -63,22 +70,40 @@ def verify(rpki):
                 preferences.append(preference)
 
             if 'ssh' in peer_config:
-                files = ['private_key_file', 'public_key_file']
-                for file in files:
-                    if file not in peer_config['ssh']:
-                        raise ConfigError('RPKI+SSH requires username and public/private ' \
-                                          'key file to be defined!')
+                if 'username' not in peer_config['ssh']:
+                    raise ConfigError('RPKI+SSH requires username to be defined!')
 
-                    filename = peer_config['ssh'][file]
-                    if not os.path.exists(filename):
-                        raise ConfigError(f'RPKI SSH {file.replace("-","-")} "{filename}" does not exist!')
+                if 'key' not in peer_config['ssh'] or 'openssh' not in rpki['pki']:
+                    raise ConfigError('RPKI+SSH requires key to be defined!')
+
+                if peer_config['ssh']['key'] not in rpki['pki']['openssh']:
+                    raise ConfigError('RPKI+SSH key not found on PKI subsystem!')
 
     return None
 
 def generate(rpki):
+    for key in glob(f'{rpki_ssh_key_base}*'):
+        os.unlink(key)
+
     if not rpki:
         return
+
+    if 'cache' in rpki:
+        for cache, cache_config in rpki['cache'].items():
+            if 'ssh' in cache_config:
+                key_name = cache_config['ssh']['key']
+                public_key_data = dict_search_args(rpki['pki'], 'openssh', key_name, 'public', 'key')
+                public_key_type = dict_search_args(rpki['pki'], 'openssh', key_name, 'public', 'type')
+                private_key_data = dict_search_args(rpki['pki'], 'openssh', key_name, 'private', 'key')
+
+                cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
+                cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
+
+                write_file(cache_config['ssh']['public_key_file'], wrap_openssh_public_key(public_key_data, public_key_type))
+                write_file(cache_config['ssh']['private_key_file'], wrap_openssh_private_key(private_key_data))
+
     rpki['new_frr_config'] = render_to_string('frr/rpki.frr.j2', rpki)
+
     return None
 
 def apply(rpki):
