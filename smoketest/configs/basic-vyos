@@ -22,6 +22,7 @@ interfaces {
             address 100.64.200.254/24
             vif-c 201 {
                 address 100.64.201.254/24
+                address fe89::1/56
             }
             vif-c 202 {
                 address 100.64.202.254/24
@@ -108,6 +109,24 @@ service {
                     start fe88:0000:0000:0001:: {
                         prefix-length 64
                         stop fe88:0000:0000:0010::
+                    }
+                }
+            }
+            subnet fe89::/56 {
+                address-range {
+                    prefix fe89::/60 {
+                        temporary
+                    }
+                    start fe89:0000:0000:fe:: {
+                        stop fe89:0000:0000:ff::
+                    }
+                }
+                domain-search vyos.net
+                name-server fe89::1
+                prefix-delegation {
+                    start fe89:0000:0000:0001:: {
+                        prefix-length 64
+                        stop fe89:0000:0000:0010::
                     }
                 }
             }
