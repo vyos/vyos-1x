@@ -3,11 +3,62 @@ interfaces {
         duplex auto
         speed auto
         address 192.0.2.1/24
+        address 2001:db8::1/64
     }
     loopback lo {
     }
 }
+policy {
+    route-map ROUTES-IN {
+        rule 10 {
+            action permit
+            match {
+                rpki valid
+            }
+            set {
+                local-preference 300
+            }
+        }
+        rule 20 {
+            action permit
+            match {
+                rpki notfound
+            }
+            set {
+                local-preference 125
+            }
+        }
+        rule 30 {
+            action deny
+            match {
+                rpki invalid
+            }
+        }
+    }
+}
 protocols {
+    bgp 100 {
+        neighbor 192.0.2.200 {
+            address-family {
+                ipv4-unicast {
+                    route-map {
+                        import ROUTES-IN
+                    }
+                }
+            }
+            remote-as 200
+        }
+        neighbor 2001:db8::200 {
+            address-family {
+                ipv6-unicast {
+                    route-map {
+                        import ROUTES-IN
+                    }
+                }
+            }
+            remote-as 200
+        }
+    }
     rpki {
         cache 1.2.3.4 {
             port 3323
