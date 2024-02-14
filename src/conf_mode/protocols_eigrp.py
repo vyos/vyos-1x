@@ -19,6 +19,7 @@ from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
 from vyos import ConfigError
 from vyos import frr
@@ -72,7 +73,14 @@ def get_config(config=None):
     return eigrp
 
 def verify(eigrp):
-    pass
+    if not eigrp or 'deleted' in eigrp:
+        return
+
+    if 'system_as' not in eigrp:
+        raise ConfigError('EIGRP system-as must be defined!')
+
+    if 'vrf' in eigrp:
+        verify_vrf(eigrp)
 
 def generate(eigrp):
     if not eigrp or 'deleted' in eigrp:

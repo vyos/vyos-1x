@@ -1,5 +1,5 @@
 <!-- include start from eigrp/protocol-common-config.xml.i -->
-<leafNode name="local-as">
+<leafNode name="system-as">
   <properties>
     <help>Autonomous System Number (ASN)</help>
     <valueHelp>
@@ -61,6 +61,7 @@
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
+    <multi/>
   </properties>
 </leafNode>
 <leafNode name="redistribute">
@@ -108,7 +109,7 @@
   </properties>
 </leafNode>
 #include <include/router-id.xml.i>
-<!-- FRR timers not implemented yet -->
+<!-- FRR error: active time not implemented yet -->
 <leafNode name="variance">
   <properties>
     <help>Control load balancing variance</help>
