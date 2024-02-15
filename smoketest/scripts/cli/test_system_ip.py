@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -119,6 +119,19 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
 
         # Commit again
         self.cli_commit()
+
+    def test_system_ip_nht(self):
+        self.cli_set(base_path + ['nht', 'no-resolve-via-default'])
+        self.cli_commit()
+        # Verify CLI config applied to FRR
+        frrconfig = self.getFRRconfig('', end='', daemon='zebra')
+        self.assertIn(f'no ip nht resolve-via-default', frrconfig)
+
+        self.cli_delete(base_path + ['nht', 'no-resolve-via-default'])
+        self.cli_commit()
+        # Verify CLI config removed to FRR
+        frrconfig = self.getFRRconfig('', end='', daemon='zebra')
+        self.assertNotIn(f'no ip nht resolve-via-default', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

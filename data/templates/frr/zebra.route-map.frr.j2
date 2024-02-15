@@ -1,4 +1,8 @@
 !
+{% if nht.no_resolve_via_default is vyos_defined %}
+no {{ afi }} nht resolve-via-default
+{% endif %}
+!
 {% if protocol is vyos_defined %}
 {%     for protocol_name, protocol_config in protocol.items() %}
 {%         if protocol_name is vyos_defined('ospfv3') %}
@@ -7,3 +11,4 @@
 {{ afi }} protocol {{ protocol_name }} route-map {{ protocol_config.route_map }}
 {%     endfor %}
 {% endif %}
+!
