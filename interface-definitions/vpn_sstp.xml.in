@@ -25,19 +25,6 @@
               </node>
             </children>
           </node>
-          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
-          #include <include/interface/mtu-68-1500.xml.i>
-          #include <include/accel-ppp/gateway-address.xml.i>
-          #include <include/name-server-ipv4-ipv6.xml.i>
-          #include <include/accel-ppp/client-ip-pool.xml.i>
-          #include <include/accel-ppp/client-ipv6-pool.xml.i>
-          #include <include/port-number.xml.i>
-          <leafNode name="port">
-            <defaultValue>443</defaultValue>
-          </leafNode>
-          #include <include/accel-ppp/default-pool.xml.i>
-          #include <include/accel-ppp/default-ipv6-pool.xml.i>
-          #include <include/accel-ppp/ppp-options.xml.i>
           <node name="ssl">
             <properties>
               <help>SSL Certificate, SSL Key and CA</help>
@@ -47,6 +34,25 @@
               #include <include/pki/certificate.xml.i>
             </children>
           </node>
+          #include <include/accel-ppp/client-ip-pool.xml.i>
+          #include <include/accel-ppp/client-ipv6-pool.xml.i>
+          #include <include/accel-ppp/default-pool.xml.i>
+          #include <include/accel-ppp/default-ipv6-pool.xml.i>
+          #include <include/accel-ppp/extended-scripts.xml.i>
+          #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/limits.xml.i>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+          #include <include/interface/mtu-68-1500.xml.i>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>443</defaultValue>
+          </leafNode>
+          #include <include/accel-ppp/ppp-options.xml.i>
+          #include <include/accel-ppp/shaper.xml.i>
+          #include <include/accel-ppp/snmp.xml.i>
+          #include <include/accel-ppp/wins-server.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
         </children>
       </node>
     </children>

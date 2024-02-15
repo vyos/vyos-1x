@@ -25,8 +25,10 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
 from vyos.accel_ppp_util import get_pools_in_order
+from vyos.accel_ppp_util import verify_accel_ppp_name_servers
+from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
-from vyos.accel_ppp_util import verify_accel_ppp_base_service
+from vyos.accel_ppp_util import verify_accel_ppp_authentication
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -69,8 +71,10 @@ def verify(ipoe):
             raise ConfigError('Option "client-subnet" incompatible with "vlan"!'
                               'Use "ipoe client-ip-pool" instead.')
 
-    verify_accel_ppp_base_service(ipoe, local_users=False)
+    verify_accel_ppp_authentication(ipoe, local_users=False)
     verify_accel_ppp_ip_pool(ipoe)
+    verify_accel_ppp_name_servers(ipoe)
+    verify_accel_ppp_wins_servers(ipoe)
 
     return None
 

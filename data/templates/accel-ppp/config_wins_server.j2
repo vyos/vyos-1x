@@ -1,0 +1,6 @@
+{% if wins_server is vyos_defined %}
+[wins]
+{%     for server in wins_server %}
+wins{{ loop.index }}={{ server }}
+{%     endfor %}
+{% endif %}

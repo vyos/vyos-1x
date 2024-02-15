@@ -22,7 +22,9 @@ from vyos.config import Config
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.accel_ppp_util import verify_accel_ppp_base_service
+from vyos.accel_ppp_util import verify_accel_ppp_name_servers
+from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
+from vyos.accel_ppp_util import verify_accel_ppp_authentication
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
@@ -60,12 +62,10 @@ def verify(pptp):
     if not pptp:
         return None
 
-    verify_accel_ppp_base_service(pptp)
+    verify_accel_ppp_authentication(pptp)
     verify_accel_ppp_ip_pool(pptp)
-
-    if 'wins_server' in pptp and len(pptp['wins_server']) > 2:
-        raise ConfigError(
-            'Not more then two WINS name-servers can be configured')
+    verify_accel_ppp_name_servers(pptp)
+    verify_accel_ppp_wins_servers(pptp)
 
 
 def generate(pptp):

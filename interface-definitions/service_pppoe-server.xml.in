@@ -49,9 +49,6 @@
               </node>
             </children>
           </node>
-          #include <include/accel-ppp/client-ip-pool.xml.i>
-          #include <include/accel-ppp/client-ipv6-pool.xml.i>
-          #include <include/name-server-ipv4-ipv6.xml.i>
           <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>
@@ -63,35 +60,6 @@
               #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>
-          #include <include/accel-ppp/gateway-address.xml.i>
-          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
-          #include <include/accel-ppp/mtu-128-16384.xml.i>
-          <node name="limits">
-            <properties>
-              <help>Limits the connection rate from a single source</help>
-            </properties>
-            <children>
-              <leafNode name="connection-limit">
-                <properties>
-                  <help>Acceptable rate of connections (e.g. 1/min, 60/sec)</help>
-                  <constraint>
-                    <regex>[0-9]+\/(min|sec)</regex>
-                  </constraint>
-                  <constraintErrorMessage>illegal value</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="burst">
-                <properties>
-                  <help>Burst count</help>
-                </properties>
-              </leafNode>
-              <leafNode name="timeout">
-                <properties>
-                  <help>Timeout in seconds</help>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
           <leafNode name="service-name">
             <properties>
               <help>Service name</help>
@@ -102,15 +70,6 @@
               <multi/>
             </properties>
           </leafNode>
-          #include <include/accel-ppp/wins-server.xml.i>
-          #include <include/accel-ppp/ppp-options.xml.i>
-          <node name="ppp-options">
-            <children>
-              <leafNode name="min-mtu">
-                <defaultValue>1280</defaultValue>
-              </leafNode>
-            </children>
-          </node>
           <tagNode name="pado-delay">
             <properties>
               <help>PADO delays</help>
@@ -164,61 +123,28 @@
             </properties>
             <defaultValue>replace</defaultValue>
           </leafNode>
-          #include <include/accel-ppp/shaper.xml.i>
-          <node name="snmp">
-            <properties>
-              <help>Enable SNMP</help>
-            </properties>
-            <children>
-              <leafNode name="master-agent">
-                <properties>
-                  <help>enable SNMP master agent mode</help>
-                  <valueless />
-                </properties>
-              </leafNode>
-            </children>
-          </node>
-          <node name="extended-scripts">
-            <properties>
-              <help>Extended script execution</help>
-            </properties>
-            <children>
-              <leafNode name="on-pre-up">
-                <properties>
-                  <help>Script to run before PPPoE session interface comes up</help>
-                    <constraint>
-                      <validator name="script"/>
-                    </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="on-up">
-                <properties>
-                  <help>Script to run when PPPoE session interface is completely configured and started</help>
-                    <constraint>
-                      <validator name="script"/>
-                    </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="on-down">
-                <properties>
-                  <help>Script to run when PPPoE session interface going to terminate</help>
-                    <constraint>
-                      <validator name="script"/>
-                    </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="on-change">
-                <properties>
-                  <help>Script to run when PPPoE session interface changed by RADIUS CoA handling</help>
-                    <constraint>
-                      <validator name="script"/>
-                    </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          #include <include/accel-ppp/client-ip-pool.xml.i>
+          #include <include/accel-ppp/client-ipv6-pool.xml.i>
           #include <include/accel-ppp/default-pool.xml.i>
           #include <include/accel-ppp/default-ipv6-pool.xml.i>
+          #include <include/accel-ppp/extended-scripts.xml.i>
+          #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/limits.xml.i>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+          #include <include/accel-ppp/mtu-128-16384.xml.i>
+          #include <include/accel-ppp/ppp-options.xml.i>
+          <node name="ppp-options">
+            <children>
+              <leafNode name="min-mtu">
+                <defaultValue>1280</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/accel-ppp/shaper.xml.i>
+          #include <include/accel-ppp/snmp.xml.i>
+          #include <include/accel-ppp/wins-server.xml.i>
+          #include <include/generic-description.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
         </children>
       </node>
     </children>

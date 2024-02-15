@@ -30,11 +30,6 @@
                   </node>
                 </children>
               </node>
-              #include <include/accel-ppp/max-concurrent-sessions.xml.i>
-              #include <include/accel-ppp/mtu-128-16384.xml.i>
-              <leafNode name="mtu">
-                <defaultValue>1436</defaultValue>
-              </leafNode>
               <leafNode name="outside-address">
                 <properties>
                   <help>External IP address to which VPN clients will connect</help>
@@ -43,14 +38,24 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/accel-ppp/gateway-address.xml.i>
-              #include <include/name-server-ipv4-ipv6.xml.i>
-              #include <include/accel-ppp/wins-server.xml.i>
               #include <include/accel-ppp/client-ip-pool.xml.i>
-              #include <include/accel-ppp/default-pool.xml.i>
               #include <include/accel-ppp/client-ipv6-pool.xml.i>
+              #include <include/accel-ppp/default-pool.xml.i>
               #include <include/accel-ppp/default-ipv6-pool.xml.i>
+              #include <include/accel-ppp/extended-scripts.xml.i>
+              #include <include/accel-ppp/gateway-address.xml.i>
+              #include <include/accel-ppp/limits.xml.i>
+              #include <include/accel-ppp/max-concurrent-sessions.xml.i>
+              #include <include/accel-ppp/mtu-128-16384.xml.i>
+              <leafNode name="mtu">
+                <defaultValue>1436</defaultValue>
+              </leafNode>
               #include <include/accel-ppp/ppp-options.xml.i>
+              #include <include/accel-ppp/shaper.xml.i>
+              #include <include/accel-ppp/snmp.xml.i>
+              #include <include/accel-ppp/wins-server.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/name-server-ipv4-ipv6.xml.i>
             </children>
           </node>
         </children>

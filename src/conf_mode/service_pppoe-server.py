@@ -25,7 +25,9 @@ from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.accel_ppp_util import verify_accel_ppp_base_service
+from vyos.accel_ppp_util import verify_accel_ppp_name_servers
+from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
+from vyos.accel_ppp_util import verify_accel_ppp_authentication
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
@@ -67,11 +69,11 @@ def verify(pppoe):
     if not pppoe:
         return None
 
-    verify_accel_ppp_base_service(pppoe)
+    verify_accel_ppp_authentication(pppoe)
     verify_accel_ppp_ip_pool(pppoe)
+    verify_accel_ppp_name_servers(pppoe)
+    verify_accel_ppp_wins_servers(pppoe)
 
-    if 'wins_server' in pppoe and len(pppoe['wins_server']) > 2:
-        raise ConfigError('Not more then two WINS name-servers can be configured')
 
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')

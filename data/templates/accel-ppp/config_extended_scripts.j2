@@ -1,0 +1,9 @@
+{% if extended_scripts is vyos_defined %}
+[pppd-compat]
+verbose=1
+radattr-prefix=/run/accel-pppd/radattr
+{%     set script_name = {'on_up': 'ip-up', 'on_down': 'ip-down', 'on_change':'ip-change', 'on_pre_up':'ip-pre-up'} %}
+{%     for script in extended_scripts %}
+{{ script_name[script] }}={{ extended_scripts[script] }}
+{%     endfor %}
+{% endif %}

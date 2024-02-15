@@ -10,6 +10,12 @@ ippool
 {% include 'accel-ppp/config_modules_ipv6.j2' %}
 {# Common authentication protocols (pap, chap ...) #}
 {% include 'accel-ppp/config_modules_auth_protocols.j2' %}
+{% if snmp is vyos_defined %}
+net-snmp
+{% endif %}
+{% if limits is vyos_defined %}
+connlimit
+{% endif %}
 
 [core]
 thread-count={{ thread_count }}
@@ -24,15 +30,8 @@ syslog=accel-pptp,daemon
 copy=1
 level=5
 
-{# Common DNS name-server definition #}
-{% include 'accel-ppp/config_name_server.j2' %}
-
-{% if wins_server is vyos_defined %}
-[wins]
-{%     for server in wins_server %}
-wins{{ loop.index }}={{ server }}
-{%     endfor %}
-{% endif %}
+[client-ip-range]
+0.0.0.0/0
 
 [pptp]
 ifname=pptp%d
@@ -52,23 +51,35 @@ ipv6-pool={{ default_ipv6_pool }}
 ipv6-pool-delegate={{ default_ipv6_pool }}
 {% endif %}
 
-[client-ip-range]
-0.0.0.0/0
-
 {# Common IP pool definitions #}
 {% include 'accel-ppp/config_ip_pool.j2' %}
 
 {# Common IPv6 pool definitions #}
 {% include 'accel-ppp/config_ipv6_pool.j2' %}
 
-{# Common ppp-options definitions #}
-{% include 'accel-ppp/ppp-options.j2' %}
+{# Common DNS name-server definition #}
+{% include 'accel-ppp/config_name_server.j2' %}
+
+{# Common wins-server definition #}
+{% include 'accel-ppp/config_wins_server.j2' %}
 
 {# Common chap-secrets and RADIUS server/option definitions #}
 {% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
+{# Common ppp-options definitions #}
+{% include 'accel-ppp/ppp-options.j2' %}
+
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}
+
+{# Common Extended scripts configuration #}
+{% include 'accel-ppp/config_extended_scripts.j2' %}
+
+{# Common Limits configuration #}
+{% include 'accel-ppp/config_limits.j2' %}
+
+{# Common SNMP definitions #}
+{% include 'accel-ppp/config_snmp.j2' %}
 
 [cli]
 tcp=127.0.0.1:2003
