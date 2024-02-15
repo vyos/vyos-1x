@@ -6,10 +6,16 @@ ipoe
 shaper
 {# Common authentication backend definitions #}
 {% include 'accel-ppp/config_modules_auth_mode.j2' %}
+ippool
 ipv6pool
 ipv6_nd
 ipv6_dhcp
-ippool
+{% if snmp is vyos_defined %}
+net-snmp
+{% endif %}
+{% if limits is vyos_defined %}
+connlimit
+{% endif %}
 
 [core]
 thread-count={{ thread_count }}
@@ -18,6 +24,7 @@ thread-count={{ thread_count }}
 {% if max_concurrent_sessions is vyos_defined %}
 max-starting={{ max_concurrent_sessions }}
 {% endif %}
+
 
 [log]
 syslog=accel-ipoe,daemon
@@ -83,6 +90,15 @@ proxy-arp=1
 
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}
+
+{# Common Extended scripts configuration #}
+{% include 'accel-ppp/config_extended_scripts.j2' %}
+
+{# Common Limits configuration #}
+{% include 'accel-ppp/config_limits.j2' %}
+
+{# Common SNMP definitions #}
+{% include 'accel-ppp/config_snmp.j2' %}
 
 [cli]
 tcp=127.0.0.1:2002

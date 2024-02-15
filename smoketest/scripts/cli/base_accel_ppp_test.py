@@ -559,3 +559,52 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             self.assertEqual(conf['ppp']['lcp-echo-failure'], lcp_failure)
             self.assertEqual(conf['ppp']['lcp-echo-interval'], lcp_interval)
             self.assertEqual(conf['ppp']['lcp-echo-timeout'], lcp_timeout)
+
+
+        def test_accel_wins_server(self):
+            self.basic_config()
+            winsservers = ["192.0.2.1", "192.0.2.2"]
+            for wins in winsservers:
+                self.set(["wins-server", wins])
+            self.cli_commit()
+            conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
+            conf.read(self._config_file)
+            for ws in winsservers:
+                self.assertIn(ws, [conf["wins"]["wins1"], conf["wins"]["wins2"]])
+
+        def test_accel_snmp(self):
+            self.basic_config()
+            self.set(['snmp', 'master-agent'])
+            self.cli_commit()
+            conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
+            conf.read(self._config_file)
+            self.assertEqual(conf['modules']['net-snmp'], None)
+            self.assertEqual(conf['snmp']['master'],'1')
+
+        def test_accel_shaper(self):
+            self.basic_config()
+            fwmark = '2'
+            self.set(['shaper', 'fwmark', fwmark])
+            self.cli_commit()
+            conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
+            conf.read(self._config_file)
+            self.assertEqual(conf['modules']['shaper'], None)
+            self.assertEqual(conf['shaper']['verbose'], '1')
+            self.assertEqual(conf['shaper']['down-limiter'], 'tbf')
+            self.assertEqual(conf['shaper']['fwmark'], fwmark)
+
+        def test_accel_limits(self):
+            self.basic_config()
+            burst = '100'
+            timeout = '20'
+            limits = '1/min'
+            self.set(['limits', 'connection-limit', limits])
+            self.set(['limits', 'timeout', timeout])
+            self.set(['limits', 'burst', burst])
+            self.cli_commit()
+            conf = ConfigParser(allow_no_value=True, delimiters="=", strict=False)
+            conf.read(self._config_file)
+            self.assertEqual(conf['modules']['connlimit'], None)
+            self.assertEqual(conf['connlimit']['limit'], limits)
+            self.assertEqual(conf['connlimit']['burst'], burst)
+            self.assertEqual(conf['connlimit']['timeout'], timeout)

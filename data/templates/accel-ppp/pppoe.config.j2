@@ -10,7 +10,6 @@ ippool
 {% include 'accel-ppp/config_modules_ipv6.j2' %}
 {# Common authentication protocols (pap, chap ...) #}
 {% include 'accel-ppp/config_modules_auth_protocols.j2' %}
-
 {% if snmp is vyos_defined %}
 net-snmp
 {% endif %}
@@ -35,32 +34,8 @@ level=5
 noauth=1
 {% endif %}
 
-{% if snmp.master_agent is vyos_defined %}
-[snmp]
-master=1
-{% endif %}
-
 [client-ip-range]
-disable
-
-{# Common IP pool definitions #}
-{% include 'accel-ppp/config_ip_pool.j2' %}
-
-{# Common IPv6 pool definitions #}
-{% include 'accel-ppp/config_ipv6_pool.j2' %}
-
-{# Common DNS name-server definition #}
-{% include 'accel-ppp/config_name_server.j2' %}
-
-{% if wins_server is vyos_defined %}
-[wins]
-{%     for server in wins_server %}
-wins{{ loop.index }}={{ server }}
-{%     endfor %}
-{% endif %}
-
-{# Common chap-secrets and RADIUS server/option definitions #}
-{% include 'accel-ppp/config_chap_secrets_radius.j2' %}
+0.0.0.0/0
 
 [common]
 {% if session_control is vyos_defined and session_control is not vyos_defined('disable') %}
@@ -69,9 +44,6 @@ single-session={{ session_control }}
 {% if max_concurrent_sessions is vyos_defined %}
 max-starting={{ max_concurrent_sessions }}
 {% endif %}
-
-{# Common ppp-options definitions #}
-{% include 'accel-ppp/ppp-options.j2' %}
 
 [pppoe]
 verbose=1
@@ -116,31 +88,35 @@ ipv6-pool={{ default_ipv6_pool }}
 ipv6-pool-delegate={{ default_ipv6_pool }}
 {% endif %}
 
-{% if limits is vyos_defined %}
-[connlimit]
-{%     if limits.connection_limit is vyos_defined %}
-limit={{ limits.connection_limit }}
-{%     endif %}
-{%     if limits.burst is vyos_defined %}
-burst={{ limits.burst }}
-{%     endif %}
-{%     if limits.timeout is vyos_defined %}
-timeout={{ limits.timeout }}
-{%     endif %}
-{% endif %}
+{# Common IP pool definitions #}
+{% include 'accel-ppp/config_ip_pool.j2' %}
+
+{# Common IPv6 pool definitions #}
+{% include 'accel-ppp/config_ipv6_pool.j2' %}
+
+{# Common DNS name-server definition #}
+{% include 'accel-ppp/config_name_server.j2' %}
+
+{# Common wins-server definition #}
+{% include 'accel-ppp/config_wins_server.j2' %}
+
+{# Common chap-secrets and RADIUS server/option definitions #}
+{% include 'accel-ppp/config_chap_secrets_radius.j2' %}
+
+{# Common ppp-options definitions #}
+{% include 'accel-ppp/ppp-options.j2' %}
 
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}
 
-{% if extended_scripts is vyos_defined %}
-[pppd-compat]
-verbose=1
-radattr-prefix=/run/accel-pppd/radattr
-{%     set script_name = {'on_up': 'ip-up', 'on_down': 'ip-down', 'on_change':'ip-change', 'on_pre_up':'ip-pre-up'} %}
-{%     for script in extended_scripts %}
-{{ script_name[script] }}={{ extended_scripts[script] }}
-{%     endfor %}
-{% endif %}
+{# Common Extended scripts configuration #}
+{% include 'accel-ppp/config_extended_scripts.j2' %}
+
+{# Common Limits configuration #}
+{% include 'accel-ppp/config_limits.j2' %}
+
+{# Common SNMP definitions #}
+{% include 'accel-ppp/config_snmp.j2' %}
 
 [cli]
 tcp=127.0.0.1:2001

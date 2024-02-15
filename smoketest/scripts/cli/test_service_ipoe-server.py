@@ -232,5 +232,9 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
     def test_accel_ppp_options(self):
         pass
 
+    @unittest.skip("WINS server is not used in IPoE")
+    def test_accel_wins_server(self):
+        pass
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
