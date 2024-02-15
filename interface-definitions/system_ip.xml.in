@@ -48,6 +48,7 @@
               </leafNode>
             </children>
           </node>
+          #include <include/system-ip-nht.xml.i>
           <node name="tcp">
             <properties>
               <help>IPv4 TCP parameters</help>

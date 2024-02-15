@@ -127,6 +127,7 @@ def apply(opt):
 
         # The route-map used for the FIB (zebra) is part of the zebra daemon
         frr_cfg.load_configuration(zebra_daemon)
+        frr_cfg.modify_section(r'no ip nht resolve-via-default')
         frr_cfg.modify_section(r'ip protocol \w+ route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
         if 'frr_zebra_config' in opt:
             frr_cfg.add_before(frr.default_add_before, opt['frr_zebra_config'])
