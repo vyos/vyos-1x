@@ -39,14 +39,34 @@ if not config.exists(base):
 def find_subnet_interface(subnet):
     subnet_net = ip_network(subnet)
 
+    def check_addr(if_path):
+        if config.exists(if_path + ['address']):
+            for addr in config.return_values(if_path + ['address']):
+                if ip_network(addr, strict=False) == subnet_net:
+                    return True
+        return None
+
     for iftype in config.list_nodes(['interfaces']):
         for ifname in config.list_nodes(['interfaces', iftype]):
             if_base = ['interfaces', iftype, ifname]
 
-            if config.exists(if_base + ['address']):
-                for addr in config.return_values(if_base + ['address']):
-                    if ip_network(addr, strict=False) == subnet_net:
-                        return ifname
+            if check_addr(if_base):
+                return ifname
+
+            if config.exists(if_base + ['vif']):
+                for vif in config.list_nodes(if_base + ['vif']):
+                    if check_addr(if_base + ['vif', vif]):
+                        return f'{ifname}.{vif}'
+
+            if config.exists(if_base + ['vif-s']):
+                for vifs in config.list_nodes(if_base + ['vif-s']):
+                    if check_addr(if_base + ['vif-s', vifs]):
+                        return f'{ifname}.{vifs}'
+
+                    if config.exists(if_base + ['vif-s', vifs, 'vif-c']):
+                        for vifc in config.list_nodes(if_base + ['vif-s', vifs, 'vif-c']):
+                            if check_addr(if_base + ['vif-s', vifs, 'vif-c', vifc]):
+                                return f'{ifname}.{vifs}.{vifc}'
 
     return False
 
