@@ -8,6 +8,7 @@
     </valueHelp>
     <constraint>
       <validator name="ipv4-prefix"/>
+      <validator name="ipv4-host"/>
     </constraint>
     <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
     <multi />
