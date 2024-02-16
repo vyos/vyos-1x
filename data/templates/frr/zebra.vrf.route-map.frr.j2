@@ -6,6 +6,12 @@
 {%             continue %}
 {%         endif %}
 vrf {{ vrf }}
+{%         if vrf_config.ip.nht.no_resolve_via_default is vyos_defined %}
+ no ip nht resolve-via-default
+{%         endif %}
+{%         if vrf_config.ipv6.nht.no_resolve_via_default is vyos_defined %}
+ no ipv6 nht resolve-via-default
+{%         endif %}
 {%         if vrf_config.ip.protocol is vyos_defined %}
 {%             for protocol_name, protocol_config in vrf_config.ip.protocol.items() %}
  ip protocol {{ protocol_name }} route-map {{ protocol_config.route_map }}
