@@ -36,6 +36,7 @@
               #include <include/arp-ndp-table-size.xml.i>
             </children>
           </node>
+          #include <include/system-ip-nht.xml.i>
           #include <include/system-ipv6-protocol.xml.i>
           <leafNode name="strict-dad">
             <properties>
