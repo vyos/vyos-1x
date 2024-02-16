@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,12 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import platform
 import unittest
 import paramiko
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from gzip import GzipFile
 from subprocess import Popen, PIPE
 from pwd import getpwall
 from time import sleep
@@ -98,8 +98,8 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for user in users:
-            cmd = ['su','-', user]
-            proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            tmp = ['su','-', user]
+            proc = Popen(tmp, stdin=PIPE, stdout=PIPE, stderr=PIPE)
             tmp = "{}\nuname -a".format(user)
             proc.stdin.write(tmp.encode())
             proc.stdin.flush()
@@ -108,6 +108,22 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
             # stdout is something like this:
             # b'Linux LR1.wue3 5.10.61-amd64-vyos #1 SMP Fri Aug 27 08:55:46 UTC 2021 x86_64 GNU/Linux\n'
             self.assertTrue(len(stdout) > 40)
+
+        locked_user = users[0]
+        # disable the first user in list
+        self.cli_set(base_path + ['user', locked_user, 'disable'])
+        self.cli_commit()
+        # check if account is locked
+        tmp = cmd(f'sudo passwd -S {locked_user}')
+        self.assertIn(f'{locked_user} L ', tmp)
+
+        # unlock account
+        self.cli_delete(base_path + ['user', locked_user, 'disable'])
+        self.cli_commit()
+        # check if account is unlocked
+        tmp = cmd(f'sudo passwd -S {locked_user}')
+        self.assertIn(f'{locked_user} P ', tmp)
+
 
     def test_system_login_otp(self):
         otp_user = 'otp-test_user'
@@ -148,8 +164,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
     def test_radius_kernel_features(self):
         # T2886: RADIUS requires some Kernel options to be present
-        kernel = platform.release()
-        kernel_config = read_file(f'/boot/config-{kernel}')
+        kernel_config = GzipFile('/proc/config.gz').read().decode('UTF-8')
 
         # T2886 - RADIUS authentication - check for statically compiled options
         options = ['CONFIG_AUDIT', 'CONFIG_AUDITSYSCALL', 'CONFIG_AUDIT_ARCH']
