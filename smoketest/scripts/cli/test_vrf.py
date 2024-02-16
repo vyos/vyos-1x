@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -495,6 +495,39 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertNotIn('vni', frrconfig)
 
+    def test_vrf_ip_ipv6_nht(self):
+        table = '6910'
+
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', table])
+            self.cli_set(base + ['ip', 'nht', 'no-resolve-via-default'])
+            self.cli_set(base + ['ipv6', 'nht', 'no-resolve-via-default'])
+
+            table = str(int(table) + 1)
+
+        self.cli_commit()
+
+        # Verify route-map properly applied to FRR
+        for vrf in vrfs:
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', daemon='zebra')
+            self.assertIn(f'vrf {vrf}', frrconfig)
+            self.assertIn(f' no ip nht resolve-via-default', frrconfig)
+            self.assertIn(f' no ipv6 nht resolve-via-default', frrconfig)
+
+        # Delete route-maps
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_delete(base + ['ip'])
+            self.cli_delete(base + ['ipv6'])
+
+        self.cli_commit()
+
+        # Verify route-map properly is removed from FRR
+        for vrf in vrfs:
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', daemon='zebra')
+            self.assertNotIn(f' no ip nht resolve-via-default', frrconfig)
+            self.assertNotIn(f' no ipv6 nht resolve-via-default', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
