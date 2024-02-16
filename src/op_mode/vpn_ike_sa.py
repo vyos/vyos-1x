@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -57,7 +57,7 @@ def ike_sa(peer, nat):
             dh_group = s(sa['dh-group']) if 'dh-group' in sa else 'n/a'
             natt = 'yes' if 'nat-local' in sa and s(sa['nat-local']) == 'yes' else 'no'
             atime = s(sa['established']) if 'established' in sa else '0'
-            ltime = s(sa['rekey-time']) if 'rekey_time' in sa else '0'
+            ltime = s(sa['rekey-time']) if 'rekey-time' in sa else '0'
             print(ike_sa_tunnel_prefix)
             print('    %-6s %-6s  %-12s %-13s %-14s %-6s %-7s %-7s\n' % (state, version, encryption, integrity, dh_group, natt, atime, ltime))
 
