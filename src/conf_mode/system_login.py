@@ -367,6 +367,12 @@ def apply(login):
                 if os.path.exists(f'{home_dir}/.google_authenticator'):
                     os.remove(f'{home_dir}/.google_authenticator')
 
+            # Lock/Unlock local user account
+            lock_unlock = '--unlock'
+            if 'disable' in user_config:
+                lock_unlock = '--lock'
+            cmd(f'usermod {lock_unlock} {user}')
+
     if 'rm_users' in login:
         for user in login['rm_users']:
             try:
