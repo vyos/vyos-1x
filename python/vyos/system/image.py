@@ -259,9 +259,9 @@ def is_live_boot() -> bool:
     running_image_result = regex_filter.match(cmdline)
     if running_image_result:
         boot_type: str = running_image_result.groupdict().get('boot_type', '')
-        if boot_type == 'live':
-            return True
-    return False
+        if boot_type == 'boot':
+            return False
+    return True
 
 def if_not_live_boot(func):
     """Decorator to call function only if not live boot"""
