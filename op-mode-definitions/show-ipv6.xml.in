@@ -28,6 +28,7 @@
             </properties>
             <command>vtysh -c "show ipv6 forwarding"</command>
           </node>
+          #include <include/show-nht.xml.i>
           <node name="ripng">
             <properties>
               <help>Show RIPNG protocol information</help>
