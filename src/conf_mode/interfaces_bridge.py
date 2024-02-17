@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -31,6 +31,7 @@ from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.utils.dict import dict_search
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 
 from vyos import airbag
@@ -85,9 +86,10 @@ def get_config(config=None):
                 bridge['member']['interface'][interface].update({'has_vlan' : ''})
 
             # When using VXLAN member interfaces that are configured for Single
-            # VXLAN Device (SVD) we need to call the VXLAN conf-mode script to re-create
-            # VLAN to VNI mappings if required
-            if interface.startswith('vxlan'):
+            # VXLAN Device (SVD) we need to call the VXLAN conf-mode script to
+            # re-create VLAN to VNI mappings if required, but only if the interface
+            # is already live on the system - this must not be done on first commit
+            if interface.startswith('vxlan') and interface_exists(interface):
                 set_dependents('vxlan', conf, interface)
 
     # delete empty dictionary keys - no need to run code paths if nothing is there to do
@@ -167,7 +169,7 @@ def apply(bridge):
         br.update(bridge)
 
     for interface in dict_search('member.interface', bridge) or []:
-        if interface.startswith('vxlan'):
+        if interface.startswith('vxlan') and interface_exists(interface):
             try:
                 call_dependents()
             except ConfigError:

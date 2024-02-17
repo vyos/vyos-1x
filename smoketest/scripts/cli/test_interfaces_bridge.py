@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,13 +21,12 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from copy import deepcopy
 from glob import glob
-from netifaces import interfaces
 
 from vyos.ifconfig import Section
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
-from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import interface_exists
 
 class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -387,6 +386,54 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
                     self.cli_delete(['interfaces', 'ethernet', member, 'vif-s', vif_s])
                     for vif_c in vifc:
                         self.cli_delete(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif_s}.{vif_c}'])
+
+    def test_bridge_tunnel_vxlan_multicast(self):
+        # Testcase for T6043 running VXLAN over gretap
+        br_if = 'br0'
+        tunnel_if = 'tun0'
+        eth_if = 'eth1'
+        vxlan_if = 'vxlan0'
+        multicast_group = '239.0.0.241'
+        vni = '123'
+
+        self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', eth_if])
+        self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', vxlan_if])
+
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.2/30'])
+
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'address', '10.0.0.2/24'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'enable-multicast'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'encapsulation', 'gretap'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'mtu', '1500'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'parameters', 'ip', 'ignore-df'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'parameters', 'ip', 'key', '1'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'parameters', 'ip', 'no-pmtu-discovery'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'parameters', 'ip', 'ttl', '0'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'remote', '203.0.113.2'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'source-address', '192.0.2.2'])
+
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'group', multicast_group])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'mtu', '1426'])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'source-interface', tunnel_if])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'vni', vni])
+
+        self.cli_commit()
+
+        self.assertTrue(interface_exists(eth_if))
+        self.assertTrue(interface_exists(vxlan_if))
+        self.assertTrue(interface_exists(tunnel_if))
+
+        tmp = get_interface_config(vxlan_if)
+        self.assertEqual(tmp['ifname'], vxlan_if)
+        self.assertEqual(tmp['linkinfo']['info_data']['link'], tunnel_if)
+        self.assertEqual(tmp['linkinfo']['info_data']['group'], multicast_group)
+        self.assertEqual(tmp['linkinfo']['info_data']['id'], int(vni))
+
+        bridge_members = []
+        for tmp in glob(f'/sys/class/net/{br_if}/lower_*'):
+            bridge_members.append(os.path.basename(tmp).replace('lower_', ''))
+        self.assertIn(eth_if, bridge_members)
+        self.assertIn(vxlan_if, bridge_members)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
