@@ -172,6 +172,7 @@
                   </tagNode>
                 </children>
               </node>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="full-name">
                 <properties>
                   <help>Full name of the user (use quotes for names with spaces)</help>
