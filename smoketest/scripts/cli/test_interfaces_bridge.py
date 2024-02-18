@@ -23,6 +23,7 @@ from copy import deepcopy
 from glob import glob
 
 from vyos.ifconfig import Section
+from vyos.template import ip_from_cidr
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
@@ -395,11 +396,12 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         vxlan_if = 'vxlan0'
         multicast_group = '239.0.0.241'
         vni = '123'
+        eth0_addr = '192.0.2.2/30'
 
         self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', eth_if])
         self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', vxlan_if])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.2/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
 
         self.cli_set(['interfaces', 'tunnel', tunnel_if, 'address', '10.0.0.2/24'])
         self.cli_set(['interfaces', 'tunnel', tunnel_if, 'enable-multicast'])
@@ -410,7 +412,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(['interfaces', 'tunnel', tunnel_if, 'parameters', 'ip', 'no-pmtu-discovery'])
         self.cli_set(['interfaces', 'tunnel', tunnel_if, 'parameters', 'ip', 'ttl', '0'])
         self.cli_set(['interfaces', 'tunnel', tunnel_if, 'remote', '203.0.113.2'])
-        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'source-address', '192.0.2.2'])
+        self.cli_set(['interfaces', 'tunnel', tunnel_if, 'source-address', ip_from_cidr(eth0_addr)])
 
         self.cli_set(['interfaces', 'vxlan', vxlan_if, 'group', multicast_group])
         self.cli_set(['interfaces', 'vxlan', vxlan_if, 'mtu', '1426'])
@@ -434,6 +436,11 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
             bridge_members.append(os.path.basename(tmp).replace('lower_', ''))
         self.assertIn(eth_if, bridge_members)
         self.assertIn(vxlan_if, bridge_members)
+
+        self.cli_delete(['interfaces', 'bridge', br_if])
+        self.cli_delete(['interfaces', 'vxlan', vxlan_if])
+        self.cli_delete(['interfaces', 'tunnel', tunnel_if])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
