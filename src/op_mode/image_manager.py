@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -95,6 +95,15 @@ def delete_image(image_name: Optional[str] = None,
     except Exception as err:
         exit(f'Unable to remove the image "{image_name}": {err}')
 
+    # remove LUKS volume if it exists
+    luks_path: Path = Path(f'{persistence_storage}/luks/{image_name}')
+    if luks_path.is_file():
+        try:
+            luks_path.unlink()
+            print(f'The encrypted config for "{image_name}" was successfully deleted')
+        except Exception as err:
+            exit(f'Unable to remove the encrypted config for "{image_name}": {err}')
+
 
 @compat.grub_cfg_update
 def set_image(image_name: Optional[str] = None,
@@ -173,6 +182,16 @@ def rename_image(name_old: str, name_new: str) -> None:
         print(f'The image "{name_old}" was renamed to "{name_new}"')
     except Exception as err:
         exit(f'Unable to rename image "{name_old}" to "{name_new}": {err}')
+
+    # rename LUKS volume if it exists
+    old_luks_path: Path = Path(f'{persistence_storage}/luks/{name_old}')
+    if old_luks_path.is_file():
+        try:
+            new_luks_path: Path = Path(f'{persistence_storage}/luks/{name_new}')
+            old_luks_path.rename(new_luks_path)
+            print(f'The encrypted config for "{name_old}" was successfully renamed to "{name_new}"')
+        except Exception as err:
+            exit(f'Unable to rename the encrypted config for "{name_old}" to "{name_new}": {err}')
 
 
 def list_images() -> None:

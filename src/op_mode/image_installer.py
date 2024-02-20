@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -65,6 +65,8 @@ MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root part
 MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial, U: USB-Serial)?'
 MSG_INPUT_COPY_DATA: str = 'Would you like to copy data to the new image?'
 MSG_INPUT_CHOOSE_COPY_DATA: str = 'From which image would you like to save config information?'
+MSG_INPUT_COPY_ENC_DATA: str = 'Would you like to copy the encrypted config to the new image?'
+MSG_INPUT_CHOOSE_COPY_ENC_DATA: str = 'From which image would you like to copy the encrypted config?'
 MSG_WARN_ISO_SIGN_INVALID: str = 'Signature is not valid. Do you want to continue with installation?'
 MSG_WARN_ISO_SIGN_UNAVAL: str = 'Signature is not available. Do you want to continue with installation?'
 MSG_WARN_ROOT_SIZE_TOOBIG: str = 'The size is too big. Try again.'
@@ -212,14 +214,17 @@ def search_previous_installation(disks: list[str]) -> None:
         disks (list[str]): a list of available disks
     """
     mnt_config = '/mnt/config'
+    mnt_encrypted_config = '/mnt/encrypted_config'
     mnt_ssh = '/mnt/ssh'
     mnt_tmp = '/mnt/tmp'
     rmtree(Path(mnt_config), ignore_errors=True)
     rmtree(Path(mnt_ssh), ignore_errors=True)
     Path(mnt_tmp).mkdir(exist_ok=True)
+    Path(mnt_encrypted_config).unlink(missing_ok=True)
 
     print('Searching for data from previous installations')
     image_data = []
+    encrypted_configs = []
     for disk_name in disks:
         for partition in disk.partition_list(disk_name):
             if disk.partition_mount(partition, mnt_tmp):
@@ -227,32 +232,61 @@ def search_previous_installation(disks: list[str]) -> None:
                     for path in Path(mnt_tmp + '/boot').iterdir():
                         if path.joinpath('rw/config/.vyatta_config').exists():
                             image_data.append((path.name, partition))
+                if Path(mnt_tmp + '/luks').exists():
+                    for path in Path(mnt_tmp + '/luks').iterdir():
+                        encrypted_configs.append((path.name, partition))
 
                 disk.partition_umount(partition)
 
-    if len(image_data) == 1:
-        image_name, image_drive = image_data[0]
-        print('Found data from previous installation:')
-        print(f'\t{image_name} on {image_drive}')
-        if not ask_yes_no(MSG_INPUT_COPY_DATA, default=True):
-            return
+    image_name = None
+    image_drive = None
+    encrypted = False
 
-    elif len(image_data) > 1:
-        print('Found data from previous installations')
-        if not ask_yes_no(MSG_INPUT_COPY_DATA, default=True):
-            return
+    if len(image_data) > 0:
+        if len(image_data) == 1:
+            print('Found data from previous installation:')
+            print(f'\t{" on ".join(image_data[0])}')
+            if ask_yes_no(MSG_INPUT_COPY_DATA, default=True):
+                image_name, image_drive = image_data[0]
 
-        image_name, image_drive = select_entry(image_data,
-                                               'Available versions:',
-                                               MSG_INPUT_CHOOSE_COPY_DATA,
-                                               search_format_selection)
+        elif len(image_data) > 1:
+            print('Found data from previous installations')
+            if ask_yes_no(MSG_INPUT_COPY_DATA, default=True):
+                image_name, image_drive = select_entry(image_data,
+                                                       'Available versions:',
+                                                       MSG_INPUT_CHOOSE_COPY_DATA,
+                                                       search_format_selection)
+    elif len(encrypted_configs) > 0:
+        if len(encrypted_configs) == 1:
+            print('Found encrypted config from previous installation:')
+            print(f'\t{" on ".join(encrypted_configs[0])}')
+            if ask_yes_no(MSG_INPUT_COPY_ENC_DATA, default=True):
+                image_name, image_drive = encrypted_configs[0]
+                encrypted = True
+
+        elif len(encrypted_configs) > 1:
+            print('Found encrypted configs from previous installations')
+            if ask_yes_no(MSG_INPUT_COPY_ENC_DATA, default=True):
+                image_name, image_drive = select_entry(encrypted_configs,
+                                          'Available versions:',
+                                          MSG_INPUT_CHOOSE_COPY_ENC_DATA,
+                                          search_format_selection)
+                encrypted = True
+
     else:
         print('No previous installation found')
         return
 
+    if not image_name:
+        return
+
     disk.partition_mount(image_drive, mnt_tmp)
 
-    copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+    if not encrypted:
+        copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+    else:
+        copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
+
     Path(mnt_ssh).mkdir()
     host_keys: list[str] = glob(f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*')
     for host_key in host_keys:
@@ -277,6 +311,12 @@ def copy_previous_installation_data(target_dir: str) -> None:
     if Path('/mnt/ssh').exists():
         copytree('/mnt/ssh', f'{target_dir}/etc/ssh',
                  dirs_exist_ok=True)
+
+
+def copy_previous_encrypted_config(target_dir: str, image_name: str) -> None:
+    if Path('/mnt/encrypted_config').exists():
+        Path(target_dir).mkdir(exist_ok=True)
+        copy('/mnt/encrypted_config', Path(target_dir).joinpath(image_name))
 
 
 def ask_single_disk(disks_available: dict[str, int]) -> str:
@@ -711,6 +751,9 @@ def install_image() -> None:
         # copy saved config data and SSH keys
         # owner restored on copy of config data by chmod_2775, above
         copy_previous_installation_data(f'{DIR_DST_ROOT}/boot/{image_name}/rw')
+
+        # copy saved encrypted config volume
+        copy_previous_encrypted_config(f'{DIR_DST_ROOT}/luks', image_name)
 
         if is_raid_install(install_target):
             write_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw'
