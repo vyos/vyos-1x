@@ -153,7 +153,12 @@ if __name__ == '__main__':
             continue
         for entry in data:
             message = entry['MESSAGE']
-            pid = entry['_PID']
+            pid = -1
+            try:
+                pid = entry['_PID']
+            except Exception as ex:
+                journal.send(f'Unable to extract PID from message entry: {entry}', SYSLOG_IDENTIFIER=my_name)
+                continue            
             # Skip empty messages and messages from this process
             if message and pid != my_pid:
                 try:
