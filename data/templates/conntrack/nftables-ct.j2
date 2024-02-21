@@ -40,9 +40,6 @@ table ip vyos_conntrack {
 
     chain PREROUTING {
         type filter hook prerouting priority -300; policy accept;
-{% if ipv4_firewall_action == 'accept' or ipv4_nat_action == 'accept' %}
-        counter jump VYOS_CT_HELPER
-{% endif %}
         counter jump VYOS_CT_IGNORE
         counter jump VYOS_CT_TIMEOUT
         counter jump FW_CONNTRACK
@@ -51,11 +48,15 @@ table ip vyos_conntrack {
         notrack
     }
 
+{% if ipv4_firewall_action == 'accept' or ipv4_nat_action == 'accept' %}
+    chain PREROUTING_HELPER {
+        type filter hook prerouting priority -5; policy accept;
+        counter jump VYOS_CT_HELPER
+    }
+{% endif %}
+
     chain OUTPUT {
         type filter hook output priority -300; policy accept;
-{% if ipv4_firewall_action == 'accept' or ipv4_nat_action == 'accept' %}
-        counter jump VYOS_CT_HELPER
-{% endif %}
         counter jump VYOS_CT_IGNORE
         counter jump VYOS_CT_TIMEOUT
         counter jump FW_CONNTRACK
@@ -65,6 +66,13 @@ table ip vyos_conntrack {
 {% endif %}
         notrack
     }
+
+{% if ipv4_firewall_action == 'accept' or ipv4_nat_action == 'accept' %}
+    chain OUTPUT_HELPER {
+        type filter hook output priority -5; policy accept;
+        counter jump VYOS_CT_HELPER
+    }
+{% endif %}
 
 {{ helper_tmpl.conntrack_helpers(module_map, modules, ipv4=True) }}
 
@@ -122,9 +130,6 @@ table ip6 vyos_conntrack {
 
     chain PREROUTING {
         type filter hook prerouting priority -300; policy accept;
-{% if ipv6_firewall_action == 'accept' or ipv6_nat_action == 'accept' %}
-        counter jump VYOS_CT_HELPER
-{% endif %}
         counter jump VYOS_CT_IGNORE
         counter jump VYOS_CT_TIMEOUT
         counter jump FW_CONNTRACK
@@ -132,17 +137,28 @@ table ip6 vyos_conntrack {
         notrack
     }
 
+{% if ipv6_firewall_action == 'accept' or ipv6_nat_action == 'accept' %}
+    chain PREROUTING_HELPER {
+        type filter hook prerouting priority -5; policy accept;
+        counter jump VYOS_CT_HELPER
+    }
+{% endif %}
+
     chain OUTPUT {
         type filter hook output priority -300; policy accept;
-{% if ipv6_firewall_action == 'accept' or ipv6_nat_action == 'accept' %}
-        counter jump VYOS_CT_HELPER
-{% endif %}
         counter jump VYOS_CT_IGNORE
         counter jump VYOS_CT_TIMEOUT
         counter jump FW_CONNTRACK
         counter jump NAT_CONNTRACK
         notrack
     }
+
+{% if ipv6_firewall_action == 'accept' or ipv6_nat_action == 'accept' %}
+    chain OUTPUT_HELPER {
+        type filter hook output priority -5; policy accept;
+        counter jump VYOS_CT_HELPER
+    }
+{% endif %}
 
 {{ helper_tmpl.conntrack_helpers(module_map, modules, ipv4=False) }}
 
