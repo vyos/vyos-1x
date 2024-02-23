@@ -1,4 +1,4 @@
-<!-- include start from pki/pki-cli-private-key.xml.i -->
+<!-- include start from pki/cli-private-key-base64.xml.i -->
 <leafNode name="key">
   <properties>
     <help>Private key in PEM format</help>
