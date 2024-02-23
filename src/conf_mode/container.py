@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,7 +32,6 @@ from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.utils.process import rc_cmd
 from vyos.template import bracketize_ipv6
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
@@ -251,7 +250,7 @@ def verify(container):
             if 'authentication' not in registry_config:
                 continue
             if not {'username', 'password'} <= set(registry_config['authentication']):
-                raise ConfigError('If registry username or or password is defined, so must be the other!')
+                raise ConfigError('Container registry requires both username and password to be set!')
 
     return None
 
@@ -400,24 +399,6 @@ def generate(container):
                     tmp['ipv6_enabled'] = True
 
             write_file(f'/etc/containers/networks/{network}.json', json_write(tmp, indent=2))
-
-    if 'registry' in container:
-        cmd = f'podman logout --all'
-        rc, out = rc_cmd(cmd)
-        if rc != 0:
-            raise ConfigError(out)
-
-        for registry, registry_config in container['registry'].items():
-            if 'disable' in registry_config:
-                continue
-            if 'authentication' in registry_config:
-                if {'username', 'password'} <= set(registry_config['authentication']):
-                    username = registry_config['authentication']['username']
-                    password = registry_config['authentication']['password']
-                    cmd = f'podman login --username {username} --password {password} {registry}'
-                    rc, out = rc_cmd(cmd)
-                    if rc != 0:
-                        raise ConfigError(out)
 
     render(config_containers, 'container/containers.conf.j2', container)
     render(config_registry, 'container/registries.conf.j2', container)
