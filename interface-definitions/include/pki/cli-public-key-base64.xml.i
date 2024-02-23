@@ -1,11 +1,11 @@
-<!-- include start from pki/pki-cli-private-key.xml.i -->
+<!-- include start from pki/cli-public-key-base64.xml.i -->
 <leafNode name="key">
   <properties>
-    <help>Private key in PEM format</help>
+    <help>Public key in PEM format</help>
     <constraint>
       <validator name="base64"/>
     </constraint>
-    <constraintErrorMessage>Private key is not base64-encoded</constraintErrorMessage>
+    <constraintErrorMessage>Public key is not base64-encoded</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
