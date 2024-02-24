@@ -31,7 +31,6 @@ def _get_json_data(command: str) -> list:
     """
     return cmd(f'{command} --format json')
 
-
 def _get_raw_data(command: str) -> list:
     json_data = _get_json_data(command)
     data = json.loads(json_data)
@@ -69,6 +68,13 @@ def add_image(name: str):
 def delete_image(name: str):
     from vyos.utils.process import rc_cmd
 
+    if name == 'all':
+        # gather list of all images and pass them to the removal list
+        name = cmd('sudo podman image ls --quiet')
+        # If there are no container images left, we can not delete them all
+        if not name: return
+        # replace newline with whitespace
+        name = name.replace('\n', ' ')
     rc, output = rc_cmd(f'podman image rm --force {name}')
     if rc != 0:
         raise vyos.opmode.InternalError(output)
@@ -81,7 +87,6 @@ def show_container(raw: bool):
     else:
         return cmd(command)
 
-
 def show_image(raw: bool):
     command = 'podman image ls'
     container_data = _get_raw_data('podman image ls')
@@ -90,7 +95,6 @@ def show_image(raw: bool):
     else:
         return cmd(command)
 
-
 def show_network(raw: bool):
     command = 'podman network ls'
     container_data = _get_raw_data(command)
@@ -98,7 +102,6 @@ def show_network(raw: bool):
         return container_data
     else:
         return cmd(command)
-
 
 def restart(name: str):
     from vyos.utils.process import rc_cmd
@@ -109,7 +112,6 @@ def restart(name: str):
         return None
     print(f'Container "{name}" restarted!')
     return output
-
 
 if __name__ == '__main__':
     try:
