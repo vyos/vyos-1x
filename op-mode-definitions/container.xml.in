@@ -41,6 +41,7 @@
             <properties>
               <help>Delete container image</help>
               <completionHelp>
+                <list>all</list>
                 <script>sudo podman image ls -q</script>
               </completionHelp>
             </properties>
