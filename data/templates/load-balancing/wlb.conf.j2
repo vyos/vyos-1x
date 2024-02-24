@@ -93,6 +93,8 @@ rule {{ rule }} {
 {%             if rule_config.destination.port is vyos_defined  %}
 {%                 if '-' in rule_config.destination.port %}
         port-ipt "-m multiport  --dports {{ rule_config.destination.port | replace('-', ':') }}"
+{%                 elif ',' in rule_config.destination.port %}
+        port-ipt "-m multiport  --dports {{ rule_config.destination.port }}"
 {%                 else %}
         port-ipt " --dport {{ rule_config.destination.port }}"
 {%                 endif %}
@@ -107,6 +109,8 @@ rule {{ rule }} {
 {%             if rule_config.source.port is vyos_defined  %}
 {%                 if '-' in rule_config.source.port %}
         port-ipt "-m multiport  --sports {{ rule_config.source.port | replace('-', ':') }}"
+{%                 elif ',' in rule_config.destination.port %}
+        port-ipt "-m multiport  --sports {{ rule_config.source.port }}"
 {%                 else %}
         port.ipt " --sport {{ rule_config.source.port }}"
 {%                 endif %}
