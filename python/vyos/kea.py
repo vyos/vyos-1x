@@ -113,6 +113,9 @@ def kea_parse_subnet(subnet, config):
         if 'bootfile_server' in config['option']:
             out['next-server'] = config['option']['bootfile_server']
 
+    if 'ignore_client_id' in config:
+        out['match-client-id'] = False
+
     if 'lease' in config:
         out['valid-lifetime'] = int(config['lease'])
         out['max-valid-lifetime'] = int(config['lease'])

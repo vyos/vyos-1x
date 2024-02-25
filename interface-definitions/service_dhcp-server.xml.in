@@ -122,6 +122,12 @@
                       <multi/>
                     </properties>
                   </leafNode>
+                  <leafNode name="ignore-client-id">
+                    <properties>
+                      <help>Ignore client identifier for lease lookups</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="lease">
                     <properties>
                       <help>Lease timeout in seconds</help>
