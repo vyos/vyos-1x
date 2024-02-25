@@ -63,6 +63,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['dynamic-dns-update'])
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+<<<<<<< HEAD
+=======
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['ignore-client-id'])
+>>>>>>> 83b435ffe (dhcp-server: T6063: Add `ignore-client-id` to relax client identifier checks for leases)
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['default-router', router])
         self.cli_set(pool + ['name-server', dns_1])
@@ -81,6 +86,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
+<<<<<<< HEAD
         config = read_file(DHCPD_CONF)
         network = address_from_cidr(subnet)
         netmask = netmask_from_cidr(subnet)
@@ -95,6 +101,42 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'range {range_0_start} {range_0_stop};', config)
         self.assertIn(f'range {range_1_start} {range_1_stop};', config)
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+=======
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        self.verify_config_value(obj, ['Dhcp4', 'interfaces-config'], 'interfaces', [interface])
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'match-client-id', False)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'valid-lifetime', 86400)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'max-valid-lifetime', 86400)
+
+        # Verify options
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'domain-name', 'data': domain_name})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'domain-name-servers', 'data': f'{dns_1}, {dns_2}'})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'routers', 'data': router})
+
+        # Verify pools
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'],
+                {'pool': f'{range_0_start} - {range_0_stop}'})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'],
+                {'pool': f'{range_1_start} - {range_1_stop}'})
+>>>>>>> 83b435ffe (dhcp-server: T6063: Add `ignore-client-id` to relax client identifier checks for leases)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

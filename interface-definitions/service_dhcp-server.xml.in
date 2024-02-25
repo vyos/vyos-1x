@@ -210,9 +210,15 @@
                       <multi/>
                     </properties>
                   </leafNode>
+<<<<<<< HEAD
                   <leafNode name="ip-forwarding">
                     <properties>
                       <help>Enable IP forwarding on client</help>
+=======
+                  <leafNode name="ignore-client-id">
+                    <properties>
+                      <help>Ignore client identifier for lease lookups</help>
+>>>>>>> 83b435ffe (dhcp-server: T6063: Add `ignore-client-id` to relax client identifier checks for leases)
                       <valueless/>
                     </properties>
                   </leafNode>
