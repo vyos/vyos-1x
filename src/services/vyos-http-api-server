@@ -546,7 +546,7 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
     return success(msg)
 
 @app.post('/configure')
-def configure_op(data: Union[ConfigureModel,
+async def configure_op(data: Union[ConfigureModel,
                              ConfigureListModel],
                        request: Request, background_tasks: BackgroundTasks):
     return _configure_op(data, request, background_tasks)
