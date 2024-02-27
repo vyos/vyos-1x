@@ -22,7 +22,6 @@ from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
 from vyos.utils.process import run
 
 sysfs_config = {
@@ -66,28 +65,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter', inverse=True)
-
-    def verify_nftables(self, nftables_search, table, inverse=False, args=''):
-        nftables_output = cmd(f'sudo nft {args} list table {table}')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(not matched if inverse else matched, msg=search)
-
-    def verify_nftables_chain(self, nftables_search, table, chain, inverse=False, args=''):
-        nftables_output = cmd(f'sudo nft {args} list chain {table} {chain}')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(not matched if inverse else matched, msg=search)
 
     def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
         # Resolver no longer blocks commit, need to wait for daemon to populate set
@@ -808,7 +785,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state related', 'accept']
         ]
 
-        nftables_output = cmd('sudo nft list table ip vyos_filter')
         self.verify_nftables(nftables_search, 'ip vyos_filter')
         self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
 

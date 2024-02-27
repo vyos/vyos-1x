@@ -102,6 +102,29 @@ class VyOSUnitTestSHIM:
             ssh_client.close()
             return output, error
 
+        # Verify nftables output
+        def verify_nftables(self, nftables_search, table, inverse=False, args=''):
+            nftables_output = cmd(f'sudo nft {args} list table {table}')
+
+            for search in nftables_search:
+                matched = False
+                for line in nftables_output.split("\n"):
+                    if all(item in line for item in search):
+                        matched = True
+                        break
+                self.assertTrue(not matched if inverse else matched, msg=search)
+
+        def verify_nftables_chain(self, nftables_search, table, chain, inverse=False, args=''):
+            nftables_output = cmd(f'sudo nft {args} list chain {table} {chain}')
+
+            for search in nftables_search:
+                matched = False
+                for line in nftables_output.split("\n"):
+                    if all(item in line for item in search):
+                        matched = True
+                        break
+                self.assertTrue(not matched if inverse else matched, msg=search)
+
 # standard construction; typing suggestion: https://stackoverflow.com/a/70292317
 def ignore_warning(warning: Type[Warning]):
     import warnings
