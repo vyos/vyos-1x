@@ -33,9 +33,10 @@ if typing.TYPE_CHECKING:
 dependency_dir = os.path.join(directories['data'],
                               'config-mode-dependencies')
 
-dependent_func: dict[str, list[typing.Callable]] = {}
+local_dependent_func: dict[str, list[typing.Callable]] = {}
 
 DEBUG = False
+FORCE_LOCAL = False
 
 def debug_print(s: str):
     if DEBUG:
@@ -122,16 +123,25 @@ def set_dependents(case: str, config: 'Config',
     d = get_dependency_dict(config)
     k = canon_name_of_path(caller_name())
     tag_ext = f'_{tagnode}' if tagnode is not None else ''
-    l = dependent_func.setdefault(k, [])
+    if hasattr(config, 'dependent_func') and not FORCE_LOCAL:
+        dependent_func = getattr(config, 'dependent_func')
+        l = dependent_func.setdefault('vyos_configd', [])
+    else:
+        dependent_func = local_dependent_func
+        l = dependent_func.setdefault(k, [])
     for target in d[k][case]:
         func = def_closure(target, config, tagnode)
         func.__name__ = f'{target}{tag_ext}'
         append_uniq(l, func)
     debug_print(f'set_dependents: caller {k}, dependents {names_of(l)}')
 
-def call_dependents():
+def call_dependents(dependent_func: dict = None):
     k = canon_name_of_path(caller_name())
-    l = dependent_func.get(k, [])
+    if dependent_func is None or FORCE_LOCAL:
+        dependent_func = local_dependent_func
+        l = dependent_func.get(k, [])
+    else:
+        l = dependent_func.get('vyos_configd', [])
     debug_print(f'call_dependents: caller {k}, dependents {names_of(l)}')
     while l:
         f = l.pop(0)
