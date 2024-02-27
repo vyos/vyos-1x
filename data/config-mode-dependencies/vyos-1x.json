@@ -1,6 +1,7 @@
 {
     "system_conntrack": {
-        "conntrack_sync": ["service_conntrack-sync"]
+        "conntrack_sync": ["service_conntrack-sync"],
+        "vrf": ["vrf"]
     },
     "firewall": {
         "conntrack": ["system_conntrack"],
