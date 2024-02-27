@@ -75,7 +75,7 @@ def delete_image(name: str):
         if not name: return
         # replace newline with whitespace
         name = name.replace('\n', ' ')
-    rc, output = rc_cmd(f'podman image rm --force {name}')
+    rc, output = rc_cmd(f'podman image rm {name}')
     if rc != 0:
         raise vyos.opmode.InternalError(output)
 
