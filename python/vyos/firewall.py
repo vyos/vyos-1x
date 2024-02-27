@@ -34,6 +34,24 @@ from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 
+# Conntrack
+
+def conntrack_required(conf):
+    required_nodes = ['nat', 'nat66', 'load-balancing wan']
+
+    for path in required_nodes:
+        if conf.exists(path):
+            return True
+
+    firewall = conf.get_config_dict(['firewall'], key_mangling=('-', '_'),
+                                    no_tag_node_value_mangle=True, get_first_key=True)
+
+    for rules, path in dict_search_recursive(firewall, 'rule'):
+        if any(('state' in rule_conf or 'connection_status' in rule_conf or 'offload_target' in rule_conf) for rule_conf in rules.values()):
+            return True
+
+    return False
+
 # Domain Resolver
 
 def fqdn_config_parse(firewall):

@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_map
+from vyos.firewall import conntrack_required
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import render_to_string
@@ -40,6 +41,12 @@ airbag.enable()
 
 config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 k_mod = ['vrf']
+
+nftables_table = 'inet vrf_zones'
+nftables_rules = {
+    'vrf_zones_ct_in': 'counter ct original zone set iifname map @ct_iface_map',
+    'vrf_zones_ct_out': 'counter ct original zone set oifname map @ct_iface_map'
+}
 
 def has_rule(af : str, priority : int, table : str=None):
     """
@@ -113,6 +120,9 @@ def get_config(config=None):
         # get VRF bound routing instances
         routes = vrf_routing(conf, name)
         if routes: vrf['vrf_remove'][name]['route'] = routes
+
+    if 'name' in vrf:
+        vrf['conntrack'] = conntrack_required(conf)
 
     # We also need the route-map information from the config
     #
@@ -293,6 +303,14 @@ def apply(vrf):
             # Add nftables conntrack zone map item
             nft_add_element = f'add element inet vrf_zones ct_iface_map {{ "{name}" : {table} }}'
             cmd(f'nft {nft_add_element}')
+
+        if vrf['conntrack']:
+            for chain, rule in nftables_rules.items():
+                cmd(f'nft add rule inet vrf_zones {chain} {rule}')
+    
+    if 'name' not in vrf or not vrf['conntrack']:
+        for chain, rule in nftables_rules.items():
+            cmd(f'nft flush chain inet vrf_zones {chain}')
 
     # Apply FRR filters
     zebra_daemon = 'zebra'

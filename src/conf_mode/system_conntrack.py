@@ -104,6 +104,10 @@ def get_config(config=None):
     if conf.exists(['service', 'conntrack-sync']):
         set_dependents('conntrack_sync', conf)
 
+    # If conntrack status changes, VRF zone rules need updating
+    if conf.exists(['vrf']):
+        set_dependents('vrf', conf)
+
     return conntrack
 
 def verify(conntrack):
