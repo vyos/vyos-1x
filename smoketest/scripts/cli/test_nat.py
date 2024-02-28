@@ -21,8 +21,6 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
-from vyos.utils.dict import dict_search
 
 base_path = ['nat']
 src_path = base_path + ['source']
@@ -46,17 +44,6 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.assertFalse(os.path.exists(nftables_nat_config))
         self.assertFalse(os.path.exists(nftables_static_nat_conf))
-
-    def verify_nftables(self, nftables_search, table, inverse=False, args=''):
-        nftables_output = cmd(f'sudo nft {args} list table {table}')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(not matched if inverse else matched, msg=search)
 
     def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
         # Resolver no longer blocks commit, need to wait for daemon to populate set

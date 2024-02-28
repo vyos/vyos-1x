@@ -529,5 +529,28 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             self.assertNotIn(f' no ip nht resolve-via-default', frrconfig)
             self.assertNotIn(f' no ipv6 nht resolve-via-default', frrconfig)
 
+    def test_vrf_conntrack(self):
+        table = '1000'
+        nftables_rules = {
+            'vrf_zones_ct_in': ['ct original zone set iifname map @ct_iface_map'],
+            'vrf_zones_ct_out': ['ct original zone set oifname map @ct_iface_map']
+        }
+
+        self.cli_set(base_path + ['name', 'blue', 'table', table])
+        self.cli_commit()
+
+        # Conntrack rules should not be present
+        for chain, rule in nftables_rules.items():
+            self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=True)
+
+        self.cli_set(['nat'])
+        self.cli_commit()
+
+        # Conntrack rules should now be present
+        for chain, rule in nftables_rules.items():
+            self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=False)
+
+        self.cli_delete(['nat'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
