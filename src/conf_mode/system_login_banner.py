@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,17 +18,12 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
+from vyos.template import render
 from vyos.utils.file import write_file
+from vyos.version import get_version_data
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
-try:
-    with open('/usr/share/vyos/default_motd') as f:
-        motd = f.read()
-except:
-    # Use an empty banner if the default banner file cannot be read
-    motd = "\n"
 
 PRELOGIN_FILE = r'/etc/issue'
 PRELOGIN_NET_FILE = r'/etc/issue.net'
@@ -36,12 +31,13 @@ POSTLOGIN_FILE = r'/etc/motd'
 
 default_config_data = {
     'issue': 'Welcome to VyOS - \\n \\l\n\n',
-    'issue_net': '',
-    'motd': motd
+    'issue_net': ''
 }
 
 def get_config(config=None):
     banner = deepcopy(default_config_data)
+    banner['version_data'] = get_version_data()
+
     if config:
         conf = config
     else:
@@ -92,7 +88,11 @@ def generate(banner):
 def apply(banner):
     write_file(PRELOGIN_FILE, banner['issue'])
     write_file(PRELOGIN_NET_FILE, banner['issue_net'])
-    write_file(POSTLOGIN_FILE, banner['motd'])
+    if 'motd' in banner:
+        write_file(POSTLOGIN_FILE, banner['motd'])
+    else:
+        render(POSTLOGIN_FILE, 'login/default_motd.j2', banner,
+            permission=0o644, user='root', group='root')
 
     return None
 
