@@ -30,6 +30,11 @@ set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option dom
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option name-server '192.168.0.1'
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 range LANDynamic start '192.168.0.20'
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 range LANDynamic stop '192.168.0.240'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 static-mapping TEST1 ip-address '192.168.0.21'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 static-mapping TEST1 mac '00:01:02:03:04:05'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 static-mapping TEST2 disable
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 static-mapping TEST2 ip-address '192.168.0.22'
+set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 static-mapping TEST2 mac '00:01:02:03:04:05'
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 subnet-id '1'
 set service dns forwarding allow-from '192.168.0.0/16'
 set service dns forwarding cache-size '10000'

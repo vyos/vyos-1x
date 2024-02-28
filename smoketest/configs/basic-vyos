@@ -89,6 +89,14 @@ service {
                     start 192.168.0.20
                     stop 192.168.0.240
                 }
+                static-mapping TEST1 {
+                    ip-address 192.168.0.21
+                    mac-address 00:01:02:03:04:05
+                }
+                static-mapping TEST2 {
+                    ip-address 192.168.0.22
+                    mac-address 00:01:02:03:04:05
+                }
             }
         }
     }
