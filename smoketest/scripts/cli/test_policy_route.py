@@ -68,17 +68,6 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         self.verify_rules(ip_rule_search, inverse=True)
 
-    def verify_nftables(self, nftables_search, table, inverse=False):
-        nftables_output = cmd(f'sudo nft list table {table}')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(not matched if inverse else matched, msg=search)
-
     def verify_rules(self, rules_search, inverse=False):
         rule_output = cmd('ip rule show')
 

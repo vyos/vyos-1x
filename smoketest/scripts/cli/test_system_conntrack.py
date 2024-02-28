@@ -21,7 +21,6 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.firewall import find_nftables_rule
-from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 
 base_path = ['system', 'conntrack']
@@ -34,17 +33,6 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
-
-    def verify_nftables(self, nftables_search, table, inverse=False, args=''):
-        nftables_output = cmd(f'sudo nft {args} list table {table}')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(not matched if inverse else matched, msg=search)
 
     def test_conntrack_options(self):
         conntrack_config = {
