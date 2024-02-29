@@ -150,7 +150,7 @@ class Ethtool:
             self._eee = True
             # read current EEE setting, this returns:
             # EEE status: disabled || EEE status: enabled - inactive || EEE status: enabled - active
-            self._eee_enabled = bool('enabled' in out.splitlines()[2])
+            self._eee_enabled = bool('enabled' in out.splitlines()[1])
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
