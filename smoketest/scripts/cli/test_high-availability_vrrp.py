@@ -237,5 +237,32 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'track_interface', config)
         self.assertIn(f'    {none_vrrp_interface}', config)
 
+    def test_05_set_multiple_peer_address(self):
+        group = 'VyOS-WAN'
+        vlan_id = '24'
+        vip = '100.64.24.1/24'
+        peer_address_1 = '192.0.2.1'
+        peer_address_2 = '192.0.2.2'
+        vrid = '150'
+        group_base = base_path + ['vrrp', 'group', group]
+
+        self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', '100.64.24.11/24'])
+        self.cli_set(group_base + ['interface', vrrp_interface])
+        self.cli_set(group_base + ['address', vip])
+        self.cli_set(group_base + ['peer-address', peer_address_1])
+        self.cli_set(group_base + ['peer-address', peer_address_2])
+        self.cli_set(group_base + ['vrid', vrid])
+
+        # commit changes
+        self.cli_commit()
+
+        config = getConfig(f'vrrp_instance {group}')
+
+        self.assertIn(f'interface {vrrp_interface}', config)
+        self.assertIn(f'virtual_router_id {vrid}', config)
+        self.assertIn(f'unicast_peer', config)
+        self.assertIn(f'    {peer_address_1}', config)
+        self.assertIn(f'    {peer_address_2}', config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
