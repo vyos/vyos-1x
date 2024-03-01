@@ -1,4 +1,4 @@
-# Copyright 2021-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,6 +16,7 @@
 import os
 import re
 
+from json import loads
 from vyos.utils.process import popen
 
 # These drivers do not support using ethtool to change the speed, duplex, or
@@ -49,8 +50,7 @@ class Ethtool:
     #   '1000': {'full': ''}
     #  }
     _speed_duplex = {'auto': {'auto': ''}}
-    _ring_buffers = { }
-    _ring_buffers_max = { }
+    _ring_buffer = None
     _driver_name = None
     _auto_negotiation = False
     _auto_negotiation_supported = None
@@ -111,28 +111,8 @@ class Ethtool:
                     'fixed' : fixed
                 }
 
-        out, _ = popen(f'ethtool --show-ring {ifname}')
-        # We are only interested in line 2-5 which contains the device maximum
-        # ringbuffers
-        for line in out.splitlines()[2:6]:
-            if ':' in line:
-                key, value = [s.strip() for s in line.strip().split(":", 1)]
-                key = key.lower().replace(' ', '_')
-                # T3645: ethtool version used on Debian Bullseye changed the
-                # output format from 0 -> n/a. As we are only interested in the
-                # tx/rx keys we do not care about RX Mini/Jumbo.
-                if value.isdigit():
-                    self._ring_buffers_max[key] = value
-        # Now we wan't to get the current RX/TX ringbuffer values - used for
-        for line in out.splitlines()[7:11]:
-            if ':' in line:
-                key, value = [s.strip() for s in line.strip().split(":", 1)]
-                key = key.lower().replace(' ', '_')
-                # T3645: ethtool version used on Debian Bullseye changed the
-                # output format from 0 -> n/a. As we are only interested in the
-                # tx/rx keys we do not care about RX Mini/Jumbo.
-                if value.isdigit():
-                    self._ring_buffers[key] = value
+        out, _ = popen(f'ethtool --json --show-ring {ifname}')
+        self._ring_buffer = loads(out)
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
@@ -201,14 +181,14 @@ class Ethtool:
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
             ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return self._ring_buffers_max.get(rx_tx, None)
+        return str(self._ring_buffer[0].get(f'{rx_tx}-max', None))
 
     def get_ring_buffer(self, rx_tx):
         # Configuration of RX/TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
             ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return str(self._ring_buffers.get(rx_tx, None))
+        return str(self._ring_buffer[0].get(rx_tx, None))
 
     def check_speed_duplex(self, speed, duplex):
         """ Check if the passed speed and duplex combination is supported by
