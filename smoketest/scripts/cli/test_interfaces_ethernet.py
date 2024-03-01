@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,9 @@
 import os
 import re
 import unittest
+
 from glob import glob
+from json import loads
 
 from netifaces import AF_INET
 from netifaces import AF_INET6
@@ -27,7 +29,6 @@ from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.pki import CERT_BEGIN
-from vyos.template import is_ipv6
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
@@ -300,6 +301,31 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         for name in ca_certs:
             self.cli_delete(['pki', 'ca', name])
         self.cli_delete(['pki', 'certificate', cert_name])
+
+    def test_ethtool_ring_buffer(self):
+        for interface in self._interfaces:
+            tmp = cmd(f'sudo ethtool --json --show-ring {interface}')
+            tmp = loads(tmp)
+            max_rx = str(tmp[0]['rx-max'])
+            max_tx = str(tmp[0]['tx-max'])
+
+            self.cli_set(self._base_path + [interface, 'ring-buffer', 'rx', max_rx])
+            self.cli_set(self._base_path + [interface, 'ring-buffer', 'tx', max_tx])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            tmp = cmd(f'sudo ethtool --json --show-ring {interface}')
+            tmp = loads(tmp)
+            max_rx = str(tmp[0]['rx-max'])
+            max_tx = str(tmp[0]['tx-max'])
+            rx = str(tmp[0]['rx'])
+            tx = str(tmp[0]['tx'])
+
+            # validate if the above change was carried out properly and the
+            # ring-buffer size got increased
+            self.assertEqual(max_rx, rx)
+            self.assertEqual(max_tx, tx)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
