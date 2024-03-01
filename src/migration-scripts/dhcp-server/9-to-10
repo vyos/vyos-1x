@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,9 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3316:
-# - Adjust hostname to have valid FQDN characters only (underscores aren't allowed anymore)
-# - Rename "service dhcp-server shared-network-name ... static-mapping <hostname> mac-address ..."
-#       to "service dhcp-server shared-network-name ... static-mapping <hostname> mac ..."
+# - Migrate dhcp options under new option node
+# - Add subnet IDs to existing subnets
 
 import sys
 import re
@@ -39,23 +38,34 @@ if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 
+option_nodes = ['bootfile-name', 'bootfile-server', 'bootfile-size', 'captive-portal',
+                'client-prefix-length', 'default-router', 'domain-name', 'domain-search',
+                'name-server', 'ip-forwarding', 'ipv6-only-preferred', 'ntp-server',
+                'pop-server', 'server-identifier', 'smtp-server', 'static-route',
+                'tftp-server-name', 'time-offset', 'time-server', 'time-zone',
+                'vendor-option', 'wins-server', 'wpad-url']
+
+subnet_id = 1
+
 for network in config.list_nodes(base):
-    # Run this for every specified 'subnet'
+    for option in option_nodes:
+        if config.exists(base + [network, option]):
+            config.set(base + [network, 'option'])
+            config.copy(base + [network, option], base + [network, 'option', option])
+            config.delete(base + [network, option])
+
     if config.exists(base + [network, 'subnet']):
         for subnet in config.list_nodes(base + [network, 'subnet']):
             base_subnet = base + [network, 'subnet', subnet]
-            if config.exists(base_subnet + ['static-mapping']):
-                for hostname in config.list_nodes(base_subnet + ['static-mapping']):
-                    base_mapping = base_subnet + ['static-mapping', hostname]
+            
+            for option in option_nodes:
+                if config.exists(base_subnet + [option]):
+                    config.set(base_subnet + ['option'])
+                    config.copy(base_subnet + [option], base_subnet + ['option', option])
+                    config.delete(base_subnet + [option])
 
-                    # Rename the 'mac-address' node to 'mac'
-                    if config.exists(base_mapping + ['mac-address']):
-                        config.rename(base_mapping + ['mac-address'], 'mac')
-
-                    # Adjust hostname to have valid FQDN characters only
-                    new_hostname = re.sub(r'[^a-zA-Z0-9-.]', '-', hostname)
-                    if new_hostname != hostname:
-                        config.rename(base_mapping, new_hostname)
+            config.set(base_subnet + ['subnet-id'], value=subnet_id)
+            subnet_id += 1
 
 try:
     with open(file_name, 'w') as f:

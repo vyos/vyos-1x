@@ -14,16 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# T3316:
-# - Adjust hostname to have valid FQDN characters only (underscores aren't allowed anymore)
-# - Rename "service dhcp-server shared-network-name ... static-mapping <hostname> mac-address ..."
-#       to "service dhcp-server shared-network-name ... static-mapping <hostname> mac ..."
+# T3316: Migrate to Kea
+#        - global-parameters will not function
+#        - shared-network-parameters will not function
+#        - subnet-parameters will not function
+#        - static-mapping-parameters will not function
+#        - host-decl-name is on by default, option removed
+#        - ping-check no longer supported
+#        - failover is default enabled on all subnets that exist on failover servers
 
 import sys
-import re
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
+if (len(sys.argv) < 2):
     print("Must specify file name!")
     sys.exit(1)
 
@@ -32,30 +35,49 @@ file_name = sys.argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['service', 'dhcp-server', 'shared-network-name']
+base = ['service', 'dhcp-server']
 config = ConfigTree(config_file)
 
 if not config.exists(base):
     # Nothing to do
     sys.exit(0)
 
-for network in config.list_nodes(base):
-    # Run this for every specified 'subnet'
-    if config.exists(base + [network, 'subnet']):
-        for subnet in config.list_nodes(base + [network, 'subnet']):
-            base_subnet = base + [network, 'subnet', subnet]
+if config.exists(base + ['host-decl-name']):
+    config.delete(base + ['host-decl-name'])
+
+if config.exists(base + ['global-parameters']):
+    config.delete(base + ['global-parameters'])
+
+if config.exists(base + ['shared-network-name']):
+    for network in config.list_nodes(base + ['shared-network-name']):
+        base_network = base + ['shared-network-name', network]
+
+        if config.exists(base_network + ['ping-check']):
+            config.delete(base_network + ['ping-check'])
+
+        if config.exists(base_network + ['shared-network-parameters']):
+            config.delete(base_network +['shared-network-parameters'])
+
+        if not config.exists(base_network + ['subnet']):
+            continue
+
+        # Run this for every specified 'subnet'
+        for subnet in config.list_nodes(base_network + ['subnet']):
+            base_subnet = base_network + ['subnet', subnet]
+
+            if config.exists(base_subnet + ['enable-failover']):
+                config.delete(base_subnet + ['enable-failover'])
+
+            if config.exists(base_subnet + ['ping-check']):
+                config.delete(base_subnet + ['ping-check'])
+
+            if config.exists(base_subnet + ['subnet-parameters']):
+                config.delete(base_subnet + ['subnet-parameters'])
+
             if config.exists(base_subnet + ['static-mapping']):
-                for hostname in config.list_nodes(base_subnet + ['static-mapping']):
-                    base_mapping = base_subnet + ['static-mapping', hostname]
-
-                    # Rename the 'mac-address' node to 'mac'
-                    if config.exists(base_mapping + ['mac-address']):
-                        config.rename(base_mapping + ['mac-address'], 'mac')
-
-                    # Adjust hostname to have valid FQDN characters only
-                    new_hostname = re.sub(r'[^a-zA-Z0-9-.]', '-', hostname)
-                    if new_hostname != hostname:
-                        config.rename(base_mapping, new_hostname)
+                for mapping in config.list_nodes(base_subnet + ['static-mapping']):
+                    if config.exists(base_subnet + ['static-mapping', mapping, 'static-mapping-parameters']):
+                        config.delete(base_subnet + ['static-mapping', mapping, 'static-mapping-parameters'])
 
 try:
     with open(file_name, 'w') as f:
