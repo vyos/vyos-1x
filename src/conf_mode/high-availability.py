@@ -116,8 +116,9 @@ def verify(ha):
                         raise ConfigError(f'VRRP group "{group}" uses IPv4 but hello-source-address is IPv6!')
 
                 if 'peer_address' in group_config:
-                    if is_ipv6(group_config['peer_address']):
-                        raise ConfigError(f'VRRP group "{group}" uses IPv4 but peer-address is IPv6!')
+                    for peer_address in group_config['peer_address']:
+                        if is_ipv6(peer_address):
+                            raise ConfigError(f'VRRP group "{group}" uses IPv4 but peer-address is IPv6!')
 
             if vaddrs6:
                 tmp = {'interface': interface, 'vrid': vrid, 'ipver': 'IPv6'}
@@ -130,8 +131,9 @@ def verify(ha):
                         raise ConfigError(f'VRRP group "{group}" uses IPv6 but hello-source-address is IPv4!')
 
                 if 'peer_address' in group_config:
-                    if is_ipv4(group_config['peer_address']):
-                        raise ConfigError(f'VRRP group "{group}" uses IPv6 but peer-address is IPv4!')
+                    for peer_address in group_config['peer_address']:
+                        if is_ipv4(peer_address):
+                            raise ConfigError(f'VRRP group "{group}" uses IPv6 but peer-address is IPv4!')
     # Check sync groups
     if 'vrrp' in ha and 'sync_group' in ha['vrrp']:
         for sync_group, sync_config in ha['vrrp']['sync_group'].items():
