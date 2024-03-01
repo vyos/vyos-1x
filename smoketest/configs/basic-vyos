@@ -84,16 +84,24 @@ service {
                 domain-name vyos.net
                 domain-search vyos.net
                 range LANDynamic {
-                    start 192.168.0.20
+                    start 192.168.0.30
                     stop 192.168.0.240
                 }
-                static-mapping TEST1 {
-                    ip-address 192.168.0.21
+                static-mapping TEST1-1 {
+                    ip-address 192.168.0.11
                     mac-address 00:01:02:03:04:05
                 }
-                static-mapping TEST2 {
-                    ip-address 192.168.0.22
+                static-mapping TEST1-2 {
+                    ip-address 192.168.0.12
                     mac-address 00:01:02:03:04:05
+                }
+                static-mapping TEST2-1 {
+                    ip-address 192.168.0.21
+                    mac-address 00:01:02:03:04:21
+                }
+                static-mapping TEST2-2 {
+                    ip-address 192.168.0.21
+                    mac-address 00:01:02:03:04:22
                 }
             }
         }
