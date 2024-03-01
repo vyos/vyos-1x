@@ -129,16 +129,13 @@ class QoSBase:
             if tmp: default_tc += f' flows {tmp}'
 
             tmp = dict_search('interval', config)
-            if tmp: default_tc += f' interval {tmp}'
-
-            tmp = dict_search('interval', config)
-            if tmp: default_tc += f' interval {tmp}'
+            if tmp: default_tc += f' interval {tmp}ms'
 
             tmp = dict_search('queue_limit', config)
             if tmp: default_tc += f' limit {tmp}'
 
             tmp = dict_search('target', config)
-            if tmp: default_tc += f' target {tmp}'
+            if tmp: default_tc += f' target {tmp}ms'
 
             default_tc += f' noecn'
 
