@@ -331,15 +331,6 @@ class QoSBase:
                         filter_cmd += f' flowid {self._parent:x}:{cls:x}'
                         self._cmd(filter_cmd)
 
-                else:
-
-                    filter_cmd += ' basic'
-
-                    cls = int(cls)
-                    filter_cmd += f' flowid {self._parent:x}:{cls:x}'
-                    self._cmd(filter_cmd)
-
-
                 # The police block allows limiting of the byte or packet rate of
                 # traffic matched by the filter it is attached to.
                 # https://man7.org/linux/man-pages/man8/tc-police.8.html
