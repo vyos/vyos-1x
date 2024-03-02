@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6079: Disable duplicate static mappings
+
+import sys
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['service', 'dhcp-server']
+config = ConfigTree(config_file)
+
+if not config.exists(base + ['shared-network-name']):
+    # Nothing to do
+    exit(0)
+
+# Run this for every instance if 'shared-network-name'
+for network in config.list_nodes(base + ['shared-network-name']):
+    base_network = base + ['shared-network-name', network]
+
+    if not config.exists(base_network + ['subnet']):
+        continue
+
+    for subnet in config.list_nodes(base_network + ['subnet']):
+        base_subnet = base_network + ['subnet', subnet]
+
+        if config.exists(base_subnet + ['static-mapping']):
+            used_mac = []
+            used_ip = []
+
+            for mapping in config.list_nodes(base_subnet + ['static-mapping']):
+                base_mapping = base_subnet + ['static-mapping', mapping]
+
+                if config.exists(base_mapping + ['mac-address']):
+                    mac = config.return_value(base_mapping + ['mac-address'])
+
+                    if mac in used_mac:
+                        config.set(base_mapping + ['disable'])
+                    else:
+                        used_mac.append(mac)
+
+                if config.exists(base_mapping + ['ip-address']):
+                    ip = config.return_value(base_mapping + ['ip-address'])
+
+                    if ip in used_ip:
+                        config.set(base_subnet + ['static-mapping', mapping, 'disable'])
+                    else:
+                        used_ip.append(ip)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
