@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -93,6 +93,8 @@ def get_config(config=None):
     for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
+    if not bool(default_values['redistribute']):
+        del default_values['redistribute']
 
     for interface in ospf.get('interface', []):
         # We need to reload the defaults on every pass b/c of
@@ -215,7 +217,7 @@ def verify(ospf):
                     raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
                                       f'and no-php-flag configured at the same time.')
 
-    # Check for index ranges being larger than the segment routing global block    
+    # Check for index ranges being larger than the segment routing global block
     if dict_search('segment_routing.global_block', ospf):
         g_high_label_value = dict_search('segment_routing.global_block.high_label_value', ospf)
         g_low_label_value = dict_search('segment_routing.global_block.low_label_value', ospf)
