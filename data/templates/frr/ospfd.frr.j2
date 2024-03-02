@@ -214,13 +214,13 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
  passive-interface default
 {% endif %}
 {% if redistribute is vyos_defined %}
-{%     for protocol, protocols_options in redistribute.items() %}
+{%     for protocol, options in redistribute.items() %}
 {%         if protocol == 'table' %}
-{%             for table, table_options in protocols_options.items() %}
- redistribute {{ protocol }} {{ table }} {{ 'metric ' + table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' + table_options.metric_type if table_options.metric_type is vyos_defined }} {{ 'route-map ' + table_options.route_map if table_options.route_map is vyos_defined }}
+{%             for table, table_options in options.items() %}
+ redistribute {{ protocol }} {{ table }} {{ 'metric ' ~ table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' ~ table_options.metric_type if table_options.metric_type is vyos_defined }} {{ 'route-map ' ~ table_options.route_map if table_options.route_map is vyos_defined }}
 {%             endfor %}
 {%         else %}
- redistribute {{ protocol }} {{ 'metric ' + protocols_options.metric if protocols_options.metric is vyos_defined }} {{ 'metric-type ' + protocols_options.metric_type if protocols_options.metric_type is vyos_defined }} {{ 'route-map ' + protocols_options.route_map if protocols_options.route_map is vyos_defined }}
+ redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
