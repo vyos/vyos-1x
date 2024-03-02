@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -84,6 +84,12 @@ def get_config(config=None):
         del default_values['default_information']
     if 'graceful_restart' not in ospfv3:
         del default_values['graceful_restart']
+
+    for protocol in ['babel', 'bgp', 'connected', 'kernel', 'ripng', 'static']:
+        if dict_search(f'redistribute.{protocol}', ospfv3) is None:
+            del default_values['redistribute'][protocol]
+    if not bool(default_values['redistribute']):
+        del default_values['redistribute']
 
     default_values.pop('interface', {})
 

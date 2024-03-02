@@ -109,7 +109,7 @@ router ospf6 {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% endif %}
 {% if redistribute is vyos_defined %}
 {%     for protocol, options in redistribute.items() %}
- redistribute {{ protocol }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
+ redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
 {%     endfor %}
 {% endif %}
 exit

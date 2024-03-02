@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -114,6 +114,8 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
 
 
     def test_ospfv3_03_redistribute(self):
+        metric = '15'
+        metric_type = '1'
         route_map = 'foo-bar'
         route_map_seq = '10'
         redistribute = ['bgp', 'connected', 'kernel', 'ripng', 'static']
@@ -121,7 +123,9 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route-map', route_map, 'rule', route_map_seq, 'action', 'permit'])
 
         for protocol in redistribute:
+            self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])
             self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
+            self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
         # commit changes
         self.cli_commit()
@@ -130,7 +134,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf6', frrconfig)
         for protocol in redistribute:
-            self.assertIn(f' redistribute {protocol} route-map {route_map}', frrconfig)
+            self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
 
     def test_ospfv3_04_interfaces(self):
