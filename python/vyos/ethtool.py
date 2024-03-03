@@ -32,16 +32,24 @@ class Ethtool:
     """
     # dictionary containing driver featurs, it will be populated on demand and
     # the content will look like:
-    # {
-    #   'tls-hw-tx-offload': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-fcoe-crc': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-ip-generic': {'fixed': False, 'enabled': True},
-    #   'tx-checksum-ipv4': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-ipv6': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-sctp': {'fixed': True, 'enabled': False},
-    #   'tx-checksumming': {'fixed': False, 'enabled': True},
-    #   'tx-esp-segmentation': {'fixed': True, 'enabled': False},
-    # }
+    # [{'esp-hw-offload': {'active': False, 'fixed': True, 'requested': False},
+    #   'esp-tx-csum-hw-offload': {'active': False,
+    #                              'fixed': True,
+    #                              'requested': False},
+    #   'fcoe-mtu': {'active': False, 'fixed': True, 'requested': False},
+    #   'generic-receive-offload': {'active': True,
+    #                               'fixed': False,
+    #                               'requested': True},
+    #   'generic-segmentation-offload': {'active': True,
+    #                                    'fixed': False,
+    #                                    'requested': True},
+    #   'highdma': {'active': True, 'fixed': False, 'requested': True},
+    #   'ifname': 'eth0',
+    #   'l2-fwd-offload': {'active': False, 'fixed': True, 'requested': False},
+    #   'large-receive-offload': {'active': False,
+    #                             'fixed': False,
+    #                             'requested': False},
+    # ...
     _features = { }
     # dictionary containing available interface speed and duplex settings
     # {
@@ -97,20 +105,11 @@ class Ethtool:
                 tmp = line.split()[-1]
                 self._auto_negotiation = bool(tmp == 'on')
 
-        # Now populate features dictionaty
-        out, _ = popen(f'ethtool --show-features {ifname}')
-        # skip the first line, it only says: "Features for eth0":
-        for line in out.splitlines()[1:]:
-            if ":" in line:
-                key, value = [s.strip() for s in line.strip().split(":", 1)]
-                fixed = bool('fixed' in value)
-                if fixed:
-                    value = value.split()[0].strip()
-                self._features[key.strip()] = {
-                    'enabled' : bool(value == 'on'),
-                    'fixed' : fixed
-                }
+        # Now populate driver features
+        out, _ = popen(f'ethtool --json --show-features {ifname}')
+        self._features = loads(out)
 
+        # Get information about NIC ring buffers
         out, _ = popen(f'ethtool --json --show-ring {ifname}')
         self._ring_buffer = loads(out)
 
@@ -149,14 +148,12 @@ class Ethtool:
 
         In case of a missing key, return "fixed = True and enabled = False"
         """
+        active = False
         fixed = True
-        enabled = False
-        if feature in self._features:
-            if 'enabled' in self._features[feature]:
-                enabled = self._features[feature]['enabled']
-            if 'fixed' in self._features[feature]:
-                fixed = self._features[feature]['fixed']
-        return enabled, fixed
+        if feature in self._features[0]:
+            active = bool(self._features[0][feature]['active'])
+            fixed = bool(self._features[0][feature]['fixed'])
+        return active, fixed
 
     def get_generic_receive_offload(self):
         return self._get_generic('generic-receive-offload')
