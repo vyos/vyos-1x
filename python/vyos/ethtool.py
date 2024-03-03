@@ -62,8 +62,7 @@ class Ethtool:
     _driver_name = None
     _auto_negotiation = False
     _auto_negotiation_supported = None
-    _flow_control = False
-    _flow_control_enabled = None
+    _flow_control = None
     _eee = False
     _eee_enabled = None
 
@@ -115,12 +114,9 @@ class Ethtool:
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
-        out, _ = popen(f'ethtool --show-pause {ifname}')
-        if len(out.splitlines()) > 1:
-            self._flow_control = True
-            # read current flow control setting, this returns:
-            # ['Autonegotiate:', 'on']
-            self._flow_control_enabled = out.splitlines()[1].split()[-1]
+        out, err = popen(f'ethtool --json --show-pause {ifname}')
+        if not bool(err):
+            self._flow_control = loads(out)
 
         # Get current Energy Efficient Ethernet (EEE) settings, but this is
         # not supported by all NICs (e.g. vmxnet3 does not support is)
@@ -207,15 +203,14 @@ class Ethtool:
 
     def check_flow_control(self):
         """ Check if the NIC supports flow-control """
-        if self.get_driver_name() in _drivers_without_speed_duplex_flow:
-            return False
-        return self._flow_control
+        return bool(self._flow_control)
 
     def get_flow_control(self):
-        if self._flow_control_enabled == None:
+        if self._flow_control == None:
             raise ValueError('Interface does not support changing '\
                              'flow-control settings!')
-        return self._flow_control_enabled
+
+        return 'on' if bool(self._flow_control[0]['autonegotiate']) else 'off'
 
     def check_eee(self):
         """ Check if the NIC supports eee """
