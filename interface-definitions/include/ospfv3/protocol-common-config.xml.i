@@ -251,6 +251,16 @@
         #include <include/route-map.xml.i>
       </children>
     </node>
+    <node name="isis">
+      <properties>
+        <help>Redistribute IS-IS routes</help>
+      </properties>
+      <children>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
+        #include <include/route-map.xml.i>
+      </children>
+    </node>
     <node name="kernel">
       <properties>
         <help>Redistribute kernel routes</help>

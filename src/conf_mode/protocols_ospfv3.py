@@ -85,7 +85,7 @@ def get_config(config=None):
     if 'graceful_restart' not in ospfv3:
         del default_values['graceful_restart']
 
-    for protocol in ['babel', 'bgp', 'connected', 'kernel', 'ripng', 'static']:
+    for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'ripng', 'static']:
         if dict_search(f'redistribute.{protocol}', ospfv3) is None:
             del default_values['redistribute'][protocol]
     if not bool(default_values['redistribute']):
