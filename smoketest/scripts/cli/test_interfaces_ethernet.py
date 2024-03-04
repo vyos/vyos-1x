@@ -31,6 +31,7 @@ from vyos.ifconfig import Section
 from vyos.pki import CERT_BEGIN
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
+from vyos.utils.process import popen
 from vyos.utils.file import read_file
 from vyos.utils.network import is_ipv6_link_local
 
@@ -304,6 +305,8 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_ethtool_ring_buffer(self):
         for interface in self._interfaces:
+            # We do not use vyos.ethtool here to not have any chance
+            # for invalid testcases. Re-gain data by hand
             tmp = cmd(f'sudo ethtool --json --show-ring {interface}')
             tmp = loads(tmp)
             max_rx = str(tmp[0]['rx-max'])
@@ -326,6 +329,30 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             # ring-buffer size got increased
             self.assertEqual(max_rx, rx)
             self.assertEqual(max_tx, tx)
+
+    def test_ethtool_flow_control(self):
+        for interface in self._interfaces:
+            # Disable flow-control
+            self.cli_set(self._base_path + [interface, 'disable-flow-control'])
+            # Check current flow-control state on ethernet interface
+            out, err = popen(f'sudo ethtool --json --show-pause {interface}')
+            # Flow-control not supported - test if it bails out with a proper
+            # this is a dynamic path where err = 1 on VMware, but err = 0 on
+            # a physical box.
+            if bool(err):
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+            else:
+                out = loads(out)
+                # Flow control is on
+                self.assertTrue(out[0]['autonegotiate'])
+
+                # commit change on CLI to disable-flow-control and re-test
+                self.cli_commit()
+
+                out, err = popen(f'sudo ethtool --json --show-pause {interface}')
+                out = loads(out)
+                self.assertFalse(out[0]['autonegotiate'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

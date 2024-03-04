@@ -32,16 +32,24 @@ class Ethtool:
     """
     # dictionary containing driver featurs, it will be populated on demand and
     # the content will look like:
-    # {
-    #   'tls-hw-tx-offload': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-fcoe-crc': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-ip-generic': {'fixed': False, 'enabled': True},
-    #   'tx-checksum-ipv4': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-ipv6': {'fixed': True, 'enabled': False},
-    #   'tx-checksum-sctp': {'fixed': True, 'enabled': False},
-    #   'tx-checksumming': {'fixed': False, 'enabled': True},
-    #   'tx-esp-segmentation': {'fixed': True, 'enabled': False},
-    # }
+    # [{'esp-hw-offload': {'active': False, 'fixed': True, 'requested': False},
+    #   'esp-tx-csum-hw-offload': {'active': False,
+    #                              'fixed': True,
+    #                              'requested': False},
+    #   'fcoe-mtu': {'active': False, 'fixed': True, 'requested': False},
+    #   'generic-receive-offload': {'active': True,
+    #                               'fixed': False,
+    #                               'requested': True},
+    #   'generic-segmentation-offload': {'active': True,
+    #                                    'fixed': False,
+    #                                    'requested': True},
+    #   'highdma': {'active': True, 'fixed': False, 'requested': True},
+    #   'ifname': 'eth0',
+    #   'l2-fwd-offload': {'active': False, 'fixed': True, 'requested': False},
+    #   'large-receive-offload': {'active': False,
+    #                             'fixed': False,
+    #                             'requested': False},
+    # ...
     _features = { }
     # dictionary containing available interface speed and duplex settings
     # {
@@ -54,8 +62,7 @@ class Ethtool:
     _driver_name = None
     _auto_negotiation = False
     _auto_negotiation_supported = None
-    _flow_control = False
-    _flow_control_enabled = None
+    _flow_control = None
     _eee = False
     _eee_enabled = None
 
@@ -97,31 +104,19 @@ class Ethtool:
                 tmp = line.split()[-1]
                 self._auto_negotiation = bool(tmp == 'on')
 
-        # Now populate features dictionaty
-        out, _ = popen(f'ethtool --show-features {ifname}')
-        # skip the first line, it only says: "Features for eth0":
-        for line in out.splitlines()[1:]:
-            if ":" in line:
-                key, value = [s.strip() for s in line.strip().split(":", 1)]
-                fixed = bool('fixed' in value)
-                if fixed:
-                    value = value.split()[0].strip()
-                self._features[key.strip()] = {
-                    'enabled' : bool(value == 'on'),
-                    'fixed' : fixed
-                }
+        # Now populate driver features
+        out, _ = popen(f'ethtool --json --show-features {ifname}')
+        self._features = loads(out)
 
+        # Get information about NIC ring buffers
         out, _ = popen(f'ethtool --json --show-ring {ifname}')
         self._ring_buffer = loads(out)
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
-        out, _ = popen(f'ethtool --show-pause {ifname}')
-        if len(out.splitlines()) > 1:
-            self._flow_control = True
-            # read current flow control setting, this returns:
-            # ['Autonegotiate:', 'on']
-            self._flow_control_enabled = out.splitlines()[1].split()[-1]
+        out, err = popen(f'ethtool --json --show-pause {ifname}')
+        if not bool(err):
+            self._flow_control = loads(out)
 
         # Get current Energy Efficient Ethernet (EEE) settings, but this is
         # not supported by all NICs (e.g. vmxnet3 does not support is)
@@ -149,14 +144,12 @@ class Ethtool:
 
         In case of a missing key, return "fixed = True and enabled = False"
         """
+        active = False
         fixed = True
-        enabled = False
-        if feature in self._features:
-            if 'enabled' in self._features[feature]:
-                enabled = self._features[feature]['enabled']
-            if 'fixed' in self._features[feature]:
-                fixed = self._features[feature]['fixed']
-        return enabled, fixed
+        if feature in self._features[0]:
+            active = bool(self._features[0][feature]['active'])
+            fixed = bool(self._features[0][feature]['fixed'])
+        return active, fixed
 
     def get_generic_receive_offload(self):
         return self._get_generic('generic-receive-offload')
@@ -210,15 +203,14 @@ class Ethtool:
 
     def check_flow_control(self):
         """ Check if the NIC supports flow-control """
-        if self.get_driver_name() in _drivers_without_speed_duplex_flow:
-            return False
-        return self._flow_control
+        return bool(self._flow_control)
 
     def get_flow_control(self):
-        if self._flow_control_enabled == None:
+        if self._flow_control == None:
             raise ValueError('Interface does not support changing '\
                              'flow-control settings!')
-        return self._flow_control_enabled
+
+        return 'on' if bool(self._flow_control[0]['autonegotiate']) else 'off'
 
     def check_eee(self):
         """ Check if the NIC supports eee """
