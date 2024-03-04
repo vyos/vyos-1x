@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -240,7 +240,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def test_ospf_07_redistribute(self):
         metric = '15'
         metric_type = '1'
-        redistribute = ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
+        redistribute = ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
 
         for protocol in redistribute:
             self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])
