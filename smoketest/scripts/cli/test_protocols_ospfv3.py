@@ -118,7 +118,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         metric_type = '1'
         route_map = 'foo-bar'
         route_map_seq = '10'
-        redistribute = ['bgp', 'connected', 'kernel', 'ripng', 'static']
+        redistribute = ['babel', 'bgp', 'connected', 'isis', 'kernel', 'ripng', 'static']
 
         self.cli_set(['policy', 'route-map', route_map, 'rule', route_map_seq, 'action', 'permit'])
 
