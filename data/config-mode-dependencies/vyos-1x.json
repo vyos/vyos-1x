@@ -31,6 +31,9 @@
         "rpki": ["protocols_rpki"],
         "sstp": ["vpn_sstp"]
     },
+    "vpn_ipsec": {
+        "nhrp": ["protocols_nhrp"]
+    },
     "vpn_l2tp": {
         "ipsec": ["vpn_ipsec"]
     },
