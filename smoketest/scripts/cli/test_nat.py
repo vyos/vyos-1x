@@ -87,21 +87,28 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         address_group_member = '192.0.2.1'
         interface_group = 'smoketest_ifaces'
         interface_group_member = 'bond.99'
-        rule = '100'
 
         self.cli_set(['firewall', 'group', 'address-group', address_group, 'address', address_group_member])
         self.cli_set(['firewall', 'group', 'interface-group', interface_group, 'interface', interface_group_member])
 
-        self.cli_set(src_path + ['rule', rule, 'source', 'group', 'address-group', address_group])
-        self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'group', interface_group])
-        self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
+        self.cli_set(src_path + ['rule', '100', 'source', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', '100', 'outbound-interface', 'group', interface_group])
+        self.cli_set(src_path + ['rule', '100', 'translation', 'address', 'masquerade'])
+
+        self.cli_set(src_path + ['rule', '110', 'source', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', '110', 'translation', 'address', '203.0.113.1'])
+
+        self.cli_set(src_path + ['rule', '120', 'source', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', '120', 'translation', 'address', '203.0.113.111/32'])
 
         self.cli_commit()
 
         nftables_search = [
             [f'set A_{address_group}'],
             [f'elements = {{ {address_group_member} }}'],
-            [f'ip saddr @A_{address_group}', f'oifname @I_{interface_group}', 'masquerade']
+            [f'ip saddr @A_{address_group}', f'oifname @I_{interface_group}', 'masquerade'],
+            [f'ip saddr @A_{address_group}', 'snat to 203.0.113.1'],
+            [f'ip saddr @A_{address_group}', 'snat prefix to 203.0.113.111/32']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
