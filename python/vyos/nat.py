@@ -89,11 +89,14 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
             if addr and is_ip_network(addr):
                 if not ipv6:
                     map_addr =  dict_search_args(rule_conf, nat_type, 'address')
-                    if port:
-                        translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} . {port} }}')
+                    if map_addr:
+                        if port:
+                            translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} . {port} }}')
+                        else:
+                            translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
+                        ignore_type_addr = True
                     else:
-                        translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
-                    ignore_type_addr = True
+                        translation_output.append(f'prefix to {addr}')
                 else:
                     translation_output.append(f'prefix to {addr}')
             elif addr == 'masquerade':
