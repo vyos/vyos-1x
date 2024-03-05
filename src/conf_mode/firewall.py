@@ -282,6 +282,15 @@ def verify_rule(firewall, rule_conf, ipv6):
         if direction in rule_conf:
             if 'name' in rule_conf[direction] and 'group' in rule_conf[direction]:
                 raise ConfigError(f'Cannot specify both interface group and interface name for {direction}')
+            if 'group' in rule_conf[direction]:
+                group_name = rule_conf[direction]['group']
+                if group_name[0] == '!':
+                    group_name = group_name[1:]
+                group_obj = dict_search_args(firewall, 'group', 'interface_group', group_name)
+                if group_obj is None:
+                    raise ConfigError(f'Invalid interface group "{group_name}" on firewall rule')
+                if not group_obj:
+                    Warning(f'interface-group "{group_name}" has no members!')
 
 def verify_nested_group(group_name, group, groups, seen):
     if 'include' not in group:
