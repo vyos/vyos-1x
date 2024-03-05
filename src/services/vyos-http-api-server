@@ -459,7 +459,6 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
                   request: Request, background_tasks: BackgroundTasks):
     session = app.state.vyos_session
     env = session.get_session_env()
-    config = Config(session_env=env)
 
     endpoint = request.url.path
 
@@ -473,6 +472,8 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
     # or modify the shared session while someone else is doing the same,
     # so the lock is really global
     lock.acquire()
+
+    config = Config(session_env=env)
 
     status = 200
     msg = None
