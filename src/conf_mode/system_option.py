@@ -92,6 +92,8 @@ def generate(options):
     if 'kernel' in options:
         if 'disable_mitigations' in options['kernel']:
             cmdline_options.append('mitigations=off')
+        if 'disable_power_saving' in options['kernel']:
+            cmdline_options.append('intel_idle.max_cstate=0 processor.max_cstate=1')
     grub_util.update_kernel_cmdline_options(' '.join(cmdline_options))
 
     return None
