@@ -18,12 +18,7 @@
     #include <include/firewall/source-destination-group.xml.i>
   </children>
 </node>
-<leafNode name="disable">
-  <properties>
-    <help>Option to disable firewall rule</help>
-    <valueless/>
-  </properties>
-</leafNode>
+#include <include/generic-disable-node.xml.i>
 <node name="fragment">
   <properties>
     <help>IP fragment match</help>
