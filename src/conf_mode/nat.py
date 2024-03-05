@@ -153,6 +153,15 @@ def verify(nat):
                 elif 'name' in config['outbound_interface']:
                     if config['outbound_interface']['name'] not in 'any' and config['outbound_interface']['name'] not in interfaces():
                         Warning(f'NAT interface "{config["outbound_interface"]["name"]}" for source NAT rule "{rule}" does not exist!')
+                else:
+                    group_name = config['outbound_interface']['group']
+                    if group_name[0] == '!':
+                        group_name = group_name[1:]
+                    group_obj = dict_search_args(nat['firewall_group'], 'interface_group', group_name)
+                    if group_obj is None:
+                        raise ConfigError(f'Invalid interface group "{group_name}" on source nat rule')
+                    if not group_obj:
+                        Warning(f'interface-group "{group_name}" has no members!')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config):
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
@@ -177,6 +186,15 @@ def verify(nat):
                 elif 'name' in config['inbound_interface']:
                     if config['inbound_interface']['name'] not in 'any' and config['inbound_interface']['name'] not in interfaces():
                         Warning(f'NAT interface "{config["inbound_interface"]["name"]}" for destination NAT rule "{rule}" does not exist!')
+                else:
+                    group_name = config['inbound_interface']['group']
+                    if group_name[0] == '!':
+                        group_name = group_name[1:]
+                    group_obj = dict_search_args(nat['firewall_group'], 'interface_group', group_name)
+                    if group_obj is None:
+                        raise ConfigError(f'Invalid interface group "{group_name}" on destination nat rule')
+                    if not group_obj:
+                        Warning(f'interface-group "{group_name}" has no members!')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config) and 'redirect' not in config['translation']:
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
