@@ -52,6 +52,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="disable-syslog">
+            <properties>
+              <help>Disable connection logging via Syslog</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="event-listen-queue-size">
             <properties>
               <help>Queue size for local conntrack events</help>
