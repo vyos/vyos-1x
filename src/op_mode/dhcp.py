@@ -31,6 +31,7 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.kea import kea_get_active_config
 from vyos.kea import kea_get_leases
 from vyos.kea import kea_get_pool_from_subnet_id
+from vyos.kea import kea_delete_lease
 from vyos.utils.process import is_systemd_service_running
 
 time_string = "%a %b %d %H:%M:%S %Z %Y"
@@ -359,6 +360,28 @@ def show_server_static_mappings(raw: bool, family: ArgFamily, pool: typing.Optio
         return static_mappings
     else:
         return _get_formatted_server_static_mappings(static_mappings, family=family)
+
+def _lease_valid(inet, address):
+    leases = kea_get_leases(inet)
+    for lease in leases:
+        if address == lease['ip-address']:
+            return True
+    return False
+
+@_verify
+def clear_dhcp_server_lease(family: ArgFamily, address: str):
+    v = 'v6' if family == 'inet6' else ''
+    inet = '6' if family == 'inet6' else '4'
+
+    if not _lease_valid(inet, address):
+        print(f'Lease not found on DHCP{v} server')
+        return None
+
+    if not kea_delete_lease(inet, address):
+        print(f'Failed to clear lease for "{address}"')
+        return None
+
+    print(f'Lease "{address}" has been cleared')
 
 def _get_raw_client_leases(family='inet', interface=None):
     from time import mktime

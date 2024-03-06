@@ -1,5 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="dhcp-server">
+        <properties>
+          <help>Clear DHCP server lease</help>
+        </properties>
+        <children>
+          <tagNode name="lease">
+            <properties>
+              <help>DHCP server lease</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/dhcp.py clear_dhcp_server_lease --family inet --address $4</command>
+          </tagNode>
+        </children>
+      </node>
+      <node name="dhcpv6-server">
+        <properties>
+          <help>Clear DHCPv6 server lease</help>
+        </properties>
+        <children>
+          <tagNode name="lease">
+            <properties>
+              <help>DHCPv6 server lease</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/dhcp.py clear_dhcp_server_lease --family inet6 --address $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="show">
     <children>
       <node name="dhcp">

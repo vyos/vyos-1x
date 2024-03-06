@@ -328,6 +328,18 @@ def kea_get_leases(inet):
 
     return leases['arguments']['leases']
 
+def kea_delete_lease(inet, ip_address):
+    ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'
+
+    args = {'ip-address': ip_address}
+
+    result = _ctrl_socket_command(ctrl_socket, f'lease{inet}-del', args)
+
+    if result and 'result' in result:
+        return result['result'] == 0
+
+    return False
+
 def kea_get_active_config(inet):
     ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'
 
