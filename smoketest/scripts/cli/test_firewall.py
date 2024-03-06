@@ -629,8 +629,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['ct state { established, related }', 'accept'],
             ['ct state invalid', 'reject'],
-            ['ct state new', 'ct status == dnat', 'accept'],
-            ['ct state { established, new }', 'ct status == snat', 'accept'],
+            ['ct state new', 'ct status dnat', 'accept'],
+            ['ct state { established, new }', 'ct status snat', 'accept'],
             ['ct state related', 'ct helper { "ftp", "pptp" }', 'accept'],
             ['drop', f'comment "{name} default-action drop"'],
             ['jump VYOS_STATE_POLICY'],
