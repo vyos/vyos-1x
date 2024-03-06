@@ -25,6 +25,8 @@ from time import time
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import dynamic_interface_pattern
@@ -96,6 +98,9 @@ def get_config(config=None):
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
     ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
+
+    if ipsec['nhrp_exists']:
+        set_dependents('nhrp', conf)
 
     tmp = conf.get_config_dict(l2tp_base, key_mangling=('-', '_'),
                                no_tag_node_value_mangle=True,
@@ -575,13 +580,6 @@ def generate(ipsec):
     render(interface_conf, 'ipsec/interfaces_use.conf.j2', ipsec)
     render(swanctl_conf, 'ipsec/swanctl.conf.j2', ipsec)
 
-def resync_nhrp(ipsec):
-    if ipsec and not ipsec['nhrp_exists']:
-        return
-
-    tmp = run('/usr/libexec/vyos/conf_mode/protocols_nhrp.py')
-    if tmp > 0:
-        print('ERROR: failed to reapply NHRP settings!')
 
 def apply(ipsec):
     systemd_service = 'strongswan.service'
@@ -590,7 +588,14 @@ def apply(ipsec):
     else:
         call(f'systemctl reload-or-restart {systemd_service}')
 
-    resync_nhrp(ipsec)
+        if ipsec.get('nhrp_exists', False):
+            try:
+                call_dependents()
+            except ConfigError:
+                # Ignore config errors on dependent due to being called too early. Example:
+                # ConfigError("ConfigError('Interface ethN requires an IP address!')")
+                pass
+
 
 if __name__ == '__main__':
     try:
