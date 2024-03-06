@@ -136,10 +136,10 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     if 'connection_status' in rule_conf and rule_conf['connection_status']:
         status = rule_conf['connection_status']
         if status['nat'] == 'destination':
-            nat_status = '{dnat}'
+            nat_status = 'dnat'
             output.append(f'ct status {nat_status}')
         if status['nat'] == 'source':
-            nat_status = '{snat}'
+            nat_status = 'snat'
             output.append(f'ct status {nat_status}')
 
     if 'protocol' in rule_conf and rule_conf['protocol'] != 'all':
