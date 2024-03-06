@@ -76,7 +76,7 @@ General {
     HashSize {{ hash_size }}
     HashLimit {{ table_size | int *2 }}
     LogFile off
-    Syslog on
+    Syslog {{ 'off' if disable_syslog is vyos_defined else 'on' }}
     LockFile /var/lock/conntrack.lock
     UNIX {
         Path /var/run/conntrackd.ctl
