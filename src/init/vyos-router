@@ -218,8 +218,8 @@ cleanup_post_commit_hooks () {
     # note that this approach only supports hooks that are "configured",
     # i.e., it does not support hooks that need to always be present.
     cpostdir=$(cli-shell-api getPostCommitHookDir)
-    # exclude commits hooks from vyatta-cfg
-    excluded="10vyatta-log-commit.pl 99vyos-user-postcommit-hooks"
+    # exclude commit hooks that need to always be present
+    excluded="00vyos-sync 10vyatta-log-commit.pl 99vyos-user-postcommit-hooks"
     if [ -d "$cpostdir" ]; then
 	    for f in $cpostdir/*; do
 	        if [[ ! $excluded =~ $(basename $f) ]]; then
