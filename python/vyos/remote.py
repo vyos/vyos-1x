@@ -43,6 +43,7 @@ from vyos.utils.io import print_error
 from vyos.utils.misc import begin
 from vyos.utils.process import cmd, rc_cmd
 from vyos.version import get_version
+from vyos.base import Warning
 
 CHUNK_SIZE = 8192
 
@@ -54,13 +55,16 @@ class InteractivePolicy(MissingHostKeyPolicy):
     def missing_host_key(self, client, hostname, key):
         print_error(f"Host '{hostname}' not found in known hosts.")
         print_error('Fingerprint: ' + key.get_fingerprint().hex())
-        if sys.stdin.isatty() and ask_yes_no('Do you wish to continue?'):
-            if client._host_keys_filename\
-               and ask_yes_no('Do you wish to permanently add this host/key pair to known hosts?'):
-                client._host_keys.add(hostname, key.get_name(), key)
-                client.save_host_keys(client._host_keys_filename)
-        else:
+        if not sys.stdin.isatty():
+            return
+        if not ask_yes_no('Do you wish to continue?'):
             raise SSHException(f"Cannot connect to unknown host '{hostname}'.")
+        if client._host_keys_filename is None:
+            Warning('no \'known_hosts\' file; create to store keys permanently')
+            return
+        if ask_yes_no('Do you wish to permanently add this host/key pair to known_hosts file?'):
+            client._host_keys.add(hostname, key.get_name(), key)
+            client.save_host_keys(client._host_keys_filename)
 
 class SourceAdapter(HTTPAdapter):
     """
