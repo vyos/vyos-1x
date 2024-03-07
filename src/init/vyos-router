@@ -64,6 +64,69 @@ disabled () {
     grep -q -w no-vyos-$1 /proc/cmdline
 }
 
+# Load encrypted config volume
+mount_encrypted_config() {
+    persist_path=$(/opt/vyatta/sbin/vyos-persistpath)
+    if [ $? == 0 ]; then
+        if [ -e $persist_path/boot ]; then
+            image_name=$(cat /proc/cmdline | sed -e s+^.*vyos-union=/boot/++ | sed -e 's/ .*$//')
+
+            if [ -z "$image_name" ]; then
+                return
+            fi
+
+            if [ ! -f $persist_path/luks/$image_name ]; then
+                return
+            fi
+
+            vyos_tpm_key=$(python3 -c 'from vyos.tpm import read_tpm_key; print(read_tpm_key().decode())' 2>/dev/null)
+
+            if [ $? -ne 0 ]; then
+                echo "ERROR: Failed to fetch encryption key from TPM. Encrypted config volume has not been mounted"
+                echo "Use 'encryption load' to load volume with recovery key"
+                echo "or 'encryption disable' to decrypt volume with recovery key"
+                return
+            fi
+
+            echo $vyos_tpm_key | tr -d '\r\n' | cryptsetup open $persist_path/luks/$image_name vyos_config --key-file=-
+
+            if [ $? -ne 0 ]; then
+                echo "ERROR: Failed to decrypt config volume. Encrypted config volume has not been mounted"
+                echo "Use 'encryption load' to load volume with recovery key"
+                echo "or 'encryption disable' to decrypt volume with recovery key"
+                return
+            fi
+
+            mount /dev/mapper/vyos_config /config
+            mount /dev/mapper/vyos_config $vyatta_sysconfdir/config
+
+            echo "Mounted encrypted config volume"
+        fi
+    fi
+}
+
+unmount_encrypted_config() {
+    persist_path=$(/opt/vyatta/sbin/vyos-persistpath)
+    if [ $? == 0 ]; then
+        if [ -e $persist_path/boot ]; then
+            image_name=$(cat /proc/cmdline | sed -e s+^.*vyos-union=/boot/++ | sed -e 's/ .*$//')
+
+            if [ -z "$image_name" ]; then
+                return
+            fi
+
+            if [ ! -f $persist_path/luks/$image_name ]; then
+                return
+            fi
+
+            umount /config
+            umount $vyatta_sysconfdir/config
+
+            cryptsetup close vyos_config
+        fi
+    fi
+}
+
 # if necessary, provide initial config
 init_bootfile () {
     if [ ! -r $BOOTFILE ] ; then
@@ -402,6 +465,8 @@ start ()
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
 
+    mount_encrypted_config
+
     # T5239: early read of system hostname as this value is read-only once during
     # FRR initialisation
     tmp=$(${vyos_libexec_dir}/read-saved-value.py --path "system host-name")
@@ -470,6 +535,8 @@ stop()
     log_action_end_msg $?
 
     systemctl stop frr.service
+
+    unmount_encrypted_config
 }
 
 case "$action" in
