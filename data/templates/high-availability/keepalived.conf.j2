@@ -33,6 +33,24 @@ global_defs {
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
 
+{# Sync group has own health-check scripts T6020 #}
+{% if vrrp.sync_group is vyos_defined %}
+{%     for name, sync_group_config in vrrp.sync_group.items() if sync_group_config.disable is not vyos_defined %}
+{%         if sync_group_config.health_check is vyos_defined %}
+vrrp_script healthcheck_sg_{{ name }} {
+{%             if sync_group_config.health_check.script is vyos_defined %}
+    script "{{ sync_group_config.health_check.script }}"
+{%             elif sync_group_config.health_check.ping is vyos_defined %}
+    script "/usr/bin/ping -c1 {{ sync_group_config.health_check.ping }}"
+{%             endif %}
+    interval {{ sync_group_config.health_check.interval }}
+    fall {{ sync_group_config.health_check.failure_count }}
+    rise 1
+}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+
 {% if vrrp.group is vyos_defined %}
 {%     for name, group_config in vrrp.group.items() if group_config.disable is not vyos_defined %}
 {%         if group_config.health_check is vyos_defined %}
@@ -132,7 +150,8 @@ vrrp_instance {{ name }} {
 {%             endfor %}
     }
 {%         endif %}
-{%         if group_config.health_check is vyos_defined %}
+{# Sync group member can't use own health check script #}
+{%         if group_config.health_check is vyos_defined and group_config._is_sync_group_member is not vyos_defined %}
     track_script {
         healthcheck_{{ name }}
     }
@@ -152,16 +171,12 @@ vrrp_sync_group {{ name }} {
 {%         endif %}
     }
 
-{# Health-check scripts should be in section sync-group if member is part of the sync-group T4081 #}
-{%         if vrrp.group is vyos_defined %}
-{%             for name, group_config in vrrp.group.items() if group_config.disable is not vyos_defined %}
-{%                 if group_config.health_check.script is vyos_defined and name in sync_group_config.member %}
+{%         if sync_group_config.health_check is vyos_defined %}
     track_script {
-        healthcheck_{{ name }}
+        healthcheck_sg_{{ name }}
     }
-{%                 endif %}
-{%             endfor %}
 {%         endif %}
+
 {%         if conntrack_sync_group is vyos_defined(name) %}
 {%             set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
     notify_master "{{ vyos_helper }} master {{ name }}"
