@@ -141,8 +141,13 @@ trap2sink {{ trap }}:{{ trap_config.port }} {{ trap_config.community }}
 # views
 {%         for view, view_config in v3.view.items() %}
 {%             if view_config.oid is vyos_defined %}
-{%                 for oid in view_config.oid %}
+{%                 for oid, oid_config in view_config.oid.items() %}
 view {{ view }} included .{{ oid }}
+{%                     if oid_config.exclude is vyos_defined %}
+{%                         for excluded in oid_config.exclude %}
+view {{ view }} excluded .{{ excluded }}
+{%                         endfor %}
+{%                     endif %}
 {%                 endfor %}
 {%             endif %}
 {%         endfor %}
