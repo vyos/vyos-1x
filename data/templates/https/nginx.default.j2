@@ -21,6 +21,10 @@ server {
     server_name {{ hostname }};
     root /srv/localui;
 
+{% if request_body_size_limit is vyos_defined %}
+    client_max_body_size {{ request_body_size_limit }}M;
+{% endif %}
+
     # SSL configuration
 {% if certificates.cert_path is vyos_defined and certificates.key_path is vyos_defined %}
     ssl_certificate {{ certificates.cert_path }};
