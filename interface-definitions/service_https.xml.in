@@ -138,6 +138,19 @@
           <leafNode name='port'>
             <defaultValue>443</defaultValue>
           </leafNode>
+          <leafNode name="request-body-size-limit">
+            <properties>
+              <help>Maximum request body size in megabytes</help>
+              <valueHelp>
+                <format>u32:1-256</format>
+                <description>Request body size in megabytes</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-256"/>
+              </constraint>
+            </properties>
+            <defaultValue>1</defaultValue>
+          </leafNode>
           <node name="certificates">
             <properties>
               <help>TLS certificates</help>
