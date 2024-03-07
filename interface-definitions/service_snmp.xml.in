@@ -543,6 +543,7 @@
                       <leafNode name="exclude">
                         <properties>
                           <help>Exclude is an optional argument</help>
+                          <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="mask">
