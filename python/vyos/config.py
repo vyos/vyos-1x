@@ -110,7 +110,7 @@ def config_dict_mangle_acme(name, cli_dict):
         vyos_certbot_dir = directories['certbot']
 
         if 'acme' in cli_dict:
-            tmp = read_file(f'{vyos_certbot_dir}/live/{name}/cert.pem')
+            tmp = read_file(f'{vyos_certbot_dir}/live/{name}/fullchain.pem')
             tmp = load_certificate(tmp, wrap_tags=False)
             cert_base64 = "".join(encode_certificate(tmp).strip().split("\n")[1:-1])
 
