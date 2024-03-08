@@ -174,8 +174,11 @@ def verify(dhcp):
             # DHCP failover needs at least one subnet that uses it
             if 'enable_failover' in subnet_config:
                 if 'failover' not in dhcp:
-                    raise ConfigError(f'Can not enable failover for "{subnet}" in "{network}".\n' \
+                    raise ConfigError(f'Cannot enable failover for "{subnet}" in "{network}".\n' \
                                       'Failover is not configured globally!')
+                if 'range' not in subnet_config:
+                    raise ConfigError(f'Cannot enable failover for "{subnet}" in "{network}".\n' \
+                                      f'Range is not configured for "{subnet}"')
                 failover_ok = True
 
             # Check if DHCP address range is inside configured subnet declaration
