@@ -56,6 +56,8 @@ kea6_options = {
     'captive_portal': 'v6-captive-portal'
 }
 
+kea_ctrl_socket = '/run/kea/dhcp{inet}-ctrl-socket'
+
 def kea_parse_options(config):
     options = []
 
@@ -294,7 +296,9 @@ def kea6_parse_subnet(subnet, config):
 
     return out
 
-def _ctrl_socket_command(path, command, args=None):
+def _ctrl_socket_command(inet, command, args=None):
+    path = kea_ctrl_socket.format(inet=inet)
+
     if not os.path.exists(path):
         return None
 
@@ -319,19 +323,25 @@ def _ctrl_socket_command(path, command, args=None):
         return json.loads(result.decode('utf-8'))
 
 def kea_get_leases(inet):
-    ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'
-
-    leases = _ctrl_socket_command(ctrl_socket, f'lease{inet}-get-all')
+    leases = _ctrl_socket_command(inet, f'lease{inet}-get-all')
 
     if not leases or 'result' not in leases or leases['result'] != 0:
         return []
 
     return leases['arguments']['leases']
 
-def kea_get_active_config(inet):
-    ctrl_socket = f'/run/kea/dhcp{inet}-ctrl-socket'
+def kea_delete_lease(inet, ip_address):
+    args = {'ip-address': ip_address}
 
-    config = _ctrl_socket_command(ctrl_socket, 'config-get')
+    result = _ctrl_socket_command(inet, f'lease{inet}-del', args)
+
+    if result and 'result' in result:
+        return result['result'] == 0
+
+    return False
+
+def kea_get_active_config(inet):
+    config = _ctrl_socket_command(inet, 'config-get')
 
     if not config or 'result' not in config or config['result'] != 0:
         return None
