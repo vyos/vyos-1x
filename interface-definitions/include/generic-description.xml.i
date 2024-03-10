@@ -7,9 +7,9 @@
       <description>Description</description>
     </valueHelp>
     <constraint>
-      <regex>[[:ascii:]]{0,256}</regex>
+      <regex>[[:ascii:]]{1,255}</regex>
     </constraint>
-    <constraintErrorMessage>Description too long (limit 256 characters)</constraintErrorMessage>
+    <constraintErrorMessage>Description too long (limit 255 characters)</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
