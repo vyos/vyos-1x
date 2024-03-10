@@ -256,6 +256,9 @@ Depends:
 # For "nat64"
   jool,
 # End "nat64"
+# For "system conntrack modules rtsp"
+  nat-rtsp,
+# End "system conntrack modules rtsp"
 # For "system ntp"
   chrony,
 # End "system ntp"

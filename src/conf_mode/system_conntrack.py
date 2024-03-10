@@ -58,6 +58,11 @@ module_map = {
         'nftables': ['tcp dport {1723} ct helper set "pptp_tcp" return'],
         'ipv4': True
      },
+    'rtsp': {
+        'ko': ['nf_nat_rtsp', 'nf_conntrack_rtsp'],
+        'nftables': ['tcp dport {554} ct helper set "rtsp_tcp" return'],
+        'ipv4': True
+    },
     'sip': {
         'ko': ['nf_nat_sip', 'nf_conntrack_sip'],
         'nftables': ['tcp dport {5060,5061} ct helper set "sip_tcp" return',
@@ -195,7 +200,7 @@ def generate(conntrack):
 def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
     # modules we need to either insmod or rmmod the helpers.
-    
+
     add_modules = []
     rm_modules = []
 

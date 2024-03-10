@@ -22,6 +22,10 @@
       <description>Related traffic from NFS helper</description>
     </valueHelp>
     <valueHelp>
+      <format>rtsp</format>
+      <description>Related traffic from RTSP helper</description>
+    </valueHelp>
+    <valueHelp>
       <format>sip</format>
       <description>Related traffic from SIP helper</description>
     </valueHelp>
@@ -34,7 +38,7 @@
       <description>Related traffic from SQLNet helper</description>
     </valueHelp>
     <constraint>
-      <regex>(ftp|h323|pptp|nfs|sip|tftp|sqlnet)</regex>
+      <regex>(ftp|h323|pptp|nfs|rtsp|sip|tftp|sqlnet)</regex>
     </constraint>
     <multi/>
   </properties>
