@@ -7,7 +7,7 @@
       <description>Description</description>
     </valueHelp>
     <constraint>
-      <regex>[[:ascii:]]{0,255}</regex>
+      <regex>.{0,255}</regex>
     </constraint>
     <constraintErrorMessage>Description too long (limit 255 characters)</constraintErrorMessage>
   </properties>
