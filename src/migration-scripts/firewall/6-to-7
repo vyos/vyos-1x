@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@
 #        utc: nftables userspace uses localtime and calculates the UTC offset automatically
 #        icmp/v6: migrate previously available `type-name` to valid type/code
 # T4178: Update tcp flags to use multi value node
+# T6071: CLI description limit of 256 characters
 
 import re
 
@@ -26,7 +27,6 @@ from sys import argv
 from sys import exit
 
 from vyos.configtree import ConfigTree
-from vyos.ifconfig import Section
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -36,6 +36,8 @@ file_name = argv[1]
 
 with open(file_name, 'r') as f:
     config_file = f.read()
+
+max_len_description = 255
 
 base = ['firewall']
 config = ConfigTree(config_file)
@@ -105,12 +107,30 @@ icmpv6_translations = {
     'unknown-option': [4, 2]
 }
 
+if config.exists(base + ['group']):
+    for group_type in config.list_nodes(base + ['group']):
+        for group_name in config.list_nodes(base + ['group', group_type]):
+            name_description = base + ['group', group_type, group_name, 'description']
+            if config.exists(name_description):
+                tmp = config.return_value(name_description)
+                config.set(name_description, value=tmp[:max_len_description])
+
 if config.exists(base + ['name']):
     for name in config.list_nodes(base + ['name']):
+        name_description = base + ['name', name, 'description']
+        if config.exists(name_description):
+            tmp = config.return_value(name_description)
+            config.set(name_description, value=tmp[:max_len_description])
+
         if not config.exists(base + ['name', name, 'rule']):
             continue
 
         for rule in config.list_nodes(base + ['name', name, 'rule']):
+            rule_description = base + ['name', name, 'rule', rule, 'description']
+            if config.exists(rule_description):
+                tmp = config.return_value(rule_description)
+                config.set(rule_description, value=tmp[:max_len_description])
+
             rule_recent = base + ['name', name, 'rule', rule, 'recent']
             rule_time = base + ['name', name, 'rule', rule, 'time']
             rule_tcp_flags = base + ['name', name, 'rule', rule, 'tcp', 'flags']
@@ -161,10 +181,20 @@ if config.exists(base + ['name']):
 
 if config.exists(base + ['ipv6-name']):
     for name in config.list_nodes(base + ['ipv6-name']):
+        name_description = base + ['ipv6-name', name, 'description']
+        if config.exists(name_description):
+            tmp = config.return_value(name_description)
+            config.set(name_description, value=tmp[:max_len_description])
+
         if not config.exists(base + ['ipv6-name', name, 'rule']):
             continue
 
         for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
+            rule_description = base + ['ipv6-name', name, 'rule', rule, 'description']
+            if config.exists(rule_description):
+                tmp = config.return_value(rule_description)
+                config.set(rule_description, value=tmp[:max_len_description])
+
             rule_recent = base + ['ipv6-name', name, 'rule', rule, 'recent']
             rule_time = base + ['ipv6-name', name, 'rule', rule, 'time']
             rule_tcp_flags = base + ['ipv6-name', name, 'rule', rule, 'tcp', 'flags']
