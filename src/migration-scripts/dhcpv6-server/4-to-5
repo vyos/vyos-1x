@@ -42,8 +42,11 @@ def find_subnet_interface(subnet):
     def check_addr(if_path):
         if config.exists(if_path + ['address']):
             for addr in config.return_values(if_path + ['address']):
-                if ip_network(addr, strict=False) == subnet_net:
-                    return True
+                try:
+                    if ip_network(addr, strict=False) == subnet_net:
+                        return True
+                except:
+                    pass # interface address was probably "dhcp" or other magic string
         return None
 
     for iftype in config.list_nodes(['interfaces']):
