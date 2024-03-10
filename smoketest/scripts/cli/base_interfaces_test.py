@@ -318,6 +318,22 @@ class BasicInterfaceTest:
                 self.assertEqual(tmp, str())
                 self.assertEqual(Interface(intf).get_alias(), str())
 
+            # Test maximum interface description lengt (255 characters)
+            test_string='abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789___'
+            for intf in self._interfaces:
+
+                self.cli_set(self._base_path + [intf, 'description', test_string])
+                for option in self._options.get(intf, []):
+                    self.cli_set(self._base_path + [intf] + option.split())
+
+            self.cli_commit()
+
+            # Validate interface description
+            for intf in self._interfaces:
+                tmp = read_file(f'/sys/class/net/{intf}/ifalias')
+                self.assertEqual(tmp, test_string)
+                self.assertEqual(Interface(intf).get_alias(), test_string)
+
         def test_add_single_ip_address(self):
             addr = '192.0.2.0/31'
             for intf in self._interfaces:
