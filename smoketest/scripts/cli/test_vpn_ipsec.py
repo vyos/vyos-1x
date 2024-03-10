@@ -31,7 +31,7 @@ nhrp_path = ['protocols', 'nhrp']
 base_path = ['vpn', 'ipsec']
 
 charon_file = '/etc/strongswan.d/charon.conf'
-dhcp_waiting_file = '/tmp/ipsec_dhcp_waiting'
+dhcp_interfaces_file = '/tmp/ipsec_dhcp_interfaces'
 swanctl_file = '/etc/swanctl/swanctl.conf'
 
 peer_ip = '203.0.113.45'
@@ -178,10 +178,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        self.assertTrue(os.path.exists(dhcp_waiting_file))
+        self.assertTrue(os.path.exists(dhcp_interfaces_file))
 
-        dhcp_waiting = read_file(dhcp_waiting_file)
-        self.assertIn(f'{interface}.{vif}', dhcp_waiting) # Ensure dhcp-failed interface was added for dhclient hook
+        dhcp_interfaces = read_file(dhcp_interfaces_file)
+        self.assertIn(f'{interface}.{vif}', dhcp_interfaces) # Ensure dhcp interface was added for dhclient hook
 
         self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
 
@@ -950,10 +950,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        self.assertTrue(os.path.exists(dhcp_waiting_file))
+        self.assertTrue(os.path.exists(dhcp_interfaces_file))
 
-        dhcp_waiting = read_file(dhcp_waiting_file)
-        self.assertIn(f'{interface}.{vif}', dhcp_waiting) # Ensure dhcp-failed interface was added for dhclient hook
+        dhcp_interfaces = read_file(dhcp_interfaces_file)
+        self.assertIn(f'{interface}.{vif}', dhcp_interfaces) # Ensure dhcp interface was added for dhclient hook
 
         self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
 

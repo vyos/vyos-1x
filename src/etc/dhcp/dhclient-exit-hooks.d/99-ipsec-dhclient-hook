@@ -14,60 +14,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_waiting"
+DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_interfaces"
 
-if [ -f $DHCP_HOOK_IFLIST ] && [ "$reason" == "BOUND" ]; then
-    if grep -qw $interface $DHCP_HOOK_IFLIST; then
-        sudo rm $DHCP_HOOK_IFLIST
-        sudo /usr/libexec/vyos/conf_mode/vpn_ipsec.py
-        exit 0
-    fi
+if ! { [ -f $DHCP_HOOK_IFLIST ] && grep -qw $interface $DHCP_HOOK_IFLIST; }; then
+    exit 0
 fi
 
+# Re-generate the config on the following events:
+# - BOUND: always re-generate
+# - RENEW: re-generate if the IP address changed
+# - REBIND: re-generate if the IP address changed
 if [ "$reason" == "RENEW" ] || [ "$reason" == "REBIND" ]; then
     if [ "$old_ip_address" == "$new_ip_address" ]; then
         exit 0
     fi
-else
+elif [ "$reason" != "BOUND" ]; then
     exit 0
 fi
 
-python3 - <<PYEND
-import os
-import re
-
-from vyos.utils.process import call
-from vyos.utils.process import cmd
-from vyos.utils.file import read_file
-from vyos.utils.file import write_file
-
-SWANCTL_CONF="/etc/swanctl/swanctl.conf"
+# Best effort wait for any active commit to finish
+sudo python3 - <<PYEND
+from vyos.utils.commit import wait_for_commit_lock
 
 if __name__ == '__main__':
-    interface = os.getenv('interface')
-    new_ip = os.getenv('new_ip_address')
-    old_ip = os.getenv('old_ip_address')
-
-    if os.path.exists(SWANCTL_CONF):
-        conf_lines = read_file(SWANCTL_CONF).split("\n")
-        found = False
-        reset_conns = set()
-        to_match = f'# dhcp:{interface}'
-
-        for i, line in enumerate(conf_lines):
-            if line.find(to_match) > 0:
-                conf_lines[i] = line.replace(old_ip, new_ip)
-                found = True
-                regex_match = re.search(r'#.* reset:([-_a-zA-Z0-9|@]+)', line)
-                if regex_match:
-                   connection_name = regex_match[1]
-                   reset_conns.add(connection_name)
-
-        if found:
-            write_file(SWANCTL_CONF, "\n".join(conf_lines))
-            for connection_name in reset_conns:
-                call(f'sudo swanctl -t -i {connection_name}')
-            call('sudo swanctl -q')
-
+    wait_for_commit_lock()
     exit(0)
 PYEND
+
+# Now re-generate the config
+sudo /usr/libexec/vyos/conf_mode/vpn_ipsec.py

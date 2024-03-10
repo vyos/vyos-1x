@@ -75,7 +75,7 @@ KEY_PATH    = f'{swanctl_dir}/private/'
 CA_PATH     = f'{swanctl_dir}/x509ca/'
 CRL_PATH    = f'{swanctl_dir}/x509crl/'
 
-DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_waiting'
+DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_interfaces'
 
 def get_config(config=None):
     if config:
@@ -94,6 +94,7 @@ def get_config(config=None):
                                  with_recursive_defaults=True,
                                  with_pki=True)
 
+    ipsec['dhcp_interfaces'] = set()
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
@@ -240,6 +241,8 @@ def verify(ipsec):
 
                     if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
                         raise ConfigError(f"Invalid dhcp-interface on remote-access connection {name}")
+
+                    ipsec['dhcp_interfaces'].add(dhcp_interface)
 
                     address = get_dhcp_address(dhcp_interface)
                     count = 0
@@ -410,6 +413,8 @@ def verify(ipsec):
                 if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
                     raise ConfigError(f"Invalid dhcp-interface on site-to-site peer {peer}")
 
+                ipsec['dhcp_interfaces'].add(dhcp_interface)
+
                 address = get_dhcp_address(dhcp_interface)
                 count = 0
                 while not address and count < dhcp_wait_attempts:
@@ -527,9 +532,9 @@ def generate(ipsec):
         render(charon_conf, 'ipsec/charon.j2', {'install_routes': default_install_routes})
         return
 
-    if ipsec['dhcp_no_address']:
+    if ipsec['dhcp_interfaces']:
         with open(DHCP_HOOK_IFLIST, 'w') as f:
-            f.write(" ".join(ipsec['dhcp_no_address'].values()))
+            f.write(" ".join(ipsec['dhcp_interfaces']))
     elif os.path.exists(DHCP_HOOK_IFLIST):
         os.unlink(DHCP_HOOK_IFLIST)
 
