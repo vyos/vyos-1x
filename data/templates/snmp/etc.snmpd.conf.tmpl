@@ -91,6 +91,11 @@ trap2sink {{ trap.target }}{{ ":" + trap.port if trap.port is defined }} {{ trap
 {%   for view in v3_views %}
 {%     for oid in view.oids %}
 view {{ view.name }} included .{{ oid.oid }}
+{%         if oid.exclude %}
+{%             for excl in oid.exclude %}
+view {{ view.name }} excluded .{{ excl }}
+{%             endfor %}
+{%         endif %}
 {%     endfor %}
 {%   endfor %}
 

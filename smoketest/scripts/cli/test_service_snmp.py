@@ -225,5 +225,25 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_snmpv3_view_exclude(self):
+        snmpv3_group = 'default_group'
+        snmpv3_view = 'default_view'
+        snmpv3_view_oid = '1'
+        snmpv3_view_oid_exclude = ['1.3.6.1.2.1.4.21', '1.3.6.1.2.1.4.24']
+
+        self.cli_set(base_path + ['v3', 'group', snmpv3_group, 'view', snmpv3_view])
+        self.cli_set(base_path + ['v3', 'view', snmpv3_view, 'oid', snmpv3_view_oid])
+
+        for excluded in snmpv3_view_oid_exclude:
+            self.cli_set(base_path + ['v3', 'view', snmpv3_view, 'oid', snmpv3_view_oid, 'exclude', excluded])
+
+        self.cli_commit()
+
+        tmp = read_file(SNMPD_CONF)
+        # views
+        self.assertIn(f'view {snmpv3_view} included .{snmpv3_view_oid}', tmp)
+        for excluded in snmpv3_view_oid_exclude:
+            self.assertIn(f'view {snmpv3_view} excluded .{excluded}', tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

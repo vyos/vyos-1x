@@ -383,6 +383,10 @@ def get_config():
                     oid_cfg = {
                         'oid': oid
                     }
+                    if conf.exists('v3 view {0} oid {1} exclude'.format(view, oid)):
+                        oid_cfg['exclude'] = []
+                        for exclude in conf.return_values('v3 view {0} oid {1} exclude'.format(view, oid)):
+                            oid_cfg['exclude'].append(exclude)
                     view_cfg['oids'].append(oid_cfg)
             snmp['v3_views'].append(view_cfg)
 
