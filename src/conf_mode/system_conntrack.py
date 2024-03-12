@@ -42,33 +42,33 @@ nftables_ct_file = r'/run/nftables-ct.conf'
 module_map = {
     'ftp': {
         'ko': ['nf_nat_ftp', 'nf_conntrack_ftp'],
-        'nftables': ['ct helper set "ftp_tcp" tcp dport {21} return']
+        'nftables': ['tcp dport {21} ct helper set "ftp_tcp" return']
     },
     'h323': {
         'ko': ['nf_nat_h323', 'nf_conntrack_h323'],
-        'nftables': ['ct helper set "ras_udp" udp dport {1719} return',
-                     'ct helper set "q931_tcp" tcp dport {1720} return']
+        'nftables': ['udp dport {1719} ct helper set "ras_udp" return',
+                     'tcp dport {1720} ct helper set "q931_tcp" return']
     },
     'nfs': {
-        'nftables': ['ct helper set "rpc_tcp" tcp dport {111} return',
-                     'ct helper set "rpc_udp" udp dport {111} return']
+        'nftables': ['tcp dport {111} ct helper set "rpc_tcp" return',
+                     'udp dport {111} ct helper set "rpc_udp" return']
     },
     'pptp': {
         'ko': ['nf_nat_pptp', 'nf_conntrack_pptp'],
-        'nftables': ['ct helper set "pptp_tcp" tcp dport {1723} return'],
+        'nftables': ['tcp dport {1723} ct helper set "pptp_tcp" return'],
         'ipv4': True
      },
     'sip': {
         'ko': ['nf_nat_sip', 'nf_conntrack_sip'],
-        'nftables': ['ct helper set "sip_tcp" tcp dport {5060,5061} return',
-                     'ct helper set "sip_udp" udp dport {5060,5061} return']
+        'nftables': ['tcp dport {5060,5061} ct helper set "sip_tcp" return',
+                     'udp dport {5060,5061} ct helper set "sip_udp" return']
      },
     'sqlnet': {
-        'nftables': ['ct helper set "tns_tcp" tcp dport {1521,1525,1536} return']
+        'nftables': ['tcp dport {1521,1525,1536} ct helper set "tns_tcp" return']
     },
     'tftp': {
         'ko': ['nf_nat_tftp', 'nf_conntrack_tftp'],
-        'nftables': ['ct helper set "tftp_udp" udp dport {69} return']
+        'nftables': ['udp dport {69} ct helper set "tftp_udp" return']
      },
 }
 
