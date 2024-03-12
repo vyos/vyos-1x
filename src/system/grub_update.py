@@ -105,4 +105,8 @@ if __name__ == '__main__':
     else:
         render(grub_cfg_main, grub.TMPL_GRUB_MAIN, {})
 
+    # sort inodes (to make GRUB read config files in alphabetical order)
+    grub.sort_inodes(f'{root_dir}/{grub.GRUB_DIR_VYOS}')
+    grub.sort_inodes(f'{root_dir}/{grub.GRUB_DIR_VYOS_VERS}')
+
     exit(0)

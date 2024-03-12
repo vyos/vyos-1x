@@ -17,6 +17,7 @@ import platform
 
 from pathlib import Path
 from re import MULTILINE, compile as re_compile
+from shutil import copy2
 from typing import Union
 from uuid import uuid5, NAMESPACE_URL, UUID
 
@@ -422,3 +423,38 @@ def set_kernel_cmdline_options(cmdline_options: str, version_name: str,
 
     version_add(version_name=version_name, root_dir=root_dir,
                 boot_opts_config=cmdline_options)
+
+
+def sort_inodes(dir_path: str) -> None:
+    """Sort inodes for files inside a folder
+    Regenerate inodes for each file to get the same order for both inodes
+    and file names
+
+    GRUB iterates files by inodes, not alphabetically. Therefore, if we
+    want to read them in proper order, we need to sort inodes for all
+    config files in a folder.
+
+    Args:
+        dir_path (str): a path to directory
+    """
+    dir_content: list[Path] = sorted(Path(dir_path).iterdir())
+    temp_list_old: list[Path] = []
+    temp_list_new: list[Path] = []
+
+    # create a copy of all files, to get new inodes
+    for item in dir_content:
+        # skip directories
+        if item.is_dir():
+            continue
+        # create a new copy of file with a temporary name
+        copy_path = Path(f'{item.as_posix()}_tmp')
+        copy2(item, Path(copy_path))
+        temp_list_old.append(item)
+        temp_list_new.append(copy_path)
+
+    # delete old files and rename new ones
+    for item in temp_list_old:
+        item.unlink()
+    for item in temp_list_new:
+        new_name = Path(f'{item.as_posix()[0:-4]}')
+        item.rename(new_name)
