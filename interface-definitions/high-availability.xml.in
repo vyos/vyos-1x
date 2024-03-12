@@ -345,6 +345,55 @@
                   </completionHelp>
                 </properties>
               </leafNode>
+              <node name="health-check">
+                <properties>
+                  <help>Health check</help>
+                </properties>
+                <children>
+                  <leafNode name="failure-count">
+                    <properties>
+                      <help>Health check failure count required for transition to fault</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive" />
+                      </constraint>
+                    </properties>
+                    <defaultValue>3</defaultValue>
+                  </leafNode>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>Health check execution interval in seconds</help>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>60</defaultValue>
+                  </leafNode>
+                  <leafNode name="ping">
+                    <properties>
+                      <help>ICMP ping health check</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 ping target address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 ping target address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="script">
+                    <properties>
+                      <help>Health check script file</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               #include <include/vrrp-transition-script.xml.i>
             </children>
           </tagNode>
