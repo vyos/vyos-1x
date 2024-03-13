@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,8 @@
 import os
 
 from sys import exit
+from ipaddress import IPv6Network
+
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.template import render
@@ -47,7 +49,9 @@ def verify(rtradv):
         return None
 
     for interface, interface_config in rtradv['interface'].items():
-        if 'prefix' in interface:
+        interval_max = int(interface_config['interval']['max'])
+
+        if 'prefix' in interface_config:
             for prefix, prefix_config in interface_config['prefix'].items():
                 valid_lifetime = prefix_config['valid_lifetime']
                 if valid_lifetime == 'infinity':
@@ -59,6 +63,15 @@ def verify(rtradv):
 
                 if not (int(valid_lifetime) >= int(preferred_lifetime)):
                     raise ConfigError('Prefix valid-lifetime must be greater then or equal to preferred-lifetime')
+
+        if 'nat64prefix' in interface_config:
+            nat64_supported_lengths = [32, 40, 48, 56, 64, 96]
+            for prefix, prefix_config in interface_config['nat64prefix'].items():
+                if IPv6Network(prefix).prefixlen not in nat64_supported_lengths:
+                    raise ConfigError(f'Invalid NAT64 prefix length for "{prefix}", can only be one of: /' + ', /'.join(nat64_supported_lengths))
+
+                if int(prefix_config['valid_lifetime']) < interval_max:
+                    raise ConfigError(f'NAT64 valid-lifetime must not be smaller then "interval max" which is "{interval_max}"!')
 
         if 'name_server' in interface_config:
             if len(interface_config['name_server']) > 3:
@@ -72,7 +85,6 @@ def verify(rtradv):
             # ensure stale RDNSS info gets removed in a timely fashion, this
             # should not be greater than 2*MaxRtrAdvInterval.
             lifetime = int(interface_config['name_server_lifetime'])
-            interval_max = int(interface_config['interval']['max'])
             if lifetime > 0:
                 if lifetime < int(interval_max):
                     raise ConfigError(f'RDNSS lifetime must be at least "{interval_max}" seconds!')

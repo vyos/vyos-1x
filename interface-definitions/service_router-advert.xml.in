@@ -225,6 +225,36 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <tagNode name="nat64prefix">
+                <properties>
+                  <help>NAT64 prefix included in the router advertisements</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix to be advertized</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="valid-lifetime">
+                    <properties>
+                      <help>Time in seconds that the prefix will remain valid</help>
+                      <completionHelp>
+                        <list>infinity</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>u32:4-65528</format>
+                        <description>Time in seconds that the prefix will remain valid</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 4-65528"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>65528</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
               <tagNode name="prefix">
                 <properties>
                   <help>IPv6 prefix to be advertised in Router Advertisements (RAs)</help>
