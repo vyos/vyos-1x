@@ -83,7 +83,11 @@ vrrp_instance {{ name }} {
     nopreempt
 {%     endif %}
 {%     if group_config.peer_address is defined and group_config.peer_address is not none %}
-    unicast_peer { {{ group_config.peer_address }} }
+    unicast_peer {
+{%         for peer_address in group_config.peer_address %}
+        {{ peer_address }}
+{%         endfor %}
+    }
 {%     endif %}
 {%     if group_config.hello_source_address is defined and group_config.hello_source_address is not none %}
 {%       if group_config.peer_address is defined and group_config.peer_address is not none %}
