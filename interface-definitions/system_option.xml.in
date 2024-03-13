@@ -43,6 +43,12 @@
                    <valueless/>
                  </properties>
                </leafNode>
+               <leafNode name="disable-power-saving">
+                <properties>
+                  <help>Disable CPU power saving mechanisms also known as C states</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
              </children>
            </node>
            <leafNode name="keyboard-layout">
