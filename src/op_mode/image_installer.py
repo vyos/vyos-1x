@@ -786,6 +786,10 @@ def install_image() -> None:
             grub.install(install_target.name, f'{DIR_DST_ROOT}/boot/',
                          f'{DIR_DST_ROOT}/boot/efi')
 
+        # sort inodes (to make GRUB read config files in alphabetical order)
+        grub.sort_inodes(f'{DIR_DST_ROOT}/{grub.GRUB_DIR_VYOS}')
+        grub.sort_inodes(f'{DIR_DST_ROOT}/{grub.GRUB_DIR_VYOS_VERS}')
+
         # umount filesystems and remove temporary files
         if is_raid_install(install_target):
             cleanup([install_target.name],
