@@ -50,6 +50,13 @@ interface {{ iface }} {
 {%             endfor %}
     };
 {%         endif %}
+{%         if iface_config.nat64prefix is vyos_defined %}
+{%             for nat64prefix, nat64prefix_options in iface_config.nat64prefix.items() %}
+    nat64prefix {{ nat64prefix }} {
+        AdvValidLifetime {{ nat64prefix_options.valid_lifetime }};
+    };
+{%             endfor %}
+{%         endif %}
 {%         if iface_config.prefix is vyos_defined %}
 {%             for prefix, prefix_options in iface_config.prefix.items() %}
     prefix {{ prefix }} {

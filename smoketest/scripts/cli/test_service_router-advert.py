@@ -195,6 +195,34 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         for src in ra_src:
             self.assertIn(f'        {src};', config)
 
+    def test_nat64prefix(self):
+        nat64prefix = '64:ff9b::/96'
+        nat64prefix_invalid = '64:ff9b::/44'
+
+        self.cli_set(base_path + ['nat64prefix', nat64prefix])
+
+        # and another invalid prefix
+        # Invalid NAT64 prefix length for "2001:db8::/34", can only be one of:
+        # /32, /40, /48, /56, /64, /96
+        self.cli_set(base_path + ['nat64prefix', nat64prefix_invalid])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['nat64prefix', nat64prefix_invalid])
+
+        # NAT64 valid-lifetime must not be smaller then "interval max"
+        self.cli_set(base_path + ['nat64prefix', nat64prefix, 'valid-lifetime', '500'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['nat64prefix', nat64prefix, 'valid-lifetime'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = f'nat64prefix {nat64prefix}' + ' {'
+        self.assertIn(tmp, config)
+        self.assertIn('AdvValidLifetime 65528;', config) # default
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
