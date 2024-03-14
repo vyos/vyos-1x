@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="nat66" owner="${vyos_conf_scripts_dir}/nat66.py">
     <properties>
-      <help>IPv6-to-IPv6 Network Prefix Translation (NAT66/NPT) Settings</help>
+      <help>Network Prefix Translation (NAT66/NPTv6) parameters</help>
       <priority>500</priority>
     </properties>
     <children>
