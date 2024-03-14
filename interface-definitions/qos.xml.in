@@ -278,6 +278,7 @@
                   #include <include/generic-description.xml.i>
                   #include <include/qos/bandwidth.xml.i>
                   #include <include/qos/burst.xml.i>
+                  #include <include/qos/mtu.xml.i>
                   #include <include/qos/class-police-exceed.xml.i>
                   #include <include/qos/class-match.xml.i>
                   #include <include/qos/class-priority.xml.i>
@@ -293,6 +294,7 @@
                 <children>
                   #include <include/qos/bandwidth.xml.i>
                   #include <include/qos/burst.xml.i>
+                  #include <include/qos/mtu.xml.i>
                   #include <include/qos/class-police-exceed.xml.i>
                 </children>
               </node>
