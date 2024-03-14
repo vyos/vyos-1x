@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="nat64" owner="${vyos_conf_scripts_dir}/nat64.py">
     <properties>
-      <help>IPv6-to-IPv4 Network Address Translation (NAT64) Settings</help>
+      <help>Network Address Translation (NAT64) parameters</help>
       <priority>501</priority>
     </properties>
     <children>
