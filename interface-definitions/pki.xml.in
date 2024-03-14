@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="pki" owner="${vyos_conf_scripts_dir}/pki.py">
     <properties>
-      <help>VyOS PKI configuration</help>
+      <help>Public key infrastructure (PKI)</help>
       <priority>300</priority>
     </properties>
     <children>
