@@ -73,30 +73,382 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="section">
+          <node name="section">
             <properties>
               <help>Section for synchronization</help>
-              <completionHelp>
-                <list>nat nat66 firewall</list>
-              </completionHelp>
-              <valueHelp>
-                <format>nat</format>
-                <description>NAT</description>
-              </valueHelp>
-              <valueHelp>
-                <format>nat66</format>
-                <description>NAT66</description>
-              </valueHelp>
-              <valueHelp>
-                <format>firewall</format>
-                <description>firewall</description>
-              </valueHelp>
-              <constraint>
-                <regex>(nat|nat66|firewall)</regex>
-              </constraint>
-              <multi/>
             </properties>
-          </leafNode>
+            <children>
+              <leafNode name="firewall">
+                <properties>
+                  <help>Firewall</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="interfaces">
+                <properties>
+                  <help>Interfaces</help>
+                </properties>
+                <children>
+                  <leafNode name="bonding">
+                    <properties>
+                      <help>Bonding interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bridge">
+                    <properties>
+                      <help>Bridge interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dummy">
+                    <properties>
+                      <help>Dummy interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ethernet">
+                    <properties>
+                      <help>Ethernet interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="geneve">
+                    <properties>
+                      <help>GENEVE interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="input">
+                    <properties>
+                      <help>Input interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="l2tpv3">
+                    <properties>
+                      <help>L2TPv3 interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="loopback">
+                    <properties>
+                      <help>Loopback interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="macsec">
+                    <properties>
+                      <help>MACsec interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="openvpn">
+                    <properties>
+                      <help>OpenVPN interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="pppoe">
+                    <properties>
+                      <help>PPPoE interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="pseudo-ethernet">
+                    <properties>
+                      <help>Pseudo-Ethernet interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="sstpc">
+                    <properties>
+                      <help>SSTP client interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="tunnel">
+                    <properties>
+                      <help>Tunnel interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="virtual-ethernet">
+                    <properties>
+                      <help>Virtual Ethernet interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vti">
+                    <properties>
+                      <help>Virtual tunnel interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="vxlan">
+                    <properties>
+                      <help>VXLAN interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="wireguard">
+                    <properties>
+                      <help>Wireguard interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="wireless">
+                    <properties>
+                      <help>Wireless interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="wwan">
+                    <properties>
+                      <help>WWAN interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="nat">
+                <properties>
+                  <help>NAT</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="nat66">
+                <properties>
+                  <help>NAT66</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="pki">
+                <properties>
+                  <help>Public key infrastructure (PKI)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="policy">
+                <properties>
+                  <help>Routing policy</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="protocols">
+                <properties>
+                  <help>Routing protocols</help>
+                </properties>
+                <children>
+                  <leafNode name="babel">
+                    <properties>
+                      <help>Babel Routing Protocol</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bfd">
+                    <properties>
+                      <help>Bidirectional Forwarding Detection (BFD)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bgp">
+                    <properties>
+                      <help>Border Gateway Protocol (BGP)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="failover">
+                    <properties>
+                      <help>Failover route</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="igmp-proxy">
+                    <properties>
+                      <help>Internet Group Management Protocol (IGMP) proxy</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="isis">
+                    <properties>
+                      <help>Intermediate System to Intermediate System (IS-IS)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mpls">
+                    <properties>
+                      <help>Multiprotocol Label Switching (MPLS)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nhrp">
+                    <properties>
+                      <help>Next Hop Resolution Protocol (NHRP) parameters</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ospf">
+                    <properties>
+                      <help>Open Shortest Path First (OSPF)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ospfv3">
+                    <properties>
+                      <help>Open Shortest Path First (OSPF) for IPv6</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="pim">
+                    <properties>
+                      <help>Protocol Independent Multicast (PIM) and IGMP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="pim6">
+                    <properties>
+                      <help>Protocol Independent Multicast for IPv6 (PIMv6) and MLD</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rip">
+                    <properties>
+                      <help>Routing Information Protocol (RIP) parameters</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ripng">
+                    <properties>
+                      <help>Routing Information Protocol (RIPng) parameters</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rpki">
+                    <properties>
+                      <help>Resource Public Key Infrastructure (RPKI)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="segment-routing">
+                    <properties>
+                      <help>Segment Routing</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="static">
+                    <properties>
+                      <help>Static Routing</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="service">
+                <properties>
+                  <help>System services</help>
+                </properties>
+                <children>
+                  <leafNode name="console-server">
+                    <properties>
+                      <help>Serial Console Server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dhcp-relay">
+                    <properties>
+                      <help>Host Configuration Protocol (DHCP) relay agent</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dhcp-server">
+                    <properties>
+                      <help>Dynamic Host Configuration Protocol (DHCP) for DHCP server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dhcpv6-relay">
+                    <properties>
+                      <help>DHCPv6 Relay Agent parameters</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dhcpv6-server">
+                    <properties>
+                      <help>DHCP for IPv6 (DHCPv6) server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dns">
+                    <properties>
+                      <help>Domain Name System (DNS) related services</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="lldp">
+                    <properties>
+                      <help>LLDP settings</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mdns">
+                    <properties>
+                      <help>Multicast DNS (mDNS) parameters</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="monitoring">
+                    <properties>
+                      <help>Monitoring services</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ndp-proxy">
+                    <properties>
+                      <help>Neighbor Discovery Protocol (NDP) Proxy</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ntp">
+                    <properties>
+                      <help>Network Time Protocol (NTP) configuration</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="snmp">
+                    <properties>
+                      <help>Simple Network Management Protocol (SNMP)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="tftp-server">
+                    <properties>
+                      <help>Trivial File Transfer Protocol (TFTP) server</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="webproxy">
+                    <properties>
+                      <help>Webproxy service settings</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="vpn">
+                <properties>
+                  <help>Virtual Private Network (VPN)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="vrf">
+                <properties>
+                  <help>Virtual Routing and Forwarding</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
