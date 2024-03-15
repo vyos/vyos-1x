@@ -4,7 +4,7 @@
     <children>
       <node name="pki">
         <properties>
-          <help>Generate PKI certificates and keys</help>
+          <help>Generate public key infrastructure (PKI) certificates and keys</help>
         </properties>
         <children>
           <node name="ca">
