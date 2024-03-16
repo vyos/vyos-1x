@@ -31,6 +31,12 @@
     }
 {% endif %}
 
+{% if modules.rtsp is vyos_defined and ipv4 %}
+    ct helper rtsp_tcp {
+        type "rtsp" protocol tcp;
+    }
+{% endif %}
+
 {% if modules.sip is vyos_defined %}
     ct helper sip_tcp {
         type "sip" protocol tcp;

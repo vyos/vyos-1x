@@ -289,6 +289,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="rtsp">
+                <properties>
+                  <help>RTSP connection tracking</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="sip">
                 <properties>
                   <help>SIP connection tracking</help>

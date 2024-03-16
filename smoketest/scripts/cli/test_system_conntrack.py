@@ -174,12 +174,16 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
             'pptp': {
                 'driver': ['nf_nat_pptp', 'nf_conntrack_pptp'],
                 'nftables': ['ct helper set "pptp_tcp"']
-             },
+            },
+            'rtsp': {
+                'driver': ['nf_nat_rtsp', 'nf_conntrack_rtsp'],
+                'nftables': ['ct helper set "rtsp_tcp"']
+            },
             'sip': {
                 'driver': ['nf_nat_sip', 'nf_conntrack_sip'],
                 'nftables': ['ct helper set "sip_tcp"',
                              'ct helper set "sip_udp"']
-             },
+            },
             'sqlnet': {
                 'nftables': ['ct helper set "tns_tcp"']
             },
