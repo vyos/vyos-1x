@@ -32,23 +32,23 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['policy', 'ipv6-route']
+base = ['policy']
 config = ConfigTree(config_file)
 
 if not config.exists(base):
     # Nothing to do
     exit(0)
 
-config.rename(base, 'route6')
-config.set_tag(['policy', 'route6'])
+if config.exists(base + ['ipv6-route']):
+    config.rename(base + ['ipv6-route'],'route6')
+    config.set_tag(['policy', 'route6'])
 
 for route in ['route', 'route6']:
-    route_path = ['policy', route]
-    if config.exists(route_path):
-        for name in config.list_nodes(route_path):
-            if config.exists(route_path + [name, 'rule']):
-                for rule in config.list_nodes(route_path + [name, 'rule']):
-                    rule_tcp_flags = route_path + [name, 'rule', rule, 'tcp', 'flags']
+    if config.exists(base + [route]):
+        for name in config.list_nodes(base + [route]):
+            if config.exists(base + [route, name, 'rule']):
+                for rule in config.list_nodes(base + [route, name, 'rule']):
+                    rule_tcp_flags = base + [route, name, 'rule', rule, 'tcp', 'flags']
 
                     if config.exists(rule_tcp_flags):
                         tmp = config.return_value(rule_tcp_flags)
