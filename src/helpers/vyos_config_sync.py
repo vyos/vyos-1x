@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -60,6 +60,7 @@ def post_request(url: str,
     return response
 
 
+
 def retrieve_config(section: str = None) -> Optional[Dict[str, Any]]:
     """Retrieves the configuration from the local server.
 
@@ -71,8 +72,6 @@ def retrieve_config(section: str = None) -> Optional[Dict[str, Any]]:
     """
     if section is None:
         section = []
-    else:
-        section = section.split()
 
     conf = Config()
     config = conf.get_config_dict(section, get_first_key=True)
@@ -101,8 +100,6 @@ def set_remote_config(
 
     if path is None:
         path = []
-    else:
-        path = path.split()
     headers = {'Content-Type': 'application/json'}
 
     # Disable the InsecureRequestWarning
@@ -127,17 +124,16 @@ def set_remote_config(
 
 def is_section_revised(section: str) -> bool:
     from vyos.config_mgmt import is_node_revised
-    return is_node_revised([section])
+    return is_node_revised(section)
 
 
 def config_sync(secondary_address: str,
                 secondary_key: str,
-                sections: List[str],
+                sections: List[list],
                 mode: str):
     """Retrieve a config section from primary router in JSON format and send it to
        secondary router
     """
-    # Config sync only if sections changed
     if not any(map(is_section_revised, sections)):
         return
 
@@ -188,5 +184,17 @@ if __name__ == '__main__':
             "Missing required configuration data for config synchronization.")
         exit(0)
 
+    # Generate list_sections of sections/subsections
+    # [
+    #   ['interfaces', 'pseudo-ethernet'], ['interfaces', 'virtual-ethernet'], ['nat'], ['nat66']
+    # ]
+    list_sections = []
+    for section, subsections in sections.items():
+        if subsections:
+            for subsection in subsections:
+                list_sections.append([section, subsection])
+        else:
+            list_sections.append([section])
+
     config_sync(secondary_address, secondary_key,
-                sections, mode)
+                list_sections, mode)
