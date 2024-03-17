@@ -132,6 +132,9 @@ class ConfigMgmt:
                                     {}).get('source_address', '')
         if config.exists(['system', 'host-name']):
             self.hostname = config.return_value(['system', 'host-name'])
+            if config.exists(['system', 'domain-name']):
+                tmp = config.return_value(['system', 'domain-name'])
+                self.hostname += f'.{tmp}'
         else:
             self.hostname = 'vyos'
 
