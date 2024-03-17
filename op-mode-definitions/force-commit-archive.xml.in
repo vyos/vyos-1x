@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <leafNode name="commit-archive">
+        <properties>
+          <help>Manually archive configuration</help>
+        </properties>
+        <command>/usr/bin/config-mgmt</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
