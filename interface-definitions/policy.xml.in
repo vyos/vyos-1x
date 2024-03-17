@@ -1124,12 +1124,20 @@
                       <leafNode name="exclude">
                         <properties>
                           <help>Remove/exclude from the as-path attribute</help>
+                          <completionHelp>
+                            <list>all</list>
+                          </completionHelp>
                           <valueHelp>
-                            <format>u32</format>
+                            <format>u32:1-4294967295</format>
                             <description>AS number</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>Exclude all AS numbers from the as-path</description>
                           </valueHelp>
                           <constraint>
                             <validator name="as-number-list"/>
+                            <regex>(all)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -1137,7 +1145,7 @@
                         <properties>
                           <help>Prepend to the as-path</help>
                           <valueHelp>
-                            <format>u32</format>
+                            <format>u32:1-4294967295</format>
                             <description>AS number</description>
                           </valueHelp>
                           <constraint>
