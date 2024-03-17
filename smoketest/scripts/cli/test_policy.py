@@ -1065,6 +1065,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     '20' : {
                         'action' : 'permit',
                         'set' : {
+                            'as-path-exclude'     : 'all',
                             'evpn-gateway-ipv4'   : '192.0.2.99',
                             'evpn-gateway-ipv6'   : '2001:db8:f00::1',
                         },
