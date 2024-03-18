@@ -188,7 +188,7 @@
                             <path>firewall bridge name ${COMP_WORDS[5]} rule</path>
                           </completionHelp>
                         </properties>
-                        <command>journalctl --no-hostname --boot -k | egrep "\[bri-NAM-$6-$8-[ADRJC]\]"</command>
+                        <command>journalctl --no-hostname --boot -k | egrep "\[bri-NAM-$6-$8-[ADRJCO]\]"</command>
                       </tagNode>
                     </children>
                   </tagNode>
