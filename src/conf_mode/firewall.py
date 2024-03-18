@@ -268,6 +268,18 @@ def verify_rule(firewall, rule_conf, ipv6):
             if 'port' in side_conf and dict_search_args(side_conf, 'group', 'port_group'):
                 raise ConfigError(f'{side} port-group and port cannot both be defined')
 
+    if 'add_address_to_group' in rule_conf:
+        for type in ['destination_address', 'source_address']:
+            if type in rule_conf['add_address_to_group']:
+                if 'address_group' not in rule_conf['add_address_to_group'][type]:
+                    raise ConfigError(f'Dynamic address group must be defined.')
+                else:
+                    target = rule_conf['add_address_to_group'][type]['address_group']
+                    fwall_group = 'ipv6_address_group' if ipv6 else 'address_group'
+                    group_obj = dict_search_args(firewall, 'group', 'dynamic_group', fwall_group, target)
+                    if group_obj is None:
+                            raise ConfigError(f'Invalid dynamic address group on firewall rule')
+
     if 'log_options' in rule_conf:
         if 'log' not in rule_conf:
             raise ConfigError('log-options defined, but log is not enable')
