@@ -68,6 +68,7 @@ Apply the new configuration:
 import tempfile
 import re
 
+from vyos import ConfigError
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
@@ -94,6 +95,7 @@ path_frr_reload = '/usr/lib/frr/frr-reload.py'
 path_config = '/run/frr'
 
 default_add_before = r'(ip prefix-list .*|route-map .*|line vty|end)'
+
 
 class FrrError(Exception):
     pass
@@ -210,13 +212,12 @@ def reload_configuration(config, daemon=None):
     LOG.debug(f'reload_configuration: Executing command against frr-reload: "{cmd}"')
     output, code = popen(cmd, stderr=STDOUT)
     f.close()
+
     for i, e in enumerate(output.split('\n')):
         LOG.debug(f'frr-reload output: {i:3} {e}')
+
     if code == 1:
-        raise CommitError('FRR configuration failed while running commit. Please ' \
-                          'enable debugging to examine logs.\n\n\n' \
-                          'To enable debugging run: "touch /tmp/vyos.frr.debug" ' \
-                          'and "sudo systemctl stop vyos-configd"')
+        raise ConfigError(output)
     elif code:
         raise OSError(code, output)
 
@@ -469,17 +470,22 @@ class FRRConfig:
         # https://github.com/FRRouting/frr/issues/10133
         count = 0
         count_max = 5
+        emsg = ''
         while count < count_max:
             count += 1
             try:
                 reload_configuration('\n'.join(self.config), daemon=daemon)
                 break
+            except ConfigError as e:
+                emsg = str(e)
             except:
                 # we just need to re-try the commit of the configuration
                 # for the listed FRR issues above
                 pass
         if count >= count_max:
-            raise ConfigurationNotValid(f'Config commit retry counter ({count_max}) exceeded for {daemon} dameon!')
+            if emsg:
+                raise ConfigError(emsg)
+            raise ConfigurationNotValid(f'Config commit retry counter ({count_max}) exceeded for {daemon} daemon!')
 
         # Save configuration to /run/frr/config/frr.conf
         save_configuration()
