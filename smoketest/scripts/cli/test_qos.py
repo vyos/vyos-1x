@@ -38,6 +38,13 @@ def get_tc_filter_json(interface, direction) -> list:
     tmp = loads(tmp)
     return tmp
 
+def get_tc_filter_details(interface, direction) -> list:
+    # json doesn't contain all params, such as mtu
+    if direction not in ['ingress', 'egress']:
+        raise ValueError()
+    tmp = cmd(f'tc -details filter show dev {interface} {direction}')
+    return tmp
+
 class TestQoS(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -234,7 +241,12 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
     def test_05_limiter(self):
         qos_config = {
             '1' : {
-                'bandwidth' : '1000000',
+                'bandwidth' : '3000000',
+                'exceed' : 'pipe',
+                'burst' : '100Kb',
+                'mtu' : '1600',
+                'not-exceed' : 'continue',
+                'priority': '15',
                 'match4' : {
                     'ssh'   : { 'dport' : '22', },
                     },
@@ -262,6 +274,10 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['interface', interface, 'ingress', policy_name])
             # set default bandwidth parameter for all remaining connections
             self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'bandwidth', '500000'])
+            self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'burst', '200kb'])
+            self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'exceed', 'drop'])
+            self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'mtu', '3000'])
+            self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'not-exceed', 'ok'])
 
             for qos_class, qos_class_config in qos_config.items():
                 qos_class_base = base_path + ['policy', 'limiter', policy_name, 'class', qos_class]
@@ -278,6 +294,21 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
 
                 if 'bandwidth' in qos_class_config:
                     self.cli_set(qos_class_base + ['bandwidth', qos_class_config['bandwidth']])
+
+                if 'exceed' in qos_class_config:
+                    self.cli_set(qos_class_base + ['exceed', qos_class_config['exceed']])
+
+                if 'not-exceed' in qos_class_config:
+                    self.cli_set(qos_class_base + ['not-exceed', qos_class_config['not-exceed']])
+
+                if 'burst' in qos_class_config:
+                    self.cli_set(qos_class_base + ['burst', qos_class_config['burst']])
+
+                if 'mtu' in qos_class_config:
+                    self.cli_set(qos_class_base + ['mtu', qos_class_config['mtu']])
+
+                if 'priority' in qos_class_config:
+                    self.cli_set(qos_class_base + ['priority', qos_class_config['priority']])
 
 
         # commit changes
@@ -302,6 +333,14 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                     if 'dport' in match_config:
                         dport = int(match_config['dport'])
                         self.assertEqual(f'{dport:x}', filter['options']['match']['value'])
+
+            tc_details = get_tc_filter_details(interface, 'ingress')
+            self.assertTrue('filter parent ffff: protocol all pref 20 u32 chain 0' in tc_details)
+            self.assertTrue('rate 1Gbit burst 15125b mtu 2Kb action drop overhead 0b linklayer ethernet' in tc_details)
+            self.assertTrue('filter parent ffff: protocol all pref 15 u32 chain 0' in tc_details)
+            self.assertTrue('rate 3Gbit burst 102000b mtu 1600b action pipe/continue overhead 0b linklayer ethernet' in tc_details)
+            self.assertTrue('rate 500Mbit burst 204687b mtu 3000b action drop overhead 0b linklayer ethernet' in tc_details)
+            self.assertTrue('filter parent ffff: protocol all pref 255 basic chain 0' in tc_details)
 
     def test_06_network_emulator(self):
         policy_type = 'network-emulator'

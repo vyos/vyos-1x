@@ -324,6 +324,11 @@ class QoSBase:
                             if 'burst' in cls_config:
                                 burst = cls_config['burst']
                                 filter_cmd += f' burst {burst}'
+
+                            if 'mtu' in cls_config:
+                                mtu = cls_config['mtu']
+                                filter_cmd += f' mtu {mtu}'
+
                         cls = int(cls)
                         filter_cmd += f' flowid {self._parent:x}:{cls:x}'
                         self._cmd(filter_cmd)
@@ -386,6 +391,10 @@ class QoSBase:
                 if 'burst' in config['default']:
                     burst = config['default']['burst']
                     filter_cmd += f' burst {burst}'
+
+                if 'mtu' in config['default']:
+                    mtu = config['default']['mtu']
+                    filter_cmd += f' mtu {mtu}'
 
                 if 'class' in config:
                     filter_cmd += f' flowid {self._parent:x}:{default_cls_id:x}'
