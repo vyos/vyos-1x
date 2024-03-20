@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,12 +14,11 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from netifaces import interfaces
-import json
 
 from vyos.ifconfig.interface import Interface
 from vyos.utils.assertion import assert_boolean
+from vyos.utils.assertion import assert_list
 from vyos.utils.assertion import assert_positive
-from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
 from vyos.configdict import get_vlan_ids
 from vyos.configdict import list_diff
@@ -85,6 +84,10 @@ class BridgeIf(Interface):
         'vlan_filter': {
             'validate': assert_boolean,
             'location': '/sys/class/net/{ifname}/bridge/vlan_filtering',
+        },
+        'vlan_protocol': {
+            'validate': lambda v: assert_list(v, ['0x88a8', '0x8100']),
+            'location': '/sys/class/net/{ifname}/bridge/vlan_protocol',
         },
         'multicast_querier': {
             'validate': assert_boolean,
@@ -248,6 +251,26 @@ class BridgeIf(Interface):
         """
         return self.set_interface('del_port', interface)
 
+    def set_vlan_protocol(self, protocol):
+        """
+        Set protocol used for VLAN filtering.
+        The valid values are 0x8100(802.1q) or 0x88A8(802.1ad).
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BridgeIf('br0').del_port('eth1')
+        """
+
+        if protocol not in ['802.1q', '802.1ad']:
+            raise ValueError()
+
+        map = {
+            '802.1ad': '0x88a8',
+            '802.1q' : '0x8100'
+        }
+
+        return self.set_interface('vlan_protocol', map[protocol])
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -294,9 +317,12 @@ class BridgeIf(Interface):
             if member in interfaces():
                 self.del_port(member)
 
-        # enable/disable Vlan Filter
+        # enable/disable VLAN Filter
         tmp = '1' if 'enable_vlan' in config else '0'
         self.set_vlan_filter(tmp)
+
+        tmp = config.get('protocol')
+        self.set_vlan_protocol(tmp)
 
         # add VLAN interfaces to local 'parent' bridge to allow forwarding
         if 'enable_vlan' in config:

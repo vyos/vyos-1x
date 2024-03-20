@@ -98,6 +98,10 @@
               <valueless/>
             </properties>
           </leafNode>
+          #include <include/interface/vlan-protocol.xml.i>
+          <leafNode name="protocol">
+            <defaultValue>802.1q</defaultValue>
+          </leafNode>
           <leafNode name="max-age">
             <properties>
               <help>Interval at which neighbor bridges are removed</help>
