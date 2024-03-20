@@ -180,12 +180,16 @@ def generate(conntrack):
     conntrack['ipv4_firewall_action'] = 'return'
     conntrack['ipv6_firewall_action'] = 'return'
 
-    for rules, path in dict_search_recursive(conntrack['firewall'], 'rule'):
-        if any(('state' in rule_conf or 'connection_status' in rule_conf or 'offload_target' in rule_conf) for rule_conf in rules.values()):
-            if path[0] == 'ipv4':
-                conntrack['ipv4_firewall_action'] = 'accept'
-            elif path[0] == 'ipv6':
-                conntrack['ipv6_firewall_action'] = 'accept'
+    if dict_search_args(conntrack['firewall'], 'global_options', 'state_policy') != None:
+        conntrack['ipv4_firewall_action'] = 'accept'
+        conntrack['ipv6_firewall_action'] = 'accept'
+    else:
+        for rules, path in dict_search_recursive(conntrack['firewall'], 'rule'):
+            if any(('state' in rule_conf or 'connection_status' in rule_conf or 'offload_target' in rule_conf) for rule_conf in rules.values()):
+                if path[0] == 'ipv4':
+                    conntrack['ipv4_firewall_action'] = 'accept'
+                elif path[0] == 'ipv6':
+                    conntrack['ipv6_firewall_action'] = 'accept'
 
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)
