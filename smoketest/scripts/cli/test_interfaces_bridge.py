@@ -182,6 +182,10 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         for interface in self._interfaces:
             cost = 1000
             priority = 10
+
+            tmp = get_interface_config(interface)
+            self.assertEqual('802.1Q',  tmp['linkinfo']['info_data']['vlan_protocol']) # default VLAN protocol
+
             for member in self._members:
                 tmp = get_interface_config(member)
                 self.assertEqual(interface, tmp['master'])
@@ -441,6 +445,20 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(['interfaces', 'vxlan', vxlan_if])
         self.cli_delete(['interfaces', 'tunnel', tunnel_if])
         self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
+
+    def test_bridge_vlan_protocol(self):
+        protocol = '802.1ad'
+
+        # Add member interface to bridge and set VLAN filter
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'protocol', protocol])
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            tmp = get_interface_config(interface)
+            self.assertEqual(protocol, tmp['linkinfo']['info_data']['vlan_protocol'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
