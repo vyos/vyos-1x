@@ -38,7 +38,8 @@ xml_tmp = join('/tmp', xml_cache_json)
 pkg_cache = abspath(join(_here, 'pkg_cache'))
 ref_cache = abspath(join(_here, 'cache.py'))
 
-node_data_fields = ("node_type", "multi", "valueless", "default_value")
+node_data_fields = ("node_type", "multi", "valueless", "default_value",
+                    "owner", "priority")
 
 def trim_node_data(cache: dict):
     for k in list(cache):
