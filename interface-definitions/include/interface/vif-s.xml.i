@@ -18,27 +18,7 @@
     #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/disable-link-detect.xml.i>
     #include <include/interface/disable.xml.i>
-    <leafNode name="protocol">
-      <properties>
-        <help>Protocol used for service VLAN (default: 802.1ad)</help>
-        <completionHelp>
-          <list>802.1ad 802.1q</list>
-        </completionHelp>
-        <valueHelp>
-          <format>802.1ad</format>
-          <description>Provider Bridging (IEEE 802.1ad, Q-inQ), ethertype 0x88a8</description>
-        </valueHelp>
-        <valueHelp>
-          <format>802.1q</format>
-          <description>VLAN-tagged frame (IEEE 802.1q), ethertype 0x8100</description>
-        </valueHelp>
-        <constraint>
-          <regex>(802.1q|802.1ad)</regex>
-        </constraint>
-        <constraintErrorMessage>Ethertype must be 802.1ad or 802.1q</constraintErrorMessage>
-      </properties>
-      <defaultValue>802.1ad</defaultValue>
-    </leafNode>
+    #include <include/interface/vlan-protocol.xml.i>
     #include <include/interface/ipv4-options.xml.i>
     #include <include/interface/ipv6-options.xml.i>
     #include <include/interface/mac.xml.i>
