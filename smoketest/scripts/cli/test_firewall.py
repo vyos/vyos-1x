@@ -598,13 +598,29 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
-    def test_ipv4_state_and_status_rules(self):
-        name = 'smoketest-state'
-        interface = 'eth0'
-
+    def test_ipv4_global_state(self):
         self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['jump VYOS_STATE_POLICY'],
+            ['chain VYOS_STATE_POLICY'],
+            ['ct state established', 'accept'],
+            ['ct state invalid', 'drop'],
+            ['ct state related', 'accept']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+        # Check conntrack is enabled from state-policy
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
+    def test_ipv4_state_and_status_rules(self):
+        name = 'smoketest-state'
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'accept'])
@@ -632,12 +648,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state new', 'ct status dnat', 'accept'],
             ['ct state { established, new }', 'ct status snat', 'accept'],
             ['ct state related', 'ct helper { "ftp", "pptp" }', 'accept'],
-            ['drop', f'comment "{name} default-action drop"'],
-            ['jump VYOS_STATE_POLICY'],
-            ['chain VYOS_STATE_POLICY'],
-            ['ct state established', 'accept'],
-            ['ct state invalid', 'drop'],
-            ['ct state related', 'accept']
+            ['drop', f'comment "{name} default-action drop"']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
