@@ -79,8 +79,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     """
     lease_file = '/config/dhcpdv6.leases' if family == 'inet6' else '/config/dhcpd.leases'
     data = []
-    leases = IscDhcpLeases(lease_file).get()
-
+    leases = IscDhcpLeases(lease_file).get(include_backups=True)
     if pool is None:
         pool = _get_dhcp_pools(family=family)
         aux = False
