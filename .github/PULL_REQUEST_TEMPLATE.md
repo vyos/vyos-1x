@@ -18,8 +18,8 @@ the box, please use [x]
 - [ ] Other (please describe):
 
 ## Related Task(s)
-<!-- All submitted PRs must be linked to a Task on Phabricator. -->
-* https://vyos.dev/Txxxx
+<!-- optional: Link to related other tasks on Phabricator. -->
+<!-- * https://vyos.dev/Txxxx -->
 
 ## Related PR(s)
 <!-- Link here any PRs in other repositories that are required by this PR -->
