@@ -279,6 +279,9 @@ def verify(dhcp):
                 tmp = key.replace('_', '-')
                 raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')
 
+        if 'split' in dhcp['failover'] and dhcp['failover']['status'] != 'primary':
+            raise ConfigError('DHCP failover split parameter can only be used if status is primary')
+
     for address in (dict_search('listen_address', dhcp) or []):
         if is_addr_assigned(address):
             listen_ok = True

@@ -47,7 +47,11 @@ failover peer "{{ failover.name }}" {
 {%     if failover.status == 'primary' %}
     primary;
     mclt 1800;
+{%         if failover.split is vyos_defined %}
+    split {{ failover.split }};
+{%         else %}
     split 128;
+{%         endif %}
 {%     elif failover.status == 'secondary' %}
     secondary;
 {%     endif %}
