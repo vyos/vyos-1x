@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -155,12 +155,12 @@ def verify(isis):
             for proto, proto_config in isis['redistribute'][afi].items():
                 if 'level_1' not in proto_config and 'level_2' not in proto_config:
                     raise ConfigError(f'Redistribute level-1 or level-2 should be specified in ' \
-                                      f'"protocols isis {process} redistribute {afi} {proto}"!')
+                                      f'"protocols isis redistribute {afi} {proto}"!')
 
                 for redistr_level, redistr_config in proto_config.items():
                     if proc_level and proc_level != 'level_1_2' and proc_level != redistr_level:
-                        raise ConfigError(f'"protocols isis {process} redistribute {afi} {proto} {redistr_level}" ' \
-                                          f'can not be used with \"protocols isis {process} level {proc_level}\"')
+                        raise ConfigError(f'"protocols isis redistribute {afi} {proto} {redistr_level}" ' \
+                                          f'can not be used with \"protocols isis level {proc_level}\"!')
 
     # Segment routing checks
     if dict_search('segment_routing.global_block', isis):
@@ -220,8 +220,8 @@ def verify(isis):
                 if ("explicit_null" in prefix_config['index']) and ("no_php_flag" in prefix_config['index']):
                     raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
                                       f'and no-php-flag configured at the same time.')
- 
-    # Check for index ranges being larger than the segment routing global block    
+
+    # Check for index ranges being larger than the segment routing global block
     if dict_search('segment_routing.global_block', isis):
         g_high_label_value = dict_search('segment_routing.global_block.high_label_value', isis)
         g_low_label_value = dict_search('segment_routing.global_block.low_label_value', isis)
@@ -233,7 +233,7 @@ def verify(isis):
                     if int(index_size) > int(g_label_difference):
                         raise ConfigError(f'Segment routing prefix {prefix} cannot have an '\
                                           f'index base size larger than the SRGB label base.')
-            
+
     # Check for LFA tiebreaker index duplication
     if dict_search('fast_reroute.lfa.local.tiebreaker', isis):
         comparison_dictionary = {}
