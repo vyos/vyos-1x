@@ -103,12 +103,28 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/container.py show_container</command>
         <children>
-          <leafNode name="image">
+          <node name="json">
+            <properties>
+              <help>Show containers in JSON format</help>
+            </properties>
+            <!-- no admin check -->
+            <command>sudo ${vyos_op_scripts_dir}/container.py show_container --raw</command>
+          </node>
+          <node name="image">
             <properties>
               <help>Show container image</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/container.py show_image</command>
-          </leafNode>
+            <children>
+              <node name="json">
+                <properties>
+                  <help>Show container image in JSON format</help>
+                </properties>
+                <!-- no admin check -->
+                <command>sudo ${vyos_op_scripts_dir}/container.py show_image --raw</command>
+              </node>
+            </children>
+          </node>
           <tagNode name="log">
             <properties>
               <help>Show logs from a given container</help>
@@ -116,14 +132,25 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
+            <!-- no admin check -->
             <command>sudo podman logs --names "$4"</command>
           </tagNode>
-          <leafNode name="network">
+          <node name="network">
             <properties>
               <help>Show available container networks</help>
             </properties>
+            <!-- no admin check -->
             <command>sudo ${vyos_op_scripts_dir}/container.py show_network</command>
-          </leafNode>
+            <children>
+              <node name="json">
+                <properties>
+                  <help>Show available container networks in JSON format</help>
+                </properties>
+                <!-- no admin check -->
+                <command>sudo ${vyos_op_scripts_dir}/container.py show_network --raw</command>
+              </node>
+            </children>
+          </node>
         </children>
       </node>
       <node name="log">
