@@ -61,14 +61,16 @@ def post_request(url: str,
 
 
 
-def retrieve_config(section: str = None) -> Optional[Dict[str, Any]]:
+def retrieve_config(section: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     """Retrieves the configuration from the local server.
 
     Args:
-        section: str: The section of the configuration to retrieve. Default is None.
+        section: List[str]: The section of the configuration to retrieve.
+        Default is None.
 
     Returns:
-        Optional[Dict[str, Any]]: The retrieved configuration as a dictionary, or None if an error occurred.
+        Optional[Dict[str, Any]]: The retrieved configuration as a
+        dictionary, or None if an error occurred.
     """
     if section is None:
         section = []
@@ -83,23 +85,21 @@ def retrieve_config(section: str = None) -> Optional[Dict[str, Any]]:
 def set_remote_config(
         address: str,
         key: str,
-        op: str,
-        path: str = None,
-        section: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        commands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """Loads the VyOS configuration in JSON format to a remote host.
 
     Args:
         address (str): The address of the remote host.
         key (str): The key to use for loading the configuration.
-        path (Optional[str]): The path of the configuration. Default is None.
-        section (Optional[str]): The section of the configuration to load. Default is None.
+        commands (list): List of set/load commands for request, given as:
+                         [{'op': str, 'path': list[str], 'section': dict},
+                         ...]
 
     Returns:
-        Optional[Dict[str, Any]]: The response from the remote host as a dictionary, or None if an error occurred.
+        Optional[Dict[str, Any]]: The response from the remote host as a
+        dictionary, or None if a RequestException occurred.
     """
 
-    if path is None:
-        path = []
     headers = {'Content-Type': 'application/json'}
 
     # Disable the InsecureRequestWarning
@@ -107,9 +107,7 @@ def set_remote_config(
 
     url = f'https://{address}/configure-section'
     data = json.dumps({
-        'op': mode,
-        'path': path,
-        'section': section,
+        'commands': commands,
         'key': key
     })
 
@@ -122,14 +120,14 @@ def set_remote_config(
         return None
 
 
-def is_section_revised(section: str) -> bool:
+def is_section_revised(section: List[str]) -> bool:
     from vyos.config_mgmt import is_node_revised
     return is_node_revised(section)
 
 
 def config_sync(secondary_address: str,
                 secondary_key: str,
-                sections: List[list],
+                sections: List[list[str]],
                 mode: str):
     """Retrieve a config section from primary router in JSON format and send it to
        secondary router
@@ -142,21 +140,25 @@ def config_sync(secondary_address: str,
     )
 
     # Sync sections ("nat", "firewall", etc)
+    commands = []
     for section in sections:
         config_json = retrieve_config(section=section)
         # Check if config path deesn't exist, for example "set nat"
         # we set empty value for config_json data
         # As we cannot send to the remote host section "nat None" config
         if not config_json:
-            config_json = ""
+            config_json = {}
         logger.debug(
             f"Retrieved config for section '{section}': {config_json}")
-        set_config = set_remote_config(address=secondary_address,
-                                       key=secondary_key,
-                                       op=mode,
-                                       path=section,
-                                       section=config_json)
-        logger.debug(f"Set config for section '{section}': {set_config}")
+
+        d = {'op': mode, 'path': section, 'section': config_json}
+        commands.append(d)
+
+    set_config = set_remote_config(address=secondary_address,
+                                   key=secondary_key,
+                                   commands=commands)
+
+    logger.debug(f"Set config for sections '{sections}': {set_config}")
 
 
 if __name__ == '__main__':
