@@ -24,7 +24,6 @@ from vyos.utils.process import popen
 _drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront',
                                       'iavf', 'ice', 'i40e', 'hv_netvsc', 'veth', 'ixgbevf',
                                       'tun']
-_drivers_without_eee = ['vmxnet3', 'virtio_net', 'xen_netfront', 'hv_netvsc']
 
 class Ethtool:
     """
@@ -63,8 +62,6 @@ class Ethtool:
     _auto_negotiation = False
     _auto_negotiation_supported = None
     _flow_control = None
-    _eee = False
-    _eee_enabled = None
 
     def __init__(self, ifname):
         # Get driver used for interface
@@ -117,15 +114,6 @@ class Ethtool:
         out, err = popen(f'ethtool --json --show-pause {ifname}')
         if not bool(err):
             self._flow_control = loads(out)
-
-        # Get current Energy Efficient Ethernet (EEE) settings, but this is
-        # not supported by all NICs (e.g. vmxnet3 does not support is)
-        out, _ = popen(f'ethtool --show-eee {ifname}')
-        if len(out.splitlines()) > 1:
-            self._eee = True
-            # read current EEE setting, this returns:
-            # EEE status: disabled || EEE status: enabled - inactive || EEE status: enabled - active
-            self._eee_enabled = bool('enabled' in out.splitlines()[1])
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
@@ -211,15 +199,3 @@ class Ethtool:
                              'flow-control settings!')
 
         return 'on' if bool(self._flow_control[0]['autonegotiate']) else 'off'
-
-    def check_eee(self):
-        """ Check if the NIC supports eee """
-        if self.get_driver_name() in _drivers_without_eee:
-            return False
-        return self._eee
-
-    def get_eee(self):
-        if self._eee_enabled == None:
-            raise ValueError('Interface does not support changing '\
-                             'EEE settings!')
-        return self._eee_enabled
