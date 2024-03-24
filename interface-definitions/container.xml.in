@@ -211,6 +211,7 @@
               <completionHelp>
                 <path>container network</path>
               </completionHelp>
+              #include <include/constraint/container-network.xml.i>
             </properties>
             <children>
               <leafNode name="address">
@@ -426,10 +427,7 @@
       <tagNode name="network">
         <properties>
           <help>Network name</help>
-          <constraint>
-            <regex>[-_a-zA-Z0-9]{1,11}</regex>
-          </constraint>
-          <constraintErrorMessage>Network name cannot be longer than 11 characters</constraintErrorMessage>
+          #include <include/constraint/container-network.xml.i>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
