@@ -128,7 +128,17 @@
           </leafNode>
           <leafNode name="image">
             <properties>
-              <help>Image name in the hub-registry</help>
+              <help>Container image to use</help>
+              <completionHelp>
+                <script>sudo podman image list --format "{{.Repository}}:{{.Tag}}"</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Image name in the hub-registry</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:ascii:]]{1,255}</regex>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="command">
@@ -165,6 +175,9 @@
                     <format>txt</format>
                     <description>Set label option value</description>
                   </valueHelp>
+                  <constraint>
+                    <regex>[[:ascii:]]{1,255}</regex>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>
