@@ -1,4 +1,4 @@
-# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -52,7 +52,13 @@ class VTIIf(Interface):
                 cmd += f' {iproute2_key} {tmp}'
 
         self._cmd(cmd.format(**self.config))
+
+        # interface is always A/D down. It needs to be enabled explicitly
         self.set_interface('admin_state', 'down')
+
+    def set_admin_state(self, state):
+        """ Handled outside by /etc/ipsec.d/vti-up-down """
+        pass
 
     def get_mac(self):
         """ Get a synthetic MAC address. """

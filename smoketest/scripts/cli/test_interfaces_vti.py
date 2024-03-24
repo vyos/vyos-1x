@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,6 +18,9 @@ import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 
+from vyos.ifconfig import Interface
+from vyos.utils.network import is_intf_addr_assigned
+
 class VTIInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -26,6 +29,20 @@ class VTIInterfaceTest(BasicInterfaceTest.TestCase):
 
         # call base-classes classmethod
         super(VTIInterfaceTest, cls).setUpClass()
+
+    def test_add_single_ip_address(self):
+        addr = '192.0.2.0/31'
+        for intf in self._interfaces:
+            self.cli_set(self._base_path + [intf, 'address', addr])
+            for option in self._options.get(intf, []):
+                self.cli_set(self._base_path + [intf] + option.split())
+
+        self.cli_commit()
+
+        # VTI interface are always down and only brought up by IPSec
+        for intf in self._interfaces:
+            self.assertTrue(is_intf_addr_assigned(intf, addr))
+            self.assertEqual(Interface(intf).get_admin_state(), 'down')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
