@@ -540,5 +540,25 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for router_id in router_ids:
             self.assertIn(f' graceful-restart helper enable {router_id}', frrconfig)
 
+    def test_ospf_17_duplicate_area_network(self):
+        area0 = '0'
+        area1 = '1'
+        network = '10.0.0.0/8'
+
+        self.cli_set(base_path + ['area', area0, 'network', network])
+
+        # we can not have the same network defined on two areas
+        self.cli_set(base_path + ['area', area1, 'network', network])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['area', area0])
+
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' network {network} area {area1}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
