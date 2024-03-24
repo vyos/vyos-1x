@@ -404,34 +404,6 @@ class EthernetIf(Interface):
             print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
 
-    def set_eee(self, enable):
-        """
-        Enable/Disable Energy Efficient Ethernet (EEE) settings
-
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.set_eee(enable=False)
-        """
-        if not isinstance(enable, bool):
-            raise ValueError('Value out of range')
-
-        if not self.ethtool.check_eee():
-            self._debug_msg(f'NIC driver does not support changing EEE settings!')
-            return False
-
-        current = self.ethtool.get_eee()
-        if current != enable:
-            # Assemble command executed on system. Unfortunately there is no way
-            # to change this setting via sysfs
-            cmd = f'ethtool --set-eee {self.ifname} eee '
-            cmd += 'on' if enable else 'off'
-            output, code = self._popen(cmd)
-            if code:
-                Warning(f'could not change "{self.ifname}" EEE setting!')
-            return output
-        return None
-
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -441,9 +413,6 @@ class EthernetIf(Interface):
         # disable ethernet flow control (pause frames)
         value = 'off' if 'disable_flow_control' in config else 'on'
         self.set_flow_control(value)
-
-        # Always disable Energy Efficient Ethernet
-        self.set_eee(False)
 
         # GRO (generic receive offload)
         self.set_gro(dict_search('offload.gro', config) != None)
