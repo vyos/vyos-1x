@@ -129,6 +129,7 @@ def verify(ospf):
 
     # Validate if configured Access-list exists
     if 'area' in ospf:
+          networks = []
           for area, area_config in ospf['area'].items():
               if 'import_list' in area_config:
                   acl_import = area_config['import_list']
@@ -136,6 +137,12 @@ def verify(ospf):
               if 'export_list' in area_config:
                   acl_export = area_config['export_list']
                   if acl_export: verify_access_list(acl_export, ospf)
+
+              if 'network' in area_config:
+                  for network in area_config['network']:
+                      if network in networks:
+                          raise ConfigError(f'Network "{network}" already defined in different area!')
+                      networks.append(network)
 
     if 'interface' in ospf:
         for interface, interface_config in ospf['interface'].items():
