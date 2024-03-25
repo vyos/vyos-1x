@@ -463,7 +463,7 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
     endpoint = request.url.path
 
     # Allow users to pass just one command
-    if not isinstance(data, ConfigureListModel):
+    if not isinstance(data, (ConfigureListModel, ConfigSectionListModel)):
         data = [data]
     else:
         data = data.commands
