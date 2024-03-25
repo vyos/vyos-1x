@@ -803,8 +803,8 @@ def kea_address_json(addresses):
 
     return dumps(out)
 
-@register_filter('kea_failover_json')
-def kea_failover_json(config):
+@register_filter('kea_high_availability_json')
+def kea_high_availability_json(config):
     from json import dumps
 
     source_addr = config['source_address']

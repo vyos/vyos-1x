@@ -143,7 +143,7 @@ def get_config(config=None):
                         dhcp['shared_network_name'][network]['subnet'][subnet].update(
                                 {'range' : new_range_dict})
 
-    if dict_search('failover.certificate', dhcp):
+    if dict_search('high_availability.certificate', dhcp):
         dhcp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
 
     return dhcp
@@ -286,34 +286,34 @@ def verify(dhcp):
     if (shared_networks - disabled_shared_networks) < 1:
         raise ConfigError(f'At least one shared network must be active!')
 
-    if 'failover' in dhcp:
+    if 'high_availability' in dhcp:
         for key in ['name', 'remote', 'source_address', 'status']:
-            if key not in dhcp['failover']:
+            if key not in dhcp['high_availability']:
                 tmp = key.replace('_', '-')
-                raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')
+                raise ConfigError(f'DHCP high-availability requires "{tmp}" to be specified!')
 
-        if len({'certificate', 'ca_certificate'} & set(dhcp['failover'])) == 1:
-            raise ConfigError(f'DHCP secured failover requires both certificate and CA certificate')
+        if len({'certificate', 'ca_certificate'} & set(dhcp['high_availability'])) == 1:
+            raise ConfigError(f'DHCP secured high-availability requires both certificate and CA certificate')
 
-        if 'certificate' in dhcp['failover']:
-            cert_name = dhcp['failover']['certificate']
+        if 'certificate' in dhcp['high_availability']:
+            cert_name = dhcp['high_availability']['certificate']
 
             if cert_name not in dhcp['pki']['certificate']:
-                raise ConfigError(f'Invalid certificate specified for DHCP failover')
+                raise ConfigError(f'Invalid certificate specified for DHCP high-availability')
 
             if not dict_search_args(dhcp['pki']['certificate'], cert_name, 'certificate'):
-                raise ConfigError(f'Invalid certificate specified for DHCP failover')
+                raise ConfigError(f'Invalid certificate specified for DHCP high-availability')
 
             if not dict_search_args(dhcp['pki']['certificate'], cert_name, 'private', 'key'):
-                raise ConfigError(f'Missing private key on certificate specified for DHCP failover')
+                raise ConfigError(f'Missing private key on certificate specified for DHCP high-availability')
 
-        if 'ca_certificate' in dhcp['failover']:
-            ca_cert_name = dhcp['failover']['ca_certificate']
+        if 'ca_certificate' in dhcp['high_availability']:
+            ca_cert_name = dhcp['high_availability']['ca_certificate']
             if ca_cert_name not in dhcp['pki']['ca']:
-                raise ConfigError(f'Invalid CA certificate specified for DHCP failover')
+                raise ConfigError(f'Invalid CA certificate specified for DHCP high-availability')
 
             if not dict_search_args(dhcp['pki']['ca'], ca_cert_name, 'certificate'):
-                raise ConfigError(f'Invalid CA certificate specified for DHCP failover')
+                raise ConfigError(f'Invalid CA certificate specified for DHCP high-availability')
 
     for address in (dict_search('listen_address', dhcp) or []):
         if is_addr_assigned(address):
@@ -359,23 +359,23 @@ def generate(dhcp):
         if os.path.exists(f):
             os.unlink(f)
 
-    if 'failover' in dhcp:
-        if 'certificate' in dhcp['failover']:
-            cert_name = dhcp['failover']['certificate']
+    if 'high_availability' in dhcp:
+        if 'certificate' in dhcp['high_availability']:
+            cert_name = dhcp['high_availability']['certificate']
             cert_data = dhcp['pki']['certificate'][cert_name]['certificate']
             key_data = dhcp['pki']['certificate'][cert_name]['private']['key']
             write_file(cert_file, wrap_certificate(cert_data), user=user_group, mode=0o600)
             write_file(cert_key_file, wrap_private_key(key_data), user=user_group, mode=0o600)
 
-            dhcp['failover']['cert_file'] = cert_file
-            dhcp['failover']['cert_key_file'] = cert_key_file
+            dhcp['high_availability']['cert_file'] = cert_file
+            dhcp['high_availability']['cert_key_file'] = cert_key_file
 
-        if 'ca_certificate' in dhcp['failover']:
-            ca_cert_name = dhcp['failover']['ca_certificate']
+        if 'ca_certificate' in dhcp['high_availability']:
+            ca_cert_name = dhcp['high_availability']['ca_certificate']
             ca_cert_data = dhcp['pki']['ca'][ca_cert_name]['certificate']
             write_file(ca_cert_file, wrap_certificate(ca_cert_data), user=user_group, mode=0o600)
 
-            dhcp['failover']['ca_cert_file'] = ca_cert_file
+            dhcp['high_availability']['ca_cert_file'] = ca_cert_file
 
         render(systemd_override, 'dhcp-server/10-override.conf.j2', dhcp)
 
@@ -402,7 +402,7 @@ def apply(dhcp):
         if service == 'kea-dhcp-ddns-server' and 'dynamic_dns_update' not in dhcp:
             action = 'stop'
 
-        if service == 'kea-ctrl-agent' and 'failover' not in dhcp:
+        if service == 'kea-ctrl-agent' and 'high_availability' not in dhcp:
             action = 'stop'
 
         call(f'systemctl {action} {service}.service')
