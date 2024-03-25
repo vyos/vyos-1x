@@ -51,11 +51,11 @@
             }
         ],
         "hooks-libraries": [
-{% if failover is vyos_defined %}
+{% if high_availability is vyos_defined %}
             {
                 "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_ha.so",
                 "parameters": {
-                    "high-availability": [{{ failover | kea_failover_json }}]
+                    "high-availability": [{{ high_availability | kea_high_availability_json }}]
                 }
             },
 {% endif %}

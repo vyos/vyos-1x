@@ -16,18 +16,18 @@
               <valueless/>
             </properties>
           </leafNode>
-          <node name="failover">
+          <node name="high-availability">
             <properties>
-              <help>DHCP failover configuration</help>
+              <help>DHCP high availability configuration</help>
             </properties>
             <children>
               #include <include/source-address-ipv4.xml.i>
               <leafNode name="remote">
                 <properties>
-                  <help>IPv4 remote address used for connectio</help>
+                  <help>IPv4 remote address used for connection</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IPv4 address of failover peer</description>
+                    <description>IPv4 address of high availability peer</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
@@ -45,7 +45,7 @@
               </leafNode>
               <leafNode name="status">
                 <properties>
-                  <help>Failover hierarchy</help>
+                  <help>High availability hierarchy</help>
                   <completionHelp>
                     <list>primary secondary</list>
                   </completionHelp>
@@ -60,7 +60,7 @@
                   <constraint>
                     <regex>(primary|secondary)</regex>
                   </constraint>
-                  <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
+                  <constraintErrorMessage>Invalid DHCP high availability peer status</constraintErrorMessage>
                 </properties>
               </leafNode>
               #include <include/pki/ca-certificate.xml.i>

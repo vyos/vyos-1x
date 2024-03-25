@@ -673,7 +673,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_dhcp_failover(self):
+    def test_dhcp_high_availability(self):
         shared_net_name = 'FAILOVER'
         failover_name = 'VyOS-Failover'
 
@@ -695,10 +695,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         failover_local = router
         failover_remote = inc_ip(router, 1)
 
-        self.cli_set(base_path + ['failover', 'source-address', failover_local])
-        self.cli_set(base_path + ['failover', 'name', failover_name])
-        self.cli_set(base_path + ['failover', 'remote', failover_remote])
-        self.cli_set(base_path + ['failover', 'status', 'primary'])
+        self.cli_set(base_path + ['high-availability', 'source-address', failover_local])
+        self.cli_set(base_path + ['high-availability', 'name', failover_name])
+        self.cli_set(base_path + ['high-availability', 'remote', failover_remote])
+        self.cli_set(base_path + ['high-availability', 'status', 'primary'])
 
         # commit changes
         self.cli_commit()
