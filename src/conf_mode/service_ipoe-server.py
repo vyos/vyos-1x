@@ -44,6 +44,7 @@ default_config_data = {
     'client_named_ip_pool': [],
     'client_ipv6_pool': [],
     'client_ipv6_delegate_prefix': [],
+    'gateway_address':[],
     'radius_server': [],
     'radius_acct_inter_jitter': '',
     'radius_acct_tmo': '3',
@@ -275,7 +276,12 @@ def get_config(config=None):
 
             ipoe['client_ipv6_delegate_prefix'].append(tmp)
 
+    if conf.exists(['gateway-address']):
+        for gw in conf.return_values(['gateway-address']):
+            ipoe['gateway_address'].append(gw)
+
     return ipoe
+
 
 
 def verify(ipoe):
@@ -303,6 +309,13 @@ def verify(ipoe):
     if ipoe['client_ipv6_delegate_prefix'] and not ipoe['client_ipv6_pool']:
         raise ConfigError('IPoE IPv6 deletate-prefix requires IPv6 prefix to be configured!')
 
+    if ipoe['gateway_address']:
+        if ipoe['client_named_ip_pool']:
+            ipoe_gateways = ' '.join(ipoe['gateway_address'])
+            for pool in ipoe['client_named_ip_pool']:
+                if f'{pool["gateway_address"]}/' in ipoe_gateways:
+                        raise ConfigError(
+                            'IPoE "gateway-address" exists in IPoE "client-ip-pool"!')
     return None
 
 

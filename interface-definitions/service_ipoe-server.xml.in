@@ -121,6 +121,7 @@
             </children>
           </node>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
+          #include <include/accel-ppp/gateway-address-multi.xml.i>
           <node name="authentication">
             <properties>
               <help>Client authentication methods</help>
