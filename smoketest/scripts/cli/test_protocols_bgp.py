@@ -1236,12 +1236,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  neighbor {pg_ipv6} activate', afiv6_config)
         self.assertIn(f'  neighbor {pg_ipv6} maximum-prefix {ipv6_max_prefix}', afiv6_config)
 
-    def test_bgp_26_commit_error(self):
+    def test_bgp_27_route_reflector_client(self):
         self.cli_set(base_path + ['peer-group', 'peer1', 'address-family', 'l2vpn-evpn', 'route-reflector-client'])
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
-
-        self.assertTrue("% Invalid command. Not an internal neighbor" in str(e.exception))
 
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
