@@ -699,6 +699,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['high-availability', 'name', failover_name])
         self.cli_set(base_path + ['high-availability', 'remote', failover_remote])
         self.cli_set(base_path + ['high-availability', 'status', 'primary'])
+        ## No mode defined -> its active-active mode by default
 
         # commit changes
         self.cli_commit()
@@ -717,7 +718,69 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_object(
             obj,
             ['Dhcp4', 'hooks-libraries', 0, 'parameters', 'high-availability', 0, 'peers'],
-            {'name': failover_name, 'url': f'http://{failover_remote}:647/', 'role': 'standby', 'auto-failover': True})
+            {'name': failover_name, 'url': f'http://{failover_remote}:647/', 'role': 'secondary', 'auto-failover': True})
+
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+
+        # Verify options
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'routers', 'data': router})
+
+        # Verify pools
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'],
+                {'pool': f'{range_0_start} - {range_0_stop}'})
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
+
+    def test_dhcp_high_availability_standby(self):
+        shared_net_name = 'FAILOVER'
+        failover_name = 'VyOS-Failover'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        # we use the first subnet IP address as default gateway
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # failover
+        failover_local = router
+        failover_remote = inc_ip(router, 1)
+
+        self.cli_set(base_path + ['high-availability', 'source-address', failover_local])
+        self.cli_set(base_path + ['high-availability', 'name', failover_name])
+        self.cli_set(base_path + ['high-availability', 'remote', failover_remote])
+        self.cli_set(base_path + ['high-availability', 'status', 'secondary'])
+        self.cli_set(base_path + ['high-availability', 'mode', 'active-passive'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        # Verify failover
+        self.verify_config_value(obj, ['Dhcp4', 'control-socket'], 'socket-name', KEA4_CTRL)
+
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'hooks-libraries', 0, 'parameters', 'high-availability', 0, 'peers'],
+            {'name': os.uname()[1], 'url': f'http://{failover_local}:647/', 'role': 'standby', 'auto-failover': True})
+
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'hooks-libraries', 0, 'parameters', 'high-availability', 0, 'peers'],
+            {'name': failover_name, 'url': f'http://{failover_remote}:647/', 'role': 'primary', 'auto-failover': True})
 
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)

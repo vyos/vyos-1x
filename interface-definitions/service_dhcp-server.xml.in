@@ -22,6 +22,27 @@
             </properties>
             <children>
               #include <include/source-address-ipv4.xml.i>
+              <leafNode name="mode">
+                <properties>
+                  <help>Configure high availability mode</help>
+                  <completionHelp>
+                    <list>active-active active-passive</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>active-active</format>
+                    <description>Both server attend DHCP requests</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>active-passive</format>
+                    <description>Only primary server attends DHCP requests</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(active-active|active-passive)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid DHCP high availability mode</constraintErrorMessage>
+                </properties>
+                <defaultValue>active-active</defaultValue>
+              </leafNode>
               <leafNode name="remote">
                 <properties>
                   <help>IPv4 remote address used for connection</help>

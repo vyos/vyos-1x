@@ -809,10 +809,19 @@ def kea_high_availability_json(config):
 
     source_addr = config['source_address']
     remote_addr = config['remote']
+    ha_mode = 'hot-standby' if config['mode'] == 'active-passive' else 'load-balancing'
+    ha_role = config['status']
+
+    if ha_role == 'primary':
+        peer1_role = 'primary'
+        peer2_role = 'standby' if ha_mode == 'hot-standby' else 'secondary'
+    else:
+        peer1_role = 'standby' if ha_mode == 'hot-standby' else 'secondary'
+        peer2_role = 'primary'
 
     data = {
         'this-server-name': os.uname()[1],
-        'mode': 'hot-standby',
+        'mode': ha_mode,
         'heartbeat-delay': 10000,
         'max-response-delay': 10000,
         'max-ack-delay': 5000,
@@ -821,13 +830,13 @@ def kea_high_availability_json(config):
         {
             'name': os.uname()[1],
             'url': f'http://{source_addr}:647/',
-            'role': 'standby' if config['status'] == 'secondary' else 'primary',
+            'role': peer1_role,
             'auto-failover': True
         },
         {
             'name': config['name'],
             'url': f'http://{remote_addr}:647/',
-            'role': 'primary' if config['status'] == 'secondary' else 'standby',
+            'role': peer2_role,
             'auto-failover': True
         }]
     }
