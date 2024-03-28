@@ -316,7 +316,7 @@ def verify(dhcp):
                 raise ConfigError(f'Invalid CA certificate specified for DHCP high-availability')
 
     for address in (dict_search('listen_address', dhcp) or []):
-        if is_addr_assigned(address):
+        if is_addr_assigned(address, include_vrf=True):
             listen_ok = True
             # no need to probe further networks, we have one that is valid
             continue
