@@ -5,7 +5,7 @@
   </properties>
   <children>
     #include <include/pki/certificate-key.xml.i>
-    #include <include/pki/ca-certificate.xml.i>
+    #include <include/pki/ca-certificate-multi.xml.i>
   </children>
 </node>
 <!-- include end -->
