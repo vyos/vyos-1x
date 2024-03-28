@@ -20,7 +20,6 @@ import signal
 import argparse
 import threading
 import re
-import json
 import logging
 
 from queue import Queue
@@ -42,6 +41,8 @@ logger.setLevel(logging.DEBUG)
 
 mdns_running_file = '/run/mdns_vrrp_active'
 mdns_update_command = 'sudo /usr/libexec/vyos/conf_mode/service_mdns_repeater.py'
+dhcp4_relay_running_file = '/run/dhcp4_vrrp_active'
+dhcp4_relay_update_command = 'sudo /usr/libexec/vyos/conf_mode/service_dhcp-relay.py'
 
 # class for all operations
 class KeepalivedFifo:
@@ -130,6 +131,8 @@ class KeepalivedFifo:
                         if n_type == 'INSTANCE':
                             if os.path.exists(mdns_running_file):
                                 cmd(mdns_update_command)
+                            if os.path.exists(dhcp4_relay_running_file):
+                                cmd(dhcp4_relay_update_command)
 
                             tmp = dict_search(f'group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
                             if tmp != None:
@@ -138,6 +141,8 @@ class KeepalivedFifo:
                         elif n_type == 'GROUP':
                             if os.path.exists(mdns_running_file):
                                 cmd(mdns_update_command)
+                            if os.path.exists(dhcp4_relay_running_file):
+                                cmd(dhcp4_relay_update_command)
 
                             tmp = dict_search(f'sync_group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
                             if tmp != None:
