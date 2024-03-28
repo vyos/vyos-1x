@@ -374,7 +374,7 @@ def create_structure(root_dir: str = '') -> None:
     if not root_dir:
         root_dir = disk.find_persistence()
 
-    Path(f'{root_dir}/GRUB_DIR_VYOS_VERS').mkdir(parents=True, exist_ok=True)
+    Path(f'{root_dir}/{GRUB_DIR_VYOS_VERS}').mkdir(parents=True, exist_ok=True)
 
 
 def set_console_type(console_type: str, root_dir: str = '') -> None:
