@@ -4,7 +4,7 @@
 {% set esp = esp_group[rw_conf.esp_group] %}
     ra-{{ name }} {
         remote_addrs = %any
-        local_addrs = {{ rw_conf.local_address if rw_conf.local_address is vyos_defined else '%any' }}
+        local_addrs = {{ rw_conf.local_address if rw_conf.local_address is not vyos_defined('any') else '%any' }} # dhcp:{{ rw_conf.dhcp_interface if rw_conf.dhcp_interface is vyos_defined else 'no' }}
         proposals = {{ ike_group[rw_conf.ike_group] | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
         send_certreq = no

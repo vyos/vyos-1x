@@ -72,7 +72,7 @@ KEY_PATH    = f'{swanctl_dir}/private/'
 CA_PATH     = f'{swanctl_dir}/x509ca/'
 CRL_PATH    = f'{swanctl_dir}/x509crl/'
 
-DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_waiting'
+DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_interfaces'
 
 def get_config(config=None):
     if config:
@@ -91,6 +91,7 @@ def get_config(config=None):
                                  with_recursive_defaults=True,
                                  with_pki=True)
 
+    ipsec['dhcp_interfaces'] = set()
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
@@ -226,6 +227,32 @@ def verify(ipsec):
     if 'remote_access' in ipsec:
         if 'connection' in ipsec['remote_access']:
             for name, ra_conf in ipsec['remote_access']['connection'].items():
+                if 'local_address' not in ra_conf and 'dhcp_interface' not in ra_conf:
+                    raise ConfigError(f"Missing local-address or dhcp-interface on remote-access connection {name}")
+
+                if 'dhcp_interface' in ra_conf:
+                    dhcp_interface = ra_conf['dhcp_interface']
+
+                    verify_interface_exists(dhcp_interface)
+                    dhcp_base = directories['isc_dhclient_dir']
+
+                    if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
+                        raise ConfigError(f"Invalid dhcp-interface on remote-access connection {name}")
+
+                    ipsec['dhcp_interfaces'].add(dhcp_interface)
+
+                    address = get_dhcp_address(dhcp_interface)
+                    count = 0
+                    while not address and count < dhcp_wait_attempts:
+                        address = get_dhcp_address(dhcp_interface)
+                        count += 1
+                        sleep(dhcp_wait_sleep)
+
+                    if not address:
+                        ipsec['dhcp_no_address'][f'ra_{name}'] = dhcp_interface
+                        print(f"Failed to get address from dhcp-interface on remote-access connection {name} -- skipped")
+                        continue
+
                 if 'esp_group' in ra_conf:
                     if 'esp_group' not in ipsec or ra_conf['esp_group'] not in ipsec['esp_group']:
                         raise ConfigError(f"Invalid esp-group on {name} remote-access config")
@@ -383,6 +410,8 @@ def verify(ipsec):
                 if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
                     raise ConfigError(f"Invalid dhcp-interface on site-to-site peer {peer}")
 
+                ipsec['dhcp_interfaces'].add(dhcp_interface)
+
                 address = get_dhcp_address(dhcp_interface)
                 count = 0
                 while not address and count < dhcp_wait_attempts:
@@ -391,7 +420,7 @@ def verify(ipsec):
                     sleep(dhcp_wait_sleep)
 
                 if not address:
-                    ipsec['dhcp_no_address'][peer] = dhcp_interface
+                    ipsec['dhcp_no_address'][f'peer_{peer}'] = dhcp_interface
                     print(f"Failed to get address from dhcp-interface on site-to-site peer {peer} -- skipped")
                     continue
 
@@ -492,9 +521,9 @@ def generate(ipsec):
         render(charon_conf, 'ipsec/charon.j2', {'install_routes': default_install_routes})
         return
 
-    if ipsec['dhcp_no_address']:
+    if ipsec['dhcp_interfaces']:
         with open(DHCP_HOOK_IFLIST, 'w') as f:
-            f.write(" ".join(ipsec['dhcp_no_address'].values()))
+            f.write(" ".join(ipsec['dhcp_interfaces']))
     elif os.path.exists(DHCP_HOOK_IFLIST):
         os.unlink(DHCP_HOOK_IFLIST)
 
@@ -511,13 +540,23 @@ def generate(ipsec):
 
     if 'remote_access' in ipsec and 'connection' in ipsec['remote_access']:
         for rw, rw_conf in ipsec['remote_access']['connection'].items():
+            if f'ra_{rw}' in ipsec['dhcp_no_address']:
+                continue
+
+            local_ip = ''
+            if 'local_address' in rw_conf:
+                local_ip = rw_conf['local_address']
+            elif 'dhcp_interface' in rw_conf:
+                local_ip = get_dhcp_address(rw_conf['dhcp_interface'])
+
+            ipsec['remote_access']['connection'][rw]['local_address'] = local_ip
 
             if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
                 generate_pki_files_x509(ipsec['pki'], rw_conf['authentication']['x509'])
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
-            if peer in ipsec['dhcp_no_address']:
+            if f'peer_{peer}' in ipsec['dhcp_no_address']:
                 continue
 
             if peer_conf['authentication']['mode'] == 'x509':
