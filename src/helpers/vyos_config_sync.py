@@ -21,9 +21,11 @@ import json
 import requests
 import urllib3
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Tuple, Dict, Any
 
 from vyos.config import Config
+from vyos.configtree import ConfigTree
+from vyos.configtree import mask_inclusive
 from vyos.template import bracketize_ipv6
 
 
@@ -61,39 +63,45 @@ def post_request(url: str,
 
 
 
-def retrieve_config(section: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+def retrieve_config(sections: List[list[str]]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Retrieves the configuration from the local server.
 
     Args:
-        section: List[str]: The section of the configuration to retrieve.
-        Default is None.
+        sections: List[list[str]]: The list of sections of the configuration
+        to retrieve, given as list of paths.
 
     Returns:
-        Optional[Dict[str, Any]]: The retrieved configuration as a
-        dictionary, or None if an error occurred.
+        Tuple[Dict[str, Any],Dict[str,Any]]: The tuple (mask, config) where:
+            - mask: The tree of paths of sections, as a dictionary.
+            - config: The subtree of masked config data, as a dictionary.
     """
-    if section is None:
-        section = []
 
-    conf = Config()
-    config = conf.get_config_dict(section, get_first_key=True)
-    if config:
-        return config
-    return None
+    mask = ConfigTree('')
+    for section in sections:
+        mask.set(section)
+    mask_dict = json.loads(mask.to_json())
 
+    config = Config()
+    config_tree = config.get_config_tree()
+    masked = mask_inclusive(config_tree, mask)
+    config_dict = json.loads(masked.to_json())
+
+    return mask_dict, config_dict
 
 def set_remote_config(
         address: str,
         key: str,
-        commands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        op: str,
+        mask: Dict[str, Any],
+        config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Loads the VyOS configuration in JSON format to a remote host.
 
     Args:
         address (str): The address of the remote host.
         key (str): The key to use for loading the configuration.
-        commands (list): List of set/load commands for request, given as:
-                         [{'op': str, 'path': list[str], 'section': dict},
-                         ...]
+        op (str): The operation to perform (set or load).
+        mask (dict): The dict of paths in sections.
+        config (dict): The dict of masked config data.
 
     Returns:
         Optional[Dict[str, Any]]: The response from the remote host as a
@@ -107,7 +115,9 @@ def set_remote_config(
 
     url = f'https://{address}/configure-section'
     data = json.dumps({
-        'commands': commands,
+        'op': op,
+        'mask': mask,
+        'config': config,
         'key': key
     })
 
@@ -140,23 +150,15 @@ def config_sync(secondary_address: str,
     )
 
     # Sync sections ("nat", "firewall", etc)
-    commands = []
-    for section in sections:
-        config_json = retrieve_config(section=section)
-        # Check if config path deesn't exist, for example "set nat"
-        # we set empty value for config_json data
-        # As we cannot send to the remote host section "nat None" config
-        if not config_json:
-            config_json = {}
-        logger.debug(
-            f"Retrieved config for section '{section}': {config_json}")
-
-        d = {'op': mode, 'path': section, 'section': config_json}
-        commands.append(d)
+    mask_dict, config_dict = retrieve_config(sections)
+    logger.debug(
+        f"Retrieved config for sections '{sections}': {config_dict}")
 
     set_config = set_remote_config(address=secondary_address,
                                    key=secondary_key,
-                                   commands=commands)
+                                   op=mode,
+                                   mask=mask_dict,
+                                   config=config_dict)
 
     logger.debug(f"Set config for sections '{sections}': {set_config}")
 
