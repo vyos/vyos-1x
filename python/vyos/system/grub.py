@@ -56,7 +56,7 @@ REGEX_KERNEL_CMDLINE: str = r'^BOOT_IMAGE=/(?P<boot_type>boot|live)/((?P<image_v
 REGEX_GRUB_BOOT_OPTS: str = r'^\s*set boot_opts="(?P<boot_opts>[^$]+)"$'
 
 
-def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS') -> None:
+def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS', chroot : str = "") -> None:
     """Install GRUB for both BIOS and EFI modes (hybrid boot)
 
     Args:
@@ -65,17 +65,22 @@ def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS') -> N
         efi_dir (str): a path to '/boot/efi' directory
     """
 
+    if chroot:
+        chroot_cmd = f"chroot {chroot}"
+    else:
+        chroot_cmd = ""
+
     efi_installation_arch = "x86_64"
     if platform.machine() == "aarch64":
         efi_installation_arch = "arm64"
     elif platform.machine() == "x86_64":
         cmd(
-            f'grub-install --no-floppy --target=i386-pc \
+            f'{chroot_cmd} grub-install --no-floppy --target=i386-pc \
             --boot-directory={boot_dir}  {drive_path} --force'
         )
 
     cmd(
-        f'grub-install --no-floppy --recheck --target={efi_installation_arch}-efi \
+        f'{chroot_cmd} grub-install --no-floppy --recheck --target={efi_installation_arch}-efi \
             --force-extra-removable --boot-directory={boot_dir} \
             --efi-directory={efi_dir} --bootloader-id="{id}" \
             --no-uefi-secure-boot'
@@ -458,3 +463,4 @@ def sort_inodes(dir_path: str) -> None:
     for item in temp_list_new:
         new_name = Path(f'{item.as_posix()[0:-4]}')
         item.rename(new_name)
+
