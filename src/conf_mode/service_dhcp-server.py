@@ -280,13 +280,12 @@ def verify(dhcp):
                 raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')
 
     for address in (dict_search('listen_address', dhcp) or []):
-        if is_addr_assigned(address):
+        if is_addr_assigned(address, include_vrf=True):
             listen_ok = True
             # no need to probe further networks, we have one that is valid
             continue
         else:
             raise ConfigError(f'listen-address "{address}" not configured on any interface')
-
 
     if not listen_ok:
         raise ConfigError('None of the configured subnets have an appropriate primary IP address on any\n'
