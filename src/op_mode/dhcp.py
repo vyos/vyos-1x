@@ -80,14 +80,20 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     :return list
     """
     inet_suffix = '6' if family == 'inet6' else '4'
-    leases = kea_get_leases(inet_suffix)
+    try:
+        leases = kea_get_leases(inet_suffix)
+    except:
+        raise vyos.opmode.DataUnavailable('Cannot fetch DHCP server lease information')
 
     if pool is None:
         pool = _get_dhcp_pools(family=family)
     else:
         pool = [pool]
 
-    active_config = kea_get_active_config(inet_suffix)
+    try:
+        active_config = kea_get_active_config(inet_suffix)
+    except:
+        raise vyos.opmode.DataUnavailable('Cannot fetch DHCP server configuration')
 
     data = []
     for lease in leases:
