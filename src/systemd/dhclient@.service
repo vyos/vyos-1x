@@ -3,6 +3,7 @@ Description=DHCP client on %i
 Documentation=man:dhclient(8)
 StartLimitIntervalSec=0
 After=vyos-router.service
+ConditionPathExists=/run/dhclient/dhclient_%i.conf
 
 [Service]
 Type=exec

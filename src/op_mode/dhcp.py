@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2023 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -33,6 +33,7 @@ from vyos.kea import kea_get_leases
 from vyos.kea import kea_get_pool_from_subnet_id
 from vyos.kea import kea_delete_lease
 from vyos.utils.process import is_systemd_service_running
+from vyos.utils.process import call
 
 time_string = "%a %b %d %H:%M:%S %Z %Y"
 
@@ -309,6 +310,25 @@ def _verify(func):
         return func(*args, **kwargs)
     return _wrapper
 
+def _verify_client(func):
+    """Decorator checks if interface is configured as DHCP client"""
+    from functools import wraps
+    from vyos.ifconfig import Section
+
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        config = ConfigTreeQuery()
+        family = kwargs.get('family')
+        v = 'v6' if family == 'inet6' else ''
+        interface = kwargs.get('interface')
+        interface_path = Section.get_config_path(interface)
+        unconf_message = f'DHCP{v} client not configured on interface {interface}!'
+
+        # Check if config does not exist
+        if not config.exists(f'interfaces {interface_path} address dhcp{v}'):
+            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
+        return func(*args, **kwargs)
+    return _wrapper
 
 @_verify
 def show_pool_statistics(raw: bool, family: ArgFamily, pool: typing.Optional[str]):
@@ -473,6 +493,16 @@ def show_client_leases(raw: bool, family: ArgFamily, interface: typing.Optional[
         return lease_data
     else:
         return _get_formatted_client_leases(lease_data, family=family)
+
+@_verify_client
+def renew_client_lease(raw: bool, family: ArgFamily, interface: str):
+    if not raw:
+        v = 'v6' if family == 'inet6' else ''
+        print(f'Restarting DHCP{v} client on interface {interface}...')
+    if family == 'inet6':
+        call(f'systemctl restart dhcp6c@{interface}.service')
+    else:
+        call(f'systemctl restart dhclient@{interface}.service')
 
 if __name__ == '__main__':
     try:
