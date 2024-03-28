@@ -205,11 +205,11 @@ def _format_openvpn(data: list) -> str:
         intf = d['intf']
         l_host = d['local_host']
         l_port = d['local_port']
+        out += f'\nOpenVPN status on {intf}\n\n'
         for client in d['clients']:
             r_host = client['remote_host']
             r_port = client['remote_port']
 
-            out += f'\nOpenVPN status on {intf}\n\n'
             name = client['name']
             remote = r_host + ':' + r_port if r_host and r_port else 'N/A'
             tunnel = client['tunnel']
@@ -220,9 +220,8 @@ def _format_openvpn(data: list) -> str:
             data_out.append([name, remote, tunnel, local, tx_bytes,
                              rx_bytes, online_since])
 
-        if data_out:
-            out += tabulate(data_out, headers)
-            out += "\n"
+        out += tabulate(data_out, headers)
+        out += "\n"
 
     return out
 
