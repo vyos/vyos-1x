@@ -140,6 +140,14 @@ class ConfigSectionModel(ApiModel, BaseConfigSectionModel):
 class ConfigSectionListModel(ApiModel):
     commands: List[BaseConfigSectionModel]
 
+class BaseConfigSectionTreeModel(BaseModel):
+    op: StrictStr
+    mask: Dict
+    config: Dict
+
+class ConfigSectionTreeModel(ApiModel, BaseConfigSectionTreeModel):
+    pass
+
 class RetrieveModel(ApiModel):
     op: StrictStr
     path: List[StrictStr]
@@ -374,7 +382,7 @@ class MultipartRequest(Request):
                         self.form_err = (400,
                         f"Malformed command '{c}': missing 'op' field")
                     if endpoint not in ('/config-file', '/container-image',
-                                        '/image'):
+                                        '/image', '/configure-section'):
                         if 'path' not in c:
                             self.form_err = (400,
                             f"Malformed command '{c}': missing 'path' field")
@@ -392,12 +400,9 @@ class MultipartRequest(Request):
                             self.form_err = (400,
                             f"Malformed command '{c}': 'value' field must be a string")
                     if endpoint in ('/configure-section'):
-                        if 'section' not in c:
+                        if 'section' not in c and 'config' not in c:
                             self.form_err = (400,
-                            f"Malformed command '{c}': missing 'section' field")
-                        elif not isinstance(c['section'], dict):
-                            self.form_err = (400,
-                            f"Malformed command '{c}': 'section' field must be JSON of dict")
+                            f"Malformed command '{c}': missing 'section' or 'config' field")
 
                 if 'key' not in forms and 'key' not in merge:
                     self.form_err = (401, "Valid API key is required")
@@ -455,7 +460,8 @@ def call_commit(s: ConfigSession):
             logger.warning(f"ConfigSessionError: {e}")
 
 def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
-                              ConfigSectionModel, ConfigSectionListModel],
+                              ConfigSectionModel, ConfigSectionListModel,
+                              ConfigSectionTreeModel],
                   request: Request, background_tasks: BackgroundTasks):
     session = app.state.vyos_session
     env = session.get_session_env()
@@ -481,7 +487,8 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
     try:
         for c in data:
             op = c.op
-            path = c.path
+            if not isinstance(c, BaseConfigSectionTreeModel):
+                path = c.path
 
             if isinstance(c, BaseConfigureModel):
                 if c.value:
@@ -494,6 +501,10 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
 
             elif isinstance(c, BaseConfigSectionModel):
                 section = c.section
+
+            elif isinstance(c, BaseConfigSectionTreeModel):
+                mask = c.mask
+                config = c.config
 
             if isinstance(c, BaseConfigureModel):
                 if op == 'set':
@@ -512,6 +523,14 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
                     session.set_section(path, section)
                 elif op == 'load':
                     session.load_section(path, section)
+                else:
+                    raise ConfigSessionError(f"'{op}' is not a valid operation")
+
+            elif isinstance(c, BaseConfigSectionTreeModel):
+                if op == 'set':
+                    session.set_section_tree(config)
+                elif op == 'load':
+                    session.load_section_tree(mask, config)
                 else:
                     raise ConfigSessionError(f"'{op}' is not a valid operation")
         # end for
@@ -554,7 +573,8 @@ def configure_op(data: Union[ConfigureModel,
 
 @app.post('/configure-section')
 def configure_section_op(data: Union[ConfigSectionModel,
-                                     ConfigSectionListModel],
+                                     ConfigSectionListModel,
+                                     ConfigSectionTreeModel],
                                request: Request, background_tasks: BackgroundTasks):
     return _configure_op(data, request, background_tasks)
 
