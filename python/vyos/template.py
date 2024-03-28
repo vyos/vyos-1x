@@ -1,4 +1,4 @@
-# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -32,8 +32,21 @@ _TESTS = {}
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
 def _get_environment(location=None):
+    from os import getenv
+
     if location is None:
-        loc_loader=FileSystemLoader(directories["templates"])
+        # Sometimes functions that rely on templates need to be executed outside of VyOS installations:
+        # for example, installer functions are executed for image builds,
+        # and anything may be invoked for testing from a developer's machine.
+        # This environment variable allows running any unmodified code
+        # with a custom template location.
+        location_env_var = getenv("VYOS_TEMPLATE_DIR")
+        if location_env_var:
+            print(f"Using environment variable {location_env_var}")
+            template_dir = location_env_var
+        else:
+            template_dir = directories["templates"]
+        loc_loader=FileSystemLoader(template_dir)
     else:
         loc_loader=FileSystemLoader(location)
     env = Environment(
