@@ -3,9 +3,6 @@
 {% set if_metric = '-e IF_METRIC=' ~ dhcp_options.default_route_distance if dhcp_options.default_route_distance is vyos_defined else '' %}
 {% set dhclient_options = '-d -nw -cf ' ~ isc_dhclient_dir ~ '/dhclient_' ~ ifname ~ '.conf -pf ' ~ isc_dhclient_dir ~ '/dhclient_' ~ ifname  ~ '.pid -lf ' ~ isc_dhclient_dir ~ '/dhclient_' ~ ifname ~ '.leases ' ~ if_metric %}
 
-[Unit]
-ConditionPathExists={{ isc_dhclient_dir }}/dhclient_%i.conf
-
 [Service]
 ExecStart=
 ExecStart={{ vrf_command }}/sbin/dhclient -4 {{ dhclient_options }} {{ ifname }}
