@@ -413,6 +413,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(peer_base_path + ['authentication', 'local-id', peer_name])
         self.cli_set(peer_base_path + ['authentication', 'mode', 'x509'])
         self.cli_set(peer_base_path + ['authentication', 'remote-id', 'peer2'])
+        self.cli_set(peer_base_path + ['authentication', 'x509', 'ca-certificate', ca_name])
         self.cli_set(peer_base_path + ['authentication', 'x509', 'ca-certificate', int_ca_name])
         self.cli_set(peer_base_path + ['authentication', 'x509', 'certificate', peer_name])
         self.cli_set(peer_base_path + ['connection-type', 'initiate'])
@@ -465,8 +466,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
-        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}_1.pem')))
-        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}_2.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         # There is only one VTI test so no need to delete this globally in tearDown()
@@ -666,7 +667,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
-        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}_1.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         self.tearDownPKI()
@@ -778,7 +779,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
-        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}_1.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         self.tearDownPKI()
@@ -893,7 +894,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
-        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}_1.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         self.tearDownPKI()
