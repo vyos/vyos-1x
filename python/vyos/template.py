@@ -807,7 +807,7 @@ def kea_address_json(addresses):
     out = []
 
     for address in addresses:
-        ifname = is_addr_assigned(address, return_ifname=True)
+        ifname = is_addr_assigned(address, return_ifname=True, include_vrf=True)
 
         if not ifname:
             continue
