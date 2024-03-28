@@ -138,8 +138,8 @@ vrrp_instance {{ name }} {
 {%         endif %}
 {%         if group_config.excluded_address is vyos_defined %}
     virtual_ipaddress_excluded {
-{%             for addr in group_config.excluded_address %}
-        {{ addr }}
+{%             for addr, addr_config in group_config.excluded_address.items() %}
+        {{ addr }}{{ ' dev ' + addr_config.interface if addr_config.interface is vyos_defined }}
 {%             endfor %}
     }
 {%         endif %}
