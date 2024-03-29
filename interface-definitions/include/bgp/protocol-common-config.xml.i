@@ -1251,7 +1251,7 @@
     </leafNode>
     <leafNode name="disable-ebgp-connected-route-check">
       <properties>
-        <help>Disable checking if nexthop is connected on ebgp session</help>
+        <help>Disable checking if nexthop is connected on eBGP session</help>
         <valueless/>
       </properties>
     </leafNode>
