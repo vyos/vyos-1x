@@ -1249,6 +1249,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="disable-ebgp-connected-route-check">
+      <properties>
+        <help>Disable checking if nexthop is connected on ebgp session</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="always-compare-med">
       <properties>
         <help>Always compare MEDs from different neighbors</help>

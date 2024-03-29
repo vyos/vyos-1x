@@ -321,6 +321,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         tcp_keepalive_probes = '22'
 
         self.cli_set(base_path + ['parameters', 'allow-martian-nexthop'])
+        self.cli_set(base_path + ['parameters', 'disable-ebgp-connected-route-check'])
         self.cli_set(base_path + ['parameters', 'no-hard-administrative-reset'])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
         self.cli_set(base_path + ['parameters', 'labeled-unicast', 'explicit-null'])
@@ -372,6 +373,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp allow-martian-nexthop', frrconfig)
+        self.assertIn(f' bgp disable-ebgp-connected-route-check', frrconfig)
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
         self.assertIn(f' bgp conditional-advertisement timer {cond_adv_timer}', frrconfig)
