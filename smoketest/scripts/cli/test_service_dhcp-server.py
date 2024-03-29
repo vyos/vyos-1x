@@ -501,5 +501,27 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_dhcp_on_interface_with_vrf(self):
+        self.cli_set(['interfaces', 'ethernet', 'eth1', 'address', '10.1.1.1/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth1', 'vrf', 'SMOKE-DHCP'])
+        self.cli_set(['protocols', 'static', 'route', '10.1.10.0/24', 'interface', 'eth1', 'vrf', 'SMOKE-DHCP'])
+        self.cli_set(['vrf', 'name', 'SMOKE-DHCP', 'protocols', 'static', 'route', '10.1.10.0/24', 'next-hop', '10.1.1.2'])
+        self.cli_set(['vrf', 'name', 'SMOKE-DHCP', 'table', '1000'])
+        self.cli_set(base_path + ['shared-network-name', 'SMOKE-DHCP-NETWORK', 'subnet', '10.1.10.0/24', 'default-router', '10.1.10.1'])
+        self.cli_set(base_path + ['shared-network-name', 'SMOKE-DHCP-NETWORK', 'subnet', '10.1.10.0/24', 'name-server', '1.1.1.1'])
+        self.cli_set(base_path + ['shared-network-name', 'SMOKE-DHCP-NETWORK', 'subnet', '10.1.10.0/24', 'range', '1', 'start', '10.1.10.10'])
+        self.cli_set(base_path + ['shared-network-name', 'SMOKE-DHCP-NETWORK', 'subnet', '10.1.10.0/24', 'range', '1', 'stop', '10.1.10.20'])
+        self.cli_set(base_path + ['listen-address', '10.1.1.1'])
+        self.cli_commit()
+
+        config = read_file(DHCPD_CONF)
+        self.assertIn('subnet 10.1.1.0 netmask 255.255.255.252', config)
+
+        self.cli_delete(['interfaces', 'ethernet', 'eth1', 'vrf', 'SMOKE-DHCP'])
+        self.cli_delete(['protocols', 'static', 'route', '10.1.10.0/24', 'interface', 'eth1', 'vrf'])
+        self.cli_delete(['vrf', 'name', 'SMOKE-DHCP'])
+        self.cli_commit()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
