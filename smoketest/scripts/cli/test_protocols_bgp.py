@@ -1241,6 +1241,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
 
+        self.cli_set(base_path + ['peer-group', 'peer1', 'remote-as', 'internal'])
+        self.cli_commit()
+
+        conf = self.getFRRconfig(' address-family l2vpn evpn')
+
+        self.assertIn('neighbor peer1 route-reflector-client', conf)
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
