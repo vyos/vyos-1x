@@ -21,7 +21,7 @@ from configparser import ConfigParser
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
-from vyos.utils.system import get_half_cpus
+from vyos.cpu import get_core_count
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
 
@@ -132,7 +132,7 @@ class BasicAccelPPPTest:
             return out
 
         def verify(self, conf):
-            self.assertEqual(conf["core"]["thread-count"], str(get_half_cpus()))
+            self.assertEqual(conf["core"]["thread-count"], str(get_core_count()))
 
         def test_accel_name_servers(self):
             # Verify proper Name-Server configuration for IPv4 and IPv6

@@ -79,13 +79,6 @@ def sysctl_apply(sysctl_dict: dict[str, str], revert: bool = True) -> bool:
     # everything applied
     return True
 
-def get_half_cpus():
-    """ return 1/2 of the numbers of available CPUs """
-    cpu = os.cpu_count()
-    if cpu > 1:
-        cpu /= 2
-    return int(cpu)
-
 def find_device_file(device):
     """ Recurively search /dev for the given device file and return its full path.
         If no device file was found 'None' is returned """
