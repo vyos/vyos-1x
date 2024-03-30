@@ -102,7 +102,7 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
             if 'disable' in rule_conf:
                 continue
 
-            row = [rule_id, rule_conf['action'], rule_conf['protocol'] if 'protocol' in rule_conf else 'all']
+            row = [rule_id, rule_conf.get('description', ''), rule_conf['action'], rule_conf['protocol'] if 'protocol' in rule_conf else 'all']
             if rule_id in details:
                 rule_details = details[rule_id]
                 row.append(rule_details.get('packets', 0))
@@ -114,7 +114,7 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'accept'
     else:
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'drop'
-    row = ['default', def_action, 'all']
+    row = ['default', '', def_action, 'all']
     rule_details = details['default-action']
     row.append(rule_details.get('packets', 0))
     row.append(rule_details.get('bytes', 0))
@@ -122,7 +122,7 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
     rows.append(row)
 
     if rows:
-        header = ['Rule', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
+        header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
         print(tabulate.tabulate(rows, header) + '\n')
 
 def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule_id=None):
@@ -191,7 +191,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
                 if not oiface:
                     oiface = 'any'
 
-            row = [rule_id]
+            row = [rule_id, rule_conf.get('description', '')]
             if rule_id in details:
                 rule_details = details[rule_id]
                 row.append(rule_details.get('packets', 0))
@@ -208,7 +208,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
 
 
     if hook in ['input', 'forward', 'output']:
-        row = ['default']
+        row = ['default', '']
         rule_details = details['default-action']
         row.append(rule_details.get('packets', 0))
         row.append(rule_details.get('bytes', 0))
@@ -223,7 +223,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
         rows.append(row)
 
     elif 'default_action' in prior_conf and not single_rule_id:
-        row = ['default']
+        row = ['default', '']
         if 'default-action' in details:
             rule_details = details['default-action']
             row.append(rule_details.get('packets', 0))
@@ -239,7 +239,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
         rows.append(row)
 
     if rows:
-        header = ['Rule', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
+        header = ['Rule', 'Description', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
         print(tabulate.tabulate(rows, header) + '\n')
 
 def show_firewall():
