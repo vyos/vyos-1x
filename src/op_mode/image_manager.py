@@ -33,27 +33,31 @@ DELETE_IMAGE_PROMPT_MSG: str = 'Select an image to delete:'
 MSG_DELETE_IMAGE_RUNNING: str = 'Currently running image cannot be deleted; reboot into another image first'
 MSG_DELETE_IMAGE_DEFAULT: str = 'Default image cannot be deleted; set another image as default first'
 
-def annotated_list(images_list: list[str]) -> list[str]:
+def annotate_list(images_list: list[str]) -> list[str]:
     """Annotate list of images with additional info
 
     Args:
         images_list (list[str]): a list of image names
 
     Returns:
-        list[str]: a list of image names with additional info
+        dict[str, str]: a dict of annotations indexed by image name
     """
-    index_running: int = None
-    index_default: int = None
-    try:
-        index_running = images_list.index(image.get_running_image())
-        index_default = images_list.index(image.get_default_image())
-    except ValueError:
-        pass
-    if index_running is not None:
-        images_list[index_running] += ' (running)'
-    if index_default is not None:
-        images_list[index_default] += ' (default boot)'
-    return images_list
+    running = image.get_running_image()
+    default = image.get_default_image()
+    annotated = {}
+    for image_name in images_list:
+        annotated[image_name] = f'{image_name}'
+    if running in images_list:
+        annotated[running] = annotated[running] + ' (running)'
+    if default in images_list:
+        annotated[default] = annotated[default] + ' (default boot)'
+    return annotated
+
+def define_format(images):
+    annotated = annotate_list(images)
+    def format_selection(image_name):
+        return annotated[image_name]
+    return format_selection
 
 @compat.grub_cfg_update
 def delete_image(image_name: Optional[str] = None,
@@ -63,14 +67,16 @@ def delete_image(image_name: Optional[str] = None,
     Args:
         image_name (str): a name of image to delete
     """
-    available_images: list[str] = annotated_list(grub.version_list())
+    available_images: list[str] = grub.version_list()
+    format_selection = define_format(available_images)
     if image_name is None:
         if no_prompt:
             exit('An image name is required for delete action')
         else:
             image_name = select_entry(available_images,
                                       DELETE_IMAGE_LIST_MSG,
-                                      DELETE_IMAGE_PROMPT_MSG)
+                                      DELETE_IMAGE_PROMPT_MSG,
+                                      format_selection)
     if image_name == image.get_running_image():
         exit(MSG_DELETE_IMAGE_RUNNING)
     if image_name == image.get_default_image():
@@ -113,14 +119,16 @@ def set_image(image_name: Optional[str] = None,
     Args:
         image_name (str): an image name
     """
-    available_images: list[str] = annotated_list(grub.version_list())
+    available_images: list[str] = grub.version_list()
+    format_selection = define_format(available_images)
     if image_name is None:
         if not prompt:
             exit('An image name is required for set action')
         else:
             image_name = select_entry(available_images,
                                       SET_IMAGE_LIST_MSG,
-                                      SET_IMAGE_PROMPT_MSG)
+                                      SET_IMAGE_PROMPT_MSG,
+                                      format_selection)
     if image_name == image.get_default_image():
         exit(f'The image "{image_name}" already configured as default')
     if image_name not in available_images:
