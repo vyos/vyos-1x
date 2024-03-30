@@ -450,15 +450,15 @@ def verify(bgp):
                             verify_route_map(afi_config['route_map'][tmp], bgp)
 
                 if 'route_reflector_client' in afi_config:
-                    if 'remote_as' in peer_config and peer_config['remote_as'] != 'internal' and peer_config['remote_as'] != bgp['system_as']:
+                    peer_group_as = peer_config.get('remote_as')
+
+                    if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
                         raise ConfigError('route-reflector-client only supported for iBGP peers')
                     else:
                         if 'peer_group' in peer_config:
                             peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', bgp)
-                            if peer_group_as != None and peer_group_as != 'internal' and peer_group_as != bgp['system_as']:
+                            if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
                                 raise ConfigError('route-reflector-client only supported for iBGP peers')
-                        else:
-                            raise ConfigError('route-reflector-client only supported for iBGP peers')
 
     # Throw an error if a peer group is not configured for allow range
     for prefix in dict_search('listen.range', bgp) or []:
