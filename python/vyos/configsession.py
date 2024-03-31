@@ -176,6 +176,25 @@ class ConfigSession(object):
         except (ValueError, ConfigSessionError) as e:
             raise ConfigSessionError(e)
 
+    def set_section_tree(self, d: dict):
+        try:
+            if d:
+                for p in dict_to_paths(d):
+                    self.set(p)
+        except (ValueError, ConfigSessionError) as e:
+            raise ConfigSessionError(e)
+
+    def load_section_tree(self, mask: dict, d: dict):
+        try:
+            if mask:
+                for p in dict_to_paths(mask):
+                    self.delete(p)
+            if d:
+                for p in dict_to_paths(d):
+                    self.set(p)
+        except (ValueError, ConfigSessionError) as e:
+            raise ConfigSessionError(e)
+
     def comment(self, path, value=None):
         if not value:
             value = [""]
