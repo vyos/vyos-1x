@@ -23,6 +23,7 @@ interface {{ ifname }} {
     send ia-pd {{ pd }}; # prefix delegation #{{ pd }}
 {%     endfor %}
 {% endif %}
+    script "{{ dhcp6_script_file }}";
 };
 
 {% if address is vyos_defined and 'dhcpv6' in address %}
@@ -59,4 +60,3 @@ id-assoc pd {{ pd }} {
 };
 {%     endfor %}
 {% endif %}
-

@@ -1338,15 +1338,19 @@ class Interface(Control):
         ifname = self.ifname
         config_base = directories['dhcp6_client_dir']
         config_file = f'{config_base}/dhcp6c.{ifname}.conf'
+        script_file = f'/etc/wide-dhcpv6/dhcp6c.{ifname}.script' # can not live under /run b/c of noexec mount option
         systemd_override_file = f'/run/systemd/system/dhcp6c@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhcp6c@{ifname}.service'
 
-        # Rendered client configuration files require the apsolute config path
-        self.config['dhcp6_client_dir'] = directories['dhcp6_client_dir']
+        # Rendered client configuration files require additional settings
+        config = deepcopy(self.config)
+        config['dhcp6_client_dir'] = directories['dhcp6_client_dir']
+        config['dhcp6_script_file'] = script_file
 
-        if enable and 'disable' not in self.config:
-            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', self.config)
-            render(config_file, 'dhcp-client/ipv6.j2', self.config)
+        if enable and 'disable' not in config:
+            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', config)
+            render(config_file, 'dhcp-client/ipv6.j2', config)
+            render(script_file, 'dhcp-client/dhcp6c-script.j2', config, permission=0o755)
 
             # Reload systemd unit definitons as some options are dynamically generated
             self._cmd('systemctl daemon-reload')
@@ -1359,6 +1363,8 @@ class Interface(Control):
                 self._cmd(f'systemctl stop {systemd_service}')
             if os.path.isfile(config_file):
                 os.remove(config_file)
+            if os.path.isfile(script_file):
+                os.remove(script_file)
 
         return None
 
