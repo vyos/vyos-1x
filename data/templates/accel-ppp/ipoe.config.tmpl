@@ -32,20 +32,29 @@ interface={{ ifname }},shared={{ interface.shared }},mode={{ interface.mode }},i
 {% endfor %}
 {% if auth_mode == 'noauth' %}
 noauth=1
-{%   if client_named_ip_pool %}
-{%     for pool in client_named_ip_pool %}
-{%       if pool.subnet is defined  %}
-ip-pool={{ pool.name }}
-{%       endif %}
-{%       if pool.gateway_address is defined %}
-gw-ip-address={{ pool.gateway_address }}/{{ pool.subnet.split('/')[1] }}
-{%       endif %}
-{%     endfor%}
-{%   endif %}
 {% elif auth_mode == 'local' %}
 username=ifname
 password=csid
+{% elif auth_mode == 'radius' %}
+attr-dhcp-client-ip=Framed-IP-Address
+attr-dhcp-mask=Framed-IP-Netmask
 {% endif %}
+{% if gateway_address %}
+{%   for gw in gateway_address %}
+gw-ip-address={{ gw }}
+{%   endfor %}
+{% endif %}
+{% if client_named_ip_pool %}
+{%   for pool in client_named_ip_pool %}
+{%     if pool.subnet is defined  %}
+ip-pool={{ pool.name }}
+{%     endif %}
+{%     if pool.gateway_address is defined %}
+gw-ip-address={{ pool.gateway_address }}/{{ pool.subnet.split('/')[1] }}
+{%     endif %}
+{%   endfor%}
+{% endif %}
+
 proxy-arp=1
 
 {% for interface in interfaces %}
