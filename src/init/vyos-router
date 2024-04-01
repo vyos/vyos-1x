@@ -430,7 +430,7 @@ start ()
     nfct helper add rpc inet6 tcp
     nfct helper add rpc inet6 udp
     nfct helper add tns inet6 tcp
-    nft -f /usr/share/vyos/vyos-firewall-init.conf || log_failure_msg "could not initiate firewall rules"
+    nft --file /usr/share/vyos/vyos-firewall-init.conf || log_failure_msg "could not initiate firewall rules"
 
     # As VyOS does not execute commands that are not present in the CLI we call
     # the script by hand to have a single source for the login banner and MOTD
