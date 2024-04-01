@@ -294,7 +294,8 @@ def network_from_ipv4(address):
 @register_filter('is_interface')
 def is_interface(interface):
     """ Check if parameter is a valid local interface name """
-    return os.path.exists(f'/sys/class/net/{interface}')
+    from vyos.utils.network import interface_exists
+    return interface_exists(interface)
 
 @register_filter('is_ip')
 def is_ip(addr):

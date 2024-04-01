@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import vyos.template
 
+from vyos.utils.network import interface_exists
 from ipaddress import ip_network
 from unittest import TestCase
 
@@ -26,7 +26,7 @@ class TestVyOSTemplate(TestCase):
 
     def test_is_interface(self):
         for interface in ['lo', 'eth0']:
-            if os.path.exists(f'/sys/class/net/{interface}'):
+            if interface_exists(interface):
                 self.assertTrue(vyos.template.is_interface(interface))
             else:
                 self.assertFalse(vyos.template.is_interface(interface))
