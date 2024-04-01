@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,7 +18,6 @@ import os
 import re
 
 from glob import glob
-from json import loads
 from sys import exit
 
 from vyos.base import Warning
@@ -31,11 +30,9 @@ from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
 from vyos.template import render
-from vyos.utils.process import call
-from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
-from vyos.utils.process import process_named_running
+from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
 from vyos import ConfigError
 from vyos import airbag
@@ -491,7 +488,7 @@ def apply_sysfs(firewall):
                     f.write(value)
 
 def apply(firewall):
-    install_result, output = rc_cmd(f'nft -f {nftables_conf}')
+    install_result, output = rc_cmd(f'nft --file {nftables_conf}')
     if install_result == 1:
         raise ConfigError(f'Failed to apply firewall: {output}')
 
