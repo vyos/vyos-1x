@@ -206,13 +206,13 @@ def verify_mirror_redirect(config):
 
     It makes no sense to mirror traffic back at yourself!
     """
-    import os
+    from vyos.utils.network import interface_exists
     if {'mirror', 'redirect'} <= set(config):
         raise ConfigError('Mirror and redirect can not be enabled at the same time!')
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
-            if not os.path.exists(f'/sys/class/net/{mirror_interface}'):
+            if not interface_exists(mirror_interface):
                 raise ConfigError(f'Requested mirror interface "{mirror_interface}" '\
                                    'does not exist!')
 
@@ -222,7 +222,7 @@ def verify_mirror_redirect(config):
 
     if 'redirect' in config:
         redirect_ifname = config['redirect']
-        if not os.path.exists(f'/sys/class/net/{redirect_ifname}'):
+        if not interface_exists(redirect_ifname):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
 
@@ -280,6 +280,7 @@ def verify_interface_exists(ifname, warning_only=False):
     from vyos.base import Warning
     from vyos.configquery import ConfigTreeQuery
     from vyos.utils.dict import dict_search_recursive
+    from vyos.utils.network import interface_exists
 
     # Check if interface is present in CLI config
     config = ConfigTreeQuery()
@@ -288,7 +289,7 @@ def verify_interface_exists(ifname, warning_only=False):
         return True
 
     # Interface not found on CLI, try Linux Kernel
-    if os.path.exists(f'/sys/class/net/{ifname}'):
+    if interface_exists(ifname):
         return True
 
     message = f'Interface "{ifname}" does not exist!'
