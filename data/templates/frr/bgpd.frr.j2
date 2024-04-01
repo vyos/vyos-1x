@@ -537,6 +537,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.allow_martian_nexthop is vyos_defined %}
  bgp allow-martian-nexthop
 {% endif %}
+{% if parameters.disable_ebgp_connected_route_check is vyos_defined %}
+ bgp disable-ebgp-connected-route-check
+{% endif %}
 {% if parameters.always_compare_med is vyos_defined %}
  bgp always-compare-med
 {% endif %}
