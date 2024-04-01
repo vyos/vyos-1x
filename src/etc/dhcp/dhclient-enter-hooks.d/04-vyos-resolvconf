@@ -14,27 +14,11 @@ if /usr/bin/systemctl -q is-active vyos-hostsd; then
             hostsd_changes=y
         fi
 
-        if [ -n "$new_dhcp6_domain_search" ]; then
-            logmsg info "Deleting search domains with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-            $hostsd_client --delete-search-domains --tag "dhcpv6-$interface"
-            logmsg info "Adding search domain \"$new_dhcp6_domain_search\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-            $hostsd_client --add-search-domains "$new_dhcp6_domain_search" --tag "dhcpv6-$interface"
-            hostsd_changes=y
-        fi
-
         if [ -n "$new_domain_name_servers" ]; then
             logmsg info "Deleting nameservers with tag \"dhcp-$interface\" via vyos-hostsd-client"
             $hostsd_client --delete-name-servers --tag "dhcp-$interface"
             logmsg info "Adding nameservers \"$new_domain_name_servers\" with tag \"dhcp-$interface\" via vyos-hostsd-client"
             $hostsd_client --add-name-servers $new_domain_name_servers --tag "dhcp-$interface"
-            hostsd_changes=y
-        fi
-
-        if [ -n "$new_dhcp6_name_servers" ]; then
-            logmsg info "Deleting nameservers with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-            $hostsd_client --delete-name-servers --tag "dhcpv6-$interface"
-            logmsg info "Adding nameservers \"$new_dhcp6_name_servers\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-            $hostsd_client --add-name-servers $new_dhcp6_name_servers --tag "dhcpv6-$interface"
             hostsd_changes=y
         fi
 
