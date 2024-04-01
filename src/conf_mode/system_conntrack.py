@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,19 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
-from vyos.utils.process import process_named_running
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
-from vyos.utils.process import run
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -218,7 +215,7 @@ def apply(conntrack):
         cmd(f'modprobe -a {module_str}')
 
     # Load new nftables ruleset
-    install_result, output = rc_cmd(f'nft -f {nftables_ct_file}')
+    install_result, output = rc_cmd(f'nft --file {nftables_ct_file}')
     if install_result == 1:
         raise ConfigError(f'Failed to apply configuration: {output}')
 
