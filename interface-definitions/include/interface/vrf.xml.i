@@ -9,6 +9,7 @@
     <completionHelp>
       <path>vrf name</path>
     </completionHelp>
+    #include <include/constraint/vrf.xml.i>
   </properties>
 </leafNode>
 <!-- include end -->

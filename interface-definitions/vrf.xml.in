@@ -16,10 +16,7 @@
       <tagNode name="name">
         <properties>
           <help>Virtual Routing and Forwarding instance</help>
-          <constraint>
-            <validator name="vrf-name"/>
-          </constraint>
-          <constraintErrorMessage>VRF instance name must be 15 characters or less and can not\nbe named as regular network interfaces.\nA name must starts from a letter.\n</constraintErrorMessage>
+          #include <include/constraint/vrf.xml.i>
           <valueHelp>
             <format>txt</format>
             <description>VRF instance name</description>
