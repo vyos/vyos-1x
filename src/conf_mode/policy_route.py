@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -177,7 +177,7 @@ def cleanup_table_marks():
                 cmd(f'{cmd_str} rule del fwmark {fwmark} table {table}')
 
 def apply(policy):
-    install_result = run(f'nft -f {nftables_conf}')
+    install_result = run(f'nft --file {nftables_conf}')
     if install_result == 1:
         raise ConfigError('Failed to apply policy based routing')
 
