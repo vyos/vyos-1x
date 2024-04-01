@@ -90,9 +90,6 @@ def get_nftables_details(family, hook, priority):
     return out
 
 def output_firewall_vertical(rules, headers):
-    if args.rule:
-        rules.pop()
-
     for rule in rules:
         adjusted_rule = rule + [""] * (len(headers) - len(rule)) # account for different header length, like default-action
         transformed_rule = [[header, textwrap.fill(adjusted_rule[i].replace('\n', ' '), 100)] for i, header in enumerate(headers)] # create key-pair list from headers and rules lists; wrap at 100 char
@@ -134,6 +131,9 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
     rows.append(row)
 
     if rows:
+        if args.rule:
+            rows.pop()
+
         header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
         if args.detail:
             output_firewall_vertical(rows, header)
