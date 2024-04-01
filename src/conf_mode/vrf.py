@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
 from json import loads
 
@@ -33,6 +31,7 @@ from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import popen
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import frr
@@ -227,7 +226,11 @@ def apply(vrf):
 
             # Remove nftables conntrack zone map item
             nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{tmp}" }}'
-            cmd(f'nft {nft_del_element}')
+            # Check if deleting is possible first to avoid raising errors
+            _, err = popen(f'nft --check {nft_del_element}')
+            if not err:
+                # Remove map element
+                cmd(f'nft {nft_del_element}')
 
             # Delete the VRF Kernel interface
             call(f'ip link delete dev {tmp}')
@@ -307,7 +310,7 @@ def apply(vrf):
         if vrf['conntrack']:
             for chain, rule in nftables_rules.items():
                 cmd(f'nft add rule inet vrf_zones {chain} {rule}')
-    
+
     if 'name' not in vrf or not vrf['conntrack']:
         for chain, rule in nftables_rules.items():
             cmd(f'nft flush chain inet vrf_zones {chain}')

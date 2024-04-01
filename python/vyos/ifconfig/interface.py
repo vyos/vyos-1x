@@ -415,7 +415,7 @@ class Interface(Control):
         else:
             nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
             # Check if deleting is possible first to avoid raising errors
-            _, err = self._popen(f'nft -c {nft_del_element}')
+            _, err = self._popen(f'nft --check {nft_del_element}')
             if not err:
                 # Remove map element
                 self._cmd(f'nft {nft_del_element}')
