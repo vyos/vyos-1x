@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -30,7 +30,6 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/run/sshd/sshd_config'
-systemd_override = r'/run/systemd/system/ssh.service.d/override.conf'
 
 sshguard_config_file = '/etc/sshguard/sshguard.conf'
 sshguard_whitelist = '/etc/sshguard/whitelist'
@@ -81,8 +80,6 @@ def generate(ssh):
     if not ssh:
         if os.path.isfile(config_file):
             os.unlink(config_file)
-        if os.path.isfile(systemd_override):
-            os.unlink(systemd_override)
 
         return None
 
@@ -99,13 +96,10 @@ def generate(ssh):
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
 
     render(config_file, 'ssh/sshd_config.j2', ssh)
-    render(systemd_override, 'ssh/override.conf.j2', ssh)
 
     if 'dynamic_protection' in ssh:
         render(sshguard_config_file, 'ssh/sshguard_config.j2', ssh)
         render(sshguard_whitelist, 'ssh/sshguard_whitelist.j2', ssh)
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
 
     return None
 
@@ -114,7 +108,7 @@ def apply(ssh):
     systemd_service_sshguard = 'sshguard.service'
     if not ssh:
         # SSH access is removed in the commit
-        call(f'systemctl stop {systemd_service_ssh}')
+        call(f'systemctl stop ssh@*.service')
         call(f'systemctl stop {systemd_service_sshguard}')
         return None
 
@@ -126,9 +120,13 @@ def apply(ssh):
     # we need to restart the service if e.g. the VRF name changed
     systemd_action = 'reload-or-restart'
     if 'restart_required' in ssh:
+        # this is only true if something for the VRFs changed, thus we
+        # stop all VRF services and only restart then new ones
+        call(f'systemctl stop ssh@*.service')
         systemd_action = 'restart'
 
-    call(f'systemctl {systemd_action} {systemd_service_ssh}')
+    for vrf in ssh['vrf']:
+        call(f'systemctl {systemd_action} ssh@{vrf}.service')
     return None
 
 if __name__ == '__main__':
