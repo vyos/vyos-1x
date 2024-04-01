@@ -71,9 +71,9 @@ def get_config(config=None):
                 hosts['nameserver'].append(ns)
             else:
                 tmp = ''
-                if_type = Section.section(ns)
-                if conf.exists(['interfaces', if_type, ns, 'address']):
-                    tmp = conf.return_values(['interfaces', if_type, ns, 'address'])
+                config_path = Section.get_config_path(ns)
+                if conf.exists(['interfaces', config_path, 'address']):
+                    tmp = conf.return_values(['interfaces', config_path, 'address'])
 
                 hosts['nameservers_dhcp_interfaces'].update({ ns : tmp })
 
