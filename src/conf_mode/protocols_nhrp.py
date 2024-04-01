@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -93,7 +93,7 @@ def generate(nhrp):
     return None
 
 def apply(nhrp):
-    nft_rc = run(f'nft -f {nhrp_nftables_conf}')
+    nft_rc = run(f'nft --file {nhrp_nftables_conf}')
     if nft_rc != 0:
         raise ConfigError('Failed to apply NHRP tunnel firewall rules')
 
