@@ -20,6 +20,9 @@ from sys import exit
 from shutil import rmtree
 
 from vyos.config import Config
+from vyos.configverify import verify_pki_certificate
+from vyos.configverify import verify_pki_ca_certificate
+from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
@@ -33,8 +36,7 @@ airbag.enable()
 load_balancing_dir = '/run/haproxy'
 load_balancing_conf_file = f'{load_balancing_dir}/haproxy.cfg'
 systemd_service = 'haproxy.service'
-systemd_override = r'/run/systemd/system/haproxy.service.d/10-override.conf'
-
+systemd_override = '/run/systemd/system/haproxy.service.d/10-override.conf'
 
 def get_config(config=None):
     if config:
@@ -53,30 +55,6 @@ def get_config(config=None):
                               with_pki=True)
 
     return lb
-
-
-def _verify_cert(lb: dict, config: dict) -> None:
-    if 'ca_certificate' in config['ssl']:
-        ca_name = config['ssl']['ca_certificate']
-        pki_ca = lb['pki'].get('ca')
-        if pki_ca is None:
-            raise ConfigError(f'CA certificates does not exist in PKI')
-        else:
-            ca = pki_ca.get(ca_name)
-            if ca is None:
-                raise ConfigError(f'CA certificate "{ca_name}" does not exist')
-
-    elif 'certificate' in config['ssl']:
-        cert_names = config['ssl']['certificate']
-        pki_certs = lb['pki'].get('certificate')
-        if pki_certs is None:
-            raise ConfigError(f'Certificates does not exist in PKI')
-
-        for cert_name in cert_names:
-            pki_cert = pki_certs.get(cert_name)
-            if pki_cert is None:
-                raise ConfigError(f'Certificate "{cert_name}" does not exist')
-
 
 def verify(lb):
     if not lb:
@@ -107,12 +85,12 @@ def verify(lb):
                 raise ConfigError(f'Cannot use both "send-proxy" and "send-proxy-v2" for server "{bk_server}"')
 
     for front, front_config in lb['service'].items():
-        if 'ssl' in front_config:
-            _verify_cert(lb, front_config)
+        for cert in dict_search('ssl.certificate', front_config) or []:
+            verify_pki_certificate(lb, cert)
 
     for back, back_config in lb['backend'].items():
-        if 'ssl' in back_config:
-            _verify_cert(lb, back_config)
+        tmp = dict_search('ssl.ca_certificate', front_config)
+        if tmp: verify_pki_ca_certificate(lb, tmp)
 
 
 def generate(lb):
