@@ -21,7 +21,6 @@ import jmespath
 
 from sys import exit
 from time import sleep
-from time import time
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -47,7 +46,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call
-from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

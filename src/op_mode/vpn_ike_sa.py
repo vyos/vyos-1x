@@ -15,14 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import re
 import sys
 import vici
 
 from vyos.utils.process import process_named_running
 
 ike_sa_peer_prefix = """\
-Peer ID / IP                            Local ID / IP               
+Peer ID / IP                            Local ID / IP
 ------------                            -------------"""
 
 ike_sa_tunnel_prefix = """

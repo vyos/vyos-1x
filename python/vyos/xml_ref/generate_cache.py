@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,19 +13,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import json
 from argparse import ArgumentParser
 from argparse import ArgumentTypeError
-from os import getcwd
-from os import makedirs
 from os.path import join
 from os.path import abspath
 from os.path import dirname
-from os.path import basename
 from xmltodict import parse
 
 _here = dirname(__file__)

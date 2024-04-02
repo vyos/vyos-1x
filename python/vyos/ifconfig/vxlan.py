@@ -1,4 +1,4 @@
-# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,9 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from json import loads
-
-from vyos import ConfigError
 from vyos.configdict import list_diff
 from vyos.ifconfig import Interface
 from vyos.utils.assertion import assert_list

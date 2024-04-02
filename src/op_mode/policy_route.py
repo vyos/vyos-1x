@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,7 +20,6 @@ import tabulate
 
 from vyos.config import Config
 from vyos.utils.process import cmd
-from vyos.utils.dict import dict_search_args
 
 def get_config_policy(conf, name=None, ipv6=False):
     config_path = ['policy']

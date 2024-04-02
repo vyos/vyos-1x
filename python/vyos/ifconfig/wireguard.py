@@ -1,4 +1,4 @@
-# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,7 +25,6 @@ from hurry.filesize import alternative
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
-from vyos.base import Warning
 
 class WireGuardOperational(Operational):
     def _dump(self):

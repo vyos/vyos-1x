@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,7 +22,6 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig.vrrp import VRRP
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
-from vyos.utils.file import read_file
 from vyos.template import inc_ip
 
 PROCESS_NAME = 'keepalived'

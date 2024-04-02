@@ -14,14 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import unittest
 
-from configparser import ConfigParser
-from vyos.utils.process import cmd
 from base_accel_ppp_test import BasicAccelPPPTest
-from vyos.template import is_ipv4
-
 
 class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
     @classmethod

@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import shutil
 import sys
 
@@ -25,7 +24,6 @@ from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 
 from vyos.tpm import clear_tpm_key
-from vyos.tpm import init_tpm
 from vyos.tpm import read_tpm_key
 from vyos.tpm import write_tpm_key
 from vyos.util import ask_input

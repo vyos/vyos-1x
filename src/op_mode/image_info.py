@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -18,12 +18,14 @@
 # VyOS. If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-from typing import List, Union
+from typing import Union
 
 from tabulate import tabulate
 
 from vyos import opmode
-from vyos.system import disk, grub, image
+from vyos.system import disk
+from vyos.system import grub
+from vyos.system import image
 from vyos.utils.convert import bytes_to_human
 
 

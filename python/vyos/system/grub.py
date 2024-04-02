@@ -18,7 +18,6 @@ import platform
 from pathlib import Path
 from re import MULTILINE, compile as re_compile
 from shutil import copy2
-from typing import Union
 from uuid import uuid5, NAMESPACE_URL, UUID
 
 from vyos.template import render
@@ -463,4 +462,3 @@ def sort_inodes(dir_path: str) -> None:
     for item in temp_list_new:
         new_name = Path(f'{item.as_posix()[0:-4]}')
         item.rename(new_name)
-

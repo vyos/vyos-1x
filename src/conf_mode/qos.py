@@ -14,14 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
 from netifaces import interfaces
 
-from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdep import set_dependents, call_dependents
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_interface_exists
 from vyos.ifconfig import Section

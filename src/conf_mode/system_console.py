@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,13 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 from pathlib import Path
 
 from vyos.config import Config
 from vyos.utils.process import call
-from vyos.utils.file import read_file
-from vyos.utils.file import write_file
 from vyos.system import grub_util
 from vyos.template import render
 from vyos import ConfigError

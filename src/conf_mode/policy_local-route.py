@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from itertools import product
 from sys import exit
 
@@ -23,13 +21,11 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
-from vyos.template import render
 from vyos.configverify import verify_interface_exists
 from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
 
 def get_config(config=None):
 

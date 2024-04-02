@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,13 +20,11 @@ import signal
 import argparse
 import threading
 import re
-import json
 import logging
 
 from queue import Queue
 from logging.handlers import SysLogHandler
 
-from vyos.ifconfig.vrrp import VRRP
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search

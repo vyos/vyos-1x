@@ -16,14 +16,12 @@
 
 import re
 import unittest
-import paramiko
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from gzip import GzipFile
 from subprocess import Popen, PIPE
 from pwd import getpwall
-from time import sleep
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd

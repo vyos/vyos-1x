@@ -16,7 +16,6 @@
 
 import os
 import re
-import tempfile
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from glob import glob

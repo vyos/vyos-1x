@@ -11,20 +11,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import re
-import unittest
 
+import re
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
 from vyos.cpu import get_core_count
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
-
 
 class BasicAccelPPPTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
