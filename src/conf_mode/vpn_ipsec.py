@@ -168,9 +168,7 @@ def verify(ipsec):
         for interface in ipsec['interface']:
             # exclude check interface for dynamic interfaces
             if tmp.match(interface):
-                if not interface_exists(interface):
-                    Warning(f'Interface "{interface}" does not exist yet and cannot be used '
-                            f'for IPsec until it is up!')
+                verify_interface_exists(interface, warning_only=True)
             else:
                 verify_interface_exists(interface)
 

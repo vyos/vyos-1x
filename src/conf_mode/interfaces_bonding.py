@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,7 @@
 import os
 
 from sys import exit
-from netifaces import interfaces
+
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
@@ -29,7 +29,6 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
-from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
@@ -38,6 +37,7 @@ from vyos.ifconfig import Section
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
+from vyos.utils.network import interface_exists
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents, call_dependents
@@ -209,7 +209,7 @@ def verify(bond):
             if interface == 'lo':
                 raise ConfigError('Loopback interface "lo" can not be added to a bond')
 
-            if interface not in interfaces():
+            if not interface_exists(interface):
                 raise ConfigError(error_msg + 'it does not exist!')
 
             if 'is_bridge_member' in interface_config:

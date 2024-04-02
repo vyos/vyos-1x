@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,10 +17,10 @@
 import os
 
 from sys import exit
-from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
@@ -65,8 +65,7 @@ def verify(igmp_proxy):
 
     upstream = 0
     for interface, config in igmp_proxy['interface'].items():
-        if interface not in interfaces():
-            raise ConfigError(f'Interface "{interface}" does not exist')
+        verify_interface_exists(interface)
         if dict_search('role', config) == 'upstream':
             upstream += 1
 

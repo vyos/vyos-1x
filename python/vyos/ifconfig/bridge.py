@@ -13,13 +13,12 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from netifaces import interfaces
-
 from vyos.ifconfig.interface import Interface
 from vyos.utils.assertion import assert_boolean
 from vyos.utils.assertion import assert_list
 from vyos.utils.assertion import assert_positive
 from vyos.utils.dict import dict_search
+from vyos.utils.network import interface_exists
 from vyos.configdict import get_vlan_ids
 from vyos.configdict import list_diff
 
@@ -314,7 +313,7 @@ class BridgeIf(Interface):
         # remove interface from bridge
         tmp = dict_search('member.interface_remove', config)
         for member in (tmp or []):
-            if member in interfaces():
+            if interface_exists(member):
                 self.del_port(member)
 
         # enable/disable VLAN Filter
@@ -345,7 +344,7 @@ class BridgeIf(Interface):
             for interface, interface_config in tmp.items():
                 # if interface does yet not exist bail out early and
                 # add it later
-                if interface not in interfaces():
+                if not interface_exists(interface):
                     continue
 
                 # Bridge lower "physical" interface

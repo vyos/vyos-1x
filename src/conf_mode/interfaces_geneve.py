@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
-from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -26,6 +25,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import GeneveIf
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 
 from vyos import airbag
@@ -77,8 +77,8 @@ def generate(geneve):
 def apply(geneve):
     # Check if GENEVE interface already exists
     if 'rebuild_required' in geneve or 'delete' in geneve:
-        if geneve['ifname'] in interfaces():
-            g = GeneveIf(geneve['ifname'])
+        if interface_exists(geneve['ifname']):
+            g = GeneveIf(**geneve)
             # GENEVE is super picky and the tunnel always needs to be recreated,
             # thus we can simply always delete it first.
             g.remove()

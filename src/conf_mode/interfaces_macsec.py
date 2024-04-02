@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,7 +16,6 @@
 
 import os
 
-from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
@@ -35,6 +34,7 @@ from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
+from vyos.utils.network import interface_exists
 from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
@@ -172,8 +172,8 @@ def apply(macsec):
     if 'deleted' in macsec or 'shutdown_required' in macsec:
         call(f'systemctl stop {systemd_service}')
 
-        if macsec['ifname'] in interfaces():
-            tmp = MACsecIf(macsec['ifname'])
+        if interface_exists(macsec['ifname']):
+            tmp = MACsecIf(**macsec)
             tmp.remove()
 
         if 'deleted' in macsec:
