@@ -66,7 +66,7 @@ def fqdn_config_parse(firewall):
         rule = path[4]
         suffix = path[5][0]
         set_name = f'{hook_name}_{priority}_{rule}_{suffix}'
-            
+
         if (path[0] == 'ipv4') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
             firewall['ip_fqdn'][set_name] = domain
         elif (path[0] == 'ipv6') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
@@ -85,7 +85,7 @@ def fqdn_resolve(fqdn, ipv6=False):
 
 def find_nftables_rule(table, chain, rule_matches=[]):
     # Find rule in table/chain that matches all criteria and return the handle
-    results = cmd(f'sudo nft -a list chain {table} {chain}').split("\n")
+    results = cmd(f'sudo nft --handle list chain {table} {chain}').split("\n")
     for line in results:
         if all(rule_match in line for rule_match in rule_matches):
             handle_search = re.search('handle (\d+)', line)
@@ -655,7 +655,7 @@ def geoip_update(firewall, force=False):
             'ipv6_sets': ipv6_sets
         })
 
-        result = run(f'nft -f {nftables_geoip_conf}')
+        result = run(f'nft --file {nftables_geoip_conf}')
         if result != 0:
             print('Error: GeoIP failed to update firewall')
             return False

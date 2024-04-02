@@ -223,19 +223,19 @@ def generate(nat):
     render(nftables_static_nat_conf, 'firewall/nftables-static-nat.j2', nat)
 
     # dry-run newly generated configuration
-    tmp = run(f'nft -c -f {nftables_nat_config}')
+    tmp = run(f'nft --check --file {nftables_nat_config}')
     if tmp > 0:
         raise ConfigError('Configuration file errors encountered!')
 
-    tmp = run(f'nft -c -f {nftables_static_nat_conf}')
+    tmp = run(f'nft --check --file {nftables_static_nat_conf}')
     if tmp > 0:
         raise ConfigError('Configuration file errors encountered!')
 
     return None
 
 def apply(nat):
-    cmd(f'nft -f {nftables_nat_config}')
-    cmd(f'nft -f {nftables_static_nat_conf}')
+    cmd(f'nft --file {nftables_nat_config}')
+    cmd(f'nft --file {nftables_static_nat_conf}')
 
     if not nat or 'deleted' in nat:
         os.unlink(nftables_nat_config)
