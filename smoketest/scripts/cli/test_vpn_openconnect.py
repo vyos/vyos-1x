@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.template import ip_from_cidr
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
@@ -27,25 +28,110 @@ base_path = ['vpn', 'openconnect']
 
 pki_path = ['pki']
 
+cert_name = 'OCServ'
 cert_data = """
-MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIw
-WTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
-bWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIx
-MDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNV
-BAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlP
-UzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
-01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3
-QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8E
-BAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu
-+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3Lftz
-ngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93
-+dm/LDnp7C0=
+MIIDsTCCApmgAwIBAgIURNQMaYmRIP/d+/OPWPWmuwkYHbswDQYJKoZIhvcNAQEL
+BQAwVzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcM
+CVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzEQMA4GA1UEAwwHdnlvcy5pbzAeFw0y
+NDA0MDIxNjQxMTRaFw0yNTA0MDIxNjQxMTRaMFcxCzAJBgNVBAYTAkdCMRMwEQYD
+VQQIDApTb21lLVN0YXRlMRIwEAYDVQQHDAlTb21lLUNpdHkxDTALBgNVBAoMBFZ5
+T1MxEDAOBgNVBAMMB3Z5b3MuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQDFeexWVV70fBLOxGofWYlcNxJ9JyLviAZZDXrBIYfQnSrYp51yMKRPTH1e
+Sjr7gIxVArAqLoYFgo7frRDkCKg8/izTopxtBTV2XJkLqDGA7DOrtBhgj0zjmF0A
+WWIWi83WHc+sTHSvIqNLCDAZgnnzf1ch3W/na10hBTnFX4Yv6CJ4I7doSIyWzaQr
+RvUXfaNYnvege+RrG5LzkVGxD2EhHyBqfQ2mxvlgqICqKSZkL56a3c/MHAm+7MKl
+2KbSGxwNDs+SpHrCgWVIsl9w0bN2NSAu6GzyfW7V+V1dkiCggLlxXGhGncPMiQ7T
+M7GKQULnQl5o/15GkW72Tg6wUdDpAgMBAAGjdTBzMAwGA1UdEwEB/wQCMAAwDgYD
+VR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMB0GA1UdDgQWBBTtil1X
+c6dXA6kxZtZCgjx9QPzeLDAfBgNVHSMEGDAWgBTKMZvYAW1thn/uxX1fpcbP5vKq
+dzANBgkqhkiG9w0BAQsFAAOCAQEARjS+QYJDz+XTdwK/lMF1GhSdacGnOIWRsbRx
+N7odsyBV7Ud5W+Py79n+/PRirw2+jAaGXFmmgdxrcjlM+dZnlO3X0QCIuNdODggD
+0J/u1ICPdm9TcJ2lEdbIE2vm2Q9P5RdQ7En7zg8Wu+rcNPlIxd3pHFOMX79vOcgi
+RkWWII6tyeeT9COYgXUbg37wf2LkVv4b5PcShrfkWZVFWKDKr1maJ+iMwcIlosOe
+Gj3SKe7gKBuPbMRwtocqKAYbW1GH12tA49DNkvxVKxVqnP4nHkwgfOJdpcZAjlyb
+gLkzVKInZwg5EvJ7qtSJirDap9jyuLTfr5TmxbcdEhmAqeS41A==
 """
 
-key_data = """
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
-2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
-u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
+cert_key_data = """
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDFeexWVV70fBLO
+xGofWYlcNxJ9JyLviAZZDXrBIYfQnSrYp51yMKRPTH1eSjr7gIxVArAqLoYFgo7f
+rRDkCKg8/izTopxtBTV2XJkLqDGA7DOrtBhgj0zjmF0AWWIWi83WHc+sTHSvIqNL
+CDAZgnnzf1ch3W/na10hBTnFX4Yv6CJ4I7doSIyWzaQrRvUXfaNYnvege+RrG5Lz
+kVGxD2EhHyBqfQ2mxvlgqICqKSZkL56a3c/MHAm+7MKl2KbSGxwNDs+SpHrCgWVI
+sl9w0bN2NSAu6GzyfW7V+V1dkiCggLlxXGhGncPMiQ7TM7GKQULnQl5o/15GkW72
+Tg6wUdDpAgMBAAECggEACbR8bHZv9GT/9EshNLQ3n3a8wQuCLd0fWWi5A90sKbun
+pj5/6uOVbP5DL7Xx4HgIrYmJyIZBI5aEg11Oi15vjOZ9o9MF4V0UVmJQ9TU0EEl2
+H/X5uA54MWaaCiaFFGWU3UqEG8wldJFSZCFyt7Y6scBW3b0JFF7+6dyyDPoCWWqh
+cNR41Hv0T0eqfXGOXX1JcBlLbqy0QXXeFoLlxV3ouIgWgkKJk7u3vDWCVM/ofP0m
+/GyZYWCEA2JljEQZaVgtk1afFoamrjM4doMiirk+Tix4yGno94HLJdDUynqdLNAd
+ZdKunFVAJau17b1VVPyfgIvIaPRvSGQVQoXH6TuB2QKBgQD5LRYTxsd8WsOwlB2R
+SBYdzDff7c3VuNSAYTp7O2MqWrsoXm2MxLzEJLJUen+jQphL6ti/ObdrSOnKF2So
+SizYeJ1Irx4M4BPSdy/Yt3T/+e+Y4K7iQ7Pdvdc/dlZ5XuNHYzuA/F7Ft/9rhUy9
+jSdQYANX+7h8vL7YrEjvhMMMZQKBgQDK4mG4D7XowLlBWv1fK4n/ErWvYSxH/X+A
+VVnLv4z4aZHyRS2nTfQnb8PKbHJ/65x9yZs8a+6HqE4CAH+0LfZuOI8qn9OksxPZ
+7GuQk/FiVyGXtu18hzlfhzmb0ZTjAalZ5b68DOIhyZIHVketebhljXaB5bfwdIgt
+7vTOfotANQKBgQCWiA5WVDgfgBXIjzJtmkcCKWV3+onnG4oFJLfXysDVzYpTkPhN
+mm0PcbvqHTcOwiSPeIkIvS15usrCM++zW1xMSlF6n5Bf5t8Svr5BBlPAcJW2ncYJ
+Gy2GQDHRPQRwvko/zkscWVpHyCieJCGAQc4GWHqspH2Hnd8Ntsc5K9NJoQKBgFR1
+5/5rM+yghr7pdT9wbbNtg4tuZbPWmYTAg3Bp3vLvaB22pOnYbwMX6SdU/Fm6qVxI
+WMLPn+6Dp2337TICTGvYSemRvdb74hC/9ouquzuYUFjLg5Rq6vyU2+u9VUEnyOuu
+1DePGXi9ZHh/d7mFSbmlKaesDWYh7StKJknsrmXdAoGBAOm+FnzryKkhIq/ELyT9
+8v4wr0lxCcAP3nNb/P5ocv3m7hRLIkf4S9k/gAL+gE/OtdesomQKjOz7noLO+I2H
+rj6ZfC/lhPIRJ4XK5BqgqqH53Zcl/HDoaUjbpmyMvZVoQfUHLut8Y912R6mfm65z
+qXl1L7EdHTY+SdoThNJTpmWb
+"""
+
+ca_name = 'VyOS-CA'
+ca_data = """
+MIIDnTCCAoWgAwIBAgIUFVRURZXSbQ7F0DiSZYfqY0gQORMwDQYJKoZIhvcNAQEL
+BQAwVzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcM
+CVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzEQMA4GA1UEAwwHdnlvcy5pbzAeFw0y
+NDA0MDIxNjQxMDFaFw0yOTA0MDExNjQxMDFaMFcxCzAJBgNVBAYTAkdCMRMwEQYD
+VQQIDApTb21lLVN0YXRlMRIwEAYDVQQHDAlTb21lLUNpdHkxDTALBgNVBAoMBFZ5
+T1MxEDAOBgNVBAMMB3Z5b3MuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQCg7Mjl6+rs8Bdkjqgl2QDuHfrH2mTDCeB7WuNTnIz0BPDtlmwIdqhU7LdC
+B/zUSABAa6LBe/Z/bKWCRKyq8fU2/4uWECe975IMXOfFdYT6KA78DROvOi32JZml
+n0LAXV+538eb+g19xNtoBhPO8igiNevfkV+nJehRK/41ATj+assTOv87vaSX7Wqy
+aP/ZqkIdQD9Kc3cqB4JsYjkWcniHL9yk4oY3cjKK8PJ1pi4FqgFHt2hA+Ic+NvbA
+hc47K9otP8FM4jkSii3MZfHA6Czb43BtbR+YEiWPzBhzE2bCuIgeRUumMF1Z+CAT
+6U7Cpx3XPh+Ac2RnDa8wKeQ1eqE1AgMBAAGjYTBfMA8GA1UdEwEB/wQFMAMBAf8w
+DgYDVR0PAQH/BAQDAgGGMB0GA1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDATAd
+BgNVHQ4EFgQUyjGb2AFtbYZ/7sV9X6XGz+byqncwDQYJKoZIhvcNAQELBQADggEB
+AArGXCq92vtaUZt528lC34ENPL9bQ7nRAS/ojplAzM9reW3o56sfYWf1M8iwRsJT
+LbAwSnVB929RLlDolNpLwpzd1XaMt61Zcx4MFQmQCd+40dfuvMhluZaxt+F9bC1Z
+cA7uwe/2HrAIULq3sga9LzSph6dNuyd1rGchr4xHCJ7u4WcF0kqi0Hjcn9S/ppEc
+ba2L3rRqZmCbe6Yngx+MS06jonGw0z8F6e8LMkcvJUlNMEC76P+5Byjp4xZGP+y3
+DtIfsfijpb+t1OUe75YmWflTFnHR9GlybNYTxGAl49mFw6LlS1kefXyPtfuReLmv
+n+vZdJAWTq76zAPT3n9FClo=
+"""
+
+ca_key_data = """
+ MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCg7Mjl6+rs8Bd
+ kjqgl2QDuHfrH2mTDCeB7WuNTnIz0BPDtlmwIdqhU7LdCB/zUSABAa6LBe/Z/bK
+ WCRKyq8fU2/4uWECe975IMXOfFdYT6KA78DROvOi32JZmln0LAXV+538eb+g19x
+ NtoBhPO8igiNevfkV+nJehRK/41ATj+assTOv87vaSX7WqyaP/ZqkIdQD9Kc3cq
+ B4JsYjkWcniHL9yk4oY3cjKK8PJ1pi4FqgFHt2hA+Ic+NvbAhc47K9otP8FM4jk
+ Sii3MZfHA6Czb43BtbR+YEiWPzBhzE2bCuIgeRUumMF1Z+CAT6U7Cpx3XPh+Ac2
+ RnDa8wKeQ1eqE1AgMBAAECggEAEDDaoqVqmMWsONoQiWRMr2h1RZvPxP7OpuKVW
+ iF3XgrMOb9HZc+Ybpj1dC+NDMekvNaHhMuF2Lqz6UgjDjzzVMH/x4yfDwFWUqeb
+ SxbglvGmVk4zg48JNkmArLT6GJQccD1XXjZZmqSOhagM4KalCpIdxfvgoZbTCa2
+ xMSCLHS+1HCDcmpCoeXM6ZBPTn0NbjRDAqIzCwcq2veG7RSz040obk8h7nrdv7j
+ hxRGmtPmPFzKgGLNn6GnL7AwYVMiidjj/ntvM4B1OMs9MwUYbtpg98TWcWyu+ZR
+ akUrnVf9z2aIHCKyuJvke/PNqMgw+L8KV4/478XxWhXfl7K1F3nMQKBgQDRBUDY
+ NFH0wC4MMWsA+RGwyz7RlzACChDJCMtA/agbW06gUoE9UYf8KtLQQQYljlLJHxH
+ GD72QnuM+sowGGXnbD4BabA9TQiQUG5c6boznTy1uU1gt8T0Zl0mmC7vIMoMBVd
+ 5bb0qrZvuR123kDGYn6crug9uvMIYSSlhGmBGTJQKBgQDFGC3vfkCyXzLoYy+RI
+ s/rXgyBF1PUYQtyDgL0N811L0H7a8JhFnt4FvodUbxv2ob+1kIc9e3yXT6FsGyO
+ 7IDOnqgeQKy74bYqVPZZuf1FOFb9fuxf00pn1FmhAF4OuSWkhVhrKkyrZwdD8Ar
+ jLK253J94dogjdKAYfN1csaOA0QKBgD0zUZI8d4a3QoRVb+RACTr/t6v8nZTrR5
+ DlX0XvP2qLKJFutuKyXaOrEkDh2R/j9T9oNncMos+WhikUdEVQ7koC1u0i2LXjF
+ tdAYN4+Akmz+DRmeNoy2VYF4w2YP+pVR+B7OPkCtBVNuPkx3743Fy42mTGPMCKy
+ jX8Lf59j5Tl1AoGBAI3sk2dZqozHMIlWovIH92CtIKP0gFD2cJ94p3fklvZDSWg
+ aeKYg4lffc8uZB/AjlAH9ly3ziZx0uIjcOc/RTg96/+SI/dls9xgUhjCmVVJ692
+ ki9GMsau/JYaEl+pTvjcOiocDJfNwQHJM3Tx+3FII59DtyXyXo3T/E6kHNSMeBA
+ oGAR9M48DTspv9OH1S7X6yR6MtMY5ltsBmB3gPhQFxiDKBvARkIkAPqObQ9TG/V
+ uOz2Purq0Oz7SHsY2jiFDd2KEGo6JfG61NDdIhiQC99ztSgt7NtvSCnX22SfVDW
+ oFxSK+tek7tvDVXAXCNy4ZESMEUGJ6NDHImb80aF+xZ3wYKw=
 """
 
 PROCESS_NAME = 'ocserv-main'
@@ -67,9 +153,10 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
 
         cls.cli_set(cls, ['interfaces', 'dummy', listen_if, 'address', listen_address])
 
-        cls.cli_set(cls, pki_path + ['ca', 'openconnect', 'certificate', cert_data.replace('\n','')])
-        cls.cli_set(cls, pki_path + ['certificate', 'openconnect', 'certificate', cert_data.replace('\n','')])
-        cls.cli_set(cls, pki_path + ['certificate', 'openconnect', 'private', 'key', key_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['ca', cert_name, 'certificate', ca_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['ca', cert_name, 'private', 'key', ca_key_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['certificate', cert_name, 'certificate', cert_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['certificate', cert_name, 'private', 'key', cert_key_data.replace('\n','')])
 
     @classmethod
     def tearDownClass(cls):
@@ -108,8 +195,12 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         for domain in split_dns:
             self.cli_set(base_path + ['network-settings', 'split-dns', domain])
 
-        self.cli_set(base_path + ['ssl', 'ca-certificate', 'openconnect'])
-        self.cli_set(base_path + ['ssl', 'certificate', 'openconnect'])
+        # SSL certificates are mandatory
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['ssl', 'ca-certificate', cert_name])
+        self.cli_set(base_path + ['ssl', 'certificate', cert_name])
 
         listen_ip_no_cidr = ip_from_cidr(listen_address)
         self.cli_set(base_path + ['listen-address', listen_ip_no_cidr])

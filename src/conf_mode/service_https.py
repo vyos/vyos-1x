@@ -24,13 +24,14 @@ from time import sleep
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.config import config_dict_merge
-from vyos.configdiff import get_config_diff
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_pki_certificate
+from vyos.configverify import verify_pki_ca_certificate
+from vyos.configverify import verify_pki_dh_parameters
 from vyos.defaults import api_config_state
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.pki import wrap_dh_parameters
-from vyos.pki import load_dh_parameters
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
@@ -84,33 +85,14 @@ def verify(https):
     if https is None:
         return None
 
-    if 'certificates' in https and 'certificate' in https['certificates']:
-        cert_name = https['certificates']['certificate']
-        if 'pki' not in https:
-            raise ConfigError('PKI is not configured!')
+    if dict_search('certificates.certificate', https) != None:
+        verify_pki_certificate(https, https['certificates']['certificate'])
 
-        if cert_name not in https['pki']['certificate']:
-            raise ConfigError('Invalid certificate in configuration!')
+        tmp = dict_search('certificates.ca_certificate', https)
+        if tmp != None: verify_pki_ca_certificate(https, tmp)
 
-        pki_cert = https['pki']['certificate'][cert_name]
-
-        if 'certificate' not in pki_cert:
-            raise ConfigError('Missing certificate in configuration!')
-
-        if 'private' not in pki_cert or 'key' not in pki_cert['private']:
-            raise ConfigError('Missing certificate private key in configuration!')
-
-        if 'dh_params' in https['certificates']:
-            dh_name = https['certificates']['dh_params']
-            if dh_name not in https['pki']['dh']:
-                raise ConfigError('Invalid DH parameter in configuration!')
-
-            pki_dh = https['pki']['dh'][dh_name]
-            dh_params = load_dh_parameters(pki_dh['parameters'])
-            dh_numbers = dh_params.parameter_numbers()
-            dh_bits = dh_numbers.p.bit_length()
-            if dh_bits < 2048:
-                raise ConfigError(f'Minimum DH key-size is 2048 bits')
+        tmp = dict_search('certificates.dh_params', https)
+        if tmp != None: verify_pki_dh_parameters(https, tmp, 2048)
 
     else:
         Warning('No certificate specified, using build-in self-signed certificates. '\
@@ -214,7 +196,8 @@ def apply(https):
     https_service_name = 'nginx.service'
 
     if https is None:
-        call(f'systemctl stop {http_api_service_name}')
+        if is_systemd_service_active(http_api_service_name):
+            call(f'systemctl stop {http_api_service_name}')
         call(f'systemctl stop {https_service_name}')
         return
 

@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import pprint
 
 from glob import glob
 from sys import exit
@@ -26,7 +25,6 @@ from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
-from vyos.configverify import verify_eapol
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu
@@ -34,6 +32,8 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bond_bridge_member
+from vyos.configverify import verify_pki_certificate
+from vyos.configverify import verify_pki_ca_certificate
 from vyos.ethtool import Ethtool
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import BondIf
@@ -263,6 +263,22 @@ def verify_allowedbond_changes(ethernet: dict):
                               f' on interface "{ethernet["ifname"]}".' \
                               f' Interface is a bond member')
 
+def verify_eapol(ethernet: dict):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of EAPoL configuration.
+    """
+    if 'eapol' not in ethernet:
+        return
+
+    if 'certificate' not in ethernet['eapol']:
+        raise ConfigError('Certificate must be specified when using EAPoL!')
+
+    verify_pki_certificate(ethernet, ethernet['eapol']['certificate'], no_password_protected=True)
+
+    if 'ca_certificate' in ethernet['eapol']:
+        for ca_cert in ethernet['eapol']['ca_certificate']:
+            verify_pki_ca_certificate(ethernet, ca_cert)
 
 def verify(ethernet):
     if 'deleted' in ethernet:
