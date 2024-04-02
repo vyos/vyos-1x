@@ -112,12 +112,9 @@ endif
 sonar:
 	sonar-scanner -X -Dsonar.login=${SONAR_TOKEN}
 
-.PHONY: docs
-.ONESHELL:
-docs:
-	sphinx-apidoc -o sphinx/source/  python/
-	cd sphinx/
-	PYTHONPATH=../python make html
+.PHONY: unused-imports
+unused-imports:
+	git ls-files *.py | xargs pylint | grep W0611
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b
