@@ -630,6 +630,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         networks = {
             '10.0.0.0/8' : {
                 'as_set' : '',
+                'summary_only' : '',
+                'route_map' : route_map_in,
                 },
             '100.64.0.0/10' : {
                 'as_set' : '',
@@ -654,6 +656,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'summary_only' in network_config:
                 self.cli_set(base_path + ['address-family', 'ipv4-unicast',
                                               'aggregate-address', network, 'summary-only'])
+            if 'route_map' in network_config:
+                self.cli_set(base_path + ['address-family', 'ipv4-unicast',
+                                              'aggregate-address', network, 'route-map', network_config['route_map']])
 
         # commit changes
         self.cli_commit()
@@ -668,10 +673,14 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         for network, network_config in networks.items():
             self.assertIn(f' network {network}', frrconfig)
+            command = f'aggregate-address {network}'
             if 'as_set' in network_config:
-                self.assertIn(f' aggregate-address {network} as-set', frrconfig)
+                command = f'{command} as-set'
             if 'summary_only' in network_config:
-                self.assertIn(f' aggregate-address {network} summary-only', frrconfig)
+                command = f'{command} summary-only'
+            if 'route_map' in network_config:
+                command = f'{command} route-map {network_config["route_map"]}'
+            self.assertIn(command, frrconfig)
 
     def test_bgp_05_afi_ipv6(self):
         networks = {

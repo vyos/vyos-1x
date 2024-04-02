@@ -290,10 +290,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         endif %}
 {%         if afi_config.aggregate_address is vyos_defined %}
 {%             for aggregate, aggregate_config in afi_config.aggregate_address.items() %}
-  aggregate-address {{ aggregate }}{{ ' as-set' if aggregate_config.as_set is vyos_defined }}{{ ' summary-only' if aggregate_config.summary_only is vyos_defined }}
-{%                 if aggregate_config.route_map is vyos_defined %}
-  aggregate-address {{ aggregate }} route-map {{ aggregate_config.route_map }}
-{%                 endif %}
+  aggregate-address {{ aggregate }} {{ 'as-set' if aggregate_config.as_set is vyos_defined }} {{ 'summary-only' if aggregate_config.summary_only is vyos_defined }} {{ 'route-map ' ~ aggregate_config.route_map if aggregate_config.route_map is vyos_defined }}
 {%             endfor %}
 {%         endif %}
 {%         if afi_config.maximum_paths.ebgp is vyos_defined %}
