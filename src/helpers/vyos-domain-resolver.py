@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2023 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-import os
 import time
 
 from vyos.configdict import dict_merge
@@ -95,7 +94,7 @@ def nft_output(table, set_name, ip_list):
 def nft_valid_sets():
     try:
         valid_sets = []
-        sets_json = cmd('nft -j list sets')
+        sets_json = cmd('nft --json list sets')
         sets_obj = json.loads(sets_json)
 
         for obj in sets_obj['nftables']:
@@ -155,7 +154,7 @@ def update(firewall):
         count += 1
 
     nft_conf_str = "\n".join(conf_lines) + "\n"
-    code = run(f'nft -f -', input=nft_conf_str)
+    code = run(f'nft --file -', input=nft_conf_str)
 
     print(f'Updated {count} sets - result: {code}')
 

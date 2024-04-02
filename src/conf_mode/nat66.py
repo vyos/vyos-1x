@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import jmespath
-import json
 import os
 
 from sys import exit
@@ -106,7 +104,7 @@ def apply(nat):
     if not nat:
         return None
 
-    cmd(f'nft -f {nftables_nat66_config}')
+    cmd(f'nft --file {nftables_nat66_config}')
     call_dependents()
 
     return None
