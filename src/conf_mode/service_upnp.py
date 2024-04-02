@@ -54,9 +54,7 @@ def get_config(config=None):
 
 def get_all_interface_addr(prefix, filter_dev, filter_family):
     list_addr = []
-    interfaces = netifaces.interfaces()
-
-    for interface in interfaces:
+    for interface in netifaces.interfaces():
         if filter_dev and interface in filter_dev:
             continue
         addrs = netifaces.ifaddresses(interface)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,22 +13,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-import os
-import unittest
-from unittest import TestCase, mock
-
+from unittest import TestCase
 from vyos.xml import load_configuration
-
-import sys
-
 
 class TestSearch(TestCase):
     def setUp(self):
         self.xml = load_configuration()
- 
+
     def test_(self):
         last = self.xml.traverse("")
         self.assertEqual(last, '')

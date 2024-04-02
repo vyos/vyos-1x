@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,7 +14,6 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.qos.base import QoSBase
-from vyos.utils.dict import dict_search
 
 class Priority(QoSBase):
     _parent = 1

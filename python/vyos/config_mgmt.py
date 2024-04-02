@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,18 +19,23 @@ import sys
 import gzip
 import logging
 
-from typing import Optional, Tuple, Union
+from typing import Optional
+from typing import Tuple
 from filecmp import cmp
 from datetime import datetime
-from textwrap import dedent, indent
+from textwrap import dedent
 from pathlib import Path
 from tabulate import tabulate
 from shutil import copy, chown
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 
 from vyos.config import Config
-from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
-from vyos.load_config import load, LoadConfigError
+from vyos.configtree import ConfigTree
+from vyos.configtree import ConfigTreeError
+from vyos.configtree import show_diff
+from vyos.load_config import load
+from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
 from vyos.utils.io import ask_yes_no

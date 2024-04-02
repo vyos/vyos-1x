@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import tempfile
 import unittest
 import vyos.configtree
 import vyos.initialsetup as vis
@@ -101,4 +99,3 @@ class TestInitialSetup(TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

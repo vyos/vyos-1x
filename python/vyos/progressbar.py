@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,11 +17,9 @@ import math
 import os
 import signal
 import subprocess
-import sys
 
 from vyos.utils.io import is_dumb_terminal
 from vyos.utils.io import print_error
-
 
 class Progressbar:
     def __init__(self, step=None):

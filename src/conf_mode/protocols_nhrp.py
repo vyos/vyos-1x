@@ -19,7 +19,6 @@ import os
 from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.template import render
-from vyos.utils.process import process_named_running
 from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag

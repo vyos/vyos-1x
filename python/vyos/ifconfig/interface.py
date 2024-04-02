@@ -35,7 +35,6 @@ from vyos.defaults import directories
 from vyos.template import render
 from vyos.utils.network import mac2eui64
 from vyos.utils.dict import dict_search
-from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_namespace
 from vyos.utils.process import is_systemd_service_active

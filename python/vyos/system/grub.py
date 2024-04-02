@@ -18,7 +18,6 @@ import platform
 from pathlib import Path
 from re import MULTILINE, compile as re_compile
 from shutil import copy2
-from typing import Union
 from uuid import uuid5, NAMESPACE_URL, UUID
 
 from vyos.template import render

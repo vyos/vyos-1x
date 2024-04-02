@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2023 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,19 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 import time
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.configsession import ConfigSessionError
-from vyos.ifconfig import Section
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 
-
 base_path = ['load-balancing']
-
 
 def create_netns(name):
     return call(f'sudo ip netns add {name}')

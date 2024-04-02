@@ -17,12 +17,8 @@
 import json
 import sys
 
-from sys import exit
-
 from vyos.utils.process import cmd
-from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
-
 import vyos.opmode
 
 def _get_json_data(command: str) -> list:

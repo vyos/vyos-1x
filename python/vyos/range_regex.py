@@ -22,7 +22,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 '''
-import math
 
 # coding=utf8
 
@@ -67,7 +66,7 @@ def regex_for_range(min_, max_):
         min_ = 0
 
     if max_ >= 0:
-        positive_subpatterns = split_to_patterns(min_, max_)    
+        positive_subpatterns = split_to_patterns(min_, max_)
 
     negative_only_subpatterns = ['-' + val for val in negative_subpatterns if val not in positive_subpatterns]
     positive_only_subpatterns = [val for val in positive_subpatterns if val not in negative_subpatterns]

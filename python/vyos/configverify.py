@@ -23,8 +23,6 @@
 
 from vyos import ConfigError
 from vyos.utils.dict import dict_search
-from vyos.utils.dict import dict_search_recursive
-
 # pattern re-used in ipsec migration script
 dynamic_interface_pattern = r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+'
 
@@ -246,7 +244,6 @@ def verify_interface_exists(ifname, warning_only=False):
     if the interface is defined on the CLI, if it's not found we try if
     it exists at the OS level.
     """
-    import os
     from vyos.base import Warning
     from vyos.configquery import ConfigTreeQuery
     from vyos.utils.dict import dict_search_recursive

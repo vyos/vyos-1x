@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,7 +20,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.template import address_from_cidr
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -109,4 +108,3 @@ class TestServiceDHCPv6Relay(VyOSUnitTestSHIM.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-
