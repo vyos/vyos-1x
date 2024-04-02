@@ -99,10 +99,17 @@ def verify_vrf(config):
     Common helper function used by interface implementations to perform
     recurring validation of VRF configuration.
     """
-    from netifaces import interfaces
-    if 'vrf' in config and config['vrf'] != 'default':
-        if config['vrf'] not in interfaces():
-            raise ConfigError('VRF "{vrf}" does not exist'.format(**config))
+    from vyos.utils.network import interface_exists
+    if 'vrf' in config:
+        vrfs = config['vrf']
+        if isinstance(vrfs, str):
+            vrfs = [vrfs]
+
+        for vrf in vrfs:
+            if vrf == 'default':
+                continue
+            if not interface_exists(vrf):
+                raise ConfigError(f'VRF "{vrf}" does not exist!')
 
         if 'is_bridge_member' in config:
             raise ConfigError(
@@ -206,13 +213,13 @@ def verify_mirror_redirect(config):
 
     It makes no sense to mirror traffic back at yourself!
     """
-    import os
+    from vyos.utils.network import interface_exists
     if {'mirror', 'redirect'} <= set(config):
         raise ConfigError('Mirror and redirect can not be enabled at the same time!')
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
-            if not os.path.exists(f'/sys/class/net/{mirror_interface}'):
+            if not interface_exists(mirror_interface):
                 raise ConfigError(f'Requested mirror interface "{mirror_interface}" '\
                                    'does not exist!')
 
@@ -222,7 +229,7 @@ def verify_mirror_redirect(config):
 
     if 'redirect' in config:
         redirect_ifname = config['redirect']
-        if not os.path.exists(f'/sys/class/net/{redirect_ifname}'):
+        if not interface_exists(redirect_ifname):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
 
@@ -280,6 +287,7 @@ def verify_interface_exists(ifname, warning_only=False):
     from vyos.base import Warning
     from vyos.configquery import ConfigTreeQuery
     from vyos.utils.dict import dict_search_recursive
+    from vyos.utils.network import interface_exists
 
     # Check if interface is present in CLI config
     config = ConfigTreeQuery()
@@ -288,7 +296,7 @@ def verify_interface_exists(ifname, warning_only=False):
         return True
 
     # Interface not found on CLI, try Linux Kernel
-    if os.path.exists(f'/sys/class/net/{ifname}'):
+    if interface_exists(ifname):
         return True
 
     message = f'Interface "{ifname}" does not exist!'

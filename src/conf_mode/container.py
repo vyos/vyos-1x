@@ -32,6 +32,7 @@ from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run
+from vyos.utils.network import interface_exists
 from vyos.template import bracketize_ipv6
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
@@ -471,7 +472,7 @@ def apply(container):
             # T5147: Networks are started only as soon as there is a consumer.
             # If only a network is created in the first place, no need to assign
             # it to a VRF as there's no consumer, yet.
-            if os.path.exists(f'/sys/class/net/{network_name}'):
+            if interface_exists(network_name):
                 tmp = Interface(network_name)
                 tmp.add_ipv6_eui64_address('fe80::/64')
                 tmp.set_vrf(network_config.get('vrf', ''))

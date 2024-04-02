@@ -262,7 +262,7 @@
               </constraint>
             </properties>
           </leafNode>
-          #include <include/interface/vrf.xml.i>
+          #include <include/vrf-multi.xml.i>
         </children>
       </node>
     </children>

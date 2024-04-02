@@ -36,8 +36,9 @@ from vyos.qos import RateLimiter
 from vyos.qos import RoundRobin
 from vyos.qos import TrafficShaper
 from vyos.qos import TrafficShaperHFSC
-from vyos.utils.process import run
 from vyos.utils.dict import dict_search_recursive
+from vyos.utils.network import interface_exists
+from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -214,7 +215,7 @@ def apply(qos):
         return None
 
     for interface, interface_config in qos['interface'].items():
-        if not os.path.exists(f'/sys/class/net/{interface}'):
+        if not interface_exists(interface):
             # When shaper is bound to a dialup (e.g. PPPoE) interface it is
             # possible that it is yet not availbale when to QoS code runs.
             # Skip the configuration and inform the user
