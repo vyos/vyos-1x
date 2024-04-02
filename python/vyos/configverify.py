@@ -275,7 +275,7 @@ def verify_source_interface(config):
     required by e.g. peth/MACvlan, MACsec ...
     """
     import re
-    from netifaces import interfaces
+    from vyos.utils.network import interface_exists
 
     ifname = config['ifname']
     if 'source_interface' not in config:
@@ -287,7 +287,7 @@ def verify_source_interface(config):
     if tmp.match(src_ifname):
         raise ConfigError(f'Can not source "{ifname}" from dynamic interface "{src_ifname}"!')
 
-    if src_ifname not in interfaces():
+    if not interface_exists(src_ifname):
         raise ConfigError(f'Specified source-interface {src_ifname} does not exist')
 
     if 'source_interface_is_bridge_member' in config:

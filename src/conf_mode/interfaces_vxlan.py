@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,6 @@
 import os
 
 from sys import exit
-from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -35,6 +34,7 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import VXLANIf
 from vyos.template import is_ipv6
 from vyos.utils.dict import dict_search
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -212,8 +212,8 @@ def generate(vxlan):
 def apply(vxlan):
     # Check if the VXLAN interface already exists
     if 'rebuild_required' in vxlan or 'delete' in vxlan:
-        if vxlan['ifname'] in interfaces():
-            v = VXLANIf(vxlan['ifname'])
+        if interface_exists(vxlan['ifname']):
+            v = VXLANIf(**vxlan)
             # VXLAN is super picky and the tunnel always needs to be recreated,
             # thus we can simply always delete it first.
             v.remove()
