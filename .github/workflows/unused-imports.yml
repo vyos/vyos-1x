@@ -1,6 +1,7 @@
-name: Pylint
-
-on: [push]
+name: Check for unused imports using Pylint
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, locked]
 
 jobs:
   build:
@@ -20,4 +21,9 @@ jobs:
         pip install pylint
     - name: Analysing the code with pylint
       run: |
-        make unused-imports
+        tmp=$(git ls-files *.py | xargs pylint | grep W0611 | wc -l)
+        if [[ $tmp -gt 0 ]]; then
+            echo "Found $tmp occurrence of unused Python import statements!"
+            exit 1
+        fi
+        exit 0
