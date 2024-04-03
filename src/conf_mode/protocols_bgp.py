@@ -285,6 +285,7 @@ def verify(bgp):
             elif tmp != 'default':
                 raise ConfigError(f'{error_msg} "{tmp}"!')
 
+    peer_groups_context = dict()
     # Common verification for both peer-group and neighbor statements
     for neighbor in ['neighbor', 'peer_group']:
         # bail out early if there is no neighbor or peer-group statement
@@ -300,6 +301,18 @@ def verify(bgp):
                 if 'peer_group' not in bgp or peer_group not in bgp['peer_group']:
                     raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                       f'neighbor "{neighbor}" does not exist!')
+
+                if 'remote_as' in peer_config:
+                    is_ibgp = True
+                    if peer_config['remote_as'] != 'internal' and \
+                            peer_config['remote_as'] != bgp['system_as']:
+                        is_ibgp = False
+
+                    if peer_group not in peer_groups_context:
+                        peer_groups_context[peer_group] = is_ibgp
+                    elif peer_groups_context[peer_group] != is_ibgp:
+                        raise ConfigError(f'Peer-group members must be '
+                                          f'all internal or all external')
 
             if 'local_role' in peer_config:
                 #Ensure Local Role has only one value.
