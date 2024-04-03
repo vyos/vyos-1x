@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,11 +20,10 @@ import re
 from sys import exit
 from ipaddress import ip_address
 
-from vyos.base import Warning
 from vyos.config import Config
 from vyos.config import config_dict_merge
 from vyos.configverify import verify_vrf
-from vyos.ifconfig import Section
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import cmd
@@ -184,10 +183,7 @@ def verify(flow_config):
 
     # check that all configured interfaces exists in the system
     for interface in flow_config['interface']:
-        if interface not in Section.interfaces():
-            # Changed from error to warning to allow adding dynamic interfaces
-            # and interface templates
-            Warning(f'Interface "{interface}" is not presented in the system')
+        verify_interface_exists(interface, warning_only=True)
 
     # check sFlow configuration
     if 'sflow' in flow_config:

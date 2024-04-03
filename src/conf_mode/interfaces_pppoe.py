@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,16 +17,12 @@
 import os
 
 from sys import exit
-from copy import deepcopy
-from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
-from vyos.configdict import get_pppoe_interfaces
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_source_interface
-from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect

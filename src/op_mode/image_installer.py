@@ -23,7 +23,6 @@ from shutil import copy, chown, rmtree, copytree
 from glob import glob
 from sys import exit
 from os import environ
-from time import sleep
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context

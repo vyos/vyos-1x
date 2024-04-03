@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,22 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from itertools import product
 from sys import exit
 
-from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
-from vyos.template import render
+from vyos.configverify import verify_interface_exists
 from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
 
 def get_config(config=None):
 
@@ -227,8 +223,7 @@ def verify(pbr):
 
                 if 'inbound_interface' in pbr_route['rule'][rule]:
                     interface = pbr_route['rule'][rule]['inbound_interface']
-                    if interface not in interfaces():
-                        raise ConfigError(f'Interface "{interface}" does not exist')
+                    verify_interface_exists(interface)
 
     return None
 

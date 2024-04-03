@@ -5,7 +5,6 @@ import sys
 import time
 
 import requests
-from pprint import pprint
 
 # Use the same regex for PR title and commit messages for now
 title_regex = r'^(([a-zA-Z\-_.]+:\s)?)T\d+:\s+[^\s]+.*'
@@ -50,4 +49,3 @@ if __name__ == '__main__':
         # Retrieve every individual commit and check its title
         co = requests.get(c["url"]).json()
         check_commit_message(co["commit"]["message"])
-

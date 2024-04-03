@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,7 +22,6 @@ from vyos.configverify import verify_route_map
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
-from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_write
 

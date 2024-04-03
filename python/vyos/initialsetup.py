@@ -1,7 +1,7 @@
 # initialsetup -- functions for setting common values in config file,
 # for use in installation and first boot scripts
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-
-import vyos.configtree
 
 from vyos.utils.auth import make_password_hash
 from vyos.utils.auth import split_ssh_public_key

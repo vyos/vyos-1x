@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,7 +28,6 @@ from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.template import address_from_cidr
-from vyos.template import dec_ip
 from vyos.template import inc_ip
 from vyos.template import last_host_address
 from vyos.template import netmask_from_cidr

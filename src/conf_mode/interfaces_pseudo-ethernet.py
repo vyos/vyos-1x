@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
-from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -29,8 +28,8 @@ from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_mtu_parent
 from vyos.configverify import verify_mirror_redirect
-from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import MACVLANIf
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 
 from vyos import airbag
@@ -84,8 +83,8 @@ def generate(peth):
 def apply(peth):
     # Check if the MACVLAN interface already exists
     if 'rebuild_required' in peth or 'deleted' in peth:
-        if peth['ifname'] in interfaces():
-            p = MACVLANIf(peth['ifname'])
+        if interface_exists(peth['ifname']):
+            p = MACVLANIf(**peth)
             # MACVLAN is always needs to be recreated,
             # thus we can simply always delete it first.
             p.remove()

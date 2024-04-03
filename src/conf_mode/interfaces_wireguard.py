@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,6 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf

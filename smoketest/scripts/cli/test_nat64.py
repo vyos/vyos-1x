@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,15 +19,11 @@ import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.configsession import ConfigSessionError
-from vyos.utils.process import cmd
-from vyos.utils.dict import dict_search
 
 base_path = ['nat64']
 src_path = base_path + ['source']
 
 jool_nat64_config = '/run/jool/instance-100.json'
-
 
 class TestNAT64(VyOSUnitTestSHIM.TestCase):
     @classmethod

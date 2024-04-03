@@ -21,7 +21,6 @@ Build-Depends:
   python3-jinja2,
   python3-psutil,
   python3-setuptools,
-  python3-sphinx,
   quilt,
   whois
 Standards-Version: 3.9.6

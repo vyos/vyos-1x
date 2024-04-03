@@ -16,12 +16,12 @@
 
 import os
 
-from netifaces import interfaces
 from sys import exit
 from time import sleep
 
 from vyos.config import Config
 from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_interface_exists
 from vyos.system import grub_util
 from vyos.template import render
 from vyos.utils.process import cmd
@@ -56,9 +56,7 @@ def verify(options):
     if 'http_client' in options:
         config = options['http_client']
         if 'source_interface' in config:
-            if not config['source_interface'] in interfaces():
-                raise ConfigError(f'Source interface {source_interface} does not '
-                                  f'exist'.format(**config))
+            verify_interface_exists(config['source_interface'])
 
         if {'source_address', 'source_interface'} <= set(config):
             raise ConfigError('Can not define both HTTP source-interface and source-address')

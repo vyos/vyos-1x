@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,18 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import node_changed
 from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
-
 airbag.enable()
-
 
 def get_config(config=None):
     if config:
@@ -38,9 +33,7 @@ def get_config(config=None):
 
     return config
 
-
 def verify(config):
-
     if 'arp' in config:
         for neighbor, neighbor_conf in config['arp'].items():
             if 'interface' not in neighbor_conf:
@@ -55,10 +48,8 @@ def verify(config):
                     f"ARP neighbor-proxy for '{neighbor}' requires an interface to be set!"
                 )
 
-
 def generate(config):
     pass
-
 
 def apply(config):
     if not config:
@@ -82,7 +73,6 @@ def apply(config):
         for neighbor, neighbor_conf in config['nd'].items():
             for interface in neighbor_conf['interface']:
                 call(f'ip -6 neighbor add proxy {neighbor} dev {interface}')
-
 
 if __name__ == '__main__':
     try:
