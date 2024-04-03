@@ -41,19 +41,20 @@ class "ubnt" {
 {%     endfor %}
 
 {% endif %}
-{% if failover is vyos_defined %}
-# DHCP failover configuration
-failover peer "{{ failover.name }}" {
-{%     if failover.status == 'primary' %}
+{% if high_availability is vyos_defined %}
+# DHCP HA configuration
+{%     set split_value = '256' if high_availability.mode == 'active-passive' else '128' %}
+failover peer "{{ high_availability.name }}" {
+{%     if high_availability.status == 'primary' %}
     primary;
     mclt 1800;
-    split 128;
-{%     elif failover.status == 'secondary' %}
+    split {{ split_value }};
+{%     elif high_availability.status == 'secondary' %}
     secondary;
 {%     endif %}
-    address {{ failover.source_address }};
+    address {{ high_availability.source_address }};
     port 647;
-    peer address {{ failover.remote }};
+    peer address {{ high_availability.remote }};
     peer port 647;
     max-response-delay 30;
     max-unacked-updates 10;
@@ -215,7 +216,7 @@ shared-network {{ network }} {
         pool {
 {%                 endif %}
 {%                 if subnet_config.enable_failover is vyos_defined %}
-            failover peer "{{ failover.name }}";
+            failover peer "{{ high_availability.name }}";
             deny dynamic bootp clients;
 {%                 endif %}
 {%                 if subnet_config.range is vyos_defined %}
