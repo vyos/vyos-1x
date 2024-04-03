@@ -192,3 +192,10 @@ systemctl enable vyos-config-cloud-init.service
 
 # Update XML cache
 python3 /usr/lib/python3/dist-packages/vyos/xml_ref/update_cache.py
+
+# Generate hardlinks for systemd units for multi VRF support
+# as softlinks will fail in systemd:
+# symlink target name type "ssh.service" does not match source, rejecting.
+if [ ! -f /lib/systemd/system/ssh@.service ]; then
+    ln /lib/systemd/system/ssh.service /lib/systemd/system/ssh@.service
+fi
