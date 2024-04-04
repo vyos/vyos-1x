@@ -163,11 +163,21 @@ def verify_accel_ppp_authentication(config, local_users=True):
             if "key" not in radius_config:
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
+    if dict_search("server_type", config) == 'ipoe' and dict_search(
+            "authentication.mode", config) == "local":
+        if not dict_search("authentication.interface", config):
+            raise ConfigError(
+                "Authentication mode local requires authentication interface to be configured!"
+            )
+        for interface in dict_search("authentication.interface", config):
+            user_config = config["authentication"]["interface"][interface]
+            if "mac" not in user_config:
+                raise ConfigError(
+                    f'Users MAC addreses are not configured for interface "{interface}"')
+
     if dict_search('authentication.radius.dynamic_author.server', config):
         if not dict_search('authentication.radius.dynamic_author.key', config):
             raise ConfigError('DAE/CoA server key required!')
-
-
 
 
 def verify_accel_ppp_ip_pool(vpn_config):
@@ -192,7 +202,9 @@ def verify_accel_ppp_ip_pool(vpn_config):
 
     default_pool = dict_search("default_pool", vpn_config)
     if default_pool:
-        if default_pool not in dict_search("client_ip_pool", vpn_config):
+        if not dict_search('client_ip_pool',
+                           vpn_config) or default_pool not in dict_search(
+                'client_ip_pool', vpn_config):
             raise ConfigError(f'Default pool "{default_pool}" does not exists')
 
     if 'client_ipv6_pool' in vpn_config:
@@ -204,8 +216,20 @@ def verify_accel_ppp_ip_pool(vpn_config):
     if dict_search('authentication.mode', vpn_config) in ['local', 'noauth']:
         if not dict_search('client_ip_pool', vpn_config) and not dict_search(
                 'client_ipv6_pool', vpn_config):
-            raise ConfigError(
-                "Local auth mode requires local client-ip-pool or client-ipv6-pool to be configured!")
+            if dict_search('server_type', vpn_config) == 'ipoe':
+                if 'interface' in vpn_config:
+                    for interface, interface_config in vpn_config['interface'].items():
+                        if dict_search('client_subnet', interface_config):
+                            break
+                    else:
+                        raise ConfigError(
+                            'Local auth and noauth mode requires local client-ip-pool \
+                             or client-ipv6-pool or client-subnet to be configured!')
+            else:
+                raise ConfigError(
+                    "Local auth mode requires local client-ip-pool \
+                    or client-ipv6-pool to be configured!")
+
         if dict_search('client_ip_pool', vpn_config) and not dict_search(
                 'default_pool', vpn_config):
             Warning("'default-pool' is not defined")
