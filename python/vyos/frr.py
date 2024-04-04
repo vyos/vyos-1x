@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -69,7 +69,6 @@ import tempfile
 import re
 
 from vyos import ConfigError
-from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
 from vyos.utils.process import STDOUT

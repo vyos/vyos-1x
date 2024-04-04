@@ -1,4 +1,4 @@
-# Copyright 2017-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -30,7 +30,7 @@ Example of the version data dict::
 """
 
 import os
-import json
+
 import requests
 import vyos.defaults
 
@@ -40,9 +40,7 @@ from vyos.utils.process import popen
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
 
-
 version_file = os.path.join(vyos.defaults.directories['data'], 'version.json')
-
 
 def get_version_data(fname=version_file):
     """

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,7 +16,6 @@
 import os
 
 from vyos.ifconfig.interface import Interface
-from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
 from vyos.utils.assertion import assert_list
 from vyos.utils.assertion import assert_positive

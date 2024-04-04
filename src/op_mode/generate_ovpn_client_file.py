@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,15 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import os
 
 from jinja2 import Template
 from textwrap import fill
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig import Section
-from vyos.utils.process import cmd
-
 
 client_config = """
 

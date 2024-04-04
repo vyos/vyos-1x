@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,10 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
-from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -30,6 +27,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import L2TPv3If
 from vyos.utils.kernel import check_kmod
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -87,7 +85,7 @@ def generate(l2tpv3):
 
 def apply(l2tpv3):
     # Check if L2TPv3 interface already exists
-    if l2tpv3['ifname'] in interfaces():
+    if interface_exists(l2tpv3['ifname']):
         # L2TPv3 is picky when changing tunnels/sessions, thus we can simply
         # always delete it first.
         l = L2TPv3If(**l2tpv3)

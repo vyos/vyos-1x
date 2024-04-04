@@ -23,8 +23,6 @@
 
 from vyos import ConfigError
 from vyos.utils.dict import dict_search
-from vyos.utils.dict import dict_search_recursive
-
 # pattern re-used in ipsec migration script
 dynamic_interface_pattern = r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+'
 
@@ -246,7 +244,6 @@ def verify_interface_exists(ifname, warning_only=False):
     if the interface is defined on the CLI, if it's not found we try if
     it exists at the OS level.
     """
-    import os
     from vyos.base import Warning
     from vyos.configquery import ConfigTreeQuery
     from vyos.utils.dict import dict_search_recursive
@@ -275,7 +272,7 @@ def verify_source_interface(config):
     required by e.g. peth/MACvlan, MACsec ...
     """
     import re
-    from netifaces import interfaces
+    from vyos.utils.network import interface_exists
 
     ifname = config['ifname']
     if 'source_interface' not in config:
@@ -287,7 +284,7 @@ def verify_source_interface(config):
     if tmp.match(src_ifname):
         raise ConfigError(f'Can not source "{ifname}" from dynamic interface "{src_ifname}"!')
 
-    if src_ifname not in interfaces():
+    if not interface_exists(src_ifname):
         raise ConfigError(f'Specified source-interface {src_ifname} does not exist')
 
     if 'source_interface_is_bridge_member' in config:

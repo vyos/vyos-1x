@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2022 VyOS maintainers and contributors
+# Copyright (C) 2017-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,7 +24,6 @@ from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_loopback_addr
 from vyos.version import get_version_data
 from vyos.utils.process import call
-from vyos.utils.dict import dict_search
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag

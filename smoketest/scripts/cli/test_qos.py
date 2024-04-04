@@ -559,7 +559,6 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for interface in self._interfaces:
-            import pprint
             tmp = get_tc_qdisc_json(interface)
             self.assertEqual('drr', tmp['kind'])
 

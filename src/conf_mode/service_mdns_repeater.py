@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2022 VyOS maintainers and contributors
+# Copyright (C) 2017-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,9 +18,10 @@ import os
 
 from json import loads
 from sys import exit
-from netifaces import ifaddresses, interfaces, AF_INET, AF_INET6
+from netifaces import ifaddresses, AF_INET, AF_INET6
 
 from vyos.config import Config
+from vyos.configverify import verify_interface_exists
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.utils.process import call
@@ -64,8 +65,7 @@ def verify(mdns):
     # For mdns-repeater to work it is essential that the interfaces has
     # an IPv4 address assigned
     for interface in mdns['interface']:
-        if interface not in interfaces():
-            raise ConfigError(f'Interface "{interface}" does not exist!')
+        verify_interface_exists(interface)
 
         if mdns['ip_version'] in ['ipv4', 'both'] and AF_INET not in ifaddresses(interface):
             raise ConfigError('mDNS repeater requires an IPv4 address to be '

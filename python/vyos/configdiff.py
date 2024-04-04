@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,12 +13,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from enum import IntFlag, auto
+from enum import IntFlag
+from enum import auto
 
 from vyos.config import Config
 from vyos.configtree import DiffTree
 from vyos.configdict import dict_merge
-from vyos.configdict import list_diff
 from vyos.utils.dict import get_sub_dict
 from vyos.utils.dict import mangle_dict_keys
 from vyos.utils.dict import dict_search_args

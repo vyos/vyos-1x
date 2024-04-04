@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,14 +18,12 @@ import re
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
-from netifaces import interfaces
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import interface_exists
-from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'wpa_supplicant'

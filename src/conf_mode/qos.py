@@ -14,15 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
 from netifaces import interfaces
 
-from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdep import set_dependents, call_dependents
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_interface_exists
 from vyos.ifconfig import Section
 from vyos.qos import CAKE
 from vyos.qos import DropTail
@@ -37,7 +36,6 @@ from vyos.qos import RoundRobin
 from vyos.qos import TrafficShaper
 from vyos.qos import TrafficShaperHFSC
 from vyos.utils.dict import dict_search_recursive
-from vyos.utils.network import interface_exists
 from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag
@@ -215,11 +213,10 @@ def apply(qos):
         return None
 
     for interface, interface_config in qos['interface'].items():
-        if not interface_exists(interface):
+        if not verify_interface_exists(interface, warning_only=True):
             # When shaper is bound to a dialup (e.g. PPPoE) interface it is
             # possible that it is yet not availbale when to QoS code runs.
-            # Skip the configuration and inform the user
-            Warning(f'Interface "{interface}" does not exist!')
+            # Skip the configuration and inform the user via warning_only=True
             continue
 
         for direction in ['egress', 'ingress']:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,7 +19,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render_to_string
-from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag

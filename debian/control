@@ -18,7 +18,6 @@ Build-Depends:
   python3-jinja2,
   python3-psutil,
   python3-setuptools,
-  python3-sphinx,
   python3-xmltodict,
   quilt,
   whois

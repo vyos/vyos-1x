@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 yOS maintainers and contributors
+# Copyright (C) 2018-2024 yOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,10 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
-from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -31,10 +28,10 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_tunnel
 from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import Interface
-from vyos.ifconfig import Section
 from vyos.ifconfig import TunnelIf
-from vyos.utils.network import get_interface_config
 from vyos.utils.dict import dict_search
+from vyos.utils.network import get_interface_config
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -202,7 +199,7 @@ def apply(tunnel):
     if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or encap in
         ['gretap', 'ip6gretap', 'erspan', 'ip6erspan'] or remote in ['any'] or
         'key_changed' in tunnel):
-        if interface in interfaces():
+        if interface_exists(interface):
             tmp = Interface(interface)
             tmp.remove()
         if 'deleted' in tunnel:

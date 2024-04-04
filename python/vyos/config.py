@@ -1,4 +1,4 @@
-# Copyright 2017, 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -60,12 +60,10 @@ In configuration mode, "base" functions like `exists`, `return_value` return val
 while functions prefixed "effective" return values from the running config.
 
 In operational mode, all functions return values from the running config.
-
 """
 
 import re
 import json
-from copy import deepcopy
 from typing import Union
 
 import vyos.configtree

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,6 @@ import json
 import signal
 
 from time import time
-from time import sleep
 from tabulate import tabulate
 
 from vyos.configquery import ConfigTreeQuery
@@ -155,4 +154,3 @@ class VRRP(object):
         # add to the active list disabled instances
         groups.extend(cls.disabled())
         return(tabulate(groups, headers))
-

@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from time import sleep
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section

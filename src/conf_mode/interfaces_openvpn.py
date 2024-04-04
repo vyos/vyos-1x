@@ -16,7 +16,6 @@
 
 import os
 import re
-import tempfile
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from glob import glob
@@ -26,7 +25,6 @@ from ipaddress import IPv4Network
 from ipaddress import IPv6Address
 from ipaddress import IPv6Network
 from ipaddress import summarize_address_range
-from netifaces import interfaces
 from secrets import SystemRandom
 from shutil import rmtree
 
@@ -63,6 +61,7 @@ from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.network import interface_exists
 
 from vyos import ConfigError
 from vyos import airbag
@@ -683,7 +682,7 @@ def apply(openvpn):
             if os.path.isfile(cleanup_file):
                 os.unlink(cleanup_file)
 
-        if interface in interfaces():
+        if interface_exists(interface):
             VTunIf(interface).remove()
 
     # dynamically load/unload DCO Kernel extension if requested

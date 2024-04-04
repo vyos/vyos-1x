@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
 import socket
 import fcntl
@@ -29,7 +28,7 @@ def get_terminal_size():
 
 def get_interface_flags(intf):
     """ Pull the SIOCGIFFLAGS """
-    nullif = '\0'*256 
+    nullif = '\0'*256
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     raw = fcntl.ioctl(sock.fileno(), SIOCGIFFLAGS, intf + nullif)
     flags, = struct.unpack('H', raw[16:18])

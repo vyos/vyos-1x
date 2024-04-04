@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,7 +16,6 @@
 
 from sys import exit
 
-from netifaces import interfaces
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
@@ -25,7 +24,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import VethIf
-
+from vyos.utils.network import interface_exists
 airbag.enable()
 
 def get_config(config=None):
@@ -92,8 +91,8 @@ def generate(peth):
 def apply(veth):
     # Check if the Veth interface already exists
     if 'rebuild_required' in veth or 'deleted' in veth:
-        if veth['ifname'] in interfaces():
-            p = VethIf(veth['ifname'])
+        if interface_exists(veth['ifname']):
+            p = VethIf(**veth)
             p.remove()
 
     if 'deleted' not in veth:

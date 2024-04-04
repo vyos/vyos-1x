@@ -16,7 +16,6 @@
 
 import os
 
-from netifaces import interfaces
 from sys import exit
 from glob import glob
 
@@ -24,9 +23,9 @@ from vyos.config import Config
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.template import render
 from vyos.template import bracketize_ipv6
+from vyos.utils.network import interface_exists
 from vyos.utils.process import call
 from vyos.utils.permission import chown
-
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -330,7 +329,7 @@ def apply(dns):
                 # names (DHCP) to use DNS servers. We need to check if the
                 # value is an interface name - only if this is the case, add the
                 # interface based DNS forwarder.
-                if interface in interfaces():
+                if interface_exists(interface):
                     hc.add_name_server_tags_recursor(['dhcp-' + interface,
                                                       'dhcpv6-' + interface ])
 

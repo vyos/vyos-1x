@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -203,8 +203,6 @@ def is_member(conf, interface, intftype=None):
     empty -> Interface is not a member
     key -> Interface is a member of this interface
     """
-    from vyos.ifconfig import Section
-
     ret_val = {}
     intftypes = ['bonding', 'bridge']
 
