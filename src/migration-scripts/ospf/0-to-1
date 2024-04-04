@@ -31,7 +31,8 @@ def ospf_passive_migration(config, ospf_base):
                 config.set_tag(ospf_base + ['interface'])
 
             config.delete(ospf_base + ['passive-interface'])
-            config.set(ospf_base + ['passive-interface'], value='default')
+            if default:
+                config.set(ospf_base + ['passive-interface'], value='default')
 
         if config.exists(ospf_base + ['passive-interface-exclude']):
             for interface in config.return_values(ospf_base + ['passive-interface-exclude']):
