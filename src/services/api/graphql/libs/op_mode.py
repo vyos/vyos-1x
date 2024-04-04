@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,7 +16,9 @@
 import os
 import re
 import typing
-from typing import Union, Tuple, Optional
+
+from typing import Union
+from typing import Optional
 from humps import decamelize
 
 from vyos.defaults import directories

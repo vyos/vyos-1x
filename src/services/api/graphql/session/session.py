@@ -1,4 +1,4 @@
-# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,6 @@ from ariadne import convert_camel_case_to_snake
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
-from vyos.template import render
 from vyos.opmode import Error as OpModeError
 
 from api.graphql.libs.op_mode import load_op_mode_as_module, split_compound_op_mode_name
