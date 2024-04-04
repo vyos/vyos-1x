@@ -143,8 +143,12 @@ def get_config(config=None):
                         dhcp['shared_network_name'][network]['subnet'][subnet].update(
                                 {'range' : new_range_dict})
 
-    if dict_search('high_availability.certificate', dhcp):
-        dhcp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
+    if len(dhcp['high_availability']) == 1:
+        ## only default value for mode is set, need to remove ha node
+        del dhcp['high_availability']
+    else:
+        if dict_search('high_availability.certificate', dhcp):
+            dhcp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
 
     return dhcp
 
