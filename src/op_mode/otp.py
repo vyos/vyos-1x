@@ -20,9 +20,7 @@ import sys
 import os
 import vyos.opmode
 from jinja2 import Template
-from vyos.configquery import ConfigTreeQuery
-from vyos.xml import defaults
-from vyos.configdict import dict_merge
+from vyos.config import Config
 from vyos.utils.process import popen
 
 
@@ -61,7 +59,7 @@ def _check_uname_otp(username:str):
     """
     Check if "username" exists and have an OTP key
     """
-    config = ConfigTreeQuery()
+    config = Config()
     base_key = ['system', 'login', 'user', username, 'authentication', 'otp', 'key']
     if not config.exists(base_key):
         return None
@@ -71,15 +69,13 @@ def _get_login_otp(username: str, info:str):
     """
     Retrieve user settings from configuration and set some defaults
     """
-    config = ConfigTreeQuery()
+    config = Config()
     base = ['system', 'login', 'user', username]
     if not config.exists(base):
         return None
-    user_otp = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(['system', 'login', 'user'])
-    user_otp = dict_merge(default_values, user_otp)
+    user_otp = config.get_config_dict(base, key_mangling=('-', '_'),
+                                      get_first_key=True,
+                                      with_recursive_defaults=True)
     result = user_otp['authentication']['otp']
     # Filling in the system and default options
     result['info'] = info
@@ -94,7 +90,7 @@ def _get_login_otp(username: str, info:str):
     result['otp_url'] = ''.join(["otpauth://",token_type_acrn,"/",username,"@",\
         result['hostname'],"?secret=",result['key_base32'],"&digits=",\
         result['otp_length'],"&period=",result['interval']])
-    result['qrcode'],err = popen('qrencode -t ansiutf8', input=result['otp_url'])
+    result['qrcode'],_ = popen('qrencode -t ansiutf8', input=result['otp_url'])
     return result
 
 def show_login(raw: bool, username: str, info:str):
