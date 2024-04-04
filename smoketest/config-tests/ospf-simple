@@ -1,0 +1,20 @@
+set interfaces ethernet eth0 vif 20 address '193.201.42.173/28'
+set interfaces ethernet eth0 vif 666 address '10.66.66.1/24'
+set interfaces loopback lo
+set protocols ospf area 0 network '10.66.66.0/24'
+set protocols ospf area 0 network '193.201.42.160/28'
+set protocols ospf area 0 area-type normal
+set protocols ospf interface eth0.20 cost '999'
+set protocols ospf interface eth0.20 dead-interval '4'
+set protocols ospf interface eth0.20 hello-interval '1'
+set protocols ospf interface eth0.20 priority '255'
+set protocols ospf interface eth0.20 retransmit-interval '5'
+set protocols ospf interface eth0.20 transmit-delay '1'
+set protocols ospf interface eth0.666 passive
+set protocols ospf log-adjacency-changes detail
+set protocols static route 0.0.0.0/0 next-hop 193.201.42.170 distance '130'
+set system config-management commit-revisions '100'
+set system host-name 'lab-vyos-r1'
+set system login user vyos authentication encrypted-password '$6$R.OnGzfXSfl6J$Iba/hl9bmjBs0VPtZ2zdW.Snh/nHuvxUwi0R6ruypgW63iKEbicJH.uUst8xZCyByURblxRtjAC1lAnYfIt.b0'
+set system login user vyos authentication plaintext-password ''
+set system console device ttyS0 speed '115200'
