@@ -6,8 +6,8 @@ SHIM_DIR := src/shim
 LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
-
 J2LINT := $(shell command -v j2lint 2> /dev/null)
+PYLINT_FILES := $(shell git ls-files *.py)
 
 config_xml_src = $(wildcard interface-definitions/*.xml.in)
 config_xml_obj = $(config_xml_src:.xml.in=.xml)
@@ -114,7 +114,7 @@ sonar:
 
 .PHONY: unused-imports
 unused-imports:
-	git ls-files *.py | xargs pylint | grep W0611
+	@pylint --disable=all --enable=W0611 $(PYLINT_FILES)
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b
