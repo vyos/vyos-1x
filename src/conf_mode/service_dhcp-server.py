@@ -131,6 +131,10 @@ def get_config(config=None):
                         dhcp['shared_network_name'][network]['subnet'][subnet].update(
                                 {'range' : new_range_dict})
 
+    if len(dhcp['high_availability']) == 1:
+        ## only default value for mode is set, need to remove ha node
+        del dhcp['high_availability']
+
     return dhcp
 
 def verify(dhcp):
@@ -178,9 +182,9 @@ def verify(dhcp):
 
             # DHCP failover needs at least one subnet that uses it
             if 'enable_failover' in subnet_config:
-                if 'failover' not in dhcp:
-                    raise ConfigError(f'Can not enable failover for "{subnet}" in "{network}".\n' \
-                                      'Failover is not configured globally!')
+                if 'high_availability' not in dhcp:
+                    raise ConfigError(f'Can not enable high availability for "{subnet}" in "{network}".\n' \
+                                      'High availability is not configured globally!')
                 failover_ok = True
 
             # Check if DHCP address range is inside configured subnet declaration
@@ -270,12 +274,12 @@ def verify(dhcp):
     if (shared_networks - disabled_shared_networks) < 1:
         raise ConfigError(f'At least one shared network must be active!')
 
-    if 'failover' in dhcp:
+    if 'high_availability' in dhcp:
         if not failover_ok:
             raise ConfigError('DHCP failover must be enabled for at least one subnet!')
 
         for key in ['name', 'remote', 'source_address', 'status']:
-            if key not in dhcp['failover']:
+            if key not in dhcp['high_availability']:
                 tmp = key.replace('_', '-')
                 raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')
 
