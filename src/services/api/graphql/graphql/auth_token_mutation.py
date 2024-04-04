@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import jwt
 import datetime
-from typing import Any, Dict
-from ariadne import ObjectType, UnionType
+from typing import Any
+from typing import Dict
+from ariadne import ObjectType
 from graphql import GraphQLResolveInfo
 
 from .. libs.token_auth import generate_token
