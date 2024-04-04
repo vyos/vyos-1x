@@ -1,4 +1,4 @@
-# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,10 +14,12 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from importlib import import_module
-from typing import Any, Dict, Optional
 from ariadne import ObjectType, convert_camel_case_to_snake
-from graphql import GraphQLResolveInfo
 from makefun import with_signature
+
+# used below by func_sig
+from typing import Any, Dict, Optional # pylint: disable=W0611
+from graphql import GraphQLResolveInfo # pylint: disable=W0611
 
 from .. import state
 from .. libs import key_auth
