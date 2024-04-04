@@ -1259,6 +1259,77 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.assertIn('neighbor peer1 route-reflector-client', conf)
 
+    def test_bgp_28_peer_group_member_all_internal_or_external(self):
+        def _common_config_check(conf, include_ras=True):
+            if include_ras:
+                self.assertIn(f'neighbor {int_neighbors[0]} remote-as {ASN}', conf)
+                self.assertIn(f'neighbor {int_neighbors[1]} remote-as {ASN}', conf)
+                self.assertIn(f'neighbor {ext_neighbors[0]} remote-as {int(ASN) + 1}',conf)
+
+            self.assertIn(f'neighbor {int_neighbors[0]} peer-group {int_pg_name}', conf)
+            self.assertIn(f'neighbor {int_neighbors[1]} peer-group {int_pg_name}', conf)
+            self.assertIn(f'neighbor {ext_neighbors[0]} peer-group {ext_pg_name}', conf)
+
+        int_neighbors = ['192.0.2.2', '192.0.2.3']
+        ext_neighbors = ['192.122.2.2', '192.122.2.3']
+        int_pg_name, ext_pg_name = 'SMOKETESTINT', 'SMOKETESTEXT'
+
+        self.cli_set(base_path + ['neighbor', int_neighbors[0], 'peer-group', int_pg_name])
+        self.cli_set(base_path + ['neighbor', int_neighbors[0], 'remote-as', ASN])
+        self.cli_set(base_path + ['peer-group', int_pg_name, 'address-family', 'ipv4-unicast'])
+        self.cli_set(base_path + ['neighbor', ext_neighbors[0], 'peer-group', ext_pg_name])
+        self.cli_set(base_path + ['neighbor', ext_neighbors[0], 'remote-as', f'{int(ASN) + 1}'])
+        self.cli_set(base_path + ['peer-group', ext_pg_name, 'address-family', 'ipv4-unicast'])
+        self.cli_commit()
+
+        # test add external remote-as to internal group
+        self.cli_set(base_path + ['neighbor', int_neighbors[1], 'peer-group', int_pg_name])
+        self.cli_set(base_path + ['neighbor', int_neighbors[1], 'remote-as', f'{int(ASN) + 1}'])
+
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+        # self.assertIn('\nPeer-group members must be all internal or all external\n', str(e.exception))
+
+        # test add internal remote-as to internal group
+        self.cli_set(base_path + ['neighbor', int_neighbors[1], 'remote-as', ASN])
+        self.cli_commit()
+
+        conf = self.getFRRconfig(f'router bgp {ASN}')
+        _common_config_check(conf)
+
+        # test add internal remote-as to external group
+        self.cli_set(base_path + ['neighbor', ext_neighbors[1], 'peer-group', ext_pg_name])
+        self.cli_set(base_path + ['neighbor', ext_neighbors[1], 'remote-as', ASN])
+
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+        # self.assertIn('\nPeer-group members must be all internal or all external\n', str(e.exception))
+
+        # test add external remote-as to external group
+        self.cli_set(base_path + ['neighbor', ext_neighbors[1], 'remote-as', f'{int(ASN) + 2}'])
+        self.cli_commit()
+
+        conf = self.getFRRconfig(f'router bgp {ASN}')
+        _common_config_check(conf)
+        self.assertIn(f'neighbor {ext_neighbors[1]} remote-as {int(ASN) + 2}', conf)
+        self.assertIn(f'neighbor {ext_neighbors[1]} peer-group {ext_pg_name}', conf)
+
+        # test named remote-as
+        self.cli_set(base_path + ['neighbor', int_neighbors[0], 'remote-as', 'internal'])
+        self.cli_set(base_path + ['neighbor', int_neighbors[1], 'remote-as', 'internal'])
+        self.cli_set(base_path + ['neighbor', ext_neighbors[0], 'remote-as', 'external'])
+        self.cli_set(base_path + ['neighbor', ext_neighbors[1], 'remote-as', 'external'])
+        self.cli_commit()
+
+        conf = self.getFRRconfig(f'router bgp {ASN}')
+        _common_config_check(conf, include_ras=False)
+
+        self.assertIn(f'neighbor {int_neighbors[0]} remote-as internal', conf)
+        self.assertIn(f'neighbor {int_neighbors[1]} remote-as internal', conf)
+        self.assertIn(f'neighbor {ext_neighbors[0]} remote-as external', conf)
+        self.assertIn(f'neighbor {ext_neighbors[1]} remote-as external', conf)
+        self.assertIn(f'neighbor {ext_neighbors[1]} peer-group {ext_pg_name}', conf)
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
