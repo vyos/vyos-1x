@@ -93,7 +93,7 @@ def get_nftables_details(family, hook, priority):
 def output_firewall_vertical(rules, headers):
     for rule in rules:
         adjusted_rule = rule + [""] * (len(headers) - len(rule)) # account for different header length, like default-action
-        transformed_rule = [[header, textwrap.fill(adjusted_rule[i].replace('\n', ' '), 100)] for i, header in enumerate(headers)] # create key-pair list from headers and rules lists; wrap at 100 char
+        transformed_rule = [[header, textwrap.fill(adjusted_rule[i].replace('\n', ' '), 65)] for i, header in enumerate(headers)] # create key-pair list from headers and rules lists; wrap at 100 char
 
         print(tabulate.tabulate(transformed_rule, tablefmt="presto"))
         print()
@@ -135,10 +135,13 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
         if args.rule:
             rows.pop()
 
-        header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
         if args.detail:
+            header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
             output_firewall_vertical(rows, header)
         else:
+            header = ['Rule', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
+            for i in rows:
+                rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
 
 def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule_id=None):
@@ -255,10 +258,13 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
         rows.append(row)
 
     if rows:
-        header = ['Rule', 'Description', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
         if args.detail:
+            header = ['Rule', 'Description', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
             output_firewall_vertical(rows, header)
         else:
+            header = ['Rule', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
+            for i in rows:
+                rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
 
 def show_firewall():
@@ -447,7 +453,6 @@ def show_firewall_group(name=None):
 
         return out
 
-    header = ['Name', 'Description','Type', 'References', 'Members']
     rows = []
 
     for group_type, group_type_conf in firewall['group'].items():
@@ -486,8 +491,12 @@ def show_firewall_group(name=None):
     if rows:
         print('Firewall Groups\n')
         if args.detail:
+            header = ['Name', 'Description','Type', 'References', 'Members']
             output_firewall_vertical(rows, header)
         else:
+            header = ['Name', 'Type', 'References', 'Members']
+            for i in rows:
+                rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header))
 
 def show_summary():
