@@ -56,7 +56,7 @@
                 <description>Permission to set system clock</description>
               </valueHelp>
               <constraint>
-                <regex>(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-module|sys-time)</regex>
+                <regex>(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-module|sys-nice|sys-time)</regex>
               </constraint>
               <multi/>
             </properties>
