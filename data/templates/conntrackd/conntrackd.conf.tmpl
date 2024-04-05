@@ -4,7 +4,7 @@
 Sync {
     Mode FTFW {
         DisableExternalCache {{ 'on' if disable_external_cache is defined else 'off' }}
-        StartupResync {{ 'on' if enable_startup_resync is defined else 'off' }}
+        StartupResync {{ 'on' if startup_resync is defined else 'off' }}
     }
 {% for iface, iface_config in interface.items() %}
 {%   if loop.first %}
