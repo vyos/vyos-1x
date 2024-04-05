@@ -1,0 +1,31 @@
+#!/bin/sh
+# Update DNS information for DHCPv6 clients
+# should be used only if vyos-hostsd is running
+
+if /usr/bin/systemctl -q is-active vyos-hostsd; then
+    hostsd_client="/usr/bin/vyos-hostsd-client"
+    hostsd_changes=
+
+    if [ -n "$new_domain_name" ]; then
+        logmsg info "Deleting search domains with tag \"dhcpv6-{{ ifname }}\" via vyos-hostsd-client"
+        $hostsd_client --delete-search-domains --tag "dhcpv6-{{ ifname }}"
+        logmsg info "Adding domain name \"$new_domain_name\" as search domain with tag \"dhcpv6-{{ ifname }}\" via vyos-hostsd-client"
+        $hostsd_client --add-search-domains "$new_domain_name" --tag "dhcpv6-{{ ifname }}"
+        hostsd_changes=y
+    fi
+
+    if [ -n "$new_domain_name_servers" ]; then
+        logmsg info "Deleting nameservers with tag \"dhcpv6-{{ ifname }}\" via vyos-hostsd-client"
+        $hostsd_client --delete-name-servers --tag "dhcpv6-{{ ifname }}"
+        logmsg info "Adding nameservers \"$new_domain_name_servers\" with tag \"dhcpv6-{{ ifname }}\" via vyos-hostsd-client"
+        $hostsd_client --add-name-servers $new_domain_name_servers --tag "dhcpv6-{{ ifname }}"
+        hostsd_changes=y
+    fi
+
+    if [ $hostsd_changes ]; then
+        logmsg info "Applying changes via vyos-hostsd-client"
+        $hostsd_client --apply
+    else
+        logmsg info "No changes to apply via vyos-hostsd-client"
+    fi
+fi

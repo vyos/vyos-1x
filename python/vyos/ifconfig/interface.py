@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -1186,12 +1186,18 @@ class Interface(Control):
 
         ifname = self.ifname
         config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        script_file = f'/etc/wide-dhcpv6/dhcp6c.{ifname}.script' # can not live under /run b/c of noexec mount option
         systemd_override_file = f'/run/systemd/system/dhcp6c@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhcp6c@{ifname}.service'
 
-        if enable and 'disable' not in self.config:
-            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', self.config)
-            render(config_file, 'dhcp-client/ipv6.tmpl', self.config)
+        # Rendered client configuration files require additional settings
+        config = deepcopy(self.config)
+        config['dhcp6_script_file'] = script_file
+
+        if enable and 'disable' not in config:
+            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', config)
+            render(config_file, 'dhcp-client/ipv6.tmpl', config)
+            render(script_file, 'dhcp-client/dhcp6c-script.j2', config, permission=0o755)
 
             # Reload systemd unit definitons as some options are dynamically generated
             self._cmd('systemctl daemon-reload')
@@ -1204,6 +1210,8 @@ class Interface(Control):
                 self._cmd(f'systemctl stop {systemd_service}')
             if os.path.isfile(config_file):
                 os.remove(config_file)
+            if os.path.isfile(script_file):
+                os.remove(script_file)
 
     def set_mirror(self):
         # Please refer to the document for details
