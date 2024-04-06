@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,7 @@ from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
+from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'sshd'
 SSHD_CONF = '/run/sshd/sshd_config'
@@ -78,9 +79,10 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        # Check configured port
-        port = get_config_value('Port')[0]
-        self.assertEqual('22', port) # default value
+        # Check configured port agains CLI default value
+        port = get_config_value('Port')
+        cli_default = default_value(base_path + ['port'])
+        self.assertEqual(port, cli_default)
 
     def test_ssh_single_listen_address(self):
         # Check if SSH service can be configured and runs
