@@ -152,6 +152,19 @@ def get_config(config=None):
     base = ['interfaces', 'ethernet']
     ifname, ethernet = get_interface_dict(conf, base, with_pki=True)
 
+    # T5862 - default MTU is not acceptable in some environments
+    # There are cloud environments available where the maximum supported
+    # ethernet MTU is e.g. 1450 bytes, thus we clamp this to the adapters
+    # maximum MTU value or 1500 bytes - whatever is lower
+    if 'mtu' not in ethernet:
+        try:
+            ethernet['mtu'] = '1500'
+            max_mtu = EthernetIf(ifname).get_max_mtu()
+            if max_mtu < int(ethernet['mtu']):
+                ethernet['mtu'] = str(max_mtu)
+        except:
+            pass
+
     if 'is_bond_member' in ethernet:
         update_bond_options(conf, ethernet)
 
