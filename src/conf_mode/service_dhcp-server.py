@@ -18,7 +18,6 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
-from netaddr import IPAddress
 from netaddr import IPRange
 from sys import exit
 

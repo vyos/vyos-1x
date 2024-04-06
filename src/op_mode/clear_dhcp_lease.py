@@ -3,7 +3,6 @@
 import argparse
 import re
 
-from isc_dhcp_leases import Lease
 from isc_dhcp_leases import IscDhcpLeases
 
 from vyos.configquery import ConfigTreeQuery

@@ -16,13 +16,10 @@
 
 # T5165: Migrate policy local-route rule <tag> destination|source
 
-import re
-
 from sys import argv
 from sys import exit
 
 from vyos.configtree import ConfigTree
-from vyos.ifconfig import Section
 
 if len(argv) < 2:
     print("Must specify file name!")

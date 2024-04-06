@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,8 +23,6 @@
 #       1. If authentication mode = 'local' then it is first named pool.
 #       If there are not named pools, namedless pool will be default.
 #       2. If authentication mode = 'radius' then namedless pool will be default
-
-import os
 
 from sys import argv
 from sys import exit

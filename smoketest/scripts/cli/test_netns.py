@@ -16,7 +16,6 @@
 
 import unittest
 
-from netifaces import interfaces
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.utils.process import cmd
