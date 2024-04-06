@@ -81,6 +81,12 @@
               <multi/>
             </properties>
           </leafNode>
+          <leafNode name="startup-resync">
+            <properties>
+              <help>Order conntrackd to request a complete conntrack table resync against the other node at startup</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <node name="failover-mechanism">
             <properties>
               <help>Failover mechanism to use for conntrack-sync</help>
