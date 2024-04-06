@@ -11,6 +11,8 @@ Build-Depends:
   libvyosconfig0 (>= 0.0.7),
   libzmq3-dev,
   python3 (>= 3.10),
+# For QA
+  pylint,
 # For generating command definitions
   python3-lxml,
   python3-xmltodict,
