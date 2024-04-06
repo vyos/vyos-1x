@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,7 +22,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
-from vyos.template import is_ipv6
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
 from vyos.utils.network import is_subnet_connected

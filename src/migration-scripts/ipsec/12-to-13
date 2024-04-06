@@ -17,8 +17,6 @@
 # Changed value of dead-peer-detection.action from hold to trap
 # Changed value of close-action from hold to trap and from restart to start
 
-import re
-
 from sys import argv
 from sys import exit
 

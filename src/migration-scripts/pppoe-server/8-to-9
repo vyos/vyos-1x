@@ -17,12 +17,9 @@
 # Change from 'ccp' to 'disable-ccp' in ppp-option section
 # Migration ipv6 options
 
-import os
-
 from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
-
 
 if len(argv) < 2:
     print("Must specify file name!")

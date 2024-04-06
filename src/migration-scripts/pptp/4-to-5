@@ -17,12 +17,9 @@
 # - Move 'require' from 'protocols' in  'authentication' node
 # - Migrate to new default values in radius timeout and acct-timeout
 
-import os
-
 from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
-
 
 if len(argv) < 2:
     print("Must specify file name!")

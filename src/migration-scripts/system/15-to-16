@@ -2,7 +2,6 @@
 #
 # Make 'system options reboot-on-panic' valueless
 
-import os
 import sys
 
 from vyos.configtree import ConfigTree

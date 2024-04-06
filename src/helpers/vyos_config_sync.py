@@ -21,7 +21,7 @@ import json
 import requests
 import urllib3
 import logging
-from typing import Optional, List, Union, Dict, Any
+from typing import Optional, List, Dict, Any
 
 from vyos.config import Config
 from vyos.template import bracketize_ipv6

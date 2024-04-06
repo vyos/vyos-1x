@@ -6,7 +6,6 @@
 import sys
 
 from vyos.configtree import ConfigTree
-from vyos.version import get_version
 
 if len(sys.argv) < 2:
     print('Must specify file name!')
