@@ -261,6 +261,9 @@
             </children>
           </node>
           #include <include/interface/mtu-68-16000.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1500</defaultValue>
+          </leafNode>
           <leafNode name="primary">
             <properties>
               <help>Primary device interface</help>
