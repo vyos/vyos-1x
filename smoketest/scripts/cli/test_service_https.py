@@ -27,6 +27,7 @@ from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 from vyos.configsession import ConfigSessionError
 
@@ -147,10 +148,8 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
     @ignore_warning(InsecureRequestWarning)
     def test_api_auth(self):
-        vhost_id = 'example'
         address = '127.0.0.1'
-        port = '443' # default value
-        name = 'localhost'
+        port = default_value(base_path + ['port'])
 
         key = 'MySuperSecretVyOS'
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
@@ -420,7 +419,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         url = f'https://{address}/config-file'
         url_config = f'https://{address}/configure'
         headers = {}
-        tmp_file = 'tmp-config.boot'
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
         self.cli_commit()
