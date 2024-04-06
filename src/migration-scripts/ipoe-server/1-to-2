@@ -23,8 +23,6 @@
 #       1. The first pool that contains next-poll.
 #       2. Else, the first pool in the list
 
-import os
-
 from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,18 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5050: Log options
-#  cli changes from:       
+#  cli changes from:
 #  set firewall [name | ipv6-name] <name> rule <number> log-level <log_level>
 #  To
 #  set firewall [name | ipv6-name] <name> rule <number> log-options level <log_level>
-
-import re
 
 from sys import argv
 from sys import exit
 
 from vyos.configtree import ConfigTree
-from vyos.ifconfig import Section
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -50,7 +47,7 @@ if config.exists(base + ['name']):
             continue
 
         for rule in config.list_nodes(base + ['name', name, 'rule']):
-            log_options_base = base + ['name', name, 'rule', rule, 'log-options'] 
+            log_options_base = base + ['name', name, 'rule', rule, 'log-options']
             rule_log_level = base + ['name', name, 'rule', rule, 'log-level']
 
             if config.exists(rule_log_level):
@@ -64,7 +61,7 @@ if config.exists(base + ['ipv6-name']):
             continue
 
         for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
-            log_options_base = base + ['ipv6-name', name, 'rule', rule, 'log-options'] 
+            log_options_base = base + ['ipv6-name', name, 'rule', rule, 'log-options']
             rule_log_level = base + ['ipv6-name', name, 'rule', rule, 'log-level']
 
             if config.exists(rule_log_level):

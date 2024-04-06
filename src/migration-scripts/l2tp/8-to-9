@@ -16,12 +16,9 @@
 
 # Deleted 'dhcp-interface' from l2tp
 
-import os
-
 from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
-
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -37,7 +34,7 @@ base = ['vpn', 'l2tp', 'remote-access']
 if not config.exists(base):
     exit(0)
 
-#deleting unused dhcp-interface
+# deleting unused dhcp-interface
 if config.exists(base + ['dhcp-interface']):
     config.delete(base + ['dhcp-interface'])
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,13 +22,10 @@
     # set policy [route | route6] ... rule <rule> log
     # Remove command if log=disable
 
-import re
-
 from sys import argv
 from sys import exit
 
 from vyos.configtree import ConfigTree
-from vyos.ifconfig import Section
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -48,7 +45,7 @@ if not config.exists(base):
 
 for family in ['route', 'route6']:
     if config.exists(base + [family]):
-        
+
         for policy_name in config.list_nodes(base + [family]):
             if config.exists(base + [family, policy_name, 'rule']):
                 for rule in config.list_nodes(base + [family, policy_name, 'rule']):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,8 +17,6 @@
 # T5286: remove XDP support in favour of VPP
 
 from sys import argv
-
-from vyos.ethtool import Ethtool
 from vyos.configtree import ConfigTree
 
 if len(argv) < 2:

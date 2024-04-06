@@ -7,7 +7,7 @@ LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
-PYLINT_FILES := $(shell git ls-files *.py)
+PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts)
 
 config_xml_src = $(wildcard interface-definitions/*.xml.in)
 config_xml_obj = $(config_xml_src:.xml.in=.xml)
