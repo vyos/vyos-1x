@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,6 +20,7 @@ from psutil import process_iter
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.xml_ref import default_value
 
 config_file = '/etc/ppp/peers/{}'
 base_path = ['interfaces', 'pppoe']
@@ -169,10 +170,10 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
+            mtu_default = default_value(base_path + [interface, 'mtu'])
 
-            # verify "normal" PPPoE value - 1492 is default MTU
             tmp = get_config_value(interface, 'mtu')[1]
-            self.assertEqual(tmp, '1492')
+            self.assertEqual(tmp, mtu_default)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
             self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')

@@ -25,6 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
 from vyos.utils.kernel import check_kmod
 from vyos.utils.file import read_file
+from vyos.xml_ref import default_value
 
 def get_config_value(interface, key):
     tmp = read_file(f'/run/hostapd/{interface}.conf')
@@ -127,7 +128,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         # channel
         tmp = get_config_value(interface, 'channel')
-        self.assertEqual('0', tmp) # default is channel 0
+        cli_default = default_value(self._base_path + [interface, 'channel'])
+        self.assertEqual(cli_default, tmp)
 
         # auto-powersave is special
         tmp = get_config_value(interface, 'uapsd_advertisement_enabled')
