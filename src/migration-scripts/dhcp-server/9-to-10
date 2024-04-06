@@ -19,7 +19,6 @@
 # - Add subnet IDs to existing subnets
 
 import sys
-import re
 from vyos.configtree import ConfigTree
 
 if len(sys.argv) < 2:
@@ -57,7 +56,7 @@ for network in config.list_nodes(base):
     if config.exists(base + [network, 'subnet']):
         for subnet in config.list_nodes(base + [network, 'subnet']):
             base_subnet = base + [network, 'subnet', subnet]
-            
+
             for option in option_nodes:
                 if config.exists(base_subnet + [option]):
                     config.set(base_subnet + ['option'])

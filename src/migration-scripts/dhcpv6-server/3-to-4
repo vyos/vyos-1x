@@ -20,7 +20,6 @@
 # - Migrate address-range to range tagNode
 
 import sys
-import re
 from vyos.configtree import ConfigTree
 
 if len(sys.argv) < 2:

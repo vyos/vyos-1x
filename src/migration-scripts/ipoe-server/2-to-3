@@ -16,12 +16,9 @@
 
 # Migrating to named ipv6 pools
 
-import os
-
 from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
-
 
 if len(argv) < 2:
     print("Must specify file name!")
