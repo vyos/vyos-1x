@@ -25,7 +25,7 @@
             <properties>
               <help>Container capabilities/permissions</help>
               <completionHelp>
-                <list>net-admin net-bind-service net-raw setpcap sys-admin sys-module sys-time</list>
+                <list>net-admin net-bind-service net-raw setpcap sys-admin sys-module sys-nice sys-time</list>
               </completionHelp>
               <valueHelp>
                 <format>net-admin</format>
@@ -50,6 +50,10 @@
               <valueHelp>
                 <format>sys-module</format>
                 <description>Load, unload and delete kernel modules</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-nice</format>
+                <description>Permissions to set process nice value</description>
               </valueHelp>
               <valueHelp>
                 <format>sys-time</format>
