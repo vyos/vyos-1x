@@ -62,7 +62,6 @@ for interface in config.list_nodes(base + ['interface']):
     base_path = base + ['interface', interface]
     for vlan in ['vlan-id', 'vlan-range']:
         if config.exists(base_path + [vlan]):
-            print(interface, vlan)
             for tmp in config.return_values(base_path + [vlan]):
                 config.set(base_path + ['vlan'], value=tmp, replace=False)
             config.delete(base_path + [vlan])
@@ -74,40 +73,38 @@ for interface in config.list_nodes(base + ['interface']):
         config.set(base_path + ['mode'], value=tmp.lower())
 
 pool_base = base + ['client-ip-pool']
-if not config.exists(pool_base):
-    exit(0)
+if config.exists(pool_base):
+    default_pool = ''
+    gateway = ''
 
-default_pool = ''
-gateway = ''
+    #named pool migration
+    namedpools_base = pool_base + ['name']
 
-#named pool migration
-namedpools_base = pool_base + ['name']
+    for pool_name in config.list_nodes(namedpools_base):
+        pool_path = namedpools_base + [pool_name]
+        if config.exists(pool_path + ['subnet']):
+            subnet = config.return_value(pool_path + ['subnet'])
+            config.set(pool_base + [pool_name, 'range'], value=subnet, replace=False)
+            # Get netmask from subnet
+            mask = subnet.split("/")[1]
+        if config.exists(pool_path + ['next-pool']):
+            next_pool = config.return_value(pool_path + ['next-pool'])
+            config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
+            if not default_pool:
+                default_pool = pool_name
+        if config.exists(pool_path + ['gateway-address']) and mask:
+            gateway = f'{config.return_value(pool_path + ["gateway-address"])}/{mask}'
+            config.set(base + ['gateway-address'], value=gateway, replace=False)
 
-for pool_name in config.list_nodes(namedpools_base):
-    pool_path = namedpools_base + [pool_name]
-    if config.exists(pool_path + ['subnet']):
-        subnet = config.return_value(pool_path + ['subnet'])
-        config.set(pool_base + [pool_name, 'range'], value=subnet, replace=False)
-        # Get netmask from subnet
-        mask = subnet.split("/")[1]
-    if config.exists(pool_path + ['next-pool']):
-        next_pool = config.return_value(pool_path + ['next-pool'])
-        config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
-        if not default_pool:
-            default_pool = pool_name
-    if config.exists(pool_path + ['gateway-address']) and mask:
-        gateway = f'{config.return_value(pool_path + ["gateway-address"])}/{mask}'
-        config.set(base + ['gateway-address'], value=gateway, replace=False)
+    if not default_pool and config.list_nodes(namedpools_base):
+        default_pool = config.list_nodes(namedpools_base)[0]
 
-if not default_pool and config.list_nodes(namedpools_base):
-    default_pool = config.list_nodes(namedpools_base)[0]
+    config.delete(namedpools_base)
 
-config.delete(namedpools_base)
-
-if default_pool:
-    config.set(base + ['default-pool'], value=default_pool)
-# format as tag node
-config.set_tag(pool_base)
+    if default_pool:
+        config.set(base + ['default-pool'], value=default_pool)
+    # format as tag node
+    config.set_tag(pool_base)
 
 try:
     with open(file_name, 'w') as f:
