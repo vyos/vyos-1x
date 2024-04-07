@@ -262,12 +262,11 @@ def generate_run_arguments(name, container_config):
     restart = container_config['restart']
 
     # Add capability options. Should be in uppercase
-    cap_add = ''
-    if 'cap_add' in container_config:
-        for c in container_config['cap_add']:
-            c = c.upper()
-            c = c.replace('-', '_')
-            cap_add += f' --cap-add={c}'
+    capabilities = ''
+    if 'capability' in container_config:
+        for cap in container_config['capability']:
+            cap = c.upper().replace('-', '_')
+            capabilities += f' --cap-add={cap}'
 
     # Add a host device to the container /dev/x:/dev/x
     device = ''
@@ -330,7 +329,7 @@ def generate_run_arguments(name, container_config):
             prop = vol_config['propagation']
             volume += f' --volume {svol}:{dvol}:{mode},{prop}'
 
-    container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
+    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
                          f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid}'
 
