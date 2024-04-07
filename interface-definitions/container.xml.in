@@ -21,9 +21,9 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="cap-add">
+          <leafNode name="capability">
             <properties>
-              <help>Container capabilities/permissions</help>
+              <help>Grant individual Linux capability to container instance</help>
               <completionHelp>
                 <list>net-admin net-bind-service net-raw setpcap sys-admin sys-module sys-time</list>
               </completionHelp>
