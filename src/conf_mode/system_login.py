@@ -336,26 +336,30 @@ def apply(login):
             command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk {user}'
             try:
                 cmd(command)
-                # we should not rely on the value stored in
-                # user_config['home_directory'], as a crazy user will choose
-                # username root or any other system user which will fail.
+                # we should not rely on the value stored in user_config['home_directory'], as a
+                # crazy user will choose username root or any other system user which will fail.
                 #
                 # XXX: Should we deny using root at all?
                 home_dir = getpwnam(user).pw_dir
-                # T5875: ensure UID is properly set on home directory if user is re-added
-                # the home directory will always exist, as it's created above by --create-home,
-                # retrieve current owner of home directory and adjust it on demand
-                dir_owner = getpwuid(os.stat(home_dir).st_uid).pw_name
-                if dir_owner != user:
-                     chown(home_dir, user=user, recursive=True)
-
+                # always re-render SSH keys with appropriate permissions
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
                        formater=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
-
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
+
+            # T5875: ensure UID is properly set on home directory if user is re-added
+            # the home directory will always exist, as it's created above by --create-home,
+            # retrieve current owner of home directory and adjust on demand
+            dir_owner = None
+            try:
+                dir_owner = getpwuid(os.stat(home_dir).st_uid).pw_name
+            except:
+                pass
+
+            if dir_owner != user:
+                    chown(home_dir, user=user, recursive=True)
 
             # Generate 2FA/MFA One-Time-Pad configuration
             if dict_search('authentication.otp.key', user_config):
