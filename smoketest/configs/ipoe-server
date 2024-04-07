@@ -56,16 +56,12 @@ service {
             }
         }
         interface eth1 {
-            client-subnet 192.168.0.0/24
             network vlan
             network-mode L3
             vlan-id 100
             vlan-id 200
             vlan-range 1000-2000
             vlan-range 2500-2700
-        }
-        interface eth2 {
-            client-subnet 192.168.1.0/24
         }
         name-server 10.10.1.1
         name-server 10.10.1.2
@@ -94,11 +90,11 @@ system {
         }
     }
     ntp {
-        server 0.pool.ntp.org {
+        server time1.vyos.net {
         }
-        server 1.pool.ntp.org {
+        server time2.vyos.net {
         }
-        server 2.pool.ntp.org {
+        server time3.vyos.net {
         }
     }
     syslog {

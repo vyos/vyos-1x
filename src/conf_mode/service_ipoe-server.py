@@ -68,8 +68,8 @@ def verify(ipoe):
     for interface, iface_config in ipoe['interface'].items():
         verify_interface_exists(interface)
         if 'client_subnet' in iface_config and 'vlan' in iface_config:
-            raise ConfigError('Option "client-subnet" incompatible with "vlan"!'
-                              'Use "ipoe client-ip-pool" instead.')
+            raise ConfigError('Option "client-subnet" and "vlan" are mutually exclusive, '
+                              'use "client-ip-pool" instead!')
 
     verify_accel_ppp_authentication(ipoe, local_users=False)
     verify_accel_ppp_ip_pool(ipoe)
