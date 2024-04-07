@@ -165,7 +165,6 @@ def verify(dhcp):
     # Inspect shared-network/subnet
     listen_ok = False
     subnets = []
-    failover_ok = False
     shared_networks =  len(dhcp['shared_network_name'])
     disabled_shared_networks = 0
 
