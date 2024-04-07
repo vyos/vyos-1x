@@ -265,7 +265,7 @@ def generate_run_arguments(name, container_config):
     capabilities = ''
     if 'capability' in container_config:
         for cap in container_config['capability']:
-            cap = c.upper().replace('-', '_')
+            cap = cap.upper().replace('-', '_')
             capabilities += f' --cap-add={cap}'
 
     # Add a host device to the container /dev/x:/dev/x
