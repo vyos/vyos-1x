@@ -16,6 +16,7 @@
 
 import os
 
+from glob import glob
 from ipaddress import ip_address
 from ipaddress import ip_network
 from netaddr import IPRange
@@ -28,6 +29,7 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import chmod_775
+from vyos.utils.file import chown
 from vyos.utils.file import makedir
 from vyos.utils.file import write_file
 from vyos.utils.process import call
@@ -42,6 +44,7 @@ ctrl_config_file = '/run/kea/kea-ctrl-agent.conf'
 ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
 config_file = '/run/kea/kea-dhcp4.conf'
 lease_file = '/config/dhcp/dhcp4-leases.csv'
+lease_file_glob = '/config/dhcp/dhcp4-leases*'
 systemd_override = r'/run/systemd/system/kea-ctrl-agent.service.d/10-override.conf'
 user_group = '_kea'
 
@@ -353,6 +356,10 @@ def generate(dhcp):
     if not os.path.isdir(lease_dir):
         makedir(lease_dir, group='vyattacfg')
         chmod_775(lease_dir)
+
+    # Ensure correct permissions on lease files + backups
+    for file in glob(lease_file_glob):
+        chown(file, user=user_group, group='vyattacfg')
 
     # Create lease file if necessary and let kea own it - 'kea-lfc' expects it that way
     if not os.path.exists(lease_file):
