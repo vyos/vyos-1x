@@ -519,8 +519,7 @@ class BasicInterfaceTest:
                     base = self._base_path + [interface, 'vif', vlan]
                     self.cli_set(base + ['mtu', mtu_9000])
 
-            # check validate() - VIF MTU must not be larger the parent interface
-            # MTU size.
+            # check validate() - Interface MTU "9000" too high, parent interface MTU is "1500"!
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
 

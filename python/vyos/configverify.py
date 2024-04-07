@@ -60,8 +60,8 @@ def verify_mtu_parent(config, parent):
     mtu = int(config['mtu'])
     parent_mtu = int(parent['mtu'])
     if mtu > parent_mtu:
-        raise ConfigError(f'Interface MTU ({mtu}) too high, ' \
-                          f'parent interface MTU is {parent_mtu}!')
+        raise ConfigError(f'Interface MTU "{mtu}" too high, ' \
+                          f'parent interface MTU is "{parent_mtu}"!')
 
 def verify_mtu_ipv6(config):
     """
@@ -76,7 +76,7 @@ def verify_mtu_ipv6(config):
         if int(config['mtu']) < min_mtu:
             interface = config['ifname']
             error_msg = f'IPv6 address will be configured on interface "{interface}",\n' \
-                        f'the required minimum MTU is {min_mtu}!'
+                        f'the required minimum MTU is "{min_mtu}"!'
 
             if 'address' in config:
                 for address in config['address']:
