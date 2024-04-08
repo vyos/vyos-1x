@@ -54,6 +54,8 @@ MSG_INFO_INSTALL_DISK_CONFIRM: str = 'Installation will delete all data on the d
 MSG_INFO_INSTALL_RAID_CONFIRM: str = 'Installation will delete all data on both drives. Continue?'
 MSG_INFO_INSTALL_PARTITONING: str = 'Creating partition table...'
 MSG_INPUT_CONFIG_FOUND: str = 'An active configuration was found. Would you like to copy it to the new image?'
+MSG_INPUT_CONFIG_CHOICE: str = 'The following config files are available for boot:'
+MSG_INPUT_CONFIG_CHOOSE: str = 'Which file would you like as boot config?'
 MSG_INPUT_IMAGE_NAME: str = 'What would you like to name this image?'
 MSG_INPUT_IMAGE_DEFAULT: str = 'Would you like to set the new image as the default one for boot?'
 MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user'
@@ -652,6 +654,10 @@ def install_image() -> None:
                                   valid_responses=['K', 'S', 'U'])
     console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS', 'U': 'ttyUSB'}
 
+    config_boot_list = ['/opt/vyatta/etc/config/config.boot',
+                        '/opt/vyatta/etc/config.boot.default']
+    default_config = config_boot_list[0]
+
     disks: dict[str, int] = find_disks()
 
     install_target: Union[disk.DiskDetails, raid.RaidDetails, None] = None
@@ -659,6 +665,14 @@ def install_image() -> None:
         install_target = check_raid_install(disks)
         if install_target is None:
             install_target = ask_single_disk(disks)
+
+        # if previous install was selected in search_previous_installation,
+        # directory /mnt/config was prepared for copy below; if not, prompt:
+        if not Path('/mnt/config').exists():
+            default_config: str = select_entry(config_boot_list,
+                                               MSG_INPUT_CONFIG_CHOICE,
+                                               MSG_INPUT_CONFIG_CHOOSE,
+                                               default_entry=1) # select_entry indexes from 1
 
         # create directories for installation media
         prepare_tmp_disr()
@@ -681,7 +695,7 @@ def install_image() -> None:
         chown(target_config_dir, group='vyattacfg')
         chmod_2775(target_config_dir)
         # copy config
-        copy('/opt/vyatta/etc/config/config.boot', target_config_dir)
+        copy(default_config, f'{target_config_dir}/config.boot')
         configure_authentication(f'{target_config_dir}/config.boot',
                                  user_password)
         Path(f'{target_config_dir}/.vyatta_config').touch()
