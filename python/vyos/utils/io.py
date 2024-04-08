@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Callable
+from typing import Callable, Optional
 
 def print_error(str='', end='\n'):
     """
@@ -81,7 +81,8 @@ def is_dumb_terminal():
     return os.getenv('TERM') in ['vt100', 'dumb']
 
 def select_entry(l: list, list_msg: str = '', prompt_msg: str = '',
-                 list_format: Callable = None,) -> str:
+                 list_format: Optional[Callable] = None,
+                 default_entry: Optional[int] = None) -> str:
     """Select an entry from a list
 
     Args:
@@ -99,6 +100,9 @@ def select_entry(l: list, list_msg: str = '', prompt_msg: str = '',
             print(f'\t{i}: {list_format(e)}')
         else:
             print(f'\t{i}: {e}')
-    select = ask_input(prompt_msg, numeric_only=True,
-                       valid_responses=range(1, len(l)+1))
+    valid_entry = range(1, len(l)+1)
+    if default_entry and default_entry not in valid_entry:
+        default_entry = None
+    select = ask_input(prompt_msg, default=default_entry, numeric_only=True,
+                       valid_responses=valid_entry)
     return next(filter(lambda x: x[0] == select, en))[1]
