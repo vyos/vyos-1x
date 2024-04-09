@@ -62,7 +62,7 @@ def _get_raw_data(family):
 
 def _get_raw_statistics():
     entries = []
-    data = cmd('sudo conntrack -S')
+    data = cmd('sudo conntrack --stats')
     data = data.replace('  \t', '').split('\n')
     for entry in data:
         entries.append(entry.split())
@@ -70,8 +70,25 @@ def _get_raw_statistics():
 
 
 def get_formatted_statistics(entries):
-    headers = ["CPU", "Found", "Invalid", "Insert", "Insert fail", "Drop", "Early drop", "Errors", "Search restart"]
-    output = tabulate(entries, headers, numalign="left")
+    headers = [
+        "CPU",
+        "Found",
+        "Invalid",
+        "Insert",
+        "Insert fail",
+        "Drop",
+        "Early drop",
+        "Errors",
+        "Search restart",
+        "",
+        "",
+    ]
+    # Process each entry to extract and format the values after '='
+    processed_entries = [
+        [value.split('=')[-1] for value in entry]
+        for entry in entries
+    ]
+    output = tabulate(processed_entries, headers, numalign="left")
     return output
 
 
