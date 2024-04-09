@@ -56,8 +56,9 @@
             <properties>
               <help>Firewall address-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="address">
@@ -96,7 +97,7 @@
               <constraint>
                 <regex>[a-zA-Z_][a-zA-Z0-9]?[\w\-\.]*</regex>
               </constraint>
-              <constraintErrorMessage>Name of domain-group can only contain alpha-numeric letters, hyphen, underscores and not start with numeric</constraintErrorMessage>
+              <constraintErrorMessage>Name of domain-group can only contain alphanumeric letters, hyphen, underscores and not start with numeric</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="address">
@@ -124,8 +125,9 @@
                 <properties>
                   <help>Firewall dynamic address group</help>
                   <constraint>
-                    <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
                   </constraint>
+                  <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
                 </properties>
                 <children>
                   #include <include/generic-description.xml.i>
@@ -148,8 +150,9 @@
             <properties>
               <help>Firewall interface-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="interface">
@@ -177,8 +180,9 @@
             <properties>
               <help>Firewall ipv6-address-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="address">
@@ -215,8 +219,9 @@
             <properties>
               <help>Firewall ipv6-network-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               #include <include/generic-description.xml.i>
@@ -248,8 +253,9 @@
             <properties>
               <help>Firewall mac-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               #include <include/generic-description.xml.i>
@@ -281,8 +287,9 @@
             <properties>
               <help>Firewall network-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               #include <include/generic-description.xml.i>
@@ -314,8 +321,9 @@
             <properties>
               <help>Firewall port-group</help>
               <constraint>
-                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
             </properties>
             <children>
               #include <include/generic-description.xml.i>
