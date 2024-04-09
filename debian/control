@@ -22,6 +22,7 @@ Build-Depends:
   python3-nose,
   python3-jinja2,
   python3-psutil,
+  python3-requests,
   python3-setuptools,
   quilt,
   whois
