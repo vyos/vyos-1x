@@ -43,6 +43,7 @@ from vyos.template import render
 from vyos.xml_ref import default_value
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 config_containers = '/etc/containers/containers.conf'
@@ -50,15 +51,18 @@ config_registry = '/etc/containers/registries.conf'
 config_storage = '/etc/containers/storage.conf'
 systemd_unit_path = '/run/systemd/system'
 
+
 def _cmd(command):
     if os.path.exists('/tmp/vyos.container.debug'):
         print(command)
     return cmd(command)
 
+
 def network_exists(name):
     # Check explicit name for network, returns True if network exists
     c = _cmd(f'podman network ls --quiet --filter name=^{name}$')
     return bool(c)
+
 
 # Common functions
 def get_config(config=None):
@@ -86,20 +90,21 @@ def get_config(config=None):
     # registry is a tagNode with default values - merge the list from
     # default_values['registry'] into the tagNode variables
     if 'registry' not in container:
-        container.update({'registry' : {}})
+        container.update({'registry': {}})
         default_values = default_value(base + ['registry'])
         for registry in default_values:
-            tmp = {registry : {}}
+            tmp = {registry: {}}
             container['registry'] = dict_merge(tmp, container['registry'])
 
     # Delete container network, delete containers
     tmp = node_changed(conf, base + ['network'])
-    if tmp: container.update({'network_remove' : tmp})
+    if tmp: container.update({'network_remove': tmp})
 
     tmp = node_changed(conf, base + ['name'])
-    if tmp: container.update({'container_remove' : tmp})
+    if tmp: container.update({'container_remove': tmp})
 
     return container
+
 
 def verify(container):
     # bail out early - looks like removal from running config
@@ -125,8 +130,8 @@ def verify(container):
             # of image upgrade and deletion.
             image = container_config['image']
             if run(f'podman image exists {image}') != 0:
-                Warning(f'Image "{image}" used in container "{name}" does not exist '\
-                        f'locally. Please use "add container image {image}" to add it '\
+                Warning(f'Image "{image}" used in container "{name}" does not exist ' \
+                        f'locally. Please use "add container image {image}" to add it ' \
                         f'to the system! Container "{name}" will not be started!')
 
             if 'cpu_quota' in container_config:
@@ -167,11 +172,11 @@ def verify(container):
 
                         # We can not use the first IP address of a network prefix as this is used by podman
                         if ip_address(address) == ip_network(network)[1]:
-                            raise ConfigError(f'IP address "{address}" can not be used for a container, '\
+                            raise ConfigError(f'IP address "{address}" can not be used for a container, ' \
                                               'reserved for the container engine!')
 
                     if cnt_ipv4 > 1 or cnt_ipv6 > 1:
-                        raise ConfigError(f'Only one IP address per address family can be used for '\
+                        raise ConfigError(f'Only one IP address per address family can be used for ' \
                                           f'container "{name}". {cnt_ipv4} IPv4 and {cnt_ipv6} IPv6 address(es)!')
 
             if 'device' in container_config:
@@ -185,6 +190,11 @@ def verify(container):
                     source = dev_config['source']
                     if not os.path.exists(source):
                         raise ConfigError(f'Device "{dev}" source path "{source}" does not exist!')
+
+            if 'kernel-parameter' in container_config:
+                for var, cfg in container_config['kernel-parameter'].items():
+                    if 'value' not in cfg:
+                        raise ConfigError(f'Kernel parameter {var} has no value assigned!')
 
             if 'environment' in container_config:
                 for var, cfg in container_config['environment'].items():
@@ -219,7 +229,8 @@ def verify(container):
 
             # Can not set both allow-host-networks and network at the same time
             if {'allow_host_networks', 'network'} <= set(container_config):
-                raise ConfigError(f'"allow-host-networks" and "network" for "{name}" cannot be both configured at the same time!')
+                raise ConfigError(
+                    f'"allow-host-networks" and "network" for "{name}" cannot be both configured at the same time!')
 
             # gid cannot be set without uid
             if 'gid' in container_config and 'uid' not in container_config:
@@ -235,8 +246,10 @@ def verify(container):
                 raise ConfigError(f'prefix for network "{network}" must be defined!')
 
             for prefix in network_config['prefix']:
-                if is_ipv4(prefix): v4_prefix += 1
-                elif is_ipv6(prefix): v6_prefix += 1
+                if is_ipv4(prefix):
+                    v4_prefix += 1
+                elif is_ipv6(prefix):
+                    v6_prefix += 1
 
             if v4_prefix > 1:
                 raise ConfigError(f'Only one IPv4 prefix can be defined for network "{network}"!')
@@ -262,12 +275,19 @@ def verify(container):
 
     return None
 
+
 def generate_run_arguments(name, container_config):
     image = container_config['image']
     cpu_quota = container_config['cpu_quota']
     memory = container_config['memory']
     shared_memory = container_config['shared_memory']
     restart = container_config['restart']
+
+    # Add sysctl options
+    sysctl_opt = ''
+    if 'kernel-parameter' in container_config:
+        for k, v in container_config['kernel-parameter'].items():
+            sysctl_opt += f" --sysctl={k}={v['value']}"
 
     # Add capability options. Should be in uppercase
     capabilities = ''
@@ -341,7 +361,7 @@ def generate_run_arguments(name, container_config):
     if 'allow_host_pid' in container_config:
       host_pid = '--pid host'
 
-    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpu_quota} ' \
+    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpu_quota} {sysctl_opt} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
                          f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid} {host_pid}'
 
@@ -375,6 +395,7 @@ def generate_run_arguments(name, container_config):
 
     return f'{container_base_cmd} --no-healthcheck --net {networks} {ip_param} {entrypoint} {image} {command} {command_arguments}'.strip()
 
+
 def generate(container):
     # bail out early - looks like removal from running config
     if not container:
@@ -387,7 +408,7 @@ def generate(container):
         for network, network_config in container['network'].items():
             tmp = {
                 'name': network,
-                'id' : sha256(f'{network}'.encode()).hexdigest(),
+                'id': sha256(f'{network}'.encode()).hexdigest(),
                 'driver': 'bridge',
                 'network_interface': f'pod-{network}',
                 'subnets': [],
@@ -399,7 +420,7 @@ def generate(container):
                 }
             }
             for prefix in network_config['prefix']:
-                net = {'subnet' : prefix, 'gateway' : inc_ip(prefix, 1)}
+                net = {'subnet': prefix, 'gateway': inc_ip(prefix, 1)}
                 tmp['subnets'].append(net)
 
                 if is_ipv6(prefix):
@@ -418,10 +439,11 @@ def generate(container):
 
             file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
             run_args = generate_run_arguments(name, container_config)
-            render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args,},
+            render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args, },
                    formater=lambda _: _.replace("&quot;", '"').replace("&apos;", "'"))
 
     return None
+
 
 def apply(container):
     # Delete old containers if needed. We can't delete running container
@@ -484,6 +506,7 @@ def apply(container):
                 tmp.add_ipv6_eui64_address('fe80::/64')
 
     return None
+
 
 if __name__ == '__main__':
     try:

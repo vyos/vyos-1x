@@ -10,6 +10,9 @@ container {
         allow-host-pid
         cap-add sys-time
         image busybox:stable
+        kernel-parameter "net.ipv4.ip_forward" {
+            value "1"
+        }
     }
 }
 interfaces {
