@@ -53,7 +53,7 @@
               </valueHelp>
               <valueHelp>
                 <format>sys-nice</format>
-                <description>Permissions to set process nice value</description>
+                <description>Permission to set process nice value</description>
               </valueHelp>
               <valueHelp>
                 <format>sys-time</format>
