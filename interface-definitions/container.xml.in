@@ -71,6 +71,26 @@
               <multi/>
             </properties>
           </leafNode>
+          <tagNode name="kernel-parameter">
+            <properties>
+              <help>Add custom kernel parameters (sysctl)</help>
+              <constraint>
+                <regex>[._a-z*]+</regex>
+              </constraint>
+              <constraintErrorMessage>Kernel parameter name must be alphanumeric and can contain periods, asterisks and underscores</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="value">
+                <properties>
+                  <help>Set kernel parameter option value</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Set kernel parameter option value</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
           #include <include/generic-description.xml.i>
           <tagNode name="device">
             <properties>
