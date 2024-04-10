@@ -16,6 +16,7 @@
 
 import os
 
+from copy import deepcopy
 from sys import exit
 
 from vyos.config import Config
@@ -65,6 +66,36 @@ def get_config(config=None):
     pppoe['server_type'] = 'pppoe'
     return pppoe
 
+def verify_pado_delay(pppoe):
+    if 'pado_delay' in pppoe:
+        pado_delay = deepcopy(pppoe['pado_delay'])
+
+        if 'disable' in pado_delay and 'sessions' not in pado_delay['disable']:
+            raise ConfigError(
+                'Number of sessions must be specified for "pado-delay disable"'
+            )
+
+        delays_without_sessions = [delay for delay, session in pado_delay.items() if not session]
+        if len(delays_without_sessions) > 1:
+            raise ConfigError(
+                f'Cannot add more then ONE pado-delay without sessions, '
+                f'but {len(delays_without_sessions)} were set'
+            )
+
+        if 'disable' in pado_delay:
+            # need to sort delays by sessions to verify if there is no delay
+            # for sessions after disabling
+            if delays_without_sessions:
+                pado_delay.pop(delays_without_sessions[0], None)
+            sorted_pado_delay = sorted(pado_delay.items(), key=lambda k_v: k_v[1]['sessions'])
+            last_delay = sorted_pado_delay[-1]
+
+            if last_delay[0] != 'disable':
+                raise ConfigError(
+                    f'Cannot add pado-delay after disabled sessions, but '
+                    f'"pado-delay {last_delay[0]} sessions {last_delay[1]["sessions"]}" was set'
+                )
+
 def verify(pppoe):
     if not pppoe:
         return None
@@ -73,7 +104,7 @@ def verify(pppoe):
     verify_accel_ppp_ip_pool(pppoe)
     verify_accel_ppp_name_servers(pppoe)
     verify_accel_ppp_wins_servers(pppoe)
-
+    verify_pado_delay(pppoe)
 
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')
