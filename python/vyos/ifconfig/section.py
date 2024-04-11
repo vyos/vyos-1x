@@ -97,7 +97,7 @@ class Section:
 
         for ifname in interfaces:
             ifsection = cls.section(ifname)
-            if not ifsection:
+            if not ifsection and not ifname.startswith('vrrp'):
                 continue
 
             if section and ifsection != section:
