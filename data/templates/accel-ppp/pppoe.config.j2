@@ -68,9 +68,9 @@ service-name={{ service_name | join(',') }}
 {%     set pado_delay_param = namespace(value=delay_without_sessions) %}
 {%     for delay, sessions in pado_delay.delays_with_sessions | sort(attribute='1') %}
 {%         if not loop.last %}
-{%             set pado_delay_param.value = pado_delay_param.value + ',' + delay + ':' + sessions|string %}
+{%             set pado_delay_param.value = pado_delay_param.value + ',' + delay + ':' + sessions | string %}
 {%         else %}
-{%             set pado_delay_param.value = pado_delay_param.value + ',-1:' + sessions|string %}
+{%             set pado_delay_param.value = pado_delay_param.value + ',-1:' + sessions | string %}
 {%         endif %}
 {%     endfor %}
 pado-delay={{ pado_delay_param.value }}
