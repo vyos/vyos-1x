@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright (C) 2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,46 +18,84 @@
 # to
 # 'set nat [source|destination] rule X [inbound-interface|outbound interface] interface-name <iface>'
 
+# T6100: Migration from 1.3.X to 1.4
+# Change IP/netmask to Network/netmask in
+#   'set nat [source|destination] rule X [source| destination| translation] address <IP/Netmask| !IP/Netmask>'
+
+import ipaddress
 from sys import argv,exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
 
-file_name = argv[1]
+def _func_T5643(conf, base_path):
+    for iface in ['inbound-interface', 'outbound-interface']:
+        if conf.exists(base_path + [iface]):
+            tmp = conf.return_value(base_path + [iface])
+            if tmp:
+                conf.delete(base_path + [iface])
+                conf.set(base_path + [iface, 'interface-name'], value=tmp)
+    return
 
-with open(file_name, 'r') as f:
-    config_file = f.read()
 
-config = ConfigTree(config_file)
+def _func_T6100(conf, base_path):
+    for addr_type in ['source', 'destination', 'translation']:
+        base_addr_type = base_path + [addr_type]
+        if not conf.exists(base_addr_type) or not conf.exists(
+                base_addr_type + ['address']):
+            continue
 
-if not config.exists(['nat']):
-    # Nothing to do
-    exit(0)
+        address = conf.return_value(base_addr_type + ['address'])
 
-for direction in ['source', 'destination']:
-    # If a node doesn't exist, we obviously have nothing to do.
-    if not config.exists(['nat', direction]):
-        continue
+        if not address or '/' not in address:
+            continue
 
-    # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
-    # but there are no rules under it.
-    if not config.list_nodes(['nat', direction]):
-        continue
+        negative = ''
+        network = address
+        if '!' in address:
+            negative = '!'
+            network = str(address.split(negative)[1])
 
-    for rule in config.list_nodes(['nat', direction, 'rule']):
-        base = ['nat', direction, 'rule', rule]
-        for iface in ['inbound-interface','outbound-interface']:
-            if config.exists(base + [iface]):
-                tmp = config.return_value(base + [iface])
-                if tmp:
-                    config.delete(base + [iface])
-                    config.set(base + [iface, 'interface-name'], value=tmp)
+        network_ip = ipaddress.ip_network(network, strict=False)
+        if str(network_ip) != network:
+            network = f'{negative}{str(network_ip)}'
+            conf.set(base_addr_type + ['address'], value=network)
+    return
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+
+if __name__ == '__main__':
+    if len(argv) < 2:
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+
+    if not config.exists(['nat']):
+        # Nothing to do
+        exit(0)
+
+    for direction in ['source', 'destination']:
+        # If a node doesn't exist, we obviously have nothing to do.
+        if not config.exists(['nat', direction]):
+            continue
+
+        # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
+        # but there are no rules under it.
+        if not config.list_nodes(['nat', direction]):
+            continue
+
+        for rule in config.list_nodes(['nat', direction, 'rule']):
+            base = ['nat', direction, 'rule', rule]
+            _func_T5643(config,base)
+            _func_T6100(config,base)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)
