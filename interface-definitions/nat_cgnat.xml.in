@@ -1,0 +1,197 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="nat">
+    <children>
+      <node name="cgnat" owner="${vyos_conf_scripts_dir}/nat_cgnat.py">
+        <properties>
+          <help>Carrier-grade NAT (CGNAT) parameters</help>
+          <priority>221</priority>
+        </properties>
+        <children>
+          <node name="pool">
+            <properties>
+              <help>External and internal pool parameters</help>
+            </properties>
+            <children>
+              <tagNode name="external">
+                <properties>
+                  <help>External pool name</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>External pool name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Name of pool can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="external-port-range">
+                    <properties>
+                      <help>Port range</help>
+                      <valueHelp>
+                        <format>range</format>
+                        <description>Numbered port range (e.g., 1001-1005)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="port-range"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>1024-65535</defaultValue>
+                  </leafNode>
+                  <node name="per-user-limit">
+                    <properties>
+                      <help>Per user limits for the pool</help>
+                    </properties>
+                    <children>
+                      <leafNode name="port">
+                        <properties>
+                          <help>Ports per user</help>
+                          <valueHelp>
+                            <format>u32:1-65535</format>
+                            <description>Numeric IP port</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>2000</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <tagNode name="range">
+                    <properties>
+                      <help>Range of IP addresses</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-host"/>
+                        <validator name="ipv4-range"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="seq">
+                        <properties>
+                          <help>Sequence</help>
+                          <valueHelp>
+                            <format>u32:1-999999</format>
+                            <description>Sequence number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-999999"/>
+                          </constraint>
+                          <constraintErrorMessage>Sequence number must be between 1 and 999999</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <tagNode name="internal">
+                <properties>
+                  <help>Internal pool name</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Internal pool name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Name of pool can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="range">
+                    <properties>
+                      <help>Range of IP addresses</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-host"/>
+                        <validator name="ipv4-range"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number for this CGNAT rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="pool">
+                    <properties>
+                      <help>Source internal pool</help>
+                      <completionHelp>
+                        <path>nat cgnat pool internal</path>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Source internal pool name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Name of pool can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="translation">
+                <properties>
+                  <help>Translation parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="pool">
+                    <properties>
+                      <help>Translation external pool</help>
+                      <completionHelp>
+                        <path>nat cgnat pool external</path>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Translation external pool name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Name of pool can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
