@@ -35,6 +35,11 @@
             auth = {{ rw_conf.authentication.client_mode }}
             eap_id = %any
 {% endif %}
+{% if rw_conf.authentication.client_mode is vyos_defined('eap-tls') or rw_conf.authentication.client_mode is vyos_defined('x509') %}
+{#          pass all configured CAs as filenames, separated by commas #}
+{#          this will produce a string like "MyCA1.pem,MyCA2.pem" #}
+            cacerts = {{ '.pem,'.join(rw_conf.authentication.x509.ca_certificate) ~ '.pem' }}
+{% endif %}
         }
         children {
             ikev2-vpn  {

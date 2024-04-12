@@ -757,6 +757,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'id = "{local_id}"',
             f'auth = pubkey',
             f'certs = peer1.pem',
+            f'cacerts = MyVyOS-CA.pem',
             f'auth = eap-tls',
             f'eap_id = %any',
             f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
@@ -840,6 +841,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'ca-certificate', ca_name])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'ca-certificate', int_ca_name])
 
         self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'esp-group', esp_group])
         self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'ike-group', ike_group])
@@ -867,6 +869,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'id = "{local_id}"',
             f'auth = pubkey',
             f'certs = peer1.pem',
+            f'cacerts = MyVyOS-CA.pem,MyVyOS-IntCA.pem',
             f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
             f'rekey_time = {eap_lifetime}s',
             f'rand_time = 540s',
@@ -894,6 +897,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         self.tearDownPKI()
