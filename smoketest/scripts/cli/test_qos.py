@@ -581,7 +581,6 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                         dport = int(match_config['dport'])
                         self.assertEqual(f'{dport:x}', filter['options']['match']['value'])
 
-
     def test_11_shaper(self):
         bandwidth = 250
         default_bandwidth = 20
@@ -634,6 +633,69 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             default_ceil += 1
             class_bandwidth += 1
             class_ceil += 1
+
+    def test_12_shaper_with_red_queue(self):
+        bandwidth = 100
+        default_bandwidth = 100
+        default_burst = 100
+        interface = self._interfaces[0]
+        class_bandwidth = 50
+        dst_address = '192.0.2.8/32'
+
+        shaper_name = f'qos-shaper-{interface}'
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'bandwidth', f'{bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'bandwidth', f'{default_bandwidth}%'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'burst', f'{default_burst}'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'queue-type', 'random-detect'])
+
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'bandwidth', f'{class_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'match', '10', 'ip', 'destination', 'address', dst_address])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'queue-type', 'random-detect'])
+
+        # commit changes
+        self.cli_commit()
+
+        # check root htb config
+        output = cmd(f'tc class show dev {interface}')
+
+        config_entries = (
+            f'prio 0 rate {class_bandwidth}Mbit ceil 50Mbit burst 15Kb',  # specified class
+            f'prio 7 rate {default_bandwidth}Mbit ceil 100Mbit burst {default_burst}b',  # default class
+        )
+        for config_entry in config_entries:
+            self.assertIn(config_entry, output)
+
+        output = cmd(f'tc -d qdisc show dev {interface}')
+        config_entries = (
+            'qdisc red',  # use random detect
+            'limit 72Kb min 9Kb max 18Kb ewma 3 probability 0.1',  # default config for random detect
+        )
+        for config_entry in config_entries:
+            self.assertIn(config_entry, output)
+
+        # test random detect queue params
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'queue-limit', '1024'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'average-packet', '1024'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'maximum-threshold', '32'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'minimum-threshold', '16'])
+
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'queue-limit', '1024'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'average-packet', '512'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'maximum-threshold', '32'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'minimum-threshold', '16'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '2', 'mark-probability', '20'])
+
+        self.cli_commit()
+
+        output = cmd(f'tc -d qdisc show dev {interface}')
+        config_entries = (
+            'qdisc red',  # use random detect
+            'limit 1Mb min 16Kb max 32Kb ewma 3 probability 0.1',  # default config for random detect
+            'limit 512Kb min 8Kb max 16Kb ewma 3 probability 0.05',  # class config for random detect
+        )
+        for config_entry in config_entries:
+            self.assertIn(config_entry, output)
 
 
 if __name__ == '__main__':
