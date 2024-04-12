@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # Temporary directory creation
     tmp_dir_path = f'{tmp_path}/drops-debug_{time_now}'
     tmp_dir: Path = Path(tmp_dir_path)
-    tmp_dir.mkdir()
+    tmp_dir.mkdir(parents=True)
 
     report_file: Path = Path(f'{tmp_dir_path}/show_tech-support_report.txt')
     report_file.touch()
