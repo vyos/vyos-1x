@@ -17,7 +17,7 @@
 DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_interfaces"
 
 if ! { [ -f $DHCP_HOOK_IFLIST ] && grep -qw $interface $DHCP_HOOK_IFLIST; }; then
-    exit 0
+    return 0
 fi
 
 # Re-generate the config on the following events:
@@ -26,10 +26,10 @@ fi
 # - REBIND: re-generate if the IP address changed
 if [ "$reason" == "RENEW" ] || [ "$reason" == "REBIND" ]; then
     if [ "$old_ip_address" == "$new_ip_address" ]; then
-        exit 0
+        return 0
     fi
 elif [ "$reason" != "BOUND" ]; then
-    exit 0
+    return 0
 fi
 
 # Best effort wait for any active commit to finish
