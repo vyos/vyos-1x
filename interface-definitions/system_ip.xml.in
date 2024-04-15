@@ -23,12 +23,6 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="disable-directed-broadcast">
-            <properties>
-              <help>Disable IPv4 directed broadcast forwarding on all interfaces</help>
-              <valueless/>
-            </properties>
-          </leafNode>
           <node name="multipath">
             <properties>
               <help>IPv4 multipath settings</help>
