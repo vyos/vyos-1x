@@ -157,6 +157,12 @@
                 </properties>
                 <children>
                   #include <include/pki/ca-certificate.xml.i>
+                  <leafNode name="no-verify">
+                    <properties>
+                      <help>Do not attempt to verify SSL certificates for backend servers</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               #include <include/haproxy/timeout.xml.i>

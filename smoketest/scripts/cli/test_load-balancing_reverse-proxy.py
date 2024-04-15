@@ -280,6 +280,24 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['backend', 'bk-01', 'ssl', 'ca-certificate', 'smoketest'])
         self.cli_commit()
 
+    def test_04_lb_reverse_proxy_backend_ssl_no_verify(self):
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # Set no-verify option
+        self.cli_set(base_path + ['backend', 'bk-01', 'ssl', 'no-verify'])
+        self.cli_commit()
+
+        # Test no-verify option
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('server bk-01 192.0.2.11:9090 send-proxy ssl verify none', config)
+
+        # Test setting ca-certificate alongside no-verify option fails, to test config validation
+        self.cli_set(base_path + ['backend', 'bk-01', 'ssl', 'ca-certificate', 'smoketest'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

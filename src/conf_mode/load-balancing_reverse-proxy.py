@@ -84,6 +84,10 @@ def verify(lb):
             if {'send_proxy', 'send_proxy_v2'} <= set(bk_server_conf):
                 raise ConfigError(f'Cannot use both "send-proxy" and "send-proxy-v2" for server "{bk_server}"')
 
+        if 'ssl' in back_config:
+            if {'no_verify', 'ca_certificate'} <= set(back_config['ssl']):
+                raise ConfigError(f'backend {back} cannot have both ssl options no-verify and ca-certificate set!')
+
     for front, front_config in lb['service'].items():
         for cert in dict_search('ssl.certificate', front_config) or []:
             verify_pki_certificate(lb, cert)
