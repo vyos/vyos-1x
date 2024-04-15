@@ -81,11 +81,6 @@ def apply(opt):
     value = '0' if (tmp != None) else '1'
     write_file('/proc/sys/net/ipv4/conf/all/forwarding', value)
 
-    # enable/disable IPv4 directed broadcast forwarding
-    tmp = dict_search('disable_directed_broadcast', opt)
-    value = '0' if (tmp != None) else '1'
-    write_file('/proc/sys/net/ipv4/conf/all/bc_forwarding', value)
-
     # configure multipath
     tmp = dict_search('multipath.ignore_unreachable_nexthops', opt)
     value = '1' if (tmp != None) else '0'
