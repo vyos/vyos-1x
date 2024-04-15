@@ -44,6 +44,26 @@
       </properties>
       <defaultValue>disable</defaultValue>
     </leafNode>
+    <leafNode name="directed-broadcast">
+      <properties>
+        <help>Policy for handling IPv4 directed broadcast forwarding on all interfaces</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable IPv4 directed broadcast forwarding on all interfaces</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable IPv4 directed broadcast forwarding on all interfaces</description>
+        </valueHelp>
+        <constraint>
+          <regex>(enable|disable)</regex>
+        </constraint>
+      </properties>
+      <defaultValue>enable</defaultValue>
+    </leafNode>
     <leafNode name="ip-src-route">
       <properties>
         <help>Policy for handling IPv4 packets with source route option</help>
