@@ -44,6 +44,7 @@ nftables_conf = '/run/nftables.conf'
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
     'broadcast_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts', 'enable': '0', 'disable': '1'},
+    'directed_broadcast' : {'sysfs': '/proc/sys/net/ipv4/conf/all/bc_forwarding', 'enable': '1', 'disable': '0'},
     'ip_src_route': {'sysfs': '/proc/sys/net/ipv4/conf/*/accept_source_route'},
     'ipv6_receive_redirects': {'sysfs': '/proc/sys/net/ipv6/conf/*/accept_redirects'},
     'ipv6_src_route': {'sysfs': '/proc/sys/net/ipv6/conf/*/accept_source_route', 'enable': '0', 'disable': '-1'},
