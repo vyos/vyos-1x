@@ -33,6 +33,16 @@ airbag.enable()
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
 
+def convert_pado_delay(pado_delay):
+    new_pado_delay = {'delays_without_sessions': [],
+                      'delays_with_sessions': []}
+    for delay, sessions in pado_delay.items():
+        if not sessions:
+            new_pado_delay['delays_without_sessions'].append(delay)
+        else:
+            new_pado_delay['delays_with_sessions'].append((delay, int(sessions['sessions'])))
+    return new_pado_delay
+
 def get_config(config=None):
     if config:
         conf = config
@@ -44,13 +54,30 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     pppoe = get_accel_dict(conf, base, pppoe_chap_secrets)
+
+    if dict_search('pado_delay', pppoe):
+        pado_delay = dict_search('pado_delay', pppoe)
+        pppoe['pado_delay'] = convert_pado_delay(pado_delay)
+
     return pppoe
+
+def verify_pado_delay(pppoe):
+    if 'pado_delay' in pppoe:
+        pado_delay = pppoe['pado_delay']
+
+        delays_without_sessions = pado_delay['delays_without_sessions']
+        if len(delays_without_sessions) > 1:
+            raise ConfigError(
+                f'Cannot add more then ONE pado-delay without sessions, '
+                f'but {len(delays_without_sessions)} were set'
+            )
 
 def verify(pppoe):
     if not pppoe:
         return None
 
     verify_accel_ppp_base_service(pppoe)
+    verify_pado_delay(pppoe)
 
     if 'wins_server' in pppoe and len(pppoe['wins_server']) > 2:
         raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')
