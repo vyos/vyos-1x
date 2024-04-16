@@ -70,6 +70,22 @@ def get_shaper(qos, interface_config, direction):
 
     return (map_vyops_tc[shaper_type], shaper_config)
 
+
+def _clean_conf_dict(conf):
+    """
+    Delete empty nodes from config e.g.
+        match ADDRESS30 {
+            ip {
+                source {}
+            }
+        }
+    """
+    if isinstance(conf, dict):
+        return {node: _clean_conf_dict(val) for node, val in conf.items() if val != {} and _clean_conf_dict(val) != {}}
+    else:
+        return conf
+
+
 def get_config(config=None):
     if config:
         conf = config
@@ -120,6 +136,13 @@ def get_config(config=None):
                     if 'queue_limit' not in qos['policy'][policy][p_name]['precedence'][precedence]:
                         qos['policy'][policy][p_name]['precedence'][precedence]['queue_limit'] = \
                             str(int(4 * max_thr))
+            # cleanup empty match config
+            if 'class' in p_config:
+                for cls, cls_config in p_config['class'].items():
+                    if 'match' in cls_config:
+                        cls_config['match'] = _clean_conf_dict(cls_config['match'])
+                        if cls_config['match'] == {}:
+                            del cls_config['match']
 
     return qos
 
