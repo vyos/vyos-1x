@@ -198,6 +198,12 @@ def verify_pki(openvpn):
                 raise ConfigError(f'Cannot use encrypted private key on openvpn interface {interface}')
 
         if 'dh_params' in tls:
+            if 'dh' not in pki:
+                raise ConfigError(f'pki dh is not configured')
+            proposed_dh = tls['dh_params']
+            if proposed_dh not in pki['dh'].keys():
+                raise ConfigError(f"pki dh '{proposed_dh}' is not configured")
+
             pki_dh = pki['dh'][tls['dh_params']]
             dh_params = load_dh_parameters(pki_dh['parameters'])
             dh_numbers = dh_params.parameter_numbers()
