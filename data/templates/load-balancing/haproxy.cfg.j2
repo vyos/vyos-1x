@@ -110,6 +110,15 @@ frontend {{ front }}
 {% if backend is vyos_defined %}
 {%     for back, back_config in backend.items() %}
 backend {{ back }}
+{%         if back_config.http_check is vyos_defined %}
+    option httpchk
+{%         endif %}
+{%         if back_config.http_check.uri is vyos_defined and back_config.http_check.method is vyos_defined %}
+    http-check send meth {{ back_config.http_check.method | upper }} uri {{ back_config.http_check.uri }}
+{%         endif %}
+{%         if back_config.http_check.expect is vyos_defined %}
+    http-check expect {{ back_config.http_check.expect }}
+{%         endif %}
 {%         if back_config.balance is vyos_defined %}
 {%             set balance_translate = {'least-connection': 'leastconn', 'round-robin': 'roundrobin', 'source-address': 'source'} %}
     balance {{ balance_translate[back_config.balance] }}
