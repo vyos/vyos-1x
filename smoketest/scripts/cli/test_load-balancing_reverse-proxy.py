@@ -298,6 +298,21 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
 
+    def test_05_lb_reverse_proxy_backend_http_check(self):
+      # Setup base
+      self.base_config()
+
+      # Set http-check
+      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'method', 'get'])
+      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'uri', '/health'])
+      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'expect', 'status 200'])
+      self.cli_commit()
+
+      # Test http-check
+      config = read_file(HAPROXY_CONF)
+      self.assertIn('option httpchk', config)
+      self.assertIn('http-check send meth GET uri /health', config)
+      self.assertIn('http-check expect status 200', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
