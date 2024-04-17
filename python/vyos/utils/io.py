@@ -27,7 +27,7 @@ def print_error(str='', end='\n'):
     sys.stderr.flush()
 
 def ask_input(question, default='', numeric_only=False, valid_responses=[],
-              no_echo=False):
+              no_echo=False, non_empty=False):
     from getpass import getpass
     question_out = question
     if default:
@@ -47,6 +47,9 @@ def ask_input(question, default='', numeric_only=False, valid_responses=[],
             response = int(response)
         if valid_responses and response not in valid_responses:
             print("Invalid value, try again.")
+            continue
+        if non_empty and not response:
+            print("Non-empty value required; try again.")
             continue
         break
     return response
