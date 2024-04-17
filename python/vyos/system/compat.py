@@ -198,11 +198,11 @@ def update_cfg_ver(root_dir:str = '') -> int:
     return cfg_version
 
 
-def get_default(menu_entries: list, root_dir: str = '') -> Union[int, None]:
+def get_default(data: dict, root_dir: str = '') -> Union[int, None]:
     """Translate default version to menuentry index
 
     Args:
-        menu_entries (list): list of dicts of installed version boot data
+        data (dict): boot data
         root_dir (str): an optional path to the root directory
 
     Returns:
@@ -213,10 +213,22 @@ def get_default(menu_entries: list, root_dir: str = '') -> Union[int, None]:
 
     grub_cfg_main = f'{root_dir}/{grub.GRUB_CFG_MAIN}'
 
+    menu_entries = data.get('versions', [])
+    console_type = data.get('console_type', 'tty')
+    console_num = data.get('console_num', '0')
     image_name = image.get_default_image()
 
-    sublist = list(filter(lambda x: x.get('version') == image_name,
-                        menu_entries))
+    sublist = list(filter(lambda x: (x.get('version') == image_name and
+                                     x.get('console_type') == console_type and
+                                     x.get('console_num') == console_num and
+                                     x.get('bootmode') == 'normal'),
+                          menu_entries))
+    # legacy images added with legacy tools omitted 'ttyUSB'; if entry not
+    # available, default to initial entry of version
+    if not sublist:
+        sublist = list(filter(lambda x: x.get('version') == image_name,
+                              menu_entries))
+
     if sublist:
         return menu_entries.index(sublist[0])
 
@@ -291,7 +303,7 @@ def grub_cfg_fields(root_dir: str = '') -> dict:
     menu_entries = update_version_list(root_dir)
     fields['versions'] = menu_entries
 
-    default = get_default(menu_entries, root_dir)
+    default = get_default(fields, root_dir)
     if default is not None:
         fields['default'] = default
 
