@@ -315,6 +315,20 @@ def apply(vrf):
         for chain, rule in nftables_rules.items():
             cmd(f'nft flush chain inet vrf_zones {chain}')
 
+    # Return default ip rule values
+    if 'name' not in vrf:
+        for afi in ['-4', '-6']:
+            # move lookup local to pref 0 (from 32765)
+            if not has_rule(afi, 0, 'local'):
+                call(f'ip {afi} rule add pref 0 from all lookup local')
+            if has_rule(afi, 32765, 'local'):
+                call(f'ip {afi} rule del pref 32765 table local')
+
+            if has_rule(afi, 1000, 'l3mdev'):
+                call(f'ip {afi} rule del pref 1000 l3mdev protocol kernel')
+            if has_rule(afi, 2000, 'l3mdev'):
+                call(f'ip {afi} rule del pref 2000 l3mdev unreachable')
+
     # Apply FRR filters
     zebra_daemon = 'zebra'
     # Save original configuration prior to starting any commit actions
