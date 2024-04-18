@@ -25,6 +25,7 @@ from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configdict import node_changed
 from vyos.configdiff import Diff
+from vyos.configdiff import get_config_diff
 from vyos.defaults import directories
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
@@ -199,6 +200,7 @@ def get_config(config=None):
     pki['system'] = conf.get_config_dict([], key_mangling=('-', '_'),
                                          get_first_key=True,
                                          no_tag_node_value_mangle=True)
+    D = get_config_diff(conf)
 
     for search in sync_search:
         for key in search['keys']:
@@ -230,9 +232,11 @@ def get_config(config=None):
 
                         if path[0] == 'interfaces':
                             ifname = found_path[0]
-                            set_dependents(path[1], conf, ifname)
+                            if not D.node_changed_presence(path + [ifname]):
+                                set_dependents(path[1], conf, ifname)
                         else:
-                            set_dependents(path[1], conf)
+                            if not D.node_changed_presence(path):
+                                set_dependents(path[1], conf)
 
     return pki
 
