@@ -48,9 +48,12 @@ def _get_tunnel_address(peer_host, peer_port, status_file):
         # 10.10.2.0/25,client1,...
         lst = [l for l in lst[1:] if '/' not in l.split(',')[0]]
 
-        tunnel_ip = lst[0].split(',')[0]
+        if lst:
+            tunnel_ip = lst[0].split(',')[0]
 
-        return tunnel_ip
+            return tunnel_ip
+
+        return 'n/a'
 
 def _get_interface_status(mode: str, interface: str) -> dict:
     status_file = f'/run/openvpn/{interface}.status'
