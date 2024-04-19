@@ -102,6 +102,39 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="http-check">
+                <properties>
+                  <help>HTTP check configuration</help>
+                </properties>
+                <children>
+                  <leafNode name="method">
+                    <properties>
+                      <help>HTTP method used for health check</help>
+                      <valueHelp>
+                        <format>options|get|post|put</format>
+                        <description>HTTP method used for health checking</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>options|get|post|put</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="uri">
+                    <properties>
+                      <help>URI used for HTTP health check (Example: '/' or '/health')</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="expect">
+                    <properties>
+                      <help>Expected response for the health check to pass</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>expected response (Example: 'status 200-299' or 'string success')</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               #include <include/haproxy/rule-backend.xml.i>
               <tagNode name="server">
                 <properties>
