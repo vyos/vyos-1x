@@ -113,11 +113,22 @@ backend {{ back }}
 {%         if back_config.http_check is vyos_defined %}
     option httpchk
 {%         endif %}
-{%         if back_config.http_check.uri is vyos_defined and back_config.http_check.method is vyos_defined %}
-    http-check send meth {{ back_config.http_check.method | upper }} uri {{ back_config.http_check.uri }}
+{%         set send = '' %}
+{%         if back_config.http_check.method is vyos_defined %}
+{%             set send = send + ' meth ' + back_config.http_check.method | upper %}
+{%         endif %}
+{%         if back_config.http_check.uri is vyos_defined %}
+{%             set send = send + ' uri ' + back_config.http_check.uri %}
+{%         endif %}
+{%         if send != '' %}
+    http-check send{{ send }}
 {%         endif %}
 {%         if back_config.http_check.expect is vyos_defined %}
-    http-check expect {{ back_config.http_check.expect }}
+{%             if back_config.http_check.expect.status is vyos_defined %}
+    http-check expect status {{ back_config.http_check.expect.status }}
+{%             elif back_config.http_check.expect.string is vyos_defined %}
+    http-check expect string {{ back_config.http_check.expect.string }}
+{%             endif %}
 {%         endif %}
 {%         if back_config.balance is vyos_defined %}
 {%             set balance_translate = {'least-connection': 'leastconn', 'round-robin': 'roundrobin', 'source-address': 'source'} %}
