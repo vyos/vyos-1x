@@ -20,10 +20,22 @@ from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
 
 LIBPATH = '/usr/lib/libvyosconfig.so.0'
 
+def replace_backslash(s, search, replace):
+    """Modify quoted strings containing backslashes not of escape sequences"""
+    def replace_method(match):
+        result = match.group().replace(search, replace)
+        return result
+    p = re.compile(r'("[^"]*[\\][^"]*"\n|\'[^\']*[\\][^\']*\'\n)')
+    return p.sub(replace_method, s)
+
 def escape_backslash(string: str) -> str:
-    """Escape single backslashes in string that are not in escape sequence"""
-    p = re.compile(r'(?<!\\)[\\](?!b|f|n|r|t|\\[^bfnrt])')
-    result = p.sub(r'\\\\', string)
+    """Escape single backslashes in quoted strings"""
+    result = replace_backslash(string, '\\', '\\\\')
+    return result
+
+def unescape_backslash(string: str) -> str:
+    """Unescape backslashes in quoted strings"""
+    result = replace_backslash(string, '\\\\', '\\')
     return result
 
 def extract_version(s):
@@ -165,11 +177,14 @@ class ConfigTree(object):
 
     def to_string(self, ordered_values=False):
         config_string = self.__to_string(self.__config, ordered_values).decode()
+        config_string = unescape_backslash(config_string)
         config_string = "{0}\n{1}".format(config_string, self.__version)
         return config_string
 
     def to_commands(self, op="set"):
-        return self.__to_commands(self.__config, op.encode()).decode()
+        commands = self.__to_commands(self.__config, op.encode()).decode()
+        commands = unescape_backslash(commands)
+        return commands
 
     def to_json(self):
         return self.__to_json(self.__config).decode()
@@ -362,6 +377,7 @@ def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
         msg = __get_error().decode()
         raise ConfigTreeError(msg)
 
+    res = unescape_backslash(res)
     return res
 
 def union(left, right, libpath=LIBPATH):
