@@ -488,9 +488,6 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             if synproxy_ws:
                 output.append(f'wscale {synproxy_ws} timestamp sack-perm')
 
-    else:
-        output.append('return')
-
     output.append(f'comment "{family}-{hook}-{fw_name}-{rule_id}"')
     return " ".join(output)
 

@@ -122,6 +122,15 @@ frontend {{ front }}
 {% if backend is vyos_defined %}
 {%     for back, back_config in backend.items() %}
 backend {{ back }}
+{%         if back_config.http_check is vyos_defined %}
+    option httpchk
+{%         endif %}
+{%         if back_config.http_check.uri is vyos_defined and back_config.http_check.method is vyos_defined %}
+    http-check send meth {{ back_config.http_check.method | upper }} uri {{ back_config.http_check.uri }}
+{%         endif %}
+{%         if back_config.http_check.expect is vyos_defined %}
+    http-check expect {{ back_config.http_check.expect }}
+{%         endif %}
 {%         if back_config.balance is vyos_defined %}
 {%             set balance_translate = {'least-connection': 'leastconn', 'round-robin': 'roundrobin', 'source-address': 'source'} %}
     balance {{ balance_translate[back_config.balance] }}
@@ -162,7 +171,7 @@ backend {{ back }}
 {%             endfor %}
 {%         endif %}
 {%         if back_config.server is vyos_defined %}
-{%             set ssl_back =  'ssl ca-file /run/haproxy/' ~ back_config.ssl.ca_certificate ~ '.pem' if back_config.ssl.ca_certificate is vyos_defined else '' %}
+{%             set ssl_back =  'ssl ca-file /run/haproxy/' ~ back_config.ssl.ca_certificate ~ '.pem' if back_config.ssl.ca_certificate is vyos_defined else ('ssl verify none' if back_config.ssl.no_verify is vyos_defined else '') %}
 {%             for server, server_config in back_config.server.items() %}
     server {{ server }} {{ server_config.address }}:{{ server_config.port }}{{ ' check' if server_config.check is vyos_defined }}{{ ' backup' if server_config.backup is vyos_defined }}{{ ' send-proxy' if server_config.send_proxy is vyos_defined }}{{ ' send-proxy-v2' if server_config.send_proxy_v2 is vyos_defined }} {{ ssl_back }}
 {%             endfor %}

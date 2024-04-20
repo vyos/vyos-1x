@@ -124,6 +124,12 @@
                     </properties>
                     <defaultValue>1</defaultValue>
                   </leafNode>
+                  <leafNode name="onlink">
+                    <properties>
+                      <help>The next hop is directly connected to the interface, even if it does not match interface prefix</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>

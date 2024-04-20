@@ -60,7 +60,8 @@ MSG_INPUT_CONFIG_CHOICE: str = 'The following config files are available for boo
 MSG_INPUT_CONFIG_CHOOSE: str = 'Which file would you like as boot config?'
 MSG_INPUT_IMAGE_NAME: str = 'What would you like to name this image?'
 MSG_INPUT_IMAGE_DEFAULT: str = 'Would you like to set the new image as the default one for boot?'
-MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user'
+MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user:'
+MSG_INPUT_PASSWORD_CONFIRM: str = 'Please confirm password for the "vyos" user:'
 MSG_INPUT_ROOT_SIZE_ALL: str = 'Would you like to use all the free space on the drive?'
 MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root partition (min is 1.5 GB)?'
 MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial, U: USB-Serial)?'
@@ -74,6 +75,7 @@ MSG_WARN_ROOT_SIZE_TOOBIG: str = 'The size is too big. Try again.'
 MSG_WARN_ROOT_SIZE_TOOSMALL: str = 'The size is too small. Try again'
 MSG_WARN_IMAGE_NAME_WRONG: str = 'The suggested name is unsupported!\n'\
 'It must be between 1 and 64 characters long and contains only the next characters: .+-_ a-z A-Z 0-9'
+MSG_WARN_PASSWORD_CONFIRM: str = 'The entered values did not match. Try again'
 CONST_MIN_DISK_SIZE: int = 2147483648  # 2 GB
 CONST_MIN_ROOT_SIZE: int = 1610612736  # 1.5 GB
 # a reserved space: 2MB for header, 1 MB for BIOS partition, 256 MB for EFI
@@ -695,8 +697,14 @@ def install_image() -> None:
         print(MSG_WARN_IMAGE_NAME_WRONG)
 
     # ask for password
-    user_password: str = ask_input(MSG_INPUT_PASSWORD, default='vyos',
-                                   no_echo=True)
+    while True:
+        user_password: str = ask_input(MSG_INPUT_PASSWORD, no_echo=True,
+                                       non_empty=True)
+        confirm: str = ask_input(MSG_INPUT_PASSWORD_CONFIRM, no_echo=True,
+                                 non_empty=True)
+        if user_password == confirm:
+            break
+        print(MSG_WARN_PASSWORD_CONFIRM)
 
     # ask for default console
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,

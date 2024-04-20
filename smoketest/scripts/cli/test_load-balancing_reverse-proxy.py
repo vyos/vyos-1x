@@ -325,5 +325,84 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'mode {mode}', config)
         self.assertIn(f'server {bk_name} {bk_server}:{bk_server_port}', config)
 
+    def test_04_lb_reverse_proxy_backend_ssl_no_verify(self):
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # Set no-verify option
+        self.cli_set(base_path + ['backend', 'bk-01', 'ssl', 'no-verify'])
+        self.cli_commit()
+
+        # Test no-verify option
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('server bk-01 192.0.2.11:9090 send-proxy ssl verify none', config)
+
+        # Test setting ca-certificate alongside no-verify option fails, to test config validation
+        self.cli_set(base_path + ['backend', 'bk-01', 'ssl', 'ca-certificate', 'smoketest'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
+    def test_05_lb_reverse_proxy_backend_http_check(self):
+      # Setup base
+      self.base_config()
+
+      # Set http-check
+      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'method', 'get'])
+      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'uri', '/health'])
+      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'expect', 'status 200'])
+      self.cli_commit()
+
+      # Test http-check
+      config = read_file(HAPROXY_CONF)
+      self.assertIn('option httpchk', config)
+      self.assertIn('http-check send meth GET uri /health', config)
+      self.assertIn('http-check expect status 200', config)
+
+    def test_05_lb_reverse_proxy_tcp_mode(self):
+        frontend = 'tcp_8443'
+        mode = 'tcp'
+        front_port = '8433'
+        rule_thirty = '30'
+        domain_bk = 'n6.example.com'
+        ssl_opt = "req-ssl-sni"
+        bk_name = 'bk-03'
+        bk_server = '192.0.2.11'
+        bk_server_port = '9090'
+
+        back_base = base_path + ['backend']
+
+        self.cli_set(base_path + ['service', frontend, 'mode', mode])
+        self.cli_set(base_path + ['service', frontend, 'port', front_port])
+
+        self.cli_set(base_path + ['service', frontend, 'rule', rule_thirty, 'domain-name', domain_bk])
+        self.cli_set(base_path + ['service', frontend, 'rule', rule_thirty, 'ssl', ssl_opt])
+        self.cli_set(base_path + ['service', frontend, 'rule', rule_thirty, 'set', 'backend', bk_name])
+
+        self.cli_set(back_base + [bk_name, 'mode', mode])
+        self.cli_set(back_base + [bk_name, 'server', bk_name, 'address', bk_server])
+        self.cli_set(back_base + [bk_name, 'server', bk_name, 'port', bk_server_port])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(HAPROXY_CONF)
+
+        # Frontend
+        self.assertIn(f'frontend {frontend}', config)
+        self.assertIn(f'bind :::{front_port} v4v6', config)
+        self.assertIn(f'mode {mode}', config)
+
+        self.assertIn(f'tcp-request inspect-delay', config)
+        self.assertIn(f"tcp-request content accept if {{ req_ssl_hello_type 1 }}", config)
+        self.assertIn(f'acl {rule_thirty} req_ssl_sni -i {domain_bk}', config)
+        self.assertIn(f'use_backend {bk_name} if {rule_thirty}', config)
+
+        # Backend
+        self.assertIn(f'backend {bk_name}', config)
+        self.assertIn(f'balance roundrobin', config)
+        self.assertIn(f'mode {mode}', config)
+        self.assertIn(f'server {bk_name} {bk_server}:{bk_server_port}', config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
