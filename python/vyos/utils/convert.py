@@ -19,12 +19,17 @@ def seconds_to_human(s, separator=""):
     """
     s = int(s)
 
+    year = 60 * 60 * 24 * 365.25
     week = 60 * 60 * 24 * 7
     day = 60 * 60 * 24
     hour = 60 * 60
 
     result = []
 
+    years = s // year
+    if years > 0:
+        result.append(f'{int(years)}y')
+        s = int(s % year)
 
     weeks = s // week
     if weeks > 0:
