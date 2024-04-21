@@ -451,6 +451,7 @@ start ()
         touch /tmp/vyos.ifconfig.debug
         touch /tmp/vyos.frr.debug
         touch /tmp/vyos.container.debug
+        touch /tmp/vyos.smoketest.debug
     fi
 
     log_action_begin_msg "Mounting VyOS Config"
