@@ -768,6 +768,26 @@
                     <children>
                       #include <include/ipsec/authentication-id.xml.i>
                       #include <include/ipsec/authentication-x509.xml.i>
+                      <leafNode name="eap-id">
+                        <properties>
+                          <help>Remote EAP ID for client authentication</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Remote EAP ID for client authentication</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <list>any</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>any</format>
+                            <description>Allow any EAP ID</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>[[:ascii:]]{1,64}</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>any</defaultValue>
+                      </leafNode>
                       <leafNode name="client-mode">
                         <properties>
                           <help>Client authentication mode</help>

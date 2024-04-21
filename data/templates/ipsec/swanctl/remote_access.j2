@@ -33,7 +33,7 @@
             auth = pubkey
 {% elif rw_conf.authentication.client_mode.startswith("eap") %}
             auth = {{ rw_conf.authentication.client_mode }}
-            eap_id = %any
+            eap_id = {{ '%any' if rw_conf.authentication.eap_id == 'any' else rw_conf.authentication.eap_id }}
 {% endif %}
 {% if rw_conf.authentication.client_mode is vyos_defined('eap-tls') or rw_conf.authentication.client_mode is vyos_defined('x509') %}
 {#          pass all configured CAs as filenames, separated by commas #}
