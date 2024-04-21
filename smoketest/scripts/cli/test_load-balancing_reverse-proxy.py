@@ -299,20 +299,39 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
     def test_05_lb_reverse_proxy_backend_http_check(self):
-      # Setup base
-      self.base_config()
+        # Setup base
+        self.base_config()
 
-      # Set http-check
-      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'method', 'get'])
-      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'uri', '/health'])
-      self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'expect', 'status 200'])
-      self.cli_commit()
+        # Set http-check
+        self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'method', 'get'])
+        self.cli_commit()
 
-      # Test http-check
-      config = read_file(HAPROXY_CONF)
-      self.assertIn('option httpchk', config)
-      self.assertIn('http-check send meth GET uri /health', config)
-      self.assertIn('http-check expect status 200', config)
+        # Test http-check
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('option httpchk', config)
+        self.assertIn('http-check send meth GET', config)
+
+        # Set http-check with uri and status
+        self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'uri', '/health'])
+        self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'expect', 'status', '200'])
+        self.cli_commit()
+
+        # Test http-check with uri and status
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('option httpchk', config)
+        self.assertIn('http-check send meth GET uri /health', config)
+        self.assertIn('http-check expect status 200', config)
+
+        # Set http-check with string
+        self.cli_delete(base_path + ['backend', 'bk-01', 'http-check', 'expect', 'status', '200'])
+        self.cli_set(base_path + ['backend', 'bk-01', 'http-check', 'expect', 'string', 'success'])
+        self.cli_commit()
+
+        # Test http-check with string
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('option httpchk', config)
+        self.assertIn('http-check send meth GET uri /health', config)
+        self.assertIn('http-check expect string success', config)
 
     def test_06_lb_reverse_proxy_tcp_mode(self):
         frontend = 'tcp_8443'
