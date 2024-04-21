@@ -102,6 +102,65 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="http-check">
+                <properties>
+                  <help>HTTP check configuration</help>
+                </properties>
+                <children>
+                  <leafNode name="method">
+                    <properties>
+                      <help>HTTP method used for health check</help>
+                      <completionHelp>
+                        <list>options head get post put</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>options|head|get|post|put</format>
+                        <description>HTTP method used for health checking</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(options|head|get|post|put)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="uri">
+                    <properties>
+                      <help>URI used for HTTP health check (Example: '/' or '/health')</help>
+                      <constraint>
+                        <regex>^\/([^?#\s]*)(\?[^#\s]*)?$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <node name="expect">
+                    <properties>
+                      <help>Expected response for the health check to pass</help>
+                    </properties>
+                    <children>
+                      <leafNode name="status">
+                        <properties>
+                          <help>Expected response status code for the health check to pass</help>
+                          <valueHelp>
+                            <format>u32:200-399</format>
+                            <description>Expected response code</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 200-399"/>
+                          </constraint>
+                          <constraintErrorMessage>Status code must be in range 200-399</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="string">
+                        <properties>
+                          <help>Expected to be in response body for the health check to pass</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>A string expected to be in the response</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
               #include <include/haproxy/rule-backend.xml.i>
               <tagNode name="server">
                 <properties>
