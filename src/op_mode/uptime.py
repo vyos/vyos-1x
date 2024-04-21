@@ -49,7 +49,7 @@ def _get_raw_data():
 
     res = {}
     res["uptime_seconds"] = _get_uptime_seconds()
-    res["uptime"] = seconds_to_human(_get_uptime_seconds())
+    res["uptime"] = seconds_to_human(_get_uptime_seconds(), separator=' ')
     res["load_average"] = _get_load_averages()
 
     return res
