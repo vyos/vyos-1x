@@ -146,7 +146,7 @@ def create_certificate_request(subject, private_key, subject_alt_names=[]):
             if isinstance(obj, ipaddress.IPv4Address) or isinstance(obj, ipaddress.IPv6Address):
                 alt_names.append(x509.IPAddress(obj))
             elif isinstance(obj, str):
-                alt_names.append(x509.DNSName(obj))
+                alt_names.append(x509.RFC822Name(obj) if '@' in obj else x509.DNSName(obj))
         if alt_names:
             builder = builder.add_extension(x509.SubjectAlternativeName(alt_names), critical=False)
 
