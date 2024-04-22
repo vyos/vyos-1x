@@ -122,7 +122,7 @@
             </constraint>
             <valueHelp>
               <format>ipv4</format>
-              <description>IPv4 address for aynamic authorization server</description>
+              <description>IPv4 address for dynamic authorization server</description>
             </valueHelp>
           </properties>
         </leafNode>
