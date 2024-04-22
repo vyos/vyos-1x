@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,38 +19,43 @@ def seconds_to_human(s, separator=""):
     """
     s = int(s)
 
+    year = 60 * 60 * 24 * 365.25
     week = 60 * 60 * 24 * 7
     day = 60 * 60 * 24
     hour = 60 * 60
 
-    remainder = 0
-    result = ""
+    result = []
+
+    years = s // year
+    if years > 0:
+        result.append(f'{int(years)}y')
+        s = int(s % year)
 
     weeks = s // week
     if weeks > 0:
-        result = "{0}w".format(weeks)
+        result.append(f'{weeks}w')
         s = s % week
 
     days = s // day
     if days > 0:
-        result = "{0}{1}{2}d".format(result, separator, days)
+        result.append(f'{days}d')
         s = s % day
 
     hours = s // hour
     if hours > 0:
-        result = "{0}{1}{2}h".format(result, separator, hours)
+        result.append(f'{hours}h')
         s = s % hour
 
     minutes = s // 60
     if minutes > 0:
-        result = "{0}{1}{2}m".format(result, separator, minutes)
+        result.append(f'{minutes}m')
         s = s % 60
 
     seconds = s
     if seconds > 0:
-        result = "{0}{1}{2}s".format(result, separator, seconds)
+        result.append(f'{seconds}s')
 
-    return result
+    return separator.join(result)
 
 def bytes_to_human(bytes, initial_exponent=0, precision=2,
                    int_below_exponent=0):
