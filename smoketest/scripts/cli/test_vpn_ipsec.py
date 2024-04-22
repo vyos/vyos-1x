@@ -782,6 +782,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
+        # Test setting of custom EAP ID
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'eap-id', 'eap-user@vyos.net'])
+        self.cli_commit()
+        self.assertIn(r'eap_id = eap-user@vyos.net', read_file(swanctl_file))
+
         self.tearDownPKI()
 
     def test_remote_access_x509(self):
