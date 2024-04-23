@@ -25,7 +25,7 @@ LOGCMD="logger -t $TAG -p $FACILITY.$LEVEL"
 VRRP_GRP="VRRP sync-group [$2]"
 FAILOVER_STATE="/var/run/vyatta-conntrackd-failover-state"
 
-$LOGCMD "vyatta-vrrp-conntracksync invoked at `date`"
+$LOGCMD "vyos-vrrp-conntracksync invoked at `date`"
 
 if ! systemctl is-active --quiet conntrackd.service; then
     echo "conntrackd service not running"
@@ -148,7 +148,7 @@ case "$1" in
   *)
   	echo UNKNOWN at `date` > $FAILOVER_STATE
     $LOGCMD "ERROR: `uname -n` unknown state transition for $VRRP_GRP"
-    echo "Usage: vyatta-vrrp-conntracksync.sh {master|backup|fault}"
+    echo "Usage: vyos-vrrp-conntracksync.sh {master|backup|fault}"
     exit 1
     ;;
 esac
