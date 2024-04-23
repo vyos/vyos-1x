@@ -13,7 +13,7 @@ jobs:
         id: regex-match
         with:
           text: ${{ github.event.comment.body }}
-          regex: '[Mm]ergifyio backport '
+          regex: '@[Mm][Ee][Rr][Gg][Ii][Ff][Yy][Ii][Oo] backport '
 
       - uses: actions-ecosystem/action-add-labels@v1
         if: ${{ steps.regex-match.outputs.match != '' }}
