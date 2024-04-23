@@ -26,6 +26,7 @@ from os import environ
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
+from errno import ENOSPC
 
 from psutil import disk_partitions
 
@@ -885,6 +886,16 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         grub.version_add(image_name, root_dir)
         if set_as_default:
             grub.set_default(image_name, root_dir)
+
+    except OSError as e:
+        # if no space error, remove image dir and cleanup
+        if e.errno == ENOSPC:
+            cleanup(mounts=[str(iso_path)],
+                    remove_items=[f'{root_dir}/boot/{image_name}'])
+        else:
+            # unmount an ISO and cleanup
+            cleanup([str(iso_path)])
+        exit(f'Error: {e}')
 
     except Exception as err:
         # unmount an ISO and cleanup
