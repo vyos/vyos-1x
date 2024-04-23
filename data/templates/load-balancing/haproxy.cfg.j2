@@ -69,6 +69,18 @@ frontend {{ front }}
 {%         endif %}
 {%         if front_config.mode is vyos_defined %}
     mode {{ front_config.mode }}
+{%             if front_config.tcp_request.inspect_delay is vyos_defined %}
+    tcp-request inspect-delay {{ front_config.tcp_request.inspect_delay }}
+{%             endif %}
+{# add tcp-request related directive if ssl is configed #}
+{%             if front_config.mode is vyos_defined('tcp') and front_config.rule is vyos_defined %}
+{%                 for rule, rule_config in front_config.rule.items() %}
+{%                     if rule_config.ssl is vyos_defined %}
+    tcp-request content accept if { req_ssl_hello_type 1 }
+{%                         break %}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
 {%         endif %}
 {%         if front_config.rule is vyos_defined %}
 {%             for rule, rule_config in front_config.rule.items() %}

@@ -38,6 +38,7 @@
               #include <include/haproxy/mode.xml.i>
               #include <include/port-number.xml.i>
               #include <include/haproxy/rule-frontend.xml.i>
+              #include <include/haproxy/tcp-request.xml.i>
               <leafNode name="redirect-http-to-https">
                 <properties>
                   <help>Redirect HTTP to HTTPS</help>
