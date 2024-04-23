@@ -48,7 +48,7 @@ def connect(interface):
         if os.path.isdir(f'/sys/class/net/{interface}'):
             print(f'Interface {interface}: already connected!')
         elif check_ppp_running(interface):
-            print(f'Interface {interface}: connection is beeing established!')
+            print(f'Interface {interface}: connection is being established!')
         else:
             print(f'Interface {interface}: connecting...')
             call(f'systemctl restart ppp@{interface}.service')
@@ -58,7 +58,7 @@ def connect(interface):
         else:
             call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces_wwan.py')
     else:
-        print(f'Unknown interface {interface}, can not connect. Aborting!')
+        print(f'Unknown interface {interface}, cannot connect. Aborting!')
 
     # Reaply QoS configuration
     config = ConfigTreeQuery()
@@ -90,7 +90,7 @@ def disconnect(interface):
             modem = interface.lstrip('wwan')
             call(f'mmcli --modem {modem} --simple-disconnect', stdout=DEVNULL)
     else:
-        print(f'Unknown interface {interface}, can not disconnect. Aborting!')
+        print(f'Unknown interface {interface}, cannot disconnect. Aborting!')
 
 def main():
     parser = argparse.ArgumentParser()
