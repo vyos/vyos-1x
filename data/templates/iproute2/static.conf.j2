@@ -2,7 +2,7 @@
 {% if table is vyos_defined %}
 {%     for t, t_options in table.items() %}
 {%         if t_options.description is vyos_defined %}
-{{ "%-6s" | format(t) }} {{ "%-40s" | format(t_options.description) }}
+{{ "%-6s" | format(t) }} {{ "%-40s" | format(t_options.description | replace(" ", "_")) }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
