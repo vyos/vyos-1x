@@ -306,7 +306,7 @@ def parse_san_string(san_string):
             output.append(ipaddress.IPv4Address(value))
         elif tag == 'ipv6':
             output.append(ipaddress.IPv6Address(value))
-        elif tag == 'dns':
+        elif tag == 'dns' or tag == 'rfc822':
             output.append(value)
     return output
 
@@ -324,7 +324,7 @@ def generate_certificate_request(private_key=None, key_type=None, return_request
     subject_alt_names = None
 
     if ask_san and ask_yes_no('Do you want to configure Subject Alternative Names?'):
-        print("Enter alternative names in a comma separate list, example: ipv4:1.1.1.1,ipv6:fe80::1,dns:vyos.net")
+        print("Enter alternative names in a comma separate list, example: ipv4:1.1.1.1,ipv6:fe80::1,dns:vyos.net,rfc822:user@vyos.net")
         san_string = ask_input('Enter Subject Alternative Names:')
         subject_alt_names = parse_san_string(san_string)
 
