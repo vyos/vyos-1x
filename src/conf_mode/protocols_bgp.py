@@ -473,6 +473,22 @@ def verify(bgp):
                             if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
                                 raise ConfigError('route-reflector-client only supported for iBGP peers')
 
+            # T5833 not all AFIs are supported for VRF
+            if 'vrf' in bgp and 'address_family' in peer_config:
+                unsupported_vrf_afi = {
+                    'ipv4_flowspec',
+                    'ipv6_flowspec',
+                    'ipv4_labeled_unicast',
+                    'ipv6_labeled_unicast',
+                    'ipv4_vpn',
+                    'ipv6_vpn',
+                }
+                for afi in peer_config['address_family']:
+                    if afi in unsupported_vrf_afi:
+                        raise ConfigError(
+                            f"VRF is not allowed for address-family '{afi.replace('_', '-')}'"
+                        )
+
     # Throw an error if a peer group is not configured for allow range
     for prefix in dict_search('listen.range', bgp) or []:
         # we can not use dict_search() here as prefix contains dots ...
