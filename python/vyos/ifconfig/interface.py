@@ -1,4 +1,4 @@
-# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -194,6 +194,9 @@ class Interface(Control):
             'validate': assert_positive,
             'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
         },
+        'ipv6_cache_tmo': {
+            'location': '/proc/sys/net/ipv6/neigh/{ifname}/base_reachable_time_ms',
+        },
         'path_cost': {
             # XXX: we should set a maximum
             'validate': assert_positive,
@@ -261,6 +264,9 @@ class Interface(Control):
         },
         'ipv6_dad_transmits': {
             'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
+        },
+        'ipv6_cache_tmo': {
+            'location': '/proc/sys/net/ipv6/neigh/{ifname}/base_reachable_time_ms',
         },
         'proxy_arp': {
             'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp',
@@ -602,6 +608,21 @@ class Interface(Control):
         if tmp == tmo:
             return None
         return self.set_interface('arp_cache_tmo', tmo)
+
+    def set_ipv6_cache_tmo(self, tmo):
+        """
+        Set IPv6 cache timeout value in seconds. Internal Kernel representation
+        is in milliseconds.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_ipv6_cache_tmo(40)
+        """
+        tmo = str(int(tmo) * 1000)
+        tmp = self.get_interface('ipv6_cache_tmo')
+        if tmp == tmo:
+            return None
+        return self.set_interface('ipv6_cache_tmo', tmo)
 
     def _cleanup_mss_rules(self, table, ifname):
         commands = []
@@ -1655,6 +1676,11 @@ class Interface(Control):
         if tmp:
             for addr in tmp:
                 self.add_ipv6_eui64_address(addr)
+
+        # Configure IPv6 base time in milliseconds - has default value
+        tmp = dict_search('ipv6.base_reachable_time', config)
+        value = tmp if (tmp != None) else '30'
+        self.set_ipv6_cache_tmo(value)
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
