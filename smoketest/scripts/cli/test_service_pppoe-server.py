@@ -168,7 +168,14 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(self._config_file)
 
-        self.assertEqual(conf['pppoe']['pado-delay'], '10,20:200,-1:300')
+        self.assertEqual(conf['pppoe']['pado-delay'], '10,20:200,30:300')
+
+        self.set(['pado-delay', 'disable', 'sessions', '400'])
+        self.cli_commit()
+
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
+        conf.read(self._config_file)
+        self.assertEqual(conf['pppoe']['pado-delay'], '10,20:200,30:300,-1:400')
 
 
 if __name__ == '__main__':
