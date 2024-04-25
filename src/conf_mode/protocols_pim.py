@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,6 +16,7 @@
 
 import os
 
+from ipaddress import IPv4Address
 from ipaddress import IPv4Network
 from signal import SIGTERM
 from sys import exit
@@ -31,6 +32,9 @@ from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
+
+RESERVED_MC_NET = '224.0.0.0/24'
+
 
 def get_config(config=None):
     if config:
@@ -92,8 +96,14 @@ def verify(pim):
     if 'interface' not in pim:
         raise ConfigError('PIM require defined interfaces!')
 
-    for interface in pim['interface']:
+    for interface, interface_config in pim['interface'].items():
         verify_interface_exists(interface)
+
+        # Check join group in reserved net
+        if 'igmp' in interface_config and 'join' in interface_config['igmp']:
+            for join_addr in interface_config['igmp']['join']:
+                if IPv4Address(join_addr) in IPv4Network(RESERVED_MC_NET):
+                    raise ConfigError(f'Groups within {RESERVED_MC_NET} are reserved and cannot be joined!')
 
     if 'rp' in pim:
         if 'address' not in pim['rp']:
