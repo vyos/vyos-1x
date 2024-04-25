@@ -246,6 +246,7 @@ class QoSBase:
                 filter_cmd_base += ' protocol all'
 
                 if 'match' in cls_config:
+                    is_filtered = False
                     for index, (match, match_config) in enumerate(cls_config['match'].items(), start=1):
                         filter_cmd = filter_cmd_base
                         if self.qostype == 'shaper' and 'prio ' not in filter_cmd:
@@ -330,11 +331,13 @@ class QoSBase:
                                 cls = int(cls)
                                 filter_cmd += f' flowid {self._parent:x}:{cls:x}'
                                 self._cmd(filter_cmd)
+                                is_filtered = True
 
                     vlan_expression = "match.*.vif"
                     match_vlan = jmespath.search(vlan_expression, cls_config)
 
-                    if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config):
+                    if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config) \
+                        and is_filtered:
                         # For "vif" "basic match" is used instead of "action police" T5961
                         if not match_vlan:
                             filter_cmd += f' action police'
