@@ -5,6 +5,7 @@
   </properties>
   <children>
     #include <include/interface/adjust-mss.xml.i>
+    #include <include/interface/base-reachable-time.xml.i>
     #include <include/interface/disable-forwarding.xml.i>
     #include <include/interface/ipv6-accept-dad.xml.i>
     #include <include/interface/ipv6-address.xml.i>
