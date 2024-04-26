@@ -32,7 +32,6 @@ from vyos.utils.process import cmd
 from vyos.utils.process import run
 
 # Conntrack
-
 def conntrack_required(conf):
     required_nodes = ['nat', 'nat66', 'load-balancing wan']
 
@@ -454,8 +453,28 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 else:
                     output.append(f'set update ip{def_suffix} saddr @DA{def_suffix}_{dyn_group}')
 
+    set_table = False
     if 'set' in rule_conf:
-        output.append(parse_policy_set(rule_conf['set'], def_suffix))
+        # Parse set command used in policy route:
+        if 'connection_mark' in rule_conf['set']:
+            conn_mark = rule_conf['set']['connection_mark']
+            output.append(f'ct mark set {conn_mark}')
+        if 'dscp' in rule_conf['set']:
+            dscp = rule_conf['set']['dscp']
+            output.append(f'ip{def_suffix} dscp set {dscp}')
+        if 'mark' in rule_conf['set']:
+            mark = rule_conf['set']['mark']
+            output.append(f'meta mark set {mark}')
+        if 'table' in rule_conf['set']:
+            set_table = True
+            table = rule_conf['set']['table']
+            if table == 'main':
+                table = '254'
+            mark = 0x7FFFFFFF - int(table)
+            output.append(f'meta mark set {mark}')
+        if 'tcp_mss' in rule_conf['set']:
+            mss = rule_conf['set']['tcp_mss']
+            output.append(f'tcp option maxseg size set {mss}')
 
     if 'action' in rule_conf:
         # Change action=return to action=action
@@ -488,6 +507,10 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             if synproxy_ws:
                 output.append(f'wscale {synproxy_ws} timestamp sack-perm')
 
+    else:
+        if set_table:
+            output.append('return')
+
     output.append(f'comment "{family}-{hook}-{fw_name}-{rule_id}"')
     return " ".join(output)
 
@@ -516,28 +539,6 @@ def parse_time(time):
         days = time['weekdays'].split(",")
         out_days = [f'"{day}"' for day in days if day[0] != '!']
         out.append(f'day {{{",".join(out_days)}}}')
-    return " ".join(out)
-
-def parse_policy_set(set_conf, def_suffix):
-    out = []
-    if 'connection_mark' in set_conf:
-        conn_mark = set_conf['connection_mark']
-        out.append(f'ct mark set {conn_mark}')
-    if 'dscp' in set_conf:
-        dscp = set_conf['dscp']
-        out.append(f'ip{def_suffix} dscp set {dscp}')
-    if 'mark' in set_conf:
-        mark = set_conf['mark']
-        out.append(f'meta mark set {mark}')
-    if 'table' in set_conf:
-        table = set_conf['table']
-        if table == 'main':
-            table = '254'
-        mark = 0x7FFFFFFF - int(table)
-        out.append(f'meta mark set {mark}')
-    if 'tcp_mss' in set_conf:
-        mss = set_conf['tcp_mss']
-        out.append(f'tcp option maxseg size set {mss}')
     return " ".join(out)
 
 # GeoIP
