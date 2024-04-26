@@ -697,6 +697,45 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, output)
 
+    def test_13_shaper_delete_only_rule(self):
+        default_bandwidth = 100
+        default_burst = 100
+        interface = self._interfaces[0]
+        class_bandwidth = 50
+        class_ceiling = 5
+        src_address = '10.1.1.0/24'
+
+        shaper_name = f'qos-shaper-{interface}'
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'bandwidth', f'10mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'bandwidth', f'{default_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'burst', f'{default_burst}'])
+
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'bandwidth', f'{class_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'ceiling', f'{class_ceiling}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'match', 'ADDRESS30', 'ip', 'source', 'address', src_address])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'match', 'ADDRESS30', 'description', 'smoketest'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'priority', '5'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'queue-type', 'fair-queue'])
+
+        # commit changes
+        self.cli_commit()
+        # check root htb config
+        output = cmd(f'tc class show dev {interface}')
+
+        config_entries = (
+            f'prio 5 rate {class_bandwidth}Mbit ceil {class_ceiling}Mbit burst 15Kb',  # specified class
+            f'prio 7 rate {default_bandwidth}Mbit ceil 100Mbit burst {default_burst}b',  # default class
+        )
+        for config_entry in config_entries:
+            self.assertIn(config_entry, output)
+
+        self.assertTrue('' != cmd(f'tc filter show dev {interface}'))
+        # self.cli_delete(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'match', 'ADDRESS30'])
+        self.cli_delete(base_path + ['policy', 'shaper', shaper_name, 'class', '30', 'match', 'ADDRESS30', 'ip', 'source', 'address', src_address])
+        self.cli_commit()
+        self.assertEqual('', cmd(f'tc filter show dev {interface}'))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
