@@ -266,6 +266,10 @@
               <valueless/>
             </properties>
           </leafNode>
+          #include <include/tls-version-min.xml.i>
+          <leafNode name="tls-version-min">
+            <defaultValue>1.2</defaultValue>
+          </leafNode>
           <node name="ssl">
             <properties>
               <help>SSL Certificate, SSL Key and CA</help>
