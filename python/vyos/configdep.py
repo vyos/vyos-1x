@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,14 @@ if typing.TYPE_CHECKING:
 dependency_dir = os.path.join(directories['data'],
                               'config-mode-dependencies')
 
-dependent_func: dict[str, list[typing.Callable]] = {}
+local_dependent_func: dict[str, list[typing.Callable]] = {}
+
+DEBUG = False
+FORCE_LOCAL = False
+
+def debug_print(s: str):
+    if DEBUG:
+        print(s)
 
 def canon_name(name: str) -> str:
     return os.path.splitext(name)[0].replace('-', '_')
@@ -44,6 +51,26 @@ def canon_name_of_path(path: str) -> str:
 
 def caller_name() -> str:
     return stack()[2].filename
+
+def name_of(f: typing.Callable) -> str:
+    return f.__name__
+
+def names_of(l: list[typing.Callable]) -> list[str]:
+    return [name_of(f) for f in l]
+
+def remove_redundant(l: list[typing.Callable]) -> list[typing.Callable]:
+    names = set()
+    for e in reversed(l):
+        _ = l.remove(e) if name_of(e) in names else names.add(name_of(e))
+
+def append_uniq(l: list[typing.Callable], e: typing.Callable):
+    """Append an element, removing earlier occurrences
+
+    The list of dependencies is generally short and traversing the list on
+    each append is preferable to the cost of redundant script invocation.
+    """
+    l.append(e)
+    remove_redundant(l)
 
 def read_dependency_dict(dependency_dir: str = dependency_dir) -> dict:
     res = {}
@@ -95,17 +122,38 @@ def set_dependents(case: str, config: 'Config',
                    tagnode: typing.Optional[str] = None):
     d = get_dependency_dict(config)
     k = canon_name_of_path(caller_name())
-    l = dependent_func.setdefault(k, [])
+    tag_ext = f'_{tagnode}' if tagnode is not None else ''
+    if hasattr(config, 'dependent_func') and not FORCE_LOCAL:
+        dependent_func = getattr(config, 'dependent_func')
+        l = dependent_func.setdefault('vyos_configd', [])
+    else:
+        dependent_func = local_dependent_func
+        l = dependent_func.setdefault(k, [])
     for target in d[k][case]:
         func = def_closure(target, config, tagnode)
-        l.append(func)
+        func.__name__ = f'{target}{tag_ext}'
+        append_uniq(l, func)
+    debug_print(f'set_dependents: caller {k}, dependents {names_of(l)}')
 
-def call_dependents():
+def call_dependents(dependent_func: dict = None):
     k = canon_name_of_path(caller_name())
-    l = dependent_func.get(k, [])
+    if dependent_func is None or FORCE_LOCAL:
+        dependent_func = local_dependent_func
+        l = dependent_func.get(k, [])
+    else:
+        l = dependent_func.get('vyos_configd', [])
+    debug_print(f'call_dependents: caller {k}, dependents {names_of(l)}')
     while l:
         f = l.pop(0)
+        debug_print(f'calling: {f.__name__}')
         f()
+
+def called_as_dependent() -> bool:
+    st = stack()[1:]
+    for f in st:
+        if f.filename == __file__:
+            return True
+    return False
 
 def graph_from_dependency_dict(d: dict) -> dict:
     g = {}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 VyOS maintainers and contributors
+ * Copyright (C) 2020-2024 VyOS maintainers and contributors
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 or later as
@@ -49,6 +49,7 @@
 #define GET_SESSION "cli-shell-api --show-working-only --show-show-defaults --show-ignore-edit showConfig"
 
 #define COMMIT_MARKER "/var/tmp/initial_in_commit"
+#define QUEUE_MARKER "/var/tmp/last_in_queue"
 
 enum {
     SUCCESS =      1 << 0,
@@ -77,6 +78,7 @@ int main(int argc, char* argv[])
 
     int ex_index;
     int init_timeout = 0;
+    int last = 0;
 
     debug_print("Connecting to vyos-configd ...\n");
     zmq_connect(requester, SOCKET_PATH);
@@ -101,10 +103,16 @@ int main(int argc, char* argv[])
         return ret;
     }
 
+    if (access(QUEUE_MARKER, F_OK) != -1) {
+        last = 1;
+        remove(QUEUE_MARKER);
+    }
+
     char error_code[1];
     debug_print("Sending node data ...\n");
-    char *string_node_data_msg = mkjson(MKJSON_OBJ, 2,
+    char *string_node_data_msg = mkjson(MKJSON_OBJ, 3,
                                         MKJSON_STRING, "type", "node",
+                                        MKJSON_BOOL, "last", last,
                                         MKJSON_STRING, "data", &string_node_data[0]);
 
     zmq_send(requester, string_node_data_msg, strlen(string_node_data_msg), 0);

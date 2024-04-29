@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ import sys
 import grp
 import re
 import json
+import typing
 import logging
 import signal
 import importlib.util
@@ -29,6 +30,7 @@ from vyos.defaults import directories
 from vyos.utils.boot import boot_configuration_complete
 from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
+from vyos.configdep import call_dependents
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -198,10 +200,12 @@ def initialization(socket):
         return None
 
     config = Config(config_source=configsource)
+    dependent_func: dict[str, list[typing.Callable]] = {}
+    setattr(config, 'dependent_func', dependent_func)
 
     return config
 
-def process_node_data(config, data) -> int:
+def process_node_data(config, data, last: bool = False) -> int:
     if not config:
         logger.critical(f"Empty config")
         return R_ERROR_DAEMON
@@ -223,10 +227,17 @@ def process_node_data(config, data) -> int:
     args.insert(0, f'{script_name}.py')
 
     if script_name not in include_set:
+        # call dependents now if last element of prio queue is run
+        # independent of configd
+        if last:
+            call_dependents(dependent_func=config.dependent_func)
         return R_PASS
 
     with stdout_redirected(session_out, session_mode):
         result = run_script(conf_mode_scripts[script_name], config, args)
+
+    if last and result == R_SUCCESS:
+        call_dependents(dependent_func=config.dependent_func)
 
     return result
 
@@ -281,7 +292,9 @@ if __name__ == '__main__':
             socket.send(resp.encode())
             config = initialization(socket)
         elif message["type"] == "node":
-            res = process_node_data(config, message["data"])
+            if message["last"]:
+                logger.debug(f'final element of priority queue')
+            res = process_node_data(config, message["data"], message["last"])
             response = res.to_bytes(1, byteorder=sys.byteorder)
             logger.debug(f"Sending response {res}")
             socket.send(response)
