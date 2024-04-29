@@ -105,7 +105,7 @@ def verify(pppoe):
 
     # Check is interface exists in the system
     for interface in pppoe['interface']:
-        verify_interface_exists(interface)
+        verify_interface_exists(interface, warning_only=True)
 
     return None
 
