@@ -236,7 +236,7 @@ def process_node_data(config, data, last: bool = False) -> int:
     with stdout_redirected(session_out, session_mode):
         result = run_script(conf_mode_scripts[script_name], config, args)
 
-    if last:
+    if last and result == R_SUCCESS:
         call_dependents(dependent_func=config.dependent_func)
 
     return result
