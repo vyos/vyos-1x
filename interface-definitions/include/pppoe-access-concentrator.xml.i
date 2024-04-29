@@ -3,9 +3,9 @@
   <properties>
     <help>Access concentrator name</help>
     <constraint>
-      <regex>[a-zA-Z0-9]{1,100}</regex>
+       #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
     </constraint>
-    <constraintErrorMessage>Access-concentrator name must be alphanumerical only (max. 100 characters)</constraintErrorMessage>
+    <constraintErrorMessage>Access-concentrator name can only contain alpha-numeric letters, hyphen and underscores(max. 100 characters)</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
