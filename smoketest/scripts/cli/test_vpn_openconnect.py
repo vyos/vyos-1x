@@ -210,6 +210,9 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         # Verify configuration
         daemon_config = read_file(config_file)
 
+        # Verify TLS string (with default setting)
+        self.assertIn('tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0:-ARCFOUR-128:-VERS-TLS1.0:-VERS-TLS1.1"', daemon_config)
+
         # authentication mode local password-otp
         self.assertIn(f'auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"', daemon_config)
         self.assertIn(f'listen-host = {listen_ip_no_cidr}', daemon_config)
@@ -252,6 +255,14 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         self.assertIn('included-http-headers = X-XSS-Protection: 0', daemon_config)
         self.assertIn('included-http-headers = Pragma: no-cache', daemon_config)
         self.assertIn('included-http-headers = Cache-control: no-store, no-cache', daemon_config)
+
+        # Set TLS version to the highest security (v1.3 min)
+        self.cli_set(base_path + ['tls-version-min', '1.3'])
+        self.cli_commit()
+
+        # Verify TLS string
+        daemon_config = read_file(config_file)
+        self.assertIn('tls-priorities = "NORMAL:%SERVER_PRECEDENCE:%COMPAT:-RSA:-VERS-SSL3.0:-ARCFOUR-128:-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2"', daemon_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
