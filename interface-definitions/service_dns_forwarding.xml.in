@@ -115,7 +115,7 @@
                     <description>An absolute DNS domain name</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="fqdn"/>
+                    <regex>((?!-)[-_a-zA-Z0-9.]{1,63}|@|any)(?&lt;!\.)</regex>
                   </constraint>
                 </properties>
                 <children>
