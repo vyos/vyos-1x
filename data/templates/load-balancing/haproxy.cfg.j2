@@ -85,7 +85,7 @@ frontend {{ front }}
 {%         if front_config.rule is vyos_defined %}
 {%             for rule, rule_config in front_config.rule.items() %}
     # rule {{ rule }}
-{%                 if rule_config.domain_name is vyos_defined and rule_config.set.backend is vyos_defined %}
+{%                 if rule_config.domain_name is vyos_defined %}
 {%                     set rule_options = 'hdr(host)' %}
 {%                     if rule_config.ssl is vyos_defined %}
 {%                         set ssl_rule_translate = {'req-ssl-sni': 'req_ssl_sni', 'ssl-fc-sni': 'ssl_fc_sni', 'ssl-fc-sni-end': 'ssl_fc_sni_end'} %}
@@ -94,16 +94,20 @@ frontend {{ front }}
 {%                     for domain in rule_config.domain_name %}
     acl {{ rule }} {{ rule_options }} -i {{ domain }}
 {%                     endfor %}
-    use_backend {{ rule_config.set.backend }} if {{ rule }}
 {%                 endif %}
 {# path url #}
-{%                 if rule_config.url_path is vyos_defined and rule_config.set.redirect_location is vyos_defined %}
+{%                 if rule_config.url_path is vyos_defined %}
 {%                     set path_mod_translate = {'begin': '-i -m beg', 'end': '-i -m end', 'exact': ''} %}
 {%                     for path, path_config in rule_config.url_path.items() %}
 {%                         for url in path_config %}
     acl {{ rule }} path {{ path_mod_translate[path] }} {{ url }}
 {%                         endfor %}
 {%                     endfor %}
+{%                 endif %}
+{%                 if rule_config.set.backend is vyos_defined %}
+    use_backend {{ rule_config.set.backend }} if {{ rule }}
+{%                 endif %}
+{%                 if rule_config.set.redirect_location is vyos_defined %}
     http-request redirect location {{ rule_config.set.redirect_location }} code 301 if {{ rule }}
 {%                 endif %}
 {# endpath #}
