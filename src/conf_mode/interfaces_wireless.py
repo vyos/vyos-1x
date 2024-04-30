@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -31,8 +31,9 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WiFiIf
 from vyos.template import render
-from vyos.utils.process import call
 from vyos.utils.dict import dict_search
+from vyos.utils.kernel import check_kmod
+from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -117,6 +118,10 @@ def verify(wifi):
 
     if 'physical_device' not in wifi:
         raise ConfigError('You must specify a physical-device "phy"')
+
+    physical_device = wifi['physical_device']
+    if not os.path.exists(f'/sys/class/ieee80211/{physical_device}'):
+        raise ConfigError(f'Wirelss interface PHY "{physical_device}" does not exist!')
 
     if 'type' not in wifi:
         raise ConfigError('You must specify a WiFi mode')
@@ -266,6 +271,7 @@ def apply(wifi):
 
 if __name__ == '__main__':
     try:
+        check_kmod('mac80211')
         c = get_config()
         verify(c)
         generate(c)
