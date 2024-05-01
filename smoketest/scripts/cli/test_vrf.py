@@ -18,7 +18,6 @@ import re
 import os
 import unittest
 
-from netifaces import interfaces
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
@@ -27,6 +26,7 @@ from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import interface_exists
 from vyos.utils.system import sysctl_read
 
 base_path = ['vrf']
@@ -60,7 +60,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
         for vrf in vrfs:
-            self.assertNotIn(vrf, interfaces())
+            self.assertFalse(interface_exists(vrf))
 
     def test_vrf_vni_and_table_id(self):
         base_table = '1000'
@@ -89,7 +89,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         iproute2_config = read_file('/etc/iproute2/rt_tables.d/vyos-vrf.conf')
         for vrf in vrfs:
             description = f'VyOS-VRF-{vrf}'
-            self.assertTrue(vrf in interfaces())
+            self.assertTrue(interface_exists(vrf))
             vrf_if = Interface(vrf)
             # validate proper interface description
             self.assertEqual(vrf_if.get_alias(), description)
@@ -131,7 +131,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         loopbacks = ['127.0.0.1', '::1']
         for vrf in vrfs:
             # Ensure VRF was created
-            self.assertIn(vrf, interfaces())
+            self.assertTrue(interface_exists(vrf))
             # Verify IP forwarding is 1 (enabled)
             self.assertEqual(sysctl_read(f'net.ipv4.conf.{vrf}.forwarding'), '1')
             self.assertEqual(sysctl_read(f'net.ipv6.conf.{vrf}.forwarding'), '1')
@@ -171,7 +171,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check if VRF has been created
-        self.assertTrue(vrf in interfaces())
+        self.assertTrue(interface_exists(vrf))
 
         table = str(int(table) + 1)
         self.cli_set(base + ['table', table])
@@ -228,7 +228,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             next_hop = f'192.0.{table}.1'
             prefix = f'10.0.{table}.0/24'
 
-            self.assertTrue(vrf in interfaces())
+            self.assertTrue(interface_exists(vrf))
 
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
@@ -261,7 +261,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Apply VRF config
         self.cli_commit()
         # Ensure VRF got created
-        self.assertIn(vrf, interfaces())
+        self.assertTrue(interface_exists(vrf))
         # ... and IP addresses are still assigned
         for address in addresses:
             self.assertTrue(is_intf_addr_assigned(interface, address))
@@ -293,7 +293,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         loopbacks = ['127.0.0.1', '::1']
         for vrf in vrfs:
             # Ensure VRF was created
-            self.assertIn(vrf, interfaces())
+            self.assertTrue(interface_exists(vrf))
             # Verify IP forwarding is 0 (disabled)
             self.assertEqual(sysctl_read(f'net.ipv4.conf.{vrf}.forwarding'), '0')
             self.assertEqual(sysctl_read(f'net.ipv6.conf.{vrf}.forwarding'), '0')
@@ -425,7 +425,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Verify VRF configuration
         table = base_table
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
+            self.assertTrue(interface_exists(vrf))
 
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
@@ -447,7 +447,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Verify VRF configuration
         table = base_table
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
+            self.assertTrue(interface_exists(vrf))
 
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
@@ -470,12 +470,38 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Verify VRF configuration
         table = base_table
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
+            self.assertTrue(interface_exists(vrf))
 
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
             # Increment table ID for the next run
             table = str(int(table) + 2)
+
+
+        # add a new VRF with VNI - this must not delete any existing VRF/VNI
+        purple = 'purple'
+        table = str(int(table) + 10)
+        self.cli_set(base_path + ['name', purple, 'table', table])
+        self.cli_set(base_path + ['name', purple, 'vni', table])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = base_table
+        for vrf in vrfs:
+            self.assertTrue(interface_exists(vrf))
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertIn(f' vni {table}', frrconfig)
+            # Increment table ID for the next run
+            table = str(int(table) + 2)
+
+        # Verify purple VRF/VNI
+        self.assertTrue(interface_exists(purple))
+        table = str(int(table) + 10)
+        frrconfig = self.getFRRconfig(f'vrf {purple}')
+        self.assertIn(f' vni {table}', frrconfig)
 
         # Now delete all the VNIs
         for vrf in vrfs:
@@ -487,10 +513,15 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify no VNI is defined
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
+            self.assertTrue(interface_exists(vrf))
 
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertNotIn('vni', frrconfig)
+
+        # Verify purple VNI remains
+        self.assertTrue(interface_exists(purple))
+        frrconfig = self.getFRRconfig(f'vrf {purple}')
+        self.assertIn(f' vni {table}', frrconfig)
 
     def test_vrf_ip_ipv6_nht(self):
         table = '6910'
