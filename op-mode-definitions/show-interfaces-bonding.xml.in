@@ -23,7 +23,7 @@
                 <properties>
                   <help>Show detailed interface information</help>
                 </properties>
-                <command>if [ -f "/proc/net/bonding/$4" ]; then cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
+                <command>if [ -f "/proc/net/bonding/$4" ]; then sudo cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
               </leafNode>
               <node name="lacp">
                 <properties>
