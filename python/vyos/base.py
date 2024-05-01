@@ -41,7 +41,7 @@ class BaseWarning:
                 isfirstmessage = False
                 initial_indent = self.standardindent
             print(f'{mes}')
-        print('')
+        print('', flush=True)
 
 
 class Warning():
