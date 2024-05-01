@@ -25,6 +25,25 @@
                 </properties>
                 <command>if [ -f "/proc/net/bonding/$4" ]; then cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
               </leafNode>
+              <node name="lacp">
+                <properties>
+                  <help>Show LACP related info</help>
+                </properties>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show LACP details</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_lacp.py --interface="$4"</command>
+                  </leafNode>
+                  <leafNode name="neighbors">
+                    <properties>
+                      <help>Show LACP Neighbors</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_lacp.py --interface="$4" --detail="$5"</command>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="slaves">
                 <properties>
                   <help>Show specified bonding interface information</help>
@@ -62,6 +81,19 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=bonding</command>
               </leafNode>
+              <node name="lacp">
+                <properties>
+                  <help>Show LACP related info</help>
+                </properties>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show LACP details</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_lacp.py --detailall="$5"</command>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="slaves">
                 <properties>
                   <help>Show specified bonding interface information</help>
