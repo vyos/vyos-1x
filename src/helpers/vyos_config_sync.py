@@ -93,7 +93,8 @@ def set_remote_config(
         key: str,
         op: str,
         mask: Dict[str, Any],
-        config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        config: Dict[str, Any],
+        port: int) -> Optional[Dict[str, Any]]:
     """Loads the VyOS configuration in JSON format to a remote host.
 
     Args:
@@ -102,6 +103,7 @@ def set_remote_config(
         op (str): The operation to perform (set or load).
         mask (dict): The dict of paths in sections.
         config (dict): The dict of masked config data.
+        port (int): The remote API port
 
     Returns:
         Optional[Dict[str, Any]]: The response from the remote host as a
@@ -113,7 +115,7 @@ def set_remote_config(
     # Disable the InsecureRequestWarning
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    url = f'https://{address}/configure-section'
+    url = f'https://{address}:{port}/configure-section'
     data = json.dumps({
         'op': op,
         'mask': mask,
@@ -138,7 +140,8 @@ def is_section_revised(section: List[str]) -> bool:
 def config_sync(secondary_address: str,
                 secondary_key: str,
                 sections: List[list[str]],
-                mode: str):
+                mode: str,
+                secondary_port: int):
     """Retrieve a config section from primary router in JSON format and send it to
        secondary router
     """
@@ -158,7 +161,8 @@ def config_sync(secondary_address: str,
                                    key=secondary_key,
                                    op=mode,
                                    mask=mask_dict,
-                                   config=config_dict)
+                                   config=config_dict,
+                                   port=secondary_port)
 
     logger.debug(f"Set config for sections '{sections}': {set_config}")
 
@@ -178,14 +182,12 @@ if __name__ == '__main__':
     secondary_address = config.get('secondary', {}).get('address')
     secondary_address = bracketize_ipv6(secondary_address)
     secondary_key = config.get('secondary', {}).get('key')
+    secondary_port = int(config.get('secondary', {}).get('port', 443))
     sections = config.get('section')
     timeout = int(config.get('secondary', {}).get('timeout'))
 
-    if not all([
-            mode, secondary_address, secondary_key, sections
-    ]):
-        logger.error(
-            "Missing required configuration data for config synchronization.")
+    if not all([mode, secondary_address, secondary_key, sections]):
+        logger.error("Missing required configuration data for config synchronization.")
         exit(0)
 
     # Generate list_sections of sections/subsections
@@ -200,5 +202,4 @@ if __name__ == '__main__':
         else:
             list_sections.append([section])
 
-    config_sync(secondary_address, secondary_key,
-                list_sections, mode)
+    config_sync(secondary_address, secondary_key, list_sections, mode, secondary_port)
