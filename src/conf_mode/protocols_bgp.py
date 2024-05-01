@@ -31,6 +31,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.process import process_named_running
+from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -50,13 +51,8 @@ def get_config(config=None):
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
-    bgp = conf.get_config_dict(
-        base,
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-        with_recursive_defaults=True,
-    )
+    bgp = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True, no_tag_node_value_mangle=True)
 
     bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
                                                  key_mangling=('-', '_'),
@@ -75,21 +71,28 @@ def get_config(config=None):
     if vrf:
         bgp.update({'vrf' : vrf})
         # We can not delete the BGP VRF instance if there is a L3VNI configured
+        # FRR L3VNI must be deleted first otherwise we will see error:
+        # "FRR error: Please unconfigure l3vni 3000"
         tmp = ['vrf', 'name', vrf, 'vni']
-        if conf.exists(tmp):
-            bgp.update({'vni' : conf.return_value(tmp)})
+        if conf.exists_effective(tmp):
+            bgp.update({'vni' : conf.return_effective_value(tmp)})
         # We can safely delete ourself from the dependent vrf list
         if vrf in bgp['dependent_vrfs']:
             del bgp['dependent_vrfs'][vrf]
 
-    bgp['dependent_vrfs'].update({'default': {'protocols': {
-        'bgp': conf.get_config_dict(base_path, key_mangling=('-', '_'),
-                                    get_first_key=True,
-                                    no_tag_node_value_mangle=True)}}})
+        bgp['dependent_vrfs'].update({'default': {'protocols': {
+            'bgp': conf.get_config_dict(base_path, key_mangling=('-', '_'),
+                                        get_first_key=True,
+                                        no_tag_node_value_mangle=True)}}})
+
     if not conf.exists(base):
         # If bgp instance is deleted then mark it
         bgp.update({'deleted' : ''})
         return bgp
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    bgp = conf.merge_defaults(bgp, recursive=True)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().
@@ -242,10 +245,6 @@ def verify(bgp):
                 if verify_vrf_as_import(bgp['vrf'], tmp_afi, bgp['dependent_vrfs']):
                     raise ConfigError(f'Cannot delete VRF instance "{bgp["vrf"]}", ' \
                                       'unconfigure "import vrf" commands!')
-            # We can not delete the BGP instance if a L3VNI instance exists
-            if 'vni' in bgp:
-                raise ConfigError(f'Cannot delete VRF instance "{bgp["vrf"]}", ' \
-                                  f'unconfigure VNI "{bgp["vni"]}" first!')
         else:
             # We are running in the default VRF context, thus we can not delete
             # our main BGP instance if there are dependent BGP VRF instances.
@@ -254,7 +253,11 @@ def verify(bgp):
                     if vrf != 'default':
                         if dict_search('protocols.bgp', vrf_options):
                             raise ConfigError('Cannot delete default BGP instance, ' \
-                                              'dependent VRF instance(s) exist!')
+                                              'dependent VRF instance(s) exist(s)!')
+                        if 'vni' in vrf_options:
+                            raise ConfigError('Cannot delete default BGP instance, ' \
+                                              'dependent L3VNI exists!')
+
         return None
 
     if 'system_as' not in bgp:
@@ -591,6 +594,13 @@ def generate(bgp):
     return None
 
 def apply(bgp):
+    if 'deleted' in bgp:
+        # We need to ensure that the L3VNI is deleted first.
+        # This is not possible with old config backend
+        # priority bug
+        if {'vrf', 'vni'} <= set(bgp):
+            call('vtysh -c "conf t" -c "vrf {vrf}" -c "no vni {vni}"'.format(**bgp))
+
     bgp_daemon = 'bgpd'
 
     # Save original configuration prior to starting any commit actions
