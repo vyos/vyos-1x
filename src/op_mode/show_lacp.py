@@ -97,6 +97,6 @@ if __name__ == "__main__":
                     bondList.append(data)
             print(tabulate(bondList, headers))
         else:
-            exit("No bond interfaces found")
+            exit("No bond interfaces found!")
     else:
         get_lacp_neighbors(args.interface)
