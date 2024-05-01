@@ -84,11 +84,28 @@ def verify_pado_delay(pppoe):
         pado_delay = pppoe['pado_delay']
 
         delays_without_sessions = pado_delay['delays_without_sessions']
+        if 'disable' in delays_without_sessions:
+            raise ConfigError(
+                'Number of sessions must be specified for "pado-delay disable"'
+            )
+
         if len(delays_without_sessions) > 1:
             raise ConfigError(
                 f'Cannot add more then ONE pado-delay without sessions, '
                 f'but {len(delays_without_sessions)} were set'
             )
+
+        if 'disable' in [delay[0] for delay in pado_delay['delays_with_sessions']]:
+            # need to sort delays by sessions to verify if there is no delay
+            # for sessions after disabling
+            sorted_pado_delay = sorted(pado_delay['delays_with_sessions'], key=lambda k_v: k_v[1])
+            last_delay = sorted_pado_delay[-1]
+
+            if last_delay[0] != 'disable':
+                raise ConfigError(
+                    f'Cannot add pado-delay after disabled sessions, but '
+                    f'"pado-delay {last_delay[0]} sessions {last_delay[1]}" was set'
+                )
 
 def verify(pppoe):
     if not pppoe:
