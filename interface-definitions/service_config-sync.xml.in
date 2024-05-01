@@ -34,6 +34,10 @@
                   </constraint>
                 </properties>
               </leafNode>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>443</defaultValue>
+              </leafNode>
               <leafNode name="timeout">
                 <properties>
                   <help>Connection API timeout</help>
