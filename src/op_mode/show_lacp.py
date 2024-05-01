@@ -19,12 +19,20 @@
 from tabulate import tabulate
 import subprocess
 import re
-import argparse
+import sys
+import typing
+import vyos.opmode
 
-def get_all_bonds():
-    return subprocess.run(f"cli-shell-api listActiveNodes interfaces bonding", stdout=subprocess.PIPE, shell=True, text=True).stdout.encode('utf-8').decode('utf-8')
+def list_to_dict(data, headers, basekey):
+    data_list = {basekey: []}
 
-def get_lacp_neighbors(interface):
+    for row in data:
+        row_dict = {headers[i]: row[i] for i in range(len(headers))}
+        data_list[basekey].append(row_dict)
+
+    return data_list
+
+def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
     headers = ["Interface", "Member", "Local ID", "Remote ID"]
     data = subprocess.run(f"sudo cat /proc/net/bonding/{interface}", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True, text=False).stdout.decode('utf-8')
     if 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation' not in data:
@@ -46,57 +54,47 @@ def get_lacp_neighbors(interface):
         remote_id = match.group("remote_id")
         interfaces.append([interface, member, local_id, remote_id])
 
-    if interfaces:
-        print(tabulate(interfaces, headers))
+    if raw:
+        return list_to_dict(interfaces, headers, 'lacp')
     else:
-        print("No Member interfaces found!")
+        return tabulate(interfaces, headers)
 
-def get_bond_info(interface):
-    headers = ["Interface", "Members", "Mode", "Rate", "System MAC", "Hash"]
-    data = subprocess.run(f"sudo cat /proc/net/bonding/{interface}", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True, text=False).stdout.decode('utf-8')
-    if 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation' not in data:
-        if args.detailall:
-            return None, headers
+def show_lacp_detail(raw: bool, interface: typing.Optional[str]):
+    headers = ["Interface", "Members", "Mode", "Rate", "System-MAC", "Hash"]
+
+    if interface:
+        intList = [interface]
+    else:
+        intList = subprocess.run(f"cli-shell-api listActiveNodes interfaces bonding", stdout=subprocess.PIPE, shell=True, text=True).stdout.encode('utf-8').decode('utf-8').replace("'", "").split()
+
+    bondList = []
+
+    for interface in intList:
+        data = subprocess.run(f"sudo cat /proc/net/bonding/{interface}", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True, text=False).stdout.decode('utf-8')
+        if 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation' not in data:
+            continue
+
+        mode_active = "active" if "LACP active: on" in data else "passive"
+        lacp_rate = re.search(r"LACP rate: (\w+)", data).group(1) if re.search(r"LACP rate: (\w+)", data) else "N/A"
+        hash_policy = re.search(r"Transmit Hash Policy: (.+?) \(\d+\)", data).group(1) if re.search(r"Transmit Hash Policy: (.+?) \(\d+\)", data) else "N/A"
+        system_mac = re.search(r"System MAC address: ([0-9a-f:]+)", data).group(1) if re.search(r"System MAC address: ([0-9a-f:]+)", data) else "N/A"
+        if raw:
+            members = re.findall(r"Slave Interface: ([a-zA-Z0-9:_-]+)", data)
         else:
-            exit("Bond is not configured with mode 802.3ad")
+            members = ",".join(set(re.findall(r"Slave Interface: ([a-zA-Z0-9:_-]+)", data)))
 
-    mode_active = "active" if "LACP active: on" in data else "passive"
-    lacp_rate = re.search(r"LACP rate: (\w+)", data).group(1) if re.search(r"LACP rate: (\w+)", data) else "N/A"
-    hash_policy = re.search(r"Transmit Hash Policy: (.+?) \(\d+\)", data).group(1) if re.search(r"Transmit Hash Policy: (.+?) \(\d+\)", data) else "N/A"
-    system_mac = re.search(r"System MAC address: ([0-9a-f:]+)", data).group(1) if re.search(r"System MAC address: ([0-9a-f:]+)", data) else "N/A"
+        bondList.append([interface, members, mode_active, lacp_rate, system_mac, hash_policy])
 
-    members = ",".join(set(re.findall(r"Slave Interface: ([a-zA-Z0-9:_-]+)", data)))
-
-    table_data = []
-
-    table_data = [interface, members, mode_active, lacp_rate, system_mac, hash_policy]
-
-    if table_data:
-        return table_data, headers
+    if raw:
+        return list_to_dict(bondList, headers, 'lacp')
     else:
-        print("No member interfaces found!")
+        return tabulate(bondList, headers)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--interface', help='Bond Interface', required=False)
-    parser.add_argument('--detail', help='LACP Details', required=False)
-    parser.add_argument('--detailall', help='LACP Details', required=False)
-
-    args = parser.parse_args()
-
-    if args.detail:
-        data, headers = get_bond_info(args.interface)
-        print(tabulate([data], headers))
-    elif args.detailall:
-        bondList = []
-        intList = get_all_bonds().split()
-        if intList:
-            for i in intList:
-                data, headers = get_bond_info(i.replace("'", ""))
-                if data:
-                    bondList.append(data)
-            print(tabulate(bondList, headers))
-        else:
-            exit("No bond interfaces found!")
-    else:
-        get_lacp_neighbors(args.interface)
+if __name__ == '__main__':
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
