@@ -180,6 +180,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         mode = 'http'
         rule_ten = '10'
         rule_twenty = '20'
+        rule_thirty = '30'
         send_proxy = 'send-proxy'
         max_connections = '1000'
 
@@ -192,6 +193,8 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['service', frontend, 'rule', rule_ten, 'set', 'backend', bk_first_name])
         self.cli_set(base_path + ['service', frontend, 'rule', rule_twenty, 'domain-name', domain_bk_second])
         self.cli_set(base_path + ['service', frontend, 'rule', rule_twenty, 'set', 'backend', bk_second_name])
+        self.cli_set(base_path + ['service', frontend, 'rule', rule_thirty, 'url-path', 'end', '/test'])
+        self.cli_set(base_path + ['service', frontend, 'rule', rule_thirty, 'set', 'backend', bk_second_name])
 
         self.cli_set(back_base + [bk_first_name, 'mode', mode])
         self.cli_set(back_base + [bk_first_name, 'server', bk_first_name, 'address', bk_server_first])
@@ -222,6 +225,8 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'use_backend {bk_first_name} if {rule_ten}', config)
         self.assertIn(f'acl {rule_twenty} hdr(host) -i {domain_bk_second}', config)
         self.assertIn(f'use_backend {bk_second_name} if {rule_twenty}', config)
+        self.assertIn(f'acl {rule_thirty} path -i -m end /test', config)
+        self.assertIn(f'use_backend {bk_second_name} if {rule_thirty}', config)
 
         # Backend
         self.assertIn(f'backend {bk_first_name}', config)
