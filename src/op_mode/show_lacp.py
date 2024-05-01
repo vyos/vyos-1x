@@ -14,9 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# This script will parse 'sudo cat /proc/net/bonding/<interface name>' and output a tables for 'lacp neighbors' and 'lacp details'
-# lacp neighbors shows - "Interface, Members, Mode, Rate, System Mac, Minimum Links, Hash"
-# lacp details shows   - "Interface, Members, Mode, Rate, System MAC, Hash"
+# This script will parse 'sudo cat /proc/net/bonding/<interface name>' and return table output for lacp related info
 
 from tabulate import tabulate
 import subprocess
@@ -92,10 +90,13 @@ if __name__ == "__main__":
     elif args.detailall:
         bondList = []
         intList = get_all_bonds().split()
-        for i in intList:
-            data, headers = get_bond_info(i.replace("'", ""))
-            if data:
-                bondList.append(data)
-        print(tabulate(bondList, headers))
+        if intList:
+            for i in intList:
+                data, headers = get_bond_info(i.replace("'", ""))
+                if data:
+                    bondList.append(data)
+            print(tabulate(bondList, headers))
+        else:
+            exit("No bond interfaces found")
     else:
         get_lacp_neighbors(args.interface)
