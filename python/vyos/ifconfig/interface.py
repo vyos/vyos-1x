@@ -36,7 +36,6 @@ from vyos.template import render
 from vyos.utils.network import mac2eui64
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
-from vyos.utils.network import get_interface_namespace
 from vyos.utils.process import is_systemd_service_active
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -136,9 +135,6 @@ class Interface(Control):
         'mtu': {
             'validate': assert_mtu,
             'shellcmd': 'ip link set dev {ifname} mtu {value}',
-        },
-        'netns': {
-            'shellcmd': 'ip link set dev {ifname} netns {value}',
         },
         'vrf': {
             'convert': lambda v: f'master {v}' if v else 'nomaster',
@@ -537,35 +533,6 @@ class Interface(Control):
         # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
         if prev_state == 'up':
             self.set_admin_state('up')
-
-    def del_netns(self, netns):
-        """
-        Remove interface from given NETNS.
-        """
-
-        # If NETNS does not exist then there is nothing to delete
-        if not os.path.exists(f'/run/netns/{netns}'):
-            return None
-
-        # As a PoC we only allow 'dummy' interfaces
-        if 'dum' not in self.ifname:
-            return None
-
-        # Check if interface realy exists in namespace
-        if get_interface_namespace(self.ifname) != None:
-            self._cmd(f'ip netns exec {get_interface_namespace(self.ifname)} ip link del dev {self.ifname}')
-            return
-
-    def set_netns(self, netns):
-        """
-        Add interface from given NETNS.
-
-        Example:
-        >>> from vyos.ifconfig import Interface
-        >>> Interface('dum0').set_netns('foo')
-        """
-
-        self.set_interface('netns', netns)
 
     def get_vrf(self):
         """
@@ -1488,16 +1455,6 @@ class Interface(Control):
                 mac = config.get('mac')
             if mac:
                 self.set_mac(mac)
-
-        # If interface is connected to NETNS we don't have to check all other
-        # settings like MTU/IPv6/sysctl values, etc.
-        # Since the interface is pushed onto a separate logical stack
-        # Configure NETNS
-        if dict_search('netns', config) != None:
-            self.set_netns(config.get('netns', ''))
-            return
-        else:
-            self.del_netns(config.get('netns', ''))
 
         # Update interface description
         self.set_alias(config.get('description', ''))
