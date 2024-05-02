@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ import vyos.hostsd_client
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdict import leaf_node_changed
 from vyos.ifconfig import Section
 from vyos.template import is_ip
 from vyos.utils.process import cmd
@@ -37,6 +38,7 @@ default_config_data = {
     'domain_search': [],
     'nameserver': [],
     'nameservers_dhcp_interfaces': {},
+    'snmpd_restart_reqired': False,
     'static_host_mapping': {}
 }
 
@@ -51,6 +53,10 @@ def get_config(config=None):
     hosts = copy.deepcopy(default_config_data)
 
     hosts['hostname'] = conf.return_value(['system', 'host-name'])
+
+    base = ['system']
+    if leaf_node_changed(conf, base + ['host-name']) or leaf_node_changed(conf, base + ['domain-name']):
+        hosts['snmpd_restart_reqired'] = True
 
     # This may happen if the config is not loaded yet,
     # e.g. if run by cloud-init
@@ -171,7 +177,7 @@ def apply(config):
         call("systemctl restart rsyslog.service")
 
     # If SNMP is running, restart it too
-    if process_named_running('snmpd'):
+    if process_named_running('snmpd') and config['snmpd_restart_reqired']:
         call('systemctl restart snmpd.service')
 
     return None
