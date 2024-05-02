@@ -39,6 +39,9 @@ from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import run
 from vyos import ConfigError
 from vyos import airbag
+from vyos.xml_ref import relative_defaults
+
+
 airbag.enable()
 
 map_vyops_tc = {
@@ -115,8 +118,18 @@ def get_config(config=None):
             for rd_name in list(qos['policy'][policy]):
                 # There are eight precedence levels - ensure all are present
                 # to be filled later down with the appropriate default values
-                default_precedence = {'precedence' : { '0' : {}, '1' : {}, '2' : {}, '3' : {},
-                                                       '4' : {}, '5' : {}, '6' : {}, '7' : {} }}
+                default_p_val = relative_defaults(
+                    ['qos', 'policy', 'random-detect', rd_name, 'precedence'],
+                    {'precedence': {'0': {}}},
+                    get_first_key=True, recursive=True
+                )['0']
+                default_p_val = {key.replace('-', '_'): value for key, value in default_p_val.items()}
+                default_precedence = {
+                    'precedence': {'0': default_p_val, '1': default_p_val,
+                                   '2': default_p_val, '3': default_p_val,
+                                   '4': default_p_val, '5': default_p_val,
+                                   '6': default_p_val, '7': default_p_val}}
+
                 qos['policy']['random_detect'][rd_name] = dict_merge(
                     default_precedence, qos['policy']['random_detect'][rd_name])
 
@@ -124,18 +137,6 @@ def get_config(config=None):
 
     for policy in qos.get('policy', []):
         for p_name, p_config in qos['policy'][policy].items():
-            if 'precedence' in p_config:
-                # precedence settings are a bit more complex as they are
-                # calculated under specific circumstances:
-                for precedence in p_config['precedence']:
-                    max_thr = int(qos['policy'][policy][p_name]['precedence'][precedence]['maximum_threshold'])
-                    if 'minimum_threshold' not in qos['policy'][policy][p_name]['precedence'][precedence]:
-                        qos['policy'][policy][p_name]['precedence'][precedence]['minimum_threshold'] = str(
-                            int((9 + int(precedence)) * max_thr) // 18);
-
-                    if 'queue_limit' not in qos['policy'][policy][p_name]['precedence'][precedence]:
-                        qos['policy'][policy][p_name]['precedence'][precedence]['queue_limit'] = \
-                            str(int(4 * max_thr))
             # cleanup empty match config
             if 'class' in p_config:
                 for cls, cls_config in p_config['class'].items():
