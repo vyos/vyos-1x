@@ -130,11 +130,6 @@ def get_config(config=None):
     tmp = {'policy' : {'route-map' : conf.get_config_dict(['policy', 'route-map'],
                                                           get_first_key=True)}}
 
-    # L3VNI setup is done via vrf_vni.py as it must be de-configured (on node
-    # deletetion prior to the BGP process. Tell the Jinja2 template no VNI
-    # setup is needed
-    vrf.update({'no_vni' : ''})
-
     # Merge policy dict into "regular" config dict
     vrf = dict_merge(tmp, vrf)
     return vrf
