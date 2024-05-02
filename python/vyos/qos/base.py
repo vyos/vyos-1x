@@ -90,13 +90,14 @@ class QoSBase:
         else:
             return value
 
-    def _calc_random_detect_queue_params(self, avg_pkt, max_thr, limit=None, min_thr=None, mark_probability=None):
+    def _calc_random_detect_queue_params(self, avg_pkt, max_thr, limit=None, min_thr=None,
+                                         mark_probability=None, precedence=0):
         params = dict()
         avg_pkt = int(avg_pkt)
         max_thr = int(max_thr)
         mark_probability = int(mark_probability)
         limit = int(limit) if limit else 4 * max_thr
-        min_thr = int(min_thr) if min_thr else (9 * max_thr) // 18
+        min_thr = int(min_thr) if min_thr else ((9 + precedence) * max_thr) // 18
 
         params['avg_pkt'] = avg_pkt
         params['limit'] = limit * avg_pkt

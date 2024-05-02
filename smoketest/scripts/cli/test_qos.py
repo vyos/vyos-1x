@@ -441,7 +441,6 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_08_random_detect(self):
-        self.skipTest('tc returns invalid JSON here - needs iproute2 fix')
         bandwidth = 5000
 
         first = True
@@ -467,8 +466,11 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         bandwidth = 5000
         for interface in self._interfaces:
             tmp = get_tc_qdisc_json(interface)
-            import pprint
-            pprint.pprint(tmp)
+            self.assertTrue('gred' in tmp.get('kind'))
+            self.assertEqual(8, len(tmp.get('options', {}).get('vqs')))
+            self.assertEqual(8, tmp.get('options', {}).get('dp_cnt'))
+            self.assertEqual(0, tmp.get('options', {}).get('dp_default'))
+            self.assertTrue(tmp.get('options', {}).get('grio'))
 
     def test_09_rate_control(self):
         bandwidth = 5000
