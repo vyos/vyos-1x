@@ -21,33 +21,25 @@ class RandomDetect(QoSBase):
     # https://man7.org/linux/man-pages/man8/tc.8.html
     def update(self, config, direction):
 
-        tmp = f'tc qdisc add dev {self._interface} root handle {self._parent}:0 dsmark indices 8 set_tc_index'
+        # # Generalized Random Early Detection
+        handle = self._parent
+        tmp = f'tc qdisc add dev {self._interface} root handle {self._parent}:0 gred setup DPs 8 default 0 grio'
         self._cmd(tmp)
-
-        tmp = f'tc filter add dev {self._interface} parent {self._parent}:0 protocol ip prio 1 tcindex mask 0xe0 shift 5'
-        self._cmd(tmp)
-
-        # Generalized Random Early Detection
-        handle = self._parent +1
-        tmp = f'tc qdisc add dev {self._interface} parent {self._parent}:0 handle {handle}:0 gred setup DPs 8 default 0 grio'
-        self._cmd(tmp)
-
         bandwidth = self._rate_convert(config['bandwidth'])
 
         # set VQ (virtual queue) parameters
         for precedence, precedence_config in config['precedence'].items():
             precedence = int(precedence)
-            avg_pkt = int(precedence_config['average_packet'])
-            limit = int(precedence_config['queue_limit']) * avg_pkt
-            min_val = int(precedence_config['minimum_threshold']) * avg_pkt
-            max_val = int(precedence_config['maximum_threshold']) * avg_pkt
-
-            tmp  = f'tc qdisc change dev {self._interface} handle {handle}:0 gred limit {limit} min {min_val} max {max_val} avpkt {avg_pkt} '
-
-            burst = (2 * int(precedence_config['minimum_threshold']) + int(precedence_config['maximum_threshold'])) // 3
-            probability = 1 / int(precedence_config['mark_probability'])
-            tmp += f'burst {burst} bandwidth {bandwidth} probability {probability} DP {precedence} prio {8 - precedence:x}'
-
+            qparams = self._calc_random_detect_queue_params(
+                avg_pkt=precedence_config.get('average_packet'),
+                max_thr=precedence_config.get('maximum_threshold'),
+                limit=precedence_config.get('queue_limit'),
+                min_thr=precedence_config.get('minimum_threshold'),
+                mark_probability=precedence_config.get('mark_probability'),
+                precedence=precedence
+            )
+            tmp = f'tc qdisc change dev {self._interface} handle {handle}:0 gred limit {qparams["limit"]} min {qparams["min_val"]} max {qparams["max_val"]} avpkt {qparams["avg_pkt"]} '
+            tmp += f'burst {qparams["burst"]} bandwidth {bandwidth} probability {qparams["probability"]} DP {precedence} prio {8 - precedence:x}'
             self._cmd(tmp)
 
         # call base class
