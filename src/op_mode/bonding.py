@@ -16,12 +16,14 @@
 #
 # This script will parse 'sudo cat /proc/net/bonding/<interface name>' and return table output for lacp related info
 
-from tabulate import tabulate
 import subprocess
 import re
 import sys
 import typing
+from tabulate import tabulate
+
 import vyos.opmode
+from vyos.configquery import ConfigTreeQuery
 
 def list_to_dict(data, headers, basekey):
     data_list = {basekey: []}
@@ -36,7 +38,7 @@ def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
     headers = ["Interface", "Member", "Local ID", "Remote ID"]
     data = subprocess.run(f"sudo cat /proc/net/bonding/{interface}", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True, text=False).stdout.decode('utf-8')
     if 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation' not in data:
-        exit("Bond is not configured with mode 802.3ad")
+        raise vyos.opmode.DataUnavailable(f"{interface} is not present or not configured with mode 802.3ad")
 
     pattern = re.compile(
         r"Slave Interface: (?P<member>\w+\d+).*?"
@@ -61,11 +63,12 @@ def show_lacp_neighbors(raw: bool, interface: typing.Optional[str]):
 
 def show_lacp_detail(raw: bool, interface: typing.Optional[str]):
     headers = ["Interface", "Members", "Mode", "Rate", "System-MAC", "Hash"]
+    query = ConfigTreeQuery()
 
     if interface:
         intList = [interface]
     else:
-        intList = subprocess.run(f"cli-shell-api listActiveNodes interfaces bonding", stdout=subprocess.PIPE, shell=True, text=True).stdout.encode('utf-8').decode('utf-8').replace("'", "").split()
+        intList = query.list_nodes(['interfaces', 'bonding'])
 
     bondList = []
 
@@ -95,6 +98,6 @@ if __name__ == '__main__':
         res = vyos.opmode.run(sys.modules[__name__])
         if res:
             print(res)
-    except ValueError as e:
+    except (ValueError, vyos.opmode.Error) as e:
         print(e)
         sys.exit(1)
