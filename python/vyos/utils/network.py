@@ -40,13 +40,6 @@ def interface_exists(interface) -> bool:
     import os
     return os.path.exists(f'/sys/class/net/{interface}')
 
-def interface_exists_in_netns(interface_name, netns):
-    from vyos.utils.process import rc_cmd
-    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface_name}')
-    if rc == 0:
-        return True
-    return False
-
 def get_vrf_members(vrf: str) -> list:
     """
     Get list of interface VRF members
@@ -100,25 +93,6 @@ def get_interface_address(interface):
     from vyos.utils.process import cmd
     tmp = loads(cmd(f'ip --detail --json addr show dev {interface}'))[0]
     return tmp
-
-def get_interface_namespace(iface):
-    """
-       Returns wich netns the interface belongs to
-    """
-    from json import loads
-    from vyos.utils.process import cmd
-    # Check if netns exist
-    tmp = loads(cmd(f'ip --json netns ls'))
-    if len(tmp) == 0:
-        return None
-
-    for ns in tmp:
-        netns = f'{ns["name"]}'
-        # Search interface in each netns
-        data = loads(cmd(f'ip netns exec {netns} ip --json link show'))
-        for tmp in data:
-            if iface == tmp["ifname"]:
-                return netns
 
 def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
     """Check if IPv6 address is in tentative state.
