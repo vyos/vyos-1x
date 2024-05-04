@@ -1,6 +1,7 @@
 [
 "accelppp.py",
 "bgp.py",
+"bonding.py",
 "bridge.py",
 "config_mgmt.py",
 "conntrack.py",
