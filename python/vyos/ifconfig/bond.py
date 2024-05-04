@@ -18,6 +18,7 @@ import os
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.assertion import assert_list
+from vyos.utils.assertion import assert_mac
 from vyos.utils.assertion import assert_positive
 
 @Interface.register
@@ -53,6 +54,10 @@ class BondIf(Interface):
         'bond_lacp_rate': {
             'validate': lambda v: assert_list(v, ['slow', 'fast']),
             'location': '/sys/class/net/{ifname}/bonding/lacp_rate',
+        },
+        'bond_system_mac': {
+            'validate': assert_mac,
+            'location': '/sys/class/net/{ifname}/bonding/ad_actor_system',
         },
         'bond_miimon': {
             'validate': assert_positive,
@@ -385,6 +390,24 @@ class BondIf(Interface):
         """
         return self.set_interface('bond_mode', mode)
 
+    def set_system_mac(self, mac):
+        """
+        In an AD system, this specifies the mac-address for the actor in
+	    protocol packet exchanges (LACPDUs). The value cannot be NULL or
+	    multicast. It is preferred to have the local-admin bit set for this
+	    mac but driver does not enforce it. If the value is not given then
+	    system defaults to using the masters' mac address as actors' system
+	    address.
+
+	    This parameter has effect only in 802.3ad mode and is available through
+	    SysFs interface.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_system_mac('00:50:ab:cd:ef:01')
+        """
+        return self.set_interface('bond_system_mac', mac)
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -432,6 +455,10 @@ class BondIf(Interface):
             # LACPDU transmission rate - default value
             if mode == '802.3ad':
                 self.set_lacp_rate(config.get('lacp_rate'))
+
+            # Add system mac address for 802.3ad
+            if mode == '802.3ad' and 'system_mac' in config:
+                self.set_system_mac(config.get('system_mac'))
 
             if mode not in ['802.3ad', 'balance-tlb', 'balance-alb']:
                 tmp = dict_search('arp_monitor.interval', config)
