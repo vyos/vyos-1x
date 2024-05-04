@@ -401,6 +401,30 @@ def union(left, right, libpath=LIBPATH):
 
     return tree
 
+def mask_inclusive(left, right, libpath=LIBPATH):
+    if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+        raise TypeError("Arguments must be instances of ConfigTree")
+
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __mask_tree = __lib.mask_tree
+        __mask_tree.argtypes = [c_void_p, c_void_p]
+        __mask_tree.restype = c_void_p
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+
+        res = __mask_tree(left._get_config(), right._get_config())
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if not res:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+    tree = ConfigTree(address=res)
+
+    return tree
+
 def reference_tree_to_json(from_dir, to_file, libpath=LIBPATH):
     try:
         __lib = cdll.LoadLibrary(libpath)
