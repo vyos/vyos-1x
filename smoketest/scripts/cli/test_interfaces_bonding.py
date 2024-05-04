@@ -241,6 +241,22 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             for member in self._members:
                 self.assertIn(member, slaves)
 
+    def test_bonding_system_mac(self):
+        # configure member interfaces and system-mac
+        system_mac = '00:50:ab:cd:ef:11'
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+            self.cli_set(self._base_path + [interface, 'system-mac', system_mac])
+
+        self.cli_commit()
+
+        # verify config
+        for interface in self._interfaces:
+            defined_mac = read_file(f'/sys/class/net/{interface}/bonding/ad_actor_system')
+            self.assertIn(defined_mac, system_mac)
+
     def test_bonding_evpn_multihoming(self):
         id = '5'
         for interface in self._interfaces:
