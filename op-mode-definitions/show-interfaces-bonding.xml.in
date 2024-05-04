@@ -23,8 +23,27 @@
                 <properties>
                   <help>Show detailed interface information</help>
                 </properties>
-                <command>if [ -f "/proc/net/bonding/$4" ]; then cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
+                <command>if [ -f "/proc/net/bonding/$4" ]; then sudo cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
               </leafNode>
+              <node name="lacp">
+                <properties>
+                  <help>Show LACP related info</help>
+                </properties>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show LACP details</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/bonding.py show_lacp_detail --interface="$4" </command>
+                  </leafNode>
+                  <leafNode name="neighbors">
+                    <properties>
+                      <help>Show LACP Neighbors</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/bonding.py show_lacp_neighbors --interface="$4"</command>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="slaves">
                 <properties>
                   <help>Show specified bonding interface information</help>
@@ -62,6 +81,19 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=bonding</command>
               </leafNode>
+              <node name="lacp">
+                <properties>
+                  <help>Show LACP related info</help>
+                </properties>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show LACP details</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/bonding.py show_lacp_detail</command>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="slaves">
                 <properties>
                   <help>Show specified bonding interface information</help>
