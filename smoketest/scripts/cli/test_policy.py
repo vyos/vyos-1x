@@ -1923,6 +1923,66 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sort_ip(tmp), sort_ip(original_second))
 
+    def test_frr_individual_remove_T6283_T6250(self):
+        path = base_path + ['route-map']
+        route_maps = ['RMAP-1', 'RMAP_2']
+        seq = '10'
+        base_local_preference = 300
+        base_table = 50
+
+        # T6250
+        local_preference = base_local_preference
+        table = base_table
+        for route_map in route_maps:
+            self.cli_set(path + [route_map, 'rule', seq, 'action', 'permit'])
+            self.cli_set(path + [route_map, 'rule', seq, 'set', 'table', str(table)])
+            self.cli_set(path + [route_map, 'rule', seq, 'set', 'local-preference', str(local_preference)])
+            local_preference += 20
+            table += 5
+
+        self.cli_commit()
+
+        local_preference = base_local_preference
+        table = base_table
+        for route_map in route_maps:
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            self.assertIn(f' set local-preference {local_preference}', config)
+            self.assertIn(f' set table {table}', config)
+            local_preference += 20
+            table += 5
+
+        for route_map in route_maps:
+            self.cli_delete(path + [route_map, 'rule', '10', 'set', 'table'])
+            # we explicitly commit multiple times to be as vandal as possible to the system
+            self.cli_commit()
+
+        local_preference = base_local_preference
+        for route_map in route_maps:
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            self.assertIn(f' set local-preference {local_preference}', config)
+            local_preference += 20
+
+        # T6283
+        seq = '20'
+        prepend = '100 100 100'
+        for route_map in route_maps:
+            self.cli_set(path + [route_map, 'rule', seq, 'action', 'permit'])
+            self.cli_set(path + [route_map, 'rule', seq, 'set', 'as-path', 'prepend', prepend])
+
+        self.cli_commit()
+
+        for route_map in route_maps:
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            self.assertIn(f' set as-path prepend {prepend}', config)
+
+        for route_map in route_maps:
+            self.cli_delete(path + [route_map, 'rule', seq, 'set'])
+            # we explicitly commit multiple times to be as vandal as possible to the system
+            self.cli_commit()
+
+        for route_map in route_maps:
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            self.assertNotIn(f' set', config)
 
 def sort_ip(output):
     o = '\n'.join([' '.join(line.strip().split()) for line in output.strip().splitlines()])
