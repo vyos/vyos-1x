@@ -25,6 +25,14 @@ from vyos.utils.file import makedir
 from vyos.utils.permission import chmod
 from vyos.utils.permission import chown
 
+# We use a mutable global variable for the default template directory
+# to make it possible to call scripts from this repository
+# outside of live VyOS systems.
+# If something (like the image build scripts)
+# want to call a script, they can modify the default location
+# to the repository path.
+DEFAULT_TEMPLATE_DIR = directories["templates"]
+
 # Holds template filters registered via register_filter()
 _FILTERS = {}
 _TESTS = {}
@@ -35,18 +43,7 @@ def _get_environment(location=None):
     from os import getenv
 
     if location is None:
-        # Sometimes functions that rely on templates need to be executed outside of VyOS installations:
-        # for example, installer functions are executed for image builds,
-        # and anything may be invoked for testing from a developer's machine.
-        # This environment variable allows running any unmodified code
-        # with a custom template location.
-        location_env_var = getenv("VYOS_TEMPLATE_DIR")
-        if location_env_var:
-            print(f"Using environment variable {location_env_var}")
-            template_dir = location_env_var
-        else:
-            template_dir = directories["templates"]
-        loc_loader=FileSystemLoader(template_dir)
+        loc_loader=FileSystemLoader(DEFAULT_TEMPLATE_DIR)
     else:
         loc_loader=FileSystemLoader(location)
     env = Environment(
