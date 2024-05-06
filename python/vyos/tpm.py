@@ -15,7 +15,7 @@
 import os
 import tempfile
 
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 
 default_pcrs = ['0','2','4','7']
 tpm_handle = 0x81000000
