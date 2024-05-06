@@ -25,6 +25,14 @@ from vyos.utils.file import makedir
 from vyos.utils.permission import chmod
 from vyos.utils.permission import chown
 
+# We use a mutable global variable for the default template directory
+# to make it possible to call scripts from this repository
+# outside of live VyOS systems.
+# If something (like the image build scripts)
+# want to call a script, they can modify the default location
+# to the repository path.
+DEFAULT_TEMPLATE_DIR = directories["templates"]
+
 # Holds template filters registered via register_filter()
 _FILTERS = {}
 _TESTS = {}
@@ -33,7 +41,7 @@ _TESTS = {}
 @functools.lru_cache(maxsize=2)
 def _get_environment(location=None):
     if location is None:
-        loc_loader=FileSystemLoader(directories["templates"])
+        loc_loader=FileSystemLoader(DEFAULT_TEMPLATE_DIR)
     else:
         loc_loader=FileSystemLoader(location)
     env = Environment(
