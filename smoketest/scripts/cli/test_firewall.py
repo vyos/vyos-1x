@@ -802,7 +802,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_flow_offload(self):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '10'])
-        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0.10'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
 
         # QEMU virtual NIC does not support hw-tc-offload
@@ -828,7 +828,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['flowtable VYOS_FLOWTABLE_smoketest'],
             ['hook ingress priority filter'],
-            ['devices = { eth0.10 }'],
+            ['devices = { eth0 }'],
             ['ct state { established, related }', 'meta l4proto { tcp, udp }', 'flow add @VYOS_FLOWTABLE_smoketest'],
         ]
 

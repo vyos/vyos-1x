@@ -20,8 +20,13 @@
             <properties>
               <help>Interfaces to use this flowtable</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces</script>
+                <path>interfaces ethernet</path>
+                <path>interfaces loopback</path>
               </completionHelp>
+               <constraint>
+                <regex>^(eth\d+|lo)$</regex>
+              </constraint>
+              <constraintErrorMessage>Only ethernet and loopback interfaces are allowed in flowtables</constraintErrorMessage>
               <multi/>
             </properties>
           </leafNode>
