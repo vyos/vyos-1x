@@ -10,6 +10,7 @@ Build-Depends:
   iproute2,
   libvyosconfig0 (>= 0.0.7),
   libzmq3-dev,
+  procps,
   python3 (>= 3.10),
 # For QA
   pylint,
