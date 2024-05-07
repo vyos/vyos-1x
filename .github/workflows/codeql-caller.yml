@@ -12,6 +12,7 @@
 name: "Call CodeQL Analysis"
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "current", crux, equuleus ]
   pull_request:
