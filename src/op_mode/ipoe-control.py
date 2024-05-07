@@ -56,7 +56,11 @@ def main():
         if args.selector in cmd_dict['selector'] and args.target:
             run(cmd_dict['cmd_base'] + "{0} {1} {2}".format(args.action, args.selector, args.target))
         else:
-            output, err = popen(cmd_dict['cmd_base'] + cmd_dict['actions'][args.action], decode='utf-8')
+            if args.action == "show_sessions":
+                ses_pattern = " ifname,username,calling-sid,ip,ip6,ip6-dp,rate-limit,type,comp,state,uptime"
+            else:
+                ses_pattern = ""
+            output, err = popen(cmd_dict['cmd_base'] + cmd_dict['actions'][args.action] + ses_pattern, decode='utf-8')
             if not err:
                 print(output)
             else:
