@@ -1330,6 +1330,27 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'neighbor {ext_neighbors[1]} remote-as external', conf)
         self.assertIn(f'neighbor {ext_neighbors[1]} peer-group {ext_pg_name}', conf)
 
+    def test_bgp_29_peer_group_remote_as_equal_local_as(self):
+        self.cli_set(base_path + ['system-as', ASN])
+        self.cli_set(base_path + ['peer-group', 'OVERLAY', 'local-as', f'{int(ASN) + 1}'])
+        self.cli_set(base_path + ['peer-group', 'OVERLAY', 'remote-as', f'{int(ASN) + 1}'])
+        self.cli_set(base_path + ['peer-group', 'OVERLAY', 'address-family', 'l2vpn-evpn'])
+
+        self.cli_set(base_path + ['peer-group', 'UNDERLAY', 'address-family', 'ipv4-unicast'])
+
+        self.cli_set(base_path + ['neighbor', '10.177.70.62', 'peer-group', 'UNDERLAY'])
+        self.cli_set(base_path + ['neighbor', '10.177.70.62', 'remote-as', 'external'])
+
+        self.cli_set(base_path + ['neighbor', '10.177.75.1', 'peer-group', 'OVERLAY'])
+        self.cli_set(base_path + ['neighbor', '10.177.75.2', 'peer-group', 'OVERLAY'])
+
+        self.cli_commit()
+
+        conf = self.getFRRconfig(f'router bgp {ASN}')
+
+        self.assertIn(f'neighbor OVERLAY remote-as {int(ASN) + 1}', conf)
+        self.assertIn(f'neighbor OVERLAY local-as {int(ASN) + 1}', conf)
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
