@@ -9,11 +9,12 @@
 # the `language` matrix defined below to confirm you have the correct set of
 # supported CodeQL languages.
 #
-name: "Call CodeQL Analysis"
+name: "Perform CodeQL Analysis"
 
 on:
   workflow_dispatch:
   push:
+    branches: [ "current", "sagitta", "equuleus" ]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "current" ]
@@ -22,11 +23,12 @@ on:
 
 permissions:
   actions: read
+  contents: read
   security-events: write
 
 jobs:
   codeql-analysis-call:
-    uses: vyos/vyos-github-actions/.github/workflows/codeql-analysis.yml@add-codeql-workflow
+    uses: vyos/vyos-github-actions/.github/workflows/codeql-analysis.yml@main
     secrets: inherit
     with:
       languages: "['python']"
