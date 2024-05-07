@@ -135,6 +135,33 @@ class Xml:
         d = self._get_ref_path(path)
         return self._is_leaf_node(d)
 
+    def _least_upper_data(self, path: list, name: str) -> str:
+        ref_path = path.copy()
+        d = self.ref
+        data = ''
+        while ref_path and d:
+            d = d.get(ref_path[0], {})
+            ref_path.pop(0)
+            if self._is_tag_node(d) and ref_path:
+                ref_path.pop(0)
+            if self._is_leaf_node(d) and ref_path:
+                ref_path.pop(0)
+            res = self._get_ref_node_data(d, name)
+            if res is not None:
+                data = res
+
+        return data
+
+    def owner(self, path: list) -> str:
+        from pathlib import Path
+        data = self._least_upper_data(path, 'owner')
+        if data:
+            data = Path(data.split()[0]).name
+        return data
+
+    def priority(self, path: list) -> str:
+        return self._least_upper_data(path, 'priority')
+
     @staticmethod
     def _dict_get(d: dict, path: list) -> dict:
         for i in path:
