@@ -14,16 +14,19 @@ name: "Call CodeQL Analysis"
 on:
   workflow_dispatch:
   push:
-    branches: [ "current", crux, equuleus ]
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "current" ]
   schedule:
     - cron: '22 10 * * 0'
 
+permissions:
+  actions: read
+  security-events: write
+
 jobs:
   codeql-analysis-call:
-    uses: vyos/vyos-github-actions/.github/workflows/codeql-analysis.yml@feature/add-codeql-workflow
+    uses: vyos/vyos-github-actions/.github/workflows/codeql-analysis.yml@add-codeql-workflow
     secrets: inherit
     with:
       languages: "['python']"
