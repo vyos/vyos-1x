@@ -19,7 +19,7 @@
       <description>Inverted interface name to match</description>
     </valueHelp>
     <constraint>
-      <regex>(\!?)(bond|br|dum|en|ersp|eth|gnv|ifb|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|veth|vti|vtun|vxlan|wg|wlan|wwan)([0-9]?)(\*?)(.+)?|(\!?)lo</regex>
+      <regex>(\!?)(bond|br|dum|en|ersp|eth|gnv|ifb|ipoe|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|veth|vti|vtun|vxlan|wg|wlan|wwan)([0-9]?)(\*?)(.+)?|(\!?)lo</regex>
       <validator name="vrf-name"/>
     </constraint>
   </properties>
