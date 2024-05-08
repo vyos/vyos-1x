@@ -28,6 +28,12 @@ interface={{ ifname }}
 {%     for bridge in is_bridge_member %}
 bridge={{ bridge }}
 {%     endfor %}
+
+# WDS (4-address frame) mode with per-station virtual interfaces
+# (only supported with driver=nl80211)
+# This mode allows associated stations to use 4-address frames to allow layer 2
+# bridging to be used.
+wds_sta=1
 {% endif %}
 
 # Driver interface type (hostap/wired/none/nl80211/bsd);
@@ -739,4 +745,3 @@ wmm_ac_vo_cwmin=2
 wmm_ac_vo_cwmax=3
 wmm_ac_vo_txop_limit=47
 wmm_ac_vo_acm=0
-

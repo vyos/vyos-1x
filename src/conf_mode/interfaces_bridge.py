@@ -63,7 +63,10 @@ def get_config(config=None):
                 # is already live on the system - this must not be done on first commit
                 if interface.startswith('vxlan') and interface_exists(interface):
                     set_dependents('vxlan', conf, interface)
-
+                # When using Wireless member interfaces we need to inform hostapd
+                # to properly set-up the bridge
+                elif interface.startswith('wlan') and interface_exists(interface):
+                    set_dependents('wlan', conf, interface)
 
     if dict_search('member.interface', bridge) is not None:
         for interface in list(bridge['member']['interface']):
@@ -99,6 +102,10 @@ def get_config(config=None):
             # is already live on the system - this must not be done on first commit
             if interface.startswith('vxlan') and interface_exists(interface):
                 set_dependents('vxlan', conf, interface)
+            # When using Wireless member interfaces we need to inform hostapd
+            # to properly set-up the bridge
+            elif interface.startswith('wlan') and interface_exists(interface):
+                set_dependents('wlan', conf, interface)
 
     # delete empty dictionary keys - no need to run code paths if nothing is there to do
     if 'member' in bridge:
@@ -148,9 +155,6 @@ def verify(bridge):
             if 'enable_vlan' in bridge:
                 if 'has_vlan' in interface_config:
                     raise ConfigError(error_msg + 'it has VLAN subinterface(s) assigned!')
-
-                if 'wlan' in interface:
-                    raise ConfigError(error_msg + 'VLAN aware cannot be set!')
             else:
                 for option in ['allowed_vlan', 'native_vlan']:
                     if option in interface_config:
@@ -184,7 +188,7 @@ def apply(bridge):
             tmp.extend(bridge['member']['interface'])
 
     for interface in tmp:
-        if interface.startswith(tuple(['vxlan'])) and interface_exists(interface):
+        if interface.startswith(tuple(['vxlan', 'wlan'])) and interface_exists(interface):
             try:
                 call_dependents()
             except ConfigError:
