@@ -56,6 +56,14 @@ def get_config(config=None):
             bridge['member'].update({'interface_remove' : tmp })
         else:
             bridge.update({'member' : {'interface_remove' : tmp }})
+            for interface in tmp:
+                # When using VXLAN member interfaces that are configured for Single
+                # VXLAN Device (SVD) we need to call the VXLAN conf-mode script to
+                # re-create VLAN to VNI mappings if required, but only if the interface
+                # is already live on the system - this must not be done on first commit
+                if interface.startswith('vxlan') and interface_exists(interface):
+                    set_dependents('vxlan', conf, interface)
+
 
     if dict_search('member.interface', bridge) is not None:
         for interface in list(bridge['member']['interface']):
@@ -168,12 +176,19 @@ def apply(bridge):
     else:
         br.update(bridge)
 
-    for interface in dict_search('member.interface', bridge) or []:
-        if interface.startswith('vxlan') and interface_exists(interface):
+    tmp = []
+    if 'member' in bridge:
+        if 'interface_remove' in bridge['member']:
+            tmp.extend(bridge['member']['interface_remove'])
+        if 'interface' in bridge['member']:
+            tmp.extend(bridge['member']['interface'])
+
+    for interface in tmp:
+        if interface.startswith(tuple(['vxlan'])) and interface_exists(interface):
             try:
                 call_dependents()
             except ConfigError:
-                raise ConfigError('Error in updating VXLAN interface after changing bridge!')
+                raise ConfigError('Error updating member interface configuration after changing bridge!')
 
     return None
 
