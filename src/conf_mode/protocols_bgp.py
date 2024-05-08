@@ -333,7 +333,7 @@ def verify(bgp):
                     raise ConfigError('Cannot have local-as same as system-as number')
 
                 # Neighbor AS specified for local-as and remote-as can not be the same
-                if dict_search('remote_as', peer_config) == asn:
+                if dict_search('remote_as', peer_config) == asn and neighbor != 'peer_group':
                      raise ConfigError(f'Neighbor "{peer}" has local-as specified which is '\
                                         'the same as remote-as, this is not allowed!')
 
