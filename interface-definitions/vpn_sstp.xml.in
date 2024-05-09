@@ -53,6 +53,15 @@
           #include <include/accel-ppp/wins-server.xml.i>
           #include <include/generic-description.xml.i>
           #include <include/name-server-ipv4-ipv6.xml.i>
+          <leafNode name="host-name">
+            <properties>
+              <help>Only allow connection to specified host with the same TLS SNI</help>
+              <constraint>
+                #include <include/constraint/host-name.xml.i>
+              </constraint>
+              <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
