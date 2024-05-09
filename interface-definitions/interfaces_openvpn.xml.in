@@ -663,7 +663,7 @@
                           <help>Number of digits to use for totp hash</help>
                           <valueHelp>
                             <format>1-65535</format>
-                            <description>Seconds</description>
+                            <description>Digits</description>
                           </valueHelp>
                           <constraint>
                             <validator name="numeric" argument="--range 1-65535"/>
