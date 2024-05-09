@@ -42,6 +42,9 @@ accept=ssl
 ssl-ca-file=/run/accel-pppd/sstp-ca.pem
 ssl-pemfile=/run/accel-pppd/sstp-cert.pem
 ssl-keyfile=/run/accel-pppd/sstp-cert.key
+{% if host_name is vyos_defined %}
+host-name={{ host_name }}
+{% endif %}
 {% if default_pool is vyos_defined %}
 ip-pool={{ default_pool }}
 {% endif %}

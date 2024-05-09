@@ -75,6 +75,16 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
         config = read_file(self._config_file)
         self.assertIn(f'port={port}', config)
 
+    def test_sstp_host_name(self):
+        host_name = 'test.vyos.io'
+        self.set(['host-name', host_name])
+
+        self.basic_config()
+        self.cli_commit()
+
+        config = read_file(self._config_file)
+        self.assertIn(f'host-name={host_name}', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
