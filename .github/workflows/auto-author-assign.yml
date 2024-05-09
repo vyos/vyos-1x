@@ -15,13 +15,3 @@ jobs:
         uses: toshimaru/auto-author-assign@v1.6.2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-  # https://github.com/shufo/auto-assign-reviewer-by-files
-  assign_reviewer:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Request review based on files changes and/or groups the author belongs to
-        uses: shufo/auto-assign-reviewer-by-files@v1.1.4
-        with:
-          token: ${{ secrets.PR_ACTION_ASSIGN_REVIEWERS }}
-          config: .github/reviewers.yml
