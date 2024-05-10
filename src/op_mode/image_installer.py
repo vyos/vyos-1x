@@ -65,7 +65,7 @@ MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user:'
 MSG_INPUT_PASSWORD_CONFIRM: str = 'Please confirm password for the "vyos" user:'
 MSG_INPUT_ROOT_SIZE_ALL: str = 'Would you like to use all the free space on the drive?'
 MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root partition (min is 1.5 GB)?'
-MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial, U: USB-Serial)?'
+MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial)?'
 MSG_INPUT_COPY_DATA: str = 'Would you like to copy data to the new image?'
 MSG_INPUT_CHOOSE_COPY_DATA: str = 'From which image would you like to save config information?'
 MSG_INPUT_COPY_ENC_DATA: str = 'Would you like to copy the encrypted config to the new image?'
@@ -710,8 +710,8 @@ def install_image() -> None:
     # ask for default console
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
                                   default='K',
-                                  valid_responses=['K', 'S', 'U'])
-    console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS', 'U': 'ttyUSB'}
+                                  valid_responses=['K', 'S'])
+    console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS'}
 
     config_boot_list = ['/opt/vyatta/etc/config/config.boot',
                         '/opt/vyatta/etc/config.boot.default']

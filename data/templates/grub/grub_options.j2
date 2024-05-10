@@ -33,12 +33,6 @@ submenu "Boot options" {
             setup_serial
             configfile ${prefix}/grub.cfg.d/*vyos-menu*.cfg
         }
-        menuentry "ttyUSB (USB serial)" {
-            set console_type="ttyUSB"
-            export console_type
-            setup_serial
-            configfile ${prefix}/grub.cfg.d/*vyos-menu*.cfg
-        }
     }
     menuentry "Enter console number" {
         read console_num
