@@ -23,6 +23,8 @@ from shutil import copy, chown, rmtree, copytree
 from glob import glob
 from sys import exit
 from os import environ
+from os import readlink
+from os import getpid, getppid
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
@@ -612,6 +614,20 @@ def copy_ssh_host_keys() -> bool:
     if ask_yes_no('Would you like to copy SSH host keys?', default=True):
         return True
     return False
+
+
+def console_hint() -> str:
+    pid = getppid() if 'SUDO_USER' in environ else getpid()
+    try:
+        path = readlink(f'/proc/{pid}/fd/1')
+    except OSError:
+        path = '/dev/tty'
+
+    name = Path(path).name
+    if name == 'ttyS0':
+        return 'S'
+    else:
+        return 'K'
 
 
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
