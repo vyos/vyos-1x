@@ -33,6 +33,7 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
 from vyos.ifconfig import Section
 from vyos.template import render_to_string
+from vyos.utils.assertion import assert_mac
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.network import interface_exists
@@ -243,6 +244,16 @@ def verify(bond):
         if bond['mode'] not in ['active-backup', 'balance-tlb', 'balance-alb']:
             raise ConfigError('primary interface only works for mode active-backup, ' \
                               'transmit-load-balance or adaptive-load-balance')
+
+    if 'system_mac' in bond:
+        if bond['mode'] != '802.3ad':
+            raise ConfigError('Actor MAC address only available in 802.3ad mode!')
+
+        system_mac = bond['system_mac']
+        try:
+            assert_mac(system_mac, test_all_zero=False)
+        except:
+            raise ConfigError(f'Cannot use a multicast MAC address "{system_mac}" as system-mac!')
 
     return None
 

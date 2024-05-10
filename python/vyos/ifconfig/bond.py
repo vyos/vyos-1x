@@ -56,7 +56,7 @@ class BondIf(Interface):
             'location': '/sys/class/net/{ifname}/bonding/lacp_rate',
         },
         'bond_system_mac': {
-            'validate': assert_mac,
+            'validate': lambda v: assert_mac(v, test_all_zero=False),
             'location': '/sys/class/net/{ifname}/bonding/ad_actor_system',
         },
         'bond_miimon': {
