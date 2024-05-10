@@ -27,7 +27,7 @@ from vyos.utils.permission import chmod_755
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.network import is_addr_assigned
-from vyos.base import Warning
+from vyos.base import Warning, DeprecationWarning
 from vyos import ConfigError
 from vyos import airbag
 
@@ -219,6 +219,9 @@ def generate(proxy):
                 for category, list_type in cat_dict.items():
                     generate_sg_rule_localdb(category, list_type, rule, proxy)
                 check_blacklist_categorydb(rule_config_section)
+
+        DeprecationWarning('URL filtering with SquidGuard is deprecated and '
+                           'will be removed in the future VyOS versions.')
 
     return None
 
