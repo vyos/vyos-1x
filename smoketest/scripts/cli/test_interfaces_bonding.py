@@ -243,7 +243,9 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_bonding_system_mac(self):
         # configure member interfaces and system-mac
+        default_system_mac = '00:00:00:00:00:00' # default MAC is all zeroes
         system_mac = '00:50:ab:cd:ef:11'
+
         for interface in self._interfaces:
             for option in self._options.get(interface, []):
                 self.cli_set(self._base_path + [interface] + option.split())
@@ -254,8 +256,18 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
         # verify config
         for interface in self._interfaces:
-            defined_mac = read_file(f'/sys/class/net/{interface}/bonding/ad_actor_system')
-            self.assertIn(defined_mac, system_mac)
+            tmp = read_file(f'/sys/class/net/{interface}/bonding/ad_actor_system')
+            self.assertIn(tmp, system_mac)
+
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface, 'system-mac'])
+
+        self.cli_commit()
+
+        # verify default value
+        for interface in self._interfaces:
+            tmp = read_file(f'/sys/class/net/{interface}/bonding/ad_actor_system')
+            self.assertIn(tmp, default_system_mac)
 
     def test_bonding_evpn_multihoming(self):
         id = '5'
