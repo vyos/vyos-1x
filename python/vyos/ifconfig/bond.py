@@ -18,6 +18,7 @@ import os
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.assertion import assert_list
+from vyos.utils.assertion import assert_mac
 from vyos.utils.assertion import assert_positive
 
 @Interface.register
@@ -53,6 +54,10 @@ class BondIf(Interface):
         'bond_lacp_rate': {
             'validate': lambda v: assert_list(v, ['slow', 'fast']),
             'location': '/sys/class/net/{ifname}/bonding/lacp_rate',
+        },
+        'bond_system_mac': {
+            'validate': lambda v: assert_mac(v, test_all_zero=False),
+            'location': '/sys/class/net/{ifname}/bonding/ad_actor_system',
         },
         'bond_miimon': {
             'validate': assert_positive,
@@ -385,6 +390,24 @@ class BondIf(Interface):
         """
         return self.set_interface('bond_mode', mode)
 
+    def set_system_mac(self, mac):
+        """
+        In an AD system, this specifies the mac-address for the actor in
+	    protocol packet exchanges (LACPDUs). The value cannot be NULL or
+	    multicast. It is preferred to have the local-admin bit set for this
+	    mac but driver does not enforce it. If the value is not given then
+	    system defaults to using the masters' mac address as actors' system
+	    address.
+
+	    This parameter has effect only in 802.3ad mode and is available through
+	    SysFs interface.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_system_mac('00:50:ab:cd:ef:01')
+        """
+        return self.set_interface('bond_system_mac', mac)
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -426,14 +449,13 @@ class BondIf(Interface):
                     Interface(interface).set_admin_state('up')
 
             # Bonding policy/mode - default value, always present
-            mode = config.get('mode')
-            self.set_mode(mode)
+            self.set_mode(config['mode'])
 
             # LACPDU transmission rate - default value
-            if mode == '802.3ad':
+            if config['mode'] == '802.3ad':
                 self.set_lacp_rate(config.get('lacp_rate'))
 
-            if mode not in ['802.3ad', 'balance-tlb', 'balance-alb']:
+            if config['mode'] not in ['802.3ad', 'balance-tlb', 'balance-alb']:
                 tmp = dict_search('arp_monitor.interval', config)
                 value = tmp if (tmp != None) else '0'
                 self.set_arp_interval(value)
@@ -467,6 +489,14 @@ class BondIf(Interface):
                 # any remaining ones
                 Interface(interface).flush_addrs()
                 self.add_port(interface)
+
+        # Add system mac address for 802.3ad - default address is all zero
+        # mode is always present (defaultValue)
+        if config['mode'] == '802.3ad':
+            mac = '00:00:00:00:00:00'
+            if 'system_mac' in config:
+                mac = config['system_mac']
+            self.set_system_mac(mac)
 
         # Primary device interface - must be set after 'mode'
         value = config.get('primary')
