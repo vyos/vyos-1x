@@ -72,6 +72,15 @@
           <help>Set system operational parameters</help>
         </properties>
         <children>
+          <tagNode name="boot-console">
+            <properties>
+              <help>Set system console type at boot</help>
+              <completionHelp>
+                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list_console_types</script>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set_console_type --console-type "${4}"</command>
+          </tagNode>
           <node name="image">
             <properties>
               <help>Set system image parameters</help>
