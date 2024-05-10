@@ -21,7 +21,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from shutil import rmtree
 from sys import exit
-from typing import Optional
+from typing import Optional, Literal, TypeAlias, get_args
 
 from vyos.system import disk, grub, image, compat
 from vyos.utils.io import ask_yes_no, select_entry
@@ -32,6 +32,8 @@ DELETE_IMAGE_LIST_MSG: str = 'The following images are installed:'
 DELETE_IMAGE_PROMPT_MSG: str = 'Select an image to delete:'
 MSG_DELETE_IMAGE_RUNNING: str = 'Currently running image cannot be deleted; reboot into another image first'
 MSG_DELETE_IMAGE_DEFAULT: str = 'Default image cannot be deleted; set another image as default first'
+
+ConsoleType: TypeAlias = Literal['tty', 'ttyS']
 
 def annotate_list(images_list: list[str]) -> list[str]:
     """Annotate list of images with additional info
@@ -202,11 +204,27 @@ def rename_image(name_old: str, name_new: str) -> None:
             exit(f'Unable to rename the encrypted config for "{name_old}" to "{name_new}": {err}')
 
 
+@compat.grub_cfg_update
+def set_console_type(console_type: ConsoleType) -> None:
+    console_choice = get_args(ConsoleType)
+    if console_type not in console_choice:
+        exit(f'console type \'{console_type}\' not available')
+
+    grub.set_console_type(console_type)
+
+
 def list_images() -> None:
     """Print list of available images for CLI hints"""
     images_list: list[str] = grub.version_list()
     for image_name in images_list:
         print(image_name)
+
+
+def list_console_types() -> None:
+    """Print list of console types for CLI hints"""
+    console_types: list[str] = list(get_args(ConsoleType))
+    for console_type in console_types:
+        print(console_type)
 
 
 def parse_arguments() -> Namespace:
@@ -217,7 +235,8 @@ def parse_arguments() -> Namespace:
     """
     parser: ArgumentParser = ArgumentParser(description='Manage system images')
     parser.add_argument('--action',
-                        choices=['delete', 'set', 'rename', 'list'],
+                        choices=['delete', 'set', 'set_console_type',
+                                 'rename', 'list', 'list_console_types'],
                         required=True,
                         help='action to perform with an image')
     parser.add_argument('--no-prompt', action='store_true',
@@ -227,6 +246,7 @@ def parse_arguments() -> Namespace:
         help=
         'a name of an image to add, delete, install, rename, or set as default')
     parser.add_argument('--image-new-name', help='a new name for image')
+    parser.add_argument('--console-type', help='console type for boot')
     args: Namespace = parser.parse_args()
     # Validate arguments
     if args.action == 'rename' and (not args.image_name or
@@ -243,10 +263,14 @@ if __name__ == '__main__':
             delete_image(args.image_name, args.no_prompt)
         if args.action == 'set':
             set_image(args.image_name)
+        if args.action == 'set_console_type':
+            set_console_type(args.console_type)
         if args.action == 'rename':
             rename_image(args.image_name, args.image_new_name)
         if args.action == 'list':
             list_images()
+        if args.action == 'list_console_types':
+            list_console_types()
 
         exit()
 

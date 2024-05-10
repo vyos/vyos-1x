@@ -14,8 +14,6 @@
     KVM
 {%- elif type == 'ttyS' -%}
     Serial
-{%- elif type == 'ttyUSB' -%}
-    USB
 {%- else -%}
     Unknown
 {%- endif %}
@@ -25,8 +23,6 @@
     console=ttyS0,{{ console_speed }} console=tty0
 {%- elif type == 'ttyS' -%}
     console=tty0 console=ttyS0,{{ console_speed }}
-{%- elif type == 'ttyUSB' -%}
-    console=tty0 console=ttyUSB0,115200
 {%- else -%}
     console=tty0 console=ttyS0,{{ console_speed }}
 {%- endif %}
