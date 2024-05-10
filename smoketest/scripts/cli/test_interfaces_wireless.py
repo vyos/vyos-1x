@@ -236,6 +236,17 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         self.assertIn(interface, bridge_members)
 
+        # Now generate a VLAN on the bridge
+        self.cli_set(bridge_path + ['enable-vlan'])
+        self.cli_set(bridge_path + ['vif', '20', 'address', '10.0.0.1/24'])
+
+        self.cli_commit()
+
+        tmp = get_config_value(interface, 'bridge')
+        self.assertEqual(tmp, bridge)
+        tmp = get_config_value(interface, 'wds_sta')
+        self.assertEqual(tmp, '1')
+
         self.cli_delete(bridge_path)
 
     def test_wireless_security_station_address(self):

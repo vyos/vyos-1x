@@ -11,7 +11,8 @@
         "ethernet": ["interfaces_ethernet"]
     },
     "interfaces_bridge": {
-        "vxlan": ["interfaces_vxlan"]
+        "vxlan": ["interfaces_vxlan"],
+        "wlan": ["interfaces_wireless"]
     },
     "load_balancing_wan": {
         "conntrack": ["system_conntrack"]
