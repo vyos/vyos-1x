@@ -220,14 +220,8 @@ def get_default(data: dict, root_dir: str = '') -> Union[int, None]:
 
     sublist = list(filter(lambda x: (x.get('version') == image_name and
                                      x.get('console_type') == console_type and
-                                     x.get('console_num') == console_num and
                                      x.get('bootmode') == 'normal'),
                           menu_entries))
-    # legacy images added with legacy tools omitted 'ttyUSB'; if entry not
-    # available, default to initial entry of version
-    if not sublist:
-        sublist = list(filter(lambda x: x.get('version') == image_name,
-                              menu_entries))
 
     if sublist:
         return menu_entries.index(sublist[0])
@@ -268,7 +262,9 @@ def update_version_list(root_dir: str = '') -> list[dict]:
     add = list(set(current_versions) - set(menu_versions))
     for ver in add:
         last = menu_entries[0].get('version')
-        new = deepcopy(list(filter(lambda x: x.get('version') == last,
+        # copy legacy format of menu entries; ignore deprecated ttyUSB
+        new = deepcopy(list(filter(lambda x: (x.get('version') == last and
+                                              x.get('console_type') != 'ttyUSB'),
                                    menu_entries)))
         for e in new:
             boot_opts = grub.get_boot_opts(ver)
