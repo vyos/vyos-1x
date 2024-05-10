@@ -725,7 +725,7 @@ def install_image() -> None:
 
     # ask for default console
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
-                                  default='K',
+                                  default=console_hint(),
                                   valid_responses=['K', 'S'])
     console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS'}
 
