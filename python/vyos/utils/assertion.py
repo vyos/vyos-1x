@@ -53,7 +53,7 @@ def assert_mtu(mtu, ifname):
     if (max_mtu and cur_mtu > max_mtu) or cur_mtu > 65536:
         raise ValueError(f'MTU is too small for interface "{ifname}": {mtu} > {max_mtu}')
 
-def assert_mac(m):
+def assert_mac(m, test_all_zero=True):
     split = m.split(':')
     size = len(split)
 
@@ -74,7 +74,7 @@ def assert_mac(m):
         raise ValueError(f'{m} is a multicast MAC address')
 
     # overall mac address is not allowed to be 00:00:00:00:00:00
-    if sum(octets) == 0:
+    if test_all_zero and sum(octets) == 0:
         raise ValueError('00:00:00:00:00:00 is not a valid MAC address')
 
     if octets[:5] == (0, 0, 94, 0, 1):
