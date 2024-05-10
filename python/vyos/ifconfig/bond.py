@@ -449,18 +449,13 @@ class BondIf(Interface):
                     Interface(interface).set_admin_state('up')
 
             # Bonding policy/mode - default value, always present
-            mode = config.get('mode')
-            self.set_mode(mode)
+            self.set_mode(config['mode'])
 
             # LACPDU transmission rate - default value
-            if mode == '802.3ad':
+            if config['mode'] == '802.3ad':
                 self.set_lacp_rate(config.get('lacp_rate'))
 
-            # Add system mac address for 802.3ad
-            if mode == '802.3ad' and 'system_mac' in config:
-                self.set_system_mac(config.get('system_mac'))
-
-            if mode not in ['802.3ad', 'balance-tlb', 'balance-alb']:
+            if config['mode'] not in ['802.3ad', 'balance-tlb', 'balance-alb']:
                 tmp = dict_search('arp_monitor.interval', config)
                 value = tmp if (tmp != None) else '0'
                 self.set_arp_interval(value)
@@ -494,6 +489,14 @@ class BondIf(Interface):
                 # any remaining ones
                 Interface(interface).flush_addrs()
                 self.add_port(interface)
+
+        # Add system mac address for 802.3ad - default address is all zero
+        # mode is always present (defaultValue)
+        if config['mode'] == '802.3ad':
+            mac = '00:00:00:00:00:00'
+            if 'system_mac' in config:
+                mac = config['system_mac']
+            self.set_system_mac(mac)
 
         # Primary device interface - must be set after 'mode'
         value = config.get('primary')
