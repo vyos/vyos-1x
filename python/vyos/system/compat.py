@@ -247,6 +247,10 @@ def update_version_list(root_dir: str = '') -> list[dict]:
     menu_entries = parse_menuentries(grub_cfg_main)
     menu_versions = find_versions(menu_entries)
 
+    # remove deprecated console-type ttyUSB
+    menu_entries = list(filter(lambda x: x.get('console_type') != 'ttyUSB',
+                               menu_entries))
+
     # get list of versions added/removed by image-tools
     current_versions = grub.version_list(root_dir)
 
@@ -262,9 +266,7 @@ def update_version_list(root_dir: str = '') -> list[dict]:
     add = list(set(current_versions) - set(menu_versions))
     for ver in add:
         last = menu_entries[0].get('version')
-        # copy legacy format of menu entries; ignore deprecated ttyUSB
-        new = deepcopy(list(filter(lambda x: (x.get('version') == last and
-                                              x.get('console_type') != 'ttyUSB'),
+        new = deepcopy(list(filter(lambda x: x.get('version') == last,
                                    menu_entries)))
         for e in new:
             boot_opts = grub.get_boot_opts(ver)
