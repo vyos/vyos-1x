@@ -102,12 +102,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="uplink">
-                <properties>
-                  <help>Uplink to the VXLAN core</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/interface/evpn-mh-uplink.xml.i>
             </children>
           </node>
           <leafNode name="hash-policy">
