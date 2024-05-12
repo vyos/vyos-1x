@@ -531,7 +531,7 @@ def show_firewall_group(name=None):
                             continue
 
                         for idx, member in enumerate(members):
-                            if type(member) == str:
+                            if isinstance(member, str):
                                 # Only member, and no timeout:
                                 val = member
                                 timeout = "N/D"
