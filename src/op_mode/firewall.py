@@ -531,9 +531,15 @@ def show_firewall_group(name=None):
                             continue
 
                         for idx, member in enumerate(members):
-                            val = member.get('val', 'N/D')
-                            timeout = str(member.get('timeout', 'N/D'))
-                            expires = str(member.get('expires', 'N/D'))
+                            if isinstance(member, str):
+                                # Only member, and no timeout:
+                                val = member
+                                timeout = "N/D"
+                                expires = "N/D"
+                            else:
+                                val = member.get('val', 'N/D')
+                                timeout = str(member.get('timeout', 'N/D'))
+                                expires = str(member.get('expires', 'N/D'))
 
                             if args.detail:
                                 row.append(f'{val} (timeout: {timeout}, expires: {expires})')
