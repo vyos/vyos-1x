@@ -354,5 +354,15 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 out = loads(out)
                 self.assertFalse(out[0]['autonegotiate'])
 
+    def test_ethtool_evpn_uplink_tarcking(self):
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'evpn', 'uplink'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon='zebra')
+            self.assertIn(f' evpn mh uplink', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

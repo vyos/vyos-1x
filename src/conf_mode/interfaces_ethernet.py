@@ -41,6 +41,7 @@ from vyos.pki import encode_certificate
 from vyos.pki import load_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
+from vyos.template import render_to_string
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
@@ -48,6 +49,7 @@ from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
 from vyos.utils.file import write_file
 from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -389,6 +391,10 @@ def generate(ethernet):
 
             write_file(ca_cert_file_path, '\n'.join(ca_chains))
 
+    ethernet['frr_zebra_config'] = ''
+    if 'deleted' not in ethernet:
+        ethernet['frr_zebra_config'] = render_to_string('frr/evpn.mh.frr.j2', ethernet)
+
     return None
 
 def apply(ethernet):
@@ -406,6 +412,17 @@ def apply(ethernet):
             eapol_action='reload-or-restart'
 
     call(f'systemctl {eapol_action} wpa_supplicant-wired@{ifname}')
+
+    zebra_daemon = 'zebra'
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(f'^interface {ifname}', stop_pattern='^exit', remove_stop_mark=True)
+    if 'frr_zebra_config' in ethernet:
+        frr_cfg.add_before(frr.default_add_before, ethernet['frr_zebra_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
 
 if __name__ == '__main__':
     try:
