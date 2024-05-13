@@ -1546,11 +1546,11 @@
                     <properties>
                       <help>Set prefixes to table</help>
                       <valueHelp>
-                        <format>u32:1-200</format>
+                        <format>u32:1-4294967295</format>
                         <description>Table value</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="numeric" argument="--range 1-200"/>
+                        <validator name="numeric" argument="--range 1-4294967295"/>
                       </constraint>
                     </properties>
                   </leafNode>
