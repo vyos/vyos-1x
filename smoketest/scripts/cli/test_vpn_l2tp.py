@@ -95,6 +95,29 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         self.cli_set(base_path + ['authentication', 'protocols', 'chap'])
         self.cli_commit()
 
+    def test_l2tp_radius_server(self):
+        base_path = ['vpn', 'l2tp', 'remote-access']
+        radius_server = "192.0.2.22"
+        radius_key = "secretVyOS"
+
+        self.cli_set(base_path + ['authentication', 'mode', 'radius'])
+        self.cli_set(base_path + ['gateway-address', '192.0.2.1'])
+        self.cli_set(base_path + ['client-ip-pool', 'SIMPLE-POOL', 'range', '192.0.2.0/24'])
+        self.cli_set(base_path + ['default-pool', 'SIMPLE-POOL'])
+        self.cli_set(base_path + ['authentication', 'radius', 'server', radius_server, 'key', radius_key])
+        self.cli_set(base_path + ['authentication', 'radius', 'server', radius_server, 'priority', '10'])
+        self.cli_set(base_path + ['authentication', 'radius', 'server', radius_server, 'backup'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Validate configuration values
+        conf = ConfigParser(allow_no_value=True)
+        conf.read(self._config_file)
+        server = conf["radius"]["server"].split(",")
+        self.assertIn('weight=10', server)
+        self.assertIn('backup', server)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
