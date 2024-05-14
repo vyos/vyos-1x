@@ -16,6 +16,7 @@
 
 import unittest
 
+from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
@@ -479,6 +480,8 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         # Commit main OSPF changes
         self.cli_commit()
+
+        sleep(10)
 
         # Verify main OSPF changes
         frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
