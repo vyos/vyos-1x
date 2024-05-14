@@ -196,9 +196,6 @@ Depends:
   snmp,
   snmpd,
 # End "service snmp"
-# For "service upnp"
-  miniupnpd-nftables,
-# End "service upnp"
 # For "service webproxy"
   squid,
   squidclient,
