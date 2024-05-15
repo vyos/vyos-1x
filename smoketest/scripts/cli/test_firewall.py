@@ -236,6 +236,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '6', 'protocol', 'icmp'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '6', 'connection-mark', conn_mark])
 
+        self.cli_set(['firewall', 'ipv4', 'output', 'raw', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'raw', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'raw', 'rule', '1', 'protocol', 'udp'])
+
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'destination', 'port', '23'])
+
         self.cli_commit()
 
         mark_hex = "{0:#010x}".format(int(conn_mark))
@@ -256,6 +264,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['meta l4proto gre', f'oifname != "{interface}"', 'drop'],
             ['meta l4proto icmp', f'ct mark {mark_hex}', 'return'],
             ['log prefix "[ipv4-OUT-filter-default-D]"','OUT-filter default-action drop', 'drop'],
+            ['chain VYOS_OUTPUT_raw'],
+            ['type filter hook output priority raw; policy accept;'],
+            ['udp', 'accept'],
+            ['OUT-raw default-action drop', 'drop'],
+            ['chain VYOS_PREROUTING_raw'],
+            ['type filter hook prerouting priority raw; policy accept;'],
+            ['tcp dport 23', 'drop'],
+            ['PRE-raw default-action accept', 'accept'],
             ['chain NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[ipv4-NAM-smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
@@ -446,16 +462,24 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'destination', 'port', '8888'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'inbound-interface', 'name', interface])
 
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'protocol', 'udp'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'source', 'address', '2002::1:2'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'inbound-interface', 'name', interface])
+
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'default-log'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'action', 'return'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'outbound-interface', 'name', interface])
 
-        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'protocol', 'udp'])
-        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'source', 'address', '2002::1:2'])
-        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'inbound-interface', 'name', interface])
+        self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'rule', '1', 'protocol', 'udp'])
+
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'destination', 'port', '23'])
 
         self.cli_commit()
 
@@ -472,6 +496,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['type filter hook output priority filter; policy accept;'],
             ['meta l4proto gre', f'oifname "{interface}"', 'return'],
             ['log prefix "[ipv6-OUT-filter-default-D]"','OUT-filter default-action drop', 'drop'],
+            ['chain VYOS_IPV6_OUTPUT_raw'],
+            ['type filter hook output priority raw; policy accept;'],
+            ['udp', 'accept'],
+            ['OUT-raw default-action drop', 'drop'],
+            ['chain VYOS_IPV6_PREROUTING_raw'],
+            ['type filter hook prerouting priority raw; policy accept;'],
+            ['tcp dport 23', 'drop'],
+            ['PRE-raw default-action accept', 'accept'],
             [f'chain NAME6_{name}'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
             [f'"{name} default-action drop"', f'log prefix "[ipv6-{name}-default-D]"', 'drop'],

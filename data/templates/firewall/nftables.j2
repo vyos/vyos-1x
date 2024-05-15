@@ -57,7 +57,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('FWD-filter', 'ipv4') }}
+        {{ conf | nft_default_rule('FWD-' + prior, 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -77,7 +77,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('INP-filter', 'ipv4') }}
+        {{ conf | nft_default_rule('INP-' + prior, 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -97,14 +97,11 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('OUT-filter', 'ipv4') }}
+        {{ conf | nft_default_rule('OUT-' + prior, 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
-    chain VYOS_FRAG_MARK {
-        type filter hook prerouting priority -450; policy accept;
-        ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
-    }
+
 {%     if ipv4.prerouting is vyos_defined %}
 {%         for prior, conf in ipv4.prerouting.items() %}
     chain VYOS_PREROUTING_{{ prior }} {
@@ -117,10 +114,15 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('PRE-filter', 'ipv4') }}
+        {{ conf | nft_default_rule('PRE-' + prior, 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
+
+    chain VYOS_FRAG_MARK {
+        type filter hook prerouting priority -450; policy accept;
+        ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
+    }
 
 {%     if ipv4.name is vyos_defined %}
 {%         for name_text, conf in ipv4.name.items() %}
@@ -202,13 +204,13 @@ table ip6 vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('FWD', prior, rule_id ,'ip6') }}
+        {{ rule_conf | nft_rule('FWD', prior, rule_id, 'ip6') }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['FWD_' + prior + '_' + rule_id] %}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('FWD-filter', 'ipv6') }}
+        {{ conf | nft_default_rule('FWD-' + prior, 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -222,13 +224,13 @@ table ip6 vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('INP', prior, rule_id ,'ip6') }}
+        {{ rule_conf | nft_rule('INP', prior, rule_id, 'ip6') }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['INP_' + prior + '_' + rule_id] %}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('INP-filter', 'ipv6') }}
+        {{ conf | nft_default_rule('INP-' + prior, 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -242,17 +244,33 @@ table ip6 vyos_filter {
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule('OUT', prior, rule_id ,'ip6') }}
+        {{ rule_conf | nft_rule('OUT', prior, rule_id, 'ip6') }}
 {%                     if rule_conf.recent is vyos_defined %}
 {%                         set ns.sets = ns.sets + ['OUT_ ' + prior + '_' + rule_id] %}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('OUT-filter', 'ipv6') }}
+        {{ conf | nft_default_rule('OUT-' + prior, 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
 
+{%     if ipv6.prerouting is vyos_defined %}
+{%         for prior, conf in ipv6.prerouting.items() %}
+    chain VYOS_IPV6_PREROUTING_{{ prior }} {
+        type filter hook prerouting priority {{ prior }}; policy accept;
+{%             if conf.rule is vyos_defined %}
+{%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+        {{ rule_conf | nft_rule('PRE', prior, rule_id, 'ip6') }}
+{%                     if rule_conf.recent is vyos_defined %}
+{%                         set ns.sets = ns.sets + ['PRE_' + prior + '_' + rule_id] %}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
+        {{ conf | nft_default_rule('PRE-' + prior, 'ipv6') }}
+    }
+{%         endfor %}
+{%     endif %}
     chain VYOS_FRAG6_MARK {
         type filter hook prerouting priority -450; policy accept;
         exthdr frag exists meta mark set 0xffff1 return

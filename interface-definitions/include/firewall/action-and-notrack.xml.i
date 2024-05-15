@@ -3,11 +3,15 @@
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept jump notrack reject return drop queue</list>
+      <list>accept continue jump notrack reject return drop queue</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
       <description>Accept matching entries</description>
+    </valueHelp>
+    <valueHelp>
+      <format>continue</format>
+      <description>Continue parsing next rule</description>
     </valueHelp>
     <valueHelp>
       <format>jump</format>
@@ -34,7 +38,7 @@
       <description>Igone connection tracking</description>
     </valueHelp>
     <constraint>
-      <regex>(accept|jump|notrack|reject|return|drop|queue)</regex>
+      <regex>(accept|continue|jump|notrack|reject|return|drop|queue)</regex>
     </constraint>
   </properties>
 </leafNode>

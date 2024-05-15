@@ -3,75 +3,9 @@
 #include <include/generic-description.xml.i>
 #include <include/firewall/firewall-mark.xml.i>
 #include <include/generic-disable-node.xml.i>
-<node name="fragment">
-  <properties>
-    <help>IP fragment match</help>
-  </properties>
-  <children>
-    <leafNode name="match-frag">
-      <properties>
-        <help>Second and further fragments of fragmented packets</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-    <leafNode name="match-non-frag">
-      <properties>
-        <help>Head fragments or unfragmented packets</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
-<node name="ipsec">
-  <properties>
-    <help>Inbound IPsec packets</help>
-  </properties>
-  <children>
-    <leafNode name="match-ipsec">
-      <properties>
-        <help>Inbound IPsec packets</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-    <leafNode name="match-none">
-      <properties>
-        <help>Inbound non-IPsec packets</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
-<node name="limit">
-  <properties>
-    <help>Rate limit using a token bucket filter</help>
-  </properties>
-  <children>
-    <leafNode name="burst">
-      <properties>
-        <help>Maximum number of packets to allow in excess of rate</help>
-        <valueHelp>
-          <format>u32:0-4294967295</format>
-          <description>Maximum number of packets to allow in excess of rate</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="rate">
-      <properties>
-        <help>Maximum average matching rate</help>
-        <valueHelp>
-          <format>u32:0-4294967295</format>
-          <description>Maximum average matching rate</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
-        </constraint>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/firewall/fragment.xml.i>
+#include <include/firewall/match-ipsec.xml.i>
+#include <include/firewall/limit.xml.i>
 #include <include/firewall/log.xml.i>
 <leafNode name="protocol">
   <properties>

@@ -378,6 +378,7 @@
           #include <include/firewall/ipv4-hook-forward.xml.i>
           #include <include/firewall/ipv4-hook-input.xml.i>
           #include <include/firewall/ipv4-hook-output.xml.i>
+          #include <include/firewall/ipv4-hook-prerouting.xml.i>
           #include <include/firewall/ipv4-custom-name.xml.i>
         </children>
       </node>
@@ -389,6 +390,7 @@
           #include <include/firewall/ipv6-hook-forward.xml.i>
           #include <include/firewall/ipv6-hook-input.xml.i>
           #include <include/firewall/ipv6-hook-output.xml.i>
+          #include <include/firewall/ipv6-hook-prerouting.xml.i>
           #include <include/firewall/ipv6-custom-name.xml.i>
         </children>
       </node>

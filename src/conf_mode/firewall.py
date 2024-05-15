@@ -351,7 +351,7 @@ def verify(firewall):
                     verify_nested_group(group_name, group, groups, [])
 
     if 'ipv4' in firewall:
-        for name in ['name','forward','input','output']:
+        for name in ['name','forward','input','output', 'prerouting']:
             if name in firewall['ipv4']:
                 for name_id, name_conf in firewall['ipv4'][name].items():
                     if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
@@ -371,7 +371,7 @@ def verify(firewall):
                             verify_rule(firewall, rule_conf, False)
 
     if 'ipv6' in firewall:
-        for name in ['name','forward','input','output']:
+        for name in ['name','forward','input','output', 'prerouting']:
             if name in firewall['ipv6']:
                 for name_id, name_conf in firewall['ipv6'][name].items():
                     if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
