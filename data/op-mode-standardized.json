@@ -9,6 +9,7 @@
 "cpu.py",
 "dhcp.py",
 "dns.py",
+"evpn.py",
 "interfaces.py",
 "ipsec.py",
 "lldp.py",
