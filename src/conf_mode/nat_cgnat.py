@@ -203,6 +203,11 @@ def verify(config):
                     f'Range for "{pool} pool {pool_name}" must be defined!'
                 )
 
+    external_pools_query = "keys(pool.external)"
+    external_pools: list = jmespath.search(external_pools_query, config)
+    internal_pools_query = "keys(pool.internal)"
+    internal_pools: list = jmespath.search(internal_pools_query, config)
+
     for rule, rule_config in config['rule'].items():
         if 'source' not in rule_config:
             raise ConfigError(f'Rule "{rule}" source pool must be defined!')
@@ -211,6 +216,14 @@ def verify(config):
 
         if 'translation' not in rule_config:
             raise ConfigError(f'Rule "{rule}" translation pool must be defined!')
+
+        internal_pool = rule_config['source']['pool']
+        if internal_pool not in internal_pools:
+            raise ConfigError(f'Internal pool "{internal_pool}" does not exist!')
+
+        external_pool = rule_config['translation']['pool']
+        if external_pool not in external_pools:
+            raise ConfigError(f'External pool "{external_pool}" does not exist!')
 
 
 def generate(config):
