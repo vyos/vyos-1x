@@ -14,7 +14,7 @@
             <children>
               #include <include/frr-detail.xml.i>
             </children>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
           </node>
           <tagNode name="access-vlan">
             <properties>
@@ -31,7 +31,7 @@
                     <list>&lt;1-4094&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
               </node>
             </children>
           </tagNode>
@@ -41,6 +41,45 @@
             </properties>
             <children>
               #include <include/vni-tagnode-all.xml.i>
+            </children>
+          </node>
+          <tagNode name="es">
+            <properties>
+              <help>Show ESI information for specified ESI</help>
+              <completionHelp>
+                <list>&lt;esi&gt;</list>
+                <script>${vyos_completion_dir}/list_esi.sh</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+          </tagNode>
+          <node name="es">
+            <properties>
+              <help>Show ESI information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show ESI details</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="es-evi">
+            <properties>
+              <help>Show ESI information per EVI</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show ESI per EVI details</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+              </leafNode>
+              #include <include/vni-tagnode.xml.i>
             </children>
           </node>
           <node name="mac">
@@ -67,7 +106,23 @@
               #include <include/vni-tagnode-all.xml.i>
             </children>
           </node>
+          #include <include/vni-tagnode.xml.i>
+          <node name="vni">
+            <properties>
+              <help>Show VNI information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show VNI details</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
+        <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
       </node>
     </children>
   </node>
