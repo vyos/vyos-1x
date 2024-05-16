@@ -57,6 +57,13 @@
           </properties>
           <defaultValue>0</defaultValue>
         </leafNode>
+        #include <include/radius-priority.xml.i>
+        <leafNode name="backup">
+          <properties>
+            <help>Use backup server if other servers are not available</help>
+            <valueless/>
+          </properties>
+        </leafNode>
       </children>
     </tagNode>
     <leafNode name="timeout">
