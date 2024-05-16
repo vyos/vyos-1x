@@ -3,6 +3,7 @@
 "bgp.py",
 "bonding.py",
 "bridge.py",
+"cgnat.py",
 "config_mgmt.py",
 "conntrack.py",
 "container.py",
