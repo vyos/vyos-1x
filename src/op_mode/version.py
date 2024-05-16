@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2016-2022 VyOS maintainers and contributors
+# Copyright (C) 2016-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -30,11 +30,15 @@ from jinja2 import Template
 version_output_tmpl = """
 Version:          VyOS {{version}}
 Release train:    {{release_train}}
+Release flavor:   {{flavor}}
 
 Built by:         {{built_by}}
 Built on:         {{built_on}}
 Build UUID:       {{build_uuid}}
 Build commit ID:  {{build_git}}
+{%- if build_comment %}
+Build comment:    {{build_comment}}
+{% endif %}
 
 Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
