@@ -367,6 +367,27 @@ class BasicAccelPPPTest:
                 ]
             )
 
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "server",
+                    radius_server,
+                    "backup",
+                ]
+            )
+
+            self.set(
+                [
+                    "authentication",
+                    "radius",
+                    "server",
+                    radius_server,
+                    "priority",
+                    "10",
+                ]
+            )
+
             # commit changes
             self.cli_commit()
 
@@ -379,6 +400,8 @@ class BasicAccelPPPTest:
             self.assertEqual(f"acct-port=0", server[3])
             self.assertEqual(f"req-limit=0", server[4])
             self.assertEqual(f"fail-time=0", server[5])
+            self.assertIn('weight=10', server)
+            self.assertIn('backup', server)
 
         def test_accel_ipv4_pool(self):
             self.basic_config(is_gateway=False, is_client_pool=False)
