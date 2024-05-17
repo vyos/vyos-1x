@@ -8,5 +8,6 @@ set container name c01 capability 'net-bind-service'
 set container name c01 capability 'net-raw'
 set container name c01 image 'busybox:stable'
 set container name c02 allow-host-networks
+set container name c02 allow-host-pid
 set container name c02 capability 'sys-time'
 set container name c02 image 'busybox:stable'
