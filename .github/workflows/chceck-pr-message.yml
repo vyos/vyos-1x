@@ -1,0 +1,14 @@
+---
+name: Check pull request message format
+
+on:
+  pull_request:
+    branches:
+      - current
+      - crux
+      - equuleus
+
+jobs:
+  check-pr-title:
+    uses: vyos/.github/.github/workflows/check-pr-message.yml@current
+    secrets: inherit

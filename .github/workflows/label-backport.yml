@@ -1,0 +1,8 @@
+name: Mergifyio backport
+
+on: [issue_comment]
+
+jobs:
+  mergifyio_backport:
+    uses: vyos/.github/.github/workflows/label-backport.yml@current
+    secrets: inherit
