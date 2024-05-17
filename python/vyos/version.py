@@ -33,11 +33,11 @@ import os
 
 import requests
 import vyos.defaults
+from vyos.system.image import is_live_boot
 
 from vyos.utils.file import read_file
 from vyos.utils.file import read_json
 from vyos.utils.process import popen
-from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
 
 version_file = os.path.join(vyos.defaults.directories['data'], 'version.json')
@@ -85,7 +85,7 @@ def get_full_version_data(fname=version_file):
     # In installed images, the squashfs image file is named after its image version,
     # while on livecd it's just "filesystem.squashfs", that's how we tell a livecd boot
     # from an installed image
-    if run(""" grep -e '^overlay.*/filesystem.squashfs' /proc/mounts >/dev/null """) == 0:
+    if is_live_boot():
         boot_via = "livecd"
     else:
         boot_via = "installed image"
