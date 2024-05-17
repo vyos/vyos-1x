@@ -7,5 +7,5 @@ on:
 
 jobs:
   Check-Unused-Imports:
-    uses: vyos/.github/.github/workflows/check-unused-imports.yml@current
+    uses: vyos/.github/.github/workflows/check-unused-imports.yml@feature/T6349-reusable-workflows
     secrets: inherit

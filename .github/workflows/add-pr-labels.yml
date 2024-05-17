@@ -11,5 +11,5 @@ on:
 
 jobs:
   add-pr-label:
-    uses: vyos/.github/.github/workflows/add-pr-labels.yml@current
+    uses: vyos/.github/.github/workflows/add-pr-labels.yml@feature/T6349-reusable-workflows
     secrets: inherit
