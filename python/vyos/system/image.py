@@ -18,8 +18,9 @@ from re import compile as re_compile
 from functools import wraps
 from tempfile import TemporaryDirectory
 from typing import TypedDict
+from json import loads
 
-from vyos import version
+from vyos.defaults import directories
 from vyos.system import disk, grub
 
 # Define variables
@@ -201,9 +202,12 @@ def get_running_image() -> str:
     if running_image_result:
         running_image: str = running_image_result.groupdict().get(
             'image_version', '')
-    # we need to have a fallback for live systems
+    # we need to have a fallback for live systems:
+    # explicit read from version file
     if not running_image:
-        running_image: str = version.get_version()
+        json_data: str = Path(directories['data']).joinpath('version.json').read_text()
+        dict_data: dict = loads(json_data)
+        running_image: str = dict_data['version']
 
     return running_image
 
