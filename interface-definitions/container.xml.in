@@ -15,9 +15,15 @@
           <constraintErrorMessage>Container name must be alphanumeric and can contain hyphens</constraintErrorMessage>
         </properties>
         <children>
+          <leafNode name="allow-host-pid">
+            <properties>
+              <help>Allow sharing host process namespace with container</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="allow-host-networks">
             <properties>
-              <help>Allow host networks in container</help>
+              <help>Allow sharing host networking with container</help>
               <valueless/>
             </properties>
           </leafNode>

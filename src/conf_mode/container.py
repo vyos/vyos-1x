@@ -329,9 +329,13 @@ def generate_run_arguments(name, container_config):
             prop = vol_config['propagation']
             volume += f' --volume {svol}:{dvol}:{mode},{prop}'
 
+    host_pid = ''
+    if 'allow_host_pid' in container_config:
+      host_pid = '--pid host'
+
     container_base_cmd = f'--detach --interactive --tty --replace {capabilities} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid}'
+                         f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid} {host_pid}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:
