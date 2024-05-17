@@ -7,6 +7,19 @@
           <help>Show IPv4 Network Address Translation (NAT) information</help>
         </properties>
         <children>
+          <node name="cgnat">
+            <properties>
+              <help>Show Carrier-Grade Network Address Translation (CGNAT)</help>
+            </properties>
+            <children>
+              <node name="allocation">
+                <properties>
+                  <help>Show allocated CGNAT parameters</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation</command>
+              </node>
+            </children>
+          </node>
           <node name="source">
             <properties>
               <help>Show source IPv4 to IPv4 Network Address Translation (NAT) information</help>
