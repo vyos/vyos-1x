@@ -219,8 +219,8 @@ def generate(config):
     # first external pool as we allow only one as PoC
     ext_pool_name = jmespath.search("rule.*.translation | [0]", config).get('pool')
     int_pool_name = jmespath.search("rule.*.source | [0]", config).get('pool')
-    ext_query = f"pool.external.{ext_pool_name}.range | keys(@)"
-    int_query = f"pool.internal.{int_pool_name}.range"
+    ext_query = f'pool.external."{ext_pool_name}".range | keys(@)'
+    int_query = f'pool.internal."{int_pool_name}".range'
     external_ranges = jmespath.search(ext_query, config)
     internal_ranges = [jmespath.search(int_query, config)]
 
@@ -246,10 +246,10 @@ def generate(config):
     external_host_count = sum(external_list_count)
     internal_host_count = sum(internal_list_count)
     ports_per_user = int(
-        jmespath.search(f'pool.external.{ext_pool_name}.per_user_limit.port', config)
+        jmespath.search(f'pool.external."{ext_pool_name}".per_user_limit.port', config)
     )
     external_port_range: str = jmespath.search(
-        f'pool.external.{ext_pool_name}.external_port_range', config
+        f'pool.external."{ext_pool_name}".external_port_range', config
     )
 
     proto_maps, other_maps = generate_port_rules(
