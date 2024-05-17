@@ -339,11 +339,6 @@ def generate_run_arguments(name, container_config):
         entrypoint = json_write(container_config['entrypoint'].split()).replace('"', "&quot;")
         entrypoint = f'--entrypoint &apos;{entrypoint}&apos;'
 
-    hostname = ''
-    if 'host_name' in container_config:
-        hostname = container_config['host_name']
-        hostname = f'--hostname {hostname}'
-
     command = ''
     if 'command' in container_config:
         command = container_config['command'].strip()
