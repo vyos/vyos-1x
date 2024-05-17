@@ -6,6 +6,7 @@
       <node name="igmp" owner="${vyos_conf_scripts_dir}/protocols_igmp.py">
         <properties>
           <help>Internet Group Management Protocol (IGMP)</help>
+          <priority>400</priority>
         </properties>
         <children>
           <tagNode name="interface">
