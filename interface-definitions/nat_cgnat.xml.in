@@ -123,6 +123,7 @@
                         <validator name="ipv4-host"/>
                         <validator name="ipv4-range"/>
                       </constraint>
+                      <multi/>
                     </properties>
                   </leafNode>
                 </children>

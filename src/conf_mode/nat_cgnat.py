@@ -253,7 +253,7 @@ def generate(config):
         int_pool_name: str = rule_config['source']['pool']
 
         external_ranges: list = [range for range in config['pool']['external'][ext_pool_name]['range']]
-        internal_ranges: list = [config['pool']['internal'][int_pool_name]['range']]
+        internal_ranges: list = [range for range in config['pool']['internal'][int_pool_name]['range']]
         external_list_hosts_count = []
         external_list_hosts = []
         internal_list_hosts_count = []
