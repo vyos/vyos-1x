@@ -16,7 +16,6 @@
 
 import json
 import sys
-import typing
 
 from tabulate import tabulate
 
