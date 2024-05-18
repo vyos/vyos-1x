@@ -3,6 +3,10 @@ on:
   schedule:
   - cron: "0 0 * * *"
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   stale:
     uses: vyos/.github/.github/workflows/check-stale.yml@feature/T6349-reusable-workflows

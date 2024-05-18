@@ -8,6 +8,10 @@ on:
       - crux
       - equuleus
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   check-pr-title:
     uses: vyos/.github/.github/workflows/check-pr-message.yml@feature/T6349-reusable-workflows
