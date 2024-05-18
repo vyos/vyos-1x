@@ -10,9 +10,5 @@ on:
 
 jobs:
   check-pr-title:
-<<<<<<< HEAD
-    uses: vyos/.github/.github/workflows/check-pr-message.yml@main
-=======
     uses: vyos/.github/.github/workflows/check-pr-message.yml@feature/T6349-reusable-workflows
->>>>>>> 9a5897682a6d7fb59e2e90eb50b87dbbe8babaea
     secrets: inherit
