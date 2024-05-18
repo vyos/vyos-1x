@@ -6,7 +6,6 @@ on:
       - sagitta
 
 permissions:
-  pull-requests: write
   contents: read
 
 jobs:
