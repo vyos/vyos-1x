@@ -9,7 +9,10 @@ on:
       - equuleus
       - sagitta
 
+permissions:
+  pull-requests: write
+
 jobs:
   add-pr-label:
-    uses: vyos/.github/.github/workflows/add-pr-labels.yml@feature/T6349-reusable-workflows
+    uses: vyos/.github/.github/workflows/add-pr-labels.yml@main
     secrets: inherit

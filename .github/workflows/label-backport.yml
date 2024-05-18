@@ -4,5 +4,5 @@ on: [issue_comment]
 
 jobs:
   mergifyio_backport:
-    uses: vyos/.github/.github/workflows/label-backport.yml@feature/T6349-reusable-workflows
+    uses: vyos/.github/.github/workflows/label-backport.yml@main
     secrets: inherit

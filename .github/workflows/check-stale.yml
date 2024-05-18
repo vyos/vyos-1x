@@ -5,5 +5,5 @@ on:
 
 jobs:
   stale:
-    uses: vyos/.github/.github/workflows/check-stale.yml@feature/T6349-reusable-workflows
+    uses: vyos/.github/.github/workflows/check-stale.yml@main
     secrets: inherit
