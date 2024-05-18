@@ -1,0 +1,9 @@
+name: "Issue and PR stale management"
+on:
+  schedule:
+  - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    uses: vyos/.github/.github/workflows/check-stale.yml@feature/T6349-reusable-workflows
+    secrets: inherit

@@ -1,0 +1,11 @@
+name: Check for unused imports using Pylint
+on:
+  pull_request_target:
+    branches:
+      - current
+      - sagitta
+
+jobs:
+  Check-Unused-Imports:
+    uses: vyos/.github/.github/workflows/check-unused-imports.yml@feature/T6349-reusable-workflows
+    secrets: inherit
