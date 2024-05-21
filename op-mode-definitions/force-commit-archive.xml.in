@@ -6,7 +6,7 @@
         <properties>
           <help>Manually archive configuration</help>
         </properties>
-        <command>/usr/bin/config-mgmt</command>
+        <command>/etc/commit/post-hooks.d/02vyos-commit-archive; printf "\n"</command>
       </leafNode>
     </children>
   </node>
