@@ -5,7 +5,7 @@
     <constraint>
       <regex>[^-].*</regex>
     </constraint>
-    <constraintErrorMessage>Match queue name cannot start with hyphen (-)</constraintErrorMessage>
+    <constraintErrorMessage>Match queue name cannot start with hyphen</constraintErrorMessage>
   </properties>
   <children>
     #include <include/generic-description.xml.i>
@@ -89,89 +89,10 @@
       </children>
     </node>
     #include <include/generic-interface.xml.i>
-    <node name="ip">
-      <properties>
-        <help>Match IP protocol header</help>
-      </properties>
-      <children>
-        <node name="destination">
-          <properties>
-            <help>Match on destination port or address</help>
-          </properties>
-          <children>
-            #include <include/qos/class-match-ipv4-address.xml.i>
-            #include <include/port-number.xml.i>
-          </children>
-        </node>
-        #include <include/qos/match-dscp.xml.i>
-        #include <include/qos/max-length.xml.i>
-        #include <include/ip-protocol.xml.i>
-        <node name="source">
-          <properties>
-            <help>Match on source port or address</help>
-          </properties>
-          <children>
-            #include <include/qos/class-match-ipv4-address.xml.i>
-            #include <include/port-number.xml.i>
-          </children>
-        </node>
-        #include <include/qos/tcp-flags.xml.i>
-      </children>
-    </node>
-    <node name="ipv6">
-      <properties>
-        <help>Match IPv6 protocol header</help>
-      </properties>
-      <children>
-        <node name="destination">
-          <properties>
-            <help>Match on destination port or address</help>
-          </properties>
-          <children>
-            #include <include/qos/class-match-ipv6-address.xml.i>
-            #include <include/port-number.xml.i>
-          </children>
-        </node>
-        #include <include/qos/match-dscp.xml.i>
-        #include <include/qos/max-length.xml.i>
-        #include <include/ip-protocol.xml.i>
-        <node name="source">
-          <properties>
-            <help>Match on source port or address</help>
-          </properties>
-          <children>
-            #include <include/qos/class-match-ipv6-address.xml.i>
-            #include <include/port-number.xml.i>
-          </children>
-        </node>
-        #include <include/qos/tcp-flags.xml.i>
-      </children>
-    </node>
-    <leafNode name="mark">
-      <properties>
-        <help>Match on mark applied by firewall</help>
-        <valueHelp>
-          <format>u32</format>
-          <description>FW mark to match</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="vif">
-      <properties>
-        <help>Virtual Local Area Network (VLAN) ID for this match</help>
-        <valueHelp>
-          <format>u32:0-4095</format>
-          <description>Virtual Local Area Network (VLAN) tag </description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-4095"/>
-        </constraint>
-        <constraintErrorMessage>VLAN ID must be between 0 and 4095</constraintErrorMessage>
-      </properties>
-    </leafNode>
+    #include <include/qos/class-match-ipv4.xml.i>
+    #include <include/qos/class-match-ipv6.xml.i>
+    #include <include/qos/class-match-mark.xml.i>
+    #include <include/qos/class-match-vif.xml.i>
   </children>
 </tagNode>
 <!-- include end -->

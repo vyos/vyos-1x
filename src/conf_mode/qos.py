@@ -17,6 +17,7 @@
 from sys import exit
 from netifaces import interfaces
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
@@ -89,6 +90,36 @@ def _clean_conf_dict(conf):
         return conf
 
 
+def _get_group_filters(config: dict, group_name: str, visited=None) -> dict:
+    filters = dict()
+    if not visited:
+        visited = [group_name, ]
+    else:
+        if group_name in visited:
+            return filters
+        visited.append(group_name)
+
+    for filter, filter_config in config.get(group_name, {}).items():
+        if filter == 'match':
+            for match, match_config in filter_config.items():
+               filters[f'{group_name}-{match}'] = match_config
+        elif filter == 'match_group':
+            for group in filter_config:
+                filters.update(_get_group_filters(config, group, visited))
+
+    return filters
+
+
+def _get_group_match(config:dict, group_name:str) -> dict:
+    match = dict()
+    for key, val in _get_group_filters(config, group_name).items():
+        # delete duplicate matches
+        if val not in match.values():
+            match[key] = val
+
+    return match
+
+
 def get_config(config=None):
     if config:
         conf = config
@@ -135,17 +166,49 @@ def get_config(config=None):
 
     qos = conf.merge_defaults(qos, recursive=True)
 
+    if 'traffic_match_group' in qos:
+        for group, group_config in qos['traffic_match_group'].items():
+            if 'match_group' in group_config:
+                qos['traffic_match_group'][group]['match'] = _get_group_match(qos['traffic_match_group'], group)
+
     for policy in qos.get('policy', []):
         for p_name, p_config in qos['policy'][policy].items():
             # cleanup empty match config
             if 'class' in p_config:
                 for cls, cls_config in p_config['class'].items():
+                    if 'match_group' in cls_config:
+                        # merge group match to match
+                        for group in cls_config['match_group']:
+                            for match, match_conf in qos['traffic_match_group'].get(group, {'match': {}})['match'].items():
+                                if 'match' not in cls_config:
+                                    cls_config['match'] = dict()
+                                if match in cls_config['match']:
+                                    cls_config['match'][f'{group}-{match}'] = match_conf
+                                else:
+                                    cls_config['match'][match] = match_conf
+
                     if 'match' in cls_config:
                         cls_config['match'] = _clean_conf_dict(cls_config['match'])
                         if cls_config['match'] == {}:
                             del cls_config['match']
 
     return qos
+
+
+def _verify_match(cls_config: dict) -> None:
+    if 'match' in cls_config:
+        for match, match_config in cls_config['match'].items():
+            if {'ip', 'ipv6'} <= set(match_config):
+                raise ConfigError(
+                    f'Can not use both IPv6 and IPv4 in one match ({match})!')
+
+
+def _verify_match_group_exist(cls_config, qos):
+    if 'match_group' in cls_config:
+        for group in cls_config['match_group']:
+            if 'traffic_match_group' not in qos or group not in qos['traffic_match_group']:
+                Warning(f'Match group "{group}" does not exist!')
+
 
 def verify(qos):
     if not qos or 'interface' not in qos:
@@ -174,11 +237,8 @@ def verify(qos):
                         # bandwidth is not mandatory for priority-queue - that is why this is on the exception list
                         if 'bandwidth' not in cls_config and policy_type not in ['priority_queue', 'round_robin', 'shaper_hfsc']:
                             raise ConfigError(f'Bandwidth must be defined for policy "{policy}" class "{cls}"!')
-                    if 'match' in cls_config:
-                        for match, match_config in cls_config['match'].items():
-                            if {'ip', 'ipv6'} <= set(match_config):
-                                 raise ConfigError(f'Can not use both IPv6 and IPv4 in one match ({match})!')
-
+                        _verify_match(cls_config)
+                        _verify_match_group_exist(cls_config, qos)
                 if policy_type in ['random_detect']:
                     if 'precedence' in policy_config:
                         for precedence, precedence_config in policy_config['precedence'].items():
@@ -216,7 +276,13 @@ def verify(qos):
             if direction not in tmp:
                 raise ConfigError(f'Selected QoS policy on interface "{interface}" only supports "{tmp}"!')
 
+    if 'traffic_match_group' in qos:
+        for group, group_config in qos['traffic_match_group'].items():
+            _verify_match(group_config)
+            _verify_match_group_exist(group_config, qos)
+
     return None
+
 
 def generate(qos):
     if not qos or 'interface' not in qos:
@@ -253,6 +319,7 @@ def apply(qos):
             tmp.update(shaper_config, direction)
 
     return None
+
 
 if __name__ == '__main__':
     try:
