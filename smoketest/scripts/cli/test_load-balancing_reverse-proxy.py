@@ -385,5 +385,26 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'mode {mode}', config)
         self.assertIn(f'server {bk_name} {bk_server}:{bk_server_port}', config)
 
+    def test_07_lb_reverse_proxy_http_response_headers(self):
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # Set example headers in both frontend and backend
+        self.cli_set(base_path + ['service', 'https_front', 'http-response-headers', 'Cache-Control', 'value', 'max-age=604800'])
+        self.cli_set(base_path + ['backend', 'bk-01',  'http-response-headers', 'Proxy-Backend-ID', 'value', 'bk-01'])
+        self.cli_commit()
+
+        # Test headers are present in generated configuration file
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('http-response set-header Cache-Control \'max-age=604800\'', config)
+        self.assertIn('http-response set-header Proxy-Backend-ID \'bk-01\'', config)
+
+        # Test setting alongside modes other than http is blocked by validation conditions
+        self.cli_set(base_path + ['service', 'https_front', 'mode', 'tcp'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
