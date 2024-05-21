@@ -300,11 +300,11 @@ def parse_nat_static_rule(rule_conf, rule_id, nat_type):
 
     output.append('counter')
 
-    if translation_str:
-        output.append(translation_str)
-
     if 'log' in rule_conf:
         output.append(f'log prefix "[{log_prefix}{log_suffix}]"')
+
+    if translation_str:
+        output.append(translation_str)
 
     output.append(f'comment "{log_prefix}"')
 

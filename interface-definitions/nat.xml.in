@@ -141,6 +141,7 @@
                 </children>
               </node>
               #include <include/inbound-interface.xml.i>
+              #include <include/firewall/log.xml.i>
               <node name="translation">
                 <properties>
                   <help>Translation address or prefix</help>
