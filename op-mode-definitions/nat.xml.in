@@ -16,6 +16,26 @@
                 <properties>
                   <help>Show allocated CGNAT parameters</help>
                 </properties>
+                <children>
+                  <tagNode name="external-address">
+                    <properties>
+                      <help>Show CGNAT allocations for an external IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation --external-address "$6"</command>
+                  </tagNode>
+                  <tagNode name="internal-address">
+                    <properties>
+                      <help>Show CGNAT allocations for an internal IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation --internal-address "$6"</command>
+                  </tagNode>
+                </children>
                 <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation</command>
               </node>
             </children>
