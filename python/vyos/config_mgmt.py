@@ -283,6 +283,8 @@ Proceed ?'''
         rollback_ct = self._get_config_tree_revision(rev)
         try:
             load(rollback_ct, switch='explicit')
+            print('Rollback diff has been applied.')
+            print('Use "compare" to review the changes or "commit" to apply them.')
         except LoadConfigError as e:
             raise ConfigMgmtError(e) from e
 
