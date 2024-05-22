@@ -72,6 +72,8 @@ def ask_yes_no(question, default=False) -> bool:
                 stdout.write("Please respond with yes/y or no/n\n")
         except EOFError:
             stdout.write("\nPlease respond with yes/y or no/n\n")
+        except KeyboardInterrupt:
+            return False
 
 def is_interactive():
     """Try to determine if the routine was called from an interactive shell."""
