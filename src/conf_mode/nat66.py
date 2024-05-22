@@ -17,15 +17,15 @@
 import os
 
 from sys import exit
-from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
-from vyos.utils.process import cmd
-from vyos.utils.kernel import check_kmod
 from vyos.utils.dict import dict_search
+from vyos.utils.kernel import check_kmod
+from vyos.utils.network import interface_exists
+from vyos.utils.process import cmd
 from vyos.template import is_ipv6
 from vyos import ConfigError
 from vyos import airbag
@@ -64,8 +64,12 @@ def verify(nat):
                 if 'name' in config['outbound_interface'] and 'group' in config['outbound_interface']:
                     raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for nat source rule "{rule}"')
                 elif 'name' in config['outbound_interface']:
-                    if config['outbound_interface']['name'] not in 'any' and config['outbound_interface']['name'] not in interfaces():
-                        Warning(f'NAT66 interface "{config["outbound_interface"]["name"]}" for source NAT66 rule "{rule}" does not exist!')
+                    interface_name = config['outbound_interface']['name']
+                    if interface_name not in 'any':
+                        if interface_name.startswith('!'):
+                            interface_name = interface_name[1:]
+                        if not interface_exists(interface_name):
+                            Warning(f'Interface "{interface_name}" for source NAT66 rule "{rule}" does not exist!')
 
             addr = dict_search('translation.address', config)
             if addr != None:
@@ -88,8 +92,12 @@ def verify(nat):
                 if 'name' in config['inbound_interface'] and 'group' in config['inbound_interface']:
                     raise ConfigError(f'{err_msg} cannot specify both interface group and interface name for destination nat rule "{rule}"')
                 elif 'name' in config['inbound_interface']:
-                    if config['inbound_interface']['name'] not in 'any' and config['inbound_interface']['name'] not in interfaces():
-                        Warning(f'NAT66 interface "{config["inbound_interface"]["name"]}" for destination NAT66 rule "{rule}" does not exist!')
+                    interface_name = config['inbound_interface']['name']
+                    if interface_name not in 'any':
+                        if interface_name.startswith('!'):
+                            interface_name = interface_name[1:]
+                        if not interface_exists(interface_name):
+                            Warning(f'Interface "{interface_name}" for destination NAT66 rule "{rule}" does not exist!')
 
     return None
 
