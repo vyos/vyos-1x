@@ -1,0 +1,85 @@
+set interfaces ethernet eth0 offload rps
+set interfaces ethernet eth0 disable
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload gso
+set interfaces ethernet eth1 offload rps
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 offload gso
+set interfaces ethernet eth2 offload rps
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth3 offload gro
+set interfaces ethernet eth3 offload gso
+set interfaces ethernet eth3 offload rps
+set interfaces ethernet eth3 offload sg
+set interfaces ethernet eth3 offload tso
+set interfaces bonding bond10 hash-policy 'layer3+4'
+set interfaces bonding bond10 member interface 'eth2'
+set interfaces bonding bond10 member interface 'eth3'
+set interfaces bonding bond10 mode '802.3ad'
+set interfaces bonding bond10 vif 50 address '192.168.189.1/24'
+set interfaces loopback lo
+set interfaces pppoe pppoe7 authentication password 'vyos'
+set interfaces pppoe pppoe7 authentication username 'vyos'
+set interfaces pppoe pppoe7 dhcpv6-options pd 0 interface bond10.50 address '1'
+set interfaces pppoe pppoe7 dhcpv6-options pd 0 length '56'
+set interfaces pppoe pppoe7 ip adjust-mss '1452'
+set interfaces pppoe pppoe7 ipv6 address autoconf
+set interfaces pppoe pppoe7 ipv6 adjust-mss '1432'
+set interfaces pppoe pppoe7 mtu '1492'
+set interfaces pppoe pppoe7 no-peer-dns
+set interfaces pppoe pppoe7 source-interface 'eth1'
+set service lldp interface eth1 disable
+set service ntp allow-client address '192.168.189.0/24'
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp listen-address '192.168.189.1'
+set service ssh dynamic-protection
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 lease '604800'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 option default-router '192.168.189.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 option domain-name 'vyos.net'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 option name-server '1.1.1.1'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 option name-server '9.9.9.9'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 range 0 start '192.168.189.20'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 range 0 stop '192.168.189.254'
+set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 subnet-id '1'
+set service router-advert interface bond10.50 prefix ::/64 preferred-lifetime '2700'
+set service router-advert interface bond10.50 prefix ::/64 valid-lifetime '5400'
+set system config-management commit-revisions '100'
+set system domain-name 'vyos.net'
+set system host-name 'R1'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set system name-server '1.1.1.1'
+set system name-server '9.9.9.9'
+set system console device ttyS0 speed '115200'
+set nat destination rule 1000 destination port '3389'
+set nat destination rule 1000 inbound-interface name 'pppoe7'
+set nat destination rule 1000 protocol 'tcp'
+set nat destination rule 1000 translation address '192.168.189.5'
+set nat destination rule 1000 translation port '3389'
+set nat destination rule 10022 destination port '10022'
+set nat destination rule 10022 inbound-interface name 'pppoe7'
+set nat destination rule 10022 protocol 'tcp'
+set nat destination rule 10022 translation address '192.168.189.2'
+set nat destination rule 10022 translation port '22'
+set nat destination rule 10300 destination port '10300'
+set nat destination rule 10300 inbound-interface name 'pppoe7'
+set nat destination rule 10300 protocol 'udp'
+set nat destination rule 10300 translation address '192.168.189.2'
+set nat destination rule 10300 translation port '10300'
+set nat source rule 10 outbound-interface name 'eth1'
+set nat source rule 10 source address '192.168.189.0/24'
+set nat source rule 10 translation address 'masquerade'
+set nat source rule 10 translation options port-mapping 'random'
+set nat source rule 50 outbound-interface name 'pppoe7'
+set nat source rule 50 protocol 'udp'
+set nat source rule 50 source address '192.168.189.2'
+set nat source rule 50 source port '10300'
+set nat source rule 50 translation address 'masquerade'
+set nat source rule 50 translation port '10300'
+set nat source rule 100 outbound-interface name 'pppoe7'
+set nat source rule 100 source address '192.168.189.0/24'
+set nat source rule 100 translation address 'masquerade'
