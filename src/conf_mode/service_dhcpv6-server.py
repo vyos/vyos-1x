@@ -85,21 +85,21 @@ def verify(dhcpv6):
 
                         # Stop address must be greater or equal to start address
                         if not ip_address(stop) >= ip_address(start):
-                            raise ConfigError(f'address-range stop address "{stop}" must be greater then or equal ' \
+                            raise ConfigError(f'address-range stop address "{stop}" must be greater than or equal ' \
                                               f'to the range start address "{start}"!')
 
                         # DHCPv6 range start address must be unique - two ranges can't
                         # start with the same address - makes no sense
                         if start in range6_start:
                             raise ConfigError(f'Conflicting DHCPv6 lease range: '\
-                                              f'Pool start address "{start}" defined multipe times!')
+                                              f'Pool start address "{start}" defined multiple times!')
                         range6_start.append(start)
 
                         # DHCPv6 range stop address must be unique - two ranges can't
                         # end with the same address - makes no sense
                         if stop in range6_stop:
                             raise ConfigError(f'Conflicting DHCPv6 lease range: '\
-                                              f'Pool stop address "{stop}" defined multipe times!')
+                                              f'Pool stop address "{stop}" defined multiple times!')
                         range6_stop.append(stop)
 
                 if 'prefix' in subnet_config:
@@ -113,12 +113,32 @@ def verify(dhcpv6):
                     raise ConfigError('prefix-delegation start address not defined!')
 
                 for prefix, prefix_config in subnet_config['prefix_delegation']['start'].items():
+                    prefix_start_addr = prefix
+
+                    # Prefix start address must be inside network
+                    if not ip_address(prefix_start_addr) in ip_network(subnet):
+                        raise ConfigError(f'Prefix delegation start address '\
+                                          f'"{prefix_start_addr}" is not in '\
+                                          f'subnet "{subnet}"')
+
                     if 'stop' not in prefix_config:
-                        raise ConfigError(f'Stop address of delegated IPv6 prefix range "{prefix}" '\
+                        raise ConfigError(f'Stop address of delegated IPv6 '\
+                                          f'prefix range "{prefix}" '\
                                           f'must be configured')
 
+                    if 'stop' in prefix_config:
+                       prefix_stop_addr = prefix_config['stop']
+
+                       # Prefix stop address must be inside network
+                       if not (ip_address(prefix_stop_addr) in
+                              ip_network(subnet)):
+                           raise ConfigError(f'Prefix delegation stop '\
+                                             f'address "{prefix_stop_addr}" '\
+                                             f'is not in subnet "{subnet}"')
+
                     if 'prefix_length' not in prefix_config:
-                        raise ConfigError('Length of delegated IPv6 prefix must be configured')
+                        raise ConfigError(f'Length of delegated IPv6 prefix '\
+                                          f'must be configured')
 
             # Static mappings don't require anything (but check if IP is in subnet if it's set)
             if 'static_mapping' in subnet_config:
@@ -130,7 +150,7 @@ def verify(dhcpv6):
 
             if 'vendor_option' in subnet_config:
                 if len(dict_search('vendor_option.cisco.tftp_server', subnet_config)) > 2:
-                    raise ConfigError(f'No more then two Cisco tftp-servers should be defined for subnet "{subnet}"!')
+                    raise ConfigError(f'No more than two Cisco tftp-servers should be defined for subnet "{subnet}"!')
 
             # Subnets must be unique
             if subnet in subnets:
