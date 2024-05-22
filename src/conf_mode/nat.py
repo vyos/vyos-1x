@@ -151,7 +151,7 @@ def verify(nat):
                 elif 'name' in config['outbound_interface']:
                     interface_name = config['outbound_interface']['name']
                     if interface_name not in 'any':
-                        if interface_name[0] == '!':
+                        if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
                         if interface_name not in interfaces():
                             Warning(f'NAT interface "{interface_name}" for source NAT rule "{rule}" does not exist!')
@@ -188,7 +188,7 @@ def verify(nat):
                 elif 'name' in config['inbound_interface']:
                     interface_name = config['inbound_interface']['name']
                     if interface_name not in 'any':
-                        if interface_name[0] == '!':
+                        if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
                         if interface_name not in interfaces():
                             Warning(f'NAT interface "{interface_name}" for destination NAT rule "{rule}" does not exist!')
