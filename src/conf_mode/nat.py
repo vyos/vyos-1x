@@ -17,7 +17,6 @@
 import os
 
 from sys import exit
-from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -30,6 +29,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 
 from vyos import airbag
@@ -153,8 +153,8 @@ def verify(nat):
                     if interface_name not in 'any':
                         if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
-                        if interface_name not in interfaces():
-                            Warning(f'NAT interface "{interface_name}" for source NAT rule "{rule}" does not exist!')
+                        if not interface_exists(interface_name):
+                            Warning(f'Interface "{interface_name}" for source NAT rule "{rule}" does not exist!')
                 else:
                     group_name = config['outbound_interface']['group']
                     if group_name[0] == '!':
@@ -190,8 +190,8 @@ def verify(nat):
                     if interface_name not in 'any':
                         if interface_name.startswith('!'):
                             interface_name = interface_name[1:]
-                        if interface_name not in interfaces():
-                            Warning(f'NAT interface "{interface_name}" for destination NAT rule "{rule}" does not exist!')
+                        if not interface_exists(interface_name):
+                            Warning(f'Interface "{interface_name}" for destination NAT rule "{rule}" does not exist!')
                 else:
                     group_name = config['inbound_interface']['group']
                     if group_name[0] == '!':
