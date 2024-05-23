@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="update">
+    <children>
+      <node name="suricata">
+        <properties>
+          <help>Update Suricata</help>
+        </properties>
+        <command>if test -f /run/suricata/suricata.yaml; then sudo suricata-update --suricata-conf /run/suricata/suricata.yaml; sudo systemctl restart suricata; else echo "Service Suricata not configured"; fi </command>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="suricata">
+        <properties>
+          <help>Restart Suricata service</help>
+        </properties>
+        <command>if systemctl is-active --quiet suricata; then sudo systemctl restart suricata.service; else echo "Service Suricata not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

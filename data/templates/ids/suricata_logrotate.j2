@@ -1,0 +1,17 @@
+{% for filename in [(log.eve.filename | default("eve.json"))] %}
+{{ filename if filename.startswith("/") else ("/var/log/suricata/" + filename) }}
+{% endfor %}{
+    weekly
+    dateext
+    dateformat _%Y-%m-%d_%H-%M-%S
+    maxsize 10M
+    rotate 10
+    missingok
+    nocompress
+    nocreate
+    nomail
+    sharedscripts
+    postrotate
+            /bin/kill -HUP `cat /run/suricata/suricata.pid 2>/dev/null` 2>/dev/null || true
+    endscript
+}

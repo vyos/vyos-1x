@@ -1,0 +1,238 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="suricata" owner="${vyos_conf_scripts_dir}/service_suricata.py">
+        <properties>
+          <help>Network IDS, IPS and Security Monitoring</help>
+          <priority>740</priority>
+        </properties>
+        <children>
+          #include <include/generic-interface-multi.xml.i>
+          <tagNode name="address-group">
+            <properties>
+              <help>Address group name</help>
+              <constraint>
+                <regex>[a-z0-9-]+</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>IP address or subnet</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 prefix to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv4</format>
+                    <description>Exclude the specified IPv4 address from matches</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv6</format>
+                    <description>Exclude the specified IPv6 address from matches</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv4net</format>
+                    <description>Exclude the specified IPv6 prefix from matches</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!ipv6net</format>
+                    <description>Exclude the specified IPv6 prefix from matches</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-prefix"/>
+                    <validator name="ipv4-address-exclude"/>
+                    <validator name="ipv6-address-exclude"/>
+                    <validator name="ipv4-prefix-exclude"/>
+                    <validator name="ipv6-prefix-exclude"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="group">
+                <properties>
+                  <help>Address group</help>
+                  <completionHelp>
+                    <path>service ids suricata address-group</path>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Address group to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!txt</format>
+                    <description>Exclude the specified address group from matches</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>!?[a-z0-9-]+</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="port-group">
+            <properties>
+              <help>Port group name</help>
+              <constraint>
+                <regex>[a-z0-9-]+</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="port">
+                <properties>
+                  <help>Port number</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Numeric port to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!u32:1-65535</format>
+                    <description>Numeric port to exclude from matches</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Numbered port range (e.g. 1001-1005) to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!start-end</format>
+                    <description>Numbered port range (e.g. !1001-1005) to exclude from matches</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="port-range"/>
+                    <validator name="port-range-exclude"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="group">
+                <properties>
+                  <help>Port group</help>
+                  <completionHelp>
+                    <path>service ids suricata port-group</path>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Port group to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!txt</format>
+                    <description>Exclude the specified port group from matches</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>!?[a-z0-9-]+</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="log">
+            <properties>
+              <help>Suricata log outputs</help>
+            </properties>
+            <children>
+              <node name="eve">
+                <properties>
+                  <help>Extensible Event Format (EVE)</help>
+                </properties>
+                <children>
+                  <leafNode name="filetype">
+                    <properties>
+                      <help>EVE logging destination</help>
+                      <completionHelp>
+                        <list>regular syslog</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>regular</format>
+                        <description>Log to filename</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>syslog</format>
+                        <description>Log to syslog</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(regular|syslog)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>regular</defaultValue>
+                  </leafNode>
+                  <leafNode name="filename">
+                    <properties>
+                      <help>Log file</help>
+                      <valueHelp>
+                        <format>filename</format>
+                        <description>File name in default Suricata log directory</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>/path</format>
+                        <description>Absolute file path</description>
+                      </valueHelp>
+                    </properties>
+                    <defaultValue>eve.json</defaultValue>
+                  </leafNode>
+                  <leafNode name="type">
+                    <properties>
+                      <help>Log types</help>
+                      <completionHelp>
+                        <list>alert anomaly drop files http dns tls smtp dnp3 ftp rdp nfs smb tftp ikev2 dcerpc krb5 snmp rfb sip dhcp ssh mqtt http2 flow netflow</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>alert</format>
+                        <description>Record events for rule matches</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>anomaly</format>
+                        <description>Record unexpected conditions such as truncated packets, packets with invalid IP/UDP/TCP length values, and other events that render the packet invalid for further processing or describe unexpected behavior on an established stream</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>drop</format>
+                        <description>Record events for dropped packets</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>file</format>
+                        <description>Record file details (e.g., MD5) for files extracted from application protocols (e.g., HTTP)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>application (http, dns, tls, ...)</format>
+                        <description>Record application-level transactions</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>flow</format>
+                        <description>Record bi-directional flows</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>netflow</format>
+                        <description>Record uni-directional flows</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(alert|anomaly|http|dns|tls|files|drop|smtp|dnp3|ftp|rdp|nfs|smb|tftp|ikev2|dcerpc|krb5|snmp|rfb|sip|dhcp|ssh|mqtt|http2|flow|netflow)</regex>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
