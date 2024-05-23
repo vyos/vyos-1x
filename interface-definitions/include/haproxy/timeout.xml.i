@@ -1,7 +1,7 @@
 <!-- include start from haproxy/timeout.xml.i -->
 <node name="timeout">
   <properties>
-    <help>Tiemout options</help>
+    <help>Timeout options</help>
   </properties>
   <children>
     <leafNode name="check">
