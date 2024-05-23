@@ -15,12 +15,12 @@
 vars:
   # more specific is better for alert accuracy and performance
   address-groups:
-{% for (name, value) in suricata['address-group'] %}
+{% for (name, value) in suricata['address_group'] %}
     {{ name }}: "[{{ value | join(',') }}]"
 {% endfor %}
 
   port-groups:
-{% for (name, value) in suricata['port-group'] %}
+{% for (name, value) in suricata['port_group'] %}
     {{ name }}: "[{{ value | join(',') }}]"
 {% endfor %}
 

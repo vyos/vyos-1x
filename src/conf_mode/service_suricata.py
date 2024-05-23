@@ -39,7 +39,7 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    suricata = conf.get_config_dict(base,
+    suricata = conf.get_config_dict(base, key_mangling=('-', '_'),
                                     get_first_key=True, with_recursive_defaults=True)
 
     return suricata
@@ -81,19 +81,19 @@ def verify(suricata):
     if 'interface' not in suricata:
         raise ConfigError('No interfaces configured!')
 
-    if 'address-group' not in suricata:
+    if 'address_group' not in suricata:
         raise ConfigError('No address-group configured!')
 
-    if 'port-group' not in suricata:
+    if 'port_group' not in suricata:
         raise ConfigError('No port-group configured!')
 
     try:
-        topological_sort(suricata['address-group'])
+        topological_sort(suricata['address_group'])
     except (ConfigError,StopIteration) as e:
         raise ConfigError(f'Invalid address-group: {e}')
 
     try:
-        topological_sort(suricata['port-group'])
+        topological_sort(suricata['port_group'])
     except (ConfigError,StopIteration) as e:
         raise ConfigError(f'Invalid port-group: {e}')
 
@@ -126,12 +126,12 @@ def generate(suricata):
         return format_group
 
     # Format the address group
-    suricata['address-group'] = map(to_config('address'),
-                                    topological_sort(suricata['address-group']))
+    suricata['address_group'] = map(to_config('address'),
+                                    topological_sort(suricata['address_group']))
 
     # Format the port group
-    suricata['port-group'] = map(to_config('port'),
-                                    topological_sort(suricata['port-group']))
+    suricata['port_group'] = map(to_config('port'),
+                                    topological_sort(suricata['port_group']))
 
     render(config_file, 'ids/suricata.j2', {'suricata': suricata})
     render(rotate_file, 'ids/suricata_logrotate.j2', suricata)
