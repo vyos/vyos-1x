@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6345: random - In kernel 5.0 and newer this is the same as fully-random.
+#        In earlier kernels the port mapping will be randomized using a seeded
+#        MD5 hash mix using source and destination address and destination port.
+#        drop fully-random from CLI
+
+from sys import argv,exit
+from vyos.configtree import ConfigTree
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['nat']):
+    # Nothing to do
+    exit(0)
+
+for direction in ['source', 'destination']:
+    # If a node doesn't exist, we obviously have nothing to do.
+    if not config.exists(['nat', direction]):
+        continue
+
+    # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
+    # but there are no rules under it.
+    if not config.list_nodes(['nat', direction]):
+        continue
+
+    for rule in config.list_nodes(['nat', direction, 'rule']):
+        port_mapping = ['nat', direction, 'rule', rule, 'translation', 'options', 'port-mapping']
+        if config.exists(port_mapping):
+            tmp = config.return_value(port_mapping)
+            if tmp == 'fully-random':
+                config.set(port_mapping, value='random')
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)
