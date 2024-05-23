@@ -628,3 +628,21 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             self.assertEqual(conf['connlimit']['limit'], limits)
             self.assertEqual(conf['connlimit']['burst'], burst)
             self.assertEqual(conf['connlimit']['timeout'], timeout)
+
+        def test_accel_log_level(self):
+            self.basic_config()
+            self.cli_commit()
+
+            # check default value
+            conf = ConfigParser(allow_no_value=True)
+            conf.read(self._config_file)
+            self.assertEqual(conf['log']['level'], '3')
+
+            for log_level in range(0, 5):
+                self.set(['log', 'level', str(log_level)])
+                self.cli_commit()
+                # Validate configuration values
+                conf = ConfigParser(allow_no_value=True)
+                conf.read(self._config_file)
+
+                self.assertEqual(conf['log']['level'], str(log_level))

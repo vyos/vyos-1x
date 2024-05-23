@@ -189,6 +189,7 @@
           #include <include/accel-ppp/snmp.xml.i>
           #include <include/generic-description.xml.i>
           #include <include/name-server-ipv4-ipv6.xml.i>
+          #include <include/accel-ppp/log.xml.i>
         </children>
       </node>
     </children>
