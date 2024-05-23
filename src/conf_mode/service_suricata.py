@@ -65,7 +65,7 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['service', 'ids', 'suricata']
+    base = ['service', 'suricata']
     if not conf.exists(base):
         return None
 
