@@ -29,53 +29,18 @@ airbag.enable()
 config_file = '/run/suricata/suricata.yaml'
 rotate_file = '/etc/logrotate.d/suricata'
 
-address_group_defaults = {
-    'home-net': {'address': ['192.168.0.0/16','10.0.0.0/8','172.16.0.0/12']},
-    'external-net': {'group': ['!home-net']},
-    'http-servers': {'group': ['home-net']},
-    'smtp-servers': {'group': ['home-net']},
-    'sql-servers': {'group': ['home-net']},
-    'dns-servers': {'group': ['home-net']},
-    'telnet-servers': {'group': ['home-net']},
-    'aim-servers': {'group': ['external-net']},
-    'dc-servers': {'group': ['home-net']},
-    'dnp3-server': {'group': ['home-net']},
-    'modbus-client': {'group': ['home-net']},
-    'modbus-server': {'group': ['home-net']},
-    'enip-client': {'group': ['home-net']},
-    'enip-server': {'group': ['home-net']},
-}
-
-port_group_defaults = {
-    'http-ports': {'port': ['80']},
-    'shellcode-ports': {'port': ['!80']},
-    'oracle-ports': {'port': ['1521']},
-    'ssh-ports': {'port': ['22']},
-    'dnp3-ports': {'port': ['20000']},
-    'modbus-ports': {'port': ['502']},
-    'file-data-ports': {'port': ['110', '143'], 'group': ['http-ports']},
-    'ftp-ports': {'port': ['21']},
-    'geneve-ports': {'port': ['6081']},
-    'vxlan-ports': {'port': ['4789']},
-    'teredo-ports': {'port': ['3544']},
-}
-
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
     base = ['service', 'suricata']
+
     if not conf.exists(base):
         return None
 
     suricata = conf.get_config_dict(base,
-                                      get_first_key=True,
-                                      with_recursive_defaults=True)
-
-    # Ensure minimal defaults are present
-    suricata['address-group'] = address_group_defaults | suricata.get('address-group', {})
-    suricata['port-group'] = port_group_defaults | suricata.get('port-group', {})
+                                    get_first_key=True, with_recursive_defaults=True)
 
     return suricata
 
@@ -114,7 +79,13 @@ def verify(suricata):
         return None
 
     if 'interface' not in suricata:
-        raise ConfigError('No interfaces configured')
+        raise ConfigError('No interfaces configured!')
+
+    if 'address-group' not in suricata:
+        raise ConfigError('No address-group configured!')
+
+    if 'port-group' not in suricata:
+        raise ConfigError('No port-group configured!')
 
     try:
         topological_sort(suricata['address-group'])

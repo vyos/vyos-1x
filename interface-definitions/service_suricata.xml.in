@@ -12,9 +12,6 @@
           <tagNode name="address-group">
             <properties>
               <help>Address group name</help>
-              <completionHelp>
-                <list>home-net external-net http-servers smtp-servers sql-servers dns-servers telnet-servers aim-servers dc-servers dnp3-server dnp3-client modbus-client modbus-server enip-client enip-server</list>
-              </completionHelp>
               <constraint>
                 <regex>[a-z0-9-]+</regex>
               </constraint>
@@ -73,14 +70,13 @@
                   <help>Address group</help>
                   <completionHelp>
                     <path>service ids suricata address-group</path>
-                    <list>home-net external-net http-servers smtp-servers sql-servers dns-servers telnet-servers aim-servers dc-servers dnp3-server dnp3-client modbus-client modbus-server enip-client enip-server</list>
                   </completionHelp>
                   <valueHelp>
-                    <format>string</format>
+                    <format>txt</format>
                     <description>Address group to match</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>!string</format>
+                    <format>!txt</format>
                     <description>Exclude the specified address group from matches</description>
                   </valueHelp>
                   <constraint>
@@ -94,9 +90,6 @@
           <tagNode name="port-group">
             <properties>
               <help>Port group name</help>
-              <completionHelp>
-                <list>http-ports shellcode-ports oracle-ports ssh-ports dnp3-ports modbus-ports file-data-ports ftp-ports geneve-ports vxlan-ports teredo-ports</list>
-              </completionHelp>
               <constraint>
                 <regex>[a-z0-9-]+</regex>
               </constraint>
@@ -133,14 +126,13 @@
                   <help>Port group</help>
                   <completionHelp>
                     <path>service ids suricata port-group</path>
-                    <list>http-ports shellcode-ports oracle-ports ssh-ports dnp3-ports modbus-ports file-data-ports ftp-ports geneve-ports vxlan-ports teredo-ports</list>
                   </completionHelp>
                   <valueHelp>
-                    <format>string</format>
+                    <format>txt</format>
                     <description>Port group to match</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>!string</format>
+                    <format>!txt</format>
                     <description>Exclude the specified port group from matches</description>
                   </valueHelp>
                   <constraint>
