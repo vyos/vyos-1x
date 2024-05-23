@@ -106,14 +106,14 @@ def verify(dhcpv6):
 
                         # Stop address must be greater or equal to start address
                         if not ip_address(stop) >= ip_address(start):
-                            raise ConfigError(f'Range stop address "{stop}" must be greater then or equal ' \
+                            raise ConfigError(f'Range stop address "{stop}" must be greater than or equal ' \
                                               f'to the range start address "{start}"!')
 
                         # DHCPv6 range start address must be unique - two ranges can't
                         # start with the same address - makes no sense
                         if start in range6_start:
                             raise ConfigError(f'Conflicting DHCPv6 lease range: '\
-                                              f'Pool start address "{start}" defined multipe times!')
+                                              f'Pool start address "{start}" defined multiple times!')
 
                         range6_start.append(start)
 
@@ -121,7 +121,7 @@ def verify(dhcpv6):
                         # end with the same address - makes no sense
                         if stop in range6_stop:
                             raise ConfigError(f'Conflicting DHCPv6 lease range: '\
-                                              f'Pool stop address "{stop}" defined multipe times!')
+                                              f'Pool stop address "{stop}" defined multiple times!')
 
                         range6_stop.append(stop)
 
@@ -180,7 +180,7 @@ def verify(dhcpv6):
             if 'option' in subnet_config:
                 if 'vendor_option' in subnet_config['option']:
                     if len(dict_search('option.vendor_option.cisco.tftp_server', subnet_config)) > 2:
-                        raise ConfigError(f'No more then two Cisco tftp-servers should be defined for subnet "{subnet}"!')
+                        raise ConfigError(f'No more than two Cisco tftp-servers should be defined for subnet "{subnet}"!')
 
             # Subnets must be unique
             if subnet in subnets:
