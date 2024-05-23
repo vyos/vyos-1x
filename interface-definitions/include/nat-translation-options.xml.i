@@ -28,22 +28,18 @@
       <properties>
         <help>Port mapping options</help>
         <completionHelp>
-          <list>random fully-random none</list>
+          <list>random none</list>
         </completionHelp>
         <valueHelp>
           <format>random</format>
           <description>Randomize source port mapping</description>
         </valueHelp>
         <valueHelp>
-          <format>fully-random</format>
-          <description>Full port randomization</description>
-        </valueHelp>
-        <valueHelp>
           <format>none</format>
           <description>Do not apply port randomization</description>
         </valueHelp>
         <constraint>
-          <regex>(random|fully-random|none)</regex>
+          <regex>(random|none)</regex>
         </constraint>
       </properties>
       <defaultValue>none</defaultValue>

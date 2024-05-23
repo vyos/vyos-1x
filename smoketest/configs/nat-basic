@@ -1,0 +1,256 @@
+interfaces {
+    bonding bond10 {
+        hash-policy "layer3+4"
+        member {
+            interface "eth2"
+            interface "eth3"
+        }
+        mode "802.3ad"
+        vif 50 {
+            address "192.168.189.1/24"
+        }
+    }
+    ethernet eth0 {
+        disable
+        offload {
+            gro
+            gso
+            rps
+            sg
+            tso
+        }
+    }
+    ethernet eth1 {
+        offload {
+            gro
+            gso
+            rps
+            sg
+            tso
+        }
+    }
+    ethernet eth2 {
+        offload {
+            gro
+            gso
+            rps
+            sg
+            tso
+        }
+    }
+    ethernet eth3 {
+        offload {
+            gro
+            gso
+            rps
+            sg
+            tso
+        }
+    }
+    loopback lo {
+    }
+    pppoe pppoe7 {
+        authentication {
+            password "vyos"
+            username "vyos"
+        }
+        dhcpv6-options {
+            pd 0 {
+                interface bond10.50 {
+                    address "1"
+                }
+                length "56"
+            }
+        }
+        ip {
+            adjust-mss "1452"
+        }
+        ipv6 {
+            address {
+                autoconf
+            }
+            adjust-mss "1432"
+        }
+        mtu "1492"
+        no-peer-dns
+        source-interface "eth1"
+    }
+}
+nat {
+    destination {
+        rule 1000 {
+            destination {
+                port "3389"
+            }
+            inbound-interface {
+                name "pppoe7"
+            }
+            protocol "tcp"
+            translation {
+                address "192.168.189.5"
+                port "3389"
+            }
+        }
+        rule 10022 {
+            destination {
+                port "10022"
+            }
+            inbound-interface {
+                name "pppoe7"
+            }
+            protocol "tcp"
+            translation {
+                address "192.168.189.2"
+                port "22"
+            }
+        }
+        rule 10300 {
+            destination {
+                port "10300"
+            }
+            inbound-interface {
+                name "pppoe7"
+            }
+            protocol "udp"
+            translation {
+                address "192.168.189.2"
+                port "10300"
+            }
+        }
+    }
+    source {
+        rule 10 {
+            outbound-interface {
+                name "eth1"
+            }
+            source {
+                address "192.168.189.0/24"
+            }
+            translation {
+                address "masquerade"
+                options {
+                    port-mapping fully-random
+                }
+            }
+        }
+        rule 50 {
+            outbound-interface {
+                name "pppoe7"
+            }
+            protocol "udp"
+            source {
+                address "192.168.189.2"
+                port "10300"
+            }
+            translation {
+                address "masquerade"
+                port "10300"
+            }
+        }
+        rule 100 {
+            outbound-interface {
+                name "pppoe7"
+            }
+            source {
+                address "192.168.189.0/24"
+            }
+            translation {
+                address "masquerade"
+            }
+        }
+    }
+}
+service {
+    dhcp-server {
+        shared-network-name LAN {
+            subnet 192.168.189.0/24 {
+                default-router "192.168.189.1"
+                domain-name "vyos.net"
+                lease "604800"
+                name-server "1.1.1.1"
+                name-server "9.9.9.9"
+                range 0 {
+                    start "192.168.189.20"
+                    stop "192.168.189.254"
+                }
+            }
+        }
+    }
+    lldp {
+        interface all {
+        }
+        interface eth1 {
+            disable
+        }
+    }
+    ntp {
+        allow-client {
+            address "192.168.189.0/24"
+        }
+        listen-address "192.168.189.1"
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+    }
+    router-advert {
+        interface bond10.50 {
+            prefix ::/64 {
+                preferred-lifetime "2700"
+                valid-lifetime "5400"
+            }
+        }
+    }
+    ssh {
+        disable-host-validation
+        dynamic-protection {
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions "100"
+    }
+    conntrack {
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sip
+            sqlnet
+            tftp
+        }
+    }
+    console {
+        device ttyS0 {
+            speed "115200"
+        }
+    }
+    domain-name "vyos.net"
+    host-name "R1"
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    name-server "1.1.1.1"
+    name-server "9.9.9.9"
+    syslog {
+        global {
+            facility all {
+                level "info"
+            }
+            facility local7 {
+                level "debug"
+            }
+        }
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@5:broadcast-relay@1:cluster@2:config-management@1:conntrack@5:conntrack-sync@2:container@2:dhcp-relay@2:dhcp-server@8:dhcpv6-server@1:dns-dynamic@4:dns-forwarding@4:firewall@15:flow-accounting@1:https@6:ids@1:interfaces@32:ipoe-server@3:ipsec@13:isis@3:l2tp@9:lldp@2:mdns@1:monitoring@1:nat@7:nat66@3:ntp@3:openconnect@3:ospf@2:pim@1:policy@8:pppoe-server@10:pptp@5:qos@2:quagga@11:rip@1:rpki@2:salt@1:snmp@3:ssh@2:sstp@6:system@27:vrf@3:vrrp@4:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2"
+// Release version: 1.4.0-epa3
