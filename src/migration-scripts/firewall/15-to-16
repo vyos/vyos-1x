@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6394: Migrate conntrack timeout options to firewall global-options
+    # from: set system conntrack timeout ..
+    # to: set firewall global-options timeout ...
+
+from sys import argv
+from sys import exit
+
+from vyos.configtree import ConfigTree
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+firewall_base = ['firewall', 'global-options']
+conntrack_base = ['system', 'conntrack', 'timeout']
+config = ConfigTree(config_file)
+
+if not config.exists(conntrack_base):
+    # Nothing to do
+    exit(0)
+
+for protocol in ['icmp', 'tcp', 'udp', 'other']:
+    if config.exists(conntrack_base + [protocol]):
+        if not config.exists(firewall_base):
+            config.set(firewall_base + ['timeout'])
+        config.copy(conntrack_base + [protocol], firewall_base + ['timeout', protocol])
+        config.delete(conntrack_base + [protocol])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

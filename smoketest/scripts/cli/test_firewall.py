@@ -23,6 +23,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import run
+from vyos.utils.file import read_file
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'default': '0', 'test_value': 'disable'},
@@ -37,6 +38,10 @@ sysfs_config = {
     'syn_cookies': {'sysfs': '/proc/sys/net/ipv4/tcp_syncookies', 'default': '1', 'test_value': 'disable'},
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337', 'default': '0', 'test_value': 'enable'}
 }
+
+def get_sysctl(parameter):
+    tmp = parameter.replace(r'.', r'/')
+    return read_file(f'/proc/sys/{tmp}')
 
 class TestFirewall(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -240,7 +245,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'output', 'raw', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'output', 'raw', 'rule', '1', 'protocol', 'udp'])
 
-        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'action', 'notrack'])
         self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'destination', 'port', '23'])
 
@@ -270,7 +275,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['OUT-raw default-action drop', 'drop'],
             ['chain VYOS_PREROUTING_raw'],
             ['type filter hook prerouting priority raw; policy accept;'],
-            ['tcp dport 23', 'drop'],
+            ['tcp dport 23', 'notrack'],
             ['PRE-raw default-action accept', 'accept'],
             ['chain NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
@@ -474,7 +479,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'outbound-interface', 'name', interface])
 
         self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'rule', '1', 'action', 'notrack'])
         self.cli_set(['firewall', 'ipv6', 'output', 'raw', 'rule', '1', 'protocol', 'udp'])
 
         self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'action', 'drop'])
@@ -498,7 +503,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['log prefix "[ipv6-OUT-filter-default-D]"','OUT-filter default-action drop', 'drop'],
             ['chain VYOS_IPV6_OUTPUT_raw'],
             ['type filter hook output priority raw; policy accept;'],
-            ['udp', 'accept'],
+            ['udp', 'notrack'],
             ['OUT-raw default-action drop', 'drop'],
             ['chain VYOS_IPV6_PREROUTING_raw'],
             ['type filter hook prerouting priority raw; policy accept;'],
@@ -769,6 +774,89 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             for path in paths:
                 with open(path, 'r') as f:
                     self.assertNotEqual(f.read().strip(), conf['default'], msg=path)
+
+    def test_timeout_sysctl(self):
+        timeout_config = {
+            'net.netfilter.nf_conntrack_icmp_timeout' :{
+                'cli'           : ['global-options', 'timeout', 'icmp'],
+                'test_value'    : '180',
+                'default_value' : '30',
+            },
+            'net.netfilter.nf_conntrack_generic_timeout' :{
+                'cli'           : ['global-options', 'timeout', 'other'],
+                'test_value'    : '1200',
+                'default_value' : '600',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_close_wait' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'close-wait'],
+                'test_value'    : '30',
+                'default_value' : '60',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_close' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'close'],
+                'test_value'    : '20',
+                'default_value' : '10',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_established' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'established'],
+                'test_value'    : '1000',
+                'default_value' : '432000',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_fin_wait' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'fin-wait'],
+                'test_value'    : '240',
+                'default_value' : '120',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_last_ack' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'last-ack'],
+                'test_value'    : '300',
+                'default_value' : '30',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_syn_recv' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'syn-recv'],
+                'test_value'    : '100',
+                'default_value' : '60',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_syn_sent' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'syn-sent'],
+                'test_value'    : '300',
+                'default_value' : '120',
+            },
+            'net.netfilter.nf_conntrack_tcp_timeout_time_wait' :{
+                'cli'           : ['global-options', 'timeout', 'tcp', 'time-wait'],
+                'test_value'    : '303',
+                'default_value' : '120',
+            },
+            'net.netfilter.nf_conntrack_udp_timeout' :{
+                'cli'           : ['global-options', 'timeout', 'udp', 'other'],
+                'test_value'    : '90',
+                'default_value' : '30',
+            },
+            'net.netfilter.nf_conntrack_udp_timeout_stream' :{
+                'cli'           : ['global-options', 'timeout', 'udp', 'stream'],
+                'test_value'    : '200',
+                'default_value' : '180',
+            },
+        }
+
+        for parameter, parameter_config in timeout_config.items():
+            self.cli_set(['firewall'] + parameter_config['cli'] + [parameter_config['test_value']])
+
+        # commit changes
+        self.cli_commit()
+
+        # validate configuration
+        for parameter, parameter_config in timeout_config.items():
+            tmp = parameter_config['test_value']
+            self.assertEqual(get_sysctl(f'{parameter}'), tmp)
+
+        # delete all configuration options and revert back to defaults
+        self.cli_delete(['firewall', 'global-options', 'timeout'])
+        self.cli_commit()
+
+        # validate configuration
+        for parameter, parameter_config in timeout_config.items():
+            self.assertEqual(get_sysctl(f'{parameter}'), parameter_config['default_value'])
 
 ### Zone
     def test_zone_basic(self):

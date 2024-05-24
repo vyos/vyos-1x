@@ -3,25 +3,7 @@
 
 net.netfilter.nf_conntrack_expect_max = {{ expect_table_size }}
 net.netfilter.nf_conntrack_max = {{ table_size }}
-
 net.ipv4.tcp_max_syn_backlog = {{ tcp.half_open_connections }}
-
 net.netfilter.nf_conntrack_tcp_loose = {{ '1' if tcp.loose is vyos_defined('enable') else '0' }}
 net.netfilter.nf_conntrack_tcp_max_retrans = {{ tcp.max_retrans }}
-
-net.netfilter.nf_conntrack_icmp_timeout = {{ timeout.icmp }}
-net.netfilter.nf_conntrack_generic_timeout = {{ timeout.other }}
-
-net.netfilter.nf_conntrack_tcp_timeout_close_wait = {{ timeout.tcp.close_wait }}
-net.netfilter.nf_conntrack_tcp_timeout_close = {{ timeout.tcp.close }}
-net.netfilter.nf_conntrack_tcp_timeout_established = {{ timeout.tcp.established }}
-net.netfilter.nf_conntrack_tcp_timeout_fin_wait = {{ timeout.tcp.fin_wait }}
-net.netfilter.nf_conntrack_tcp_timeout_last_ack = {{ timeout.tcp.last_ack }}
-net.netfilter.nf_conntrack_tcp_timeout_syn_recv = {{ timeout.tcp.syn_recv }}
-net.netfilter.nf_conntrack_tcp_timeout_syn_sent = {{ timeout.tcp.syn_sent }}
-net.netfilter.nf_conntrack_tcp_timeout_time_wait = {{ timeout.tcp.time_wait }}
-
-net.netfilter.nf_conntrack_udp_timeout = {{ timeout.udp.other }}
-net.netfilter.nf_conntrack_udp_timeout_stream = {{ timeout.udp.stream }}
-
 net.netfilter.nf_conntrack_acct = {{ '1' if flow_accounting is vyos_defined else '0' }}

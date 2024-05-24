@@ -244,6 +244,14 @@
       </properties>
       <defaultValue>enable</defaultValue>
     </leafNode>
+    <node name="timeout">
+      <properties>
+        <help>Connection timeout options</help>
+      </properties>
+      <children>
+        #include <include/firewall/timeout-common-protocols.xml.i>
+      </children>
+    </node>
     <leafNode name="twa-hazards-protection">
       <properties>
         <help>RFC1337 TCP TIME-WAIT assasination hazards protection</help>

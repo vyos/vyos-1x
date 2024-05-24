@@ -35,7 +35,7 @@
     </valueHelp>
     <valueHelp>
       <format>notrack</format>
-      <description>Igone connection tracking</description>
+      <description>Ignore connection tracking</description>
     </valueHelp>
     <constraint>
       <regex>(accept|continue|jump|notrack|reject|return|drop|queue)</regex>

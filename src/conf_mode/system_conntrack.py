@@ -166,7 +166,7 @@ def verify(conntrack):
                                     if not group_obj:
                                         Warning(f'{error_group} "{group_name}" has no members!')
 
-            Warning(f'It is prefered to defined {inet} conntrack ignore rules in the <firewall {inet} prerouting raw> section')
+            Warning(f'It is prefered to define {inet} conntrack ignore rules in <firewall {inet} prerouting raw> section')
 
         if dict_search_args(conntrack, 'timeout', 'custom', inet, 'rule') != None:
             for rule, rule_config in conntrack['timeout']['custom'][inet]['rule'].items():

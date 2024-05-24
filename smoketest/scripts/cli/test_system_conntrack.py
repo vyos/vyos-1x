@@ -68,66 +68,6 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                 'test_value'    : '128',
                 'default_value' : '3',
             },
-            'net.netfilter.nf_conntrack_icmp_timeout' :{
-                'cli'           : ['timeout', 'icmp'],
-                'test_value'    : '180',
-                'default_value' : '30',
-            },
-            'net.netfilter.nf_conntrack_generic_timeout' :{
-                'cli'           : ['timeout', 'other'],
-                'test_value'    : '1200',
-                'default_value' : '600',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_close_wait' :{
-                'cli'           : ['timeout', 'tcp', 'close-wait'],
-                'test_value'    : '30',
-                'default_value' : '60',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_close' :{
-                'cli'           : ['timeout', 'tcp', 'close'],
-                'test_value'    : '20',
-                'default_value' : '10',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_established' :{
-                'cli'           : ['timeout', 'tcp', 'established'],
-                'test_value'    : '1000',
-                'default_value' : '432000',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_fin_wait' :{
-                'cli'           : ['timeout', 'tcp', 'fin-wait'],
-                'test_value'    : '240',
-                'default_value' : '120',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_last_ack' :{
-                'cli'           : ['timeout', 'tcp', 'last-ack'],
-                'test_value'    : '300',
-                'default_value' : '30',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_syn_recv' :{
-                'cli'           : ['timeout', 'tcp', 'syn-recv'],
-                'test_value'    : '100',
-                'default_value' : '60',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_syn_sent' :{
-                'cli'           : ['timeout', 'tcp', 'syn-sent'],
-                'test_value'    : '300',
-                'default_value' : '120',
-            },
-            'net.netfilter.nf_conntrack_tcp_timeout_time_wait' :{
-                'cli'           : ['timeout', 'tcp', 'time-wait'],
-                'test_value'    : '303',
-                'default_value' : '120',
-            },
-            'net.netfilter.nf_conntrack_udp_timeout' :{
-                'cli'           : ['timeout', 'udp', 'other'],
-                'test_value'    : '90',
-                'default_value' : '30',
-            },
-            'net.netfilter.nf_conntrack_udp_timeout_stream' :{
-                'cli'           : ['timeout', 'udp', 'stream'],
-                'test_value'    : '200',
-                'default_value' : '180',
-            },
         }
 
         for parameter, parameter_config in conntrack_config.items():
