@@ -39,6 +39,7 @@
               #include <include/port-number.xml.i>
               #include <include/haproxy/rule-frontend.xml.i>
               #include <include/haproxy/tcp-request.xml.i>
+              #include <include/haproxy/http-response-headers.xml.i>
               <leafNode name="redirect-http-to-https">
                 <properties>
                   <help>Redirect HTTP to HTTPS</help>
@@ -90,6 +91,7 @@
               </leafNode>
               #include <include/generic-description.xml.i>
               #include <include/haproxy/mode.xml.i>
+              #include <include/haproxy/http-response-headers.xml.i>
               <node name="parameters">
                 <properties>
                   <help>Backend parameters</help>

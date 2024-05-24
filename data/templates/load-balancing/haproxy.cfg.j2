@@ -81,6 +81,11 @@ frontend {{ front }}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+{%             if front_config.http_response_headers is vyos_defined %}
+{%                 for header, header_config in front_config.http_response_headers.items() %}
+    http-response set-header {{ header }} '{{ header_config['value'] }}'
+{%                 endfor %}
+{%             endif %}
 {%         endif %}
 {%         if front_config.rule is vyos_defined %}
 {%             for rule, rule_config in front_config.rule.items() %}
@@ -158,6 +163,11 @@ backend {{ back }}
 {%         endif %}
 {%         if back_config.mode is vyos_defined %}
     mode {{ back_config.mode }}
+{%             if back_config.http_response_headers is vyos_defined %}
+{%                 for header, header_config in back_config.http_response_headers.items() %}
+    http-response set-header {{ header }} '{{ header_config['value'] }}'
+{%                 endfor %}
+{%             endif %}
 {%         endif %}
 {%         if back_config.rule is vyos_defined %}
 {%             for rule, rule_config in back_config.rule.items() %}

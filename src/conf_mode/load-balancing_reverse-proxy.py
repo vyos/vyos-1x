@@ -88,6 +88,12 @@ def verify(lb):
             if {'send_proxy', 'send_proxy_v2'} <= set(bk_server_conf):
                 raise ConfigError(f'Cannot use both "send-proxy" and "send-proxy-v2" for server "{bk_server}"')
 
+    # Check if http-response-headers are configured in any frontend/backend where mode != http
+    for group in ['service', 'backend']:
+        for config_name, config in lb[group].items():
+            if 'http_response_headers' in config and ('mode' not in config or config['mode'] != 'http'):
+                raise ConfigError(f'{group} {config_name} must be set to http mode to use http_response_headers!')
+
         if 'ssl' in back_config:
             if {'no_verify', 'ca_certificate'} <= set(back_config['ssl']):
                 raise ConfigError(f'backend {back} cannot have both ssl options no-verify and ca-certificate set!')
