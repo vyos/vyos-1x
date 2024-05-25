@@ -18,8 +18,8 @@ the box, please use [x]
 - [ ] Other (please describe):
 
 ## Related Task(s)
-<!-- All submitted PRs must be linked to a Task on Phabricator. -->
-* https://vyos.dev/Txxxx
+<!-- optional: Link to related other tasks on Phabricator. -->
+<!-- * https://vyos.dev/Txxxx -->
 
 ## Component(s) name
 <!-- A rather incomplete list of components: ethernet, wireguard, bgp, mpls, ldp, l2tp, dhcp ... -->
@@ -41,9 +41,8 @@ like this
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
 <!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
 <!--- The entire development process is outlined here: https://docs.vyos.io/en/latest/contributing/development.html -->
-- [ ] I have read the [**CONTRIBUTING**](https://github.com/vyos/vyos-1x/blob/current/CONTRIBUTING.md) document
+- [ ] I have read the [**CONTRIBUTING**](https://github.com/vyos/vyos-1x/blob/sagitta/CONTRIBUTING.md) document
 - [ ] I have linked this PR to one or more Phabricator Task(s)
-- [ ] I have run the components [**SMOKETESTS**](https://github.com/vyos/vyos-1x/tree/current/smoketest/scripts/cli) if applicable
 - [ ] My commit headlines contain a valid Task id
 - [ ] My change requires a change to the documentation
 - [ ] I have updated the documentation accordingly
