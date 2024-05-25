@@ -876,7 +876,7 @@ def show_certificate_authority(name=None, pem=False):
     print("Certificate Authorities:")
     print(tabulate.tabulate(data, headers))
 
-def show_certificate(name=None, pem=False):
+def show_certificate(name=None, pem=False, fingerprint_hash=None):
     headers = ['Name', 'Type', 'Subject CN', 'Issuer CN', 'Issued', 'Expiry', 'Revoked', 'Private Key', 'CA Present']
     data = []
     certs = get_config_certificate()
@@ -896,6 +896,9 @@ def show_certificate(name=None, pem=False):
 
             if name and pem:
                 print(encode_certificate(cert))
+                return
+            elif name and fingerprint_hash:
+                print(get_certificate_fingerprint(cert, fingerprint_hash))
                 return
 
             ca_name = get_certificate_ca(cert, ca_certs)
@@ -922,12 +925,6 @@ def show_certificate(name=None, pem=False):
 
     print("Certificates:")
     print(tabulate.tabulate(data, headers))
-
-def show_certificate_fingerprint(name, hash):
-    cert = get_config_certificate(name=name)
-    cert = load_certificate(cert['certificate'])
-
-    print(get_certificate_fingerprint(cert, hash))
 
 def show_crl(name=None, pem=False):
     headers = ['CA Name', 'Updated', 'Revokes']
@@ -1074,7 +1071,7 @@ if __name__ == '__main__':
                 if args.fingerprint is None:
                     show_certificate(None if args.certificate == 'all' else args.certificate, args.pem)
                 else:
-                    show_certificate_fingerprint(args.certificate, args.fingerprint)
+                    show_certificate(args.certificate, fingerprint_hash=args.fingerprint)
             elif args.crl:
                 show_crl(None if args.crl == 'all' else args.crl, args.pem)
             else:
