@@ -105,22 +105,29 @@ def verify(dhcpv6):
                 if 'prefix' in subnet_config:
                     for prefix in subnet_config['prefix']:
                         if ip_network(prefix) not in ip_network(subnet):
-                            raise ConfigError(f'address-range prefix "{prefix}" is not in subnet "{subnet}""')
+                            raise ConfigError(f'address-range prefix "{prefix}" is not in subnet "{subnet}"!')
 
             # Prefix delegation sanity checks
             if 'prefix_delegation' in subnet_config:
                 if 'start' not in subnet_config['prefix_delegation']:
-                    raise ConfigError('prefix-delegation start address not defined!')
+                        raise ConfigError(f'Start address of delegated IPv6 prefix range "{prefix}" '\
+                                          f'must be configured!')
 
                 for prefix, prefix_config in subnet_config['prefix_delegation']['start'].items():
                     if 'stop' not in prefix_config:
-                        raise ConfigError(f'Stop address of delegated IPv6 '\
-                                          f'prefix range "{prefix}" '\
-                                          f'must be configured')
+                        raise ConfigError(f'Stop address of delegated IPv6 prefix range "{prefix}" '\
+                                          f'must be configured!')
+
+                    start_addr = prefix
+                    stop_addr = prefix_config['stop']
+
+                    if ip_address(stop_addr) <= ip_address(start_addr):
+                        raise ConfigError(f'Stop address of delegated IPv6 prefix range "{prefix}" '\
+                                          f'must be greater than start address!')
 
                     if 'prefix_length' not in prefix_config:
                         raise ConfigError(f'Length of delegated IPv6 prefix '\
-                                          f'must be configured')
+                                          f'must be configured!')
 
             # Static mappings don't require anything (but check if IP is in subnet if it's set)
             if 'static_mapping' in subnet_config:
