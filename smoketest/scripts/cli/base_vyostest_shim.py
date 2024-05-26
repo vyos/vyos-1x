@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -47,6 +47,8 @@ class VyOSUnitTestSHIM:
         def setUpClass(cls):
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
+            if os.path.exists('/tmp/vyos.smoketest.debug'):
+                cls.debug = True
             pass
 
         @classmethod

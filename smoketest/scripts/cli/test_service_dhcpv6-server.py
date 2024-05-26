@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.template import inc_ip
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
@@ -143,8 +144,13 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
 
         self.cli_set(pool + ['address-range', 'start', range_start, 'stop', range_stop])
-        self.cli_set(pool + ['prefix-delegation', 'start', delegate_start, 'stop', delegate_stop])
         self.cli_set(pool + ['prefix-delegation', 'start', delegate_start, 'prefix-length', delegate_len])
+
+        self.cli_set(pool + ['prefix-delegation', 'start', delegate_start, 'stop', delegate_start])
+        # Prefix delegation stop address must be greater then start address
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(pool + ['prefix-delegation', 'start', delegate_start, 'stop', delegate_stop])
 
         # commit changes
         self.cli_commit()
