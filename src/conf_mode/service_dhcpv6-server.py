@@ -113,28 +113,10 @@ def verify(dhcpv6):
                     raise ConfigError('prefix-delegation start address not defined!')
 
                 for prefix, prefix_config in subnet_config['prefix_delegation']['start'].items():
-                    prefix_start_addr = prefix
-
-                    # Prefix start address must be inside network
-                    if not ip_address(prefix_start_addr) in ip_network(subnet):
-                        raise ConfigError(f'Prefix delegation start address '\
-                                          f'"{prefix_start_addr}" is not in '\
-                                          f'subnet "{subnet}"')
-
                     if 'stop' not in prefix_config:
                         raise ConfigError(f'Stop address of delegated IPv6 '\
                                           f'prefix range "{prefix}" '\
                                           f'must be configured')
-
-                    if 'stop' in prefix_config:
-                       prefix_stop_addr = prefix_config['stop']
-
-                       # Prefix stop address must be inside network
-                       if not (ip_address(prefix_stop_addr) in
-                              ip_network(subnet)):
-                           raise ConfigError(f'Prefix delegation stop '\
-                                             f'address "{prefix_stop_addr}" '\
-                                             f'is not in subnet "{subnet}"')
 
                     if 'prefix_length' not in prefix_config:
                         raise ConfigError(f'Length of delegated IPv6 prefix '\
