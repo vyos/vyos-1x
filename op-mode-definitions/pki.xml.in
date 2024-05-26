@@ -495,7 +495,7 @@
             <properties>
               <help>Show x509 CA certificates</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/pki.py --action show --ca "all"</command>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "all"</command>
           </leafNode>
           <tagNode name="ca">
             <properties>
@@ -504,13 +504,13 @@
                 <path>pki ca</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/pki.py --action show --ca "$4"</command>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4"</command>
             <children>
               <leafNode name="pem">
                 <properties>
                   <help>Show x509 CA certificate in PEM format</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/pki.py --action show --ca "$4" --pem</command>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4" --pem</command>
               </leafNode>
             </children>
           </tagNode>
@@ -518,7 +518,7 @@
             <properties>
               <help>Show x509 certificates</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
           </leafNode>
           <tagNode name="certificate">
             <properties>
@@ -527,7 +527,7 @@
                 <path>pki certificate</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/pki.py --action show --certificate "$4"</command>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4"</command>
             <children>
               <leafNode name="pem">
                 <properties>
@@ -542,7 +542,7 @@
                     <list>sha256 sha384 sha512</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/pki.py --action show --certificate "$4" --fingerprint "$6"</command>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4" --fingerprint "$6"</command>
               </tagNode>
             </children>
           </tagNode>
