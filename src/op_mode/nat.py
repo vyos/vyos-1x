@@ -99,6 +99,23 @@ def _get_raw_translation(direction, family, address=None):
 
 
 def _get_formatted_output_rules(data, direction, family):
+    def _get_ports_for_output(my_dict):
+        # Get and insert all configured ports or port ranges into output string
+        for index, port in enumerate(my_dict['set']):
+            if 'range' in str(my_dict['set'][index]):
+                output = my_dict['set'][index]['range']
+                output = '-'.join(map(str, output))
+            else:
+                output = str(port)
+            if index == 0:
+                output = str(output)
+            else:
+                output = ','.join([output,output])
+        # Handle case where configured ports are a negated list
+        if my_dict['op'] == '!=':
+            output = '!' + output
+        return(output)
+
     # Add default values before loop
     sport, dport, proto = 'any', 'any', 'any'
     saddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
@@ -126,21 +143,9 @@ def _get_formatted_output_rules(data, direction, family):
                     elif my_dict['field'] == 'daddr':
                         daddr = f'{op}{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
                     elif my_dict['field'] == 'sport':
-                        # Port range or single port
-                        if jmespath.search('set[*].range', my_dict):
-                            sport = my_dict['set'][0]['range']
-                            sport = '-'.join(map(str, sport))
-                        else:
-                            sport = my_dict.get('set')
-                            sport = ','.join(map(str, sport))
+                        sport = _get_ports_for_output(my_dict)
                     elif my_dict['field'] == 'dport':
-                        # Port range or single port
-                        if jmespath.search('set[*].range', my_dict):
-                            dport = my_dict["set"][0]["range"]
-                            dport = '-'.join(map(str, dport))
-                        else:
-                            dport = my_dict.get('set')
-                            dport = ','.join(map(str, dport))
+                        dport = _get_ports_for_output(my_dict)
                 else:
                     field = jmespath.search('left.payload.field', match)
                     if field == 'saddr':
