@@ -228,10 +228,11 @@
                             <format>ipv6</format>
                             <description>IPv6 address used in prefix delegation</description>
                           </valueHelp>
-                          <constraint>
+                          <constraintGroup>
+                            <validator name="ipv6-address"/>
                             <!-- IPv6 address used MUST end with :: -->
                             <regex>([a-fA-F0-9]{1,4}:)+:</regex>
-                          </constraint>
+                          </constraintGroup>
                         </properties>
                         <children>
                           <leafNode name="prefix-length">
@@ -254,10 +255,11 @@
                                 <format>ipv6</format>
                                 <description>IPv6 address used in prefix delegation</description>
                               </valueHelp>
-                              <constraint>
+                              <constraintGroup>
+                                <validator name="ipv6-address"/>
                                 <!-- IPv6 address used MUST end with :: -->
                                 <regex>([a-fA-F0-9]{1,4}:)+:</regex>
-                              </constraint>
+                              </constraintGroup>
                             </properties>
                           </leafNode>
                         </children>
