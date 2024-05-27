@@ -94,6 +94,15 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', config)
             self.assertTrue(tmp)
 
+    def test_vfio(self):
+        options_to_check = [
+            'CONFIG_VFIO', 'CONFIG_VFIO_GROUP', 'CONFIG_VFIO_CONTAINER',
+            'CONFIG_VFIO_IOMMU_TYPE1', 'CONFIG_VFIO_NOIOMMU', 'CONFIG_VFIO_VIRQFD'
+            ]
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 
