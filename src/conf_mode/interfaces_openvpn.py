@@ -260,6 +260,11 @@ def verify(openvpn):
     # OpenVPN site-to-site - VERIFY
     #
     elif openvpn['mode'] == 'site-to-site':
+        # XXX: site-to-site is the only mode that still can work without TLS,
+        # so we need to make sure that if TLS is used, then TLS role is also specified
+        if 'shared_secret_key' not in openvpn['tls'] and 'role' not in openvpn['tls']:
+            raise ConfigError('"tls role" is required for site-to-site OpenVPN with TLS')
+
         if 'local_address' not in openvpn and 'is_bridge_member' not in openvpn:
             raise ConfigError('Must specify "local-address" or add interface to bridge')
 
