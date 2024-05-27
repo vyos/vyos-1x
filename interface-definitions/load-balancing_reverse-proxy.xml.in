@@ -92,19 +92,6 @@
               #include <include/generic-description.xml.i>
               #include <include/haproxy/mode.xml.i>
               #include <include/haproxy/http-response-headers.xml.i>
-              <node name="parameters">
-                <properties>
-                  <help>Backend parameters</help>
-                </properties>
-                <children>
-                  <leafNode name="http-check">
-                    <properties>
-                      <help>HTTP health check</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               <node name="http-check">
                 <properties>
                   <help>HTTP check configuration</help>
