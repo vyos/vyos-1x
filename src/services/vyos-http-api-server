@@ -23,16 +23,17 @@ import logging
 import signal
 import traceback
 import threading
+from enum import Enum
 
 from time import sleep
-from typing import List, Union, Callable, Dict
+from typing import List, Union, Callable, Dict, Self
 
 from fastapi import FastAPI, Depends, Request, Response, HTTPException
 from fastapi import BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from pydantic import BaseModel, StrictStr, validator
+from pydantic import BaseModel, StrictStr, validator, model_validator
 from starlette.middleware.cors import CORSMiddleware
 from starlette.datastructures import FormData
 from starlette.formparsers import FormParser, MultiPartParser
@@ -177,16 +178,35 @@ class ConfigFileModel(ApiModel):
             }
         }
 
+
+class ImageOp(str, Enum):
+    add = "add"
+    delete = "delete"
+    show = "show"
+    set_default = "set_default"
+
+
 class ImageModel(ApiModel):
-    op: StrictStr
+    op: ImageOp
     url: StrictStr = None
     name: StrictStr = None
+
+    @model_validator(mode='after')
+    def check_data(self) -> Self:
+        if self.op == 'add':
+            if not self.url:
+                raise ValueError("Missing required field \"url\"")
+        elif self.op in ['delete', 'set_default']:
+            if not self.name:
+                raise ValueError("Missing required field \"name\"")
+
+        return self
 
     class Config:
         schema_extra = {
             "example": {
                 "key": "id_key",
-                "op": "add | delete",
+                "op": "add | delete | show | set_default",
                 "url": "imagelocation",
                 "name": "imagename",
             }
@@ -668,19 +688,13 @@ def image_op(data: ImageModel):
 
     try:
         if op == 'add':
-            if data.url:
-                url = data.url
-            else:
-                return error(400, "Missing required field \"url\"")
-            res = session.install_image(url)
+            res = session.install_image(data.url)
         elif op == 'delete':
-            if data.name:
-                name = data.name
-            else:
-                return error(400, "Missing required field \"name\"")
-            res = session.remove_image(name)
-        else:
-            return error(400, f"'{op}' is not a valid operation")
+            res = session.remove_image(data.name)
+        elif op == 'show':
+            res = session.show(["system", "image"])
+        elif op == 'set_default':
+            res = session.set_default_image(data.name)
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:

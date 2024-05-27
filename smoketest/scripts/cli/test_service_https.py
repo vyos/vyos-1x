@@ -412,6 +412,47 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(r.status_code, 200)
 
     @ignore_warning(InsecureRequestWarning)
+    def test_api_image(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/image'
+        headers = {}
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        payload = {
+            'data': '{"op": "add"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('Missing required field "url"', r.json().get('error'))
+
+        payload = {
+            'data': '{"op": "delete"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('Missing required field "name"', r.json().get('error'))
+
+        payload = {
+            'data': '{"op": "set_default"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('Missing required field "name"', r.json().get('error'))
+
+        payload = {
+            'data': '{"op": "show"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+    @ignore_warning(InsecureRequestWarning)
     def test_api_config_file_load_http(self):
         # Test load config from HTTP URL
         address = '127.0.0.1'
