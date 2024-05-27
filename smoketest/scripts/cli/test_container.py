@@ -91,6 +91,22 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertEqual(process_named_running(PROCESS_NAME), pid)
 
+    def test_cpu_limit(self):
+        cont_name = 'c2'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'cpus', '1.25'])
+
+        self.cli_commit()
+
+        pid = 0
+        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
+            pid = int(f.read())
+
+        # Check for running process
+        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+
     def test_ipv4_network(self):
         prefix = '192.0.2.0/24'
         base_name = 'ipv4'
