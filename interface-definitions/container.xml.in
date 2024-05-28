@@ -192,6 +192,24 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="cpu-quota">
+            <properties>
+              <help>This limits the number of CPU resources the container can use</help>
+              <valueHelp>
+                <format>u32:0</format>
+                <description>Unlimited</description>
+              </valueHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Amount of CPU time the container can use in amount of cores (up to three decimals)</description>
+              </valueHelp>
+              <constraint>
+                <regex>(0|[1-9]\d*)(\.\d{1,3})?</regex>
+              </constraint>
+              <constraintErrorMessage>Container CPU limit must be a (decimal) number in range 0 to number of threads</constraintErrorMessage>
+            </properties>
+            <defaultValue>0</defaultValue>
+          </leafNode>
           <leafNode name="memory">
             <properties>
               <help>Memory (RAM) available to this container</help>

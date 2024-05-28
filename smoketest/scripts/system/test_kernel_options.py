@@ -120,5 +120,13 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
+    def test_container_cpu(self):
+        options_to_check = [
+            'CONFIG_CGROUP_SCHED', 'CONFIG_CPUSETS', 'CONFIG_CGROUP_CPUACCT', 'CONFIG_CFS_BANDWIDTH'
+            ]
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
