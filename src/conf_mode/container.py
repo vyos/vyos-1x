@@ -128,9 +128,9 @@ def verify(container):
                         f'locally. Please use "add container image {image}" to add it '\
                         f'to the system! Container "{name}" will not be started!')
 
-            if 'cpus' in container_config:
-                cores = os.cpu_count()
-                if Decimal(container_config['cpus']) > cores:
+            if 'cpu_quota' in container_config:
+                cores = vyos.cpu.get_core_count()
+                if Decimal(container_config['cpu_quota']) > cores:
                     raise ConfigError(f'Cannot set limit to more cores than available "{name}"!')
 
             if 'network' in container_config:
@@ -263,7 +263,7 @@ def verify(container):
 
 def generate_run_arguments(name, container_config):
     image = container_config['image']
-    cpus = container_config['cpus']
+    cpu_quota = container_config['cpu_quota']
     memory = container_config['memory']
     shared_memory = container_config['shared_memory']
     restart = container_config['restart']
@@ -340,7 +340,7 @@ def generate_run_arguments(name, container_config):
     if 'allow_host_pid' in container_config:
       host_pid = '--pid host'
 
-    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpus} ' \
+    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpu_quota} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
                          f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid} {host_pid}'
 

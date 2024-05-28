@@ -96,7 +96,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
         self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
-        self.cli_set(base_path + ['name', cont_name, 'cpus', '1.25'])
+        self.cli_set(base_path + ['name', cont_name, 'cpu-quota', '1.25'])
 
         self.cli_commit()
 
