@@ -40,13 +40,14 @@ from vyos.template import render
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.process import cmd, run
-from vyos.version import get_remote_version
+from vyos.version import get_remote_version, get_version_data
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
 MSG_ERR_LIVE: str = 'The system is in live-boot mode. Please use "install image" instead.'
 MSG_ERR_NO_DISK: str = 'No suitable disk was found. There must be at least one disk of 2GB or greater size.'
 MSG_ERR_IMPROPER_IMAGE: str = 'Missing sha256sum.txt.\nEither this image is corrupted, or of era 1.2.x (md5sum) and would downgrade image tools;\ndisallowed in either case.'
+MSG_ERR_ARCHITECTURE_MISMATCH: str = 'Upgrading to a different image architecture will break your system.'
 MSG_INFO_INSTALL_WELCOME: str = 'Welcome to VyOS installation!\nThis command will install VyOS to your permanent storage.'
 MSG_INFO_INSTALL_EXIT: str = 'Exiting from VyOS installation'
 MSG_INFO_INSTALL_SUCCESS: str = 'The image installed successfully; please reboot now.'
@@ -79,6 +80,9 @@ MSG_WARN_ROOT_SIZE_TOOSMALL: str = 'The size is too small. Try again'
 MSG_WARN_IMAGE_NAME_WRONG: str = 'The suggested name is unsupported!\n'\
 'It must be between 1 and 64 characters long and contains only the next characters: .+-_ a-z A-Z 0-9'
 MSG_WARN_PASSWORD_CONFIRM: str = 'The entered values did not match. Try again'
+MSG_WARN_FLAVOR_MISMATCH: str = 'The running image flavor is "{0}". The new image flavor is "{1}".\n' \
+'Installing a different image flavor may cause functionality degradation or break your system.\n' \
+'Do you want to continue with installation?'
 CONST_MIN_DISK_SIZE: int = 2147483648  # 2 GB
 CONST_MIN_ROOT_SIZE: int = 1610612736  # 1.5 GB
 # a reserved space: 2MB for header, 1 MB for BIOS partition, 256 MB for EFI
@@ -693,6 +697,31 @@ def is_raid_install(install_object: Union[disk.DiskDetails, raid.RaidDetails]) -
     return False
 
 
+def validate_compatibility(iso_path: str) -> None:
+    """Check architecture and flavor compatibility with the running image
+
+    Args:
+        iso_path (str): a path to the mounted ISO image
+    """
+    old_data = get_version_data()
+    old_flavor = old_data.get('flavor', '')
+    old_architecture = old_data.get('architecture') or cmd('dpkg --print-architecture')
+
+    new_data = get_version_data(f'{iso_path}/version.json')
+    new_flavor = new_data.get('flavor', '')
+    new_architecture = new_data.get('architecture', '')
+
+    if not old_architecture == new_architecture:
+        print(MSG_ERR_ARCHITECTURE_MISMATCH)
+        cleanup()
+        exit(MSG_INFO_INSTALL_EXIT)
+
+    if not old_flavor == new_flavor:
+        if not ask_yes_no(MSG_WARN_FLAVOR_MISMATCH.format(old_flavor, new_flavor), default=False):
+            cleanup()
+            exit(MSG_INFO_INSTALL_EXIT)
+
+
 def install_image() -> None:
     """Install an image to a disk
     """
@@ -875,6 +904,9 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
         disk.partition_mount(iso_path, DIR_ISO_MOUNT, 'iso9660')
+
+        print('Validating image compatibility')
+        validate_compatibility(DIR_ISO_MOUNT)
 
         # check sums
         print('Validating image checksums')
