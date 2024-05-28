@@ -192,7 +192,7 @@
               </leafNode>
             </children>
           </tagNode>
-          <leafNode name="cpus">
+          <leafNode name="cpu-quota">
             <properties>
               <help>This limits the number of CPU resources the container can use</help>
               <valueHelp>
