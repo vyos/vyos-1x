@@ -34,6 +34,8 @@ INSTALL_IMAGE = ['/usr/libexec/vyos/op_mode/image_installer.py',
                  '--action', 'add', '--no-prompt', '--image-path']
 REMOVE_IMAGE = ['/usr/libexec/vyos/op_mode/image_manager.py',
                 '--action', 'delete', '--no-prompt', '--image-name']
+SET_DEFAULT_IMAGE = ['/usr/libexec/vyos/op_mode/image_manager.py',
+                '--action', 'set', '--no-prompt', '--image-name']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
@@ -233,6 +235,10 @@ class ConfigSession(object):
 
     def remove_image(self, name):
         out = self.__run_command(REMOVE_IMAGE + [name])
+        return out
+
+    def set_default_image(self, name):
+        out = self.__run_command(SET_DEFAULT_IMAGE + [name])
         return out
 
     def generate(self, path):
