@@ -252,7 +252,11 @@ def generate(config):
         ext_pool_name: str = rule_config['translation']['pool']
         int_pool_name: str = rule_config['source']['pool']
 
-        external_ranges: list = [range for range in config['pool']['external'][ext_pool_name]['range']]
+        # Sort the external ranges by sequence
+        external_ranges: list = sorted(
+            config['pool']['external'][ext_pool_name]['range'],
+            key=lambda r: int(config['pool']['external'][ext_pool_name]['range'][r].get('seq', 999999))
+        )
         internal_ranges: list = [range for range in config['pool']['internal'][int_pool_name]['range']]
         external_list_hosts_count = []
         external_list_hosts = []

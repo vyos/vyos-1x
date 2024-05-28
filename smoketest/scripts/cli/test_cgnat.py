@@ -95,5 +95,44 @@ class TestCGNAT(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip cgnat', inverse=False, args='-s')
 
 
+    def test_cgnat_sequence(self):
+        internal_name = 'earth'
+        external_name = 'milky_way'
+        internal_net = '100.64.0.0/28'
+
+        ext_addr_alpha_proxima = '192.0.2.121/32'
+        ext_addr_beta_cygni = '198.51.100.23/32'
+        ext_addr_gamma_leonis = '203.0.113.102/32'
+
+        ext_seq_beta_cygni = '3'
+        ext_seq_gamma_leonis = '10'
+
+        external_ports = '1024-65535'
+        ports_per_subscriber = '10000'
+        rule = '100'
+
+        nftables_search = [
+            ['100.64.0.0 : 198.51.100.23 . 1024-11023, 100.64.0.1 : 198.51.100.23 . 11024-21023'],
+            ['100.64.0.4 : 198.51.100.23 . 41024-51023, 100.64.0.5 : 198.51.100.23 . 51024-61023'],
+            ['100.64.0.6 : 203.0.113.102 . 1024-11023, 100.64.0.7 : 203.0.113.102 . 11024-21023'],
+            ['100.64.0.8 : 203.0.113.102 . 21024-31023, 100.64.0.9 : 203.0.113.102 . 31024-41023'],
+            ['100.64.0.10 : 203.0.113.102 . 41024-51023, 100.64.0.11 : 203.0.113.102 . 51024-61023'],
+            ['100.64.0.12 : 192.0.2.121 . 1024-11023, 100.64.0.13 : 192.0.2.121 . 11024-21023'],
+            ['100.64.0.14 : 192.0.2.121 . 21024-31023, 100.64.0.15 : 192.0.2.121 . 31024-41023'],
+        ]
+
+        self.cli_set(base_path + ['pool', 'external', external_name, 'external-port-range', external_ports])
+        self.cli_set(base_path + ['pool', 'external', external_name, 'per-user-limit', 'port', ports_per_subscriber])
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', ext_addr_alpha_proxima])
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', ext_addr_beta_cygni, 'seq', ext_seq_beta_cygni])
+        self.cli_set(base_path + ['pool', 'external', external_name, 'range', ext_addr_gamma_leonis, 'seq', ext_seq_gamma_leonis])
+        self.cli_set(base_path + ['pool', 'internal', internal_name, 'range', internal_net])
+        self.cli_set(base_path + ['rule', rule, 'source', 'pool', internal_name])
+        self.cli_set(base_path + ['rule', rule, 'translation', 'pool', external_name])
+        self.cli_commit()
+
+        self.verify_nftables(nftables_search, 'ip cgnat', inverse=False, args='-s')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
