@@ -165,6 +165,41 @@
   </properties>
 </leafNode>
 #include <include/isis/ldp-sync-protocol.xml.i>
+<leafNode name="topology">
+  <properties>
+    <help>Configure IS-IS topologies</help>
+    <completionHelp>
+      <list>ipv4-multicast ipv4-mgmt ipv6-unicast ipv6-multicast ipv6-mgmt ipv6-dstsrc</list>
+    </completionHelp>
+    <valueHelp>
+      <format>ipv4-multicast</format>
+      <description>Use IPv4 multicast topology</description>
+    </valueHelp>
+    <valueHelp>
+      <format>ipv4-mgmt</format>
+      <description>Use IPv4 management topology</description>
+    </valueHelp>
+    <valueHelp>
+      <format>ipv6-unicast</format>
+      <description>Use IPv6 unicast topology</description>
+    </valueHelp>
+    <valueHelp>
+      <format>ipv6-multicast</format>
+      <description>Use IPv6 multicast topology</description>
+    </valueHelp>
+    <valueHelp>
+      <format>ipv6-mgmt</format>
+      <description>Use IPv6 management topology</description>
+    </valueHelp>
+    <valueHelp>
+      <format>ipv6-dstsrc</format>
+      <description>Use IPv6 dst-src topology</description>
+    </valueHelp>
+    <constraint>
+      <regex>(ipv4-multicast|ipv4-mgmt|ipv6-unicast|ipv6-multicast|ipv6-mgmt|ipv6-dstsrc)</regex>
+    </constraint>
+  </properties>
+</leafNode>
 <node name="fast-reroute">
   <properties>
     <help>IS-IS fast reroute configuration</help>
