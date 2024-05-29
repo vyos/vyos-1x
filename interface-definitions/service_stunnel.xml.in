@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <properties>
+      <help>System services</help>
+    </properties>
+    <children>
+      <node name="stunnel" owner="${vyos_conf_scripts_dir}/service_stunnel.py">
+        <properties>
+          <help>Stunnel TLS Proxy</help>
+          <priority>1000</priority>
+        </properties>
+        <children>
+          <tagNode name="server">
+            <properties>
+              <help>Stunnel server config</help>
+            </properties>
+            <children>
+              #include <include/stunnel/connect.xml.i>
+              #include <include/stunnel/listen.xml.i>
+              #include <include/stunnel/ssl.xml.i>
+              #include <include/stunnel/psk.xml.i>
+              <leafNode name="protocol">
+                <properties>
+                  <help>Application protocol to negotiate TLS</help>
+                  <completionHelp>
+                    <list>cifs imap pgsql pop3 proxy smtp socks</list>
+                  </completionHelp>
+                  #include <include/stunnel/protocol-value-cifs.xml.i>
+                  #include <include/stunnel/protocol-value-imap.xml.i>
+                  #include <include/stunnel/protocol-value-pgsql.xml.i>
+                  #include <include/stunnel/protocol-value-pop3.xml.i>
+                  #include <include/stunnel/protocol-value-proxy.xml.i>
+                  #include <include/stunnel/protocol-value-smtp.xml.i>
+                  #include <include/stunnel/protocol-value-socks.xml.i>
+                  <constraint>
+                    <regex>(cifs|imap|pgsql|pop3|proxy|smtp|socks)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="client">
+            <properties>
+              <help>Stunnel client config</help>
+            </properties>
+            <children>
+              #include <include/stunnel/connect.xml.i>
+              #include <include/stunnel/listen.xml.i>
+              #include <include/stunnel/ssl.xml.i>
+              #include <include/stunnel/psk.xml.i>
+              <leafNode name="protocol">
+                <properties>
+                  <help>Application protocol to negotiate TLS</help>
+                  <completionHelp>
+                    <list>cifs connect imap nntp pgsql pop3 proxy smtp socks</list>
+                  </completionHelp>
+                  #include <include/stunnel/protocol-value-cifs.xml.i>
+                  #include <include/stunnel/protocol-value-connect.xml.i>
+                  #include <include/stunnel/protocol-value-imap.xml.i>
+                  #include <include/stunnel/protocol-value-nntp.xml.i>
+                  #include <include/stunnel/protocol-value-pgsql.xml.i>
+                  #include <include/stunnel/protocol-value-pop3.xml.i>
+                  #include <include/stunnel/protocol-value-proxy.xml.i>
+                  #include <include/stunnel/protocol-value-smtp.xml.i>
+                  #include <include/stunnel/protocol-value-socks.xml.i>
+                  <constraint>
+                    <regex>(cifs|connect|imap|nntp|pgsql|pop3|proxy|smtp|socks)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/stunnel/protocol-options.xml.i>
+            </children>
+          </tagNode>
+          <node name="log">
+            <properties>
+              <help>Service logging</help>
+            </properties>
+            <children>
+              <leafNode name="level">
+                <properties>
+                  <help>Specifies log level.</help>
+                  <completionHelp>
+                    <list>emerg alert crit err warning notice info debug</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>emerg</format>
+                    <description>Emerg log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>alert</format>
+                    <description>Alert log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>crit</format>
+                    <description>Critical log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>err</format>
+                    <description>Error log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>warning</format>
+                    <description>Warning log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>notice</format>
+                    <description>Notice log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>info</format>
+                    <description>Info log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>debug</format>
+                    <description>Debug log level</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(emerg|alert|crit|err|warning|notice|info|debug)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>notice</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

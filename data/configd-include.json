@@ -81,6 +81,7 @@
 "service_sla.py",
 "service_snmp.py",
 "service_ssh.py",
+"service_stunnel.py",
 "service_tftp-server.py",
 "service_webproxy.py",
 "system_acceleration.py",

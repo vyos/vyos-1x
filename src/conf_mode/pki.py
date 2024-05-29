@@ -85,6 +85,10 @@ sync_search = [
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['vpn', 'sstp'],
+    },
+    {
+        'keys': ['certificate', 'ca_certificate'],
+        'path': ['service', 'stunnel'],
     }
 ]
 
