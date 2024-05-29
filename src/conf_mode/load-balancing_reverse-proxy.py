@@ -126,30 +126,23 @@ def generate(lb):
 
     # SSL Certificates for frontend
     for front, front_config in lb['service'].items():
-        if 'ssl' in front_config:
+        if 'ssl' not in front_config:
+            continue
 
-            if 'certificate' in front_config['ssl']:
-                cert_names = front_config['ssl']['certificate']
+        if 'certificate' in front_config['ssl']:
+            cert_names = front_config['ssl']['certificate']
 
-                for cert_name in cert_names:
-                    pki_cert = lb['pki']['certificate'][cert_name]
-                    cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
-                    cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
+            for cert_name in cert_names:
+                pki_cert = lb['pki']['certificate'][cert_name]
+                cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
+                cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
 
-                    with open(cert_file_path, 'w') as f:
-                        f.write(wrap_certificate(pki_cert['certificate']))
+                with open(cert_file_path, 'w') as f:
+                    f.write(wrap_certificate(pki_cert['certificate']))
 
-                    if 'private' in pki_cert and 'key' in pki_cert['private']:
-                        with open(cert_key_path, 'w') as f:
-                            f.write(wrap_private_key(pki_cert['private']['key']))
-
-            if 'ca_certificate' in front_config['ssl']:
-                ca_name = front_config['ssl']['ca_certificate']
-                pki_ca_cert = lb['pki']['ca'][ca_name]
-                ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
-
-                with open(ca_cert_file_path, 'w') as f:
-                    f.write(wrap_certificate(pki_ca_cert['certificate']))
+                if 'private' in pki_cert and 'key' in pki_cert['private']:
+                    with open(cert_key_path, 'w') as f:
+                        f.write(wrap_private_key(pki_cert['private']['key']))
 
     # SSL Certificates for backend
     for back, back_config in lb['backend'].items():
