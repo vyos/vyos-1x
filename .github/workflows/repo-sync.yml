@@ -1,0 +1,31 @@
+name: Repo-sync
+
+on:
+  # push:
+  #   branches:
+  #     - current
+  pull_request:
+    types:
+      - closed
+    branches:
+      - current
+  workflow_dispatch:
+
+jobs:
+  trigger-sync:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Trigger sync workflow
+        shell: bash
+        env:
+          MY_REMOTE_REPO: ${{ secrets.REMOTE_REPO }}
+          MY_REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
+          MY_PAT: ${{ secrets.PAT }}
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.everest-preview+json" \
+            -H "Authorization: Bearer $MY_PAT" \
+            https://api.github.com/repos/$MY_REMOTE_OWNER/$MY_REMOTE_REPO/actions/workflows/vyos-repo-sync.yml/dispatches \
+            -d '{"ref":"git-actions"}'
