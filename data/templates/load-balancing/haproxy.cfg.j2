@@ -62,7 +62,7 @@ frontend {{ front }}
     bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ ssl_directive }} {{ ssl_front | join(' ') }}
 {%             endfor %}
 {%         else %}
-    bind :::{{ front_config.port }} v4v6 {{ ssl_directive }} {{ ssl_front | join(' ') }}
+    bind [::]:{{ front_config.port }} v4v6 {{ ssl_directive }} {{ ssl_front | join(' ') }}
 {%         endif %}
 {%         if front_config.redirect_http_to_https is vyos_defined %}
     http-request redirect scheme https unless { ssl_fc }
