@@ -168,6 +168,14 @@ def verify_pki(openvpn):
                            'verification, consult the documentation for details.')
 
     if tls:
+        if mode == 'site-to-site':
+            # XXX: site-to-site with PSKs is the only mode that can work without TLS,
+            # so 'tls role' is not mandatory for it,
+            # but we need to check that if it uses peer certificate fingerprints rather than PSKs,
+            # then the TLS role is set
+            if ('shared_secret_key' not in tls) and ('role' not in tls):
+                raise ConfigError('"tls role" is required for site-to-site OpenVPN with TLS')
+
         if (mode in ['server', 'client']) and ('ca_certificate' not in tls):
             raise ConfigError(f'Must specify "tls ca-certificate" on openvpn interface {interface},\
               it is required in server and client modes')
@@ -260,11 +268,6 @@ def verify(openvpn):
     # OpenVPN site-to-site - VERIFY
     #
     elif openvpn['mode'] == 'site-to-site':
-        # XXX: site-to-site is the only mode that still can work without TLS,
-        # so we need to make sure that if TLS is used, then TLS role is also specified
-        if 'shared_secret_key' not in openvpn['tls'] and 'role' not in openvpn['tls']:
-            raise ConfigError('"tls role" is required for site-to-site OpenVPN with TLS')
-
         if 'local_address' not in openvpn and 'is_bridge_member' not in openvpn:
             raise ConfigError('Must specify "local-address" or add interface to bridge')
 
