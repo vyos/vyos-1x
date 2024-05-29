@@ -1358,10 +1358,11 @@ class Interface(Control):
                 # read configured system hostname.
                 # maybe change to vyos hostd client ???
                 hostname = 'vyos'
-                with open('/etc/hostname', 'r') as f:
-                    hostname = f.read().rstrip('\n')
-                    tmp = {'dhcp_options' : { 'host_name' : hostname}}
-                    self.config = dict_merge(tmp, self.config)
+                if os.path.isfile('/etc/hostname'):
+                    with open('/etc/hostname', 'r') as f:
+                        hostname = f.read().rstrip('\n')
+                        tmp = {'dhcp_options' : { 'host_name' : hostname}}
+                        self.config = dict_merge(tmp, self.config)
 
             render(systemd_override_file, 'dhcp-client/override.conf.j2', self.config)
             render(dhclient_config_file, 'dhcp-client/ipv4.j2', self.config)
