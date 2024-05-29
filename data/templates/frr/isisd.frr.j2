@@ -178,7 +178,7 @@ advertise-passive-only
 {%             for priority, priority_limit_options in fast_reroute.lfa.local.priority_limit.items() %}
 {%                 for level in priority_limit_options %}
  fast-reroute priority-limit {{ priority }} {{ level | replace('_', '-') }}
-{%                 endfor %}                   
+{%                 endfor %}
 {%             endfor %}
 {%         endif %}
 {%         if fast_reroute.lfa.local.tiebreaker is vyos_defined %}
@@ -232,6 +232,9 @@ fast-reroute remote-lfa prefix-list {{ prefix_list }}
 {%             endif %}
 {%         endfor %}
 {%     endfor %}
+{% endif %}
+{% if topology is vyos_defined %}
+topology {{ topology }}
 {% endif %}
 {% if level is vyos_defined('level-2') %}
  is-type level-2-only

@@ -395,5 +395,20 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['policy', 'prefix-list', prefix_list])
         self.cli_commit()
 
+    def test_isis_10_topology(self):
+        topologies = ['ipv4-multicast', 'ipv4-mgmt', 'ipv6-unicast', 'ipv6-multicast', 'ipv6-mgmt']
+        interface = 'lo'
+
+        # Set a basic IS-IS config
+        self.cli_set(base_path + ['net', net])
+
+        self.cli_set(base_path + ['interface', interface])
+        for topology in topologies:
+            self.cli_set(base_path + ['topology', topology])
+            self.cli_commit()
+            tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+            self.assertIn(f' net {net}', tmp)
+            self.assertIn(f' topology {topology}', tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
