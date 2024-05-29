@@ -218,7 +218,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
         # Frontend
         self.assertIn(f'frontend {frontend}', config)
-        self.assertIn(f'bind :::{front_port} v4v6', config)
+        self.assertIn(f'bind [::]:{front_port} v4v6', config)
         self.assertIn(f'mode {mode}', config)
         for domain in domains_bk_first:
             self.assertIn(f'acl {rule_ten} hdr(host) -i {domain}', config)
@@ -371,7 +371,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
         # Frontend
         self.assertIn(f'frontend {frontend}', config)
-        self.assertIn(f'bind :::{front_port} v4v6', config)
+        self.assertIn(f'bind [::]:{front_port} v4v6', config)
         self.assertIn(f'mode {mode}', config)
 
         self.assertIn(f'tcp-request inspect-delay {tcp_request_delay}', config)
