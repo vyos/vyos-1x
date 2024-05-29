@@ -1,0 +1,13 @@
+name: Repo-sync
+
+on:
+    pull_request:
+      types:
+        - closed
+      branches:
+        - current
+
+jobs:
+  trigger-sync:
+    uses: vyos/.github/.github/workflows/trigger-repo-sync.yml@feature/T6349-reusable-workflows
+    secrets: inherit
