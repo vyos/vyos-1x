@@ -28,7 +28,11 @@ from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
+from vyos.pki import find_chain
+from vyos.pki import load_certificate
+from vyos.pki import encode_certificate
 from vyos.template import render
+from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -146,15 +150,22 @@ def generate(lb):
 
     # SSL Certificates for backend
     for back, back_config in lb['backend'].items():
-        if 'ssl' in back_config:
+        if 'ssl' not in back_config:
+            continue
 
-            if 'ca_certificate' in back_config['ssl']:
-                ca_name = back_config['ssl']['ca_certificate']
-                pki_ca_cert = lb['pki']['ca'][ca_name]
-                ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
+        if 'ca_certificate' in back_config['ssl']:
+            ca_name = back_config['ssl']['ca_certificate']
+            ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
+            ca_chains = []
 
-                with open(ca_cert_file_path, 'w') as f:
-                    f.write(wrap_certificate(pki_ca_cert['certificate']))
+            loaded_ca_certs = {load_certificate(c['certificate'])
+                for c in lb['pki']['ca'].values()} if 'ca' in lb['pki'] else {}
+
+            pki_ca_cert = lb['pki']['ca'][ca_name]
+            loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
+            ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+            ca_chains.append('\n'.join(encode_certificate(c) for c in ca_full_chain))
+            write_file(ca_cert_file_path, '\n'.join(ca_chains))
 
     render(load_balancing_conf_file, 'load-balancing/haproxy.cfg.j2', lb)
     render(systemd_override, 'load-balancing/override_haproxy.conf.j2', lb)
