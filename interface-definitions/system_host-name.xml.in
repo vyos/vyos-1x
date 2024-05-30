@@ -6,6 +6,7 @@
       <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/system_host-name.py">
         <properties>
           <help>System host name (default: vyos)</help>
+          <priority>5</priority>
           <constraint>
             #include <include/constraint/host-name.xml.i>
           </constraint>
