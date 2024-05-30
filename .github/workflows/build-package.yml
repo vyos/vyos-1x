@@ -1,0 +1,17 @@
+name: Debian Package Build
+on:
+  pull_request:
+    branches:
+      - current
+
+jobs:
+  package-build:
+    runs-on: ubuntu-latest
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Debian package
+        run: dpkg-buildpackage -uc -us -tc -b
