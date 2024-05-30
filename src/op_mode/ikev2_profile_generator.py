@@ -144,15 +144,22 @@ tmp = reversed(tmp)
 data['rfqdn'] = '.'.join(tmp)
 
 pki = conf.get_config_dict(pki_base, get_first_key=True)
-ca_name = data['authentication']['x509']['ca_certificate']
 cert_name = data['authentication']['x509']['certificate']
 
-ca_cert = load_certificate(pki['ca'][ca_name]['certificate'])
-cert = load_certificate(pki['certificate'][cert_name]['certificate'])
+data['certs'] = []
 
-data['ca_cn'] = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-data['cert_cn'] = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-data['ca_cert'] = conf.value(pki_base + ['ca', ca_name, 'certificate'])
+for ca_name in data['authentication']['x509']['ca_certificate']:
+    tmp = {}
+    ca_cert = load_certificate(pki['ca'][ca_name]['certificate'])
+    cert = load_certificate(pki['certificate'][cert_name]['certificate'])
+
+
+    tmp['ca_cn'] = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    tmp['cert_cn'] = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    tmp['ca_cert'] = conf.value(pki_base + ['ca', ca_name, 'certificate'])
+
+    data['certs'].append(tmp)
+
 
 esp_proposals = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group'], 'proposal'],
                                      key_mangling=('-', '_'), get_first_key=True)
