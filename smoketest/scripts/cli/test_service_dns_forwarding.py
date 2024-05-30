@@ -291,5 +291,15 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('edns-subnet-allow-list')
         self.assertEqual(tmp, ','.join(options))
 
+    def test_multiple_ns_records(self):
+        test_zone = 'example.com'
+        self.cli_set(base_path + ['authoritative-domain', test_zone, 'records', 'ns', 'test', 'target', f'ns1.{test_zone}'])
+        self.cli_set(base_path + ['authoritative-domain', test_zone, 'records', 'ns', 'test', 'target', f'ns2.{test_zone}'])
+        self.cli_commit()
+        zone_config = read_file(f'{PDNS_REC_RUN_DIR}/zone.{test_zone}.conf')
+        self.assertRegex(zone_config, fr'test\s+\d+\s+NS\s+ns1\.{test_zone}\.')
+        self.assertRegex(zone_config, fr'test\s+\d+\s+NS\s+ns2\.{test_zone}\.')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
