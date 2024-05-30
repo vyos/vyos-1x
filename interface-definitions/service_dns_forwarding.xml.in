@@ -311,6 +311,7 @@
                               <constraint>
                                 <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
                               </constraint>
+                              <multi/>
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
