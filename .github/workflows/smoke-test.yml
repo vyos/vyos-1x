@@ -1,0 +1,17 @@
+---
+name: Smoke test
+
+on:
+  pull_request:
+    branches:
+      - current
+      - crux
+      - equuleus
+
+permissions:
+  contents: read
+
+jobs:
+  smote-test:
+    uses: vyos/.github/.github/workflows/smoke-test.yml@feature/T6349-reusable-workflows
+    secrets: inherit
