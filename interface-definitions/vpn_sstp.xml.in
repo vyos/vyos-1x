@@ -62,6 +62,7 @@
               <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
             </properties>
           </leafNode>
+          #include <include/accel-ppp/log.xml.i>
         </children>
       </node>
     </children>
