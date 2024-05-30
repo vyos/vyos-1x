@@ -5,6 +5,7 @@
       <leafNode name="domain-name" owner="${vyos_conf_scripts_dir}/system_host-name.py">
         <properties>
           <help>System domain name</help>
+          <priority>6</priority>
           <constraint>
             <validator name="fqdn"/>
           </constraint>
