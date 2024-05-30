@@ -39,6 +39,7 @@ from vyos.utils.network import get_interface_config
 from vyos.utils.process import is_systemd_service_active
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
+from vyos.utils.file import read_file
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.assertion import assert_boolean
@@ -1286,12 +1287,13 @@ class Interface(Control):
         if enable and 'disable' not in self.config:
             if dict_search('dhcp_options.host_name', self.config) == None:
                 # read configured system hostname.
-                # maybe change to vyos hostd client ???
+                # maybe change to vyos-hostsd client ???
                 hostname = 'vyos'
-                with open('/etc/hostname', 'r') as f:
-                    hostname = f.read().rstrip('\n')
-                    tmp = {'dhcp_options' : { 'host_name' : hostname}}
-                    self.config = dict_merge(tmp, self.config)
+                hostname_file = '/etc/hostname'
+                if os.path.isfile(hostname_file):
+                    hostname = read_file(hostname_file)
+                tmp = {'dhcp_options' : { 'host_name' : hostname}}
+                self.config = dict_merge(tmp, self.config)
 
             render(systemd_override_file, 'dhcp-client/override.conf.j2', self.config)
             render(dhclient_config_file, 'dhcp-client/ipv4.j2', self.config)
