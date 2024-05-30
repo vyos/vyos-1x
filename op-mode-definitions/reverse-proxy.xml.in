@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="reverse-proxy">
+        <properties>
+          <help>Restart reverse-proxy service</help>
+        </properties>
+        <command>if cli-shell-api existsActive load-balancing reverse-proxy; then sudo systemctl restart haproxy.service; else echo "Reverse-Proxy not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="reverse-proxy">
+        <properties>
+          <help>Show load-balancing reverse-proxy</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/reverseproxy.py show</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

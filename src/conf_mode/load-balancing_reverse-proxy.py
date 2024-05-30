@@ -26,9 +26,13 @@ from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
-from vyos.pki import wrap_certificate
-from vyos.pki import wrap_private_key
+from vyos.pki import find_chain
+from vyos.pki import load_certificate
+from vyos.pki import load_private_key
+from vyos.pki import encode_certificate
+from vyos.pki import encode_private_key
 from vyos.template import render
+from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -124,50 +128,53 @@ def generate(lb):
     if not os.path.isdir(load_balancing_dir):
         os.mkdir(load_balancing_dir)
 
+    loaded_ca_certs = {load_certificate(c['certificate'])
+        for c in lb['pki']['ca'].values()} if 'ca' in lb['pki'] else {}
+
     # SSL Certificates for frontend
     for front, front_config in lb['service'].items():
-        if 'ssl' in front_config:
+        if 'ssl' not in front_config:
+            continue
 
-            if 'certificate' in front_config['ssl']:
-                cert_names = front_config['ssl']['certificate']
+        if 'certificate' in front_config['ssl']:
+            cert_names = front_config['ssl']['certificate']
 
-                for cert_name in cert_names:
-                    pki_cert = lb['pki']['certificate'][cert_name]
-                    cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
-                    cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
+            for cert_name in cert_names:
+                pki_cert = lb['pki']['certificate'][cert_name]
+                cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
+                cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
 
-                    with open(cert_file_path, 'w') as f:
-                        f.write(wrap_certificate(pki_cert['certificate']))
+                loaded_pki_cert = load_certificate(pki_cert['certificate'])
+                cert_full_chain = find_chain(loaded_pki_cert, loaded_ca_certs)
 
-                    if 'private' in pki_cert and 'key' in pki_cert['private']:
-                        with open(cert_key_path, 'w') as f:
-                            f.write(wrap_private_key(pki_cert['private']['key']))
+                write_file(cert_file_path,
+                   '\n'.join(encode_certificate(c) for c in cert_full_chain))
 
-            if 'ca_certificate' in front_config['ssl']:
-                ca_name = front_config['ssl']['ca_certificate']
-                pki_ca_cert = lb['pki']['ca'][ca_name]
-                ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
-
-                with open(ca_cert_file_path, 'w') as f:
-                    f.write(wrap_certificate(pki_ca_cert['certificate']))
+                if 'private' in pki_cert and 'key' in pki_cert['private']:
+                    loaded_key = load_private_key(pki_cert['private']['key'], passphrase=None, wrap_tags=True)
+                    key_pem = encode_private_key(loaded_key, passphrase=None)
+                    write_file(cert_key_path, key_pem)
 
     # SSL Certificates for backend
     for back, back_config in lb['backend'].items():
-        if 'ssl' in back_config:
+        if 'ssl' not in back_config:
+            continue
 
-            if 'ca_certificate' in back_config['ssl']:
-                ca_name = back_config['ssl']['ca_certificate']
-                pki_ca_cert = lb['pki']['ca'][ca_name]
-                ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
+        if 'ca_certificate' in back_config['ssl']:
+            ca_name = back_config['ssl']['ca_certificate']
+            ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
+            ca_chains = []
 
-                with open(ca_cert_file_path, 'w') as f:
-                    f.write(wrap_certificate(pki_ca_cert['certificate']))
+            pki_ca_cert = lb['pki']['ca'][ca_name]
+            loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
+            ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+            ca_chains.append('\n'.join(encode_certificate(c) for c in ca_full_chain))
+            write_file(ca_cert_file_path, '\n'.join(ca_chains))
 
     render(load_balancing_conf_file, 'load-balancing/haproxy.cfg.j2', lb)
     render(systemd_override, 'load-balancing/override_haproxy.conf.j2', lb)
 
     return None
-
 
 def apply(lb):
     call('systemctl daemon-reload')
