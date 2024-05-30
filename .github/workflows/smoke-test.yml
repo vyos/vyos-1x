@@ -12,6 +12,6 @@ permissions:
   contents: read
 
 jobs:
-  smote-test:
+  smoke-test:
     uses: vyos/.github/.github/workflows/smoke-test.yml@feature/T6349-reusable-workflows
     secrets: inherit
