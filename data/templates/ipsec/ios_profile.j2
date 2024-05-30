@@ -83,12 +83,15 @@
                 </dict>
             </dict>
         </dict>
+{% if certs is vyos_defined %}
         <!-- This payload is optional but it provides an easy way to install the CA certificate together with the configuration -->
+{%     for cert in certs %}
+        <!-- Payload for: {{ cert.ca_cn }} -->
         <dict>
             <key>PayloadIdentifier</key>
-            <string>org.example.ca</string>
+            <string>org.{{ cert.ca_cn | lower | replace(' ', '.') | replace('_', '.') }}</string>
             <key>PayloadUUID</key>
-            <string>{{ '' | get_uuid }}</string>
+            <string>{{ cert.ca_cn | generate_uuid4 }}</string>
             <key>PayloadType</key>
             <string>com.apple.security.root</string>
             <key>PayloadVersion</key>
@@ -96,9 +99,11 @@
             <!-- This is the Base64 (PEM) encoded CA certificate -->
             <key>PayloadContent</key>
             <data>
-            {{ ca_cert }}
+            {{ cert.ca_cert }}
             </data>
         </dict>
+{%     endfor %}
+{% endif %}
     </array>
 </dict>
 </plist>
