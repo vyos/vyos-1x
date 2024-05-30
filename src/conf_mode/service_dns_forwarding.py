@@ -115,7 +115,7 @@ def get_config(config=None):
                         })
                     elif rtype == 'ns':
                         if not 'target' in rdata:
-                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at leaast one target is required')
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one target is required')
                             continue
 
                         for target in rdata['target']:
@@ -123,7 +123,7 @@ def get_config(config=None):
                                 'name': subnode,
                                 'type': rtype.upper(),
                                 'ttl': rdata['ttl'],
-                                'value': '{}.'.format(target)
+                                'value': f'{target}.'
                             })
 
                     elif rtype == 'mx':
