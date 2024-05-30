@@ -6,6 +6,7 @@ on:
         - closed
       branches:
         - current
+    workflow_dispatch:
 
 jobs:
   trigger-sync:
