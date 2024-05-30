@@ -33,16 +33,16 @@ base = ['load-balancing', 'reverse-proxy', 'backend']
 if not config.exists(base):
     # Nothing to do
     exit(0)
-else:
-    # we need to run this for every configured network
-    for backend in config.list_nodes(base):
-        param_node = base + [backend, 'parameters']
-        if config.exists(param_node):
-            config.delete(param_node)
 
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)
+# we need to run this for every configured network
+for backend in config.list_nodes(base):
+    param_node = base + [backend, 'parameters']
+    if config.exists(param_node):
+        config.delete(param_node)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
