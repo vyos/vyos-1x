@@ -48,4 +48,5 @@
   #include <include/version/vyos-accel-ppp-version.xml.i>
   #include <include/version/wanloadbalance-version.xml.i>
   #include <include/version/webproxy-version.xml.i>
+  #include <include/version/reverseproxy-version.xml.i>
 </interfaceDefinition>
