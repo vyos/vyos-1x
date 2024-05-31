@@ -76,6 +76,9 @@ advertise-passive-only
 {% if set_overload_bit is vyos_defined %}
  set-overload-bit
 {% endif %}
+{% if metric_style is vyos_defined %}
+ metric-style {{ metric_style }}
+{% endif %}
 {% if domain_password.md5 is vyos_defined %}
  domain-password md5 {{ domain_password.plaintext_password }}
 {% elif domain_password.plaintext_password is vyos_defined %}
