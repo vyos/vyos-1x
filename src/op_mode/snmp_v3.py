@@ -85,7 +85,7 @@ if __name__ == '__main__':
         'user': [],
         'view': []
     }
-    
+
     if c.exists_effective('service snmp v3 group'):
         for g in c.list_effective_nodes('service snmp v3 group'):
             group = {
@@ -146,7 +146,6 @@ if __name__ == '__main__':
 
             data['trap'].append(trap)
 
-    print(data)
     if args.all:
          # Special case, print all templates !
          tmpl = jinja2.Template(GROUP_OUTP_TMPL_SRC)
