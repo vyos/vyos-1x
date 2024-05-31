@@ -281,6 +281,7 @@
                   #include <include/qos/mtu.xml.i>
                   #include <include/qos/class-police-exceed.xml.i>
                   #include <include/qos/class-match.xml.i>
+                  #include <include/qos/class-match-group.xml.i>
                   #include <include/qos/class-priority.xml.i>
                   <leafNode name="priority">
                     <defaultValue>20</defaultValue>
@@ -415,6 +416,7 @@
                   #include <include/qos/flows.xml.i>
                   #include <include/qos/interval.xml.i>
                   #include <include/qos/class-match.xml.i>
+                  #include <include/qos/class-match-group.xml.i>
                   #include <include/qos/queue-limit-1-4294967295.xml.i>
                   #include <include/qos/queue-type.xml.i>
                   <leafNode name="queue-type">
@@ -542,6 +544,8 @@
                   #include <include/qos/flows.xml.i>
                   #include <include/qos/interval.xml.i>
                   #include <include/qos/class-match.xml.i>
+                  #include <include/qos/class-match-group.xml.i>
+
                   <leafNode name="quantum">
                     <properties>
                       <help>Packet scheduling quantum</help>
@@ -645,6 +649,7 @@
                   #include <include/qos/flows.xml.i>
                   #include <include/qos/interval.xml.i>
                   #include <include/qos/class-match.xml.i>
+                  #include <include/qos/class-match-group.xml.i>
                   #include <include/qos/class-priority.xml.i>
                   #include <include/qos/queue-average-packet.xml.i>
                   #include <include/qos/queue-maximum-threshold.xml.i>
@@ -767,6 +772,7 @@
                     </children>
                   </node>
                   #include <include/qos/class-match.xml.i>
+                  #include <include/qos/class-match-group.xml.i>
                   <node name="realtime">
                     <properties>
                       <help>Realtime class settings</help>
@@ -830,6 +836,39 @@
           </tagNode>
         </children>
       </node>
+      <tagNode name="traffic-match-group">
+        <properties>
+          <help>Filter group for QoS policy</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Match group name</description>
+          </valueHelp>
+          <constraint>
+            <regex>[^-].*</regex>
+          </constraint>
+          <constraintErrorMessage>Match group name cannot start with hyphen</constraintErrorMessage>
+        </properties>
+          <children>
+            #include <include/generic-description.xml.i>
+            <tagNode name="match">
+              <properties>
+                <help>Class matching rule name</help>
+                <constraint>
+                  <regex>[^-].*</regex>
+                </constraint>
+                <constraintErrorMessage>Match queue name cannot start with hyphen</constraintErrorMessage>
+              </properties>
+              <children>
+                #include <include/generic-description.xml.i>
+                #include <include/qos/class-match-ipv4.xml.i>
+                #include <include/qos/class-match-ipv6.xml.i>
+                #include <include/qos/class-match-mark.xml.i>
+                #include <include/qos/class-match-vif.xml.i>
+              </children>
+            </tagNode>
+            #include <include/qos/class-match-group.xml.i>
+          </children>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>
