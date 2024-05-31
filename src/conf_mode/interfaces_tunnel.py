@@ -145,11 +145,20 @@ def verify(tunnel):
                 # If no IP GRE key is defined we can not have more then one GRE tunnel
                 # bound to any one interface/IP address and the same remote. This will
                 # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
-                if (their_address == our_address or our_source_if == their_source_if) and \
-                    our_remote == their_remote:
-                    raise ConfigError(f'Missing required "ip key" parameter when '\
-                                       'running more then one GRE based tunnel on the '\
-                                       'same source-interface/source-address')
+                if our_remote == their_remote:
+                    if our_address is not None and their_address == our_address: 
+                        # If set to the same values, this is always a fail 
+                        raise ConfigError(f'Missing required "ip key" parameter when '\
+                                           'running more then one GRE based tunnel on the '\
+                                           'same source-address')
+
+                    if their_source_if == our_source_if and their_address == our_address:
+                        # Note that lack of None check on these is deliberate. 
+                        # source-if and source-ip matching while unset (all None) is a fail
+                        # source-ifs set and matching with unset source-ips is a fail
+                        raise ConfigError(f'Missing required "ip key" parameter when '\
+                                           'running more then one GRE based tunnel on the '\
+                                           'same source-interface')
 
     # Keys are not allowed with ipip and sit tunnels
     if tunnel['encapsulation'] in ['ipip', 'sit']:
