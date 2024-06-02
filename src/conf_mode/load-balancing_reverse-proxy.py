@@ -79,12 +79,21 @@ def verify(lb):
             raise ConfigError(f'"TCP" port "{tmp_port}" is used by another service')
 
     for back, back_config in lb['backend'].items():
-        if 'http-check' in back_config:
-            http_check = back_config['http-check']
+        if 'http_check' in back_config:
+            http_check = back_config['http_check']
             if 'expect' in http_check and 'status' in http_check['expect'] and 'string' in http_check['expect']:
                 raise ConfigError(f'"expect status" and "expect string" can not be configured together!')
+
+        if 'health_check' in back_config:
+            if 'mode' not in back_config or back_config['mode'] != 'tcp':
+                raise ConfigError(f'backend "{back}" can only be configured with {back_config["health_check"]} ' +
+                                  f'health-check whilst in TCP mode!')
+            if 'http_check' in back_config:
+                raise ConfigError(f'backend "{back}" cannot be configured with both http-check and health-check!')
+
         if 'server' not in back_config:
             raise ConfigError(f'"{back} server" must be configured!')
+
         for bk_server, bk_server_conf in back_config['server'].items():
             if 'address' not in bk_server_conf or 'port' not in bk_server_conf:
                 raise ConfigError(f'"backend {back} server {bk_server} address and port" must be configured!')
