@@ -159,6 +159,146 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running('hostapd'))
 
+    def test_wireless_hostapd_vht_mu_beamformer_config(self):
+        # Multi-User-Beamformer
+        interface = 'wlan1'
+        ssid = 'vht_mu-beamformer'
+        antennas = '3'
+
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'channel', '36'])
+
+        ht_opt = {
+            # VyOS CLI option           hostapd - ht_capab setting
+            'channel-set-width ht20'  : '[HT20]',
+            'channel-set-width ht40-' : '[HT40-]',
+            'channel-set-width ht40+' : '[HT40+]',
+            'dsss-cck-40'             : '[DSSS_CCK-40]',
+            'short-gi 20'             : '[SHORT-GI-20]',
+            'short-gi 40'             : '[SHORT-GI-40]',
+            'max-amsdu 7935'          : '[MAX-AMSDU-7935]',
+        }
+        for key in ht_opt:
+            self.cli_set(self._base_path + [interface, 'capabilities', 'ht'] + key.split())
+
+        vht_opt = {
+            # VyOS CLI option           hostapd - ht_capab setting
+            'max-mpdu 11454'          : '[MAX-MPDU-11454]',
+            'max-mpdu-exp 2'          : '[MAX-A-MPDU-LEN-EXP-2]',
+            'stbc tx'                 : '[TX-STBC-2BY1]',
+            'stbc rx 12'              : '[RX-STBC-12]',
+            'ldpc'                    : '[RXLDPC]',
+            'tx-powersave'            : '[VHT-TXOP-PS]',
+            'vht-cf'                  : '[HTC-VHT]',
+            'antenna-pattern-fixed'   : '[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
+            'link-adaptation both'    : '[VHT-LINK-ADAPT3]',
+            'short-gi 80'             : '[SHORT-GI-80]',
+            'short-gi 160'            : '[SHORT-GI-160]',
+            'beamform multi-user-beamformer' : '[MU-BEAMFORMER][BF-ANTENNA-3][SOUNDING-DIMENSION-3]',
+        }
+
+        self.cli_set(self._base_path + [interface, 'capabilities', 'vht', 'channel-set-width', '1'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'vht', 'center-channel-freq', 'freq-1', '42'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'vht', 'antenna-count', antennas])
+        for key in vht_opt:
+            self.cli_set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
+
+        self.cli_commit()
+
+        #
+        # Validate Config
+        #
+        tmp = get_config_value(interface, 'interface')
+        self.assertEqual(interface, tmp)
+
+        # ssid
+        tmp = get_config_value(interface, 'ssid')
+        self.assertEqual(ssid, tmp)
+
+        # channel
+        tmp = get_config_value(interface, 'channel')
+        self.assertEqual('36', tmp)
+
+        tmp = get_config_value(interface, 'ht_capab')
+        for key, value in ht_opt.items():
+            self.assertIn(value, tmp)
+
+        tmp = get_config_value(interface, 'vht_capab')
+        for key, value in vht_opt.items():
+            self.assertIn(value, tmp)
+
+    def test_wireless_hostapd_vht_su_beamformer_config(self):
+        # Single-User-Beamformer
+        interface = 'wlan1'
+        ssid = 'vht_su-beamformer'
+        antennas = '3'
+
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'channel', '36'])
+
+        ht_opt = {
+            # VyOS CLI option           hostapd - ht_capab setting
+            'channel-set-width ht20'  : '[HT20]',
+            'channel-set-width ht40-' : '[HT40-]',
+            'channel-set-width ht40+' : '[HT40+]',
+            'dsss-cck-40'             : '[DSSS_CCK-40]',
+            'short-gi 20'             : '[SHORT-GI-20]',
+            'short-gi 40'             : '[SHORT-GI-40]',
+            'max-amsdu 7935'          : '[MAX-AMSDU-7935]',
+        }
+        for key in ht_opt:
+            self.cli_set(self._base_path + [interface, 'capabilities', 'ht'] + key.split())
+
+        vht_opt = {
+            # VyOS CLI option           hostapd - ht_capab setting
+            'max-mpdu 11454'          : '[MAX-MPDU-11454]',
+            'max-mpdu-exp 2'          : '[MAX-A-MPDU-LEN-EXP-2]',
+            'stbc tx'                 : '[TX-STBC-2BY1]',
+            'stbc rx 12'              : '[RX-STBC-12]',
+            'ldpc'                    : '[RXLDPC]',
+            'tx-powersave'            : '[VHT-TXOP-PS]',
+            'vht-cf'                  : '[HTC-VHT]',
+            'antenna-pattern-fixed'   : '[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
+            'link-adaptation both'    : '[VHT-LINK-ADAPT3]',
+            'short-gi 80'             : '[SHORT-GI-80]',
+            'short-gi 160'            : '[SHORT-GI-160]',
+            'beamform single-user-beamformer' : '[SU-BEAMFORMER][BF-ANTENNA-2][SOUNDING-DIMENSION-2]',
+        }
+
+        self.cli_set(self._base_path + [interface, 'capabilities', 'vht', 'channel-set-width', '1'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'vht', 'center-channel-freq', 'freq-1', '42'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'vht', 'antenna-count', antennas])
+        for key in vht_opt:
+            self.cli_set(self._base_path + [interface, 'capabilities', 'vht'] + key.split())
+
+        self.cli_commit()
+
+        #
+        # Validate Config
+        #
+        tmp = get_config_value(interface, 'interface')
+        self.assertEqual(interface, tmp)
+
+        # ssid
+        tmp = get_config_value(interface, 'ssid')
+        self.assertEqual(ssid, tmp)
+
+        # channel
+        tmp = get_config_value(interface, 'channel')
+        self.assertEqual('36', tmp)
+
+        tmp = get_config_value(interface, 'ht_capab')
+        for key, value in ht_opt.items():
+            self.assertIn(value, tmp)
+
+        tmp = get_config_value(interface, 'vht_capab')
+        for key, value in vht_opt.items():
+            self.assertIn(value, tmp)
+
     def test_wireless_hostapd_wpa_config(self):
         # Only set the hostapd (access-point) options
         interface = 'wlan0'
