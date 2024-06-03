@@ -49,7 +49,7 @@ def verify(bfd):
         for peer, peer_config in bfd['peer'].items():
             # IPv6 link local peers require an explicit local address/interface
             if is_ipv6_link_local(peer):
-                if 'source' not in peer_config or len(peer_config['source'] < 2):
+                if 'source' not in peer_config or len(peer_config['source']) < 2:
                     raise ConfigError('BFD IPv6 link-local peers require explicit local address and interface setting')
 
             # IPv6 peers require an explicit local address
