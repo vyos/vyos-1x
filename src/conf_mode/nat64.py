@@ -20,7 +20,7 @@ import csv
 import os
 import re
 
-from ipaddress import IPv6Network
+from ipaddress import IPv6Network, IPv6Address
 from json import dumps as json_write
 
 from vyos import ConfigError
@@ -103,8 +103,14 @@ def verify(nat64) -> None:
             # Verify that source.prefix is set and is a /96
             if not dict_search("source.prefix", instance):
                 raise ConfigError(f"Source NAT64 rule {rule} missing source prefix")
-            if IPv6Network(instance["source"]["prefix"]).prefixlen != 96:
+            src_prefix = IPv6Network(instance["source"]["prefix"])
+            if src_prefix.prefixlen != 96:
                 raise ConfigError(f"Source NAT64 rule {rule} source prefix must be /96")
+            if (int(src_prefix[0]) & int(IPv6Address('0:0:0:0:ff00::'))) != 0:
+                raise ConfigError(
+                    f'Source NAT64 rule {rule} source prefix is not RFC6052-compliant: '
+                    'bits 64 to 71 (9th octet) must be zeroed'
+                )
 
             pools = dict_search("translation.pool", instance)
             if pools:
