@@ -338,6 +338,11 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn('http-check send meth GET uri /health', config)
         self.assertIn('http-check expect string success', config)
 
+        # Test configuring both http-check & health-check fails validation script
+        self.cli_set(base_path + ['backend', 'bk-01', 'health-check', 'ldap'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
     def test_06_lb_reverse_proxy_tcp_mode(self):
         frontend = 'tcp_8443'
         mode = 'tcp'
@@ -404,6 +409,54 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['service', 'https_front', 'mode', 'tcp'])
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
+
+    def test_08_lb_reverse_proxy_tcp_health_checks(self):
+        # Setup PKI
+        self.configure_pki()
+
+        # Define variables
+        frontend = 'fe_ldaps'
+        mode = 'tcp'
+        health_check = 'ldap'
+        front_port = '636'
+        bk_name = 'bk_ldap'
+        bk_servers = ['192.0.2.11', '192.0.2.12']
+        bk_server_port = '389'
+
+        # Configure frontend
+        self.cli_set(base_path + ['service', frontend, 'mode', mode])
+        self.cli_set(base_path + ['service', frontend, 'port', front_port])
+        self.cli_set(base_path + ['service', frontend, 'ssl', 'certificate', 'smoketest'])
+
+        # Configure backend
+        self.cli_set(base_path + ['backend', bk_name, 'mode', mode])
+        self.cli_set(base_path + ['backend', bk_name, 'health-check', health_check])
+        for index, bk_server in enumerate(bk_servers):
+            self.cli_set(base_path + ['backend', bk_name, 'server', f'srv-{index}', 'address', bk_server])
+            self.cli_set(base_path + ['backend', bk_name, 'server', f'srv-{index}', 'port', bk_server_port])
+
+        # Commit & read config
+        self.cli_commit()
+        config = read_file(HAPROXY_CONF)
+
+        # Validate Frontend
+        self.assertIn(f'frontend {frontend}', config)
+        self.assertIn(f'bind [::]:{front_port} v4v6 ssl crt /run/haproxy/smoketest.pem', config)
+        self.assertIn(f'mode {mode}', config)
+        self.assertIn(f'backend {bk_name}', config)
+
+        # Validate Backend
+        self.assertIn(f'backend {bk_name}', config)
+        self.assertIn(f'option {health_check}-check', config)
+        self.assertIn(f'mode {mode}', config)
+        for index, bk_server in enumerate(bk_servers):
+            self.assertIn(f'server srv-{index} {bk_server}:{bk_server_port}', config)
+
+        # Validate SMTP option renders correctly
+        self.cli_set(base_path + ['backend', bk_name, 'health-check', 'smtp'])
+        self.cli_commit()
+        config = read_file(HAPROXY_CONF)
+        self.assertIn(f'option smtpchk', config)
 
 
 if __name__ == '__main__':

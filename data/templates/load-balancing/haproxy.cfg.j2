@@ -131,6 +131,13 @@ frontend {{ front }}
 {% if backend is vyos_defined %}
 {%     for back, back_config in backend.items() %}
 backend {{ back }}
+{%         if back_config.health_check is vyos_defined %}
+{%             if back_config.health_check == 'smtp' %}
+    option smtpchk
+{%             else  %}
+    option {{ back_config.health_check }}-check
+{%             endif %}
+{%         endif %}
 {%         if back_config.http_check is vyos_defined %}
     option httpchk
 {%         endif %}
