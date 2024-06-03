@@ -151,6 +151,37 @@
                   </node>
                 </children>
               </node>
+              <leafNode name="health-check">
+                <properties>
+                  <help>Non HTTP health check options</help>
+                  <completionHelp>
+                    <list>ldap mysql pgsql redis smtp</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ldap</format>
+                    <description>LDAP protocol check</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>mysql</format>
+                    <description>MySQL protocol check</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>pgsql</format>
+                    <description>PostgreSQL protocol check</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>redis</format>
+                    <description>Redis protocol check</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>smtp</format>
+                    <description>SMTP protocol check</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(ldap|mysql|redis|pgsql|smtp)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
               #include <include/haproxy/rule-backend.xml.i>
               <tagNode name="server">
                 <properties>
