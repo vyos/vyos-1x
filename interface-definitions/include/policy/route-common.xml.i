@@ -177,7 +177,7 @@
       <properties>
         <help>Routing table to forward packet with</help>
         <valueHelp>
-          <format>u32:1-200</format>
+          <format>u32:1-65535</format>
           <description>Table number</description>
         </valueHelp>
         <valueHelp>
@@ -185,7 +185,7 @@
           <description>Main table</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 1-200"/>
+          <validator name="numeric" argument="--range 1-65535"/>
           <regex>(main)</regex>
         </constraint>
         <completionHelp>
