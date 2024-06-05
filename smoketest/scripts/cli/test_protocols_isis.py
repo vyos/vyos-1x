@@ -60,6 +60,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         prefix_list = 'EXPORT-ISIS'
         route_map = 'EXPORT-ISIS'
         rule = '10'
+        metric_style = 'transition'
 
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', rule, 'action', 'permit'])
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', rule, 'prefix', '203.0.113.0/24'])
@@ -80,6 +81,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
         self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
+        self.cli_set(base_path + ['metric-style', metric_style])
         self.cli_set(base_path + ['log-adjacency-changes'])
 
         # Commit all changes
@@ -88,6 +90,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # Verify all changes
         tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
         self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' metric-style {metric_style}', tmp)
         self.assertIn(f' log-adjacency-changes', tmp)
         self.assertIn(f' redistribute ipv4 connected level-2 route-map {route_map}', tmp)
 
@@ -401,7 +404,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
         # Set a basic IS-IS config
         self.cli_set(base_path + ['net', net])
-
         self.cli_set(base_path + ['interface', interface])
         for topology in topologies:
             self.cli_set(base_path + ['topology', topology])
