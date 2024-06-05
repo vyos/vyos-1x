@@ -4,6 +4,9 @@ Welcome to VyOS!
    . VyOS {{ version_data.version }}
    └ ──┘  {{ version_data.release_train }}
 
+{% if version_data.lts_build %}
+ * Support portal: {{ version_data.support_url }}
+{% endif %}
  * Documentation:  {{ version_data.documentation_url }}
  * Project news:   {{ version_data.project_news_url }}
  * Bug reports:    {{ version_data.bugtracker_url }}
