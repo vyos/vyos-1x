@@ -46,3 +46,5 @@ cfg_vintage = 'vyos'
 commit_lock = '/opt/vyatta/config/.lock'
 
 component_version_json = os.path.join(directories['data'], 'component-versions.json')
+
+config_default = os.path.join(directories['data'], 'config.boot.default')
