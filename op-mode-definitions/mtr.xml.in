@@ -13,7 +13,7 @@
         <children>
           <leafNode name="node.tag">
             <properties>
-              <help>mtr options</help>
+              <help>Traceroute options</help>
               <completionHelp>
                 <script>${vyos_op_scripts_dir}/mtr.py --get-options-nested "${COMP_WORDS[@]}"</script>
               </completionHelp>
@@ -35,7 +35,7 @@
     <children>
       <leafNode name="node.tag">
         <properties>
-          <help>Traceroute options</help>
+          <help>mtr options</help>
           <completionHelp>
             <script>${vyos_op_scripts_dir}/mtr.py --get-options "${COMP_WORDS[@]}"</script>
           </completionHelp>
