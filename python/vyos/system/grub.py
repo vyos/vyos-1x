@@ -49,7 +49,7 @@ TMPL_GRUB_COMMON: str = 'grub/grub_common.j2'
 BOOT_OPTS_STEM: str = 'boot=live rootdelay=5 noautologin net.ifnames=0 biosdevname=0 vyos-union=/boot/'
 
 # prepare regexes
-REGEX_GRUB_VARS: str = r'^set (?P<variable_name>.+)=[\'"]?(?P<variable_value>.*)(?<![\'"])[\'"]?$'
+REGEX_GRUB_VARS: str = r'^set (?P<variable_name>\w+)=[\'"]?(?P<variable_value>.*)(?<![\'"])[\'"]?$'
 REGEX_GRUB_MODULES: str = r'^insmod (?P<module_name>.+)$'
 REGEX_KERNEL_CMDLINE: str = r'^BOOT_IMAGE=/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
 REGEX_GRUB_BOOT_OPTS: str = r'^\s*set boot_opts="(?P<boot_opts>[^$]+)"$'
