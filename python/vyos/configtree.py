@@ -175,9 +175,11 @@ class ConfigTree(object):
     def get_version_string(self):
         return self.__version
 
-    def to_string(self, ordered_values=False):
+    def to_string(self, ordered_values=False, no_version=False):
         config_string = self.__to_string(self.__config, ordered_values).decode()
         config_string = unescape_backslash(config_string)
+        if no_version:
+            return config_string
         config_string = "{0}\n{1}".format(config_string, self.__version)
         return config_string
 
@@ -482,3 +484,9 @@ class DiffTree:
         add = self.add.to_commands()
         delete = self.delete.to_commands(op="delete")
         return delete + "\n" + add
+
+def deep_copy(config_tree: ConfigTree) -> ConfigTree:
+    """An inelegant, but reasonably fast, copy; replace with backend copy
+    """
+    D = DiffTree(None, config_tree)
+    return D.add
