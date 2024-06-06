@@ -178,6 +178,8 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     hook_name = 'input'
                 if hook == 'OUT':
                     hook_name = 'output'
+                if hook == 'PRE':
+                    hook_name = 'prerouting'
                 if hook == 'NAM':
                     hook_name = f'name{def_suffix}'
                 output.append(f'{ip_name} {prefix}addr {operator} @FQDN_{hook_name}_{fw_name}_{rule_id}_{prefix}')
@@ -193,6 +195,8 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     hook_name = 'input'
                 if hook == 'OUT':
                     hook_name = 'output'
+                if hook == 'PRE':
+                    hook_name = 'prerouting'
                 if hook == 'NAM':
                     hook_name = f'name'
                 output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_CC{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
@@ -477,8 +481,6 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             output.append(f'tcp option maxseg size set {mss}')
 
     if 'action' in rule_conf:
-        # Change action=return to action=action
-        # #output.append(nft_action(rule_conf['action']))
         if rule_conf['action'] == 'offload':
             offload_target = rule_conf['offload_target']
             output.append(f'flow add @VYOS_FLOWTABLE_{offload_target}')

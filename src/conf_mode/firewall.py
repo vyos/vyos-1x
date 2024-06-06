@@ -33,6 +33,7 @@ from vyos.template import render
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import call
+from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
 from vyos import ConfigError
 from vyos import airbag
@@ -40,20 +41,7 @@ from vyos import airbag
 airbag.enable()
 
 nftables_conf = '/run/nftables.conf'
-
-sysfs_config = {
-    'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
-    'broadcast_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts', 'enable': '0', 'disable': '1'},
-    'directed_broadcast' : {'sysfs': '/proc/sys/net/ipv4/conf/all/bc_forwarding', 'enable': '1', 'disable': '0'},
-    'ip_src_route': {'sysfs': '/proc/sys/net/ipv4/conf/*/accept_source_route'},
-    'ipv6_receive_redirects': {'sysfs': '/proc/sys/net/ipv6/conf/*/accept_redirects'},
-    'ipv6_src_route': {'sysfs': '/proc/sys/net/ipv6/conf/*/accept_source_route', 'enable': '0', 'disable': '-1'},
-    'log_martians': {'sysfs': '/proc/sys/net/ipv4/conf/all/log_martians'},
-    'receive_redirects': {'sysfs': '/proc/sys/net/ipv4/conf/*/accept_redirects'},
-    'send_redirects': {'sysfs': '/proc/sys/net/ipv4/conf/*/send_redirects'},
-    'syn_cookies': {'sysfs': '/proc/sys/net/ipv4/tcp_syncookies'},
-    'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337'}
-}
+sysctl_file = r'/run/sysctl/10-vyos-firewall.conf'
 
 valid_groups = [
     'address_group',
@@ -351,7 +339,7 @@ def verify(firewall):
                     verify_nested_group(group_name, group, groups, [])
 
     if 'ipv4' in firewall:
-        for name in ['name','forward','input','output']:
+        for name in ['name','forward','input','output', 'prerouting']:
             if name in firewall['ipv4']:
                 for name_id, name_conf in firewall['ipv4'][name].items():
                     if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
@@ -371,7 +359,7 @@ def verify(firewall):
                             verify_rule(firewall, rule_conf, False)
 
     if 'ipv6' in firewall:
-        for name in ['name','forward','input','output']:
+        for name in ['name','forward','input','output', 'prerouting']:
             if name in firewall['ipv6']:
                 for name_id, name_conf in firewall['ipv6'][name].items():
                     if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
@@ -467,33 +455,16 @@ def generate(firewall):
                     local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
 
     render(nftables_conf, 'firewall/nftables.j2', firewall)
+    render(sysctl_file, 'firewall/sysctl-firewall.conf.j2', firewall)
     return None
-
-def apply_sysfs(firewall):
-    for name, conf in sysfs_config.items():
-        paths = glob(conf['sysfs'])
-        value = None
-
-        if name in firewall['global_options']:
-            conf_value = firewall['global_options'][name]
-            if conf_value in conf:
-                value = conf[conf_value]
-            elif conf_value == 'enable':
-                value = '1'
-            elif conf_value == 'disable':
-                value = '0'
-
-        if value:
-            for path in paths:
-                with open(path, 'w') as f:
-                    f.write(value)
 
 def apply(firewall):
     install_result, output = rc_cmd(f'nft --file {nftables_conf}')
     if install_result == 1:
         raise ConfigError(f'Failed to apply firewall: {output}')
 
-    apply_sysfs(firewall)
+    # Apply firewall global-options sysctl settings
+    cmd(f'sysctl -f {sysctl_file}')
 
     call_dependents()
 
