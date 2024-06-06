@@ -3,12 +3,12 @@
   <node name="load-balancing">
     <properties>
       <help>Configure load-balancing</help>
-      <priority>900</priority>
     </properties>
     <children>
       <node name="wan" owner="${vyos_conf_scripts_dir}/load-balancing_wan.py">
         <properties>
           <help>Configure Wide Area Network (WAN) load-balancing</help>
+          <priority>900</priority>
         </properties>
         <children>
           <leafNode name="disable-source-nat">

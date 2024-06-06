@@ -5,6 +5,7 @@
       <node name="reverse-proxy" owner="${vyos_conf_scripts_dir}/load-balancing_reverse-proxy.py">
         <properties>
           <help>Configure reverse-proxy</help>
+          <priority>900</priority>
         </properties>
         <children>
           <tagNode name="service">

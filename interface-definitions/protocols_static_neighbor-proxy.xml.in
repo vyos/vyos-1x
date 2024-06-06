@@ -7,6 +7,7 @@
           <node name="neighbor-proxy" owner="${vyos_conf_scripts_dir}/protocols_static_neighbor-proxy.py">
             <properties>
               <help>Neighbor proxy parameters</help>
+              <priority>481</priority>
             </properties>
             <children>
               <tagNode name="arp">
