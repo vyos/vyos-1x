@@ -22,6 +22,7 @@ declare progname=${0##*/}
 declare action=$1; shift
 
 declare -x BOOTFILE=$vyatta_sysconfdir/config/config.boot
+declare -x DEFAULT_BOOTFILE=$vyatta_sysconfdir/config.boot.default
 
 # If vyos-config= boot option is present, use that file instead
 for x in $(cat /proc/cmdline); do
@@ -129,9 +130,16 @@ unmount_encrypted_config() {
 
 # if necessary, provide initial config
 init_bootfile () {
+    # define and version default boot config if not present
+    if [ ! -r $DEFAULT_BOOTFILE ]; then
+        if [ -f $vyos_data_dir/config.boot.default ]; then
+            cp $vyos_data_dir/config.boot.default $DEFAULT_BOOTFILE
+            $vyos_libexec_dir/system-versions-foot.py >> $DEFAULT_BOOTFILE
+        fi
+    fi
     if [ ! -r $BOOTFILE ] ; then
-        if [ -f $vyatta_sysconfdir/config.boot.default ]; then
-            cp $vyatta_sysconfdir/config.boot.default $BOOTFILE
+        if [ -f $DEFAULT_BOOTFILE ]; then
+            cp $DEFAULT_BOOTFILE $BOOTFILE
         else
             $vyos_libexec_dir/system-versions-foot.py > $BOOTFILE
         fi
@@ -146,6 +154,15 @@ migrate_bootfile ()
     if [ -x $vyos_libexec_dir/run-config-migration.py ]; then
         log_progress_msg migrate
         sg ${GROUP} -c "$vyos_libexec_dir/run-config-migration.py $BOOTFILE"
+    fi
+}
+
+# configure system-specific settings
+system_config ()
+{
+    if [ -x $vyos_libexec_dir/run-config-activation.py ]; then
+        log_progress_msg system
+        sg ${GROUP} -c "$vyos_libexec_dir/run-config-activation.py $BOOTFILE"
     fi
 }
 
@@ -492,6 +509,8 @@ start ()
     run_postupgrade_script
 
     update_interface_config
+
+    disabled system_config || system_config
 
     for s in ${subinit[@]} ; do
     if ! disabled $s; then

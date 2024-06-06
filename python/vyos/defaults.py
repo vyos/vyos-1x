@@ -25,6 +25,7 @@ directories = {
   'services' : f'{base_dir}/services',
   'config' : '/opt/vyatta/etc/config',
   'migrate' : '/opt/vyatta/etc/config-migrate/migrate',
+  'activate' : f'{base_dir}/activate',
   'log' : '/var/log/vyatta',
   'templates' : '/usr/share/vyos/templates/',
   'certbot' : '/config/auth/letsencrypt',
@@ -46,3 +47,5 @@ cfg_vintage = 'vyos'
 commit_lock = '/opt/vyatta/config/.lock'
 
 component_version_json = os.path.join(directories['data'], 'component-versions.json')
+
+config_default = os.path.join(directories['data'], 'config.boot.default')
