@@ -11,6 +11,7 @@ VYOS_MIBS_DIR := usr/share/snmp/mibs
 VYOS_LOCALUI_DIR := srv/localui
 
 MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
+ACTIVATION_SCRIPTS_DIR := usr/libexec/vyos/activate
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
 SERVICES_DIR := usr/libexec/vyos/services
 
@@ -66,6 +67,10 @@ override_dh_auto_install:
 	# Install migration scripts
 	mkdir -p $(DIR)/$(MIGRATION_SCRIPTS_DIR)
 	cp -r src/migration-scripts/* $(DIR)/$(MIGRATION_SCRIPTS_DIR)
+
+	# Install activation scripts
+	mkdir -p $(DIR)/$(ACTIVATION_SCRIPTS_DIR)
+	cp -r src/activation-scripts/* $(DIR)/$(ACTIVATION_SCRIPTS_DIR)
 
 	# Install system scripts
 	mkdir -p $(DIR)/$(SYSTEM_SCRIPTS_DIR)
