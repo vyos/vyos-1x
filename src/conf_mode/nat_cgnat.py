@@ -111,7 +111,19 @@ def generate_port_rules(
     port_count: int,
     global_port_range: str = '1024-65535',
 ) -> list:
-    """Generates list of nftables rules for the batch file."""
+    """Generates a list of nftables option rules for the batch file.
+
+    Args:
+        external_hosts (list): A list of external host IPs.
+        internal_hosts (list): A list of internal host IPs.
+        port_count (int): The number of ports required per host.
+        global_port_range (str): The global port range to be used. Default is '1024-65535'.
+
+    Returns:
+        list: A list containing two elements:
+            - proto_map_elements (list): A list of proto map elements.
+            - other_map_elements (list): A list of other map elements.
+    """
     rules = []
     proto_map_elements = []
     other_map_elements = []
@@ -120,13 +132,6 @@ def generate_port_rules(
 
     # Calculate the required number of ports per host
     required_ports_per_host = port_count
-
-    # Check if there are enough external addresses for all internal hosts
-    if required_ports_per_host * len(internal_hosts) > total_possible_ports * len(
-        external_hosts
-    ):
-        raise ConfigError("Not enough ports available for the specified parameters!")
-
     current_port = start_port
     current_external_index = 0
 
@@ -140,13 +145,6 @@ def generate_port_rules(
             external_host = external_hosts[current_external_index]
             current_port = start_port
             next_end_port = current_port + required_ports_per_host - 1
-
-        # Ensure the same port is not assigned to the same external host
-        if any(
-            rule.endswith(f'{external_host}:{current_port}-{next_end_port}')
-            for rule in rules
-        ):
-            raise ConfigError("Not enough ports available for the specified parameters")
 
         proto_map_elements.append(
             f'{internal_host} : {external_host} . {current_port}-{next_end_port}'
@@ -239,6 +237,49 @@ def verify(config):
 
         used_external_pools[external_pool] = rule
         used_internal_pools[internal_pool] = rule
+
+        # Check calculation for allocation
+        external_port_range: str = config['pool']['external'][external_pool]['external_port_range']
+
+        external_ip_ranges: list = list(
+            config['pool']['external'][external_pool]['range']
+        )
+        internal_ip_ranges: list = config['pool']['internal'][internal_pool]['range']
+        start_port, end_port = map(int, external_port_range.split('-'))
+        ports_per_range_count: int = (end_port - start_port) + 1
+
+        external_list_hosts_count = []
+        external_list_hosts = []
+        internal_list_hosts_count = []
+        internal_list_hosts = []
+        for ext_range in external_ip_ranges:
+            # External hosts count
+            e_count = IPOperations(ext_range).get_ips_count()
+            external_list_hosts_count.append(e_count)
+            # External hosts list
+            e_hosts = IPOperations(ext_range).convert_prefix_to_list_ips()
+            external_list_hosts.extend(e_hosts)
+        for int_range in internal_ip_ranges:
+            # Internal hosts count
+            i_count = IPOperations(int_range).get_ips_count()
+            internal_list_hosts_count.append(i_count)
+            # Internal hosts list
+            i_hosts = IPOperations(int_range).convert_prefix_to_list_ips()
+            internal_list_hosts.extend(i_hosts)
+
+        external_host_count = sum(external_list_hosts_count)
+        internal_host_count = sum(internal_list_hosts_count)
+        ports_per_user: int = int(
+            config['pool']['external'][external_pool]['per_user_limit']['port']
+        )
+        users_per_extip = ports_per_range_count // ports_per_user
+        max_users = users_per_extip * external_host_count
+
+        if internal_host_count > max_users:
+            raise ConfigError(
+                f'Rule "{rule}" does not have enough ports available for the '
+                f'specified parameters'
+            )
 
 
 def generate(config):
