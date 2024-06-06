@@ -5,6 +5,7 @@
       <node name="proxy" owner="${vyos_conf_scripts_dir}/system_proxy.py">
         <properties>
           <help>Sets a proxy for system wide use</help>
+          <priority>100</priority>
         </properties>
         <children>
           <leafNode name="url">
