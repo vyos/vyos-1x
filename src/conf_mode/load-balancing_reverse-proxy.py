@@ -85,7 +85,7 @@ def verify(lb):
                 raise ConfigError(f'"expect status" and "expect string" can not be configured together!')
 
         if 'health_check' in back_config:
-            if 'mode' not in back_config or back_config['mode'] != 'tcp':
+            if back_config['mode'] != 'tcp':
                 raise ConfigError(f'backend "{back}" can only be configured with {back_config["health_check"]} ' +
                                   f'health-check whilst in TCP mode!')
             if 'http_check' in back_config:
@@ -108,7 +108,7 @@ def verify(lb):
     # Check if http-response-headers are configured in any frontend/backend where mode != http
     for group in ['service', 'backend']:
         for config_name, config in lb[group].items():
-            if 'http_response_headers' in config and ('mode' not in config or config['mode'] != 'http'):
+            if 'http_response_headers' in config and config['mode'] != 'http':
                 raise ConfigError(f'{group} {config_name} must be set to http mode to use http_response_headers!')
 
     for front, front_config in lb['service'].items():
