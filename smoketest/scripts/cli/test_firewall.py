@@ -116,6 +116,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '53'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '123'])
+        self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '55,125'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.com'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.org'])
         self.cli_set(['firewall', 'group', 'interface-group', 'smoketest_interface', 'interface', 'eth0'])
@@ -140,7 +141,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['ip saddr @N_smoketest_network', 'ip daddr 172.16.10.10', 'th dport @P_smoketest_port', 'accept'],
             ['elements = { 172.16.99.0/24 }'],
-            ['elements = { 53, 123 }'],
+            ['elements = { 53, 55, 123, 125 }'],
             ['ether saddr @M_smoketest_mac', 'accept'],
             ['elements = { 00:01:02:03:04:05 }'],
             ['set D_smoketest_domain'],
@@ -160,6 +161,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network1', 'include', 'smoketest_network'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '53'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port1', 'port', '123'])
+        self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '55,125'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port1', 'include', 'smoketest_port'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'source', 'group', 'network-group', 'smoketest_network1'])
@@ -178,7 +180,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['ip saddr @N_smoketest_network1', 'th dport @P_smoketest_port1', 'accept'],
             ['elements = { 172.16.99.0/24, 172.16.101.0/24 }'],
-            ['elements = { 53, 123 }']
+            ['elements = { 53, 55, 123, 125 }']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
