@@ -18,5 +18,6 @@
       <regex>(http|tcp)</regex>
     </constraint>
   </properties>
+  <defaultValue>http</defaultValue>
 </leafNode>
 <!-- include end -->
