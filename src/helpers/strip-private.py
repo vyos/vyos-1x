@@ -35,6 +35,8 @@ parser.add_argument('--domain', action='store_true', help='strip off domain name
 parser.add_argument('--asn', action='store_true', help='strip off BGP ASNs')
 parser.add_argument('--snmp', action='store_true', help='strip off SNMP location information')
 parser.add_argument('--lldp', action='store_true', help='strip off LLDP location information')
+parser.add_argument('--zt_node', action='store_true', help='strip off SNMP location information')
+parser.add_argument('--zt_network', action='store_true', help='strip off LLDP location information')
 
 address_preserval = parser.add_mutually_exclusive_group()
 address_preserval.add_argument('--address', action='store_true', help='strip off all IPv4 and IPv6 addresses')
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # Strict mode is the default and the absence of loose mode implies presence of strict mode.
     if not args.loose:
-        args.mac = args.domain = args.hostname = args.username = args.dhcp = args.asn = args.snmp = args.lldp = True
+        args.mac = args.domain = args.hostname = args.username = args.dhcp = args.asn = args.snmp = args.lldp = args.zt_node = args.zt_network = True
         if not args.public_address and not args.keep_address:
             args.address = True
     elif not args.address and not args.public_address:
@@ -123,6 +125,8 @@ if __name__ == "__main__":
         (True, re.compile(r'md5-key \S+'), 'md5-key xxxxxx'),
         # Strip WireGuard private-key
         (True, re.compile(r'private-key \S+'), 'private-key xxxxxx'),
+        # Strip ZeroTier api-key
+        (True, re.compile(r'api-key \S+'), 'api-key xxxxxx'),
 
         # Strip MAC addresses
         (args.mac, re.compile(r'([0-9a-fA-F]{2}\:){5}([0-9a-fA-F]{2}((\:{0,1})){3})'), r'xx:xx:xx:xx:xx:\2'),
@@ -149,5 +153,10 @@ if __name__ == "__main__":
 
         # Strip SNMP location
         (args.snmp, re.compile(r'(location) \S+'), r'\1 xxxxxx'),
+
+        # Strip ZeroTier information
+        (args.zt_node, re.compile(r'([A-Fa-f0-9]{16})'), r'xxxxxxxxxxxxxxxx'.strip()),
+        (args.zt_network, re.compile(r'([A-Fa-f0-9]{10})'), r'xxxxxxxxxx'.strip()),
     ]
+
     strip_lines(stripping_rules)

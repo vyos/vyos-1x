@@ -39,3 +39,4 @@ from vyos.ifconfig.macsec import MACsecIf
 from vyos.ifconfig.veth import VethIf
 from vyos.ifconfig.wwan import WWANIf
 from vyos.ifconfig.sstpc import SSTPCIf
+from vyos.ifconfig.zerotier import ZeroTierIf

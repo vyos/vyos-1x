@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+#
+# This script validates that a '/' separated IP/Port contains a valid IP and
+# Port
+
+from sys import argv
+import ipaddress
+
+def validate_ip_port(ip_port):
+    try:
+        ip, port = ip_port.split('/')
+        ipaddress.ip_address(ip)
+
+        port = int(port)
+        if not (1 <= port <= 65535):
+            exit(1)
+        exit(0)
+    except Exception as e:
+        exit(1)
+
+if __name__ == '__main__':
+    if len(argv)>1:
+        validate_ip_port(argv[1])
