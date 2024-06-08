@@ -120,7 +120,12 @@ def _get_formatted_output(raw_data):
                 tmp.append('')
 
             # Remote interface
-            interface = jmespath.search('port.descr', values)
+            interface = None
+            if jmespath.search('port.id.type', values) == 'ifname':
+                # Remote peer has explicitly returned the interface name as the PortID
+                interface = jmespath.search('port.id.value', values)
+            if not interface:
+                interface = jmespath.search('port.descr', values)
             if not interface:
                 interface = jmespath.search('port.id.value', values)
             if not interface:
@@ -136,11 +141,17 @@ def _get_formatted_output(raw_data):
 
 @_verify
 def show_neighbors(raw: bool, interface: typing.Optional[str], detail: typing.Optional[bool]):
-    lldp_data = _get_raw_data(interface=interface, detail=detail)
-    if raw:
-        return lldp_data
-    else:
-        return _get_formatted_output(lldp_data)
+    if raw or not detail:
+        lldp_data = _get_raw_data(interface=interface, detail=detail)
+        if raw:
+            return lldp_data
+        else:
+            return _get_formatted_output(lldp_data)
+    else: # non-raw, detail 
+        tmp = 'lldpcli -f text show neighbors details'
+        if interface:
+            tmp += f' ports {interface}'
+        return cmd(tmp)
 
 if __name__ == "__main__":
     try:

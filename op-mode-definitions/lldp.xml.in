@@ -13,6 +13,12 @@
             </properties>
             <command>${vyos_op_scripts_dir}/lldp.py show_neighbors</command>
             <children>
+              <node name="detail">
+                <properties>
+                  <help>Show extended detail for LLDP neighbors</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/lldp.py show_neighbors --detail</command>
+              </node>
               <tagNode name="interface">
                 <properties>
                   <help>Show LLDP for specified interface</help>
@@ -21,6 +27,17 @@
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/lldp.py show_neighbors --interface $5</command>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed LLDP for specified interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/lldp.py show_neighbors --interface $5 --detail</command>
+                  </node>
+                </children>
               </tagNode>
             </children>
           </node>
