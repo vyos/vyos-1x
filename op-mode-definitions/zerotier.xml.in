@@ -1,0 +1,231 @@
+<?xml version="1.0" ?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="zerotier">
+            <properties>
+              <help>Show ZeroTier information for given interface</help>
+              <completionHelp>
+                <path>interfaces zerotier</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_interfaces --interface $4</command>
+            <children>
+              <tagNode name="bonding">
+                <properties>
+                  <help>Show ZeroTier bonding for given peer</help>
+                  <completionHelp>
+                    <list>&lt;hhhhhhhhhh&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_command --interface $4 --command "bond $6 show"</command>
+              </tagNode>
+              <node name="bonding">
+                <properties>
+                  <help>Show ZeroTier bonding</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_command --interface $4 --command "bond list"</command>
+              </node>
+              <node name="metrics">
+                <properties>
+                  <help>Show ZeroTier metrics</help>
+                </properties>
+                <children>
+                  <leafNode name="accepted-packets">
+                    <properties>
+                      <help>Show ZeroTier metrics for accepted packets</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric acceptedpackets</command>
+                  </leafNode>
+                  <leafNode name="errors">
+                    <properties>
+                      <help>Show ZeroTier metrics for control-plane errors</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric errors</command>
+                  </leafNode>
+                  <leafNode name="latency">
+                    <properties>
+                      <help>Show ZeroTier metrics for latency buckets</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric latency</command>
+                  </leafNode>
+                  <leafNode name="packet-types">
+                    <properties>
+                      <help>Show ZeroTier metrics for packet types</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric packettype</command>
+                  </leafNode>
+                  <leafNode name="peer-packets">
+                    <properties>
+                      <help>Show ZeroTier metrics for packets to/from peers</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric peerpackets</command>
+                  </leafNode>
+                  <leafNode name="peer-packet-errors">
+                    <properties>
+                      <help>Show ZeroTier metrics for errors from peers</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric peerpacketerrors</command>
+                  </leafNode>
+                  <leafNode name="protocols">
+                    <properties>
+                      <help>Show ZeroTier metrics for protocols</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_metrics --interface $4 --metric protocols</command>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="network">
+                <properties>
+                  <help>Show ZeroTier network</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_command --interface $4 --command listnetworks</command>
+              </leafNode>
+              <leafNode name="peers">
+                <properties>
+                  <help>Show ZeroTier peers</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_command --interface $4 --command peers</command>
+              </leafNode>
+              <leafNode name="peers-all">
+                <properties>
+                  <help>Show peer detail for all peers</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_peers_all --interface $4</command>
+              </leafNode>
+              <leafNode name="peers-detail">
+                <properties>
+                  <help>Show peer detail for connected peers</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_peers_detail --interface $4</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="zerotier">
+            <properties>
+              <help>Show ZeroTier information</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/zerotier.py show_interfaces</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <tagNode name="zerotier">
+        <properties>
+          <help>Restart ZeroTier interface</help>
+          <completionHelp>
+            <path>interfaces zerotier</path>
+          </completionHelp>
+        </properties>
+        <command>sudo systemctl restart vyos-zerotier@$3.service</command>
+      </tagNode>
+    </children>
+  </node>
+  <node name="zerotier">
+    <properties>
+      <help>ZeroTier operational commands</help>
+    </properties>
+    <children>
+      <tagNode name="interface">
+        <properties>
+          <help>ZeroTier operation commands for given interface</help>
+          <completionHelp>
+            <path>interfaces zerotier</path>
+          </completionHelp>
+        </properties>
+        <children>
+          <node name="allow-default">
+            <properties>
+              <help>Enable/Disable ZeroTier's ability to receive public IP from controller</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable receiving default route from ZeroTier controller</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py set_allowed --interface $3 --allowed allowDefault --state 0</command>
+              </leafNode>
+              <leafNode name="enable">
+                <properties>
+                  <help>Enable receiving default route from ZeroTier controller</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py set_allowed --interface $3 --allowed allowDefault --state 1</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="allow-global">
+            <properties>
+              <help>Enable/Disable ZeroTier's ability to receive public IP from controller</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable public IP on ZeroTier interface</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py set_allowed --interface $3 --allowed allowGlobal --state 0</command>
+              </leafNode>
+              <leafNode name="enable">
+                <properties>
+                  <help>Enable public IP on ZeroTier interface</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py set_allowed --interface $3 --allowed allowGlobal --state 1</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="allow-managed">
+            <properties>
+              <help>Enable/Disable ZeroTier's ability to receive IP from controller</help>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable managed IP on ZeroTier interface</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py set_allowed --interface $3 --allowed allowManaged --state 0</command>
+              </leafNode>
+              <leafNode name="enable">
+                <properties>
+                  <help>Enable managed IP on ZeroTier interface</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/zerotier.py set_allowed --interface $3 --allowed allowManaged --state 1</command>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="bonding-failover">
+            <properties>
+              <help>Failover bonding for active-backup peer</help>
+              <completionHelp>
+                <list>&lt;hhhhhhhhhh&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>sudo podman exec vyos_created_$3 zerotier-cli bond $5 rotate</command>
+          </tagNode>
+          <tagNode name="orbit">
+            <properties>
+              <help>Orbit a private-root server (Moon)</help>
+              <completionHelp>
+                <list>&lt;hhhhhhhhhh&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>sudo podman exec vyos_created_$3 zerotier-cli orbit $5</command>
+          </tagNode>
+        </children>
+      </tagNode>
+      <tagNode name="restore">
+        <properties>
+          <help>Restore the config directory of previously deleted interface</help>
+          <completionHelp>
+            <list>&lt;filename&gt;</list>
+            <script>${vyos_completion_dir}/list_files.sh /config/vyos-zerotier/backup</script>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/zerotier.py reset_node --file $3</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
