@@ -307,6 +307,13 @@ def dict_to_paths(d: dict) -> list:
     for r in func(d, []):
         yield r
 
+def embed_dict(p: list[str], d: dict) -> dict:
+    path = p.copy()
+    ret = d
+    while path:
+        ret = {path.pop(): ret}
+    return ret
+
 def check_mutually_exclusive_options(d, keys, required=False):
     """ Checks if a dict has at most one or only one of
     mutually exclusive keys.
