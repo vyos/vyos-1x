@@ -71,26 +71,35 @@
               <multi/>
             </properties>
           </leafNode>
-          <tagNode name="kernel-parameter">
+          <node name="sysctl">
             <properties>
-              <help>Add custom kernel parameters (sysctl)</help>
-              <constraint>
-                <regex>[._a-z*]+</regex>
-              </constraint>
-              <constraintErrorMessage>Kernel parameter name must be alphanumeric and can contain periods, asterisks and underscores</constraintErrorMessage>
+              <help>Configure namespaced kernel parameters of the container</help>
             </properties>
             <children>
-              <leafNode name="value">
+              <tagNode name="parameter">
                 <properties>
-                  <help>Set kernel parameter option value</help>
+                  <help>Sysctl key name</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_container_sysctl_parameters.sh</script>
+                  </completionHelp>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Set kernel parameter option value</description>
+                    <description>Sysctl key name</description>
                   </valueHelp>
+                  <constraint>
+                    <validator name="sysctl"/>
+                  </constraint>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="value">
+                    <properties>
+                      <help>Sysctl configuration value</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
             </children>
-          </tagNode>
+          </node>
           #include <include/generic-description.xml.i>
           <tagNode name="device">
             <properties>
