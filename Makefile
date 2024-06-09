@@ -61,12 +61,13 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/clear/node.def
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 
-	# XXX: ping, traceroute and mtr must be able to recursivly call themselves as the
+	# XXX: tcpdump, ping, traceroute and mtr must be able to recursivly call themselves as the
 	# options are provided from the scripts themselves
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
 	ln -s ../node.tag $(OP_TMPL_DIR)/traceroute/node.tag/node.tag/
 	ln -s ../node.tag $(OP_TMPL_DIR)/mtr/node.tag/node.tag/
 	ln -s ../node.tag $(OP_TMPL_DIR)/monitor/traceroute/node.tag/node.tag/
+	ln -s ../node.tag $(OP_TMPL_DIR)/monitor/traffic/interface/node.tag/node.tag/
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
