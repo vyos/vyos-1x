@@ -47,7 +47,8 @@ def _utc_to_local(utc_dt):
     return datetime.fromtimestamp((datetime.fromtimestamp(utc_dt) - datetime(1970, 1, 1)).total_seconds())
 
 
-def _format_hex_string(in_str):
+def _format_hex_string(in_bytes):
+    in_str = bytes(in_bytes).hex()
     out_str = ""
     # if input is divisible by 2, add : every 2 chars
     if len(in_str) > 0 and len(in_str) % 2 == 0:
