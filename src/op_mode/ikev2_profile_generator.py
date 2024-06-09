@@ -21,6 +21,10 @@ from socket import getfqdn
 from cryptography.x509.oid import NameOID
 
 from vyos.configquery import ConfigTreeQuery
+from vyos.pki import CERT_BEGIN
+from vyos.pki import CERT_END
+from vyos.pki import find_chain
+from vyos.pki import encode_certificate
 from vyos.pki import load_certificate
 from vyos.template import render_to_string
 from vyos.utils.io import ask_input
@@ -146,26 +150,28 @@ data['rfqdn'] = '.'.join(tmp)
 pki = conf.get_config_dict(pki_base, get_first_key=True)
 cert_name = data['authentication']['x509']['certificate']
 
-data['certs'] = []
+cert_data = load_certificate(pki['certificate'][cert_name]['certificate'])
+data['cert_common_name'] = cert_data.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+data['ca_common_name'] = cert_data.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+data['ca_certificates'] = []
+
+loaded_ca_certs = {load_certificate(c['certificate'])
+    for c in pki['ca'].values()} if 'ca' in pki else {}
 
 for ca_name in data['authentication']['x509']['ca_certificate']:
-    tmp = {}
-    ca_cert = load_certificate(pki['ca'][ca_name]['certificate'])
-    cert = load_certificate(pki['certificate'][cert_name]['certificate'])
-
-
-    tmp['ca_cn'] = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-    tmp['cert_cn'] = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-    tmp['ca_cert'] = conf.value(pki_base + ['ca', ca_name, 'certificate'])
-
-    data['certs'].append(tmp)
-
+    loaded_ca_cert = load_certificate(pki['ca'][ca_name]['certificate'])
+    ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+    for ca in ca_full_chain:
+        tmp = {
+            'ca_name' : ca.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value,
+            'ca_chain' : encode_certificate(ca).replace(CERT_BEGIN, '').replace(CERT_END, '').replace('\n', ''),
+        }
+        data['ca_certificates'].append(tmp)
 
 esp_proposals = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group'], 'proposal'],
                                      key_mangling=('-', '_'), get_first_key=True)
 ike_proposal = conf.get_config_dict(ipsec_base + ['ike-group', data['ike_group'], 'proposal'],
                                     key_mangling=('-', '_'), get_first_key=True)
-
 
 # This script works only for Apple iOS/iPadOS and Windows. Both operating systems
 # have different limitations thus we load the limitations based on the operating
