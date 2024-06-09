@@ -30,7 +30,8 @@
         "ipsec": ["vpn_ipsec"],
         "openconnect": ["vpn_openconnect"],
         "rpki": ["protocols_rpki"],
-        "sstp": ["vpn_sstp"]
+        "sstp": ["vpn_sstp"],
+        "sstpc": ["interfaces_sstpc"]
     },
     "vpn_ipsec": {
         "nhrp": ["protocols_nhrp"]
