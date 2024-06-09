@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,6 +18,7 @@ from vyos.utils import auth
 from vyos.utils import boot
 from vyos.utils import commit
 from vyos.utils import convert
+from vyos.utils import cpu
 from vyos.utils import dict
 from vyos.utils import file
 from vyos.utils import io
