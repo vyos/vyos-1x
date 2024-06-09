@@ -67,6 +67,10 @@ sync_search = [
         'path': ['interfaces', 'sstpc'],
     },
     {
+        'keys': ['certificate', 'ca_certificate'],
+        'path': ['load_balancing', 'reverse_proxy'],
+    },
+    {
         'keys': ['key'],
         'path': ['protocols', 'rpki', 'cache'],
     },
