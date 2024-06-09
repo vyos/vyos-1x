@@ -67,25 +67,23 @@ frontend {{ front }}
 {%         if front_config.redirect_http_to_https is vyos_defined %}
     http-request redirect scheme https unless { ssl_fc }
 {%         endif %}
-{%         if front_config.mode is vyos_defined %}
     mode {{ front_config.mode }}
-{%             if front_config.tcp_request.inspect_delay is vyos_defined %}
+{%         if front_config.tcp_request.inspect_delay is vyos_defined %}
     tcp-request inspect-delay {{ front_config.tcp_request.inspect_delay }}
-{%             endif %}
-{# add tcp-request related directive if ssl is configed #}
-{%             if front_config.mode is vyos_defined('tcp') and front_config.rule is vyos_defined %}
-{%                 for rule, rule_config in front_config.rule.items() %}
-{%                     if rule_config.ssl is vyos_defined %}
+{%         endif %}
+{# add tcp-request related directive if ssl is configured #}
+{%         if front_config.mode == 'tcp' and front_config.rule is vyos_defined %}
+{%             for rule, rule_config in front_config.rule.items() %}
+{%                 if rule_config.ssl is vyos_defined %}
     tcp-request content accept if { req_ssl_hello_type 1 }
-{%                         break %}
-{%                     endif %}
-{%                 endfor %}
-{%             endif %}
-{%             if front_config.http_response_headers is vyos_defined %}
-{%                 for header, header_config in front_config.http_response_headers.items() %}
+{%                     break %}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if front_config.http_response_headers is vyos_defined %}
+{%             for header, header_config in front_config.http_response_headers.items() %}
     http-response set-header {{ header }} '{{ header_config['value'] }}'
-{%                 endfor %}
-{%             endif %}
+{%             endfor %}
 {%         endif %}
 {%         if front_config.rule is vyos_defined %}
 {%             for rule, rule_config in front_config.rule.items() %}
@@ -162,19 +160,17 @@ backend {{ back }}
 {%             set balance_translate = {'least-connection': 'leastconn', 'round-robin': 'roundrobin', 'source-address': 'source'} %}
     balance {{ balance_translate[back_config.balance] }}
 {%         endif %}
-{# If mode is not TCP skip Forwarded #}
-{%         if back_config.mode is not vyos_defined('tcp') %}
+{# If mode is HTTP add X-Forwarded headers #}
+{%         if back_config.mode == 'http' %}
     option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }
 {%         endif %}
-{%         if back_config.mode is vyos_defined %}
     mode {{ back_config.mode }}
-{%             if back_config.http_response_headers is vyos_defined %}
-{%                 for header, header_config in back_config.http_response_headers.items() %}
+{%         if back_config.http_response_headers is vyos_defined %}
+{%             for header, header_config in back_config.http_response_headers.items() %}
     http-response set-header {{ header }} '{{ header_config['value'] }}'
-{%                 endfor %}
-{%             endif %}
+{%             endfor %}
 {%         endif %}
 {%         if back_config.rule is vyos_defined %}
 {%             for rule, rule_config in back_config.rule.items() %}
