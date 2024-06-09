@@ -17,7 +17,6 @@
 import os
 import re
 
-from glob import glob
 from sys import exit
 
 from vyos.base import Warning
