@@ -191,10 +191,12 @@ def verify(container):
                     if not os.path.exists(source):
                         raise ConfigError(f'Device "{dev}" source path "{source}" does not exist!')
 
-            if 'kernel-parameter' in container_config:
-                for var, cfg in container_config['kernel-parameter'].items():
+            if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
+                for var, cfg in container_config['sysctl']['parameter'].items():
                     if 'value' not in cfg:
-                        raise ConfigError(f'Kernel parameter {var} has no value assigned!')
+                        raise ConfigError(f'sysctl parameter {var} has no value assigned!')
+                    if var.startswith('net.') and 'allow_host_networks' in container_config:
+                        raise ConfigError(f'sysctl parameter {var} cannot be set when using host networking!')
 
             if 'environment' in container_config:
                 for var, cfg in container_config['environment'].items():
@@ -285,9 +287,9 @@ def generate_run_arguments(name, container_config):
 
     # Add sysctl options
     sysctl_opt = ''
-    if 'kernel-parameter' in container_config:
-        for k, v in container_config['kernel-parameter'].items():
-            sysctl_opt += f" --sysctl={k}={v['value']}"
+    if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
+        for k, v in container_config['sysctl']['parameter'].items():
+            sysctl_opt += f" --sysctl {k}={v['value']}"
 
     # Add capability options. Should be in uppercase
     capabilities = ''
