@@ -11,4 +11,4 @@ set container name c02 allow-host-networks
 set container name c02 allow-host-pid
 set container name c02 capability 'sys-time'
 set container name c02 image 'busybox:stable'
-set container name c02 kernel-parameter 'net.ipv4.conf.all.forwarding' value '1'
+set container name c02 sysctl parameter kernel.msgmax value '8192'
