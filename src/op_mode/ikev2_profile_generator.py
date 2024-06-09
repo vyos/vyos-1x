@@ -168,6 +168,10 @@ for ca_name in data['authentication']['x509']['ca_certificate']:
         }
         data['ca_certificates'].append(tmp)
 
+# Remove duplicate list entries for CA certificates, as they are added by their common name
+# https://stackoverflow.com/a/9427216
+data['ca_certificates'] = [dict(t) for t in {tuple(d.items()) for d in data['ca_certificates']}]
+
 esp_proposals = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group'], 'proposal'],
                                      key_mangling=('-', '_'), get_first_key=True)
 ike_proposal = conf.get_config_dict(ipsec_base + ['ike-group', data['ike_group'], 'proposal'],
