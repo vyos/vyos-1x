@@ -762,6 +762,47 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit keepalived.service</command>
           </leafNode>
+          <node name="wireless">
+            <properties>
+              <help>Show log for Wireless interface</help>
+            </properties>
+            <children>
+              <node name="wpa-supplicant">
+                <properties>
+                  <help>Show log for WPA supplicant</help>
+                </properties>
+                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --unit "wpa_supplicant@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show log for specific wireless interface supplicant</help>
+                      <completionHelp>
+                        <path>interfaces wireless</path>
+                      </completionHelp>
+                    </properties>
+                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "station" ]]; then journalctl --no-hostname --boot --unit "wpa_supplicant@$6.service"; else echo "Wireless interface $6 not configured as station!"; fi</command>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="hostapd">
+                <properties>
+                  <help>Show log for host access point daemon</help>
+                </properties>
+                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --unit "hostapd@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show log for specific host access point daemon interface</help>
+                      <completionHelp>
+                        <path>interfaces wireless</path>
+                      </completionHelp>
+                    </properties>
+                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "access-point" ]]; then journalctl --no-hostname --boot --unit "hostapd@$6.service"; else echo "Wireless interface $6 not configured as access-point!"; fi</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <leafNode name="webproxy">
             <properties>
               <help>Show log for Webproxy</help>
