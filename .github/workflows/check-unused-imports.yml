@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - current
+      - equuleus
       - sagitta
   workflow_dispatch:
 
