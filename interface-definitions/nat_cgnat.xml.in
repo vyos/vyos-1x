@@ -8,6 +8,12 @@
           <priority>221</priority>
         </properties>
         <children>
+          <leafNode name="log-allocation">
+            <properties>
+              <help>Log IP address and port allocation</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <node name="pool">
             <properties>
               <help>External and internal pool parameters</help>
