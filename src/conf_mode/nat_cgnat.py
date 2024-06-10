@@ -16,9 +16,11 @@
 
 import ipaddress
 import jmespath
+import logging
 import os
 
 from sys import exit
+from logging.handlers import SysLogHandler
 
 from vyos.config import Config
 from vyos.template import render
@@ -31,6 +33,18 @@ airbag.enable()
 
 
 nftables_cgnat_config = '/run/nftables-cgnat.nft'
+
+# Logging
+logger = logging.getLogger('cgnat')
+logger.setLevel(logging.DEBUG)
+
+syslog_handler = SysLogHandler(address="/dev/log")
+syslog_handler.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(name)s: %(message)s')
+syslog_handler.setFormatter(formatter)
+
+logger.addHandler(syslog_handler)
 
 
 class IPOperations:
@@ -355,6 +369,22 @@ def apply(config):
             os.unlink(nftables_cgnat_config)
         return None
     cmd(f'nft --file {nftables_cgnat_config}')
+
+    # Logging allocations
+    if 'log_allocation' in config:
+        allocations = config['proto_map_elements']
+        allocations = allocations.split(',')
+        for allocation in allocations:
+            try:
+                # Split based on the delimiters used in the nft data format
+                internal_host, rest = allocation.split(' : ')
+                external_host, port_range = rest.split(' . ')
+                # Log the parsed data
+                logger.info(
+                    f"Internal host: {internal_host.lstrip()}, external host: {external_host}, Port range: {port_range}")
+            except ValueError as e:
+                # Log error message
+                logger.error(f"Error processing line '{allocation}': {e}")
 
 
 if __name__ == '__main__':
