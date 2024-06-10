@@ -412,18 +412,18 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
   route-target vpn both {{ afi_config.route_target.vpn.both }}
 {%         else %}
 {%             if afi_config.route_target.vpn.export is vyos_defined %}
-  {%             if afi_config.route_target.vpn.export is iterable and not afi_config.route_target.vpn.export is string %}
+{%                 if afi_config.route_target.vpn.export is iterable and not afi_config.route_target.vpn.export is string %}
   route-target vpn export {{ afi_config.route_target.vpn.export | join(' ') }}
-  {%             else %}
+{%                 else %}
   route-target vpn export {{ afi_config.route_target.vpn.export }}
-  {%             endif %}
+{%                 endif %}
 {%             endif %}
 {%             if afi_config.route_target.vpn.import is vyos_defined %}
-  {%             if afi_config.route_target.vpn.import is iterable and not afi_config.route_target.vpn.import is string %}
+{%                 if afi_config.route_target.vpn.import is iterable and not afi_config.route_target.vpn.import is string %}
   route-target vpn import {{ afi_config.route_target.vpn.import | join(' ') }}
-  {%             else %}
+{%                 else %}
   route-target vpn import {{ afi_config.route_target.vpn.import }}
-  {%             endif %}
+{%                 endif %}
 {%             endif %}
 {%         endif %}
 {%         if afi_config.route_target.both is vyos_defined %}
