@@ -19,7 +19,7 @@ from configparser import ConfigParser
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
-from vyos.cpu import get_core_count
+from vyos.utils.cpu import get_core_count
 from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
 

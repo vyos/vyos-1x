@@ -631,7 +631,7 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
 
     Return a dictionary with the necessary interface config keys.
     """
-    from vyos.cpu import get_core_count
+    from vyos.utils.cpu import get_core_count
     from vyos.template import is_ipv4
 
     dict = config.get_config_dict(base, key_mangling=('-', '_'),

@@ -29,7 +29,7 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Interface
-from vyos.cpu import get_core_count
+from vyos.utils.cpu import get_core_count
 from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import cmd
