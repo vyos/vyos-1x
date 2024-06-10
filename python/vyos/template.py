@@ -523,10 +523,17 @@ def get_esp_ike_cipher(group_config, ike_group=None):
     return ciphers
 
 @register_filter('get_uuid')
-def get_uuid(interface):
+def get_uuid(seed):
     """ Get interface IP addresses"""
-    from uuid import uuid1
-    return uuid1()
+    if seed:
+        from hashlib import md5
+        from uuid import UUID
+        tmp = md5()
+        tmp.update(seed.encode('utf-8'))
+        return str(UUID(tmp.hexdigest()))
+    else:
+        from uuid import uuid1
+        return uuid1()
 
 openvpn_translate = {
     'des': 'des-cbc',
