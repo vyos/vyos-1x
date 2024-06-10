@@ -48,10 +48,10 @@
                 <!-- Optional, if it matches the CN of the root CA certificate (not the full subject DN) a certificate request will be sent
                      NOTE: If this is not configured make sure to configure leftsendcert=always on the server, otherwise it won't send its certificate -->
                 <key>ServerCertificateIssuerCommonName</key>
-                <string>{{ ca_cn }}</string>
+                <string>{{ ca_common_name }}</string>
                 <!-- Optional, the CN or one of the subjectAltNames of the server certificate to verify it, if not set RemoteIdentifier will be used -->
                 <key>ServerCertificateCommonName</key>
-                <string>{{ cert_cn }}</string>
+                <string>{{ cert_common_name }}</string>
                 <!-- The server is authenticated using a certificate -->
                 <key>AuthenticationMethod</key>
                 <string>Certificate</string>
@@ -83,24 +83,22 @@
                 </dict>
             </dict>
         </dict>
-{% if certs is vyos_defined %}
+{% if ca_certificates is vyos_defined %}
         <!-- This payload is optional but it provides an easy way to install the CA certificate together with the configuration -->
-{%     for cert in certs %}
-        <!-- Payload for: {{ cert.ca_cn }} -->
+{%     for ca in ca_certificates %}
+        <!-- Payload for: {{ ca.ca_name }} -->
         <dict>
             <key>PayloadIdentifier</key>
-            <string>org.{{ cert.ca_cn | lower | replace(' ', '.') | replace('_', '.') }}</string>
+            <string>org.{{ ca.ca_name | lower | replace(' ', '.') | replace('_', '.') }}</string>
             <key>PayloadUUID</key>
-            <string>{{ cert.ca_cn | generate_uuid4 }}</string>
+            <string>{{ ca.ca_name | get_uuid }}</string>
             <key>PayloadType</key>
             <string>com.apple.security.root</string>
             <key>PayloadVersion</key>
             <integer>1</integer>
             <!-- This is the Base64 (PEM) encoded CA certificate -->
             <key>PayloadContent</key>
-            <data>
-            {{ cert.ca_cert }}
-            </data>
+            <data>{{ ca.ca_chain }}</data>
         </dict>
 {%     endfor %}
 {% endif %}
