@@ -164,8 +164,6 @@ Depends:
 # End "service dns dynamic"
 # # For "service ids"
   fastnetmon [amd64],
-  suricata,
-  suricata-update,
 # End "service ids"
 # # For "service ndp-proxy"
   ndppd,
