@@ -31,6 +31,7 @@
             <constraint>
               <validator name="bgp-rd-rt" argument="--route-target-multi"/>
             </constraint>
+            <multi/>
           </properties>
         </leafNode>
         <leafNode name="export">
@@ -43,6 +44,7 @@
             <constraint>
               <validator name="bgp-rd-rt" argument="--route-target-multi"/>
             </constraint>
+            <multi/>
           </properties>
         </leafNode>
       </children>
