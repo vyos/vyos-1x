@@ -759,6 +759,15 @@
               <help>Wireless security settings</help>
             </properties>
             <children>
+              <leafNode name="bssid">
+                <properties>
+                  <help>Basic Service Set Identifier (BSSID)</help>
+                  <constraint>
+                    <regex>([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid BSSID</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <node name="station-address">
                 <properties>
                   <help>Station MAC address based authentication</help>
@@ -935,15 +944,16 @@
                     </properties>
                     <defaultValue>wpa+wpa2</defaultValue>
                   </leafNode>
+                  #include <include/generic-username.xml.i>
                   <leafNode name="passphrase">
                     <properties>
-                      <help>WPA personal shared pass phrase. If you are using special characters in the WPA passphrase then single quotes are required.</help>
+                      <help>WPA passphrase. If you are using special characters in the WPA passphrase then single quotes are required.</help>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Passphrase of at least 8 but not more than 63 printable characters</description>
+                        <description>Passphrase of at least 8 but not more than 63 printable characters for WPA-Personal and any passphrase for WPA-Enterprise</description>
                       </valueHelp>
                       <constraint>
-                        <regex>.{8,63}</regex>
+                        <regex>.*</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid WPA pass phrase, must be 8 to 63 printable characters!</constraintErrorMessage>
                     </properties>
