@@ -3,7 +3,7 @@
   <properties>
     <help>Peer group for this peer</help>
     <completionHelp>
-      <path>protocols bgp peer-group</path>
+      <path>${COMP_WORDS[@]:1:${#COMP_WORDS[@]}-5} peer-group</path>
     </completionHelp>
     <valueHelp>
       <format>txt</format>
