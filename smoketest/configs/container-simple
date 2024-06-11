@@ -10,6 +10,11 @@ container {
         allow-host-pid
         cap-add sys-time
         image busybox:stable
+        sysctl {
+            parameter kernel.msgmax {
+                value "8192"
+            }
+        }
     }
 }
 interfaces {
