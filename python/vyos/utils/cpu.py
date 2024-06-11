@@ -28,7 +28,6 @@ but nothing is certain.
 
 import re
 
-
 def _read_cpuinfo():
     with open('/proc/cpuinfo', 'r') as f:
         lines = f.read().strip()
