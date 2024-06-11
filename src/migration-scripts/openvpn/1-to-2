@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Removes --cipher option (deprecated) from OpenVPN configs
+# and moves it to --data-ciphers for server and client modes
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['interfaces', 'openvpn']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
+    for	i in ovpn_intfs:
+        # Remove 'encryption cipher' and add this value to 'encryption ncp-ciphers'
+        # for server and client mode.
+        # Site-to-site mode still can use --cipher option
+        cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'cipher']
+        ncp_cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers']
+        if config.exists(cipher_path):
+            if config.exists(['interfaces', 'openvpn', i, 'shared-secret-key']):
+                continue
+            cipher = config.return_value(cipher_path)
+            config.delete(cipher_path)
+            if cipher == 'none':
+                if not config.exists(ncp_cipher_path):
+                    config.delete(['interfaces', 'openvpn', i, 'encryption'])
+                continue
+
+            ncp_ciphers = []
+            if config.exists(ncp_cipher_path):
+                ncp_ciphers = config.return_values(ncp_cipher_path)
+                config.delete(ncp_cipher_path)
+
+            # need to add the deleted cipher at the first place in the list
+            if cipher in ncp_ciphers:
+                ncp_ciphers.remove(cipher)
+            ncp_ciphers.insert(0, cipher)
+
+            for c in ncp_ciphers:
+                config.set(ncp_cipher_path, value=c, replace=False)
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
