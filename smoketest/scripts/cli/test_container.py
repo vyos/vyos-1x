@@ -80,6 +80,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'sysctl', 'parameter', 'kernel.msgmax', 'value', '4096'])
 
         # commit changes
         self.cli_commit()
@@ -90,6 +91,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertEqual(process_named_running(PROCESS_NAME), pid)
+
+        # verify
+        tmp = cmd(f'sudo podman exec -it {cont_name} sysctl kernel.msgmax')
+        self.assertEqual(tmp, 'kernel.msgmax = 4096')
 
     def test_cpu_limit(self):
         cont_name = 'c2'
