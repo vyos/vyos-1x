@@ -42,8 +42,9 @@ if not config.exists(conntrack_base):
 
 for protocol in ['icmp', 'tcp', 'udp', 'other']:
     if config.exists(conntrack_base + [protocol]):
-        if not config.exists(firewall_base):
+        if not config.exists(firewall_base + ['timeout']):
             config.set(firewall_base + ['timeout'])
+
         config.copy(conntrack_base + [protocol], firewall_base + ['timeout', protocol])
         config.delete(conntrack_base + [protocol])
 
