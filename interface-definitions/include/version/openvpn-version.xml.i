@@ -1,3 +1,3 @@
 <!-- include start from include/version/openvpn-version.xml.i -->
-<syntaxVersion component='openvpn' version='1'></syntaxVersion>
+<syntaxVersion component='openvpn' version='2'></syntaxVersion>
 <!-- include end -->

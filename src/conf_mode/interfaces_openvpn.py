@@ -515,6 +515,10 @@ def verify(openvpn):
                 print('Warning: using dh-params and EC keys simultaneously will ' \
                       'lead to DH ciphers being used instead of ECDH')
 
+        if dict_search('encryption.cipher', openvpn):
+            raise ConfigError('"encryption cipher" option is deprecated for TLS mode. '
+                              'Use "encryption ncp-ciphers" instead')
+
     if dict_search('encryption.cipher', openvpn) == 'none':
         print('Warning: "encryption none" was specified!')
         print('No encryption will be performed and data is transmitted in ' \
