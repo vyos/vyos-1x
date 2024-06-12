@@ -5,6 +5,7 @@
       <node name="config-sync" owner="${vyos_conf_scripts_dir}/service_config-sync.py">
         <properties>
           <help>Configuration synchronization</help>
+          <priority>10000</priority>
         </properties>
         <children>
           <node name="secondary">

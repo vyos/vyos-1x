@@ -509,7 +509,6 @@
                   </node>
                 </children>
               </node>
-              #include <include/conntrack/timeout-common-protocols.xml.i>
             </children>
           </node>
         </children>

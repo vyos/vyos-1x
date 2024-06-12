@@ -29,8 +29,10 @@
         "https": ["service_https"],
         "ipsec": ["vpn_ipsec"],
         "openconnect": ["vpn_openconnect"],
+        "reverse_proxy": ["load-balancing_reverse-proxy"],
         "rpki": ["protocols_rpki"],
-        "sstp": ["vpn_sstp"]
+        "sstp": ["vpn_sstp"],
+        "sstpc": ["interfaces_sstpc"]
     },
     "vpn_ipsec": {
         "nhrp": ["protocols_nhrp"]

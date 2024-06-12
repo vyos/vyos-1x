@@ -2,11 +2,13 @@
 name: Check pull request message format
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - current
       - crux
       - equuleus
+      - sagitta
+    types: [opened, synchronize, edited]
 
 permissions:
   pull-requests: write

@@ -287,6 +287,12 @@ def process_node(n, tmpl_dir):
     props = get_properties(props_elem, n.find("defaultValue"))
     if owner:
         props["owner"] = owner
+        # <priority> tag is mandatory if the parent node has an owner
+        if "priority" not in props:
+            raise ValueError(
+                f"<priority> tag should be set for the node <{name}> path '{' '.join(my_tmpl_dir[1:])}'"
+            )
+
     # Type should not be set for non-tag, non-leaf nodes
     # For non-valueless leaf nodes, set the type to txt: to make them have some type,
     # actual value validation is handled by constraints translated to syntax:expression:
@@ -335,4 +341,8 @@ nodes = root.iterfind("*")
 for n in nodes:
     if n.tag == "syntaxVersion":
         continue
-    process_node(n, [output_dir])
+    try:
+        process_node(n, [output_dir])
+    except ValueError as e:
+        print(e)
+        sys.exit(1)

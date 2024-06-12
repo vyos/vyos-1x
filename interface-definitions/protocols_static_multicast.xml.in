@@ -7,6 +7,7 @@
           <node name="multicast" owner="${vyos_conf_scripts_dir}/protocols_static_multicast.py">
             <properties>
               <help>Multicast static route</help>
+              <priority>481</priority>
             </properties>
             <children>
               <tagNode name="route">

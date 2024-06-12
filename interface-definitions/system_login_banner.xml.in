@@ -11,6 +11,7 @@
           <node name="banner" owner="${vyos_conf_scripts_dir}/system_login_banner.py">
             <properties>
               <help>System login banners</help>
+              <priority>410</priority>
             </properties>
             <children>
               <leafNode name="post-login">

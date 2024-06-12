@@ -1,4 +1,4 @@
-<!-- include start from conntrack/timeout-common-protocols.xml.i -->
+<!-- include start from firewall/timeout-common-protocols.xml.i -->
 <leafNode name="icmp">
   <properties>
     <help>ICMP timeout in seconds</help>
@@ -169,4 +169,3 @@
     </leafNode>
   </children>
 </node>
-<!-- include end -->

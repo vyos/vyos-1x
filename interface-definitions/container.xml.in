@@ -71,6 +71,35 @@
               <multi/>
             </properties>
           </leafNode>
+          <node name="sysctl">
+            <properties>
+              <help>Configure namespaced kernel parameters of the container</help>
+            </properties>
+            <children>
+              <tagNode name="parameter">
+                <properties>
+                  <help>Sysctl key name</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_container_sysctl_parameters.sh</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Sysctl key name</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="sysctl"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="value">
+                    <properties>
+                      <help>Sysctl configuration value</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           #include <include/generic-description.xml.i>
           <tagNode name="device">
             <properties>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
@@ -29,8 +29,8 @@ def _get_uptime_seconds():
 
 def _get_load_averages():
     from re import search
+    from vyos.utils.cpu import get_core_count
     from vyos.utils.process import cmd
-    from vyos.cpu import get_core_count
 
     data = cmd("uptime")
     matches = search(r"load average:\s*(?P<one>[0-9\.]+)\s*,\s*(?P<five>[0-9\.]+)\s*,\s*(?P<fifteen>[0-9\.]+)\s*", data)

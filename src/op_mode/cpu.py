@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2016-2022 VyOS maintainers and contributors
+# Copyright (C) 2016-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,8 +16,9 @@
 
 import sys
 
-import vyos.cpu
 import vyos.opmode
+from vyos.utils.cpu import get_cpus
+from vyos.utils.cpu import get_core_count
 
 from jinja2 import Template
 
@@ -37,15 +38,15 @@ CPU model(s): {{models | join(", ")}}
 """)
 
 def _get_raw_data():
-    return vyos.cpu.get_cpus()
+    return get_cpus()
 
 def _format_cpus(cpu_data):
     env = {'cpus': cpu_data}
     return cpu_template.render(env).strip()
 
 def _get_summary_data():
-    count = vyos.cpu.get_core_count()
-    cpu_data = vyos.cpu.get_cpus()
+    count = get_core_count()
+    cpu_data = get_cpus()
     models = [c['model name'] for c in cpu_data]
     env = {'count': count, "models": models}
 
@@ -79,4 +80,3 @@ if __name__ == '__main__':
     except (ValueError, vyos.opmode.Error) as e:
         print(e)
         sys.exit(1)
-

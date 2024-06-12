@@ -138,10 +138,13 @@ class VXLANIf(Interface):
             raise ValueError('Value out of range')
 
         if 'vlan_to_vni_removed' in self.config:
-            cur_vni_filter = get_vxlan_vni_filter(self.ifname)
+            cur_vni_filter = None
+            if dict_search('parameters.vni_filter', self.config) != None:
+                cur_vni_filter = get_vxlan_vni_filter(self.ifname)
+
             for vlan, vlan_config in self.config['vlan_to_vni_removed'].items():
                 # If VNI filtering is enabled, remove matching VNI filter
-                if dict_search('parameters.vni_filter', self.config) != None:
+                if cur_vni_filter != None:
                     vni = vlan_config['vni']
                     if vni in cur_vni_filter:
                         self._cmd(f'bridge vni delete dev {self.ifname} vni {vni}')

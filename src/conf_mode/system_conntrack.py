@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.dict import dict_search
@@ -164,6 +165,8 @@ def verify(conntrack):
 
                                     if not group_obj:
                                         Warning(f'{error_group} "{group_name}" has no members!')
+
+            Warning(f'It is prefered to define {inet} conntrack ignore rules in <firewall {inet} prerouting raw> section')
 
         if dict_search_args(conntrack, 'timeout', 'custom', inet, 'rule') != None:
             for rule, rule_config in conntrack['timeout']['custom'][inet]['rule'].items():
