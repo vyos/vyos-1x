@@ -8,7 +8,7 @@
         </properties>
         <children>
           <tagNode name="interface">
-            <command>sudo tcpdump -i $4</command>
+            <command>${vyos_op_scripts_dir}/tcpdump.py $4</command>
             <properties>
               <help>Monitor traffic dump from an interface</help>
               <completionHelp>
@@ -16,54 +16,15 @@
               </completionHelp>
             </properties>
             <children>
-              <node name="verbose">
-                <command>sudo tcpdump -vvv -ne -i $4</command>
+              <leafNode name="node.tag">
                 <properties>
-                  <help>Provide more detailed packets for each monitored traffic</help>
+                  <help>Traffic capture options</help>
+                  <completionHelp>
+                    <script>${vyos_op_scripts_dir}/tcpdump.py --get-options-nested "${COMP_WORDS[@]}"</script>
+                  </completionHelp>
                 </properties>
-                <children>
-                  <tagNode name="filter">
-                    <command>sudo tcpdump -vvv -ne -i $4 "${@:6}"</command>
-                    <properties>
-                      <help>Monitor traffic matching filter conditions</help>
-                    </properties>
-                  </tagNode>
-                  <tagNode name="save">
-                    <command>sudo tcpdump -vvv -ne -i $4 -w $6</command>
-                    <properties>
-                      <help>Save traffic dump from an interface to a file</help>
-                    </properties>
-                    <children>
-                      <tagNode name="filter">
-                        <command>sudo tcpdump -vvv -ne -i $4 -w $6 "${@:8}"</command>
-                        <properties>
-                          <help>Save a dump of traffic matching filter conditions to a file</help>
-                        </properties>
-                      </tagNode>
-                    </children>
-                  </tagNode>
-                </children>
-              </node>
-              <tagNode name="filter">
-                <command>sudo tcpdump -n -i $4 "${@:6}"</command>
-                <properties>
-                  <help>Monitor traffic matching filter conditions</help>
-                </properties>
-              </tagNode>
-              <tagNode name="save">
-                <command>sudo tcpdump -n -i $4 -w $6</command>
-                <properties>
-                  <help>Save traffic dump from an interface to a file</help>
-                </properties>
-                <children>
-                  <tagNode name="filter">
-                    <command>sudo tcpdump -n -i $4 -w $6 "${@:8}"</command>
-                    <properties>
-                      <help>Save a dump of traffic matching filter conditions to a file</help>
-                    </properties>
-                  </tagNode>
-                </children>
-              </tagNode>
+                <command>${vyos_op_scripts_dir}/tcpdump.py "${@:4}"</command>
+              </leafNode>
             </children>
           </tagNode>
         </children>
