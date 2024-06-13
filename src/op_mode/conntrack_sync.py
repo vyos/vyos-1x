@@ -19,6 +19,8 @@ import sys
 import syslog
 import xmltodict
 
+from tabulate import tabulate
+
 import vyos.opmode
 
 from vyos.configquery import CliShellApiConfigQuery
@@ -27,7 +29,6 @@ from vyos.utils.commit import commit_in_progress
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.template import render_to_string
 
 conntrackd_bin = '/usr/sbin/conntrackd'
 conntrackd_config = '/run/conntrackd/conntrackd.conf'
@@ -59,6 +60,26 @@ def flush_cache(direction):
     if tmp > 0:
         raise vyos.opmode.Error('Failed to clear {direction} cache')
 
+def get_formatted_output(data):
+    data_entries = []
+    for parsed in data:
+        for meta in parsed.get('flow', {}).get('meta', []):
+            direction = meta['@direction']
+            if direction == 'original':
+                src = meta['layer3']['src']
+                dst = meta['layer3']['dst']
+                sport = meta['layer4'].get('sport')
+                dport = meta['layer4'].get('dport')
+                protocol = meta['layer4'].get('@protoname')
+                orig_src = f'{src}:{sport}' if sport else src
+                orig_dst = f'{dst}:{dport}' if dport else dst
+
+                data_entries.append([orig_src, orig_dst, protocol])
+
+    headers = ["Source", "Destination", "Protocol"]
+    output = tabulate(data_entries, headers, tablefmt="simple")
+    return output
+
 def from_xml(raw, xml):
     out = []
     for line in xml.splitlines():
@@ -70,7 +91,7 @@ def from_xml(raw, xml):
     if raw:
         return out
     else:
-        return render_to_string('conntrackd/conntrackd.op-mode.j2', {'data' : out})
+        return get_formatted_output(out)
 
 def restart():
     is_configured()
