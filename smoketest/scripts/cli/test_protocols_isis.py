@@ -37,6 +37,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         self.cli_delete(base_path)
+        self.cli_delete(['interfaces', 'dummy'])
+        self.cli_delete(['interfaces', 'tunnel'])
         self.cli_commit()
 
         # Check for running process
@@ -221,6 +223,39 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip router isis {domain}', tmp)
             self.assertIn(f' ipv6 router isis {domain}', tmp)
             self.assertIn(f' isis network {network}', tmp)
+
+    def test_isis_06_tunnel_interface(self):
+        self.cli_set(['interfaces', 'dummy', 'dum0', 'address', '203.0.113.254/32'])
+        self.cli_set(['interfaces', 'dummy', 'dum0', 'description', 'dum0'])
+        self.cli_set(['interfaces', 'dummy', 'dum1', 'address', '192.0.2.5/24'])
+        self.cli_set(['interfaces', 'dummy', 'dum1', 'description', 'LAN'])
+
+        self.cli_set(['interfaces', 'tunnel', 'tun0', 'address', '10.0.0.2/30'])
+        self.cli_set(['interfaces', 'tunnel', 'tun0', 'description', 'tun-to-192.0.2.1'])
+        self.cli_set(['interfaces', 'tunnel', 'tun0', 'encapsulation', 'gre'])
+        self.cli_set(['interfaces', 'tunnel', 'tun0', 'source-address', '192.0.2.5'])
+
+        self.cli_set(base_path + ['interface', 'dum1'])
+        self.cli_set(base_path + ['interface', 'tun0'])
+        self.cli_set(base_path + ['lsp-mtu', '1460'])
+        self.cli_set(base_path + ['net', '49.0001.1920.0200.0011.00'])
+        self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(['interfaces', 'tunnel', 'tun0', 'remote', '192.0.2.1'])
+        self.cli_commit()
+
+        frr_config = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+        expected_config = "router isis VyOS\n"\
+                " net 49.0001.1920.0200.0011.00\n"\
+                " lsp-mtu 1460\n"\
+                " redistribute ipv4 connected level-2\n"\
+                "!"
+
+        self.assertEqual(expected_config, frr_config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

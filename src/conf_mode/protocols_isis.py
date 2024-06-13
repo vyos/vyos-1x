@@ -69,6 +69,15 @@ def get_config(config=None):
     # Merge policy dict into "regular" config dict
     isis = dict_merge(tmp, isis)
 
+    for interface in isis.get('interface'):
+        # when we use tunnel interface necessary additional config validate
+        if interface.startswith('tun'):
+            isis['tunnel_config'] = conf.get_config_dict(
+                ['interfaces', 'tunnel'],
+                key_mangling=('-', '_'),
+                get_first_key=True)
+            break
+
     return isis
 
 def verify(isis):
@@ -102,6 +111,10 @@ def verify(isis):
                               f'current area MTU is {area_mtu}! \n' \
                               f'Recommended area lsp-mtu {recom_area_mtu} or less ' \
                               '(calculated on MTU size).')
+
+        if interface.startswith('tun'):
+            if not dict_search(f'tunnel_config.{interface}.remote', isis):
+                raise ConfigError(f'Option remote for interface {interface} is required.')
 
     # If md5 and plaintext-password set at the same time
     for password in ['area_password', 'domain_password']:
