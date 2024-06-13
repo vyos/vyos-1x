@@ -24,7 +24,7 @@
               </tagNode>
             </children>
           </node>
-          <node name="shaping">
+          <node name="shaper">
             <properties>
               <help>Show QoS shaping information</help>
             </properties>

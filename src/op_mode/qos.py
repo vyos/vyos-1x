@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2016-2024 VyOS maintainers and contributors
+# Copyright (C) 2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,17 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # This script parses output from the 'tc' command and provides table or list output
-
 import sys
 import typing
 import json
 from tabulate import tabulate
 
 import vyos.opmode
-from vyos.configquery import ConfigTreeQuery
+from vyos.configquery import op_mode_config_dict
 from vyos.utils.process import cmd
-
-conf = ConfigTreeQuery()
+from vyos.ifconfig.interface import Interface
 
 def detailed_output(dataset, headers):
     for data in dataset:
@@ -37,7 +35,7 @@ def detailed_output(dataset, headers):
 
 def get_tc_info(interface_dict, interface_name, policy_type):
     policy_name = interface_dict.get(interface_name, {}).get('egress')
-    class_dict = conf.get_config_dict(['qos', 'policy', policy_type, policy_name], key_mangling=('-', '_'),
+    class_dict = op_mode_config_dict(['qos', 'policy', policy_type, policy_name], key_mangling=('-', '_'),
                             get_first_key=True)
 
     return policy_name, class_dict
@@ -61,12 +59,14 @@ def format_data_type(num, suffix):
 def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optional[str], detail: bool):
     # Scope which interfaces will output data
     if ifname:
-        interface_dict = {}
-        interface_dict[ifname] = conf.get_config_dict(['qos', 'interface', ifname], key_mangling=('-', '_'),
-                            get_first_key=True)
+        if not Interface.exists(ifname):
+            raise vyos.opmode.Error(f"{ifname} does not exist!")
+        
+        interface_dict = {ifname: op_mode_config_dict(['qos', 'interface', ifname], key_mangling=('-', '_'),
+                            get_first_key=True)}
     else:
-        interface_dict = conf.get_config_dict(['qos', 'interface'], key_mangling=('-', '_'),
-                            get_first_key=True)
+        interface_dict = op_mode_config_dict(['qos', 'interface'], key_mangling=('-', '_'),
+                            get_first_key=True)     
 
     raw_dict = {'qos': {}}
     for i in interface_dict.keys():
@@ -186,7 +186,7 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
         if output_list:
             if detail:
                 # Headers for detailed (list view) output
-                headers = ['Interface', 'Policy Name', 'Direction', 'Class', 'Type', 'BW', 'Max. BW', 'Bytes', 'Pkts.', 'Drops', 'Queued', 'Overlimit', 'Requeue', 'Lended', 'Borrowed', 'Giants']
+                headers = ['Interface', 'Policy Name', 'Direction', 'Class', 'Type', 'Bandwidth', 'Max. BW', 'Bytes', 'Packets', 'Drops', 'Queued', 'Overlimit', 'Requeue', 'Lended', 'Borrowed', 'Giants']
 
                 print('-' * 35)
                 print(f"Interface: {interface_name}")
@@ -194,14 +194,14 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
                 detailed_output(output_list, headers)
             else:
                 # Headers for table output
-                headers = ['Class', 'Type', 'BW', 'Max. BW', 'Bytes', 'Pkts.', 'Drops', 'Queued']
+                headers = ['Class', 'Type', 'Bandwidth', 'Max. BW', 'Bytes', 'Pkts', 'Drops', 'Queued']
                 align = ('left','left','right','right','right','right','right','right')
 
                 print('-' * 80)
                 print(f"Interface: {interface_name}")
                 print(f"Policy Name: {policy_name}\n")
                 print(tabulate(output_list, headers, colalign=align))
-                print()
+                print("\n\n")
 
     # Return dictionary with all interfaces if 'raw' is called
     if raw:
