@@ -207,15 +207,17 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
     if raw:
         return raw_dict
 
-def show_cake(raw: bool, ifname: typing.Optional[str]):
-    interface_name = ifname
-    cake_data = json.loads(cmd(f"sudo tc -j -s qdisc show dev {interface_name}"))[0]
+def show_cake(raw: bool, ifname: typing.Optional[str]):    
+    if not Interface.exists(ifname):
+        raise vyos.opmode.Error(f"{ifname} does not exist!")
+        
+    cake_data = json.loads(cmd(f"sudo tc -j -s qdisc show dev {ifname}"))[0]
     if cake_data:
         if cake_data.get('kind') == 'cake':
             if raw:
-                return {'qos': {interface_name: cake_data}}
+                return {'qos': {ifname: cake_data}}
             else:
-                print(cmd(f"sudo tc -s qdisc show dev {interface_name}"))
+                print(cmd(f"sudo tc -s qdisc show dev {ifname}"))
 
 if __name__ == '__main__':
     try:
