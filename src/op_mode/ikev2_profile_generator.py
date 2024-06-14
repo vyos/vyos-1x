@@ -21,6 +21,7 @@ from socket import getfqdn
 from cryptography.x509.oid import NameOID
 
 from vyos.configquery import ConfigTreeQuery
+from vyos.config import config_dict_mangle_acme
 from vyos.pki import CERT_BEGIN
 from vyos.pki import CERT_END
 from vyos.pki import find_chain
@@ -123,6 +124,8 @@ pki_base = ['pki']
 conf = ConfigTreeQuery()
 if not conf.exists(config_base):
     exit('IPsec remote-access is not configured!')
+if not conf.exists(pki_base):
+    exit('PKI is not configured!')
 
 profile_name = 'VyOS IKEv2 Profile'
 if args.profile:
@@ -147,30 +150,36 @@ tmp = getfqdn().split('.')
 tmp = reversed(tmp)
 data['rfqdn'] = '.'.join(tmp)
 
-pki = conf.get_config_dict(pki_base, get_first_key=True)
-cert_name = data['authentication']['x509']['certificate']
+if args.os == 'ios':
+    pki = conf.get_config_dict(pki_base, get_first_key=True)
+    if 'certificate' in pki:
+        for certificate in pki['certificate']:
+            pki['certificate'][certificate] = config_dict_mangle_acme(certificate, pki['certificate'][certificate])
 
-cert_data = load_certificate(pki['certificate'][cert_name]['certificate'])
-data['cert_common_name'] = cert_data.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-data['ca_common_name'] = cert_data.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-data['ca_certificates'] = []
+    cert_name = data['authentication']['x509']['certificate']
 
-loaded_ca_certs = {load_certificate(c['certificate'])
-    for c in pki['ca'].values()} if 'ca' in pki else {}
 
-for ca_name in data['authentication']['x509']['ca_certificate']:
-    loaded_ca_cert = load_certificate(pki['ca'][ca_name]['certificate'])
-    ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
-    for ca in ca_full_chain:
-        tmp = {
-            'ca_name' : ca.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value,
-            'ca_chain' : encode_certificate(ca).replace(CERT_BEGIN, '').replace(CERT_END, '').replace('\n', ''),
-        }
-        data['ca_certificates'].append(tmp)
+    cert_data = load_certificate(pki['certificate'][cert_name]['certificate'])
+    data['cert_common_name'] = cert_data.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    data['ca_common_name'] = cert_data.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    data['ca_certificates'] = []
 
-# Remove duplicate list entries for CA certificates, as they are added by their common name
-# https://stackoverflow.com/a/9427216
-data['ca_certificates'] = [dict(t) for t in {tuple(d.items()) for d in data['ca_certificates']}]
+    loaded_ca_certs = {load_certificate(c['certificate'])
+        for c in pki['ca'].values()} if 'ca' in pki else {}
+
+    for ca_name in data['authentication']['x509']['ca_certificate']:
+        loaded_ca_cert = load_certificate(pki['ca'][ca_name]['certificate'])
+        ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+        for ca in ca_full_chain:
+            tmp = {
+                'ca_name' : ca.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value,
+                'ca_chain' : encode_certificate(ca).replace(CERT_BEGIN, '').replace(CERT_END, '').replace('\n', ''),
+            }
+            data['ca_certificates'].append(tmp)
+
+    # Remove duplicate list entries for CA certificates, as they are added by their common name
+    # https://stackoverflow.com/a/9427216
+    data['ca_certificates'] = [dict(t) for t in {tuple(d.items()) for d in data['ca_certificates']}]
 
 esp_proposals = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group'], 'proposal'],
                                      key_mangling=('-', '_'), get_first_key=True)
