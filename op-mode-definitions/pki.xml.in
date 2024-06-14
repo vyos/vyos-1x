@@ -490,6 +490,7 @@
         <properties>
           <help>Show PKI x509 certificates</help>
         </properties>
+        <command>sudo ${vyos_op_scripts_dir}/pki.py --action show</command>
         <children>
           <leafNode name="ca">
             <properties>
@@ -570,7 +571,6 @@
             </children>
           </tagNode>
         </children>
-        <command>${vyos_op_scripts_dir}/pki.py --action show</command>
       </node>
     </children>
   </node>
