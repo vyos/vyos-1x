@@ -1,0 +1,16 @@
+---
+name: Add pull request labels
+
+on:
+  pull_request_target:
+    branches:
+      - equuleus
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  add-pr-label:
+    uses: vyos/.github/.github/workflows/add-pr-labels.yml@equuleus
+    secrets: inherit
