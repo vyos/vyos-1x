@@ -17,6 +17,7 @@ from vyos.utils import assertion
 from vyos.utils import auth
 from vyos.utils import boot
 from vyos.utils import commit
+from vyos.utils import configfs
 from vyos.utils import convert
 from vyos.utils import cpu
 from vyos.utils import dict
