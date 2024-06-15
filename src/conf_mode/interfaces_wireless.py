@@ -48,6 +48,8 @@ hostapd_conf = '/run/hostapd/{ifname}.conf'
 hostapd_accept_station_conf = '/run/hostapd/{ifname}_station_accept.conf'
 hostapd_deny_station_conf = '/run/hostapd/{ifname}_station_deny.conf'
 
+country_code_path = ['system', 'wireless', 'country-code']
+
 def find_other_stations(conf, base, ifname):
     """
     Only one wireless interface per phy can be in station mode -
@@ -82,7 +84,11 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'wireless']
 
-    ifname, wifi = get_interface_dict(conf, base)
+    _, wifi = get_interface_dict(conf, base)
+
+    # retrieve global Wireless regulatory domain setting
+    if conf.exists(country_code_path):
+        wifi['country_code'] = conf.return_value(country_code_path)
 
     if 'deleted' not in wifi:
         # then get_interface_dict provides default keys
@@ -149,7 +155,8 @@ def verify(wifi):
 
     if wifi['type'] == 'access-point':
         if 'country_code' not in wifi:
-            raise ConfigError('Wireless country-code is mandatory')
+            raise ConfigError(f'Wireless country-code is mandatory, use: '\
+                              f'"set {" ".join(country_code_path)}"!')
 
         if 'channel' not in wifi:
             raise ConfigError('Wireless channel must be configured!')
