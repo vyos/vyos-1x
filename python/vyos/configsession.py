@@ -1,5 +1,4 @@
-# configsession -- the write API for the VyOS running config
-# Copyright (C) 2019-2023 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -12,11 +11,14 @@
 # You should have received a copy of the GNU Lesser General Public License along with this library;
 # if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+# configsession -- the write API for the VyOS running config
+
 import os
 import re
 import sys
 import subprocess
 
+from vyos.defaults import directories
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.dict import dict_to_paths
 
@@ -58,7 +60,7 @@ def inject_vyos_env(env):
     env['VYOS_HEADLESS_CLIENT'] = 'vyos_http_api'
     env['vyatta_bindir']= '/opt/vyatta/bin'
     env['vyatta_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
-    env['vyatta_configdir'] = '/opt/vyatta/config'
+    env['vyatta_configdir'] = directories['vyos_configdir']
     env['vyatta_datadir'] = '/opt/vyatta/share'
     env['vyatta_datarootdir'] = '/opt/vyatta/share'
     env['vyatta_libdir'] = '/opt/vyatta/lib'
@@ -70,7 +72,7 @@ def inject_vyos_env(env):
     env['vyos_bin_dir'] = '/usr/bin'
     env['vyos_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
     env['vyos_completion_dir'] = '/usr/libexec/vyos/completion'
-    env['vyos_configdir'] = '/opt/vyatta/config'
+    env['vyos_configdir'] = directories['vyos_configdir']
     env['vyos_conf_scripts_dir'] = '/usr/libexec/vyos/conf_mode'
     env['vyos_datadir'] = '/opt/vyatta/share'
     env['vyos_datarootdir']= '/opt/vyatta/share'
