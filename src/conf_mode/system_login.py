@@ -30,6 +30,7 @@ from vyos.configverify import verify_vrf
 from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
+from vyos.utils.auth import get_current_user
 from vyos.utils.dict import dict_search
 from vyos.utils.file import chown
 from vyos.utils.file import write_file
@@ -48,8 +49,6 @@ radius_config_file = "/etc/pam_radius_auth.conf"
 tacacs_pam_config_file = "/etc/tacplus_servers"
 tacacs_nss_config_file = "/etc/tacplus_nss.conf"
 nss_config_file = "/etc/nsswitch.conf"
-
-current_user = None
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
@@ -122,9 +121,6 @@ def get_config(config=None):
     rm_users = [tmp for tmp in all_users if tmp not in cli_users]
     if rm_users: login.update({'rm_users' : rm_users})
 
-    if 'SUDO_USER' in os.environ:
-        current_user = os.environ['SUDO_USER']
-
     return login
 
 def verify(login):
@@ -132,8 +128,9 @@ def verify(login):
         # This check is required as the script is also executed from vyos-router
         # init script and there is no SUDO_USER environment variable available
         # during system boot.
-        if current_user in login['rm_users']:
-            raise ConfigError(f'Attempting to delete current user: {cur_user}')
+        tmp = get_current_user()
+        if tmp in login['rm_users']:
+            raise ConfigError(f'Attempting to delete current user: {tmp}')
 
     if 'user' in login:
         system_users = getpwall()
@@ -239,9 +236,9 @@ def generate(login):
 
                     # store encrypted password
                     tmp = os.path.join(env[config_dir], '/'.join(add_user_encrypt.split()))
-                    write_file(f'{tmp}/node.val', encrypted_password, user=current_user, group='vyattacfg', mode=0o664)
+                    write_file(f'{tmp}/node.val', encrypted_password, user=get_current_user(), group='vyattacfg', mode=0o664)
                     if config_dir == 'VYATTA_CHANGES_ONLY_DIR':
-                        write_file(f'{tmp}/.modified', encrypted_password, user=current_user, group='vyattacfg', mode=0o664)
+                        write_file(f'{tmp}/.modified', encrypted_password, user=get_current_user(), group='vyattacfg', mode=0o664)
 
             else:
                 try:
@@ -275,8 +272,6 @@ def generate(login):
             os.unlink(tacacs_pam_config_file)
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
-
-
 
     # NSS must always be present on the system
     render(nss_config_file, 'login/nsswitch.conf.j2', login,
