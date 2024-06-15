@@ -21,22 +21,20 @@ from psutil import users
 from pwd import getpwall
 from pwd import getpwnam
 from pwd import getpwuid
-from shutil import rmtree
 from sys import exit
 from time import sleep
 
 from vyos.config import Config
 from vyos.configverify import verify_vrf
-from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.auth import get_current_user
+from vyos.utils.configfs import delete_cli_node
+from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
 from vyos.utils.file import chown
-from vyos.utils.file import write_file
 from vyos.utils.process import cmd
 from vyos.utils.process import call
-from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
 from vyos import ConfigError
@@ -216,7 +214,6 @@ def verify(login):
 def generate(login):
     # calculate users encrypted password
     if 'user' in login:
-        env = os.environ.copy()
         for user, user_config in login['user'].items():
             tmp = dict_search('authentication.plaintext_password', user_config)
             if tmp:
@@ -225,20 +222,11 @@ def generate(login):
                 del login['user'][user]['authentication']['plaintext_password']
 
                 # Set default commands for re-adding user with encrypted password
-                del_user_plain = f'system login user {user} authentication plaintext-password'
-                add_user_encrypt = f'system login user {user} authentication encrypted-password'
+                del_user_plain = ['system', 'login', 'user', user, 'authentication', 'plaintext-password']
+                add_user_encrypt = ['system', 'login', 'user', user, 'authentication', 'encrypted-password']
 
-                for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
-                    tmp = os.path.join(env[config_dir], '/'.join(del_user_plain.split()))
-                    # delete temporary plaintext-password CLI node
-                    if os.path.exists(tmp):
-                        rmtree(tmp)
-
-                    # store encrypted password
-                    tmp = os.path.join(env[config_dir], '/'.join(add_user_encrypt.split()))
-                    write_file(f'{tmp}/node.val', encrypted_password, user=get_current_user(), group='vyattacfg', mode=0o664)
-                    if config_dir == 'VYATTA_CHANGES_ONLY_DIR':
-                        write_file(f'{tmp}/.modified', encrypted_password, user=get_current_user(), group='vyattacfg', mode=0o664)
+                delete_cli_node(del_user_plain)
+                add_cli_node(add_user_encrypt, value=encrypted_password)
 
             else:
                 try:
