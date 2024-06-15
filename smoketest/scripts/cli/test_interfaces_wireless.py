@@ -32,19 +32,31 @@ def get_config_value(interface, key):
     tmp = re.findall(f'{key}=+(.*)', tmp)
     return tmp[0]
 
+wifi_cc_path = ['system', 'wireless', 'country-code']
+
 class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._base_path = ['interfaces', 'wireless']
         cls._options = {
-            'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
-                       'type station', 'address 192.0.2.1/30'],
-            'wlan1':  ['physical-device phy0', 'ssid VyOS-WIFI-1', 'country-code se',
-                       'type access-point', 'address 192.0.2.5/30', 'channel 0'],
-            'wlan10': ['physical-device phy1', 'ssid VyOS-WIFI-2',
-                       'type station', 'address 192.0.2.9/30'],
-            'wlan11': ['physical-device phy1', 'ssid VyOS-WIFI-3', 'country-code se',
-                       'type access-point', 'address 192.0.2.13/30', 'channel 0'],
+            'wlan0':  ['physical-device phy0',
+                       'ssid VyOS-WIFI-0',
+                       'type station',
+                       'address 192.0.2.1/30'],
+            'wlan1':  ['physical-device phy0',
+                       'ssid VyOS-WIFI-1',
+                       'type access-point',
+                       'address 192.0.2.5/30',
+                       'channel 0'],
+            'wlan10': ['physical-device phy1',
+                       'ssid VyOS-WIFI-2',
+                       'type station',
+                       'address 192.0.2.9/30'],
+            'wlan11': ['physical-device phy1',
+                       'ssid VyOS-WIFI-3',
+                       'type access-point',
+                       'address 192.0.2.13/30',
+                       'channel 0'],
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
@@ -53,6 +65,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         # T5245 - currently testcases are disabled
         cls._test_ipv6 = False
         cls._test_vlan = False
+
+        cls.cli_set(cls, wifi_cc_path + ['es'])
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
@@ -74,7 +88,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         ssid = 'ssid'
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
-        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
 
         # auto-powersave is special
@@ -150,7 +163,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         # Only set the hostapd (access-point) options
         interface = 'wlan0'
         phy = 'phy0'
-        ssid = 'ssid'
+        ssid = 'VyOS-SMOKETEST'
         channel = '1'
         wpa_key = 'VyOSVyOSVyOS'
         mode = 'n'
@@ -160,20 +173,19 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'mode', mode])
 
+        # Country-Code must be set
+        self.cli_delete(wifi_cc_path)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(wifi_cc_path + [country])
+
         # SSID must be set
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
 
         # Channel must be set
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
         self.cli_set(self._base_path + [interface, 'channel', channel])
-
-        # Country-Code must be set
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_set(self._base_path + [interface, 'country-code', country])
 
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', wpa_key])
@@ -222,7 +234,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(bridge_path + ['member', 'interface', interface])
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
-        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
 
         self.cli_commit()
@@ -260,7 +271,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         deny_mac = ['00:00:00:00:de:01', '00:00:00:00:de:02', '00:00:00:00:de:03', '00:00:00:00:de:04']
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
-        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'security', 'station-address', 'mode', 'accept'])
 
@@ -295,4 +305,4 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)
