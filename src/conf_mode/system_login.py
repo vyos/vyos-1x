@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,6 +21,7 @@ from psutil import users
 from pwd import getpwall
 from pwd import getpwnam
 from pwd import getpwuid
+from shutil import rmtree
 from sys import exit
 from time import sleep
 
@@ -31,6 +32,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.dict import dict_search
 from vyos.utils.file import chown
+from vyos.utils.file import write_file
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
@@ -46,6 +48,8 @@ radius_config_file = "/etc/pam_radius_auth.conf"
 tacacs_pam_config_file = "/etc/tacplus_servers"
 tacacs_nss_config_file = "/etc/tacplus_nss.conf"
 nss_config_file = "/etc/nsswitch.conf"
+
+current_user = None
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
@@ -118,6 +122,9 @@ def get_config(config=None):
     rm_users = [tmp for tmp in all_users if tmp not in cli_users]
     if rm_users: login.update({'rm_users' : rm_users})
 
+    if 'SUDO_USER' in os.environ:
+        current_user = os.environ['SUDO_USER']
+
     return login
 
 def verify(login):
@@ -125,10 +132,8 @@ def verify(login):
         # This check is required as the script is also executed from vyos-router
         # init script and there is no SUDO_USER environment variable available
         # during system boot.
-        if 'SUDO_USER' in os.environ:
-            cur_user = os.environ['SUDO_USER']
-            if cur_user in login['rm_users']:
-                raise ConfigError(f'Attempting to delete current user: {cur_user}')
+        if current_user in login['rm_users']:
+            raise ConfigError(f'Attempting to delete current user: {cur_user}')
 
     if 'user' in login:
         system_users = getpwall()
@@ -214,6 +219,7 @@ def verify(login):
 def generate(login):
     # calculate users encrypted password
     if 'user' in login:
+        env = os.environ.copy()
         for user, user_config in login['user'].items():
             tmp = dict_search('authentication.plaintext_password', user_config)
             if tmp:
@@ -221,35 +227,22 @@ def generate(login):
                 login['user'][user]['authentication']['encrypted_password'] = encrypted_password
                 del login['user'][user]['authentication']['plaintext_password']
 
-                # remove old plaintext password and set new encrypted password
-                env = os.environ.copy()
-                env['vyos_libexec_dir'] = directories['base']
-
                 # Set default commands for re-adding user with encrypted password
-                del_user_plain = f"system login user {user} authentication plaintext-password"
-                add_user_encrypt = f"system login user {user} authentication encrypted-password '{encrypted_password}'"
+                del_user_plain = f'system login user {user} authentication plaintext-password'
+                add_user_encrypt = f'system login user {user} authentication encrypted-password'
 
-                lvl = env['VYATTA_EDIT_LEVEL']
-                # We're in config edit level, for example "edit system login"
-                # Change default commands for re-adding user with encrypted password
-                if lvl != '/':
-                    # Replace '/system/login' to 'system login'
-                    lvl = lvl.strip('/').split('/')
-                    # Convert command str to list
-                    del_user_plain = del_user_plain.split()
-                    # New command exclude level, for example "edit system login"
-                    del_user_plain = del_user_plain[len(lvl):]
-                    # Convert string to list
-                    del_user_plain = " ".join(del_user_plain)
+                for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
+                    tmp = os.path.join(env[config_dir], '/'.join(del_user_plain.split()))
+                    # delete temporary plaintext-password CLI node
+                    if os.path.exists(tmp):
+                        rmtree(tmp)
 
-                    add_user_encrypt = add_user_encrypt.split()
-                    add_user_encrypt = add_user_encrypt[len(lvl):]
-                    add_user_encrypt = " ".join(add_user_encrypt)
+                    # store encrypted password
+                    tmp = os.path.join(env[config_dir], '/'.join(add_user_encrypt.split()))
+                    write_file(f'{tmp}/node.val', encrypted_password, user=current_user, group='vyattacfg', mode=0o664)
+                    if config_dir == 'VYATTA_CHANGES_ONLY_DIR':
+                        write_file(f'{tmp}/.modified', encrypted_password, user=current_user, group='vyattacfg', mode=0o664)
 
-                ret, out = rc_cmd(f"/opt/vyatta/sbin/my_delete {del_user_plain}", env=env)
-                if ret: raise ConfigError(out)
-                ret, out = rc_cmd(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
-                if ret: raise ConfigError(out)
             else:
                 try:
                     if get_shadow_password(user) == dict_search('authentication.encrypted_password', user_config):
