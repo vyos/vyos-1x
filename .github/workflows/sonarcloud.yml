@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - current
+      - sagitta-stream
+      - circinus-stream
+      - equuleus-stream
   pull_request_target:
     types: [opened, synchronize, reopened]
 jobs:
