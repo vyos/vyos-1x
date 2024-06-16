@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "current", "sagitta", "equuleus" ]
   pull_request:
-    # The branches below must be a subset of the branches above
+    # The branches below must be a subset of the branches mentioned above
     branches: [ "current" ]
   schedule:
     - cron: '22 10 * * 0'
