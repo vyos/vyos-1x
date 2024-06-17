@@ -92,6 +92,7 @@
 "system_ip.py",
 "system_ipv6.py",
 "system_lcd.py",
+"system_login.py",
 "system_login_banner.py",
 "system_logs.py",
 "system_option.py",

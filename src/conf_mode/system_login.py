@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,14 +26,15 @@ from time import sleep
 
 from vyos.config import Config
 from vyos.configverify import verify_vrf
-from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
+from vyos.utils.auth import get_current_user
+from vyos.utils.configfs import delete_cli_node
+from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
 from vyos.utils.file import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import call
-from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
 from vyos import ConfigError
@@ -125,10 +126,9 @@ def verify(login):
         # This check is required as the script is also executed from vyos-router
         # init script and there is no SUDO_USER environment variable available
         # during system boot.
-        if 'SUDO_USER' in os.environ:
-            cur_user = os.environ['SUDO_USER']
-            if cur_user in login['rm_users']:
-                raise ConfigError(f'Attempting to delete current user: {cur_user}')
+        tmp = get_current_user()
+        if tmp in login['rm_users']:
+            raise ConfigError(f'Attempting to delete current user: {tmp}')
 
     if 'user' in login:
         system_users = getpwall()
@@ -221,35 +221,13 @@ def generate(login):
                 login['user'][user]['authentication']['encrypted_password'] = encrypted_password
                 del login['user'][user]['authentication']['plaintext_password']
 
-                # remove old plaintext password and set new encrypted password
-                env = os.environ.copy()
-                env['vyos_libexec_dir'] = directories['base']
-
                 # Set default commands for re-adding user with encrypted password
-                del_user_plain = f"system login user {user} authentication plaintext-password"
-                add_user_encrypt = f"system login user {user} authentication encrypted-password '{encrypted_password}'"
+                del_user_plain = ['system', 'login', 'user', user, 'authentication', 'plaintext-password']
+                add_user_encrypt = ['system', 'login', 'user', user, 'authentication', 'encrypted-password']
 
-                lvl = env['VYATTA_EDIT_LEVEL']
-                # We're in config edit level, for example "edit system login"
-                # Change default commands for re-adding user with encrypted password
-                if lvl != '/':
-                    # Replace '/system/login' to 'system login'
-                    lvl = lvl.strip('/').split('/')
-                    # Convert command str to list
-                    del_user_plain = del_user_plain.split()
-                    # New command exclude level, for example "edit system login"
-                    del_user_plain = del_user_plain[len(lvl):]
-                    # Convert string to list
-                    del_user_plain = " ".join(del_user_plain)
+                delete_cli_node(del_user_plain)
+                add_cli_node(add_user_encrypt, value=encrypted_password)
 
-                    add_user_encrypt = add_user_encrypt.split()
-                    add_user_encrypt = add_user_encrypt[len(lvl):]
-                    add_user_encrypt = " ".join(add_user_encrypt)
-
-                ret, out = rc_cmd(f"/opt/vyatta/sbin/my_delete {del_user_plain}", env=env)
-                if ret: raise ConfigError(out)
-                ret, out = rc_cmd(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
-                if ret: raise ConfigError(out)
             else:
                 try:
                     if get_shadow_password(user) == dict_search('authentication.encrypted_password', user_config):
@@ -282,8 +260,6 @@ def generate(login):
             os.unlink(tacacs_pam_config_file)
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
-
-
 
     # NSS must always be present on the system
     render(nss_config_file, 'login/nsswitch.conf.j2', login,

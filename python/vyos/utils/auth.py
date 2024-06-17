@@ -1,6 +1,6 @@
 # authutils -- miscelanneous functions for handling passwords and publis keys
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2023-2024 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -11,12 +11,11 @@
 # See the GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along with this library;
-# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import re
 
 from vyos.utils.process import cmd
-
 
 def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
@@ -39,3 +38,10 @@ def split_ssh_public_key(key_string, defaultname=""):
         raise ValueError("Bad key type \'{0}\', must be one of must be one of ssh-rsa, ssh-dss, ecdsa-sha2-nistp<256|384|521> or ssh-ed25519".format(key_type))
 
     return({"type": key_type, "data": key_data, "name": key_name})
+
+def get_current_user() -> str:
+    import os
+    current_user = 'nobody'
+    if 'SUDO_USER' in os.environ:
+        current_user = os.environ['SUDO_USER']
+    return current_user
