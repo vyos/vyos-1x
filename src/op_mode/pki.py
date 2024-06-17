@@ -426,11 +426,15 @@ def generate_ca_certificate_sign(name, ca_name, install=False, file=False):
         return None
 
     cert = generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=True, is_sub_ca=True)
-    passphrase = ask_passphrase()
+
+    passphrase = None
+    if private_key is not None:
+        passphrase = ask_passphrase()
 
     if not install and not file:
         print(encode_certificate(cert))
-        print(encode_private_key(private_key, passphrase=passphrase))
+        if private_key is not None:
+            print(encode_private_key(private_key, passphrase=passphrase))
         return None
 
     if install:
@@ -438,7 +442,8 @@ def generate_ca_certificate_sign(name, ca_name, install=False, file=False):
 
     if file:
         write_file(f'{name}.pem', encode_certificate(cert))
-        write_file(f'{name}.key', encode_private_key(private_key, passphrase=passphrase))
+        if private_key is not None:
+            write_file(f'{name}.key', encode_private_key(private_key, passphrase=passphrase))
 
 def generate_certificate_sign(name, ca_name, install=False, file=False):
     ca_dict = get_config_ca_certificate(ca_name)
@@ -492,11 +497,15 @@ def generate_certificate_sign(name, ca_name, install=False, file=False):
         return None
 
     cert = generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False)
-    passphrase = ask_passphrase()
+    
+    passphrase = None
+    if private_key is not None:
+        passphrase = ask_passphrase()
 
     if not install and not file:
         print(encode_certificate(cert))
-        print(encode_private_key(private_key, passphrase=passphrase))
+        if private_key is not None:
+            print(encode_private_key(private_key, passphrase=passphrase))
         return None
 
     if install:
@@ -504,7 +513,8 @@ def generate_certificate_sign(name, ca_name, install=False, file=False):
 
     if file:
         write_file(f'{name}.pem', encode_certificate(cert))
-        write_file(f'{name}.key', encode_private_key(private_key, passphrase=passphrase))
+        if private_key is not None:
+            write_file(f'{name}.key', encode_private_key(private_key, passphrase=passphrase))
 
 def generate_certificate_selfsign(name, install=False, file=False):
     private_key, key_type = generate_private_key()
