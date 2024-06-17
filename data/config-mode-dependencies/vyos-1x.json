@@ -59,5 +59,8 @@
         "wireguard": ["interfaces_wireguard"],
         "wireless": ["interfaces_wireless"],
         "wwan": ["interfaces_wwan"]
+    },
+    "system_wireless": {
+        "wireless": ["interfaces_wireless"]
     }
 }

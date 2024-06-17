@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="wireless" owner="${vyos_conf_scripts_dir}/system_wireless.py">
+        <properties>
+          <help>Wireless (IEEE-802.11) subsystem settings</help>
+          <!-- must be before interface wireless, check /opt/vyatta/sbin/priority.pl -->
+          <priority>317</priority>
+        </properties>
+        <children>
+          <leafNode name="country-code">
+            <properties>
+              <help>Indicate country in which device is operating</help>
+              <completionHelp>
+                <list>00 ad ae af ai al am an ar as at au aw az ba bb bd be bf bg bh bl bm bn bo br bs bt by bz ca cf ch ci cl cn co cr cu cx cy cz de dk dm do dz ec ee eg es et fi fm fr gb gd ge gf gh gl gp gr gt gu gy hk hn hr ht hu id ie il in ir is it jm jo jp ke kh kn kp kr kw ky kz lb lc li lk ls lt lu lv ma mc md me mf mh mk mn mo mp mq mr mt mu mv mw mx my ng ni nl no np nz om pa pe pf pg ph pk pl pm pr pt pw py qa re ro rs ru rw sa se sg si sk sn sr sv sy tc td tg th tn tr tt tw tz ua ug us uy uz vc ve vi vn vu wf ws ye yt za zw</list>
+              </completionHelp>
+              <valueHelp>
+                <format>00</format>
+                <description>World regulatory domain</description>
+              </valueHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>ISO/IEC 3166-1 Country Code</description>
+              </valueHelp>
+              <constraint>
+                <regex>(00|ad|ae|af|ai|al|am|an|ar|as|at|au|aw|az|ba|bb|bd|be|bf|bg|bh|bl|bm|bn|bo|br|bs|bt|by|bz|ca|cf|ch|ci|cl|cn|co|cr|cu|cx|cy|cz|de|dk|dm|do|dz|ec|ee|eg|es|et|fi|fm|fr|gb|gd|ge|gf|gh|gl|gp|gr|gt|gu|gy|hk|hn|hr|ht|hu|id|ie|il|in|ir|is|it|jm|jo|jp|ke|kh|kn|kp|kr|kw|ky|kz|lb|lc|li|lk|ls|lt|lu|lv|ma|mc|md|me|mf|mh|mk|mn|mo|mp|mq|mr|mt|mu|mv|mw|mx|my|ng|ni|nl|no|np|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pr|pt|pw|py|qa|re|ro|rs|ru|rw|sa|se|sg|si|sk|sn|sr|sv|sy|tc|td|tg|th|tn|tr|tt|tw|tz|ua|ug|us|uy|uz|vc|ve|vi|vn|vu|wf|ws|ye|yt|za|zw)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid ISO/IEC 3166-1 Country Code</constraintErrorMessage>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

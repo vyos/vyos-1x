@@ -102,6 +102,7 @@
 "system_task-scheduler.py",
 "system_timezone.py",
 "system_update-check.py",
+"system_wireless.py",
 "vpn_ipsec.py",
 "vpn_l2tp.py",
 "vpn_openconnect.py",
