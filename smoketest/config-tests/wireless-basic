@@ -16,7 +16,7 @@ set interfaces wireless wlan1 mode 'n'
 set interfaces wireless wlan1 ssid 'VyOS-PUBLIC'
 set interfaces wireless wlan1 type 'access-point'
 set system config-management commit-revisions '200'
-set system console device ttyS0 speed 115200
+set system console device ttyS0 speed '115200'
 set system domain-name 'dev.vyos.net'
 set system host-name 'WR1'
 set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
