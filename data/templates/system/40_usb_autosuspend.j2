@@ -1,0 +1,5 @@
+{% set autosuspend = "auto" %}
+{% if disable_usb_autosuspend is vyos_defined %}
+{%     set autosuspend = "on" %}
+{% endif %}
+ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="{{ autosuspend }}"
