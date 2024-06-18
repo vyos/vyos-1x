@@ -63,10 +63,16 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
             raise vyos.opmode.Error(f"{ifname} does not exist!")
         
         interface_dict = {ifname: op_mode_config_dict(['qos', 'interface', ifname], key_mangling=('-', '_'),
-                            get_first_key=True)}
+                            get_first_key=True)}   
+        if not interface_dict[ifname]:
+            raise vyos.opmode.Error(f"QoS is not applied to {ifname}!")
+        
     else:
         interface_dict = op_mode_config_dict(['qos', 'interface'], key_mangling=('-', '_'),
                             get_first_key=True)     
+        if not interface_dict:
+            raise vyos.opmode.Error(f"QoS is not applied to any interface!")
+    
 
     raw_dict = {'qos': {}}
     for i in interface_dict.keys():
@@ -74,7 +80,7 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
         output_list = []
         output_dict = {'classes': {}}
         raw_dict['qos'][interface_name] = {}
-
+        
         # Get configuration node data
         policy_name, class_dict = get_tc_info(interface_dict, interface_name, 'shaper')
 
