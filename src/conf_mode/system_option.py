@@ -35,6 +35,7 @@ airbag.enable()
 curlrc_config = r'/etc/curlrc'
 ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
+usb_autosuspend = r'/etc/udev/rules.d/40-usb-autosuspend.rules'
 time_format_to_locale = {
     '12-hour': 'en_US.UTF-8',
     '24-hour': 'en_GB.UTF-8'
@@ -85,6 +86,7 @@ def verify(options):
 def generate(options):
     render(curlrc_config, 'system/curlrc.j2', options)
     render(ssh_config, 'system/ssh_config.j2', options)
+    render(usb_autosuspend, 'system/40_usb_autosuspend.j2', options)
 
     cmdline_options = []
     if 'kernel' in options:
@@ -154,6 +156,9 @@ def apply(options):
     if 'time_format' in options:
         time_format = time_format_to_locale.get(options['time_format'])
         cmd(f'localectl set-locale LC_TIME={time_format}')
+
+    cmd('udevadm control --reload-rules')
+
 
 if __name__ == '__main__':
     try:
