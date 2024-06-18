@@ -207,7 +207,7 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
                 print(f"Interface: {interface_name}")
                 print(f"Policy Name: {policy_name}\n")
                 print(tabulate(output_list, headers, colalign=align))
-                print("\n\n")
+                print(" \n")
 
     # Return dictionary with all interfaces if 'raw' is called
     if raw:
