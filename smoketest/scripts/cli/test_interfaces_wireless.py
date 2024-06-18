@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -166,7 +166,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         antennas = '3'
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
-        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'channel', '36'])
 
@@ -236,7 +235,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         antennas = '3'
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
-        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'channel', '36'])
 
