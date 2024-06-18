@@ -23,6 +23,7 @@ from sys import exit
 from logging.handlers import SysLogHandler
 
 from vyos.config import Config
+from vyos.configdict import is_node_changed
 from vyos.template import render
 from vyos.utils.process import cmd
 from vyos.utils.process import run
@@ -118,6 +119,41 @@ class IPOperations:
                 + [self.ip_network.broadcast_address]
             ]
 
+    def get_prefix_by_ip_range(self):
+        """Return the common prefix for the address range
+
+        Example:
+            % ip = IPOperations('100.64.0.1-100.64.0.5')
+            % ip.get_prefix_by_ip_range()
+            100.64.0.0/29
+        """
+        if '-' in self.ip_prefix:
+            ip_start, ip_end = self.ip_prefix.split('-')
+            start_ip = ipaddress.IPv4Address(ip_start.strip())
+            end_ip = ipaddress.IPv4Address(ip_end.strip())
+
+            start_int = int(start_ip)
+            end_int = int(end_ip)
+
+            # XOR to find differing bits
+            xor = start_int ^ end_int
+
+            # Count the number of leading zeros in the XOR result to find the prefix length
+            prefix_length = 32 - xor.bit_length()
+
+            # Calculate the network address
+            network_int = start_int & (0xFFFFFFFF << (32 - prefix_length))
+            network_address = ipaddress.IPv4Address(network_int)
+
+            return f"{network_address}/{prefix_length}"
+        return self.ip_prefix
+
+
+def _delete_conntrack_entries(source_prefixes: list) -> None:
+    """Delete all conntrack entries for the list of prefixes"""
+    for source_prefix in source_prefixes:
+        run(f'conntrack -D -s {source_prefix}')
+
 
 def generate_port_rules(
     external_hosts: list,
@@ -187,6 +223,9 @@ def get_config(config=None):
         no_tag_node_value_mangle=True,
         with_recursive_defaults=True,
     )
+
+    if conf.exists(base) and is_node_changed(conf, base + ['pool']):
+        config.update({'delete_conntrack_entries': {}})
 
     return config
 
@@ -385,6 +424,18 @@ def apply(config):
             except ValueError as e:
                 # Log error message
                 logger.error(f"Error processing line '{allocation}': {e}")
+
+    # Delete conntrack entries
+    if 'delete_conntrack_entries' in config:
+        internal_pool_prefix_list = []
+        for rule, rule_config in config['rule'].items():
+            internal_pool = rule_config['source']['pool']
+            internal_ip_ranges: list = config['pool']['internal'][internal_pool]['range']
+            for internal_range in internal_ip_ranges:
+                ip_prefix = IPOperations(internal_range).get_prefix_by_ip_range()
+                internal_pool_prefix_list.append(ip_prefix)
+        # Deleta required sources for conntrack
+        _delete_conntrack_entries(internal_pool_prefix_list)
 
 
 if __name__ == '__main__':
