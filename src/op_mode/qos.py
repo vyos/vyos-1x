@@ -35,8 +35,13 @@ def detailed_output(dataset, headers):
 
 def get_tc_info(interface_dict, interface_name, policy_type):
     policy_name = interface_dict.get(interface_name, {}).get('egress')
+    if not policy_name:
+        return None, None
+    
     class_dict = op_mode_config_dict(['qos', 'policy', policy_type, policy_name], key_mangling=('-', '_'),
                             get_first_key=True)
+    if not class_dict:
+        return None, None
 
     return policy_name, class_dict
 
@@ -56,7 +61,7 @@ def format_data_type(num, suffix):
     else:
         return f"{num / 10**18:.3f} E{suffix}"
 
-def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optional[str], detail: bool):
+def show_shaper(raw: bool, ifname: typing.Optional[str], classn: typing.Optional[str], detail: bool):
     # Scope which interfaces will output data
     if ifname:
         if not Interface.exists(ifname):
@@ -83,6 +88,8 @@ def show_shaping(raw: bool, ifname: typing.Optional[str], classn: typing.Optiona
         
         # Get configuration node data
         policy_name, class_dict = get_tc_info(interface_dict, interface_name, 'shaper')
+        if not policy_name:
+            continue        
 
         class_data = json.loads(cmd(f"sudo tc -j -s class show dev {i}"))
         qdisc_data = json.loads(cmd(f"sudo tc -j qdisc show dev {i}"))
