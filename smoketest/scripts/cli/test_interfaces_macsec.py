@@ -225,11 +225,11 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
         self.cli_delete(self._base_path + [interface, 'security', 'mka'])
 
-        # check validate() - tx-key required
+        # check validate() - key required
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        # check validate() - tx-key length must match cipher
+        # check validate() - key length must match cipher
         self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_2])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
@@ -239,7 +239,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        # check validate() - enabled peer must have both rx-key and MAC defined
+        # check validate() - enabled peer must have both key and MAC defined
         self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
@@ -252,7 +252,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
         self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'mac', peer_mac])
 
-        # check validate() - peer rx-key length must match cipher
+        # check validate() - peer key length must match cipher
         self.cli_set(self._base_path + [interface, 'security', 'cipher', cipher2])
         self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_2])
         with self.assertRaises(ConfigSessionError):

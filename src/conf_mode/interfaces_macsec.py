@@ -103,9 +103,9 @@ def verify(macsec):
 
         # Logic to check static configuration
         if dict_search('security.static', macsec) != None:
-            # tx-key must be defined
+            # key must be defined
             if dict_search('security.static.key', macsec) == None:
-                raise ConfigError('Static MACsec tx-key must be defined.')
+                raise ConfigError('Static MACsec key must be defined.')
 
             tx_len = len(dict_search('security.static.key', macsec))
 
@@ -119,12 +119,12 @@ def verify(macsec):
             if 'peer' not in macsec['security']['static']:
                 raise ConfigError('Must have at least one peer defined for static MACsec')
 
-            # For every enabled peer, make sure a MAC and rx-key is defined
+            # For every enabled peer, make sure a MAC and key is defined
             for peer, peer_config in macsec['security']['static']['peer'].items():
                 if 'disable' not in peer_config and ('mac' not in peer_config or 'key' not in peer_config):
-                    raise ConfigError('Every enabled MACsec static peer must have a MAC address and rx-key defined.')
+                    raise ConfigError('Every enabled MACsec static peer must have a MAC address and key defined!')
 
-                # check rx-key length against cipher suite
+                # check key length against cipher suite
                 rx_len = len(peer_config['key'])
 
                 if dict_search('security.cipher', macsec) == 'gcm-aes-128' and rx_len != GCM_AES_128_LEN:
