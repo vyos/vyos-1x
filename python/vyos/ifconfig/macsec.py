@@ -66,7 +66,7 @@ class MACsecIf(Interface):
                 cmd = 'ip macsec add {ifname} rx port 1 address'.format(**self.config)
                 cmd += f' {peer_config["mac"]}'
                 self._cmd(cmd)
-                # Add the rx-key to the address
+                # Add the encryption key to the address
                 cmd += f' sa 0 pn 1 on key 01 {peer_config["key"]}'
                 self._cmd(cmd)
 
