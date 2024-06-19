@@ -49,6 +49,19 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="debug">
+                <properties>
+                  <help>Dynamic debugging for kernel module</help>
+                </properties>
+                <children>
+                  <leafNode name="wireguard">
+                    <properties>
+                      <help>Dynamic debugging for Wireguard module</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
              </children>
            </node>
            <leafNode name="keyboard-layout">
