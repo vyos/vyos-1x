@@ -24,6 +24,9 @@ from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
 from vyos.system import grub_util
 from vyos.template import render
+from vyos.utils.dict import dict_search
+from vyos.utils.file import write_file
+from vyos.utils.kernel import check_kmod
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
@@ -159,6 +162,15 @@ def apply(options):
 
     cmd('udevadm control --reload-rules')
 
+    # Enable/disable dynamic debugging for kernel modules
+    modules = ['wireguard']
+    modules_enabled = dict_search('kernel.debug', options) or []
+    for module in modules:
+        if module in modules_enabled:
+            check_kmod(module)
+            write_file('/sys/kernel/debug/dynamic_debug/control', f'module {module} +p')
+        else:
+            write_file('/sys/kernel/debug/dynamic_debug/control', f'module {module} -p')
 
 if __name__ == '__main__':
     try:
