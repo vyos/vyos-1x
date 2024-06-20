@@ -79,6 +79,7 @@
 "service_router-advert.py",
 "service_salt-minion.py",
 "service_sla.py",
+"service_snmp.py",
 "service_ssh.py",
 "service_tftp-server.py",
 "service_webproxy.py",
