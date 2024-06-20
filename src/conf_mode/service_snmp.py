@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2023 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,10 +26,12 @@ from vyos.snmpv3_hashgen import plaintext_to_md5
 from vyos.snmpv3_hashgen import plaintext_to_sha1
 from vyos.snmpv3_hashgen import random
 from vyos.template import render
-from vyos.utils.process import call
-from vyos.utils.permission import chmod_755
+from vyos.utils.configfs import delete_cli_node
+from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.process import call
+from vyos.utils.permission import chmod_755
 from vyos.version import get_version_data
 from vyos import ConfigError
 from vyos import airbag
@@ -192,12 +194,8 @@ def generate(snmp):
         return None
 
     if 'v3' in snmp:
-        # net-snmp is now regenerating the configuration file in the background
-        # thus we need to re-open and re-read the file as the content changed.
-        # After that we can no read the encrypted password from the config and
-        # replace the CLI plaintext password with its encrypted version.
-        os.environ['vyos_libexec_dir'] = '/usr/libexec/vyos'
-
+        # SNMPv3 uses a hashed password. If CLI defines a plaintext password,
+        # we will hash it in the background and replace the CLI node!
         if 'user' in snmp['v3']:
             for user, user_config in snmp['v3']['user'].items():
                 if dict_search('auth.type', user_config)  == 'sha':
@@ -212,8 +210,9 @@ def generate(snmp):
                     snmp['v3']['user'][user]['auth']['encrypted_password'] = tmp
                     del snmp['v3']['user'][user]['auth']['plaintext_password']
 
-                    call(f'/opt/vyatta/sbin/my_set service snmp v3 user "{user}" auth encrypted-password "{tmp}" > /dev/null')
-                    call(f'/opt/vyatta/sbin/my_delete service snmp v3 user "{user}" auth plaintext-password > /dev/null')
+                    cli_base = ['service', 'snmp', 'v3', 'user', user, 'auth']
+                    delete_cli_node(cli_base + ['plaintext-password'])
+                    add_cli_node(cli_base + ['encrypted-password'], value=tmp)
 
                 if dict_search('privacy.plaintext_password', user_config) is not None:
                     tmp = hash(dict_search('privacy.plaintext_password', user_config),
@@ -222,8 +221,9 @@ def generate(snmp):
                     snmp['v3']['user'][user]['privacy']['encrypted_password'] = tmp
                     del snmp['v3']['user'][user]['privacy']['plaintext_password']
 
-                    call(f'/opt/vyatta/sbin/my_set service snmp v3 user "{user}" privacy encrypted-password "{tmp}" > /dev/null')
-                    call(f'/opt/vyatta/sbin/my_delete service snmp v3 user "{user}" privacy plaintext-password > /dev/null')
+                    cli_base = ['service', 'snmp', 'v3', 'user', user, 'privacy']
+                    delete_cli_node(cli_base + ['plaintext-password'])
+                    add_cli_node(cli_base + ['encrypted-password'], value=tmp)
 
     # Write client config file
     render(config_file_client, 'snmp/etc.snmp.conf.j2', snmp)
@@ -246,7 +246,7 @@ def apply(snmp):
         return None
 
     # start SNMP daemon
-    call(f'systemctl restart {systemd_service}')
+    call(f'systemctl reload-or-restart {systemd_service}')
 
     # Enable AgentX in FRR
     # This should be done for each daemon individually because common command
