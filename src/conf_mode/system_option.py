@@ -39,6 +39,7 @@ curlrc_config = r'/etc/curlrc'
 ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 usb_autosuspend = r'/etc/udev/rules.d/40-usb-autosuspend.rules'
+kernel_dynamic_debug = r'/sys/kernel/debug/dynamic_debug/control'
 time_format_to_locale = {
     '12-hour': 'en_US.UTF-8',
     '24-hour': 'en_GB.UTF-8'
@@ -160,6 +161,7 @@ def apply(options):
         time_format = time_format_to_locale.get(options['time_format'])
         cmd(f'localectl set-locale LC_TIME={time_format}')
 
+    # Reload UDEV, required for USB auto suspend
     cmd('udevadm control --reload-rules')
 
     # Enable/disable dynamic debugging for kernel modules
@@ -168,9 +170,9 @@ def apply(options):
     for module in modules:
         if module in modules_enabled:
             check_kmod(module)
-            write_file('/sys/kernel/debug/dynamic_debug/control', f'module {module} +p')
+            write_file(kernel_dynamic_debug, f'module {module} +p')
         else:
-            write_file('/sys/kernel/debug/dynamic_debug/control', f'module {module} -p')
+            write_file(kernel_dynamic_debug, f'module {module} -p')
 
 if __name__ == '__main__':
     try:
