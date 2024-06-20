@@ -275,7 +275,7 @@
               <help>SSL Certificate, SSL Key and CA</help>
             </properties>
             <children>
-              #include <include/pki/ca-certificate.xml.i>
+              #include <include/pki/ca-certificate-multi.xml.i>
               #include <include/pki/certificate-key.xml.i>
             </children>
           </node>

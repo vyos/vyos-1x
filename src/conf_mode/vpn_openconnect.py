@@ -21,14 +21,17 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
-from vyos.pki import wrap_certificate
+from vyos.pki import find_chain
+from vyos.pki import encode_certificate
+from vyos.pki import load_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
-from vyos.utils.process import call
-from vyos.utils.network import check_port_availability
-from vyos.utils.process import is_systemd_service_running
-from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.dict import dict_search
+from vyos.utils.file import write_file
+from vyos.utils.network import check_port_availability
+from vyos.utils.network import is_listen_port_bind_service
+from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from passlib.hash import sha512_crypt
 from time import sleep
@@ -142,7 +145,8 @@ def verify(ocserv):
     verify_pki_certificate(ocserv, ocserv['ssl']['certificate'])
 
     if 'ca_certificate' in ocserv['ssl']:
-        verify_pki_ca_certificate(ocserv, ocserv['ssl']['ca_certificate'])
+        for ca_cert in ocserv['ssl']['ca_certificate']:
+            verify_pki_ca_certificate(ocserv, ca_cert)
 
     # Check network settings
     if "network_settings" in ocserv:
@@ -219,25 +223,36 @@ def generate(ocserv):
     if "ssl" in ocserv:
         cert_file_path = os.path.join(cfg_dir, 'cert.pem')
         cert_key_path = os.path.join(cfg_dir, 'cert.key')
-        ca_cert_file_path = os.path.join(cfg_dir, 'ca.pem')
+
 
         if 'certificate' in ocserv['ssl']:
             cert_name = ocserv['ssl']['certificate']
             pki_cert = ocserv['pki']['certificate'][cert_name]
 
-            with open(cert_file_path, 'w') as f:
-                f.write(wrap_certificate(pki_cert['certificate']))
+            loaded_pki_cert = load_certificate(pki_cert['certificate'])
+            loaded_ca_certs = {load_certificate(c['certificate'])
+                for c in ocserv['pki']['ca'].values()} if 'ca' in ocserv['pki'] else {}
+
+            cert_full_chain = find_chain(loaded_pki_cert, loaded_ca_certs)
+
+            write_file(cert_file_path,
+                '\n'.join(encode_certificate(c) for c in cert_full_chain))
 
             if 'private' in pki_cert and 'key' in pki_cert['private']:
-                with open(cert_key_path, 'w') as f:
-                    f.write(wrap_private_key(pki_cert['private']['key']))
+                write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
 
         if 'ca_certificate' in ocserv['ssl']:
-            ca_name = ocserv['ssl']['ca_certificate']
-            pki_ca_cert = ocserv['pki']['ca'][ca_name]
+            ca_cert_file_path = os.path.join(cfg_dir, 'ca.pem')
+            ca_chains = []
 
-            with open(ca_cert_file_path, 'w') as f:
-                f.write(wrap_certificate(pki_ca_cert['certificate']))
+            for ca_name in ocserv['ssl']['ca_certificate']:
+                pki_ca_cert = ocserv['pki']['ca'][ca_name]
+                loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
+                ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+                ca_chains.append(
+                    '\n'.join(encode_certificate(c) for c in ca_full_chain))
+
+            write_file(ca_cert_file_path, '\n'.join(ca_chains))
 
     # Render config
     render(ocserv_conf, 'ocserv/ocserv_config.j2', ocserv)
