@@ -14,6 +14,133 @@
             <format>vtunN</format>
             <description>OpenVPN interface name</description>
           </valueHelp>
+          <childSpecification>
+            <requiredChildren>
+              <child>mode</child>
+            </requiredChildren>
+            <!-- OpenVPN client mode -->
+            <oneWayDependantChildren>
+              <dependants><descendant name="mode"><value>client</value></descendant></dependants>
+              <dependees>
+                <child>remote_host</child>
+              </dependees>
+            </oneWayDependantChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="mode"><value>client</value></descendant>
+              <child>local-port</child>
+              <child>local-host</child>
+              <descendant name="tls"><child>dh-params</child></descendant>
+            </mutuallyExclusiveChildren>
+            <!-- / OpenVPN client mode -->
+            <!-- OpenVPN site-to-site -->
+            <oneWayDependantChildren>
+              <dependants><descendant name="mode"><value>site-to-site</value></descendant></dependants>
+              <dependees>
+                <child>remote-host</child>
+              </dependees>
+            </oneWayDependantChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="mode"><value>site-to-site</value></descendant>
+              <descendant name="encryption"><child>ncp-ciphers</child></descendant>
+            </mutuallyExclusiveChildren>
+            <!-- / OpenVPN site-to-site -->
+            <!-- OpenVPN server mode -->
+            <mutuallyExclusiveChildren>
+              <descendant name="mode"><value>server</value></descendant>
+              <descendant name="protocol"><value>tcp-active</value></descendant>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="mode"><value>server</value></descendant>
+              <child>authentication</child>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="mode"><value>server</value></descendant>
+              <child>remote-host</child>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="mode"><value>server</value></descendant>
+              <child>remote-port</child>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <child>server</child>
+              <descendant name="mode">
+                <value>site-to-site</value>
+                <value>client</value>
+              </descendant>
+            </mutuallyExclusiveChildren>
+            <mutuallyDependantChildren>
+              <descendant name="authentication">
+                <child>username</child>
+                <child>password</child>
+              </descendant>
+            </mutuallyDependantChildren>
+            <mutuallyDependantChildren>
+              <descendant name="server"><descendant name="client-ip-pool">
+                <child>start</child>
+                <child>stop</child>
+              </descendant></descendant>
+            </mutuallyDependantChildren>
+            <!-- / OpenVPN server mode -->
+            <!-- checks for both client and site-to-site go here -->
+            <mutuallyExclusiveChildren>
+                <descendant name="mode">
+                  <value>client</value>
+                  <value>site-to-site</value>
+                </descendant>
+                <descendant name="server"><child>reject-unconfigured-clients</child></descendant>
+            </mutuallyExclusiveChildren>
+            <!-- / checks for both client and site-to-site go here -->
+            <!-- OpenVPN common verification section (not depending on any operation mode) -->
+            <!-- TCP active -->
+            <mutuallyExclusiveChildren>
+              <descendant name="protocol"><value>tcp-active</value></descendant>
+              <child>local-port</child>
+            </mutuallyExclusiveChildren>
+            <oneWayDependantChildren>
+              <dependants><descendant name="protocol"><value>tcp-active</value></descendant></dependants>
+              <dependees><child>remote-host</child></dependees>
+            </oneWayDependantChildren>
+            <!-- / TCP active -->
+            <!-- TLS/encryption -->
+            <mutuallyExclusiveChildren>
+              <child>shared_secret_key</child>
+              <descendant name="encryption"><descendant name="cipher">
+                <value>aes128gcm</value>
+                <value>aes192gcm</value>
+                <value>aes256gcm</value>
+              </descendant></descendant>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="tls"><child>auth-key</child></descendant>
+              <descendant name="tls"><child>crypt-key</child></descendant>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="tls">
+                <descendant name="role">
+                  <value>active</value>
+                </descendant>
+              </descendant>
+              <descendant name="protocol"><value>tcp-passive </value></descendant>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="tls">
+                <descendant name="role">
+                  <value>active</value>
+                </descendant>
+              </descendant>
+              <child>dh-params</child>
+            </mutuallyExclusiveChildren>
+            <mutuallyExclusiveChildren>
+              <descendant name="tls">
+                <descendant name="role">
+                  <value>passive</value>
+                </descendant>
+              </descendant>
+              <descendant name="protocol"><value>tcp-active</value></descendant>
+            </mutuallyExclusiveChildren>
+            <!-- / TLS/encryption -->
+            <!-- / OpenVPN common verification section (not depending on any operation mode) -->
+          </childSpecification>
         </properties>
         <children>
           #include <include/interface/authentication.xml.i>

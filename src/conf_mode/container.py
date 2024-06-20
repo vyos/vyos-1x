@@ -23,11 +23,11 @@ from ipaddress import ip_network
 from json import dumps as json_write
 
 from vyos.base import Warning
-from vyos.config import Config
+from vyos.config import Config, ConfigDict
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
-from vyos.configverify import verify_vrf
+from vyos.configverify import verify_vrf, verify_children
 from vyos.ifconfig import Interface
 from vyos.utils.cpu import get_core_count
 from vyos.utils.file import write_file
@@ -65,14 +65,13 @@ def network_exists(name):
 
 
 # Common functions
-def get_config(config=None):
+def get_config(config:Config=None) -> ConfigDict:
     if config:
         conf = config
     else:
         conf = Config()
 
-    base = ['container']
-    container = conf.get_config_dict(base, key_mangling=('-', '_'),
+    container = conf.get_config_dict(['container'], key_mangling=('-', '_'),
                                      no_tag_node_value_mangle=True,
                                      get_first_key=True,
                                      with_recursive_defaults=True)
@@ -80,7 +79,7 @@ def get_config(config=None):
     for name in container.get('name', []):
         # T5047: Any container related configuration changed? We only
         # wan't to restart the required containers and not all of them ...
-        tmp = is_node_changed(conf, base + ['name', name])
+        tmp = is_node_changed(conf, container.base + ['name', name])
         if tmp:
             if 'container_restart' not in container:
                 container['container_restart'] = [name]
@@ -91,32 +90,31 @@ def get_config(config=None):
     # default_values['registry'] into the tagNode variables
     if 'registry' not in container:
         container.update({'registry': {}})
-        default_values = default_value(base + ['registry'])
+        default_values = default_value(container.base + ['registry'])
         for registry in default_values:
             tmp = {registry: {}}
             container['registry'] = dict_merge(tmp, container['registry'])
 
     # Delete container network, delete containers
-    tmp = node_changed(conf, base + ['network'])
+    tmp = node_changed(conf, container.base + ['network'])
     if tmp: container.update({'network_remove': tmp})
 
-    tmp = node_changed(conf, base + ['name'])
+    tmp = node_changed(conf, container.base + ['name'])
     if tmp: container.update({'container_remove': tmp})
 
     return container
 
-
-def verify(container):
+def verify(container: ConfigDict):
     # bail out early - looks like removal from running config
     if not container:
         return None
 
+    # Validate child config against schema definitions
+    verify_children(container)
+
     # Add new container
     if 'name' in container:
         for name, container_config in container['name'].items():
-            # Container image is a mandatory option
-            if 'image' not in container_config:
-                raise ConfigError(f'Container image for "{name}" is mandatory!')
 
             # Check if requested container image exists locally. If it does not
             # exist locally - inform the user. This is required as there is a
@@ -181,71 +179,26 @@ def verify(container):
 
             if 'device' in container_config:
                 for dev, dev_config in container_config['device'].items():
-                    if 'source' not in dev_config:
-                        raise ConfigError(f'Device "{dev}" has no source path configured!')
-
-                    if 'destination' not in dev_config:
-                        raise ConfigError(f'Device "{dev}" has no destination path configured!')
-
                     source = dev_config['source']
                     if not os.path.exists(source):
                         raise ConfigError(f'Device "{dev}" source path "{source}" does not exist!')
 
             if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
                 for var, cfg in container_config['sysctl']['parameter'].items():
-                    if 'value' not in cfg:
-                        raise ConfigError(f'sysctl parameter {var} has no value assigned!')
                     if var.startswith('net.') and 'allow_host_networks' in container_config:
                         raise ConfigError(f'sysctl parameter {var} cannot be set when using host networking!')
 
-            if 'environment' in container_config:
-                for var, cfg in container_config['environment'].items():
-                    if 'value' not in cfg:
-                        raise ConfigError(f'Environment variable {var} has no value assigned!')
-
-            if 'label' in container_config:
-                for var, cfg in container_config['label'].items():
-                    if 'value' not in cfg:
-                        raise ConfigError(f'Label variable {var} has no value assigned!')
-
             if 'volume' in container_config:
                 for volume, volume_config in container_config['volume'].items():
-                    if 'source' not in volume_config:
-                        raise ConfigError(f'Volume "{volume}" has no source path configured!')
-
-                    if 'destination' not in volume_config:
-                        raise ConfigError(f'Volume "{volume}" has no destination path configured!')
-
                     source = volume_config['source']
                     if not os.path.exists(source):
                         raise ConfigError(f'Volume "{volume}" source path "{source}" does not exist!')
-
-            if 'port' in container_config:
-                for tmp in container_config['port']:
-                    if not {'source', 'destination'} <= set(container_config['port'][tmp]):
-                        raise ConfigError(f'Both "source" and "destination" must be specified for a port mapping!')
-
-            # If 'allow-host-networks' or 'network' not set.
-            if 'allow_host_networks' not in container_config and 'network' not in container_config:
-                raise ConfigError(f'Must either set "network" or "allow-host-networks" for container "{name}"!')
-
-            # Can not set both allow-host-networks and network at the same time
-            if {'allow_host_networks', 'network'} <= set(container_config):
-                raise ConfigError(
-                    f'"allow-host-networks" and "network" for "{name}" cannot be both configured at the same time!')
-
-            # gid cannot be set without uid
-            if 'gid' in container_config and 'uid' not in container_config:
-                raise ConfigError(f'Cannot set "gid" without "uid" for container')
 
     # Add new network
     if 'network' in container:
         for network, network_config in container['network'].items():
             v4_prefix = 0
             v6_prefix = 0
-            # If ipv4-prefix not defined for user-defined network
-            if 'prefix' not in network_config:
-                raise ConfigError(f'prefix for network "{network}" must be defined!')
 
             for prefix in network_config['prefix']:
                 if is_ipv4(prefix):
@@ -267,13 +220,6 @@ def verify(container):
             for c, c_config in container['name'].items():
                 if 'network' in c_config and network in c_config['network']:
                     raise ConfigError(f'Can not remove network "{network}", used by container "{c}"!')
-
-    if 'registry' in container:
-        for registry, registry_config in container['registry'].items():
-            if 'authentication' not in registry_config:
-                continue
-            if not {'username', 'password'} <= set(registry_config['authentication']):
-                raise ConfigError('Container registry requires both username and password to be set!')
 
     return None
 

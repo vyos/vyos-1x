@@ -2,19 +2,19 @@
 <grammar xmlns="http://relaxng.org/ns/structure/1.0">
   <!--
        interface_definition.rnc: VyConf reference tree XML grammar
-
+    
        Copyright (C) 2014. 2017 VyOS maintainers and contributors <maintainers@vyos.net>
-
+    
        This library is free software; you can redistribute it and/or
        modify it under the terms of the GNU Lesser General Public
        License as published by the Free Software Foundation; either
        version 2.1 of the License, or (at your option) any later version.
-
+    
        This library is distributed in the hope that it will be useful,
        but WITHOUT ANY WARRANTY; without even the implied warranty of
        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
        Lesser General Public License for more details.
-
+    
        You should have received a copy of the GNU Lesser General Public
        License along with this library; if not, write to the Free Software
        Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -22,8 +22,10 @@
   -->
   <!--
     The language of this file is compact form RELAX-NG
-    http://relaxng.org/compact-tutorial-20030326.htm
+    https://relaxng.org/compact-tutorial-20030326.html
     (unless converted to XML, then just RELAX-NG :)
+    
+    A useful tool to find errors in the generated schemas can be found at https://www.liquid-technologies.com/online-relaxng-validator
   -->
   <!-- Interface definition starts with interfaceDefinition tag that may contain node tags -->
   <start>
@@ -142,7 +144,7 @@
     Nodes may have properties
     For simplicity, any property is allowed in any node,
     but whether they are used or not is implementation-defined
-
+    
     Leaf nodes may differ in number of values that can be
     associated with them.
     By default, a leaf node can have only one value.
@@ -150,7 +152,7 @@
     "valueless" means it can have no values at all.
     "hidden" means node visibility can be toggled, eg 'dangerous' commands,
     "secret" allows a node to hide its value from unprivileged users.
-
+    
     "priority" is used to influence node processing order for nodes
     with exact same dependencies and in compatibility modes.
   -->
@@ -204,6 +206,10 @@
           <element name="priority">
             <text/>
           </element>
+        </optional>
+        <optional>
+          <!-- These are meaningful only for tag and node nodes -->
+          <ref name="childSpecification"/>
         </optional>
         <optional>
           <!-- These are meaningful only for tag nodes -->
@@ -323,6 +329,102 @@
         <zeroOrMore>
           <element name="script">
             <text/>
+          </element>
+        </zeroOrMore>
+      </interleave>
+    </element>
+  </define>
+  <!--
+    childSpecification tags is a declarative way to configure basic
+    requirements of node or tagnode children.
+    
+    Some support for requiring nested descendants are provided,
+     this is to increase flexibility when including generic schema
+     components that can not add the requirements themselvs
+    
+    NOTE: keep the specification as close to the target child as
+     possible to minimize complexity when reading the schemas
+  -->
+  <define name="childSpecificationDescendant">
+    <oneOrMore>
+      <choice>
+        <oneOrMore>
+          <element name="descendant">
+            <ref name="nodeNameAttr"/>
+            <oneOrMore>
+              <ref name="childSpecificationDescendant"/>
+            </oneOrMore>
+          </element>
+        </oneOrMore>
+        <oneOrMore>
+          <element name="child">
+            <text/>
+          </element>
+        </oneOrMore>
+      </choice>
+    </oneOrMore>
+  </define>
+  <define name="childSpecificationDescendantWithValue">
+    <oneOrMore>
+      <choice>
+        <oneOrMore>
+          <element name="descendant">
+            <ref name="nodeNameAttr"/>
+            <oneOrMore>
+              <ref name="childSpecificationDescendantWithValue"/>
+            </oneOrMore>
+          </element>
+        </oneOrMore>
+        <oneOrMore>
+          <element name="child">
+            <text/>
+          </element>
+        </oneOrMore>
+        <oneOrMore>
+          <element name="value">
+            <text/>
+          </element>
+        </oneOrMore>
+      </choice>
+    </oneOrMore>
+  </define>
+  <define name="childSpecification">
+    <element name="childSpecification">
+      <interleave>
+        <optional>
+          <element name="requiredChildren">
+            <ref name="childSpecificationDescendant"/>
+          </element>
+        </optional>
+        <zeroOrMore>
+          <element name="atLeastOneOf">
+            <ref name="childSpecificationDescendant"/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="mutuallyExclusiveChildren">
+            <ref name="childSpecificationDescendantWithValue"/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="mutuallyDependantChildren">
+            <ref name="childSpecificationDescendantWithValue"/>
+          </element>
+        </zeroOrMore>
+        <zeroOrMore>
+          <element name="oneWayDependantChildren">
+            <interleave>
+              <oneOrMore>
+                <element name="dependants">
+                  <ref name="childSpecificationDescendantWithValue"/>
+                </element>
+              </oneOrMore>
+              <oneOrMore>
+                <element name="dependees">
+                  <ref name="childSpecificationDescendantWithValue"/>
+                </element>
+              </oneOrMore>
+            </interleave>
           </element>
         </zeroOrMore>
       </interleave>

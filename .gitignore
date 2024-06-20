@@ -149,3 +149,6 @@ python/vyos/xml_ref/pkg_cache/*_cache.py
 # We do not use pip
 Pipfile
 Pipfile.lock
+
+# KDE
+.directory

@@ -15,6 +15,7 @@
 
 from typing import Optional, Union, TYPE_CHECKING
 from vyos.xml_ref import definition
+from vyos.xml_ref.child_specification import CSChildSpecification
 
 if TYPE_CHECKING:
     from vyos.config import ConfigDict
@@ -58,6 +59,9 @@ def owner(path: list) -> str:
 
 def priority(path: list) -> str:
     return load_reference().priority(path)
+
+def xml_child_specification(path: list[str]) -> CSChildSpecification:
+    return load_reference().xml_child_specification(path)
 
 def cli_defined(path: list, node: str, non_local=False) -> bool:
     return load_reference().cli_defined(path, node, non_local=non_local)

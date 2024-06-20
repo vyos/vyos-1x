@@ -22,9 +22,43 @@
 # makes use of it!
 
 from vyos import ConfigError
+from vyos.config import ConfigDict
 from vyos.utils.dict import dict_search
 # pattern re-used in ipsec migration script
 dynamic_interface_pattern = r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+'
+
+def verify_children(config: ConfigDict):
+    """
+    Common helper function user by all to verify configuration specification
+    based on XML schema definition
+    """
+
+    # the recursive function is encapsulated to keep a minimal public interface
+    # with a well defined type as input parameter and reduce complexity
+    # when choosing the most practical types to recurse over
+    def _verify_children(rpath: list[str], raw_config_dict: dict):
+        from vyos.xml_ref import is_leaf, is_tag, is_tag_value, xml_child_specification
+
+        # Loop over all tag_node children
+        if is_tag(rpath) and not is_tag_value(rpath):
+            for k, v in raw_config_dict.items():
+                _verify_children(rpath + [k], v)
+            return
+
+        # Leaf nodes has no children
+        if is_leaf(rpath):
+            return
+
+        xml_specs = xml_child_specification(rpath)
+        if xml_specs:
+            xml_specs.verify(rpath, raw_config_dict)
+
+        # Verify all childrens specs recursively
+        for k, v in raw_config_dict.items():
+            _verify_children(rpath + [k], v)
+
+    _verify_children(rpath=config.base, raw_config_dict=config.raw_conf_dict)
+
 
 def verify_mtu(config):
     """

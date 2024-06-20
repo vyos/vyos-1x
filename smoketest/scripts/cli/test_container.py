@@ -230,5 +230,70 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         tmp = cmd(f'sudo podman exec -it {cont_name} id -g')
         self.assertEqual(tmp, gid)
 
+    def test_image(self):
+        cont_name = 'image-test'
+
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+
+        # verify() - image is required
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+
+        self.cli_commit()
+
+        # verify
+        pid = 0
+        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
+            pid = int(f.read())
+
+        # Check for running process
+        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+
+    def test_network_required(self):
+        cont_name = 'image-test'
+
+        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+
+        # verify() - image is required
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # at least one of "network" or "allow-host-networks" must be configured
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_commit()
+
+        # verify
+        pid = 0
+        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
+            pid = int(f.read())
+
+        # Check for running process
+        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+
+    def test_network_or_host_networks(self):
+        cont_name = 'image-test'
+        prefix = '192.0.2.0/24'
+        net_name = 'NET01'
+
+        self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'network', net_name, 'address', str(ip_interface(prefix).ip)])
+
+        # verify() - image is required
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path + ['name', cont_name, 'network', net_name])
+        self.cli_commit()
+
+        # verify
+        pid = 0
+        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
+            pid = int(f.read())
+
+        # Check for running process
+        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
