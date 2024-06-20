@@ -23,7 +23,7 @@ from typing import TypeAlias, Union, Callable
 
 from vyos.configtree import ConfigTree
 from vyos.configtree import deep_copy as ct_deep_copy
-from vyos.utils.system import load_as_module
+from vyos.utils.system import load_as_module_source
 
 ConfigObj: TypeAlias = Union[str, ConfigTree]
 
@@ -64,7 +64,7 @@ class ComposeConfig:
         """
         try:
             mod_name = Path(func_file).stem.replace('-', '_')
-            mod = load_as_module(mod_name, func_file)
+            mod = load_as_module_source(mod_name, func_file)
             func = getattr(mod, func_name)
         except Exception as e:
             raise ComposeConfigError(f'Error with {func_file}: {e}') from e

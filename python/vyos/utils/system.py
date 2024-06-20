@@ -99,6 +99,18 @@ def load_as_module(name: str, path: str):
     spec.loader.exec_module(mod)
     return mod
 
+def load_as_module_source(name: str, path: str):
+    """ Necessary modification of load_as_module for files without *.py
+    extension """
+    import importlib.util
+    from importlib.machinery import SourceFileLoader
+
+    loader = SourceFileLoader(name, path)
+    spec = importlib.util.spec_from_loader(name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
 def get_uptime_seconds():
     """ Returns system uptime in seconds """
     from re import search
@@ -127,4 +139,3 @@ def get_load_averages():
     res[15] = float(matches["fifteen"]) / core_count
 
     return res
-
