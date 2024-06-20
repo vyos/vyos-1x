@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -30,7 +30,8 @@ import tempfile
 import vyos.defaults
 import vyos.remote
 from vyos.configsource import ConfigSourceSession, VyOSError
-from vyos.migrator import Migrator, VirtualMigrator, MigratorError
+from vyos.migrate import ConfigMigrate
+from vyos.migrate import ConfigMigrateError
 
 class LoadConfig(ConfigSourceSession):
     """A subclass for calling 'loadFile'.
@@ -81,22 +82,16 @@ with tempfile.NamedTemporaryFile() as fp:
     with open(fp.name, 'w') as fd:
         fd.write(config_string)
 
-    virtual_migration = VirtualMigrator(fp.name)
+    config_migrate = ConfigMigrate(fp.name)
     try:
-        virtual_migration.run()
-    except MigratorError as err:
-        sys.exit('{}'.format(err))
-
-    migration = Migrator(fp.name)
-    try:
-        migration.run()
-    except MigratorError as err:
-        sys.exit('{}'.format(err))
+        config_migrate.run()
+    except ConfigMigrateError as err:
+        sys.exit(err)
 
     try:
         config.load_config(fp.name)
     except VyOSError as err:
-        sys.exit('{}'.format(err))
+        sys.exit(err)
 
 if config.session_changed():
     print("Load complete. Use 'commit' to make changes effective.")
