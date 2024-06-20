@@ -1,85 +1,68 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # - move all pool to named pools
 #       'start-stop' migrate to namedpool 'default-range-pool'
 #       'subnet' migrate to namedpool 'default-subnet-pool'
 #       'default-subnet-pool' is the next pool for 'default-range-pool'
 
-from sys import argv
-from sys import exit
 from vyos.configtree import ConfigTree
 from vyos.base import Warning
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 base = ['vpn', 'l2tp', 'remote-access']
 pool_base = base + ['client-ip-pool']
-if not config.exists(base):
-    exit(0)
 
-if not config.exists(pool_base):
-    exit(0)
-default_pool = ''
-range_pool_name = 'default-range-pool'
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
 
-if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
-    def is_legalrange(ip1: str, ip2: str, mask: str):
-        from ipaddress import IPv4Interface
-        interface1 = IPv4Interface(f'{ip1}/{mask}')
+    if not config.exists(pool_base):
+        return
 
-        interface2 = IPv4Interface(f'{ip2}/{mask}')
-        return interface1.network.network_address == interface2.network.network_address and interface2.ip > interface1.ip
+    default_pool = ''
+    range_pool_name = 'default-range-pool'
 
-    start_ip = config.return_value(pool_base + ['start'])
-    stop_ip = config.return_value(pool_base + ['stop'])
-    if is_legalrange(start_ip, stop_ip,'24'):
-        ip_range = f'{start_ip}-{stop_ip}'
-        config.set(pool_base + [range_pool_name, 'range'], value=ip_range, replace=False)
+    if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
+        def is_legalrange(ip1: str, ip2: str, mask: str):
+            from ipaddress import IPv4Interface
+            interface1 = IPv4Interface(f'{ip1}/{mask}')
+
+            interface2 = IPv4Interface(f'{ip2}/{mask}')
+            return interface1.network.network_address == interface2.network.network_address and interface2.ip > interface1.ip
+
+        start_ip = config.return_value(pool_base + ['start'])
+        stop_ip = config.return_value(pool_base + ['stop'])
+        if is_legalrange(start_ip, stop_ip,'24'):
+            ip_range = f'{start_ip}-{stop_ip}'
+            config.set(pool_base + [range_pool_name, 'range'], value=ip_range, replace=False)
+            default_pool = range_pool_name
+        else:
+            Warning(
+                f'L2TP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} can not be migrated.')
+
+        config.delete(pool_base + ['start'])
+        config.delete(pool_base + ['stop'])
+
+    if config.exists(pool_base + ['subnet']):
+        for subnet in config.return_values(pool_base + ['subnet']):
+            config.set(pool_base + [range_pool_name, 'range'], value=subnet, replace=False)
+
+        config.delete(pool_base + ['subnet'])
         default_pool = range_pool_name
-    else:
-        Warning(
-            f'L2TP client-ip-pool range start-ip:{start_ip} and stop-ip:{stop_ip} can not be migrated.')
 
-    config.delete(pool_base + ['start'])
-    config.delete(pool_base + ['stop'])
-
-if config.exists(pool_base + ['subnet']):
-    for subnet in config.return_values(pool_base + ['subnet']):
-        config.set(pool_base + [range_pool_name, 'range'], value=subnet, replace=False)
-
-    config.delete(pool_base + ['subnet'])
-    default_pool = range_pool_name
-
-if default_pool:
-    config.set(base + ['default-pool'], value=default_pool)
-# format as tag node
-config.set_tag(pool_base)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+    if default_pool:
+        config.set(base + ['default-pool'], value=default_pool)
+    # format as tag node
+    config.set_tag(pool_base)

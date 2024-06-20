@@ -1,65 +1,43 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3631: route-map: migrate "set extcommunity-rt" and "set extcommunity-soo"
 #        to "set extcommunity rt|soo" to match FRR syntax
 
-
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['policy', 'route-map']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    for route_map in config.list_nodes(base):
+        if not config.exists(base + [route_map, 'rule']):
+            continue
+        for rule in config.list_nodes(base + [route_map, 'rule']):
+            base_rule = base + [route_map, 'rule', rule]
+
+            if config.exists(base_rule + ['set', 'extcommunity-rt']):
+                tmp = config.return_value(base_rule + ['set', 'extcommunity-rt'])
+                config.delete(base_rule + ['set', 'extcommunity-rt'])
+                config.set(base_rule + ['set', 'extcommunity', 'rt'], value=tmp)
 
 
-for route_map in config.list_nodes(base):
-    if not config.exists(base + [route_map, 'rule']):
-        continue
-    for rule in config.list_nodes(base + [route_map, 'rule']):
-        base_rule = base + [route_map, 'rule', rule]
-
-        if config.exists(base_rule + ['set', 'extcommunity-rt']):
-            tmp = config.return_value(base_rule + ['set', 'extcommunity-rt'])
-            config.delete(base_rule + ['set', 'extcommunity-rt'])
-            config.set(base_rule + ['set', 'extcommunity', 'rt'], value=tmp)
-
-
-        if config.exists(base_rule + ['set', 'extcommunity-soo']):
-            tmp = config.return_value(base_rule + ['set', 'extcommunity-soo'])
-            config.delete(base_rule + ['set', 'extcommunity-soo'])
-            config.set(base_rule + ['set', 'extcommunity', 'soo'], value=tmp)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+            if config.exists(base_rule + ['set', 'extcommunity-soo']):
+                tmp = config.return_value(base_rule + ['set', 'extcommunity-soo'])
+                config.delete(base_rule + ['set', 'extcommunity-soo'])
+                config.set(base_rule + ['set', 'extcommunity', 'soo'], value=tmp)

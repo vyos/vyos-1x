@@ -1,25 +1,23 @@
-#!/usr/bin/env python3
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Split WireGuard endpoint into address / port nodes to make use of common
 # validators
 
 import os
 
-from sys import exit, argv
 from vyos.configtree import ConfigTree
 from vyos.utils.permission import chown
 from vyos.utils.permission import chmod_750
@@ -36,23 +34,14 @@ def migrate_default_keys():
         os.rename(f'{kdir}/private.key', f'{location}/private.key')
         os.rename(f'{kdir}/public.key', f'{location}/public.key')
 
-if __name__ == '__main__':
-    if len(argv) < 2:
-        print("Must specify file name!")
-        exit(1)
-
-    file_name = argv[1]
-    with open(file_name, 'r') as f:
-        config_file = f.read()
-
-    config = ConfigTree(config_file)
+def migrate(config: ConfigTree) -> None:
     base = ['interfaces', 'wireguard']
 
     migrate_default_keys()
 
     if not config.exists(base):
         # Nothing to do
-        exit(0)
+        return
 
     # list all individual wireguard interface isntance
     for i in config.list_nodes(base):
@@ -68,10 +57,3 @@ if __name__ == '__main__':
                 # setup new nodes
                 config.set(base_peer + ['address'], value=address)
                 config.set(base_peer + ['port'], value=port)
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)

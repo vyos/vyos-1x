@@ -1,23 +1,21 @@
-#!/usr/bin/env python3
+# Copyright 202-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Migrate IPv6 router advertisments from a nested interface configuration to
 # a denested "service router-advert"
 
-import sys
 from vyos.configtree import ConfigTree
 
 def copy_rtradv(c, old_base, interface):
@@ -97,17 +95,7 @@ def copy_rtradv(c, old_base, interface):
             if tmp == '0':
                 c.delete(new_base + ['link-mtu'])
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Must specify file name!")
-        exit(1)
-
-    file_name = sys.argv[1]
-    with open(file_name, 'r') as f:
-        config_file = f.read()
-
-    config = ConfigTree(config_file)
-
+def migrate(config: ConfigTree) -> None:
     # list all individual interface types like dummy, ethernet and so on
     for if_type in config.list_nodes(['interfaces']):
         base_if_type = ['interfaces', if_type]
@@ -124,10 +112,3 @@ if __name__ == '__main__':
                     old_base = vif_base + [vif, 'ipv6', 'router-advert']
                     vlan_name = f'{intf}.{vif}'
                     copy_rtradv(config, old_base, vlan_name)
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

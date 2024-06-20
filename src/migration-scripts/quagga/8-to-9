@@ -1,23 +1,19 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # - T2450: drop interface-route and interface-route6 from "protocols static"
-
-from sys import argv
-from sys import exit
 
 from vyos.configtree import ConfigTree
 
@@ -84,54 +80,38 @@ def migrate_route(config, base, path, route_route6):
                         config.rename(vrf_path, 'vrf')
 
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['protocols', 'static']
 
-config = ConfigTree(config_file)
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# Migrate interface-route into route
-migrate_interface_route(config, base, ['interface-route'], 'route')
+    # Migrate interface-route into route
+    migrate_interface_route(config, base, ['interface-route'], 'route')
 
-# Migrate interface-route6 into route6
-migrate_interface_route(config, base, ['interface-route6'], 'route6')
+    # Migrate interface-route6 into route6
+    migrate_interface_route(config, base, ['interface-route6'], 'route6')
 
-# Cleanup nodes inside route
-migrate_route(config, base, ['route'], 'route')
+    # Cleanup nodes inside route
+    migrate_route(config, base, ['route'], 'route')
 
-# Cleanup nodes inside route6
-migrate_route(config, base, ['route6'], 'route6')
+    # Cleanup nodes inside route6
+    migrate_route(config, base, ['route6'], 'route6')
 
-#
-# PBR table cleanup
-table_path = base + ['table']
-if config.exists(table_path):
-    for table in config.list_nodes(table_path):
-        # Migrate interface-route into route
-        migrate_interface_route(config, table_path + [table], ['interface-route'], 'route')
+    #
+    # PBR table cleanup
+    table_path = base + ['table']
+    if config.exists(table_path):
+        for table in config.list_nodes(table_path):
+            # Migrate interface-route into route
+            migrate_interface_route(config, table_path + [table], ['interface-route'], 'route')
 
-        # Migrate interface-route6 into route6
-        migrate_interface_route(config, table_path + [table], ['interface-route6'], 'route6')
+            # Migrate interface-route6 into route6
+            migrate_interface_route(config, table_path + [table], ['interface-route6'], 'route6')
 
-        # Cleanup nodes inside route
-        migrate_route(config, table_path + [table], ['route'], 'route')
+            # Cleanup nodes inside route
+            migrate_route(config, table_path + [table], ['route'], 'route')
 
-        # Cleanup nodes inside route6
-        migrate_route(config, table_path + [table], ['route6'], 'route6')
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+            # Cleanup nodes inside route6
+            migrate_route(config, table_path + [table], ['route6'], 'route6')

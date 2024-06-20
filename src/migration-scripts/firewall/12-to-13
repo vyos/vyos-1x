@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5729: Switch to valueless whenever is possible.
 # From
@@ -25,65 +24,46 @@
     # set firewall ... rule <rule> state <state>
     # Remove command if log=disable or <state>=disable
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['firewall']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# State Policy logs:
-if config.exists(base + ['global-options', 'state-policy']):
-    for state in config.list_nodes(base + ['global-options', 'state-policy']):
-        if config.exists(base + ['global-options', 'state-policy', state, 'log']):
-            log_value = config.return_value(base + ['global-options', 'state-policy', state, 'log'])
-            config.delete(base + ['global-options', 'state-policy', state, 'log'])
-            if log_value == 'enable':
-                config.set(base + ['global-options', 'state-policy', state, 'log'])
+    # State Policy logs:
+    if config.exists(base + ['global-options', 'state-policy']):
+        for state in config.list_nodes(base + ['global-options', 'state-policy']):
+            if config.exists(base + ['global-options', 'state-policy', state, 'log']):
+                log_value = config.return_value(base + ['global-options', 'state-policy', state, 'log'])
+                config.delete(base + ['global-options', 'state-policy', state, 'log'])
+                if log_value == 'enable':
+                    config.set(base + ['global-options', 'state-policy', state, 'log'])
 
-for family in ['ipv4', 'ipv6', 'bridge']:
-    if config.exists(base + [family]):
-        for hook in ['forward', 'input', 'output', 'name']:
-            if config.exists(base + [family, hook]):
-                for priority in config.list_nodes(base + [family, hook]):
-                    if config.exists(base + [family, hook, priority, 'rule']):
-                        for rule in config.list_nodes(base + [family, hook, priority, 'rule']):
-                            # Log
-                            if config.exists(base + [family, hook, priority, 'rule', rule, 'log']):
-                                log_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'log'])
-                                config.delete(base + [family, hook, priority, 'rule', rule, 'log'])
-                                if log_value == 'enable':
-                                    config.set(base + [family, hook, priority, 'rule', rule, 'log'])
-                            # State
-                            if config.exists(base + [family, hook, priority, 'rule', rule, 'state']):
-                                flag_enable = 'False'
-                                for state in ['established', 'invalid', 'new', 'related']:
-                                    if config.exists(base + [family, hook, priority, 'rule', rule, 'state', state]):
-                                        state_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'state', state])
-                                        config.delete(base + [family, hook, priority, 'rule', rule, 'state', state])
-                                        if state_value == 'enable':
-                                            config.set(base + [family, hook, priority, 'rule', rule, 'state'], value=state, replace=False)
-                                            flag_enable = 'True'
-                                if flag_enable == 'False':
-                                    config.delete(base + [family, hook, priority, 'rule', rule, 'state'])
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+    for family in ['ipv4', 'ipv6', 'bridge']:
+        if config.exists(base + [family]):
+            for hook in ['forward', 'input', 'output', 'name']:
+                if config.exists(base + [family, hook]):
+                    for priority in config.list_nodes(base + [family, hook]):
+                        if config.exists(base + [family, hook, priority, 'rule']):
+                            for rule in config.list_nodes(base + [family, hook, priority, 'rule']):
+                                # Log
+                                if config.exists(base + [family, hook, priority, 'rule', rule, 'log']):
+                                    log_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'log'])
+                                    config.delete(base + [family, hook, priority, 'rule', rule, 'log'])
+                                    if log_value == 'enable':
+                                        config.set(base + [family, hook, priority, 'rule', rule, 'log'])
+                                # State
+                                if config.exists(base + [family, hook, priority, 'rule', rule, 'state']):
+                                    flag_enable = 'False'
+                                    for state in ['established', 'invalid', 'new', 'related']:
+                                        if config.exists(base + [family, hook, priority, 'rule', rule, 'state', state]):
+                                            state_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'state', state])
+                                            config.delete(base + [family, hook, priority, 'rule', rule, 'state', state])
+                                            if state_value == 'enable':
+                                                config.set(base + [family, hook, priority, 'rule', rule, 'state'], value=state, replace=False)
+                                                flag_enable = 'True'
+                                    if flag_enable == 'False':
+                                        config.delete(base + [family, hook, priority, 'rule', rule, 'state'])

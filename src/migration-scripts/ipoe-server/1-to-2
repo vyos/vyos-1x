@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # - T4703: merge vlan-id and vlan-range to vlan CLI node
 # L2|L3 -> l2|l3
@@ -28,87 +27,68 @@
 #       1. The first pool that contains next-poll.
 #       2. Else, the first pool in the list
 
-from sys import argv
-from sys import exit
 from vyos.configtree import ConfigTree
 
-
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 base = ['service', 'ipoe-server']
 
-if not config.exists(base):
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
 
-if config.exists(base + ['authentication', 'interface']):
-    for interface in config.list_nodes(base + ['authentication', 'interface']):
-        config.rename(base + ['authentication', 'interface', interface, 'mac-address'], 'mac')
+    if config.exists(base + ['authentication', 'interface']):
+        for interface in config.list_nodes(base + ['authentication', 'interface']):
+            config.rename(base + ['authentication', 'interface', interface, 'mac-address'], 'mac')
 
-        mac_base = base + ['authentication', 'interface', interface, 'mac']
-        for mac in config.list_nodes(mac_base):
-            vlan_config = mac_base + [mac, 'vlan-id']
-            if config.exists(vlan_config):
-                config.rename(vlan_config, 'vlan')
+            mac_base = base + ['authentication', 'interface', interface, 'mac']
+            for mac in config.list_nodes(mac_base):
+                vlan_config = mac_base + [mac, 'vlan-id']
+                if config.exists(vlan_config):
+                    config.rename(vlan_config, 'vlan')
 
-for interface in config.list_nodes(base + ['interface']):
-    base_path = base + ['interface', interface]
-    for vlan in ['vlan-id', 'vlan-range']:
-        if config.exists(base_path + [vlan]):
-            for tmp in config.return_values(base_path + [vlan]):
-                config.set(base_path + ['vlan'], value=tmp, replace=False)
-            config.delete(base_path + [vlan])
+    for interface in config.list_nodes(base + ['interface']):
+        base_path = base + ['interface', interface]
+        for vlan in ['vlan-id', 'vlan-range']:
+            if config.exists(base_path + [vlan]):
+                for tmp in config.return_values(base_path + [vlan]):
+                    config.set(base_path + ['vlan'], value=tmp, replace=False)
+                config.delete(base_path + [vlan])
 
-    if config.exists(base_path + ['network-mode']):
-        tmp = config.return_value(base_path + ['network-mode'])
-        config.delete(base_path + ['network-mode'])
-        # Change L2|L3 to lower case l2|l3
-        config.set(base_path + ['mode'], value=tmp.lower())
+        if config.exists(base_path + ['network-mode']):
+            tmp = config.return_value(base_path + ['network-mode'])
+            config.delete(base_path + ['network-mode'])
+            # Change L2|L3 to lower case l2|l3
+            config.set(base_path + ['mode'], value=tmp.lower())
 
-pool_base = base + ['client-ip-pool']
-if config.exists(pool_base):
-    default_pool = ''
-    gateway = ''
+    pool_base = base + ['client-ip-pool']
+    if config.exists(pool_base):
+        default_pool = ''
+        gateway = ''
 
-    #named pool migration
-    namedpools_base = pool_base + ['name']
+        #named pool migration
+        namedpools_base = pool_base + ['name']
 
-    for pool_name in config.list_nodes(namedpools_base):
-        pool_path = namedpools_base + [pool_name]
-        if config.exists(pool_path + ['subnet']):
-            subnet = config.return_value(pool_path + ['subnet'])
-            config.set(pool_base + [pool_name, 'range'], value=subnet, replace=False)
-            # Get netmask from subnet
-            mask = subnet.split("/")[1]
-        if config.exists(pool_path + ['next-pool']):
-            next_pool = config.return_value(pool_path + ['next-pool'])
-            config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
-            if not default_pool:
-                default_pool = pool_name
-        if config.exists(pool_path + ['gateway-address']) and mask:
-            gateway = f'{config.return_value(pool_path + ["gateway-address"])}/{mask}'
-            config.set(base + ['gateway-address'], value=gateway, replace=False)
+        for pool_name in config.list_nodes(namedpools_base):
+            pool_path = namedpools_base + [pool_name]
+            if config.exists(pool_path + ['subnet']):
+                subnet = config.return_value(pool_path + ['subnet'])
+                config.set(pool_base + [pool_name, 'range'], value=subnet, replace=False)
+                # Get netmask from subnet
+                mask = subnet.split("/")[1]
+            if config.exists(pool_path + ['next-pool']):
+                next_pool = config.return_value(pool_path + ['next-pool'])
+                config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
+                if not default_pool:
+                    default_pool = pool_name
+            if config.exists(pool_path + ['gateway-address']) and mask:
+                gateway = f'{config.return_value(pool_path + ["gateway-address"])}/{mask}'
+                config.set(base + ['gateway-address'], value=gateway, replace=False)
 
-    if not default_pool and config.list_nodes(namedpools_base):
-        default_pool = config.list_nodes(namedpools_base)[0]
+        if not default_pool and config.list_nodes(namedpools_base):
+            default_pool = config.list_nodes(namedpools_base)[0]
 
-    config.delete(namedpools_base)
+        config.delete(namedpools_base)
 
-    if default_pool:
-        config.set(base + ['default-pool'], value=default_pool)
-    # format as tag node
-    config.set_tag(pool_base)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+        if default_pool:
+            config.set(base + ['default-pool'], value=default_pool)
+        # format as tag node
+        config.set_tag(pool_base)

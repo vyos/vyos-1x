@@ -1,40 +1,28 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
 import sys
 
 from vyos.configtree import ConfigTree
+from vyos.base import MigrationError
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Must specify file name!")
-        sys.exit(1)
-
-    file_name = sys.argv[1]
-
-    with open(file_name, 'r') as f:
-        config_file = f.read()
-
-    config = ConfigTree(config_file)
-
+def migrate(config: ConfigTree) -> None:
     if not config.exists(['cluster']):
         # Cluster is not set -- nothing to do at all
-        sys.exit(0)
+        return
 
     # If at least one cluster group is defined, we have real work to do.
     # If there are no groups, we remove the top-level cluster node at the end of this script anyway.
@@ -102,8 +90,9 @@ if __name__ == '__main__':
                     services["other"].append(s)
 
             if services["other"]:
-                print("Cluster config includes non-IP address services and cannot be migrated", file=sys.stderr)
-                sys.exit(1)
+                err_str = "Cluster config includes non-IP address services and cannot be migrated"
+                print(err_str, file=sys.stderr)
+                raise MigrationError(err_str)
 
             # Cluster allowed virtual IPs for different interfaces within a single group.
             # VRRP groups are by definition bound to interfaces, so we cannot migrate such configurations.
@@ -123,14 +112,16 @@ if __name__ == '__main__':
                     if global_interface is not None:
                         ips.append({"ip": ip, "interface": global_interface})
                     else:
-                        print("Error: cluster has groups with IPs without interfaces and 'cluster interface' is not specified.", file=sys.stderr)
-                        sys.exit(1)
+                        err_str = "Cluster group has addresses without interfaces and 'cluster interface' is not specified."
+                        print(f'Error: {err_str}', file=sys.stderr)
+                        raise MigrationError(err_str)
 
             # Then we check if all addresses are for the same interface.
             intfs_set = set(map(lambda i: i["interface"], ips))
             if len(intfs_set) > 1:
-                print("Error: cluster group has addresses for different interfaces", file=sys.stderr)
-                sys.exit(1)
+                err_str = "Cluster group has addresses for different interfaces"
+                print(f'Error: {err_str}', file=sys.stderr)
+                raise MigrationError(err_str)
 
             # If we got this far, the group is migratable.
 
@@ -143,8 +134,9 @@ if __name__ == '__main__':
             # If there's already a VRRP group with exactly the same name,
             # we probably shouldn't try to make up a unique name, just leave migration to the user...
             if config.exists(vrrp_path):
-                print("Error: VRRP group with the same name as a cluster group already exists", file=sys.stderr)
-                sys.exit(1)
+                err_str = "VRRP group with the same name already exists"
+                print(f'Error: {err_str}', file=sys.stderr)
+                raise MigrationError(err_str)
 
             config.set(vrrp_path + ['interface'], value=interface)
             for a in addresses:
@@ -184,10 +176,3 @@ if __name__ == '__main__':
 
     # Finally, clean up the old cluster node
     config.delete(['cluster'])
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

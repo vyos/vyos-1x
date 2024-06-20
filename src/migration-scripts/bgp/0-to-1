@@ -1,60 +1,40 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3417: migrate BGP tagNode to node as we can only have one BGP process
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
+def migrate(config: ConfigTree) -> None:
+    base = ['protocols', 'bgp']
 
-file_name = argv[1]
+    if not config.exists(base) or not config.is_tag(base):
+        # Nothing to do
+        return
 
-with open(file_name, 'r') as f:
-    config_file = f.read()
+    # Only one BGP process is supported, thus this operation is savea
+    asn = config.list_nodes(base)
+    bgp_base = base + asn
 
-base = ['protocols', 'bgp']
-config = ConfigTree(config_file)
+    # We need a temporary copy of the config
+    tmp_base = ['protocols', 'bgp2']
+    config.copy(bgp_base, tmp_base)
 
-if not config.exists(base) or not config.is_tag(base):
-    # Nothing to do
-    exit(0)
+    # Now it's save to delete the old configuration
+    config.delete(base)
 
-# Only one BGP process is supported, thus this operation is savea
-asn = config.list_nodes(base)
-bgp_base = base + asn
-
-# We need a temporary copy of the config
-tmp_base = ['protocols', 'bgp2']
-config.copy(bgp_base, tmp_base)
-
-# Now it's save to delete the old configuration
-config.delete(base)
-
-# Rename temporary copy to new final config and set new "local-as" option
-config.rename(tmp_base, 'bgp')
-config.set(base + ['local-as'], value=asn[0])
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    # Rename temporary copy to new final config and set new "local-as" option
+    config.rename(tmp_base, 'bgp')
+    config.set(base + ['local-as'], value=asn[0])

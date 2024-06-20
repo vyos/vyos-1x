@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # * remove "system login user <user> group" node, Why should be add a user to a
 #   3rd party group when the system is fully managed by CLI?
@@ -20,35 +19,18 @@
 #   This is the only privilege level left and also the default, what is the
 #   sense in keeping this orphaned node?
 
-import sys
-
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 base = ['system', 'login', 'user']
-if not config.exists(base):
-    # Nothing to do
-    sys.exit(0)
-else:
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
     for user in config.list_nodes(base):
         if config.exists(base + [user, 'group']):
             config.delete(base + [user, 'group'])
 
         if config.exists(base + [user, 'level']):
             config.delete(base + [user, 'level'])
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

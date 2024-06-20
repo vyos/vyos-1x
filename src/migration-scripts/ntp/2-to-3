@@ -1,62 +1,43 @@
-#!/usr/bin/env python3
-
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5154: allow only one ip address per family for parameter 'listen-address'
 # Allow only one interface for parameter 'interface'
 # If more than one are specified, remove such entries
 
-import sys
-
 from vyos.configtree import ConfigTree
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 base_path = ['service', 'ntp']
-if not config.exists(base_path):
-    # Nothing to do
-    sys.exit(0)
 
-if config.exists(base_path + ['listen-address']) and (len([addr for addr in config.return_values(base_path + ['listen-address']) if is_ipv4(addr)]) > 1):
-    for addr in config.return_values(base_path + ['listen-address']):
-        if is_ipv4(addr):
-            config.delete_value(base_path + ['listen-address'], addr)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base_path):
+        # Nothing to do
+        return
 
-if config.exists(base_path + ['listen-address']) and (len([addr for addr in config.return_values(base_path + ['listen-address']) if is_ipv6(addr)]) > 1):
-    for addr in config.return_values(base_path + ['listen-address']):
-        if is_ipv6(addr):
-            config.delete_value(base_path + ['listen-address'], addr)
+    if config.exists(base_path + ['listen-address']) and (len([addr for addr in config.return_values(base_path + ['listen-address']) if is_ipv4(addr)]) > 1):
+        for addr in config.return_values(base_path + ['listen-address']):
+            if is_ipv4(addr):
+                config.delete_value(base_path + ['listen-address'], addr)
 
-if config.exists(base_path + ['interface']):
-    if len(config.return_values(base_path + ['interface'])) > 1:
-        config.delete(base_path + ['interface'])
+    if config.exists(base_path + ['listen-address']) and (len([addr for addr in config.return_values(base_path + ['listen-address']) if is_ipv6(addr)]) > 1):
+        for addr in config.return_values(base_path + ['listen-address']):
+            if is_ipv6(addr):
+                config.delete_value(base_path + ['listen-address'], addr)
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    if config.exists(base_path + ['interface']):
+        if len(config.return_values(base_path + ['interface'])) > 1:
+            config.delete(base_path + ['interface'])

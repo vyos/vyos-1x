@@ -14,50 +14,48 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
 # T5681: Firewall re-writing. Simplify cli when mathcing interface
 # From
 #   'set nat66 [source|destination] rule X [inbound-interface|outbound interface] <iface>'
 # to
 #   'set nat66 [source|destination] rule X [inbound-interface|outbound interface] name <iface>'
 
-from sys import argv,exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['nat66']):
+        # Nothing to do
+        return
 
-file_name = argv[1]
+    for direction in ['source', 'destination']:
+        # If a node doesn't exist, we obviously have nothing to do.
+        if not config.exists(['nat66', direction]):
+            continue
 
-with open(file_name, 'r') as f:
-    config_file = f.read()
+        # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
+        # but there are no rules under it.
+        if not config.list_nodes(['nat66', direction]):
+            continue
 
-config = ConfigTree(config_file)
-if not config.exists(['nat66']):
-    # Nothing to do
-    exit(0)
-
-for direction in ['source', 'destination']:
-    # If a node doesn't exist, we obviously have nothing to do.
-    if not config.exists(['nat66', direction]):
-        continue
-
-    # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
-    # but there are no rules under it.
-    if not config.list_nodes(['nat66', direction]):
-        continue
-
-    for rule in config.list_nodes(['nat66', direction, 'rule']):
-        base = ['nat66', direction, 'rule', rule]
-        for iface in ['inbound-interface','outbound-interface']:
-            if config.exists(base + [iface]):
-                tmp = config.return_value(base + [iface])
-                config.delete(base + [iface])
-                config.set(base + [iface, 'name'], value=tmp)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+        for rule in config.list_nodes(['nat66', direction, 'rule']):
+            base = ['nat66', direction, 'rule', rule]
+            for iface in ['inbound-interface','outbound-interface']:
+                if config.exists(base + [iface]):
+                    tmp = config.return_value(base + [iface])
+                    config.delete(base + [iface])
+                    config.set(base + [iface, 'name'], value=tmp)

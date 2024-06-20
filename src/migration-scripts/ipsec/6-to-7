@@ -1,25 +1,21 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Migrate /config/auth certificates and keys into PKI configuration
 
 import os
-
-from sys import argv
-from sys import exit
 
 from vyos.configtree import ConfigTree
 from vyos.pki import load_certificate
@@ -29,27 +25,27 @@ from vyos.pki import encode_certificate
 from vyos.pki import encode_private_key
 from vyos.utils.process import run
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 pki_base = ['pki']
 ipsec_site_base = ['vpn', 'ipsec', 'site-to-site', 'peer']
-
-config = ConfigTree(config_file)
-changes_made = False
 
 AUTH_DIR = '/config/auth'
 
 def wrapped_pem_to_config_value(pem):
     return "".join(pem.strip().split("\n")[1:-1])
 
-if config.exists(ipsec_site_base):
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(ipsec_site_base):
+        return
+
+    migration_needed = False
+    for peer in config.list_nodes(ipsec_site_base):
+        if config.exists(ipsec_site_base + [peer, 'authentication', 'x509']):
+            migration_needed = True
+            break
+
+    if not migration_needed:
+        return
+
     config.set(pki_base + ['ca'])
     config.set_tag(pki_base + ['ca'])
 
@@ -59,8 +55,6 @@ if config.exists(ipsec_site_base):
     for peer in config.list_nodes(ipsec_site_base):
         if not config.exists(ipsec_site_base + [peer, 'authentication', 'x509']):
             continue
-
-        changes_made = True
 
         peer_x509_base = ipsec_site_base + [peer, 'authentication', 'x509']
         pki_name = 'peer_' + peer.replace(".", "-").replace("@", "")
@@ -159,11 +153,3 @@ if config.exists(ipsec_site_base):
                 print(f'Failed to migrate private key on peer "{peer}"')
 
             config.delete(peer_x509_base + ['key'])
-
-if changes_made:
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

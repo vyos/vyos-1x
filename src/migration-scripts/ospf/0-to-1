@@ -1,22 +1,20 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3753: upgrade to FRR8 and move CLI options to better fit with the new FRR CLI
 
-from sys import argv
 from vyos.configtree import ConfigTree
 
 def ospf_passive_migration(config, ospf_base):
@@ -40,45 +38,29 @@ def ospf_passive_migration(config, ospf_base):
                 config.set_tag(ospf_base + ['interface'])
             config.delete(ospf_base + ['passive-interface-exclude'])
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 ospfv3_base = ['protocols', 'ospfv3']
-if config.exists(ospfv3_base):
-    area_base = ospfv3_base + ['area']
-    if config.exists(area_base):
-        for area in config.list_nodes(area_base):
-            if not config.exists(area_base + [area, 'interface']):
-                continue
 
-            for interface in config.return_values(area_base + [area, 'interface']):
-                config.set(ospfv3_base + ['interface', interface, 'area'], value=area)
-                config.set_tag(ospfv3_base + ['interface'])
+def migrate(config: ConfigTree) -> None:
+    if config.exists(ospfv3_base):
+        area_base = ospfv3_base + ['area']
+        if config.exists(area_base):
+            for area in config.list_nodes(area_base):
+                if not config.exists(area_base + [area, 'interface']):
+                    continue
 
-            config.delete(area_base + [area, 'interface'])
+                for interface in config.return_values(area_base + [area, 'interface']):
+                    config.set(ospfv3_base + ['interface', interface, 'area'], value=area)
+                    config.set_tag(ospfv3_base + ['interface'])
 
-# Migrate OSPF syntax in default VRF
-ospf_base = ['protocols', 'ospf']
-ospf_passive_migration(config, ospf_base)
+                config.delete(area_base + [area, 'interface'])
 
-vrf_base = ['vrf', 'name']
-if config.exists(vrf_base):
-    for vrf in config.list_nodes(vrf_base):
-        vrf_ospf_base = vrf_base + [vrf, 'protocols', 'ospf']
-        if config.exists(vrf_ospf_base):
-            ospf_passive_migration(config, vrf_ospf_base)
+    # Migrate OSPF syntax in default VRF
+    ospf_base = ['protocols', 'ospf']
+    ospf_passive_migration(config, ospf_base)
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    vrf_base = ['vrf', 'name']
+    if config.exists(vrf_base):
+        for vrf in config.list_nodes(vrf_base):
+            vrf_ospf_base = vrf_base + [vrf, 'protocols', 'ospf']
+            if config.exists(vrf_ospf_base):
+                ospf_passive_migration(config, vrf_ospf_base)

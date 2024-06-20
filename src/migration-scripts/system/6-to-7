@@ -1,48 +1,36 @@
-#!/usr/bin/env python3
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Change smp_affinity to smp-affinity
 
-import sys
-
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
+def migrate(config: ConfigTree) -> None:
+    intf_types = config.list_nodes(["interfaces"])
 
-file_name = sys.argv[1]
+    for intf_type in intf_types:
+        intf_type_path = ["interfaces", intf_type]
+        intfs = config.list_nodes(intf_type_path)
 
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
-update_required = False
-
-intf_types = config.list_nodes(["interfaces"])
-
-for intf_type in intf_types:
-    intf_type_path = ["interfaces", intf_type]
-    intfs = config.list_nodes(intf_type_path)
-
-    for intf in intfs:
-        intf_path = intf_type_path + [intf]
-        if not config.exists(intf_path + ["smp_affinity"]):
-            # Nothing to do.
-            continue
-        else:
-            # Rename the node.
-            old_smp_affinity_path = intf_path + ["smp_affinity"]
-            config.rename(old_smp_affinity_path, "smp-affinity")
-            update_required = True
-
-if update_required:
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("failed to save the modified config: {}".format(e))
-        sys.exit(1)
-
-
-
+        for intf in intfs:
+            intf_path = intf_type_path + [intf]
+            if not config.exists(intf_path + ["smp_affinity"]):
+                # Nothing to do.
+                continue
+            else:
+                # Rename the node.
+                old_smp_affinity_path = intf_path + ["smp_affinity"]
+                config.rename(old_smp_affinity_path, "smp-affinity")
+                update_required = True
