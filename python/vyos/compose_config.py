@@ -55,7 +55,8 @@ class ComposeConfig:
         try:
             func(self.config_tree)
         except Exception as e:
-            self.config_tree = self.checkpoint
+            if self.checkpoint_file is not None:
+                self.config_tree = self.checkpoint
             raise ComposeConfigError(e) from e
 
     def apply_file(self, func_file: str, func_name: str):
