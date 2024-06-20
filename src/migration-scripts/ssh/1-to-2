@@ -1,81 +1,63 @@
-#!/usr/bin/env python3
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # VyOS 1.2 crux allowed configuring a lower or upper case loglevel. This
 # is no longer supported as the input data is validated and will lead to
 # an error. If user specifies an upper case logleve, make it lowercase
 
-from sys import argv,exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['service', 'ssh']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-path_loglevel = base + ['loglevel']
-if config.exists(path_loglevel):
-    # red in configured loglevel and convert it to lower case
-    tmp = config.return_value(path_loglevel).lower()
-    # VyOS 1.2 had no proper value validation on the CLI thus the
-    # user could use any arbitrary values - sanitize them
-    if tmp not in ['quiet', 'fatal', 'error', 'info', 'verbose']:
-        tmp = 'info'
-    config.set(path_loglevel, value=tmp)
+    path_loglevel = base + ['loglevel']
+    if config.exists(path_loglevel):
+        # red in configured loglevel and convert it to lower case
+        tmp = config.return_value(path_loglevel).lower()
+        # VyOS 1.2 had no proper value validation on the CLI thus the
+        # user could use any arbitrary values - sanitize them
+        if tmp not in ['quiet', 'fatal', 'error', 'info', 'verbose']:
+            tmp = 'info'
+        config.set(path_loglevel, value=tmp)
 
-# T4273: migrate ssh cipher list to multi node
-path_ciphers = base + ['ciphers']
-if config.exists(path_ciphers):
-    tmp = []
-    # get curtrent cipher list - comma delimited
-    for cipher in config.return_values(path_ciphers):
-        tmp.extend(cipher.split(','))
-    # delete old cipher suite representation
-    config.delete(path_ciphers)
+    # T4273: migrate ssh cipher list to multi node
+    path_ciphers = base + ['ciphers']
+    if config.exists(path_ciphers):
+        tmp = []
+        # get curtrent cipher list - comma delimited
+        for cipher in config.return_values(path_ciphers):
+            tmp.extend(cipher.split(','))
+        # delete old cipher suite representation
+        config.delete(path_ciphers)
 
-    for cipher in tmp:
-        config.set(path_ciphers, value=cipher, replace=False)
+        for cipher in tmp:
+            config.set(path_ciphers, value=cipher, replace=False)
 
-# T4273: migrate ssh key-exchange list to multi node
-path_kex = base + ['key-exchange']
-if config.exists(path_kex):
-    tmp = []
-    # get curtrent cipher list - comma delimited
-    for kex in config.return_values(path_kex):
-        tmp.extend(kex.split(','))
-    # delete old cipher suite representation
-    config.delete(path_kex)
+    # T4273: migrate ssh key-exchange list to multi node
+    path_kex = base + ['key-exchange']
+    if config.exists(path_kex):
+        tmp = []
+        # get curtrent cipher list - comma delimited
+        for kex in config.return_values(path_kex):
+            tmp.extend(kex.split(','))
+        # delete old cipher suite representation
+        config.delete(path_kex)
 
-    for kex in tmp:
-        config.set(path_kex, value=kex, replace=False)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+        for kex in tmp:
+            config.set(path_kex, value=kex, replace=False)

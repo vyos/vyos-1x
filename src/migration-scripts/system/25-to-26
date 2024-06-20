@@ -1,39 +1,25 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
 # syslog: migrate deprecated CLI options
 #         - protocols -> local7
 #         - security -> auth
 
-from sys import exit, argv
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['system', 'syslog']
-config = ConfigTree(config_file)
-
-if not config.exists(base):
-    exit(0)
 
 def rename_facilities(config, base_tree, facility, facility_new) -> None:
     if config.exists(base + [base_tree, 'facility', facility]):
@@ -44,39 +30,36 @@ def rename_facilities(config, base_tree, facility, facility_new) -> None:
             # delete old duplicate facility config
             config.delete(base + [base_tree, 'facility', facility])
 
-#
-# Rename protocols and securityy facility to common ones
-#
-replace = {
-    'protocols' : 'local7',
-    'security' : 'auth'
-}
-for facility, facility_new in replace.items():
-    rename_facilities(config, 'console', facility, facility_new)
-    rename_facilities(config, 'global', facility, facility_new)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
 
+    #
+    # Rename protocols and securityy facility to common ones
+    #
+    replace = {
+        'protocols' : 'local7',
+        'security' : 'auth'
+    }
+    for facility, facility_new in replace.items():
+        rename_facilities(config, 'console', facility, facility_new)
+        rename_facilities(config, 'global', facility, facility_new)
+
+        if config.exists(base + ['host']):
+            for host in config.list_nodes(base + ['host']):
+                rename_facilities(config, f'host {host}', facility, facility_new)
+
+    #
+    # It makes no sense to configure udp/tcp transport per individual facility
+    #
     if config.exists(base + ['host']):
         for host in config.list_nodes(base + ['host']):
-            rename_facilities(config, f'host {host}', facility, facility_new)
-
-#
-# It makes no sense to configure udp/tcp transport per individual facility
-#
-if config.exists(base + ['host']):
-    for host in config.list_nodes(base + ['host']):
-        protocol = None
-        for facility in config.list_nodes(base + ['host', host, 'facility']):
-            tmp_path = base + ['host', host, 'facility', facility, 'protocol']
-            if config.exists(tmp_path):
-                # We can only change the first one
-                if protocol == None:
-                    protocol = config.return_value(tmp_path)
-                    config.set(base + ['host', host, 'protocol'], value=protocol)
-                config.delete(tmp_path)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+            protocol = None
+            for facility in config.list_nodes(base + ['host', host, 'facility']):
+                tmp_path = base + ['host', host, 'facility', facility, 'protocol']
+                if config.exists(tmp_path):
+                    # We can only change the first one
+                    if protocol == None:
+                        protocol = config.return_value(tmp_path)
+                        config.set(base + ['host', host, 'protocol'], value=protocol)
+                    config.delete(tmp_path)

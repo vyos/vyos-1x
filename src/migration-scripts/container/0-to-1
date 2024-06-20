@@ -1,77 +1,65 @@
-#!/usr/bin/env python3
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T4870: change underlaying container filesystem from vfs to overlay
 
 import os
 import shutil
-import sys
 
 from vyos.configtree import ConfigTree
 from vyos.utils.process import call
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['container', 'name']
-config = ConfigTree(config_file)
 
-# Check if containers exist and we need to perform image manipulation
-if config.exists(base):
-    for container in config.list_nodes(base):
-        # Stop any given container first
-        call(f'sudo systemctl stop vyos-container-{container}.service')
-        # Export container image for later re-import to new filesystem. We store
-        # the backup on a real disk as a tmpfs (like /tmp) could probably lack
-        # memory if a host has too many containers stored.
-        image_name = config.return_value(base + [container, 'image'])
-        call(f'sudo podman image save --quiet --output /root/{container}.tar --format oci-archive {image_name}')
+def migrate(config: ConfigTree) -> None:
+    # Check if containers exist and we need to perform image manipulation
+    if config.exists(base):
+        for container in config.list_nodes(base):
+            # Stop any given container first
+            call(f'sudo systemctl stop vyos-container-{container}.service')
+            # Export container image for later re-import to new filesystem. We store
+            # the backup on a real disk as a tmpfs (like /tmp) could probably lack
+            # memory if a host has too many containers stored.
+            image_name = config.return_value(base + [container, 'image'])
+            call(f'sudo podman image save --quiet --output /root/{container}.tar --format oci-archive {image_name}')
 
-# No need to adjust the strage driver online (this is only used for testing and
-# debugging on a live system) - it is already overlay2 when the migration script
-# is run during system update. But the specified driver in the image is actually
-# overwritten by the still present VFS filesystem on disk. Thus podman still
-# thinks it uses VFS until we delete the libpod directory under:
-# /usr/lib/live/mount/persistence/container/storage
-#call('sed -i "s/vfs/overlay2/g" /etc/containers/storage.conf /usr/share/vyos/templates/container/storage.conf.j2')
+    # No need to adjust the strage driver online (this is only used for testing and
+    # debugging on a live system) - it is already overlay2 when the migration script
+    # is run during system update. But the specified driver in the image is actually
+    # overwritten by the still present VFS filesystem on disk. Thus podman still
+    # thinks it uses VFS until we delete the libpod directory under:
+    # /usr/lib/live/mount/persistence/container/storage
+    #call('sed -i "s/vfs/overlay2/g" /etc/containers/storage.conf /usr/share/vyos/templates/container/storage.conf.j2')
 
-base_path = '/usr/lib/live/mount/persistence/container/storage'
-for dir in ['libpod', 'vfs', 'vfs-containers', 'vfs-images', 'vfs-layers']:
-    if os.path.exists(f'{base_path}/{dir}'):
-        shutil.rmtree(f'{base_path}/{dir}')
+    base_path = '/usr/lib/live/mount/persistence/container/storage'
+    for dir in ['libpod', 'vfs', 'vfs-containers', 'vfs-images', 'vfs-layers']:
+        if os.path.exists(f'{base_path}/{dir}'):
+            shutil.rmtree(f'{base_path}/{dir}')
 
-# Now all remaining information about VFS is gone and we operate in overlayfs2
-# filesystem mode. Time to re-import the images.
-if config.exists(base):
-    for container in config.list_nodes(base):
-        # Export container image for later re-import to new filesystem
-        image_name = config.return_value(base + [container, 'image'])
-        image_path = f'/root/{container}.tar'
-        call(f'sudo podman image load --quiet --input {image_path}')
+    # Now all remaining information about VFS is gone and we operate in overlayfs2
+    # filesystem mode. Time to re-import the images.
+    if config.exists(base):
+        for container in config.list_nodes(base):
+            # Export container image for later re-import to new filesystem
+            image_name = config.return_value(base + [container, 'image'])
+            image_path = f'/root/{container}.tar'
+            call(f'sudo podman image load --quiet --input {image_path}')
 
-        # Start any given container first
-        call(f'sudo systemctl start vyos-container-{container}.service')
+            # Start any given container first
+            call(f'sudo systemctl start vyos-container-{container}.service')
 
-        # Delete temporary container image
-        if os.path.exists(image_path):
-            os.unlink(image_path)
-
+            # Delete temporary container image
+            if os.path.exists(image_path):
+                os.unlink(image_path)

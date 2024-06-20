@@ -1,19 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # - migrate from "service sstp-server" to "vpn sstp"
 # - remove primary/secondary identifier from nameserver
@@ -23,25 +21,15 @@
 #   - do not migrate radius server req-limit, use default of unlimited
 # - migrate SSL certificate path
 
-import sys
-
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 old_base = ['service', 'sstp-server']
-if not config.exists(old_base):
-    # Nothing to do
-    sys.exit(0)
-else:
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(old_base):
+        # Nothing to do
+        return
+
     # ensure new base path exists
     if not config.exists(['vpn']):
         config.set(['vpn'])
@@ -119,10 +107,3 @@ else:
 
     if config.exists(new_ssl + ['server-key']):
         config.rename(new_ssl + ['server-key'], 'key-file')
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

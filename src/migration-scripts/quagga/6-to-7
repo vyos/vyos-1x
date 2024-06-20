@@ -1,116 +1,97 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # - T3037, BGP address-family ipv6-unicast capability dynamic does not exist in
 #   FRR, there is only a base, per neighbor dynamic capability, migrate config
 
-from sys import argv
-from sys import exit
 from vyos.configtree import ConfigTree
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['protocols', 'bgp']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# Check if BGP is actually configured and obtain the ASN
-asn_list = config.list_nodes(base)
-if asn_list:
-    # There's always just one BGP node, if any
-    bgp_base = base + [asn_list[0]]
+    # Check if BGP is actually configured and obtain the ASN
+    asn_list = config.list_nodes(base)
+    if asn_list:
+        # There's always just one BGP node, if any
+        bgp_base = base + [asn_list[0]]
 
-    for neighbor_type in ['neighbor', 'peer-group']:
-        if not config.exists(bgp_base + [neighbor_type]):
-            continue
-        for neighbor in config.list_nodes(bgp_base + [neighbor_type]):
-            # T2844 - add IPv4 AFI disable-send-community support
-            send_comm_path = bgp_base + [neighbor_type, neighbor, 'disable-send-community']
-            if config.exists(send_comm_path):
-                new_base = bgp_base + [neighbor_type, neighbor, 'address-family', 'ipv4-unicast']
-                config.set(new_base)
-                config.copy(send_comm_path, new_base + ['disable-send-community'])
-                config.delete(send_comm_path)
+        for neighbor_type in ['neighbor', 'peer-group']:
+            if not config.exists(bgp_base + [neighbor_type]):
+                continue
+            for neighbor in config.list_nodes(bgp_base + [neighbor_type]):
+                # T2844 - add IPv4 AFI disable-send-community support
+                send_comm_path = bgp_base + [neighbor_type, neighbor, 'disable-send-community']
+                if config.exists(send_comm_path):
+                    new_base = bgp_base + [neighbor_type, neighbor, 'address-family', 'ipv4-unicast']
+                    config.set(new_base)
+                    config.copy(send_comm_path, new_base + ['disable-send-community'])
+                    config.delete(send_comm_path)
 
-            cap_dynamic = False
-            peer_group = None
-            for afi in ['ipv4-unicast', 'ipv6-unicast']:
-                afi_path = bgp_base + [neighbor_type, neighbor, 'address-family', afi]
-                # Exit loop early if AFI does not exist
-                if not config.exists(afi_path):
-                    continue
+                cap_dynamic = False
+                peer_group = None
+                for afi in ['ipv4-unicast', 'ipv6-unicast']:
+                    afi_path = bgp_base + [neighbor_type, neighbor, 'address-family', afi]
+                    # Exit loop early if AFI does not exist
+                    if not config.exists(afi_path):
+                        continue
 
-                cap_path = afi_path + ['capability', 'dynamic']
-                if config.exists(cap_path):
-                    cap_dynamic = True
-                    config.delete(cap_path)
+                    cap_path = afi_path + ['capability', 'dynamic']
+                    if config.exists(cap_path):
+                        cap_dynamic = True
+                        config.delete(cap_path)
 
-                    # We have now successfully migrated the address-family
-                    # specific dynamic capability to the neighbor/peer-group
-                    # level. If this has been the only option under the
-                    # address-family nodes, we can clean them up by checking if
-                    # no other nodes are left under that tree and if so, delete
-                    # the parent.
-                    #
-                    # We walk from the most inner node to the most outer one.
-                    cleanup = -1
-                    while len(config.list_nodes(cap_path[:cleanup])) == 0:
-                        config.delete(cap_path[:cleanup])
-                        cleanup -= 1
+                        # We have now successfully migrated the address-family
+                        # specific dynamic capability to the neighbor/peer-group
+                        # level. If this has been the only option under the
+                        # address-family nodes, we can clean them up by checking if
+                        # no other nodes are left under that tree and if so, delete
+                        # the parent.
+                        #
+                        # We walk from the most inner node to the most outer one.
+                        cleanup = -1
+                        while len(config.list_nodes(cap_path[:cleanup])) == 0:
+                            config.delete(cap_path[:cleanup])
+                            cleanup -= 1
 
-                peer_group_path = afi_path + ['peer-group']
-                if config.exists(peer_group_path):
-                    if ((is_ipv4(neighbor) and afi == 'ipv4-unicast') or
-                        (is_ipv6(neighbor) and afi == 'ipv6-unicast')):
-                        peer_group = config.return_value(peer_group_path)
+                    peer_group_path = afi_path + ['peer-group']
+                    if config.exists(peer_group_path):
+                        if ((is_ipv4(neighbor) and afi == 'ipv4-unicast') or
+                            (is_ipv6(neighbor) and afi == 'ipv6-unicast')):
+                            peer_group = config.return_value(peer_group_path)
 
-                    config.delete(peer_group_path)
+                        config.delete(peer_group_path)
 
-                    # We have now successfully migrated the address-family
-                    # specific peer-group to the neighbor level. If this has
-                    # been the only option under the address-family nodes, we
-                    # can clean them up by checking if no other nodes are left
-                    # under that tree and if so, delete the parent.
-                    #
-                    # We walk from the most inner node to the most outer one.
-                    cleanup = -1
-                    while len(config.list_nodes(peer_group_path[:cleanup])) == 0:
-                        config.delete(peer_group_path[:cleanup])
-                        cleanup -= 1
+                        # We have now successfully migrated the address-family
+                        # specific peer-group to the neighbor level. If this has
+                        # been the only option under the address-family nodes, we
+                        # can clean them up by checking if no other nodes are left
+                        # under that tree and if so, delete the parent.
+                        #
+                        # We walk from the most inner node to the most outer one.
+                        cleanup = -1
+                        while len(config.list_nodes(peer_group_path[:cleanup])) == 0:
+                            config.delete(peer_group_path[:cleanup])
+                            cleanup -= 1
 
-            if cap_dynamic:
-                config.set(bgp_base + [neighbor_type, neighbor, 'capability', 'dynamic'])
-            if peer_group:
-                config.set(bgp_base + [neighbor_type, neighbor, 'peer-group'], value=peer_group)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+                if cap_dynamic:
+                    config.set(bgp_base + [neighbor_type, neighbor, 'capability', 'dynamic'])
+                if peer_group:
+                    config.set(bgp_base + [neighbor_type, neighbor, 'peer-group'], value=peer_group)

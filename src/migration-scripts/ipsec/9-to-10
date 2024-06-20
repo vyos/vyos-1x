@@ -1,131 +1,114 @@
-#!/usr/bin/env python3
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2022-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4118: Change vpn ipsec syntax for IKE ESP and peer
+# T4879: IPsec migration script remote-id for peer name eq address
 
 import re
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['vpn', 'ipsec']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# IKE changes, T4118:
-if config.exists(base + ['ike-group']):
-    for ike_group in config.list_nodes(base + ['ike-group']):
-        # replace 'ipsec ike-group <tag> mobike disable'
-        #      => 'ipsec ike-group <tag> disable-mobike'
-        mobike = base + ['ike-group', ike_group, 'mobike']
-        if config.exists(mobike):
-            if config.return_value(mobike) == 'disable':
-                config.set(base + ['ike-group', ike_group, 'disable-mobike'])
-            config.delete(mobike)
+    # IKE changes, T4118:
+    if config.exists(base + ['ike-group']):
+        for ike_group in config.list_nodes(base + ['ike-group']):
+            # replace 'ipsec ike-group <tag> mobike disable'
+            #      => 'ipsec ike-group <tag> disable-mobike'
+            mobike = base + ['ike-group', ike_group, 'mobike']
+            if config.exists(mobike):
+                if config.return_value(mobike) == 'disable':
+                    config.set(base + ['ike-group', ike_group, 'disable-mobike'])
+                config.delete(mobike)
 
-        # replace 'ipsec ike-group <tag> ikev2-reauth yes'
-        #      => 'ipsec ike-group <tag> ikev2-reauth'
-        reauth = base + ['ike-group', ike_group, 'ikev2-reauth']
-        if config.exists(reauth):
-            if config.return_value(reauth) == 'yes':
-                config.delete(reauth)
-                config.set(reauth)
-            else:
-                config.delete(reauth)
+            # replace 'ipsec ike-group <tag> ikev2-reauth yes'
+            #      => 'ipsec ike-group <tag> ikev2-reauth'
+            reauth = base + ['ike-group', ike_group, 'ikev2-reauth']
+            if config.exists(reauth):
+                if config.return_value(reauth) == 'yes':
+                    config.delete(reauth)
+                    config.set(reauth)
+                else:
+                    config.delete(reauth)
 
-# ESP changes
-# replace 'ipsec esp-group <tag> compression enable'
-#      => 'ipsec esp-group <tag> compression'
-if config.exists(base + ['esp-group']):
-    for esp_group in config.list_nodes(base + ['esp-group']):
-        compression = base + ['esp-group', esp_group, 'compression']
-        if config.exists(compression):
-            if config.return_value(compression) == 'enable':
-                config.delete(compression)
-                config.set(compression)
-            else:
-                config.delete(compression)
+    # ESP changes
+    # replace 'ipsec esp-group <tag> compression enable'
+    #      => 'ipsec esp-group <tag> compression'
+    if config.exists(base + ['esp-group']):
+        for esp_group in config.list_nodes(base + ['esp-group']):
+            compression = base + ['esp-group', esp_group, 'compression']
+            if config.exists(compression):
+                if config.return_value(compression) == 'enable':
+                    config.delete(compression)
+                    config.set(compression)
+                else:
+                    config.delete(compression)
 
-# PEER changes
-if config.exists(base + ['site-to-site', 'peer']):
-    for peer in config.list_nodes(base + ['site-to-site', 'peer']):
-        peer_base = base + ['site-to-site', 'peer', peer]
+    # PEER changes
+    if config.exists(base + ['site-to-site', 'peer']):
+        for peer in config.list_nodes(base + ['site-to-site', 'peer']):
+            peer_base = base + ['site-to-site', 'peer', peer]
 
-        # replace: 'peer <tag> id x'
-        #       => 'peer <tag> local-id x'
-        if config.exists(peer_base + ['authentication', 'id']):
-            config.rename(peer_base + ['authentication', 'id'], 'local-id')
+            # replace: 'peer <tag> id x'
+            #       => 'peer <tag> local-id x'
+            if config.exists(peer_base + ['authentication', 'id']):
+                config.rename(peer_base + ['authentication', 'id'], 'local-id')
 
-        # For the peer '@foo' set remote-id 'foo' if remote-id is not defined
-        # For the peer '192.0.2.1' set remote-id '192.0.2.1' if remote-id is not defined
-        if not config.exists(peer_base + ['authentication', 'remote-id']):
-            tmp = peer.replace('@', '') if peer.startswith('@') else peer
-            config.set(peer_base + ['authentication', 'remote-id'], value=tmp)
+            # For the peer '@foo' set remote-id 'foo' if remote-id is not defined
+            # For the peer '192.0.2.1' set remote-id '192.0.2.1' if remote-id is not defined
+            if not config.exists(peer_base + ['authentication', 'remote-id']):
+                tmp = peer.replace('@', '') if peer.startswith('@') else peer
+                config.set(peer_base + ['authentication', 'remote-id'], value=tmp)
 
-        # replace: 'peer <tag> force-encapsulation enable'
-        #       => 'peer <tag> force-udp-encapsulation'
-        force_enc = peer_base + ['force-encapsulation']
-        if config.exists(force_enc):
-            if config.return_value(force_enc) == 'enable':
-                config.delete(force_enc)
-                config.set(peer_base + ['force-udp-encapsulation'])
-            else:
-                config.delete(force_enc)
+            # replace: 'peer <tag> force-encapsulation enable'
+            #       => 'peer <tag> force-udp-encapsulation'
+            force_enc = peer_base + ['force-encapsulation']
+            if config.exists(force_enc):
+                if config.return_value(force_enc) == 'enable':
+                    config.delete(force_enc)
+                    config.set(peer_base + ['force-udp-encapsulation'])
+                else:
+                    config.delete(force_enc)
 
-        # add option: 'peer <tag> remote-address x.x.x.x'
-        remote_address = peer
-        if peer.startswith('@'):
-            remote_address = 'any'
-        config.set(peer_base + ['remote-address'], value=remote_address)
-        # Peer name it is swanctl connection name and shouldn't contain dots or colons
-        # rename peer:
-        #   peer 192.0.2.1   => peer peer_192-0-2-1
-        #   peer 2001:db8::2 => peer peer_2001-db8--2
-        #   peer @foo        => peer peer_foo
-        re_peer_name = re.sub(':|\.', '-', peer)
-        if re_peer_name.startswith('@'):
-            re_peer_name = re.sub('@', '', re_peer_name)
-        new_peer_name = f'peer_{re_peer_name}'
+            # add option: 'peer <tag> remote-address x.x.x.x'
+            remote_address = peer
+            if peer.startswith('@'):
+                remote_address = 'any'
+            config.set(peer_base + ['remote-address'], value=remote_address)
+            # Peer name it is swanctl connection name and shouldn't contain dots or colons
+            # rename peer:
+            #   peer 192.0.2.1   => peer peer_192-0-2-1
+            #   peer 2001:db8::2 => peer peer_2001-db8--2
+            #   peer @foo        => peer peer_foo
+            re_peer_name = re.sub(':|\.', '-', peer)
+            if re_peer_name.startswith('@'):
+                re_peer_name = re.sub('@', '', re_peer_name)
+            new_peer_name = f'peer_{re_peer_name}'
 
-        config.rename(peer_base, new_peer_name)
+            config.rename(peer_base, new_peer_name)
 
-# remote-access/road-warrior changes
-if config.exists(base + ['remote-access', 'connection']):
-    for connection in config.list_nodes(base + ['remote-access', 'connection']):
-        ra_base = base + ['remote-access', 'connection', connection]
-        # replace: 'remote-access connection <tag> authentication id x'
-        #       => 'remote-access connection <tag> authentication local-id x'
-        if config.exists(ra_base + ['authentication', 'id']):
-            config.rename(ra_base + ['authentication', 'id'], 'local-id')
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    # remote-access/road-warrior changes
+    if config.exists(base + ['remote-access', 'connection']):
+        for connection in config.list_nodes(base + ['remote-access', 'connection']):
+            ra_base = base + ['remote-access', 'connection', connection]
+            # replace: 'remote-access connection <tag> authentication id x'
+            #       => 'remote-access connection <tag> authentication local-id x'
+            if config.exists(ra_base + ['authentication', 'id']):
+                config.rename(ra_base + ['authentication', 'id'], 'local-id')

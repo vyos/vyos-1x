@@ -1,47 +1,44 @@
-#!/usr/bin/env python3
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # converts 'set system syslog host <address>:<port>'
 # to 'set system syslog host <address> port <port>'
 
-import sys
 import re
 
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-  print("Must specify file name!")
-  sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-  config_file = f.read()
-
-config = ConfigTree(config_file)
 cbase = ['system', 'syslog', 'host']
 
-if not config.exists(cbase):
-    sys.exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(cbase):
+        return
 
-for host in config.list_nodes(cbase):
-    if re.search(':[0-9]{1,5}$',host):
-        h = re.search('^[a-zA-Z\-0-9\.]+', host).group(0)
-        p = re.sub(':', '', re.search(':[0-9]+$', host).group(0))
-        config.set(cbase + [h])
-        config.set(cbase + [h, 'port'], value=p)
-        for fac in config.list_nodes(cbase + [host, 'facility']):
-            config.set(cbase + [h, 'facility', fac])
-            config.set_tag(cbase + [h, 'facility'])
-            if config.exists(cbase + [host, 'facility', fac, 'protocol']):
-                proto = config.return_value(cbase + [host, 'facility', fac, 'protocol'])
-                config.set(cbase + [h, 'facility', fac, 'protocol'], value=proto)
-            if config.exists(cbase + [host, 'facility', fac, 'level']):
-                lvl = config.return_value(cbase + [host, 'facility', fac, 'level'])
-                config.set(cbase + [h, 'facility', fac, 'level'], value=lvl)
-        config.delete(cbase + [host])
-
-try:
-    open(file_name,'w').write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    for host in config.list_nodes(cbase):
+        if re.search(':[0-9]{1,5}$',host):
+            h = re.search('^[a-zA-Z\-0-9\.]+', host).group(0)
+            p = re.sub(':', '', re.search(':[0-9]+$', host).group(0))
+            config.set(cbase + [h])
+            config.set(cbase + [h, 'port'], value=p)
+            for fac in config.list_nodes(cbase + [host, 'facility']):
+                config.set(cbase + [h, 'facility', fac])
+                config.set_tag(cbase + [h, 'facility'])
+                if config.exists(cbase + [host, 'facility', fac, 'protocol']):
+                    proto = config.return_value(cbase + [host, 'facility', fac, 'protocol'])
+                    config.set(cbase + [h, 'facility', fac, 'protocol'], value=proto)
+                if config.exists(cbase + [host, 'facility', fac, 'level']):
+                    lvl = config.return_value(cbase + [host, 'facility', fac, 'level'])
+                    config.set(cbase + [h, 'facility', fac, 'level'], value=lvl)
+            config.delete(cbase + [host])

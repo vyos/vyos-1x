@@ -1,84 +1,64 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3741: no-ipv4-unicast is now enabled by default
 # T5937: Migrate IPv6 BGP Neighbor Peer Groups
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['protocols', 'bgp']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# This is now a default option - simply delete it.
-# As it was configured explicitly - we can also bail out early as we need to
-# do nothing!
-if config.exists(base + ['parameters', 'default', 'no-ipv4-unicast']):
-    config.delete(base + ['parameters', 'default', 'no-ipv4-unicast'])
+    # This is now a default option - simply delete it.
+    # As it was configured explicitly - we can also bail out early as we need to
+    # do nothing!
+    if config.exists(base + ['parameters', 'default', 'no-ipv4-unicast']):
+        config.delete(base + ['parameters', 'default', 'no-ipv4-unicast'])
 
-    # Check if the "default" node is now empty, if so - remove it
-    if len(config.list_nodes(base + ['parameters', 'default'])) == 0:
-        config.delete(base + ['parameters', 'default'])
+        # Check if the "default" node is now empty, if so - remove it
+        if len(config.list_nodes(base + ['parameters', 'default'])) == 0:
+            config.delete(base + ['parameters', 'default'])
 
-    # Check if the "default" node is now empty, if so - remove it
-    if len(config.list_nodes(base + ['parameters'])) == 0:
-        config.delete(base + ['parameters'])
-else:
-    # As we now install a new default option into BGP we need to migrate all
-    # existing BGP neighbors and restore the old behavior
+        # Check if the "default" node is now empty, if so - remove it
+        if len(config.list_nodes(base + ['parameters'])) == 0:
+            config.delete(base + ['parameters'])
+    else:
+        # As we now install a new default option into BGP we need to migrate all
+        # existing BGP neighbors and restore the old behavior
+        if config.exists(base + ['neighbor']):
+            for neighbor in config.list_nodes(base + ['neighbor']):
+                peer_group = base + ['neighbor', neighbor, 'peer-group']
+                if config.exists(peer_group):
+                    peer_group_name = config.return_value(peer_group)
+                    # peer group enables old behavior for neighbor - bail out
+                    if config.exists(base + ['peer-group', peer_group_name, 'address-family', 'ipv4-unicast']):
+                        continue
+
+                afi_ipv4 = base + ['neighbor', neighbor, 'address-family', 'ipv4-unicast']
+                if not config.exists(afi_ipv4):
+                    config.set(afi_ipv4)
+
+    # Migrate IPv6 AFI peer-group
     if config.exists(base + ['neighbor']):
         for neighbor in config.list_nodes(base + ['neighbor']):
-            peer_group = base + ['neighbor', neighbor, 'peer-group']
-            if config.exists(peer_group):
-                peer_group_name = config.return_value(peer_group)
-                # peer group enables old behavior for neighbor - bail out
-                if config.exists(base + ['peer-group', peer_group_name, 'address-family', 'ipv4-unicast']):
-                    continue
-
-            afi_ipv4 = base + ['neighbor', neighbor, 'address-family', 'ipv4-unicast']
-            if not config.exists(afi_ipv4):
-                config.set(afi_ipv4)
-
-# Migrate IPv6 AFI peer-group
-if config.exists(base + ['neighbor']):
-    for neighbor in config.list_nodes(base + ['neighbor']):
-        tmp_path = base + ['neighbor', neighbor, 'address-family', 'ipv6-unicast', 'peer-group']
-        if config.exists(tmp_path):
-            peer_group = config.return_value(tmp_path)
-            config.set(base + ['neighbor', neighbor, 'peer-group'], value=peer_group)
-            config.delete(tmp_path)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+            tmp_path = base + ['neighbor', neighbor, 'address-family', 'ipv6-unicast', 'peer-group']
+            if config.exists(tmp_path):
+                peer_group = config.return_value(tmp_path)
+                config.set(base + ['neighbor', neighbor, 'peer-group'], value=peer_group)
+                config.delete(tmp_path)

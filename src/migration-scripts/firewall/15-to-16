@@ -18,39 +18,20 @@
     # from: set system conntrack timeout ..
     # to: set firewall global-options timeout ...
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
-
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
 
 firewall_base = ['firewall', 'global-options']
 conntrack_base = ['system', 'conntrack', 'timeout']
-config = ConfigTree(config_file)
 
-if not config.exists(conntrack_base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(conntrack_base):
+        # Nothing to do
+        return
 
-for protocol in ['icmp', 'tcp', 'udp', 'other']:
-    if config.exists(conntrack_base + [protocol]):
-        if not config.exists(firewall_base + ['timeout']):
-            config.set(firewall_base + ['timeout'])
+    for protocol in ['icmp', 'tcp', 'udp', 'other']:
+        if config.exists(conntrack_base + [protocol]):
+            if not config.exists(firewall_base + ['timeout']):
+                config.set(firewall_base + ['timeout'])
 
-        config.copy(conntrack_base + [protocol], firewall_base + ['timeout', protocol])
-        config.delete(conntrack_base + [protocol])
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+            config.copy(conntrack_base + [protocol], firewall_base + ['timeout', protocol])
+            config.delete(conntrack_base + [protocol])

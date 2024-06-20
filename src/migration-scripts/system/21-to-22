@@ -1,55 +1,38 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import exit, argv
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['system', 'sysctl']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-for all_custom in ['all', 'custom']:
-    if config.exists(base + [all_custom]):
-        for key in config.list_nodes(base + [all_custom]):
-            tmp = config.return_value(base + [all_custom, key, 'value'])
-            config.set(base + ['parameter', key, 'value'], value=tmp)
+    for all_custom in ['all', 'custom']:
+        if config.exists(base + [all_custom]):
+            for key in config.list_nodes(base + [all_custom]):
+                tmp = config.return_value(base + [all_custom, key, 'value'])
+                config.set(base + ['parameter', key, 'value'], value=tmp)
+                config.set_tag(base + ['parameter'])
+            config.delete(base + [all_custom])
+
+    for ipv4_param in ['net.ipv4.igmp_max_memberships', 'net.ipv4.ipfrag_time']:
+        if config.exists(base + [ipv4_param]):
+            tmp = config.return_value(base + [ipv4_param])
+            config.set(base + ['parameter', ipv4_param, 'value'], value=tmp)
             config.set_tag(base + ['parameter'])
-        config.delete(base + [all_custom])
-
-for ipv4_param in ['net.ipv4.igmp_max_memberships', 'net.ipv4.ipfrag_time']:
-    if config.exists(base + [ipv4_param]):
-        tmp = config.return_value(base + [ipv4_param])
-        config.set(base + ['parameter', ipv4_param, 'value'], value=tmp)
-        config.set_tag(base + ['parameter'])
-        config.delete(base + [ipv4_param])
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+            config.delete(base + [ipv4_param])
