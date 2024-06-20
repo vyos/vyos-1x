@@ -17,6 +17,7 @@
 config.
 """
 
+import traceback
 from pathlib import Path
 from typing import TypeAlias, Union, Callable
 
@@ -70,7 +71,9 @@ class ComposeConfig:
         try:
             self.apply_func(func)
         except ComposeConfigError as e:
-            raise ComposeConfigError(f'Error in {func_file}: {e}') from e
+            msg = str(e)
+            tb = f'{traceback.format_exc()}'
+            raise ComposeConfigError(f'Error in {func_file}: {msg}\n{tb}') from e
 
     def to_string(self, with_version=False) -> str:
         """Return the rendered config tree.
