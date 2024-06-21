@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -98,3 +98,33 @@ def load_as_module(name: str, path: str):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+def get_uptime_seconds():
+    """ Returns system uptime in seconds """
+    from re import search
+    from vyos.utils.file import read_file
+
+    data = read_file("/proc/uptime")
+    seconds = search(r"([0-9\.]+)\s", data).group(1)
+    res  = int(float(seconds))
+
+    return res
+
+def get_load_averages():
+    """ Returns load averages for 1, 5, and 15 minutes as a dict """
+    from re import search
+    from vyos.utils.file import read_file
+    from vyos.utils.cpu import get_core_count
+
+    data = read_file("/proc/loadavg")
+    matches = search(r"\s*(?P<one>[0-9\.]+)\s+(?P<five>[0-9\.]+)\s+(?P<fifteen>[0-9\.]+)\s*", data)
+
+    core_count = get_core_count()
+
+    res = {}
+    res[1]  = float(matches["one"]) / core_count
+    res[5]  = float(matches["five"]) / core_count
+    res[15] = float(matches["fifteen"]) / core_count
+
+    return res
+

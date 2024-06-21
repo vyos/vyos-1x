@@ -18,39 +18,14 @@ import sys
 
 import vyos.opmode
 
-def _get_uptime_seconds():
-  from re import search
-  from vyos.utils.file import read_file
-
-  data = read_file("/proc/uptime")
-  seconds = search("([0-9\.]+)\s", data).group(1)
-
-  return int(float(seconds))
-
-def _get_load_averages():
-    from re import search
-    from vyos.utils.cpu import get_core_count
-    from vyos.utils.process import cmd
-
-    data = cmd("uptime")
-    matches = search(r"load average:\s*(?P<one>[0-9\.]+)\s*,\s*(?P<five>[0-9\.]+)\s*,\s*(?P<fifteen>[0-9\.]+)\s*", data)
-
-    core_count = get_core_count()
-
-    res = {}
-    res[1]  = float(matches["one"]) / core_count
-    res[5]  = float(matches["five"]) / core_count
-    res[15] = float(matches["fifteen"]) / core_count
-
-    return res
-
 def _get_raw_data():
+    from vyos.utils.system import get_uptime_seconds, get_load_averages
     from vyos.utils.convert import seconds_to_human
 
     res = {}
-    res["uptime_seconds"] = _get_uptime_seconds()
-    res["uptime"] = seconds_to_human(_get_uptime_seconds(), separator=' ')
-    res["load_average"] = _get_load_averages()
+    uptime_seconds = get_uptime_seconds()
+    res["uptime"] = seconds_to_human(uptime_seconds, separator=' ')
+    res["load_average"] = get_load_averages()
 
     return res
 
