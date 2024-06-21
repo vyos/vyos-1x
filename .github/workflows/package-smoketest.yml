@@ -1,0 +1,106 @@
+name: Package ISO Test
+
+on:
+  pull_request:
+    branches:
+      - current
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    env:
+      BUILD_BY: autobuild@vyos.net
+      DEBIAN_MIRROR: http://deb.debian.org/debian/
+    outputs:
+      build_version: ${{ steps.version.outputs.build_version }}
+    steps:
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - name: Clone vyos-1x source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-1x
+          path: packages/vyos-1x
+          fetch-tags: true # required for Debian package version
+      - name: Build vyos-1x package
+        run: |
+          cd packages/vyos-1x; dpkg-buildpackage -uc -us -tc -b
+      - name: Generate ISO version string
+        id: version
+        run: |
+          echo "build_version=1.5-integration-$(date -u +%Y%m%d%H%M)" >> $GITHUB_OUTPUT
+      - name: Build custom ISO image
+        run: |
+          sudo --preserve-env ./build-vyos-image \
+          --architecture amd64 \
+          --build-by $BUILD_BY \
+          --debian-mirror $DEBIAN_MIRROR \
+          --version ${{ steps.version.outputs.build_version }} \
+          --build-type release \
+          generic
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vyos-${{ steps.version.outputs.build_version }}
+          path: build/live-image-amd64.hybrid.iso
+
+  cli-smoketests:
+    needs: build
+    runs-on: ubuntu-24.04
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    steps:
+      # We need the test script from vyos-build repo
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyos-${{ needs.build.outputs.build_version }}
+          path: build
+      - name: VyOS CLI smoketests
+        run: ls -al; ls -al build; sudo make test
+
+  config-load-tests:
+    needs: build
+    runs-on: ubuntu-24.04
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    steps:
+      # We need the test script from vyos-build repo
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyos-${{ needs.build.outputs.build_version }}
+          path: build
+      - name: VyOS config tests
+        run: sudo make testc
+
+  raid1-install-test:
+    needs: build
+    runs-on: ubuntu-24.04
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    steps:
+      # We need the test script from vyos-build repo
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyos-${{ needs.build.outputs.build_version }}
+          path: build
+      - name: VyOS RAID1 install test
+        run: sudo make testraid
