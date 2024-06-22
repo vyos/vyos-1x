@@ -6,7 +6,7 @@
         <properties>
           <help>Restart SSH service</help>
         </properties>
-        <command>if cli-shell-api existsActive service ssh; then sudo systemctl restart ssh.service; else echo "Service SSH not configured"; fi</command>
+        <command>if cli-shell-api existsActive service ssh; then sudo systemctl restart "ssh@*.service"; else echo "Service SSH not configured"; fi</command>
       </node>
     </children>
   </node>
