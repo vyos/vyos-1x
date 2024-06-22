@@ -110,7 +110,7 @@ def check_unsaved_config():
     from vyos.config_mgmt import unsaved_commits
     from vyos.utils.boot import boot_configuration_success
 
-    if unsaved_commits() and boot_configuration_success():
+    if unsaved_commits(allow_missing_config=True) and boot_configuration_success():
         print("Warning: there are unsaved configuration changes!")
         print("Run 'save' command if you do not want to lose those changes after reboot/shutdown.")
     else:
