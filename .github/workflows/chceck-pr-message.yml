@@ -8,6 +8,7 @@ on:
       - crux
       - equuleus
       - sagitta
+      - circinus
     types: [opened, synchronize, edited]
 
 permissions:

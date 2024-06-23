@@ -5,6 +5,7 @@ on:
       - current
       - equuleus
       - sagitta
+      - circinus
   workflow_dispatch:
 
 permissions:
