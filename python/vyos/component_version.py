@@ -191,6 +191,21 @@ def version_info_prune_component(x: VersionInfo, y: VersionInfo) -> VersionInfo:
     """
     x.component = { k: v for k,v in x.component.items() if k in y.component }
 
+def add_system_version(config_str: str = None, out_file: str = None):
+    """
+    Wrap config string with system version and write to out_file.
+    For convenience, calling with no argument will write system version
+    string to stdout, for use in bash scripts.
+    """
+    version_info = version_info_from_system()
+    if config_str is not None:
+        version_info.update_config_body(config_str)
+    version_info.update_footer()
+    if out_file is not None:
+        version_info.write(out_file)
+    else:
+        sys.stdout.write(version_info.write_string())
+
 def from_string(string_line, vintage='vyos'):
     """
     Get component version dictionary from string.
