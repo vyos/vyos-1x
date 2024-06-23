@@ -42,6 +42,10 @@ def split_ssh_public_key(key_string, defaultname=""):
 def get_current_user() -> str:
     import os
     current_user = 'nobody'
+    # During CLI "owner" script execution we use SUDO_USER
     if 'SUDO_USER' in os.environ:
         current_user = os.environ['SUDO_USER']
+    # During op-mode or config-mode interactive CLI we use USER
+    elif 'USER' in os.environ:
+        current_user = os.environ['USER']
     return current_user
