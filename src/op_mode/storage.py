@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,54 +18,38 @@
 import sys
 
 import vyos.opmode
-from vyos.utils.process import cmd
 
-# FIY: As of coreutils from Debian Buster and Bullseye,
-# the outpt looks like this:
-#
-# $ df -h -t ext4 --output=source,size,used,avail,pcent
-# Filesystem      Size  Used Avail Use%
-# /dev/sda1        16G  7.6G  7.3G  51%
-#
-# Those field names are automatically normalized by vyos.opmode.run,
-# so we don't touch them here,
-# and only normalize values.
+from jinja2 import Template
 
-def _get_system_storage(only_persistent=False):
-    if not only_persistent:
-        cmd_str = 'df -h -x squashf'
-    else:
-        cmd_str = 'df -h -t ext4 --output=source,size,used,avail,pcent'
-
-    res = cmd(cmd_str)
-
-    return res
-
-def _get_raw_data():
-    from re import sub as re_sub
-    from vyos.utils.convert import human_to_bytes
-
-    out =  _get_system_storage(only_persistent=True)
-    lines = out.splitlines()
-    lists = [l.split() for l in lines]
-    res = {lists[0][i]: lists[1][i] for i in range(len(lists[0]))}
-
-    res["Size"] = human_to_bytes(res["Size"])
-    res["Used"] = human_to_bytes(res["Used"])
-    res["Avail"] = human_to_bytes(res["Avail"])
-    res["Use%"] = re_sub(r'%', '', res["Use%"])
-
-    return res
+output_tmpl = """
+Filesystem: {{filesystem}}
+Size:       {{size}}
+Used:       {{used}} ({{use_percentage}}%)
+Available:  {{avail}} ({{avail_percentage}}%)
+"""
 
 def _get_formatted_output():
     return _get_system_storage()
 
 def show(raw: bool):
+    from vyos.utils.disk import get_persistent_storage_stats
+
     if raw:
-        return _get_raw_data()
+        res = get_persistent_storage_stats(human_units=False)
+        if res is None:
+            raise vyos.opmode.DataUnavailable("Storage statistics are not available")
+        else:
+            return res
+    else:
+        data = get_persistent_storage_stats(human_units=True)
+        if data is None:
+            return "Storage statistics are not available"
+        else:
+            data["avail_percentage"] = 100 - int(data["use_percentage"])
+            tmpl = Template(output_tmpl)
+            return tmpl.render(data).strip()
 
-    return _get_formatted_output()
-
+    return output
 
 if __name__ == '__main__':
     try:
