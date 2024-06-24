@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="kernel">
+        <properties>
+          <help>Show kernel information</help>
+        </properties>
+        <children>
+          <node name="modules">
+            <properties>
+              <help>Show kernel modules</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/kernel_modules.py show</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
