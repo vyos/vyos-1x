@@ -179,8 +179,13 @@ def initialization(socket):
     pid_string = socket.recv().decode("utf-8", "ignore")
     resp = "pid"
     socket.send(resp.encode())
+    sudo_user_string = socket.recv().decode("utf-8", "ignore")
+    resp = "sudo_user"
+    socket.send(resp.encode())
 
     logger.debug(f"config session pid is {pid_string}")
+    logger.debug(f"config session sudo_user is {sudo_user_string}")
+
     try:
         session_out = os.readlink(f"/proc/{pid_string}/fd/1")
         session_mode = 'w'
@@ -191,6 +196,8 @@ def initialization(socket):
     if not session_out or not boot_configuration_complete():
         session_out = script_stdout_log
         session_mode = 'a'
+
+    os.environ['SUDO_USER'] = sudo_user_string
 
     try:
         configsource = ConfigSourceString(running_config_text=active_string,
@@ -265,9 +272,6 @@ if __name__ == '__main__':
 
     cfg_group = grp.getgrnam(CFG_GROUP)
     os.setgid(cfg_group.gr_gid)
-
-    os.environ['SUDO_USER'] = 'vyos'
-    os.environ['SUDO_GID'] = str(cfg_group.gr_gid)
 
     def sig_handler(signum, frame):
         shutdown()

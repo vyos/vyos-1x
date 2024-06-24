@@ -24,6 +24,7 @@ from subprocess import Popen, PIPE
 from pwd import getpwall
 
 from vyos.configsession import ConfigSessionError
+from vyos.utils.auth import get_current_user
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.template import inc_ip
@@ -333,6 +334,15 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
             self.assertIn(f'secret={tacacs_secret}', nss_tacacs_conf)
             self.assertIn(f'server={server}', nss_tacacs_conf)
+
+    def test_delete_current_user(self):
+        current_user = get_current_user()
+
+        # We are not allowed to delete the current user
+        self.cli_delete(base_path + ['user', current_user])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -178,6 +178,13 @@ int initialization(void* Requester)
     strsep(&pid_val, "_");
     debug_print("config session pid: %s\n", pid_val);
 
+    char *sudo_user = getenv("SUDO_USER");
+    if (!sudo_user) {
+        char nobody[] = "nobody";
+        sudo_user = nobody;
+    }
+    debug_print("sudo_user is %s\n", sudo_user);
+
     debug_print("Sending init announcement\n");
     char *init_announce = mkjson(MKJSON_OBJ, 1,
                                  MKJSON_STRING, "type", "init");
@@ -240,6 +247,10 @@ int initialization(void* Requester)
     zmq_recv(Requester, buffer, 16, 0);
     debug_print("Received pid receipt\n");
 
+    debug_print("Sending config session sudo_user\n");
+    zmq_send(Requester, sudo_user, strlen(sudo_user), 0);
+    zmq_recv(Requester, buffer, 16, 0);
+    debug_print("Received sudo_user receipt\n");
 
     return 0;
 }

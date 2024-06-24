@@ -74,6 +74,11 @@ class VyOSUnitTestSHIM:
                 print('del ' + ' '.join(config))
             self._session.delete(config)
 
+        def cli_discard(self):
+            if self.debug:
+                print('DISCARD')
+            self._session.discard()
+
         def cli_commit(self):
             self._session.commit()
             # during a commit there is a process opening commit_lock, and run() returns 0
