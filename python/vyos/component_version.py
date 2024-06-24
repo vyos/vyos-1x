@@ -117,7 +117,7 @@ class VersionInfo:
     def write(self, config_file):
         string = self.write_string()
         try:
-            write_file(config_file, string, mode=0o660)
+            write_file(config_file, string)
         except Exception as e:
             raise ValueError(e) from e
 
