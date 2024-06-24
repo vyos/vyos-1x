@@ -68,7 +68,16 @@ jobs:
           name: vyos-${{ needs.build.outputs.build_version }}
           path: build
       - name: VyOS CLI smoketests
-        run: ls -al; ls -al build; sudo make test
+        run: sudo make test
+      - name: Add PR comment
+        if: always()
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-success: '👍 VyOS CLI smoketests finished successfully!'
+          message-failure: '❌ VyOS CLI smoketests failed!'
+          message-cancelled: '❌ VyOS CLI smoketests cancelled!'
+          allow-repeats: false
+          refresh-message-position: true
 
   config-load-tests:
     needs: build
@@ -89,6 +98,15 @@ jobs:
           path: build
       - name: VyOS config tests
         run: sudo make testc
+      - name: Add PR comment
+        if: always()
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-success: '👍 VyOS config tests finished successfully!'
+          message-failure: '❌ VyOS config tests failed!'
+          message-cancelled: '❌ VyOS config tests cancelled!'
+          allow-repeats: false
+          refresh-message-position: true
 
   raid1-install-test:
     needs: build
@@ -109,3 +127,12 @@ jobs:
           path: build
       - name: VyOS RAID1 install test
         run: sudo make testraid
+      - name: Add PR comment
+        if: always()
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-success: '👍 RAID1 Smoketests finished successfully!'
+          message-failure: '❌ RAID1 Smoketests failed!'
+          message-cancelled: '❌ RAID1 action cancelled!'
+          allow-repeats: false
+          refresh-message-position: true
