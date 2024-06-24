@@ -1,0 +1,15 @@
+[Unit]
+Description=SSL tunneling service
+Documentation=http://man.he.net/man8/stunnel4
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/stunnel /run/stunnel/stunnel.conf
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+PIDFile=/run/stunnel/stunnel.pid
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

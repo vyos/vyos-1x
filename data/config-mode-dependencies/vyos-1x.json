@@ -32,7 +32,8 @@
         "reverse_proxy": ["load-balancing_reverse-proxy"],
         "rpki": ["protocols_rpki"],
         "sstp": ["vpn_sstp"],
-        "sstpc": ["interfaces_sstpc"]
+        "sstpc": ["interfaces_sstpc"],
+        "stunnel": ["service_stunnel"]
     },
     "vpn_ipsec": {
         "nhrp": ["protocols_nhrp"]
