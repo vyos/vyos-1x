@@ -1,9 +1,10 @@
-name: Package ISO Test
+name: VyOS ISO integration Test
 
 on:
   pull_request:
     branches:
       - current
+      - circinus
 
 jobs:
   build:
