@@ -232,7 +232,7 @@ def get_config(config=None):
 
                         path = search['path']
                         path_str = ' '.join(path + found_path)
-                        print(f'PKI: Updating config: {path_str} {item_name}')
+                        #print(f'PKI: Updating config: {path_str} {item_name}')
 
                         if path[0] == 'interfaces':
                             ifname = found_path[0]
