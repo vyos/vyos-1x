@@ -77,7 +77,7 @@ def change_rule_numbers(config_dict, start, step):
             change_rule_numbers(config_dict[key], start, step)
 
 
-def convert_rule_keys_to_int(config_dict):
+def convert_rule_keys_to_int(config_dict, prev_key=None):
     """
     Converts rule keys in the configuration dictionary to integers.
 
@@ -91,11 +91,11 @@ def convert_rule_keys_to_int(config_dict):
         new_dict = {}
         for key, value in config_dict.items():
             # Convert key to integer if possible
-            new_key = int(key) if key.isdigit() else key
+            new_key = int(key) if key.isdigit() and prev_key == 'rule' else key
 
             # Recur for nested dictionaries
             if isinstance(value, dict):
-                new_value = convert_rule_keys_to_int(value)
+                new_value = convert_rule_keys_to_int(value, key)
             else:
                 new_value = value
 
@@ -111,27 +111,24 @@ def convert_rule_keys_to_int(config_dict):
 if __name__ == "__main__":
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Convert dictionary to set commands with rule number modifications.')
-    parser.add_argument('--start', type=int, default=100, help='Start rule number')
+    parser.add_argument('--service', type=str, help='Name of service')
+    parser.add_argument('--start', type=int, default=100, help='Start rule number (default: 100)')
     parser.add_argument('--step', type=int, default=10, help='Step for rule numbers (default: 10)')
     args = parser.parse_args()
 
     config = ConfigTreeQuery()
-    if not config.exists('firewall'):
-        print('Firewall is not configured')
+    if not config.exists(args.service):
+        print(f'{args.service} is not configured')
         exit(1)
 
-    config_dict = config.get_config_dict('firewall')
+    config_dict = config.get_config_dict(args.service)
 
-    # Remove global-options, group and flowtable as they don't need sequencing
-    if 'global-options' in config_dict['firewall']:
-        del config_dict['firewall']['global-options']
+    if 'firewall' in config_dict:
+        # Remove global-options, group and flowtable as they don't need sequencing
+        for item in ['global-options', 'group', 'flowtable']:
+            if item in config_dict['firewall']:
+                del config_dict['firewall'][item]
 
-    if 'group' in config_dict['firewall']:
-        del config_dict['firewall']['group']
-
-    if 'flowtable' in config_dict['firewall']:
-        del config_dict['firewall']['flowtable']
-    
     # Convert rule keys to integers, rule "10" -> rule 10
     # This is necessary for sorting the rules
     config_dict = convert_rule_keys_to_int(config_dict)
