@@ -67,6 +67,11 @@ Ciphers {{ ciphers | join(',') }}
 HostKeyAlgorithms {{ hostkey_algorithm | join(',') }}
 {% endif %}
 
+{% if pubkey_accepted_algorithm is vyos_defined %}
+# Specifies the available PubKey signature algorithms
+PubkeyAcceptedAlgorithms {{ pubkey_accepted_algorithm | join(',') }}
+{% endif %}
+
 {% if mac is vyos_defined %}
 # Specifies the available MAC (message authentication code) algorithms
 MACs {{ mac | join(',') }}

@@ -304,6 +304,22 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         for line in ssh_lines:
             self.assertIn(line, tmp_sshd_conf)
 
+    def test_ssh_pubkey_accepted_algorithm(self):
+        algs = ['ssh-ed25519', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384',
+                'ecdsa-sha2-nistp521', 'ssh-dss', 'ssh-rsa', 'rsa-sha2-256',
+                'rsa-sha2-512'
+                ]
+
+        expected = 'PubkeyAcceptedAlgorithms '
+        for alg in algs:
+            self.cli_set(base_path + ['pubkey-accepted-algorithm', alg])
+            expected = f'{expected}{alg},'
+        expected = expected[:-1]
+
+        self.cli_commit()
+        tmp_sshd_conf = read_file(SSHD_CONF)
+        self.assertIn(expected, tmp_sshd_conf)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
