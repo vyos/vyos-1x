@@ -1,13 +1,15 @@
-name: Package ISO Test
+name: VyOS ISO integration Test
 
 on:
   pull_request:
     branches:
       - current
+      - circinus
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     container:
       image: vyos/vyos-build:current
       options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
@@ -51,6 +53,7 @@ jobs:
   cli-smoketests:
     needs: build
     runs-on: ubuntu-24.04
+    timeout-minutes: 180
     container:
       image: vyos/vyos-build:current
       options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
@@ -65,11 +68,21 @@ jobs:
           name: vyos-${{ needs.build.outputs.build_version }}
           path: build
       - name: VyOS CLI smoketests
-        run: ls -al; ls -al build; sudo make test
+        run: sudo make test
+      - name: Add PR comment
+        if: always()
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-success: '👍 VyOS CLI smoketests finished successfully!'
+          message-failure: '❌ VyOS CLI smoketests failed!'
+          message-cancelled: '❌ VyOS CLI smoketests cancelled!'
+          allow-repeats: false
+          refresh-message-position: true
 
   config-load-tests:
     needs: build
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     container:
       image: vyos/vyos-build:current
       options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
@@ -85,10 +98,20 @@ jobs:
           path: build
       - name: VyOS config tests
         run: sudo make testc
+      - name: Add PR comment
+        if: always()
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-success: '👍 VyOS config tests finished successfully!'
+          message-failure: '❌ VyOS config tests failed!'
+          message-cancelled: '❌ VyOS config tests cancelled!'
+          allow-repeats: false
+          refresh-message-position: true
 
   raid1-install-test:
     needs: build
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     container:
       image: vyos/vyos-build:current
       options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
@@ -104,3 +127,12 @@ jobs:
           path: build
       - name: VyOS RAID1 install test
         run: sudo make testraid
+      - name: Add PR comment
+        if: always()
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-success: '👍 RAID1 Smoketests finished successfully!'
+          message-failure: '❌ RAID1 Smoketests failed!'
+          message-cancelled: '❌ RAID1 action cancelled!'
+          allow-repeats: false
+          refresh-message-position: true
