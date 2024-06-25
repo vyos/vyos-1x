@@ -41,6 +41,21 @@
   bucket = "{{ influxdb.bucket }}"
 ### End InfluxDB2 ###
 {% endif %}
+{% if loki is vyos_defined %}
+### Loki ###
+[[outputs.loki]]
+  ## The domain of Loki
+  domain = "{{ loki.url }}:{{ loki.port }}"
+{%     if loki.authentication.username is vyos_defined and loki.authentication.password is vyos_defined  %}
+  ## Basic Authentication
+  username = "{{ loki.authentication.username }}"
+  password = "{{ loki.authentication.password }}"
+{%     endif %}
+{%     if loki.metric_name_label is vyos_defined %}
+metric_name_label = "{{ loki.metric_name_label }}"
+{%     endif %}
+### End Loki ###
+{% endif %}
 {% if prometheus_client is vyos_defined %}
 ### Prometheus ###
 [[outputs.prometheus_client]]
