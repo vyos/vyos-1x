@@ -56,7 +56,7 @@ REGEX_RELEASE_VERSION_VYATTA = r'/\* Release version:\s+(\S*)\s*\*/'
 CONFIG_FILE_VERSION = """\
 // Warning: Do not remove the following line.
 // vyos-config-version: "{}"
-// Release version: {}\n
+// Release version: {}
 """
 
 warn_filter_vyos = re.compile(REGEX_WARN_VYOS)
