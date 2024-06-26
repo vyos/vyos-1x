@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-#
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -62,4 +60,3 @@ class TestVyOSOpMode(TestCase):
 
         data = [1, False, "foo"]
         self.assertEqual(_normalize_field_names(data), [1, False, "foo"])
-
