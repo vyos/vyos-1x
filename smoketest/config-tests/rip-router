@@ -1,0 +1,83 @@
+set interfaces dummy dum0 address '192.0.2.0/32'
+set interfaces ethernet eth0 address '172.18.202.10/24'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth1 speed 'auto'
+set interfaces ethernet eth1 vif 20
+set interfaces ethernet eth1 vif-s 200 vif-c 2000
+set interfaces ethernet eth1 vif-s 200 vif-c 3000
+set policy access-list6 198 rule 10 action 'permit'
+set policy access-list6 198 rule 10 source any
+set policy access-list6 199 rule 20 action 'deny'
+set policy access-list6 199 rule 20 source any
+set policy prefix-list6 bar-prefix rule 200 action 'deny'
+set policy prefix-list6 bar-prefix rule 200 prefix '2001:db8::/32'
+set policy prefix-list6 foo-prefix rule 100 action 'permit'
+set policy prefix-list6 foo-prefix rule 100 prefix '2001:db8::/32'
+set policy route-map FooBar123 rule 10 action 'permit'
+set protocols rip default-distance '20'
+set protocols rip default-information originate
+set protocols rip interface eth0 authentication md5 1 password 'VyOSsecure'
+set protocols rip interface eth0 split-horizon poison-reverse
+set protocols rip interface eth1.20 authentication plaintext-password 'VyOSsecure'
+set protocols rip interface eth1.20 split-horizon poison-reverse
+set protocols rip interface eth1.200 authentication md5 1 password 'VyOSsecure'
+set protocols rip interface eth1.200 split-horizon disable
+set protocols rip interface eth1.200.2000 authentication md5 1 password 'VyOSsecure'
+set protocols rip interface eth1.200.3000 split-horizon disable
+set protocols rip network '192.168.0.0/24'
+set protocols rip redistribute connected
+set protocols ripng aggregate-address '2001:db8:1000::/48'
+set protocols ripng default-information originate
+set protocols ripng default-metric '8'
+set protocols ripng distribute-list access-list in '198'
+set protocols ripng distribute-list access-list out '199'
+set protocols ripng distribute-list interface eth0 access-list in '198'
+set protocols ripng distribute-list interface eth0 access-list out '199'
+set protocols ripng distribute-list interface eth0 prefix-list in 'foo-prefix'
+set protocols ripng distribute-list interface eth0 prefix-list out 'bar-prefix'
+set protocols ripng distribute-list interface eth1 access-list in '198'
+set protocols ripng distribute-list interface eth1 access-list out '199'
+set protocols ripng distribute-list interface eth1 prefix-list in 'foo-prefix'
+set protocols ripng distribute-list interface eth1 prefix-list out 'bar-prefix'
+set protocols ripng distribute-list interface eth2 access-list in '198'
+set protocols ripng distribute-list interface eth2 access-list out '199'
+set protocols ripng distribute-list interface eth2 prefix-list in 'foo-prefix'
+set protocols ripng distribute-list interface eth2 prefix-list out 'bar-prefix'
+set protocols ripng distribute-list prefix-list in 'foo-prefix'
+set protocols ripng distribute-list prefix-list out 'bar-prefix'
+set protocols ripng interface eth0 split-horizon poison-reverse
+set protocols ripng interface eth1.20 split-horizon disable
+set protocols ripng interface eth1.200 split-horizon poison-reverse
+set protocols ripng interface eth1.200.3000 split-horizon poison-reverse
+set protocols ripng network '2001:db8:1000::/64'
+set protocols ripng network '2001:db8:1001::/64'
+set protocols ripng network '2001:db8:2000::/64'
+set protocols ripng network '2001:db8:2001::/64'
+set protocols ripng passive-interface 'default'
+set protocols ripng redistribute connected metric '8'
+set protocols ripng redistribute connected route-map 'FooBar123'
+set protocols ripng redistribute static metric '8'
+set protocols ripng redistribute static route-map 'FooBar123'
+set protocols ripng route '2001:db8:1000::/64'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server 0.pool.ntp.org
+set service ntp server 1.pool.ntp.org
+set service ntp server 2.pool.ntp.org
+set service ssh port '22'
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'

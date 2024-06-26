@@ -1,0 +1,123 @@
+set interfaces bridge br2000 address '10.1.1.1/24'
+set interfaces bridge br2000 description 'customer blue'
+set interfaces bridge br2000 member interface eth4
+set interfaces bridge br2000 member interface vxlan2000
+set interfaces bridge br2000 vrf 'blue'
+set interfaces bridge br3000 address '10.2.1.1/24'
+set interfaces bridge br3000 description 'customer red'
+set interfaces bridge br3000 member interface eth5
+set interfaces bridge br3000 member interface vxlan3000
+set interfaces bridge br3000 vrf 'red'
+set interfaces bridge br4000 address '10.3.1.1/24'
+set interfaces bridge br4000 description 'customer green'
+set interfaces bridge br4000 member interface eth6
+set interfaces bridge br4000 member interface vxlan4000
+set interfaces bridge br4000 vrf 'green'
+set interfaces dummy dum0 address '172.29.255.1/32'
+set interfaces ethernet eth0 address '192.0.2.59/27'
+set interfaces ethernet eth0 address '2001:db8:ffff::59/64'
+set interfaces ethernet eth0 description 'Out-of-Band Managament Port'
+set interfaces ethernet eth0 offload gro
+set interfaces ethernet eth0 vrf 'mgmt'
+set interfaces ethernet eth1 address '172.29.0.2/31'
+set interfaces ethernet eth1 description 'link to pe2'
+set interfaces ethernet eth1 mtu '1600'
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth2 disable
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth3 address '172.29.0.6/31'
+set interfaces ethernet eth3 description 'link to pe3'
+set interfaces ethernet eth3 mtu '1600'
+set interfaces ethernet eth3 offload gro
+set interfaces ethernet eth4 description 'customer blue'
+set interfaces ethernet eth4 offload gro
+set interfaces ethernet eth5 description 'customer red'
+set interfaces ethernet eth5 offload gro
+set interfaces ethernet eth6 description 'customer green'
+set interfaces ethernet eth6 offload gro
+set interfaces loopback lo
+set interfaces vxlan vxlan2000 mtu '1500'
+set interfaces vxlan vxlan2000 parameters nolearning
+set interfaces vxlan vxlan2000 port '4789'
+set interfaces vxlan vxlan2000 source-address '172.29.255.1'
+set interfaces vxlan vxlan2000 vni '2000'
+set interfaces vxlan vxlan3000 mtu '1500'
+set interfaces vxlan vxlan3000 parameters nolearning
+set interfaces vxlan vxlan3000 port '4789'
+set interfaces vxlan vxlan3000 source-address '172.29.255.1'
+set interfaces vxlan vxlan3000 vni '3000'
+set interfaces vxlan vxlan4000 mtu '1500'
+set interfaces vxlan vxlan4000 parameters nolearning
+set interfaces vxlan vxlan4000 port '4789'
+set interfaces vxlan vxlan4000 source-address '172.29.255.1'
+set interfaces vxlan vxlan4000 vni '4000'
+set protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set protocols bgp address-family l2vpn-evpn advertise-all-vni
+set protocols bgp neighbor 172.29.255.2 peer-group 'ibgp'
+set protocols bgp neighbor 172.29.255.3 peer-group 'ibgp'
+set protocols bgp parameters log-neighbor-changes
+set protocols bgp parameters router-id '172.29.255.1'
+set protocols bgp peer-group ibgp address-family l2vpn-evpn
+set protocols bgp peer-group ibgp remote-as '100'
+set protocols bgp peer-group ibgp update-source 'dum0'
+set protocols bgp system-as '100'
+set protocols ospf area 0 network '172.29.0.2/31'
+set protocols ospf area 0 network '172.29.0.6/31'
+set protocols ospf interface eth1 network 'point-to-point'
+set protocols ospf interface eth1 passive disable
+set protocols ospf interface eth3 network 'point-to-point'
+set protocols ospf interface eth3 passive disable
+set protocols ospf log-adjacency-changes detail
+set protocols ospf parameters abr-type 'cisco'
+set protocols ospf parameters router-id '172.29.255.1'
+set protocols ospf passive-interface 'default'
+set protocols ospf redistribute connected
+set service lldp interface all
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp listen-address '192.0.2.59'
+set service ntp listen-address '2001:db8:ffff::59'
+set service ntp server 192.0.2.251
+set service ntp server 192.0.2.252
+set service ntp server 2001:db8::251
+set service ntp server 2001:db8::252
+set service ntp vrf 'mgmt'
+set service ssh disable-host-validation
+set service ssh port '22'
+set service ssh vrf 'mgmt'
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system domain-name 'vyos.net'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system name-server '192.0.2.251'
+set system name-server '192.0.2.252'
+set system name-server '2001:db8::1'
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set vrf name blue protocols bgp address-family ipv4-unicast redistribute connected
+set vrf name blue protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set vrf name blue protocols bgp system-as '100'
+set vrf name blue table '2000'
+set vrf name blue vni '2000'
+set vrf name green protocols bgp address-family ipv4-unicast redistribute connected
+set vrf name green protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set vrf name green protocols bgp system-as '100'
+set vrf name green table '4000'
+set vrf name green vni '4000'
+set vrf name mgmt protocols static route 0.0.0.0/0 next-hop 192.0.2.62
+set vrf name mgmt protocols static route6 ::/0 next-hop 2001:db8:ffff::1
+set vrf name mgmt table '1000'
+set vrf name red protocols bgp address-family ipv4-unicast redistribute connected
+set vrf name red protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set vrf name red protocols bgp system-as '100'
+set vrf name red table '3000'
+set vrf name red vni '3000'

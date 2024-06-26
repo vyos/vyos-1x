@@ -1,0 +1,44 @@
+set interfaces dummy dum0 address '203.0.113.1/24'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 offload sg
+set interfaces ethernet eth0 offload tso
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth1 address '192.0.2.1/24'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth1 speed 'auto'
+set interfaces ethernet eth2 duplex 'auto'
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth2 speed 'auto'
+set interfaces ethernet eth3 duplex 'auto'
+set interfaces ethernet eth3 offload sg
+set interfaces ethernet eth3 offload tso
+set interfaces ethernet eth3 speed 'auto'
+set policy prefix-list EXPORT-ISIS rule 10 action 'permit'
+set policy prefix-list EXPORT-ISIS rule 10 prefix '203.0.113.0/24'
+set policy route-map EXPORT-ISIS rule 10 action 'permit'
+set policy route-map EXPORT-ISIS rule 10 match ip address prefix-list 'EXPORT-ISIS'
+set protocols isis interface eth1 bfd
+set protocols isis net '49.0001.1921.6800.1002.00'
+set protocols isis redistribute ipv4 connected level-2 route-map 'EXPORT-ISIS'
+set system config-management commit-revisions '200'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system domain-name 'vyos.io'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set system time-zone 'Europe/Berlin'

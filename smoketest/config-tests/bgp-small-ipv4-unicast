@@ -1,0 +1,32 @@
+set interfaces ethernet eth0 address '192.0.2.1/24'
+set interfaces ethernet eth0 address '2001:db8::1/64'
+set interfaces loopback lo
+set protocols bgp address-family ipv4-unicast network 10.0.150.0/23
+set protocols bgp address-family ipv6-unicast network 2001:db8:200::/40
+set protocols bgp neighbor 192.0.2.10 address-family ipv4-unicast
+set protocols bgp neighbor 192.0.2.10 remote-as '65010'
+set protocols bgp neighbor 192.0.2.11 address-family ipv4-unicast
+set protocols bgp neighbor 192.0.2.11 remote-as '65011'
+set protocols bgp neighbor 2001:db8::10 address-family ipv4-unicast
+set protocols bgp neighbor 2001:db8::10 remote-as '65010'
+set protocols bgp neighbor 2001:db8::11 address-family ipv4-unicast
+set protocols bgp neighbor 2001:db8::11 remote-as '65011'
+set protocols bgp parameters log-neighbor-changes
+set protocols bgp system-as '65001'
+set service ssh disable-host-validation
+set service ssh port '22'
+set system config-management commit-revisions '200'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system domain-name 'vyos.net'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'notice'
+set system syslog global facility local7 level 'debug'

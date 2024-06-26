@@ -1,0 +1,186 @@
+set interfaces bridge br50 address '192.168.0.1/24'
+set interfaces bridge br50 member interface eth0.50
+set interfaces bridge br50 member interface eth2
+set interfaces bridge br50 member interface eth3
+set interfaces dummy dum0 address '100.64.51.252/32'
+set interfaces dummy dum0 address '2001:db8:200:ffff::1/128'
+set interfaces dummy dum0 vrf 'vyos-test-01'
+set interfaces ethernet eth0 offload gro
+set interfaces ethernet eth0 offload rps
+set interfaces ethernet eth0 ring-buffer rx '256'
+set interfaces ethernet eth0 ring-buffer tx '256'
+set interfaces ethernet eth0 vif 5 address '2001:db8:200:f0::114/64'
+set interfaces ethernet eth0 vif 5 address '100.64.50.121/28'
+set interfaces ethernet eth0 vif 5 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 10 address '2001:db8:200:10::ffff/64'
+set interfaces ethernet eth0 vif 10 address '2001:db8:200::ffff/64'
+set interfaces ethernet eth0 vif 10 address '100.64.50.62/26'
+set interfaces ethernet eth0 vif 10 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 15 address '100.64.50.78/28'
+set interfaces ethernet eth0 vif 15 address '2001:db8:200:15::ffff/64'
+set interfaces ethernet eth0 vif 15 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 50 description 'Member of bridge br50'
+set interfaces ethernet eth0 vif 110 address '100.64.51.190/27'
+set interfaces ethernet eth0 vif 110 address '100.64.51.158/28'
+set interfaces ethernet eth0 vif 110 address '2001:db8:200:101::ffff/64'
+set interfaces ethernet eth0 vif 110 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 410 address '100.64.51.206/28'
+set interfaces ethernet eth0 vif 410 address '2001:db8:200:104::ffff/64'
+set interfaces ethernet eth0 vif 410 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 500 address '100.64.51.238/28'
+set interfaces ethernet eth0 vif 500 address '2001:db8:200:50::ffff/64'
+set interfaces ethernet eth0 vif 500 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 520 address '100.64.50.190/28'
+set interfaces ethernet eth0 vif 520 address '2001:db8:200:520::ffff/64'
+set interfaces ethernet eth0 vif 520 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 666 address '2001:db8:200:ff::101:1/112'
+set interfaces ethernet eth0 vif 666 address '100.64.51.223/31'
+set interfaces ethernet eth0 vif 666 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 800 address '2001:db8:200:ff::104:1/112'
+set interfaces ethernet eth0 vif 800 address '100.64.51.212/31'
+set interfaces ethernet eth0 vif 800 vrf 'vyos-test-01'
+set interfaces ethernet eth0 vif 810 address '100.64.51.30/27'
+set interfaces ethernet eth0 vif 810 address '2001:db8:200:102::ffff/64'
+set interfaces ethernet eth0 vif 810 vrf 'vyos-test-01'
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload rps
+set interfaces ethernet eth1 ring-buffer rx '256'
+set interfaces ethernet eth1 ring-buffer tx '256'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth3 offload gro
+set interfaces loopback lo
+set interfaces pppoe pppoe7 authentication password 'vyos'
+set interfaces pppoe pppoe7 authentication username 'vyos'
+set interfaces pppoe pppoe7 dhcpv6-options pd 0 interface br50 address '1'
+set interfaces pppoe pppoe7 dhcpv6-options pd 0 length '56'
+set interfaces pppoe pppoe7 ip adjust-mss '1452'
+set interfaces pppoe pppoe7 ipv6 address autoconf
+set interfaces pppoe pppoe7 ipv6 adjust-mss '1432'
+set interfaces pppoe pppoe7 mtu '1492'
+set interfaces pppoe pppoe7 no-peer-dns
+set interfaces pppoe pppoe7 source-interface 'eth1'
+set interfaces virtual-ethernet veth0 address '100.64.51.220/31'
+set interfaces virtual-ethernet veth0 address '2001:db8:200:ff::105:1/112'
+set interfaces virtual-ethernet veth0 description 'Core: connect vyos-test-01 and default VRF'
+set interfaces virtual-ethernet veth0 peer-name 'veth1'
+set interfaces virtual-ethernet veth1 address '100.64.51.221/31'
+set interfaces virtual-ethernet veth1 address '2001:db8:200:ff::105:2/112'
+set interfaces virtual-ethernet veth1 description 'Core: connect vyos-test-01 and default VRF'
+set interfaces virtual-ethernet veth1 peer-name 'veth0'
+set interfaces virtual-ethernet veth1 vrf 'vyos-test-01'
+set interfaces wireguard wg500 address '100.64.51.209/31'
+set interfaces wireguard wg500 mtu '1500'
+set interfaces wireguard wg500 peer A address '192.0.2.1'
+set interfaces wireguard wg500 peer A allowed-ips '0.0.0.0/0'
+set interfaces wireguard wg500 peer A port '5500'
+set interfaces wireguard wg500 peer A public-key 'KGSXF4QckzGe7f7CT+r6VZ5brOD/pVYk8yvrxOQ+X0Y='
+set interfaces wireguard wg500 port '5500'
+set interfaces wireguard wg500 private-key 'iLJh6Me6AdPJtNv3dgGhUbtyFxExxmNU4v0Fs6YE2Xc='
+set interfaces wireguard wg500 vrf 'vyos-test-01'
+set interfaces wireguard wg501 address '2001:db8:200:ff::102:2/112'
+set interfaces wireguard wg501 mtu '1500'
+set interfaces wireguard wg501 peer A address '2001:db8:300::1'
+set interfaces wireguard wg501 peer A allowed-ips '::/0'
+set interfaces wireguard wg501 peer A port '5501'
+set interfaces wireguard wg501 peer A public-key 'OF+1OJ+VfQ0Yw1mgVtQ2ion4CnAdy8Bvx7yEiO4+Pn8='
+set interfaces wireguard wg501 port '5501'
+set interfaces wireguard wg501 private-key '0MP5X0PW58O4q2LDpuIXgZ0ySyAoWH8/kdpvQccCbUU='
+set interfaces wireguard wg501 vrf 'vyos-test-01'
+set interfaces wireguard wg666 address '172.29.0.0/31'
+set interfaces wireguard wg666 mtu '1500'
+set interfaces wireguard wg666 peer B allowed-ips '0.0.0.0/0'
+set interfaces wireguard wg666 peer B public-key '2HT+RfwcqJMYNYzdmtmpem8Ht0dL37o31APHVwmh024='
+set interfaces wireguard wg666 port '50666'
+set interfaces wireguard wg666 private-key 'zvPnp2MLAoX7SotuHLFLDyy4sdlD7ttbD1xNEqA3mkU='
+set nat source rule 100 outbound-interface name 'pppoe7'
+set nat source rule 100 source address '192.168.0.0/24'
+set nat source rule 100 translation address 'masquerade'
+set policy prefix-list AS100-origin-v4 rule 10 action 'permit'
+set policy prefix-list AS100-origin-v4 rule 10 prefix '100.64.0.0/12'
+set policy prefix-list AS100-origin-v4 rule 100 action 'permit'
+set policy prefix-list AS100-origin-v4 rule 100 prefix '0.0.0.0/0'
+set policy prefix-list AS200-origin-v4 rule 10 action 'permit'
+set policy prefix-list AS200-origin-v4 rule 10 prefix '10.0.0.0/8'
+set policy prefix-list AS200-origin-v4 rule 20 action 'permit'
+set policy prefix-list AS200-origin-v4 rule 20 prefix '172.16.0.0/12'
+set policy prefix-list6 AS100-origin-v6 rule 10 action 'permit'
+set policy prefix-list6 AS100-origin-v6 rule 10 prefix '2001:db8:200::/40'
+set policy prefix-list6 AS200-origin-v6 rule 10 action 'permit'
+set policy prefix-list6 AS200-origin-v6 rule 10 prefix '2001:db8:100::/40'
+set protocols static route 100.64.50.0/23 next-hop 100.64.51.221
+set protocols static route 192.0.2.255/32 interface pppoe7
+set protocols static route6 2001:db8:ffff:ffff:ffff:ffff:ffff:ffff/128 interface pppoe7
+set qos interface pppoe7 egress 'isp-out'
+set qos policy shaper isp-out bandwidth '38mbit'
+set qos policy shaper isp-out default bandwidth '100%'
+set qos policy shaper isp-out default burst '15k'
+set qos policy shaper isp-out default queue-limit '1000'
+set qos policy shaper isp-out default queue-type 'fq-codel'
+set service router-advert interface br50 prefix ::/64 preferred-lifetime '2700'
+set service router-advert interface br50 prefix ::/64 valid-lifetime '5400'
+set service router-advert interface eth0.500 default-preference 'high'
+set service router-advert interface eth0.500 name-server '2001:db8:200::1'
+set service router-advert interface eth0.500 name-server '2001:db8:200::2'
+set service router-advert interface eth0.500 prefix 2001:db8:200:50::/64 valid-lifetime 'infinity'
+set service router-advert interface eth0.520 default-preference 'high'
+set service router-advert interface eth0.520 name-server '2001:db8:200::1'
+set service router-advert interface eth0.520 name-server '2001:db8:200::2'
+set service router-advert interface eth0.520 prefix 2001:db8:200:520::/64 valid-lifetime 'infinity'
+set service ssh disable-host-validation
+set service ssh dynamic-protection allow-from '100.64.0.0/10'
+set service ssh dynamic-protection allow-from '2001:db8:200::/40'
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system domain-name 'vyos.net'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system name-server '192.168.0.1'
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set system time-zone 'Europe/Berlin'
+set vrf bind-to-all
+set vrf name vyos-test-01 protocols bgp address-family ipv4-unicast network 100.64.50.0/23
+set vrf name vyos-test-01 protocols bgp address-family ipv6-unicast network 2001:db8:200:ffff::1/128
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.208 peer-group 'AS100v4'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 address-family ipv4-unicast default-originate
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 address-family ipv4-unicast maximum-prefix '10'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 address-family ipv4-unicast prefix-list export 'AS100-origin-v4'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 address-family ipv4-unicast prefix-list import 'AS200-origin-v4'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 address-family ipv4-unicast soft-reconfiguration inbound
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 capability dynamic
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.222 remote-as '200'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.251 peer-group 'AS100v4'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.251 shutdown
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.254 peer-group 'AS100v4'
+set vrf name vyos-test-01 protocols bgp neighbor 100.64.51.254 shutdown
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ff::101:2 address-family ipv6-unicast maximum-prefix '10'
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ff::101:2 address-family ipv6-unicast prefix-list export 'AS100-origin-v6'
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ff::101:2 address-family ipv6-unicast prefix-list import 'AS200-origin-v6'
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ff::101:2 address-family ipv6-unicast soft-reconfiguration inbound
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ff::101:2 capability dynamic
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ff::101:2 remote-as '200'
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ffff::2 peer-group 'AS100v6'
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ffff::2 shutdown
+set vrf name vyos-test-01 protocols bgp neighbor 2001:db8:200:ffff::a peer-group 'AS100v6'
+set vrf name vyos-test-01 protocols bgp peer-group AS100v4 address-family ipv4-unicast nexthop-self
+set vrf name vyos-test-01 protocols bgp peer-group AS100v4 capability dynamic
+set vrf name vyos-test-01 protocols bgp peer-group AS100v4 remote-as 'internal'
+set vrf name vyos-test-01 protocols bgp peer-group AS100v4 update-source 'dum0'
+set vrf name vyos-test-01 protocols bgp peer-group AS100v6 address-family ipv6-unicast nexthop-self
+set vrf name vyos-test-01 protocols bgp peer-group AS100v6 capability dynamic
+set vrf name vyos-test-01 protocols bgp peer-group AS100v6 remote-as 'internal'
+set vrf name vyos-test-01 protocols bgp peer-group AS100v6 update-source 'dum0'
+set vrf name vyos-test-01 protocols bgp system-as '100'
+set vrf name vyos-test-01 protocols static route 100.64.50.0/23 blackhole
+set vrf name vyos-test-01 protocols static route 100.64.51.32/27 next-hop 100.64.51.5
+set vrf name vyos-test-01 protocols static route 192.168.0.0/24 next-hop 100.64.51.220
+set vrf name vyos-test-01 protocols static route6 2001:db8:2fe:ffff::/64 next-hop 2001:db8:200:102::5
+set vrf name vyos-test-01 table '1000'

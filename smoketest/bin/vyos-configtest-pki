@@ -25,9 +25,9 @@ from vyos.pki import encode_dh_parameters
 from vyos.pki import encode_private_key
 from vyos.utils.file import write_file
 
-subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'vyos'}
-ca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'vyos CA'}
-subca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'vyos SubCA'}
+subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'VyOS'}
+ca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'VyOS CA'}
+subca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'VyOS SubCA'}
 
 ca_cert = '/config/auth/ovpn_test_ca.pem'
 ca_key = '/config/auth/ovpn_test_ca.key'

@@ -1,7 +1,7 @@
 set interfaces dummy dum0 address '1.1.1.1/32'
 set interfaces dummy dum0 address '2001:db8::1/128'
-set interfaces ethernet eth0 address 'fd52:100:200:fffe::1/64'
 set interfaces ethernet eth0 address '192.168.253.1/24'
+set interfaces ethernet eth0 address 'fd52:100:200:fffe::1/64'
 set interfaces ethernet eth1
 set interfaces ethernet eth2
 set policy route-map BGP-IN rule 10 action 'permit'

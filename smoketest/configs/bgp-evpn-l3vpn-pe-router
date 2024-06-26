@@ -38,7 +38,7 @@ interfaces {
     ethernet eth0 {
         address 192.0.2.59/27
         address 2001:db8:ffff::59/64
-        description "out-of-band management"
+        description "Out-of-Band Managament Port"
         vrf mgmt
     }
     ethernet eth1 {

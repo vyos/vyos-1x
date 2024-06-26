@@ -1,0 +1,82 @@
+set interfaces dummy dum0 address '172.18.254.200/32'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth0 vif 201 address '172.18.201.9/24'
+set interfaces ethernet eth0 vif 202 address '172.18.202.9/24'
+set interfaces ethernet eth0 vif 203 address '172.18.203.9/24'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth1 speed 'auto'
+set protocols ospf area 0 network '172.18.201.0/24'
+set protocols ospf area 0 network '172.18.202.0/24'
+set protocols ospf area 0 network '172.18.203.0/24'
+set protocols ospf area 0 network '172.18.254.200/32'
+set protocols ospf interface eth0.201 authentication md5 key-id 10 md5-key 'OSPFVyOSNET'
+set protocols ospf interface eth0.201 dead-interval '40'
+set protocols ospf interface eth0.201 hello-interval '10'
+set protocols ospf interface eth0.201 passive disable
+set protocols ospf interface eth0.201 priority '1'
+set protocols ospf interface eth0.201 retransmit-interval '5'
+set protocols ospf interface eth0.201 transmit-delay '1'
+set protocols ospf interface eth0.202 authentication md5 key-id 10 md5-key 'OSPFVyOSNET'
+set protocols ospf interface eth0.202 dead-interval '40'
+set protocols ospf interface eth0.202 hello-interval '10'
+set protocols ospf interface eth0.202 passive disable
+set protocols ospf interface eth0.202 priority '1'
+set protocols ospf interface eth0.202 retransmit-interval '5'
+set protocols ospf interface eth0.202 transmit-delay '1'
+set protocols ospf interface eth0.203 authentication md5 key-id 10 md5-key 'OSPFVyOSNET'
+set protocols ospf interface eth0.203 dead-interval '40'
+set protocols ospf interface eth0.203 hello-interval '10'
+set protocols ospf interface eth0.203 passive disable
+set protocols ospf interface eth0.203 priority '1'
+set protocols ospf interface eth0.203 retransmit-interval '5'
+set protocols ospf interface eth0.203 transmit-delay '1'
+set protocols ospf log-adjacency-changes
+set protocols ospf parameters abr-type 'cisco'
+set protocols ospf parameters router-id '172.18.254.200'
+set protocols ospf passive-interface 'default'
+set protocols ospfv3 area 0.0.0.0
+set protocols ospfv3 interface eth0.201 area '0.0.0.0'
+set protocols ospfv3 interface eth0.201 bfd
+set protocols ospfv3 interface eth0.201 cost '40'
+set protocols ospfv3 interface eth0.202 area '0.0.0.0'
+set protocols ospfv3 interface eth0.202 bfd
+set protocols ospfv3 interface eth0.202 cost '40'
+set protocols ospfv3 interface eth0.203 area '0.0.0.0'
+set protocols ospfv3 interface eth0.203 bfd
+set protocols ospfv3 interface eth0.203 cost '40'
+set protocols ospfv3 interface eth1 area '0.0.0.0'
+set protocols ospfv3 interface eth1 bfd
+set protocols ospfv3 interface eth1 cost '60'
+set protocols ospfv3 interface eth1 mtu-ignore
+set protocols ospfv3 interface eth1 network 'broadcast'
+set protocols ospfv3 interface eth1 priority '20'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ssh disable-host-validation
+set service ssh port '22'
+set system config-management commit-revisions '200'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system domain-name 'vyos.net'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set system name-server '172.16.254.30'
+set system sysctl parameter net.ipv4.conf.eth0.tag value '1'
+set system sysctl parameter net.ipv4.conf.eth1.tag value '1'
+set system sysctl parameter net.ipv4.igmp_max_memberships value '5'
+set system sysctl parameter net.ipv4.ipfrag_time value '4'
+set system sysctl parameter net.mpls.default_ttl value '10'
+set system sysctl parameter net.mpls.ip_ttl_propagate value '0'
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set system time-zone 'Europe/Berlin'

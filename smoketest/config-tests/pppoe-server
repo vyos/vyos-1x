@@ -1,0 +1,47 @@
+set interfaces ethernet eth0 address 'dhcp'
+set interfaces ethernet eth1 address '192.168.0.1/24'
+set interfaces ethernet eth1 speed 'auto'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth2 speed 'auto'
+set interfaces ethernet eth2 duplex 'auto'
+set interfaces loopback lo
+set nat source rule 100 outbound-interface name 'eth0'
+set nat source rule 100 source address '192.168.0.0/24'
+set nat source rule 100 translation address 'masquerade'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server 0.pool.ntp.org
+set service ntp server 1.pool.ntp.org
+set service ntp server 2.pool.ntp.org
+set service pppoe-server access-concentrator 'ACN'
+set service pppoe-server authentication local-users username foo password 'bar'
+set service pppoe-server authentication local-users username foo rate-limit download '20480'
+set service pppoe-server authentication local-users username foo rate-limit upload '10240'
+set service pppoe-server authentication mode 'local'
+set service pppoe-server client-ip-pool default-range-pool range '10.0.0.0/24'
+set service pppoe-server client-ip-pool default-range-pool range '10.0.1.0/24'
+set service pppoe-server client-ip-pool default-range-pool range '10.0.2.0/24'
+set service pppoe-server default-pool 'default-range-pool'
+set service pppoe-server gateway-address '192.168.0.2'
+set service pppoe-server interface eth1
+set service pppoe-server interface eth2 vlan '10'
+set service pppoe-server interface eth2 vlan '20'
+set service pppoe-server interface eth2 vlan '30-40'
+set service pppoe-server interface eth2 vlan '50-60'
+set service pppoe-server name-server '192.168.0.1'
+set service pppoe-server ppp-options disable-ccp
+set service ssh
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'

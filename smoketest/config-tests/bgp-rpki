@@ -1,0 +1,43 @@
+set interfaces ethernet eth0 address '192.0.2.100/25'
+set interfaces ethernet eth0 address '2001:db8::ffff/64'
+set interfaces ethernet eth1 address '100.64.0.1/24'
+set interfaces loopback lo
+set policy route-map ebgp-transit-rpki rule 10 action 'deny'
+set policy route-map ebgp-transit-rpki rule 10 match rpki 'invalid'
+set policy route-map ebgp-transit-rpki rule 20 action 'permit'
+set policy route-map ebgp-transit-rpki rule 20 match rpki 'notfound'
+set policy route-map ebgp-transit-rpki rule 20 set local-preference '20'
+set policy route-map ebgp-transit-rpki rule 30 action 'permit'
+set policy route-map ebgp-transit-rpki rule 30 match rpki 'valid'
+set policy route-map ebgp-transit-rpki rule 30 set local-preference '100'
+set policy route-map ebgp-transit-rpki rule 40 action 'permit'
+set policy route-map ebgp-transit-rpki rule 40 set extcommunity rt '192.0.2.100:100'
+set policy route-map ebgp-transit-rpki rule 40 set extcommunity soo '64500:100'
+set protocols bgp neighbor 1.2.3.4 address-family ipv4-unicast nexthop-self
+set protocols bgp neighbor 1.2.3.4 address-family ipv4-unicast route-map import 'ebgp-transit-rpki'
+set protocols bgp neighbor 1.2.3.4 remote-as '10'
+set protocols bgp system-as '64500'
+set protocols rpki cache 192.0.2.10 port '3323'
+set protocols rpki cache 192.0.2.10 preference '1'
+set protocols static route 0.0.0.0/0 next-hop 192.0.2.1
+set protocols static route6 ::/0 next-hop 2001:db8::1
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server 0.pool.ntp.org
+set service ntp server 1.pool.ntp.org
+set service ntp server 2.pool.ntp.org
+set service ssh
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'

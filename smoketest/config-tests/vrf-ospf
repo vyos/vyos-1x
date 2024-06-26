@@ -1,0 +1,59 @@
+set interfaces ethernet eth0 address '192.0.2.1/24'
+set interfaces ethernet eth0 offload gro
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 vrf 'red'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 vrf 'blue'
+set protocols ospf area 0 network '192.0.2.0/24'
+set protocols ospf interface eth0 authentication md5 key-id 10 md5-key 'ospfkey'
+set protocols ospf interface eth0 passive disable
+set protocols ospf log-adjacency-changes
+set protocols ospf parameters abr-type 'cisco'
+set protocols ospf parameters router-id '1.2.3.4'
+set protocols ospf passive-interface 'default'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server 0.pool.ntp.org
+set service ntp server 1.pool.ntp.org
+set service ntp server 2.pool.ntp.org
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set system time-zone 'Europe/Berlin'
+set vrf name blue protocols ospf area 0 network '172.18.201.0/24'
+set vrf name blue protocols ospf interface eth2 authentication md5 key-id 30 md5-key 'vyoskey456'
+set vrf name blue protocols ospf interface eth2 dead-interval '40'
+set vrf name blue protocols ospf interface eth2 hello-interval '10'
+set vrf name blue protocols ospf interface eth2 passive disable
+set vrf name blue protocols ospf interface eth2 priority '1'
+set vrf name blue protocols ospf interface eth2 retransmit-interval '5'
+set vrf name blue protocols ospf interface eth2 transmit-delay '1'
+set vrf name blue protocols ospf log-adjacency-changes
+set vrf name blue protocols ospf parameters abr-type 'cisco'
+set vrf name blue protocols ospf parameters router-id '5.6.7.8'
+set vrf name blue protocols ospf passive-interface 'default'
+set vrf name blue table '2000'
+set vrf name red protocols ospf area 0 network '172.18.202.0/24'
+set vrf name red protocols ospf interface eth1 authentication md5 key-id 20 md5-key 'vyoskey123'
+set vrf name red protocols ospf interface eth1 dead-interval '40'
+set vrf name red protocols ospf interface eth1 hello-interval '10'
+set vrf name red protocols ospf interface eth1 passive disable
+set vrf name red protocols ospf interface eth1 priority '1'
+set vrf name red protocols ospf interface eth1 retransmit-interval '5'
+set vrf name red protocols ospf interface eth1 transmit-delay '1'
+set vrf name red protocols ospf log-adjacency-changes
+set vrf name red protocols ospf parameters abr-type 'cisco'
+set vrf name red protocols ospf parameters router-id '9.10.11.12'
+set vrf name red protocols ospf passive-interface 'default'
+set vrf name red table '1000'

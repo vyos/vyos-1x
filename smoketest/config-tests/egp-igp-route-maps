@@ -1,0 +1,46 @@
+set interfaces ethernet eth0 address '192.0.2.1/25'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth1 address '192.0.2.129/25'
+set interfaces ethernet eth1 address '2001:db8::1234/64'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth1 speed 'auto'
+set interfaces loopback lo
+set policy route-map zebra-bgp rule 10 action 'permit'
+set policy route-map zebra-isis rule 10 action 'permit'
+set policy route-map zebra-ospf rule 10 action 'permit'
+set policy route-map zebra-ospfv3 rule 10 action 'permit'
+set policy route-map zebra-ripng rule 10 action 'permit'
+set policy route-map zebra-static rule 10 action 'permit'
+set protocols bgp system-as '100'
+set protocols isis interface eth0
+set protocols isis net '49.0001.1921.6800.1002.00'
+set protocols ospf area 0 network '192.0.2.0/25'
+set protocols ospf area 0 network '192.0.2.128/25'
+set protocols ospf interface eth0 passive disable
+set protocols ospf interface eth1 passive disable
+set protocols ospf log-adjacency-changes
+set protocols ospf parameters abr-type 'cisco'
+set protocols ospf parameters router-id '1.1.1.1'
+set protocols ospf passive-interface 'default'
+set protocols ospfv3 area 0
+set protocols ospfv3 interface eth1 area '0'
+set protocols ospfv3 parameters router-id '1.1.1.1'
+set protocols ripng interface eth1
+set protocols static
+set system config-management commit-revisions '100'
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system ip protocol bgp route-map 'zebra-bgp'
+set system ip protocol isis route-map 'zebra-isis'
+set system ip protocol ospf route-map 'zebra-ospf'
+set system ip protocol static route-map 'zebra-static'
+set system ipv6 protocol ospfv3 route-map 'zebra-ospfv3'
+set system ipv6 protocol ripng route-map 'zebra-ripng'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system logs logrotate messages max-size '1'
+set system logs logrotate messages rotate '5'
+set system name-server '192.168.0.1'
+set system syslog global facility all level 'info'
+set system time-zone 'Europe/Berlin'
