@@ -1,4 +1,5 @@
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+#!/usr/bin/env python3
+# Copyright (C) 2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -12,15 +13,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from unittest import TestCase
-class TestVyOSUtils(TestCase):
-    def test_key_mangling(self):
-        from vyos.utils.dict import mangle_dict_keys
-        data = {"foo-bar": {"baz-quux": None}}
-        expected_data = {"foo_bar": {"baz_quux": None}}
-        new_data = mangle_dict_keys(data, '-', '_')
-        self.assertEqual(new_data, expected_data)
+import os
+from jinja2 import Template
 
-    def test_sysctl_read(self):
-        from vyos.utils.system import sysctl_read
-        self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
+conf_scripts = 'src/conf_mode'
+configd_include = 'data/configd-include.json'
+
+configd_template = Template("""[
+{% for file in files %}
+"{{ file }}"{{ "," if not loop.last else "" }}
+{% endfor %}
+]
+""", trim_blocks=True)
+
+files = [f for f in os.listdir(conf_scripts) if os.path.isfile(f'{conf_scripts}/{f}')]
+files = sorted(files)
+
+tmp = {'files' : files}
+with open(configd_include, 'w') as f:
+    f.write(configd_template.render(tmp))

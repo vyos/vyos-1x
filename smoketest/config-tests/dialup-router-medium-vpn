@@ -25,18 +25,12 @@ set high-availability vrrp sync-group failover-group member 'LAN'
 set interfaces ethernet eth0 duplex 'auto'
 set interfaces ethernet eth0 mtu '9000'
 set interfaces ethernet eth0 offload gro
-set interfaces ethernet eth0 offload gso
-set interfaces ethernet eth0 offload sg
-set interfaces ethernet eth0 offload tso
 set interfaces ethernet eth0 speed 'auto'
 set interfaces ethernet eth1 address '192.168.0.250/24'
 set interfaces ethernet eth1 duplex 'auto'
 set interfaces ethernet eth1 ip source-validation 'strict'
 set interfaces ethernet eth1 mtu '9000'
 set interfaces ethernet eth1 offload gro
-set interfaces ethernet eth1 offload gso
-set interfaces ethernet eth1 offload sg
-set interfaces ethernet eth1 offload tso
 set interfaces ethernet eth1 speed 'auto'
 set interfaces loopback lo
 set interfaces openvpn vtun0 encryption ncp-ciphers 'aes256'
@@ -130,6 +124,7 @@ set interfaces wireguard wg0 peer red persistent-keepalive '20'
 set interfaces wireguard wg0 peer red preshared-key 'CumyXX7osvUT9AwnS+m2TEfCaL0Ptc2LfuZ78Sujuk8='
 set interfaces wireguard wg0 peer red public-key 'ALGWvMJCKpHF2tVH3hEIHqUe9iFfAmZATUUok/WQzks='
 set interfaces wireguard wg0 port '7777'
+set interfaces wireguard wg0 private-key 'aGx+fvW916Ej7QRnBbW3QMoldhNv1u95/WHz45zDmF0='
 set interfaces wireguard wg1 address '10.89.90.2/30'
 set interfaces wireguard wg1 ip adjust-mss '1380'
 set interfaces wireguard wg1 peer sam address '192.0.2.45'
@@ -140,6 +135,7 @@ set interfaces wireguard wg1 peer sam port '1200'
 set interfaces wireguard wg1 peer sam preshared-key 'XpFtzx2Z+nR8pBv9/sSf7I94OkZkVYTz0AeU5Q/QQUE='
 set interfaces wireguard wg1 peer sam public-key 'v5zfKGvH6W/lfDXJ0en96lvKo1gfFxMUWxe02+Fj5BU='
 set interfaces wireguard wg1 port '7778'
+set interfaces wireguard wg1 private-key 'aGx+fvW916Ej7QRnBbW3QMoldhNv1u95/WHz45zDmF0='
 set nat destination rule 50 destination port '49371'
 set nat destination rule 50 inbound-interface name 'pppoe0'
 set nat destination rule 50 protocol 'tcp_udp'
@@ -295,9 +291,18 @@ set service ssh listen-address '192.168.0.1'
 set service ssh listen-address '192.168.10.1'
 set service ssh listen-address '192.168.0.250'
 set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
 set system console device ttyS0 speed '115200'
 set system host-name 'vyos'
 set system ip arp table-size '1024'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
 set system name-server '192.168.0.1'
 set system name-server 'pppoe0'
 set system option ctrl-alt-delete 'ignore'

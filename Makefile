@@ -78,18 +78,7 @@ vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions check test j2lint vyshim check_migration_scripts_executable
-
-.PHONY: check
-.ONESHELL:
-check:
-	@echo "Checking which CLI scripts are not enabled to work with vyos-configd..."
-	@for file in `ls src/conf_mode -I__pycache__`
-	do
-		if ! grep -q $$file data/configd-include.json; then
-			echo "* $$file"
-		fi
-	done
+all: clean interface_definitions op_mode_definitions test j2lint vyshim check_migration_scripts_executable generate-configd-include-json
 
 .PHONY: clean
 clean:
@@ -99,7 +88,7 @@ clean:
 	$(MAKE) -C $(SHIM_DIR) clean
 
 .PHONY: test
-test:
+test: generate-configd-include-json
 	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/, /ppp/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
@@ -126,6 +115,10 @@ unused-imports:
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b
+
+.PHONY: generate-configd-include-json
+generate-configd-include-json:
+	@scripts/generate-configd-include-json.py
 
 .PHONY: schema
 schema:

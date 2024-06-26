@@ -10,6 +10,9 @@ permissions:
   pull-requests: write
   contents: read
 
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for PR comments
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -30,9 +33,7 @@ jobs:
       - name: Clone vyos-1x source code
         uses: actions/checkout@v4
         with:
-          repository: vyos/vyos-1x
           path: packages/vyos-1x
-          fetch-tags: true # required for Debian package version
       - name: Build vyos-1x package
         run: |
           cd packages/vyos-1x; dpkg-buildpackage -uc -us -tc -b

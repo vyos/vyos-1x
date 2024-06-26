@@ -55,7 +55,7 @@ def make_test_function(filename, test_path=None):
 
         if test_path:
             config_commands = self.session.show(['configuration', 'commands'])
-            
+
             with open(test_path, 'r') as f:
                 for line in f.readlines():
                     if not line or line.startswith("#"):
@@ -83,9 +83,10 @@ if __name__ == '__main__':
         test_path = os.path.join(config_test_dir, config)
 
         if not os.path.exists(test_path):
-            test_path = None
-        else:
-            log.info(f'Loaded migration result test for config "{config}"')
+            log.error(f'Missing migration result test for config "{config}"')
+            sys.exit(1)
+
+        log.info(f'Loaded migration result test for config "{config}"')
 
         test_func = make_test_function(config, test_path)
 

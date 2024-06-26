@@ -4,6 +4,7 @@ interfaces {
         address 2001:db8::ffff/64
     }
     ethernet eth1 {
+        address 100.64.0.1/24
     }
     loopback lo {
     }

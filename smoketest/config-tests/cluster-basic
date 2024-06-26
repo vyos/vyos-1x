@@ -1,0 +1,21 @@
+set high-availability vrrp group VyOS address 192.0.2.10/24
+set high-availability vrrp group VyOS address 192.0.2.20/24
+set high-availability vrrp group VyOS advertise-interval '1'
+set high-availability vrrp group VyOS authentication password 'qwerty'
+set high-availability vrrp group VyOS authentication type 'plaintext-password'
+set high-availability vrrp group VyOS interface 'eth1'
+set high-availability vrrp group VyOS vrid '1'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth1 address '192.0.2.1/24'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth1 speed 'auto'
+set interfaces loopback lo
+set system config-management commit-revisions '100'
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set system time-zone 'Antarctica/South_Pole'

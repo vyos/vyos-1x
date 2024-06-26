@@ -1,0 +1,55 @@
+set interfaces bridge br100 member interface eth3
+set interfaces bridge br100 member interface vxlan100
+set interfaces dummy dum0 address '172.29.0.1/32'
+set interfaces ethernet eth0 address '2001:db8::41/64'
+set interfaces ethernet eth0 address '192.0.2.41/27'
+set interfaces ethernet eth0 description 'Out-of-Band Managament Port'
+set interfaces ethernet eth0 vrf 'MGMT'
+set interfaces ethernet eth1 address '172.29.1.1/31'
+set interfaces ethernet eth1 mtu '1600'
+set interfaces ethernet eth2 address '172.29.2.1/31'
+set interfaces ethernet eth2 mtu '1600'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth3 offload gro
+set interfaces loopback lo
+set interfaces vxlan vxlan100 mtu '1500'
+set interfaces vxlan vxlan100 parameters nolearning
+set interfaces vxlan vxlan100 port '8472'
+set interfaces vxlan vxlan100 source-address '172.29.0.1'
+set interfaces vxlan vxlan100 vni '100'
+set protocols bgp address-family ipv4-unicast maximum-paths ibgp '4'
+set protocols bgp address-family ipv4-unicast redistribute connected
+set protocols bgp address-family l2vpn-evpn advertise-all-vni
+set protocols bgp neighbor 172.29.1.0 peer-group 'evpn'
+set protocols bgp neighbor 172.29.2.0 peer-group 'evpn'
+set protocols bgp parameters log-neighbor-changes
+set protocols bgp peer-group evpn address-family ipv4-unicast nexthop-self
+set protocols bgp peer-group evpn address-family l2vpn-evpn nexthop-self
+set protocols bgp peer-group evpn remote-as '65010'
+set protocols bgp system-as '65010'
+set service lldp interface all
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp listen-address '192.0.2.41'
+set service ntp listen-address '2001:db8::41'
+set service ntp server 0.de.pool.ntp.org prefer
+set service ntp vrf 'MGMT'
+set service ssh disable-host-validation
+set service ssh vrf 'MGMT'
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set vrf name MGMT protocols static route 0.0.0.0/0 next-hop 192.0.2.62
+set vrf name MGMT protocols static route6 ::/0 next-hop 2001:db8::1
+set vrf name MGMT table '1000'

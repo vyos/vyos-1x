@@ -1,0 +1,69 @@
+set interfaces ethernet eth0 address '100.64.10.1/31'
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth1 speed 'auto'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces loopback lo
+set interfaces tunnel tun0 address '192.168.254.62/26'
+set interfaces tunnel tun0 enable-multicast
+set interfaces tunnel tun0 encapsulation 'gre'
+set interfaces tunnel tun0 parameters ip key '1'
+set interfaces tunnel tun0 source-address '100.64.10.1'
+set protocols bgp address-family ipv4-unicast network 172.20.0.0/16
+set protocols bgp neighbor 192.168.254.1 peer-group 'DMVPN'
+set protocols bgp neighbor 192.168.254.1 remote-as '65001'
+set protocols bgp neighbor 192.168.254.2 peer-group 'DMVPN'
+set protocols bgp neighbor 192.168.254.2 remote-as '65002'
+set protocols bgp neighbor 192.168.254.3 peer-group 'DMVPN'
+set protocols bgp neighbor 192.168.254.3 remote-as '65003'
+set protocols bgp parameters log-neighbor-changes
+set protocols bgp peer-group DMVPN address-family ipv4-unicast
+set protocols bgp system-as '65000'
+set protocols bgp timers holdtime '30'
+set protocols bgp timers keepalive '10'
+set protocols nhrp tunnel tun0 cisco-authentication 'secret'
+set protocols nhrp tunnel tun0 holding-time '300'
+set protocols nhrp tunnel tun0 multicast 'dynamic'
+set protocols nhrp tunnel tun0 redirect
+set protocols nhrp tunnel tun0 shortcut
+set protocols static route 0.0.0.0/0 next-hop 100.64.10.0
+set protocols static route 172.20.0.0/16 blackhole distance '200'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'cpe-4'
+set system login user vyos authentication encrypted-password '$6$r/Yw/07NXNY$/ZB.Rjf9jxEV.BYoDyLdH.kH14rU52pOBtrX.4S34qlPt77chflCHvpTCq9a6huLzwaMR50rEICzA5GoIRZlM0'
+set system login user vyos authentication plaintext-password ''
+set system name-server '1.1.1.1'
+set system name-server '8.8.8.8'
+set system name-server '9.9.9.9'
+set system syslog global facility all level 'info'
+set system syslog global facility local7 level 'debug'
+set vpn ipsec esp-group ESP-DMVPN lifetime '1800'
+set vpn ipsec esp-group ESP-DMVPN mode 'transport'
+set vpn ipsec esp-group ESP-DMVPN pfs 'dh-group2'
+set vpn ipsec esp-group ESP-DMVPN proposal 1 encryption 'aes256'
+set vpn ipsec esp-group ESP-DMVPN proposal 1 hash 'sha1'
+set vpn ipsec ike-group IKE-DMVPN close-action 'none'
+set vpn ipsec ike-group IKE-DMVPN key-exchange 'ikev1'
+set vpn ipsec ike-group IKE-DMVPN lifetime '3600'
+set vpn ipsec ike-group IKE-DMVPN proposal 1 dh-group '2'
+set vpn ipsec ike-group IKE-DMVPN proposal 1 encryption 'aes256'
+set vpn ipsec ike-group IKE-DMVPN proposal 1 hash 'sha1'
+set vpn ipsec interface 'eth0'
+set vpn ipsec profile NHRPVPN authentication mode 'pre-shared-secret'
+set vpn ipsec profile NHRPVPN authentication pre-shared-secret 'VyOS-topsecret'
+set vpn ipsec profile NHRPVPN bind tunnel 'tun0'
+set vpn ipsec profile NHRPVPN esp-group 'ESP-DMVPN'
+set vpn ipsec profile NHRPVPN ike-group 'IKE-DMVPN'

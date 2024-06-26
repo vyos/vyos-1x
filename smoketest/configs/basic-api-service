@@ -3,8 +3,6 @@ interfaces {
         address 192.0.2.1/31
         address 2001:db8::1234/64
     }
-    ethernet eth1 {
-    }
     loopback lo {
     }
 }
