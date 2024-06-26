@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-#
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,16 +15,16 @@
 import os
 import re
 import json
-import unittest
+
 import warnings
 import importlib.util
-from inspect import signature, getsource
+from inspect import signature
+from inspect import getsource
 from functools import wraps
+from unittest import TestCase
 
-from vyos.defaults import directories
-
-INC_FILE = '/usr/share/vyos/configd-include.json'
-CONF_DIR = directories['conf_mode']
+INC_FILE = 'data/configd-include.json'
+CONF_DIR = 'src/conf_mode'
 
 f_list = ['get_config', 'verify', 'generate', 'apply']
 
@@ -47,7 +45,7 @@ def ignore_deprecation_warning(f):
             f(*args, **kwargs)
     return decorated_function
 
-class TestConfigdInclude(unittest.TestCase):
+class TestConfigdInspect(TestCase):
     def setUp(self):
         with open(INC_FILE) as f:
             self.inc_list = json.load(f)
@@ -105,6 +103,3 @@ class TestConfigdInclude(unittest.TestCase):
             str_m = getsource(m)
             n = str_m.count('my_set')
             self.assertEqual(n, 0, f"'{s}' modifies config")
-
-if __name__ == '__main__':
-    unittest.main(verbosity=2)

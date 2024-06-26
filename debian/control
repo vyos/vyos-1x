@@ -19,12 +19,18 @@ Build-Depends:
   python3-xmltodict,
 # For running tests
   python3-coverage,
+  python3-hurry.filesize,
+  python3-netaddr,
   python3-netifaces,
   python3-nose,
   python3-jinja2,
+  python3-paramiko,
+  python3-passlib,
   python3-psutil,
   python3-requests,
   python3-setuptools,
+  python3-tabulate,
+  python3-zmq,
   quilt,
   whois
 Standards-Version: 3.9.6
