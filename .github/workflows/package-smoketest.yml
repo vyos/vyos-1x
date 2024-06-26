@@ -10,6 +10,9 @@ permissions:
   pull-requests: write
   contents: read
 
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for PR comments
+
 jobs:
   build:
     runs-on: ubuntu-24.04
