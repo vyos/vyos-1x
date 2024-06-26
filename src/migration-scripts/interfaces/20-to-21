@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ from sys import argv
 
 from vyos.ethtool import Ethtool
 from vyos.configtree import ConfigTree
+from vyos.utils.network import interface_exists
 
 if len(argv) < 2:
     print("Must specify file name!")
@@ -38,6 +39,10 @@ if not config.exists(base):
     exit(0)
 
 for ifname in config.list_nodes(base):
+    # Bail out early if interface vanished from system
+    if not interface_exists(ifname):
+        continue
+
     eth = Ethtool(ifname)
 
     # If GRO is enabled by the Kernel - we reflect this on the CLI. If GRO is

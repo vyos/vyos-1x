@@ -16,6 +16,7 @@
 import re
 
 from json import loads
+from vyos.utils.network import interface_exists
 from vyos.utils.process import popen
 
 # These drivers do not support using ethtool to change the speed, duplex, or
@@ -64,6 +65,9 @@ class Ethtool:
 
     def __init__(self, ifname):
         # Get driver used for interface
+        if not interface_exists(ifname):
+            raise ValueError(f'Interface "{ifname}" does not exist!')
+
         out, _ = popen(f'ethtool --driver {ifname}')
         driver = re.search(r'driver:\s(\w+)', out)
         if driver:
