@@ -66,7 +66,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         cls._test_ipv6 = False
         cls._test_vlan = False
 
-        cls.cli_set(cls, wifi_cc_path + ['es'])
+        cls.cli_set(cls, wifi_cc_path + ['se'])
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
@@ -84,7 +84,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_wireless_hostapd_config(self):
         # Only set the hostapd (access-point) options
-        interface = 'wlan0'
+        interface = 'wlan1'
         ssid = 'ssid'
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
@@ -297,9 +297,96 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         for key, value in vht_opt.items():
             self.assertIn(value, tmp)
 
+    def test_wireless_hostapd_he_config(self):
+        # Only set the hostapd (access-point) options - HE mode for 802.11ax at 6GHz
+        interface = 'wlan1'
+        ssid = 'ssid'
+        channel = '1'
+        sae_pw = 'VyOSVyOSVyOS'
+        country = 'de'
+        bss_color = '37'
+        channel_set_width = '134'
+        center_channel_freq_1 = '15'
+
+        self.cli_set(wifi_cc_path + [country])
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'channel', channel])
+        self.cli_set(self._base_path + [interface, 'mode', 'ax'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa3'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', sae_pw])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'CCMP'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'GCMP'])
+        self.cli_set(self._base_path + [interface, 'enable-bf-protection'])
+        self.cli_set(self._base_path + [interface, 'mgmt-frame-protection', 'required'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'bss-color', bss_color])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'channel-set-width', channel_set_width])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'center-channel-freq', 'freq-1', center_channel_freq_1])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'multi-user-beamformer'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'single-user-beamformer'])
+
+        self.cli_commit()
+
+        #
+        # Validate Config
+        #
+        tmp = get_config_value(interface, 'interface')
+        self.assertEqual(interface, tmp)
+
+        # ssid
+        tmp = get_config_value(interface, 'ssid')
+        self.assertEqual(ssid, tmp)
+
+        # mode of operation resulting from [interface, 'mode', 'ax']
+        tmp = get_config_value(interface, 'hw_mode')
+        self.assertEqual('a', tmp)
+        tmp = get_config_value(interface, 'ieee80211h')
+        self.assertEqual('1', tmp)
+        tmp = get_config_value(interface, 'ieee80211ax')
+        self.assertEqual('1', tmp)
+
+        # channel and channel width
+        tmp = get_config_value(interface, 'channel')
+        self.assertEqual(channel, tmp)
+        tmp = get_config_value(interface, 'op_class')
+        self.assertEqual(channel_set_width, tmp)
+        tmp = get_config_value(interface, 'he_oper_centr_freq_seg0_idx')
+        self.assertEqual(center_channel_freq_1, tmp)
+
+        # Country code
+        tmp = get_config_value(interface, 'country_code')
+        self.assertEqual(country.upper(), tmp)
+
+        # BSS coloring
+        tmp = get_config_value(interface, 'he_bss_color')
+        self.assertEqual(bss_color, tmp)
+
+        # sae_password
+        tmp = get_config_value(interface, 'sae_password')
+        self.assertEqual(sae_pw, tmp)
+
+        # WPA3 and dependencies
+        tmp = get_config_value(interface, 'wpa')
+        self.assertEqual('2', tmp)
+        tmp = get_config_value(interface, 'rsn_pairwise')
+        self.assertEqual('CCMP GCMP', tmp)
+        tmp = get_config_value(interface, 'wpa_key_mgmt')
+        self.assertEqual('SAE', tmp)
+
+        # beamforming
+        tmp = get_config_value(interface, 'he_mu_beamformer')
+        self.assertEqual('1', tmp)
+        tmp = get_config_value(interface, 'he_su_beamformee')
+        self.assertEqual('0', tmp)
+        tmp = get_config_value(interface, 'he_mu_beamformer')
+        self.assertEqual('1', tmp)
+
+        # Check for running process
+        self.assertTrue(process_named_running('hostapd'))
+
     def test_wireless_hostapd_wpa_config(self):
         # Only set the hostapd (access-point) options
-        interface = 'wlan0'
+        interface = 'wlan1'
         phy = 'phy0'
         ssid = 'VyOS-SMOKETEST'
         channel = '1'
@@ -311,8 +398,12 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'mode', mode])
 
-        # Country-Code must be set
+        # SSID and country-code are already configured in self.setUpClass()
+        # Therefore, we must delete those here to check if commit will fail without it.
         self.cli_delete(wifi_cc_path)
+        self.cli_delete(self._base_path + [interface, 'ssid'])
+
+        # Country-Code must be set
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(wifi_cc_path + [country])
@@ -322,7 +413,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
 
-        # Channel must be set
+        # Channel must be set (defaults to channel 0)
         self.cli_set(self._base_path + [interface, 'channel', channel])
 
         self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
@@ -363,7 +454,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertTrue(process_named_running('hostapd'))
 
     def test_wireless_access_point_bridge(self):
-        interface = 'wlan0'
+        interface = 'wlan1'
         ssid = 'VyOS-Test'
         bridge = 'br42477'
 
@@ -373,6 +464,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'channel', '1'])
 
         self.cli_commit()
 
@@ -399,7 +491,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(bridge_path)
 
     def test_wireless_security_station_address(self):
-        interface = 'wlan0'
+        interface = 'wlan1'
         ssid = 'VyOS-ACL'
 
         hostapd_accept_station_conf = f'/run/hostapd/{interface}_station_accept.conf'
