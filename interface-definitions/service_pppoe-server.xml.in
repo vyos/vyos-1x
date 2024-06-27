@@ -47,6 +47,12 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="any-login">
+                <properties>
+                  <help>Authentication with any login</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <tagNode name="interface">

@@ -177,6 +177,17 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         conf.read(self._config_file)
         self.assertEqual(conf['pppoe']['pado-delay'], '10,20:200,30:300,-1:400')
 
+    def test_pppoe_server_any_login(self):
+        # Test configuration of local authentication for PPPoE server
+        self.basic_config()
+
+        self.set(['authentication', 'any-login'])
+        self.cli_commit()
+
+        # Validate configuration values
+        config = read_file(self._config_file)
+        self.assertIn('any-login=1', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

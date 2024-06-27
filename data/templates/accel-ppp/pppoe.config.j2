@@ -31,9 +31,12 @@ copy=1
 level={{ log.level }}
 {% endif %}
 
-{% if authentication.mode is vyos_defined("noauth") %}
 [auth]
+{% if authentication.mode is vyos_defined("noauth") %}
 noauth=1
+{% endif %}
+{% if authentication.any_login is vyos_defined %}
+any-login=1
 {% endif %}
 
 [client-ip-range]
