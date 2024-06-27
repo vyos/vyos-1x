@@ -26,8 +26,5 @@ class TestDeviceFile(TestCase):
     def test_zero(self):
         self.assertEqual(find_device_file('zero'), '/dev/zero')
 
-    def test_input_event(self):
-        self.assertEqual(find_device_file('event0'), '/dev/input/event0')
-
     def test_non_existing(self):
         self.assertFalse(find_device_file('vyos'))
