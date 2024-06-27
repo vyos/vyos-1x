@@ -1,83 +1,63 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import argv
-from sys import exit
+# T4916: Rewrite IPsec peer authentication and psk migration
 
 from vyos.configtree import ConfigTree
 
-
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['vpn', 'ipsec']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# PEER changes
-if config.exists(base + ['site-to-site', 'peer']):
-    for peer in config.list_nodes(base + ['site-to-site', 'peer']):
-        peer_base = base + ['site-to-site', 'peer', peer]
+    # PEER changes
+    if config.exists(base + ['site-to-site', 'peer']):
+        for peer in config.list_nodes(base + ['site-to-site', 'peer']):
+            peer_base = base + ['site-to-site', 'peer', peer]
 
-        # replace: 'ipsec site-to-site peer <tag> authentication pre-shared-secret xxx'
-        #       => 'ipsec authentication psk <tag> secret xxx'
-        if config.exists(peer_base + ['authentication', 'pre-shared-secret']):
-            tmp = config.return_value(peer_base + ['authentication', 'pre-shared-secret'])
-            config.delete(peer_base + ['authentication', 'pre-shared-secret'])
-            config.set(base + ['authentication', 'psk', peer, 'secret'], value=tmp)
-            # format as tag node to avoid loading problems
-            config.set_tag(base + ['authentication', 'psk'])
+            # replace: 'ipsec site-to-site peer <tag> authentication pre-shared-secret xxx'
+            #       => 'ipsec authentication psk <tag> secret xxx'
+            if config.exists(peer_base + ['authentication', 'pre-shared-secret']):
+                tmp = config.return_value(peer_base + ['authentication', 'pre-shared-secret'])
+                config.delete(peer_base + ['authentication', 'pre-shared-secret'])
+                config.set(base + ['authentication', 'psk', peer, 'secret'], value=tmp)
+                # format as tag node to avoid loading problems
+                config.set_tag(base + ['authentication', 'psk'])
 
-            # Get id's from peers for "ipsec auth psk <tag> id xxx"
-            if config.exists(peer_base + ['authentication', 'local-id']):
-                local_id = config.return_value(peer_base + ['authentication', 'local-id'])
-                config.set(base + ['authentication', 'psk', peer, 'id'], value=local_id, replace=False)
-            if config.exists(peer_base + ['authentication', 'remote-id']):
-                remote_id = config.return_value(peer_base + ['authentication', 'remote-id'])
-                config.set(base + ['authentication', 'psk', peer, 'id'], value=remote_id, replace=False)
+                # Get id's from peers for "ipsec auth psk <tag> id xxx"
+                if config.exists(peer_base + ['authentication', 'local-id']):
+                    local_id = config.return_value(peer_base + ['authentication', 'local-id'])
+                    config.set(base + ['authentication', 'psk', peer, 'id'], value=local_id, replace=False)
+                if config.exists(peer_base + ['authentication', 'remote-id']):
+                    remote_id = config.return_value(peer_base + ['authentication', 'remote-id'])
+                    config.set(base + ['authentication', 'psk', peer, 'id'], value=remote_id, replace=False)
 
-            if config.exists(peer_base + ['local-address']):
-                tmp = config.return_value(peer_base + ['local-address'])
-                config.set(base + ['authentication', 'psk', peer, 'id'], value=tmp, replace=False)
-            if config.exists(peer_base + ['remote-address']):
-                tmp = config.return_values(peer_base + ['remote-address'])
-                if tmp:
-                    for remote_addr in tmp:
-                        if remote_addr == 'any':
-                            remote_addr = '%any'
-                        config.set(base + ['authentication', 'psk', peer, 'id'], value=remote_addr, replace=False)
+                if config.exists(peer_base + ['local-address']):
+                    tmp = config.return_value(peer_base + ['local-address'])
+                    config.set(base + ['authentication', 'psk', peer, 'id'], value=tmp, replace=False)
+                if config.exists(peer_base + ['remote-address']):
+                    tmp = config.return_values(peer_base + ['remote-address'])
+                    if tmp:
+                        for remote_addr in tmp:
+                            if remote_addr == 'any':
+                                remote_addr = '%any'
+                            config.set(base + ['authentication', 'psk', peer, 'id'], value=remote_addr, replace=False)
 
-            # get DHCP peer interface as psk dhcp-interface
-            if config.exists(peer_base + ['dhcp-interface']):
-                tmp = config.return_value(peer_base + ['dhcp-interface'])
-                config.set(base + ['authentication', 'psk', peer, 'dhcp-interface'], value=tmp)
-
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+                # get DHCP peer interface as psk dhcp-interface
+                if config.exists(peer_base + ['dhcp-interface']):
+                    tmp = config.return_value(peer_base + ['dhcp-interface'])
+                    config.set(base + ['authentication', 'psk', peer, 'dhcp-interface'], value=tmp)

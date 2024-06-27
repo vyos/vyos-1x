@@ -1,62 +1,43 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5762: http: api: smoketests fail as they can not establish IPv6 connection
 #        to uvicorn backend server, always make the UNIX domain socket the
 #        default way of communication
 
-import sys
-
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 base = ['service', 'https']
-if not config.exists(base):
-    # Nothing to do
-    sys.exit(0)
 
-# Delete "socket" CLI option - we always use UNIX domain sockets for
-# NGINX <-> API server communication
-if config.exists(base + ['api', 'socket']):
-    config.delete(base + ['api', 'socket'])
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# There is no need for an API service port, as UNIX domain sockets
-# are used
-if config.exists(base + ['api', 'port']):
-    config.delete(base + ['api', 'port'])
+    # Delete "socket" CLI option - we always use UNIX domain sockets for
+    # NGINX <-> API server communication
+    if config.exists(base + ['api', 'socket']):
+        config.delete(base + ['api', 'socket'])
 
-# rename listen-port -> port ver virtual-host
-if config.exists(base + ['virtual-host']):
-    for vhost in config.list_nodes(base + ['virtual-host']):
-        if config.exists(base + ['virtual-host', vhost, 'listen-port']):
-            config.rename(base + ['virtual-host', vhost, 'listen-port'], 'port')
+    # There is no need for an API service port, as UNIX domain sockets
+    # are used
+    if config.exists(base + ['api', 'port']):
+        config.delete(base + ['api', 'port'])
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    # rename listen-port -> port ver virtual-host
+    if config.exists(base + ['virtual-host']):
+        for vhost in config.list_nodes(base + ['virtual-host']):
+            if config.exists(base + ['virtual-host', vhost, 'listen-port']):
+                config.rename(base + ['virtual-host', vhost, 'listen-port'], 'port')

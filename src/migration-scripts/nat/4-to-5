@@ -1,40 +1,28 @@
-#!/usr/bin/env python3
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Drop the enable/disable from the nat "log" node. If log node is specified
 # it is "enabled"
 
-from sys import argv,exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['nat']):
+        # Nothing to do
+        return
 
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
-if not config.exists(['nat']):
-    # Nothing to do
-    exit(0)
-else:
     for direction in ['source', 'destination']:
         # If a node doesn't exist, we obviously have nothing to do.
         if not config.exists(['nat', direction]):
@@ -55,10 +43,3 @@ else:
                 config.delete(base + ['log'])
                 if tmp == 'enable':
                     config.set(base + ['log'])
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)

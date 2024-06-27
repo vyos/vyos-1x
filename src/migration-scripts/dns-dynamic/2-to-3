@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
-
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5791:
 # - migrate "service dns dynamic address web web-options ..."
@@ -23,7 +22,6 @@
 #        to "service dns dynamic name <service> address <interface> ..."
 # - normalize the all service names to conform with name constraints
 
-import sys
 import re
 from unicodedata import normalize
 from vyos.configtree import ConfigTree
@@ -41,79 +39,61 @@ def normalize_name(name):
 
     return name
 
-
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 base_path = ['service', 'dns', 'dynamic']
 address_path = base_path + ['address']
 name_path = base_path + ['name']
 
-if not config.exists(address_path):
-    # Nothing to do
-    sys.exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(address_path):
+        # Nothing to do
+        return
 
-# config.copy does not recursively create a path, so initialize the name path as tagged node
-if not config.exists(name_path):
-    config.set(name_path)
-    config.set_tag(name_path)
+    # config.copy does not recursively create a path, so initialize the name path as tagged node
+    if not config.exists(name_path):
+        config.set(name_path)
+        config.set_tag(name_path)
 
-for address in config.list_nodes(address_path):
+    for address in config.list_nodes(address_path):
 
-    address_path_tag = address_path + [address]
+        address_path_tag = address_path + [address]
 
-    # Move web-option as a configuration in each service instead of top level web-option
-    if config.exists(address_path_tag + ['web-options']) and address == 'web':
+        # Move web-option as a configuration in each service instead of top level web-option
+        if config.exists(address_path_tag + ['web-options']) and address == 'web':
+            for svc_type in ['service', 'rfc2136']:
+                if config.exists(address_path_tag + [svc_type]):
+                    for svc_cfg in config.list_nodes(address_path_tag + [svc_type]):
+                        config.copy(address_path_tag + ['web-options'],
+                                    address_path_tag + [svc_type, svc_cfg, 'web-options'])
+            config.delete(address_path_tag + ['web-options'])
+
         for svc_type in ['service', 'rfc2136']:
             if config.exists(address_path_tag + [svc_type]):
+                # Set protocol to 'nsupdate' for RFC2136 configuration
+                if svc_type == 'rfc2136':
+                    for rfc_cfg in config.list_nodes(address_path_tag + ['rfc2136']):
+                        config.set(address_path_tag + ['rfc2136', rfc_cfg, 'protocol'], 'nsupdate')
+
+                # Add address as config value in each service before moving the service path
+                # And then copy the services from 'address <interface> service <service>'
+                #                              to 'name (service|rfc2136)-<service>-<address>'
+                # Note: The new service is named (service|rfc2136)-<service>-<address>
+                #       to avoid name conflict with old entries
                 for svc_cfg in config.list_nodes(address_path_tag + [svc_type]):
-                    config.copy(address_path_tag + ['web-options'],
-                                address_path_tag + [svc_type, svc_cfg, 'web-options'])
-        config.delete(address_path_tag + ['web-options'])
+                    config.set(address_path_tag + [svc_type, svc_cfg, 'address'], address)
+                    config.copy(address_path_tag + [svc_type, svc_cfg],
+                                name_path + ['-'.join([svc_type, svc_cfg, address])])
 
-    for svc_type in ['service', 'rfc2136']:
-        if config.exists(address_path_tag + [svc_type]):
-            # Set protocol to 'nsupdate' for RFC2136 configuration
-            if svc_type == 'rfc2136':
-                for rfc_cfg in config.list_nodes(address_path_tag + ['rfc2136']):
-                    config.set(address_path_tag + ['rfc2136', rfc_cfg, 'protocol'], 'nsupdate')
+    # Finally cleanup the old address path
+    config.delete(address_path)
 
-            # Add address as config value in each service before moving the service path
-            # And then copy the services from 'address <interface> service <service>'
-            #                              to 'name (service|rfc2136)-<service>-<address>'
-            # Note: The new service is named (service|rfc2136)-<service>-<address>
-            #       to avoid name conflict with old entries
-            for svc_cfg in config.list_nodes(address_path_tag + [svc_type]):
-                config.set(address_path_tag + [svc_type, svc_cfg, 'address'], address)
-                config.copy(address_path_tag + [svc_type, svc_cfg],
-                            name_path + ['-'.join([svc_type, svc_cfg, address])])
-
-# Finally cleanup the old address path
-config.delete(address_path)
-
-# Normalize the all service names to conform with name constraints
-index = 1
-for name in config.list_nodes(name_path):
-    new_name = normalize_name(name)
-    if new_name != name:
-        # Append index if there is still a name conflicts after normalization
-        # For example, "foo-?(" and "foo-!)" both normalize to "foo-"
-        if config.exists(name_path + [new_name]):
-            new_name = f'{new_name}-{index}'
-            index += 1
-        config.rename(name_path + [name], new_name)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    # Normalize the all service names to conform with name constraints
+    index = 1
+    for name in config.list_nodes(name_path):
+        new_name = normalize_name(name)
+        if new_name != name:
+            # Append index if there is still a name conflicts after normalization
+            # For example, "foo-?(" and "foo-!)" both normalize to "foo-"
+            if config.exists(name_path + [new_name]):
+                new_name = f'{new_name}-{index}'
+                index += 1
+            config.rename(name_path + [name], new_name)

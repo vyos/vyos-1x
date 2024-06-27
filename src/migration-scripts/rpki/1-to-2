@@ -1,73 +1,53 @@
-#!/usr/bin/env python3
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T6011: rpki: known-hosts-file is no longer supported bxy FRR CLI,
 #        remove VyOS CLI node
-
-from sys import exit
-from sys import argv
 
 from vyos.configtree import ConfigTree
 from vyos.pki import OPENSSH_KEY_BEGIN
 from vyos.pki import OPENSSH_KEY_END
 from vyos.utils.file import read_file
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['protocols', 'rpki']
-config = ConfigTree(config_file)
 
-# Nothing to do
-if not config.exists(base):
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    # Nothing to do
+    if not config.exists(base):
+        return
 
-if config.exists(base + ['cache']):
-    for cache in config.list_nodes(base + ['cache']):
-        ssh_node = base + ['cache', cache, 'ssh']
-        if config.exists(ssh_node + ['known-hosts-file']):
-            config.delete(ssh_node + ['known-hosts-file'])
+    if config.exists(base + ['cache']):
+        for cache in config.list_nodes(base + ['cache']):
+            ssh_node = base + ['cache', cache, 'ssh']
+            if config.exists(ssh_node + ['known-hosts-file']):
+                config.delete(ssh_node + ['known-hosts-file'])
 
-        if config.exists(base + ['cache', cache, 'ssh']):
-            private_key_node = base + ['cache', cache, 'ssh', 'private-key-file']
-            private_key_file = config.return_value(private_key_node)
-            private_key = read_file(private_key_file).replace(OPENSSH_KEY_BEGIN, '').replace(OPENSSH_KEY_END, '').replace('\n','')
+            if config.exists(base + ['cache', cache, 'ssh']):
+                private_key_node = base + ['cache', cache, 'ssh', 'private-key-file']
+                private_key_file = config.return_value(private_key_node)
+                private_key = read_file(private_key_file).replace(OPENSSH_KEY_BEGIN, '').replace(OPENSSH_KEY_END, '').replace('\n','')
 
-            public_key_node = base + ['cache', cache, 'ssh', 'public-key-file']
-            public_key_file = config.return_value(public_key_node)
-            public_key = read_file(public_key_file).split()
+                public_key_node = base + ['cache', cache, 'ssh', 'public-key-file']
+                public_key_file = config.return_value(public_key_node)
+                public_key = read_file(public_key_file).split()
 
-            config.set(['pki', 'openssh', f'rpki-{cache}', 'private', 'key'], value=private_key)
-            config.set(['pki', 'openssh', f'rpki-{cache}', 'public', 'key'], value=public_key[1])
-            config.set(['pki', 'openssh', f'rpki-{cache}', 'public', 'type'], value=public_key[0])
-            config.set_tag(['pki', 'openssh'])
-            config.set(ssh_node + ['key'], value=f'rpki-{cache}')
+                config.set(['pki', 'openssh', f'rpki-{cache}', 'private', 'key'], value=private_key)
+                config.set(['pki', 'openssh', f'rpki-{cache}', 'public', 'key'], value=public_key[1])
+                config.set(['pki', 'openssh', f'rpki-{cache}', 'public', 'type'], value=public_key[0])
+                config.set_tag(['pki', 'openssh'])
+                config.set(ssh_node + ['key'], value=f'rpki-{cache}')
 
-            config.delete(private_key_node)
-            config.delete(public_key_node)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+                config.delete(private_key_node)
+                config.delete(public_key_node)

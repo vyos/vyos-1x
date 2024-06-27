@@ -1,93 +1,73 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Remove deprecated strongSwan options from VyOS CLI
 # - vpn ipsec nat-traversal enable
 # - vpn ipsec nat-networks allowed-network
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['vpn', 'ipsec']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# Delete CLI nodes whose config options got removed by strongSwan
-for cli_node in ['nat-traversal', 'nat-networks']:
-    if config.exists(base + [cli_node]):
-        config.delete(base + [cli_node])
+    # Delete CLI nodes whose config options got removed by strongSwan
+    for cli_node in ['nat-traversal', 'nat-networks']:
+        if config.exists(base + [cli_node]):
+            config.delete(base + [cli_node])
 
-# Remove options only valid in Openswan
-if config.exists(base + ['site-to-site', 'peer']):
-    for peer in config.list_nodes(base + ['site-to-site', 'peer']):
-        if not config.exists(base + ['site-to-site', 'peer', peer, 'tunnel']):
-            continue
-        for tunnel in config.list_nodes(base + ['site-to-site', 'peer', peer, 'tunnel']):
-            # allow-public-networks - Sets a value in ipsec.conf that was only ever valid in Openswan on kernel 2.6
-            nat_networks = base + ['site-to-site', 'peer', peer, 'tunnel', tunnel, 'allow-nat-networks']
-            if config.exists(nat_networks):
-                config.delete(nat_networks)
+    # Remove options only valid in Openswan
+    if config.exists(base + ['site-to-site', 'peer']):
+        for peer in config.list_nodes(base + ['site-to-site', 'peer']):
+            if not config.exists(base + ['site-to-site', 'peer', peer, 'tunnel']):
+                continue
+            for tunnel in config.list_nodes(base + ['site-to-site', 'peer', peer, 'tunnel']):
+                # allow-public-networks - Sets a value in ipsec.conf that was only ever valid in Openswan on kernel 2.6
+                nat_networks = base + ['site-to-site', 'peer', peer, 'tunnel', tunnel, 'allow-nat-networks']
+                if config.exists(nat_networks):
+                    config.delete(nat_networks)
 
-            # allow-nat-networks - Also sets a value only valid in Openswan
-            public_networks = base + ['site-to-site', 'peer', peer, 'tunnel', tunnel, 'allow-public-networks']
-            if config.exists(public_networks):
-                config.delete(public_networks)
+                # allow-nat-networks - Also sets a value only valid in Openswan
+                public_networks = base + ['site-to-site', 'peer', peer, 'tunnel', tunnel, 'allow-public-networks']
+                if config.exists(public_networks):
+                    config.delete(public_networks)
 
-# Rename "logging log-level" and "logging log-modes" to something more human friendly
-log = base + ['logging']
-if config.exists(log):
-    config.rename(log, 'log')
-    log = base + ['log']
+    # Rename "logging log-level" and "logging log-modes" to something more human friendly
+    log = base + ['logging']
+    if config.exists(log):
+        config.rename(log, 'log')
+        log = base + ['log']
 
-log_level = log + ['log-level']
-if config.exists(log_level):
-    config.rename(log_level, 'level')
+    log_level = log + ['log-level']
+    if config.exists(log_level):
+        config.rename(log_level, 'level')
 
-log_mode = log + ['log-modes']
-if config.exists(log_mode):
-    config.rename(log_mode, 'subsystem')
+    log_mode = log + ['log-modes']
+    if config.exists(log_mode):
+        config.rename(log_mode, 'subsystem')
 
-# Rename "ipsec-interfaces interface" to "interface"
-base_interfaces = base + ['ipsec-interfaces', 'interface']
-if config.exists(base_interfaces):
-    config.copy(base_interfaces, base + ['interface'])
-    config.delete(base + ['ipsec-interfaces'])
+    # Rename "ipsec-interfaces interface" to "interface"
+    base_interfaces = base + ['ipsec-interfaces', 'interface']
+    if config.exists(base_interfaces):
+        config.copy(base_interfaces, base + ['interface'])
+        config.delete(base + ['ipsec-interfaces'])
 
-# Remove deprecated "auto-update" option
-tmp = base + ['auto-update']
-if config.exists(tmp):
-    config.delete(tmp)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    # Remove deprecated "auto-update" option
+    tmp = base + ['auto-update']
+    if config.exists(tmp):
+        config.delete(tmp)

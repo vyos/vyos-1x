@@ -23,7 +23,7 @@ from argparse import ArgumentParser
 
 from vyos.config import Config
 from vyos.remote import urlc
-from vyos.component_version import system_footer
+from vyos.component_version import add_system_version
 from vyos.defaults import directories
 
 DEFAULT_CONFIG_PATH = os.path.join(directories['config'], 'config.boot')
@@ -50,14 +50,13 @@ if re.match(r'\w+:/', save_file):
 config = Config()
 ct = config.get_config_tree(effective=True)
 
+# pylint: disable=consider-using-with
 write_file = save_file if remote_save is None else NamedTemporaryFile(delete=False).name
-with open(write_file, 'w') as f:
-    # config_tree is None before boot configuration is complete;
-    # automated saves should check boot_configuration_complete
-    if ct is not None:
-        f.write(ct.to_string())
-    f.write("\n")
-    f.write(system_footer())
+
+# config_tree is None before boot configuration is complete;
+# automated saves should check boot_configuration_complete
+config_str = None if ct is None else ct.to_string()
+add_system_version(config_str, write_file)
 
 if json_file is not None and ct is not None:
     try:

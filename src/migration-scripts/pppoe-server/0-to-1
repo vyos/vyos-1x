@@ -1,50 +1,33 @@
-#!/usr/bin/env python3
+# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Convert "service pppoe-server authentication radius-server node key"
 # to: "service pppoe-server authentication radius-server node secret"
 
-from sys import argv, exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-ctree = ConfigTree(config_file)
 base = ['service', 'pppoe-server', 'authentication', 'radius-server']
 
-if not ctree.exists(base):
-    # Nothing to do
-    exit(0)
-else:
+def migrate(ctree: ConfigTree) -> None:
+    if not ctree.exists(base):
+        # Nothing to do
+        return
+
     nodes = ctree.list_nodes(base)
     for node in nodes:
         if ctree.exists(base + [node, 'key']):
             val = ctree.return_value(base + [node, 'key'])
             ctree.set(base + [node, 'secret'], value=val, replace=False)
             ctree.delete(base + [node, 'key'])
-
-    try:
-        open(file_name,'w').write(ctree.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)

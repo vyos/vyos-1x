@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5160: Firewall re-writing
 
@@ -37,171 +36,152 @@
     # set firewall [ipv4 | ipv6] input filter rule <5,10,15,...> action jump
     # set firewall [ipv4 | ipv6] input filter rule <5,10,15,...> jump-target <name>
 
-from sys import argv
-from sys import exit
-
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['firewall']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-### Migration of state policies
-if config.exists(base + ['state-policy']):
-    for state in config.list_nodes(base + ['state-policy']):
-        action = config.return_value(base + ['state-policy', state, 'action'])
-        config.set(base + ['global-options', 'state-policy', state, 'action'], value=action)
-        if config.exists(base + ['state-policy', state, 'log']):
-            config.set(base + ['global-options', 'state-policy', state, 'log'], value='enable')
-    config.delete(base + ['state-policy'])
+    ### Migration of state policies
+    if config.exists(base + ['state-policy']):
+        for state in config.list_nodes(base + ['state-policy']):
+            action = config.return_value(base + ['state-policy', state, 'action'])
+            config.set(base + ['global-options', 'state-policy', state, 'action'], value=action)
+            if config.exists(base + ['state-policy', state, 'log']):
+                config.set(base + ['global-options', 'state-policy', state, 'log'], value='enable')
+        config.delete(base + ['state-policy'])
 
-## migration of global options:
-for option in ['all-ping', 'broadcast-ping', 'config-trap', 'ip-src-route', 'ipv6-receive-redirects', 'ipv6-src-route', 'log-martians',
-                'receive-redirects', 'resolver-cache', 'resolver-internal', 'send-redirects', 'source-validation', 'syn-cookies', 'twa-hazards-protection']:
-    if config.exists(base + [option]):
-        if option != 'config-trap':
-            val = config.return_value(base + [option])
-            config.set(base + ['global-options', option], value=val)
-        config.delete(base + [option])
+    ## migration of global options:
+    for option in ['all-ping', 'broadcast-ping', 'config-trap', 'ip-src-route', 'ipv6-receive-redirects', 'ipv6-src-route', 'log-martians',
+                    'receive-redirects', 'resolver-cache', 'resolver-internal', 'send-redirects', 'source-validation', 'syn-cookies', 'twa-hazards-protection']:
+        if config.exists(base + [option]):
+            if option != 'config-trap':
+                val = config.return_value(base + [option])
+                config.set(base + ['global-options', option], value=val)
+            config.delete(base + [option])
 
-### Migration of firewall name and ipv6-name
-### Also migrate legacy 'accept' behaviour
-if config.exists(base + ['name']):
-    config.set(['firewall', 'ipv4', 'name'])
-    config.set_tag(['firewall', 'ipv4', 'name'])
+    ### Migration of firewall name and ipv6-name
+    ### Also migrate legacy 'accept' behaviour
+    if config.exists(base + ['name']):
+        config.set(['firewall', 'ipv4', 'name'])
+        config.set_tag(['firewall', 'ipv4', 'name'])
 
-    for ipv4name in config.list_nodes(base + ['name']):
-        config.copy(base + ['name', ipv4name], base + ['ipv4', 'name', ipv4name])
+        for ipv4name in config.list_nodes(base + ['name']):
+            config.copy(base + ['name', ipv4name], base + ['ipv4', 'name', ipv4name])
 
-        if config.exists(base + ['ipv4', 'name', ipv4name, 'default-action']):
-            action = config.return_value(base + ['ipv4', 'name', ipv4name, 'default-action'])
-
-            if action == 'accept':
-                config.set(base + ['ipv4', 'name', ipv4name, 'default-action'], value='return')
-
-        if config.exists(base + ['ipv4', 'name', ipv4name, 'rule']):
-            for rule_id in config.list_nodes(base + ['ipv4', 'name', ipv4name, 'rule']):
-                action = config.return_value(base + ['ipv4', 'name', ipv4name, 'rule', rule_id, 'action'])
+            if config.exists(base + ['ipv4', 'name', ipv4name, 'default-action']):
+                action = config.return_value(base + ['ipv4', 'name', ipv4name, 'default-action'])
 
                 if action == 'accept':
-                    config.set(base + ['ipv4', 'name', ipv4name, 'rule', rule_id, 'action'], value='return')
+                    config.set(base + ['ipv4', 'name', ipv4name, 'default-action'], value='return')
 
-    config.delete(base + ['name'])
+            if config.exists(base + ['ipv4', 'name', ipv4name, 'rule']):
+                for rule_id in config.list_nodes(base + ['ipv4', 'name', ipv4name, 'rule']):
+                    action = config.return_value(base + ['ipv4', 'name', ipv4name, 'rule', rule_id, 'action'])
 
-if config.exists(base + ['ipv6-name']):
-    config.set(['firewall', 'ipv6', 'name'])
-    config.set_tag(['firewall', 'ipv6', 'name'])
+                    if action == 'accept':
+                        config.set(base + ['ipv4', 'name', ipv4name, 'rule', rule_id, 'action'], value='return')
 
-    for ipv6name in config.list_nodes(base + ['ipv6-name']):
-        config.copy(base + ['ipv6-name', ipv6name], base + ['ipv6', 'name', ipv6name])
+        config.delete(base + ['name'])
 
-        if config.exists(base + ['ipv6', 'name', ipv6name, 'default-action']):
-            action = config.return_value(base + ['ipv6', 'name', ipv6name, 'default-action'])
+    if config.exists(base + ['ipv6-name']):
+        config.set(['firewall', 'ipv6', 'name'])
+        config.set_tag(['firewall', 'ipv6', 'name'])
 
-            if action == 'accept':
-                config.set(base + ['ipv6', 'name', ipv6name, 'default-action'], value='return')
+        for ipv6name in config.list_nodes(base + ['ipv6-name']):
+            config.copy(base + ['ipv6-name', ipv6name], base + ['ipv6', 'name', ipv6name])
 
-        if config.exists(base + ['ipv6', 'name', ipv6name, 'rule']):
-            for rule_id in config.list_nodes(base + ['ipv6', 'name', ipv6name, 'rule']):
-                action = config.return_value(base + ['ipv6', 'name', ipv6name, 'rule', rule_id, 'action'])
+            if config.exists(base + ['ipv6', 'name', ipv6name, 'default-action']):
+                action = config.return_value(base + ['ipv6', 'name', ipv6name, 'default-action'])
 
                 if action == 'accept':
-                    config.set(base + ['ipv6', 'name', ipv6name, 'rule', rule_id, 'action'], value='return')
+                    config.set(base + ['ipv6', 'name', ipv6name, 'default-action'], value='return')
 
-    config.delete(base + ['ipv6-name'])
+            if config.exists(base + ['ipv6', 'name', ipv6name, 'rule']):
+                for rule_id in config.list_nodes(base + ['ipv6', 'name', ipv6name, 'rule']):
+                    action = config.return_value(base + ['ipv6', 'name', ipv6name, 'rule', rule_id, 'action'])
 
-### Migration of firewall interface
-if config.exists(base + ['interface']):
-    fwd_ipv4_rule = 5
-    inp_ipv4_rule = 5
-    fwd_ipv6_rule = 5
-    inp_ipv6_rule = 5
-    for direction in ['in', 'out', 'local']:
-        for iface in config.list_nodes(base + ['interface']):
-            if config.exists(base + ['interface', iface, direction]):
-                if config.exists(base + ['interface', iface, direction, 'name']):
-                    target = config.return_value(base + ['interface', iface, direction, 'name'])
-                    if direction == 'in':
-                        # Add default-action== accept for compatibility reasons:
-                        config.set(base + ['ipv4', 'forward', 'filter', 'default-action'], value='accept')
-                        new_base = base + ['ipv4', 'forward', 'filter', 'rule']
-                        config.set(new_base)
-                        config.set_tag(new_base)
-                        config.set(new_base + [fwd_ipv4_rule, 'inbound-interface', 'interface-name'], value=iface)
-                        config.set(new_base + [fwd_ipv4_rule, 'action'], value='jump')
-                        config.set(new_base + [fwd_ipv4_rule, 'jump-target'], value=target)
-                        fwd_ipv4_rule = fwd_ipv4_rule + 5
-                    elif direction == 'out':
-                        # Add default-action== accept for compatibility reasons:
-                        config.set(base + ['ipv4', 'forward', 'filter', 'default-action'], value='accept')
-                        new_base = base + ['ipv4', 'forward', 'filter', 'rule']
-                        config.set(new_base)
-                        config.set_tag(new_base)
-                        config.set(new_base + [fwd_ipv4_rule, 'outbound-interface', 'interface-name'], value=iface)
-                        config.set(new_base + [fwd_ipv4_rule, 'action'], value='jump')
-                        config.set(new_base + [fwd_ipv4_rule, 'jump-target'], value=target)
-                        fwd_ipv4_rule = fwd_ipv4_rule + 5
-                    else:
-                        # Add default-action== accept for compatibility reasons:
-                        config.set(base + ['ipv4', 'input', 'filter', 'default-action'], value='accept')
-                        new_base = base + ['ipv4', 'input', 'filter', 'rule']
-                        config.set(new_base)
-                        config.set_tag(new_base)
-                        config.set(new_base + [inp_ipv4_rule, 'inbound-interface', 'interface-name'], value=iface)
-                        config.set(new_base + [inp_ipv4_rule, 'action'], value='jump')
-                        config.set(new_base + [inp_ipv4_rule, 'jump-target'], value=target)
-                        inp_ipv4_rule = inp_ipv4_rule + 5
+                    if action == 'accept':
+                        config.set(base + ['ipv6', 'name', ipv6name, 'rule', rule_id, 'action'], value='return')
 
-                if config.exists(base + ['interface', iface, direction, 'ipv6-name']):
-                    target = config.return_value(base + ['interface', iface, direction, 'ipv6-name'])
-                    if direction == 'in':
-                        # Add default-action== accept for compatibility reasons:
-                        config.set(base + ['ipv6', 'forward', 'filter', 'default-action'], value='accept')
-                        new_base = base + ['ipv6', 'forward', 'filter', 'rule']
-                        config.set(new_base)
-                        config.set_tag(new_base)
-                        config.set(new_base + [fwd_ipv6_rule, 'inbound-interface', 'interface-name'], value=iface)
-                        config.set(new_base + [fwd_ipv6_rule, 'action'], value='jump')
-                        config.set(new_base + [fwd_ipv6_rule, 'jump-target'], value=target)
-                        fwd_ipv6_rule = fwd_ipv6_rule + 5
-                    elif direction == 'out':
-                        # Add default-action== accept for compatibility reasons:
-                        config.set(base + ['ipv6', 'forward', 'filter', 'default-action'], value='accept')
-                        new_base = base + ['ipv6', 'forward', 'filter', 'rule']
-                        config.set(new_base)
-                        config.set_tag(new_base)
-                        config.set(new_base + [fwd_ipv6_rule, 'outbound-interface', 'interface-name'], value=iface)
-                        config.set(new_base + [fwd_ipv6_rule, 'action'], value='jump')
-                        config.set(new_base + [fwd_ipv6_rule, 'jump-target'], value=target)
-                        fwd_ipv6_rule = fwd_ipv6_rule + 5
-                    else:
-                        new_base = base + ['ipv6', 'input', 'filter', 'rule']
-                        # Add default-action== accept for compatibility reasons:
-                        config.set(base + ['ipv6', 'input', 'filter', 'default-action'], value='accept')
-                        config.set(new_base)
-                        config.set_tag(new_base)
-                        config.set(new_base + [inp_ipv6_rule, 'inbound-interface', 'interface-name'], value=iface)
-                        config.set(new_base + [inp_ipv6_rule, 'action'], value='jump')
-                        config.set(new_base + [inp_ipv6_rule, 'jump-target'], value=target)
-                        inp_ipv6_rule = inp_ipv6_rule + 5
+        config.delete(base + ['ipv6-name'])
 
-    config.delete(base + ['interface'])
+    ### Migration of firewall interface
+    if config.exists(base + ['interface']):
+        fwd_ipv4_rule = 5
+        inp_ipv4_rule = 5
+        fwd_ipv6_rule = 5
+        inp_ipv6_rule = 5
+        for direction in ['in', 'out', 'local']:
+            for iface in config.list_nodes(base + ['interface']):
+                if config.exists(base + ['interface', iface, direction]):
+                    if config.exists(base + ['interface', iface, direction, 'name']):
+                        target = config.return_value(base + ['interface', iface, direction, 'name'])
+                        if direction == 'in':
+                            # Add default-action== accept for compatibility reasons:
+                            config.set(base + ['ipv4', 'forward', 'filter', 'default-action'], value='accept')
+                            new_base = base + ['ipv4', 'forward', 'filter', 'rule']
+                            config.set(new_base)
+                            config.set_tag(new_base)
+                            config.set(new_base + [fwd_ipv4_rule, 'inbound-interface', 'interface-name'], value=iface)
+                            config.set(new_base + [fwd_ipv4_rule, 'action'], value='jump')
+                            config.set(new_base + [fwd_ipv4_rule, 'jump-target'], value=target)
+                            fwd_ipv4_rule = fwd_ipv4_rule + 5
+                        elif direction == 'out':
+                            # Add default-action== accept for compatibility reasons:
+                            config.set(base + ['ipv4', 'forward', 'filter', 'default-action'], value='accept')
+                            new_base = base + ['ipv4', 'forward', 'filter', 'rule']
+                            config.set(new_base)
+                            config.set_tag(new_base)
+                            config.set(new_base + [fwd_ipv4_rule, 'outbound-interface', 'interface-name'], value=iface)
+                            config.set(new_base + [fwd_ipv4_rule, 'action'], value='jump')
+                            config.set(new_base + [fwd_ipv4_rule, 'jump-target'], value=target)
+                            fwd_ipv4_rule = fwd_ipv4_rule + 5
+                        else:
+                            # Add default-action== accept for compatibility reasons:
+                            config.set(base + ['ipv4', 'input', 'filter', 'default-action'], value='accept')
+                            new_base = base + ['ipv4', 'input', 'filter', 'rule']
+                            config.set(new_base)
+                            config.set_tag(new_base)
+                            config.set(new_base + [inp_ipv4_rule, 'inbound-interface', 'interface-name'], value=iface)
+                            config.set(new_base + [inp_ipv4_rule, 'action'], value='jump')
+                            config.set(new_base + [inp_ipv4_rule, 'jump-target'], value=target)
+                            inp_ipv4_rule = inp_ipv4_rule + 5
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+                    if config.exists(base + ['interface', iface, direction, 'ipv6-name']):
+                        target = config.return_value(base + ['interface', iface, direction, 'ipv6-name'])
+                        if direction == 'in':
+                            # Add default-action== accept for compatibility reasons:
+                            config.set(base + ['ipv6', 'forward', 'filter', 'default-action'], value='accept')
+                            new_base = base + ['ipv6', 'forward', 'filter', 'rule']
+                            config.set(new_base)
+                            config.set_tag(new_base)
+                            config.set(new_base + [fwd_ipv6_rule, 'inbound-interface', 'interface-name'], value=iface)
+                            config.set(new_base + [fwd_ipv6_rule, 'action'], value='jump')
+                            config.set(new_base + [fwd_ipv6_rule, 'jump-target'], value=target)
+                            fwd_ipv6_rule = fwd_ipv6_rule + 5
+                        elif direction == 'out':
+                            # Add default-action== accept for compatibility reasons:
+                            config.set(base + ['ipv6', 'forward', 'filter', 'default-action'], value='accept')
+                            new_base = base + ['ipv6', 'forward', 'filter', 'rule']
+                            config.set(new_base)
+                            config.set_tag(new_base)
+                            config.set(new_base + [fwd_ipv6_rule, 'outbound-interface', 'interface-name'], value=iface)
+                            config.set(new_base + [fwd_ipv6_rule, 'action'], value='jump')
+                            config.set(new_base + [fwd_ipv6_rule, 'jump-target'], value=target)
+                            fwd_ipv6_rule = fwd_ipv6_rule + 5
+                        else:
+                            new_base = base + ['ipv6', 'input', 'filter', 'rule']
+                            # Add default-action== accept for compatibility reasons:
+                            config.set(base + ['ipv6', 'input', 'filter', 'default-action'], value='accept')
+                            config.set(new_base)
+                            config.set_tag(new_base)
+                            config.set(new_base + [inp_ipv6_rule, 'inbound-interface', 'interface-name'], value=iface)
+                            config.set(new_base + [inp_ipv6_rule, 'action'], value='jump')
+                            config.set(new_base + [inp_ipv6_rule, 'jump-target'], value=target)
+                            inp_ipv6_rule = inp_ipv6_rule + 5
+
+        config.delete(base + ['interface'])

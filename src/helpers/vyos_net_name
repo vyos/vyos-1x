@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,7 +26,7 @@ from vyos.configtree import ConfigTree
 from vyos.defaults import directories
 from vyos.utils.process import cmd
 from vyos.utils.boot import boot_configuration_complete
-from vyos.migrator import VirtualMigrator
+from vyos.migrate import ConfigMigrate
 
 vyos_udev_dir = directories['vyos_udev_dir']
 vyos_log_dir = '/run/udev/log'
@@ -147,8 +147,10 @@ def get_configfile_interfaces() -> dict:
             with tempfile.NamedTemporaryFile() as fp:
                 with open(fp.name, 'w') as fd:
                     fd.write(config_file)
-                virtual_migration = VirtualMigrator(fp.name)
-                virtual_migration.run()
+                config_migrate = ConfigMigrate(fp.name)
+                if config_migrate.syntax_update_needed():
+                    config_migrate.update_syntax()
+                    config_migrate.write_config()
                 with open(fp.name) as fd:
                     config_file = fd.read()
 

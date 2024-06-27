@@ -1,4 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Fixup non existent time-zones. Some systems have time-zone set to: Los*
 # (Los_Angeles), Den* (Denver), New* (New_York) ... but those are no real IANA
@@ -9,27 +22,18 @@
 # Migrate all configured timezones to real IANA assigned timezones!
 
 import re
-import sys
 
 from vyos.configtree import ConfigTree
 from vyos.utils.process import cmd
 
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 tz_base = ['system', 'time-zone']
-if not config.exists(tz_base):
-    # Nothing to do
-    sys.exit(0)
-else:
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(tz_base):
+        # Nothing to do
+        return
+
     tz = config.return_value(tz_base)
 
     # retrieve all valid timezones
@@ -61,10 +65,3 @@ else:
 
     # replace timezone data is required
     config.set(tz_base, value=tz)
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

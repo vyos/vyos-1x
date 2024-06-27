@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
-
-# Copyright (C) 2023 VyOS maintainers and contributors
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5144:
 # - migrate "service dns dynamic interface ..."
@@ -27,7 +26,6 @@
 # - apply service protocol mapping upfront, they are not 'auto-detected' anymore
 # - migrate web-options url to stricter format
 
-import sys
 import re
 from vyos.configtree import ConfigTree
 
@@ -45,84 +43,67 @@ service_protocol_mapping = {
     'zoneedit': 'zoneedit1'
 }
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 old_base_path = ['service', 'dns', 'dynamic', 'interface']
 new_base_path = ['service', 'dns', 'dynamic', 'address']
 
-if not config.exists(old_base_path):
-    # Nothing to do
-    sys.exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(old_base_path):
+        # Nothing to do
+        return
 
-# Migrate "service dns dynamic interface"
-#      to "service dns dynamic address"
-config.rename(old_base_path, new_base_path[-1])
+    # Migrate "service dns dynamic interface"
+    #      to "service dns dynamic address"
+    config.rename(old_base_path, new_base_path[-1])
 
-for address in config.list_nodes(new_base_path):
-    # Migrate "service dns dynamic interface <interface> rfc2136 <config> record"
-    #      to "service dns dynamic address <address> rfc2136 <config> host-name"
-    if config.exists(new_base_path + [address, 'rfc2136']):
-        for rfc_cfg in config.list_nodes(new_base_path + [address, 'rfc2136']):
-            if config.exists(new_base_path + [address, 'rfc2136', rfc_cfg, 'record']):
-                config.rename(new_base_path + [address, 'rfc2136', rfc_cfg, 'record'], 'host-name')
+    for address in config.list_nodes(new_base_path):
+        # Migrate "service dns dynamic interface <interface> rfc2136 <config> record"
+        #      to "service dns dynamic address <address> rfc2136 <config> host-name"
+        if config.exists(new_base_path + [address, 'rfc2136']):
+            for rfc_cfg in config.list_nodes(new_base_path + [address, 'rfc2136']):
+                if config.exists(new_base_path + [address, 'rfc2136', rfc_cfg, 'record']):
+                    config.rename(new_base_path + [address, 'rfc2136', rfc_cfg, 'record'], 'host-name')
 
-    # Migrate "service dns dynamic interface <interface> service <config> login"
-    #      to "service dns dynamic address <address> service <config> username"
-    if config.exists(new_base_path + [address, 'service']):
-        for svc_cfg in config.list_nodes(new_base_path + [address, 'service']):
-            if config.exists(new_base_path + [address, 'service', svc_cfg, 'login']):
-                config.rename(new_base_path + [address, 'service', svc_cfg, 'login'], 'username')
-            # Apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
-            if config.exists(new_base_path + [address, 'ipv6-enable']):
-                config.set(new_base_path + [address, 'service', svc_cfg, 'ip-version'], 'ipv6')
-                config.delete(new_base_path + [address, 'ipv6-enable'])
-            # Apply service protocol mapping upfront, they are not 'auto-detected' anymore
-            if svc_cfg in service_protocol_mapping:
-                config.set(new_base_path + [address, 'service', svc_cfg, 'protocol'],
-                           service_protocol_mapping.get(svc_cfg))
+        # Migrate "service dns dynamic interface <interface> service <config> login"
+        #      to "service dns dynamic address <address> service <config> username"
+        if config.exists(new_base_path + [address, 'service']):
+            for svc_cfg in config.list_nodes(new_base_path + [address, 'service']):
+                if config.exists(new_base_path + [address, 'service', svc_cfg, 'login']):
+                    config.rename(new_base_path + [address, 'service', svc_cfg, 'login'], 'username')
+                # Apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
+                if config.exists(new_base_path + [address, 'ipv6-enable']):
+                    config.set(new_base_path + [address, 'service', svc_cfg, 'ip-version'], 'ipv6')
+                    config.delete(new_base_path + [address, 'ipv6-enable'])
+                # Apply service protocol mapping upfront, they are not 'auto-detected' anymore
+                if svc_cfg in service_protocol_mapping:
+                    config.set(new_base_path + [address, 'service', svc_cfg, 'protocol'],
+                               service_protocol_mapping.get(svc_cfg))
 
-    # If use-web is set, then:
-    #   Move "service dns dynamic address <address> <service|rfc2136> <service> ..."
-    #     to "service dns dynamic address web <service|rfc2136> <service>-<address> ..."
-    #   Move "service dns dynamic address web use-web ..."
-    #     to "service dns dynamic address web web-options ..."
-    # Note: The config is named <service>-<address> to avoid name conflict with old entries
-    if config.exists(new_base_path + [address, 'use-web']):
-        for svc_type in ['rfc2136', 'service']:
-            if config.exists(new_base_path + [address, svc_type]):
-                config.set(new_base_path + ['web', svc_type])
-                config.set_tag(new_base_path + ['web', svc_type])
-                for svc_cfg in config.list_nodes(new_base_path + [address, svc_type]):
-                    config.copy(new_base_path + [address, svc_type, svc_cfg],
-                                new_base_path + ['web', svc_type, f'{svc_cfg}-{address}'])
+        # If use-web is set, then:
+        #   Move "service dns dynamic address <address> <service|rfc2136> <service> ..."
+        #     to "service dns dynamic address web <service|rfc2136> <service>-<address> ..."
+        #   Move "service dns dynamic address web use-web ..."
+        #     to "service dns dynamic address web web-options ..."
+        # Note: The config is named <service>-<address> to avoid name conflict with old entries
+        if config.exists(new_base_path + [address, 'use-web']):
+            for svc_type in ['rfc2136', 'service']:
+                if config.exists(new_base_path + [address, svc_type]):
+                    config.set(new_base_path + ['web', svc_type])
+                    config.set_tag(new_base_path + ['web', svc_type])
+                    for svc_cfg in config.list_nodes(new_base_path + [address, svc_type]):
+                        config.copy(new_base_path + [address, svc_type, svc_cfg],
+                                    new_base_path + ['web', svc_type, f'{svc_cfg}-{address}'])
 
-        # Multiple web-options were not supported, so copy only the first one
-        # Also, migrate web-options url to stricter format and transition
-        # checkip.dyndns.org to https://domains.google.com/checkip for better
-        # TLS support (see: https://github.com/ddclient/ddclient/issues/597)
-        if not config.exists(new_base_path + ['web', 'web-options']):
-            config.copy(new_base_path + [address, 'use-web'], new_base_path + ['web', 'web-options'])
-            if config.exists(new_base_path + ['web', 'web-options', 'url']):
-                url = config.return_value(new_base_path + ['web', 'web-options', 'url'])
-                if re.search("^(https?://)?checkip\.dyndns\.org", url):
-                    config.set(new_base_path + ['web', 'web-options', 'url'], 'https://domains.google.com/checkip')
-                if not url.startswith(('http://', 'https://')):
-                    config.set(new_base_path + ['web', 'web-options', 'url'], f'https://{url}')
+            # Multiple web-options were not supported, so copy only the first one
+            # Also, migrate web-options url to stricter format and transition
+            # checkip.dyndns.org to https://domains.google.com/checkip for better
+            # TLS support (see: https://github.com/ddclient/ddclient/issues/597)
+            if not config.exists(new_base_path + ['web', 'web-options']):
+                config.copy(new_base_path + [address, 'use-web'], new_base_path + ['web', 'web-options'])
+                if config.exists(new_base_path + ['web', 'web-options', 'url']):
+                    url = config.return_value(new_base_path + ['web', 'web-options', 'url'])
+                    if re.search("^(https?://)?checkip\.dyndns\.org", url):
+                        config.set(new_base_path + ['web', 'web-options', 'url'], 'https://domains.google.com/checkip')
+                    if not url.startswith(('http://', 'https://')):
+                        config.set(new_base_path + ['web', 'web-options', 'url'], f'https://{url}')
 
-        config.delete(new_base_path + [address])
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+            config.delete(new_base_path + [address])

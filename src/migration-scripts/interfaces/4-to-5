@@ -1,9 +1,21 @@
-#!/usr/bin/env python3
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # De-nest PPPoE interfaces
 # Migrate boolean nodes to valueless
 
-import sys
 from vyos.configtree import ConfigTree
 
 def migrate_dialer(config, tree, intf):
@@ -55,18 +67,7 @@ def migrate_dialer(config, tree, intf):
         if config.exists(ipv6_ra):
             config.delete(ipv6_ra)
 
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Must specify file name!")
-        exit(1)
-
-    file_name = sys.argv[1]
-
-    with open(file_name, 'r') as f:
-        config_file = f.read()
-
-    config = ConfigTree(config_file)
+def migrate(config: ConfigTree) -> None:
     pppoe_links = ['bonding', 'ethernet']
 
     for link_type in pppoe_links:
@@ -103,10 +104,3 @@ if __name__ == '__main__':
                     # Add interface description that this is required for PPPoE
                     if not config.exists(vlan_if + ['description']):
                         config.set(vlan_if + ['description'], value='PPPoE link interface')
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

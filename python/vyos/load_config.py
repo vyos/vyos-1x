@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -28,9 +28,7 @@ from typing import Union, Literal, TypeAlias, get_type_hints, get_args
 from vyos.config import Config
 from vyos.configtree import ConfigTree, DiffTree
 from vyos.configsource import ConfigSourceSession, VyOSError
-from vyos.component_version import from_string as version_from_string
-from vyos.component_version import from_system as version_from_system
-from vyos.migrator import Migrator, VirtualMigrator, MigratorError
+from vyos.migrate import ConfigMigrate, ConfigMigrateError
 from vyos.utils.process import popen, DEVNULL
 
 Variety: TypeAlias = Literal['explicit', 'batch', 'tree', 'legacy']
@@ -50,20 +48,6 @@ def get_running_config(config: Config) -> ConfigTree:
 def get_proposed_config(config_file: str = None) -> ConfigTree:
     config_str = Path(config_file).read_text()
     return ConfigTree(config_str)
-
-def migration_needed(config_obj: ConfigObj) -> bool:
-    """Check if a migration is needed for the config object.
-    """
-    if not isinstance(config_obj, ConfigTree):
-        atree = get_proposed_config(config_obj)
-    else:
-        atree = config_obj
-    version_str = atree.get_version_string()
-    if not version_str:
-        return True
-    aversion = version_from_string(version_str.splitlines()[1])
-    bversion = version_from_system()
-    return aversion != bversion
 
 def check_session(strict: bool, switch: Variety) -> None:
     """Check if we are in a config session, with no uncommitted changes, if
@@ -128,12 +112,10 @@ def migrate(config_obj: ConfigObj) -> ConfigObj:
     else:
         config_file = config_obj
 
-    virtual_migration = VirtualMigrator(config_file)
-    migration = Migrator(config_file)
+    config_migrate = ConfigMigrate(config_file)
     try:
-        virtual_migration.run()
-        migration.run()
-    except MigratorError as e:
+        config_migrate.run()
+    except ConfigMigrateError as e:
         raise LoadConfigError(e) from e
     else:
         if isinstance(config_obj, ConfigTree):
@@ -193,8 +175,7 @@ def load(config_obj: ConfigObj, strict: bool = True,
 
     check_session(strict, switch)
 
-    if migration_needed(config_obj):
-        config_obj = migrate(config_obj)
+    config_obj = migrate(config_obj)
 
     func = getattr(thismod, f'load_{switch}')
     func(config_obj)

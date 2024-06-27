@@ -1,89 +1,72 @@
-#!/usr/bin/env python3
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3316:
 # - Add subnet IDs to existing subnets
 # - Move options to option node
 # - Migrate address-range to range tagNode
 
-import sys
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['service', 'dhcpv6-server', 'shared-network-name']
-config = ConfigTree(config_file)
-
-if not config.exists(base):
-    # Nothing to do
-    sys.exit(0)
 
 option_nodes = ['captive-portal', 'domain-search', 'name-server',
                 'nis-domain', 'nis-server', 'nisplus-domain', 'nisplus-server',
                 'sip-server', 'sntp-server', 'vendor-option']
 
-subnet_id = 1
 
-for network in config.list_nodes(base):
-    if config.exists(base + [network, 'subnet']):
-        for subnet in config.list_nodes(base + [network, 'subnet']):
-            base_subnet = base + [network, 'subnet', subnet]
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-            if config.exists(base_subnet + ['address-range']):
-                config.set(base_subnet + ['range'])
-                config.set_tag(base_subnet + ['range'])
+    subnet_id = 1
 
-                range_id = 1
+    for network in config.list_nodes(base):
+        if config.exists(base + [network, 'subnet']):
+            for subnet in config.list_nodes(base + [network, 'subnet']):
+                base_subnet = base + [network, 'subnet', subnet]
 
-                if config.exists(base_subnet + ['address-range', 'prefix']):
-                    for prefix in config.return_values(base_subnet + ['address-range', 'prefix']):
-                        config.set(base_subnet + ['range', range_id, 'prefix'], value=prefix)
+                if config.exists(base_subnet + ['address-range']):
+                    config.set(base_subnet + ['range'])
+                    config.set_tag(base_subnet + ['range'])
 
-                        range_id += 1
+                    range_id = 1
 
-                if config.exists(base_subnet + ['address-range', 'start']):
-                    for start in config.list_nodes(base_subnet + ['address-range', 'start']):
-                        stop = config.return_value(base_subnet + ['address-range', 'start', start, 'stop'])
+                    if config.exists(base_subnet + ['address-range', 'prefix']):
+                        for prefix in config.return_values(base_subnet + ['address-range', 'prefix']):
+                            config.set(base_subnet + ['range', range_id, 'prefix'], value=prefix)
 
-                        config.set(base_subnet + ['range', range_id, 'start'], value=start)
-                        config.set(base_subnet + ['range', range_id, 'stop'], value=stop)
+                            range_id += 1
 
-                        range_id += 1
+                    if config.exists(base_subnet + ['address-range', 'start']):
+                        for start in config.list_nodes(base_subnet + ['address-range', 'start']):
+                            stop = config.return_value(base_subnet + ['address-range', 'start', start, 'stop'])
 
-                config.delete(base_subnet + ['address-range'])
+                            config.set(base_subnet + ['range', range_id, 'start'], value=start)
+                            config.set(base_subnet + ['range', range_id, 'stop'], value=stop)
 
-            for option in option_nodes:
-                if config.exists(base_subnet + [option]):
-                    config.set(base_subnet + ['option'])
-                    config.copy(base_subnet + [option], base_subnet + ['option', option])
-                    config.delete(base_subnet + [option])
+                            range_id += 1
 
-            config.set(base_subnet + ['subnet-id'], value=subnet_id)
-            subnet_id += 1
+                    config.delete(base_subnet + ['address-range'])
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+                for option in option_nodes:
+                    if config.exists(base_subnet + [option]):
+                        config.set(base_subnet + ['option'])
+                        config.copy(base_subnet + [option], base_subnet + ['option', option])
+                        config.delete(base_subnet + [option])
+
+                config.set(base_subnet + ['subnet-id'], value=subnet_id)
+                subnet_id += 1
