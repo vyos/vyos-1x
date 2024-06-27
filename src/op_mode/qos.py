@@ -23,7 +23,7 @@ from tabulate import tabulate
 import vyos.opmode
 from vyos.configquery import op_mode_config_dict
 from vyos.utils.process import cmd
-from vyos.ifconfig.interface import Interface
+from vyos.utils.network import interface_exists
 
 def detailed_output(dataset, headers):
     for data in dataset:
@@ -64,7 +64,7 @@ def format_data_type(num, suffix):
 def show_shaper(raw: bool, ifname: typing.Optional[str], classn: typing.Optional[str], detail: bool):
     # Scope which interfaces will output data
     if ifname:
-        if not Interface.exists(ifname):
+        if not interface_exists(ifname):
             raise vyos.opmode.Error(f"{ifname} does not exist!")
         
         interface_dict = {ifname: op_mode_config_dict(['qos', 'interface', ifname], key_mangling=('-', '_'),
@@ -221,7 +221,7 @@ def show_shaper(raw: bool, ifname: typing.Optional[str], classn: typing.Optional
         return raw_dict
 
 def show_cake(raw: bool, ifname: typing.Optional[str]):    
-    if not Interface.exists(ifname):
+    if not interface_exists(ifname):
         raise vyos.opmode.Error(f"{ifname} does not exist!")
         
     cake_data = json.loads(cmd(f"tc -j -s qdisc show dev {ifname}"))[0]
