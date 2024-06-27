@@ -315,4 +315,43 @@
       </node>
     </children>
   </node>
+  <node name="release">
+    <properties>
+      <help>Release specified variable</help>
+    </properties>
+    <children>
+      <node name="dhcp">
+        <properties>
+          <help>Release DHCP client lease</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Release DHCP client lease for specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/dhcp.py release_client_lease --family inet --interface "$4"</command>
+          </tagNode>
+        </children>
+      </node>
+      <node name="dhcpv6">
+        <properties>
+          <help>Release DHCPv6 client lease</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Release DHCPv6 client lease for specified interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/dhcp.py release_client_lease --family inet6 --interface "$4"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
