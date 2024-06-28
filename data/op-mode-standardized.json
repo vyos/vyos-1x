@@ -23,6 +23,7 @@
 "openconnect.py",
 "openvpn.py",
 "otp.py",
+"qos.py",
 "reset_vpn.py",
 "reverseproxy.py",
 "route.py",

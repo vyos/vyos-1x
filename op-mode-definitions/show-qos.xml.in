@@ -1,0 +1,80 @@
+<?xml version="1.0" ?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="qos">
+        <properties>
+          <help>Show Quality of Service (QoS) information</help>
+        </properties>
+        <children>
+          <node name="cake">
+            <properties>
+              <help>Show QoS CAKE information</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show QoS CAKE for given interface</help>
+                  <completionHelp>
+                    <path>qos interface</path>
+                    <list>&lt;interface&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/qos.py show_cake --ifname $5</command>
+              </tagNode>
+            </children>
+          </node>
+          <node name="shaper">
+            <properties>
+              <help>Show QoS shaping information</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/qos.py show_shaper</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show QoS detailed information</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/qos.py show_shaper --detail</command>
+              </leafNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show QoS shaping for given interface</help>
+                  <completionHelp>
+                    <path>qos interface</path>
+                    <list>&lt;interface&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/qos.py show_shaper --ifname $5</command>
+                <children>
+                  <tagNode name="class">
+                    <properties>
+                      <help>Show QoS shaping for given class</help>
+                      <completionHelp>
+                        <list>&lt;class&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/qos.py show_shaper --ifname $5 --classn $7</command>
+                    <children>
+                      <leafNode name="detail">
+                        <properties>
+                          <help>Show QoS detailed information for given class</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/qos.py show_shaper --ifname $5 --classn $7 --detail</command>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show QoS detailed information for given interface</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/qos.py show_shaper --ifname $5 --detail</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
