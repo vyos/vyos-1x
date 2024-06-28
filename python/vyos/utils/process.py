@@ -245,3 +245,18 @@ def is_systemd_service_running(service):
     Copied from: https://unix.stackexchange.com/a/435317 """
     tmp = cmd(f'systemctl show --value -p SubState {service}')
     return bool((tmp == 'running'))
+
+def ip_cmd(args, json=True):
+    """ A helper for easily calling iproute2 commands """
+    if json:
+        from json import loads
+        res = cmd(f"ip --json {args}").strip()
+        if res:
+            return loads(res)
+        else:
+            # Many mutation commands like "ip link set"
+            # return an empty string
+            return None
+    else:
+        res = cmd(f"ip {args}")
+        return res
