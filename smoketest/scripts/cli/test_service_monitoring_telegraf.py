@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
 
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
@@ -62,6 +63,34 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
 
         for input in inputs:
             self.assertIn(input, config)
+
+    def test_02_loki(self):
+        label = 'r123'
+        loki_url = 'http://localhost'
+        port = '3100'
+        loki_username = 'VyOS'
+        loki_password = 'PassW0Rd_VyOS'
+
+        self.cli_set(base_path + ['loki', 'url', loki_url])
+        self.cli_set(base_path + ['loki', 'port', port])
+        self.cli_set(base_path + ['loki', 'metric-name-label', label])
+
+        self.cli_set(base_path + ['loki', 'authentication', 'username', loki_username])
+        # password not set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['loki', 'authentication', 'password', loki_password])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(TELEGRAF_CONF)
+        self.assertIn(f'[[outputs.loki]]', config)
+        self.assertIn(f'domain = "{loki_url}:{port}"', config)
+        self.assertIn(f'metric_name_label = "{label}"', config)
+        self.assertIn(f'username = "{loki_username}"', config)
+        self.assertIn(f'password = "{loki_password}"', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

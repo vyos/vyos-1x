@@ -148,6 +148,39 @@
                   #include <include/url-http-https.xml.i>
                 </children>
               </node>
+              <node name="loki">
+                <properties>
+                  <help>Output plugin Loki</help>
+                </properties>
+                <children>
+                  <node name="authentication">
+                    <properties>
+                      <help>HTTP basic authentication parameters</help>
+                    </properties>
+                    <children>
+                      #include <include/generic-username.xml.i>
+                      #include <include/generic-password.xml.i>
+                    </children>
+                  </node>
+                  <leafNode name="metric-name-label">
+                    <properties>
+                      <help>Metric name label</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Label to use for the metric name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>3100</defaultValue>
+                  </leafNode>
+                  #include <include/url-http-https.xml.i>
+                </children>
+              </node>
               <leafNode name="source">
                 <properties>
                   <help>Source parameters for monitoring</help>
