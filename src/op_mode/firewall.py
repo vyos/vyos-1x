@@ -63,10 +63,10 @@ def get_nftables_details(family, hook, priority):
         aux=''
 
     if hook == 'name' or hook == 'ipv6-name':
-        command = f'sudo nft list chain {suffix} vyos_filter {name_prefix}{priority}'
+        command = f'nft list chain {suffix} vyos_filter {name_prefix}{priority}'
     else:
         up_hook = hook.upper()
-        command = f'sudo nft list chain {suffix} vyos_filter VYOS_{aux}{up_hook}_{priority}'
+        command = f'nft list chain {suffix} vyos_filter VYOS_{aux}{up_hook}_{priority}'
 
     try:
         results = cmd(command)
@@ -90,12 +90,42 @@ def get_nftables_details(family, hook, priority):
         out[rule_id] = rule
     return out
 
+def get_nftables_state_details(family):
+    if family == 'ipv6':
+        suffix = 'ip6'
+        name_suffix = 'POLICY6'
+    elif family == 'ipv4':
+        suffix = 'ip'
+        name_suffix = 'POLICY'
+    else:
+        # no state policy for bridge
+        return {}
+
+    command = f'nft list chain {suffix} vyos_filter VYOS_STATE_{name_suffix}'
+    try:
+        results = cmd(command)
+    except:
+        return {}
+
+    out = {}
+    for line in results.split('\n'):
+        rule = {}
+        for state in ['established', 'related', 'invalid']:
+            if state in line:
+                counter_search = re.search(r'counter packets (\d+) bytes (\d+)', line)
+                if counter_search:
+                    rule['packets'] = counter_search[1]
+                    rule['bytes'] = counter_search[2]
+                rule['conditions'] = re.sub(r'(\b(counter packets \d+ bytes \d+|drop|reject|return|log)\b|comment "[\w\-]+")', '', line).strip()
+                out[state] = rule
+    return out
+
 def get_nftables_group_members(family, table, name):
     prefix = 'ip6' if family == 'ipv6' else 'ip'
     out = []
 
     try:
-        results_str = cmd(f'sudo nft -j list set {prefix} {table} {name}')
+        results_str = cmd(f'nft -j list set {prefix} {table} {name}')
         results = json.loads(results_str)
     except:
         return out
@@ -168,6 +198,34 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
             output_firewall_vertical(rows, header)
         else:
             header = ['Rule', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
+            for i in rows:
+                rows[rows.index(i)].pop(1)
+            print(tabulate.tabulate(rows, header) + '\n')
+
+def output_firewall_state_policy(family):
+    if family == 'bridge':
+        return {}
+    print(f'\n---------------------------------\n{family} State Policy\n')
+
+    details = get_nftables_state_details(family)
+    rows = []
+
+    for state, state_conf in details.items():
+        row = [state, state_conf['conditions']]
+        row.append(state_conf.get('packets', 0))
+        row.append(state_conf.get('bytes', 0))
+        row.append(state_conf.get('conditions'))
+        rows.append(row)
+
+    if rows:
+        if args.rule:
+            rows.pop()
+
+        if args.detail:
+            header = ['State', 'Conditions', 'Packets', 'Bytes']
+            output_firewall_vertical(rows, header)
+        else:
+            header = ['State', 'Packets', 'Bytes', 'Conditions']
             for i in rows:
                 rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
@@ -305,6 +363,10 @@ def show_firewall():
         return
 
     for family in ['ipv4', 'ipv6', 'bridge']:
+        if 'global_options' in firewall:
+            if 'state_policy' in firewall['global_options']:
+                output_firewall_state_policy(family)
+
         if family in firewall:
             for hook, hook_conf in firewall[family].items():
                 for prior, prior_conf in firewall[family][hook].items():
@@ -316,12 +378,17 @@ def show_firewall_family(family):
     conf = Config()
     firewall = get_config_node(conf)
 
-    if not firewall or family not in firewall:
+    if not firewall:
         return
 
-    for hook, hook_conf in firewall[family].items():
-        for prior, prior_conf in firewall[family][hook].items():
-            output_firewall_name(family, hook, prior, prior_conf)
+    if 'global_options' in firewall:
+        if 'state_policy' in firewall['global_options']:
+            output_firewall_state_policy(family)
+
+    if family in firewall:
+        for hook, hook_conf in firewall[family].items():
+            for prior, prior_conf in firewall[family][hook].items():
+                output_firewall_name(family, hook, prior, prior_conf)
 
 def show_firewall_name(family, hook, priority):
     print('Ruleset Information')
@@ -622,6 +689,10 @@ def show_statistics():
         return
 
     for family in ['ipv4', 'ipv6', 'bridge']:
+        if 'global_options' in firewall:
+            if 'state_policy' in firewall['global_options']:
+                output_firewall_state_policy(family)
+
         if family in firewall:
             for hook, hook_conf in firewall[family].items():
                 for prior, prior_conf in firewall[family][hook].items():
