@@ -26,9 +26,8 @@ from tempfile import TemporaryDirectory
 from vyos.tpm import clear_tpm_key
 from vyos.tpm import read_tpm_key
 from vyos.tpm import write_tpm_key
-from vyos.util import ask_input
-from vyos.util import ask_yes_no
-from vyos.util import cmd
+from vyos.utils.io import ask_input, ask_yes_no
+from vyos.utils.process import cmd
 
 persistpath_cmd = '/opt/vyatta/sbin/vyos-persistpath'
 mount_paths = ['/config', '/opt/vyatta/etc/config']
