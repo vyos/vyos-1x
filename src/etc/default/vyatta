@@ -1,0 +1,217 @@
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2006, 2007 Vyatta, Inc.
+# All Rights Reserved.
+
+# declare configured Vyatta shell environment variables
+
+# first set vars per args of the "source /etc/default/vyatta VAR=FOO"
+_vyatta_extglob=$(shopt -p extglob)
+shopt -s extglob
+for arg ; do
+    [[ $arg == *=* ]] && \
+	eval declare -x $arg
+done
+eval $_vyatta_extglob
+unset _vyatta_extglob
+
+{
+  # These declarations must go within braces in order to be able to silence
+  # readonly variable errors.
+
+    for var in prefix exec_prefix datarootdir ; do
+	eval test -n \"\$$var\" \&\& _vyatta_save_$var=\$$var
+    done
+
+    prefix=/opt/vyatta
+    exec_prefix=${prefix}
+    datarootdir=${prefix}/share
+
+    if test -z "$vyatta_prefix" ; then
+	if test -n "/opt/vyatta" ; then
+	    declare -x -r vyatta_prefix=/opt/vyatta
+            declare -x -r vyos_prefix=/opt/vyatta
+	else
+	    declare -x -r vyatta_prefix=/opt/vyatta
+            declare -x -r vyos_prefix=/opt/vyatta
+	fi
+    fi
+    if test -z "$vyatta_exec_prefix" ; then
+	if test -n "${prefix}" ; then
+	    declare -x -r vyatta_prefix=${prefix}
+            declare -x -r vyos_prefix=${prefix}
+	else
+	    declare -x -r vyatta_prefix=$vyatta_prefix
+            declare -x -r vyos_prefix=$vyatta_prefix
+	fi
+    fi
+    if test -z "$vyatta_datarootdir" ; then
+	if test -n "${prefix}/share" ; then
+	    declare -x -r vyatta_datarootdir=${prefix}/share
+            declare -x -r vyos_datarootdir=${prefix}/share
+	else
+	    declare -x -r vyatta_datarootdir=$vyatta_prefix/share
+            declare -x -r vyos_datarootdir=$vyatta_prefix/share
+	fi
+    fi
+    if test -z "$vyatta_bindir" ; then
+	if test -n "${exec_prefix}/bin" ; then
+	    declare -x -r vyatta_bindir=${exec_prefix}/bin
+	else
+	    declare -x -r vyatta_bindir=$vyatta_exec_prefix/bin
+	fi
+    fi
+    if test -z "$vyatta_sbindir" ; then
+	if test -n "${exec_prefix}/sbin" ; then
+	    declare -x -r vyatta_sbindir=${exec_prefix}/sbin
+	else
+	    declare -x -r vyatta_sbindir=$vyatta_exec_prefix/sbin
+	fi
+    fi
+    if test -z "$vyatta_libdir" ; then
+	if test -n "${exec_prefix}/lib" ; then
+	    declare -x -r vyatta_libdir=${exec_prefix}/lib
+            declare -x -r vyos_libdir=${exec_prefix}/lib
+	else
+	    declare -x -r vyatta_libdir=$vyatta_exec_prefix/lib
+            declare -x -r vyos_libdir=$vyatta_exec_prefix/lib
+	fi
+    fi
+    if test -z "$vyatta_libexecdir" ; then
+	if test -n "${exec_prefix}/libexec" ; then
+	    declare -x -r vyatta_libexecdir=${exec_prefix}/libexec
+	else
+	    declare -x -r vyatta_libexecdir=$vyatta_exec_prefix/libexec
+	fi
+    fi
+    if test -z "$vyatta_datadir" ; then
+	if test -n "${datarootdir}" ; then
+	    declare -x -r vyatta_datadir=${datarootdir}
+            declare -x -r vyos_datadir=${datarootdir}
+	else
+	    declare -x -r vyatta_datadir=$vyatta_datarootdir
+            declare -x -r vyos_datadir=$vyatta_datarootdir
+	fi
+    fi
+    if test -z "$vyatta_htmldir" ; then
+	if test -n "${docdir}" ; then
+	    declare -x -r vyatta_htmldir=${docdir}
+	else
+	    declare -x -r vyatta_htmldir=$vyatta_datarootdir/html
+	fi
+    fi
+    if test -z "$vyatta_infodir" ; then
+	if test -n "${prefix}/share/info" ; then
+	    declare -x -r vyatta_infodir=${prefix}/share/info
+	else
+	    declare -x -r vyatta_infodir=$vyatta_datarootdir/info
+	fi
+    fi
+    if test -z "$vyatta_mandir" ; then
+	if test -n "${prefix}/share/man" ; then
+	    declare -x -r vyatta_htmldir=${prefix}/share/man
+	else
+	    declare -x -r vyatta_htmldir=$vyatta_datarootdir/man
+	fi
+    fi
+    if test -z "$vyatta_localedir" ; then
+	if test -n "${datarootdir}/locale" ; then
+	    declare -x -r vyatta_localedir=${datarootdir}/locale
+	else
+	    declare -x -r vyatta_localedir=$vyatta_datarootdir/locale
+	fi
+    fi
+    if test -z "$vyatta_localstatedir" ; then
+	if test -n "${prefix}/var" ; then
+	    declare -x -r vyatta_localstatedir=${prefix}/var
+	else
+	    declare -x -r vyatta_localstatedir=$vyatta_prefix/var
+	fi
+    fi
+    if test -z "$vyatta_sharedstatedir" ; then
+	if test -n "${prefix}/com" ; then
+	    declare -x -r vyatta_sharedstatedir=${prefix}/com
+	else
+	    declare -x -r vyatta_sharedstatedir=$vyatta_prefix/com
+	fi
+    fi
+    if test -z "$vyatta_sysconfdir" ; then
+	if test -n "${prefix}/etc" ; then
+	    declare -x -r vyatta_sysconfdir=${prefix}/etc
+	else
+	    declare -x -r vyatta_sysconfdir=$vyatta_prefix/etc
+	fi
+    fi
+    if test -z "$vyatta_op_templates" ; then
+	declare -x -r vyatta_op_templates=$vyatta_datadir/vyatta-op/templates
+        declare -x -r vyos_op_templates=$vyatta_datadir/vyatta-op/templates
+    fi
+    if test -z "$vyatta_cfg_templates" ; then
+	declare -x -r vyatta_cfg_templates=$vyatta_datadir/vyatta-cfg/templates
+        declare -x -r vyos_cfg_templates=$vyatta_datadir/vyatta-cfg/templates
+    fi
+    if test -z "$vyatta_configdir" ; then
+	declare -x -r vyatta_configdir=$vyatta_prefix/config
+        declare -x -r vyos_configdir=$vyatta_prefix/config
+    fi
+
+    for var in prefix exec_prefix datarootdir ; do
+	eval test -n \"\$_vyatta_save_$var\" \&\& $var=\$_vyatta_save_$var
+    done
+
+    # It's not like we do, or should support installing VyOS at a different prefix
+    declare -x -r vyos_libexec_dir=/usr/libexec/vyos
+    declare -x -r vyos_bin_dir=/usr/bin
+    declare -x -r vyos_sbin_dir=/usr/sbin
+    declare -x -r vyos_share_dir=/usr/share
+
+    if test -z "$vyos_conf_scripts_dir" ; then
+        declare -x -r vyos_conf_scripts_dir=$vyos_libexec_dir/conf_mode
+    fi
+    if test -z "$vyos_op_scripts_dir" ; then
+        declare -x -r vyos_op_scripts_dir=$vyos_libexec_dir/op_mode
+    fi
+    if test -z "$vyos_completion_dir" ; then
+        declare -x -r vyos_completion_dir=$vyos_libexec_dir/completion
+    fi
+    if test -z "$vyos_validators_dir" ; then
+        declare -x -r vyos_validators_dir=$vyos_libexec_dir/validators
+    fi
+    if test -z "$vyos_data_dir" ; then
+        declare -x -r vyos_data_dir=$vyos_share_dir/vyos
+    fi
+    if test -z "$vyos_persistence_dir" ; then
+        UNION_NAME=$(cat /proc/cmdline | sed -e s+^.*vyos-union=++ | sed -e 's/ .*$//')
+        declare -x -r vyos_persistence_dir="/usr/lib/live/mount/persistence/${UNION_NAME}"
+    fi
+    if test -z "$vyos_rootfs_dir" ; then
+        ROOTFS=$(mount -t squashfs | grep loop0 | cut -d' ' -f3)
+        declare -x -r vyos_rootfs_dir="${ROOTFS}"
+    fi
+    if test -z "$VRF" ; then
+        VRF=$(ip vrf identify)
+        [ -n "$VRF" ] && declare -x -r VRF="${VRF}"
+    fi
+    if test -z "$NETNS" ; then
+        NETNS=$(ip netns identify)
+        [ -n "$NETNS" ] && declare -x -r NETNS="${NETNS}"
+    fi
+
+} 2>/dev/null || :
+
+[ -r /etc/default/vyatta-cfg ] && source /etc/default/vyatta-cfg
+
+[ -r /etc/default/vyatta-local-env ] && source /etc/default/vyatta-local-env
+
+###  Local Variables:
+###  mode: shell-script
+###  End:

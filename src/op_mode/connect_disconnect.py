@@ -95,17 +95,21 @@ def disconnect(interface):
 def main():
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--connect", help="Bring up a connection-oriented network interface", action="store")
-    group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store")
+    group.add_argument("--connect", help="Bring up a connection-oriented network interface", action="store_true")
+    group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store_true")
+    group.add_argument("--interface", help="Interface name", action="store", required=True)
     args = parser.parse_args()
 
-    if args.connect:
-        if commit_in_progress():
-            print('Cannot connect while a commit is in progress')
-            exit(1)
-        connect(args.connect)
-    elif args.disconnect:
-        disconnect(args.disconnect)
+    if args.connect or args.disconnect:
+        if args.disconnect:
+            disconnect(args.interface)
+
+        if args.connect:
+            if commit_in_progress():
+                print('Cannot connect while a commit is in progress')
+                exit(1)
+            connect(args.interface)
+
     else:
         parser.print_help()
 

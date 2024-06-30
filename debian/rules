@@ -103,6 +103,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/etc
 	cp -r src/etc/* $(DIR)/etc
 
+	# Install legacy Vyatta files
+	mkdir -p $(DIR)/opt
+	cp -r src/opt/* $(DIR)/opt
+
 	# Install PAM configuration snippets
 	mkdir -p $(DIR)/usr/share/pam-configs
 	cp -r src/pam-configs/* $(DIR)/usr/share/pam-configs

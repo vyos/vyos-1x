@@ -1,0 +1,16 @@
+clear
+connect
+delete
+disconnect
+exit
+force
+monitor
+ping
+reset
+release
+renew
+set
+show
+telnet
+traceroute
+update

@@ -120,6 +120,61 @@ fi
 # ensure the proxy user has a proper shell
 chsh -s /bin/sh proxy
 
+# Set file capabilities
+setcap cap_net_admin=pe /sbin/ethtool
+setcap cap_net_admin=pe /sbin/tc
+setcap cap_net_admin=pe /bin/ip
+setcap cap_net_admin=pe /sbin/xtables-legacy-multi
+setcap cap_net_admin=pe /sbin/xtables-nft-multi
+setcap cap_net_admin=pe /usr/sbin/conntrack
+setcap cap_net_admin=pe /usr/sbin/arp
+setcap cap_net_raw=pe /usr/bin/tcpdump
+setcap cap_net_admin,cap_sys_admin=pe /sbin/sysctl
+setcap cap_sys_module=pe /bin/kmod
+setcap cap_sys_time=pe /bin/date
+
+# create needed directories
+mkdir -p /var/log/user
+mkdir -p /var/core
+mkdir -p /opt/vyatta/etc/config/auth
+mkdir -p /opt/vyatta/etc/config/scripts
+mkdir -p /opt/vyatta/etc/config/user-data
+mkdir -p /opt/vyatta/etc/config/support
+chown -R root:vyattacfg /opt/vyatta/etc/config
+chmod -R 775 /opt/vyatta/etc/config
+mkdir -p /opt/vyatta/etc/logrotate
+mkdir -p /opt/vyatta/etc/netdevice.d
+
+touch /etc/environment
+
+if [ ! -f /etc/bash_completion ]; then
+  echo "source /etc/bash_completion.d/10vyatta-op" > /etc/bash_completion
+  echo "source /etc/bash_completion.d/20vyatta-cfg" >> /etc/bash_completion
+fi
+
+sed -i 's/^set /builtin set /' /etc/bash_completion
+
+# Fix up PAM configuration for login so that invalid users are prompted
+# for password
+sed -i 's/requisite[ \t][ \t]*pam_securetty.so/required pam_securetty.so/' $rootfsdir/etc/pam.d/login
+
+# Change default shell for new accounts
+sed -i -e ':^DSHELL:s:/bin/bash:/bin/vbash:' /etc/adduser.conf
+
+# Do not allow users to change full name field (controlled by vyos-1x)
+sed -i -e 's/^CHFN_RESTRICT/#&/' /etc/login.defs
+
+# Only allow root to use passwd command
+if ! grep -q 'pam_succeed_if.so' /etc/pam.d/passwd ; then
+    sed -i -e '/^@include/i \
+password    requisite pam_succeed_if.so user = root
+' /etc/pam.d/passwd
+fi
+
+# remove unnecessary ddclient script in /etc/ppp/ip-up.d/
+# this logs unnecessary messages trying to start ddclient
+rm -f /etc/ppp/ip-up.d/ddclient
+
 # create /opt/vyatta/etc/config/scripts/vyos-preconfig-bootup.script
 PRECONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-preconfig-bootup.script
 if [ ! -x $PRECONFIG_SCRIPT ]; then
