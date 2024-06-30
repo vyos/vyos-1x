@@ -55,12 +55,6 @@ op_mode_definitions: $(op_xml_obj)
 
 	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
-	# XXX: delete top level op mode node.def's that now live in other packages
-	rm -f $(OP_TMPL_DIR)/add/node.def
-	rm -f $(OP_TMPL_DIR)/clear/interfaces/node.def
-	rm -f $(OP_TMPL_DIR)/clear/node.def
-	rm -f $(OP_TMPL_DIR)/delete/node.def
-
 	# XXX: tcpdump, ping, traceroute and mtr must be able to recursivly call themselves as the
 	# options are provided from the scripts themselves
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/

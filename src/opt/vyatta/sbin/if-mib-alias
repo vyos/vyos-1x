@@ -1,0 +1,130 @@
+#! /usr/bin/perl
+
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2007 Vyatta, Inc.
+# All Rights Reserved.
+#
+# Author: Stephen Hemminger
+# Date: October 2010
+# Description: script is run as net-snmp extension to read interface alias
+#
+# **** End License ****
+
+use strict;
+use warnings;
+use feature "switch";
+no warnings 'experimental::smartmatch';
+
+# Collect interface all alias values
+sub get_alias {
+    my @interfaces;
+
+    open (my $ip, '-|', 'ip li')
+       or die "Can't run ip command\n";
+    my $index;
+    while(<$ip>) {
+       if (/^(\d+): ([^:]*): /) {
+	   $index = $1;
+	   $interfaces[$index] = $2;
+       } elsif (/^ +alias (.*)$/) {
+	   $interfaces[$index] = $1;
+       }
+    }
+    close $ip;
+    return @interfaces;
+}
+
+sub get_oid {
+    my $oid = shift;
+    die "Not a valid Object ID: $oid"
+	unless ($oid =~ /.(\d+)$/);
+
+    my $ifindex = $1;
+    my @interfaces = get_alias();
+
+    my $ifalias = $interfaces[$ifindex];
+    print "$oid\nstring\n$ifalias\n" if $ifalias;
+}
+
+# OID of ifAlias [RFC2863]
+my $BASE = '.1.3.6.1.2.1.31.1.1.1.18';
+
+sub get_next {
+    my $oid = shift;
+
+    return get_next("$BASE.0")
+	if ($oid eq $BASE);
+
+    die "Not a valid Object ID: $oid"
+	unless ($oid =~ /^(\S*)\.(\d+)$/);
+
+    my $base = $1;
+    my $ifindex = $2;
+    my @interfaces = get_alias();
+
+    while (++$ifindex <= $#interfaces) {
+	my $ifalias = $interfaces[$ifindex];
+	if ($ifalias) {
+	    print "$base.$ifindex\nstring\n$ifalias\n";
+	    last;
+	}
+    }
+}
+
+sub ifindextoname {
+    my $ifindex = shift;
+
+    open (my $ip, '-|', 'ip li')
+	or die "Can't run ip command\n";
+    my $index;
+    while(<$ip>) {
+	next unless (/^(\d+): ([^:]*): /);
+	return $2 if ($1 == $ifindex);
+    }
+    return;
+}
+
+sub set_oid {
+    my ($oid, $target, $value) = @_;
+    die "Not a valid Object ID: $oid"
+	unless ($oid =~ /\.(\d+)$/);
+    my $ifindex = $1;
+    unless ($target eq 'string') {
+	print "wrong-type\n";
+	return;
+    }
+
+    my $ifname = ifindextoname($ifindex);
+    if ($ifname) {
+	system("ip li set $ifname alias '$value' >/dev/null 2>&1");
+	print "not-writeable\n"	if ($? != 0);
+    }
+}
+
+sub usage {
+    warn "Usage: $0 {-g|-n} OID\n";
+    warn "       $0 -s OID TARGET VALUE\n";
+    exit 1;
+}
+
+usage unless $#ARGV >= 1;
+
+given ($ARGV[0]) {
+    when ('-g') { get_oid ($ARGV[1]); }
+    when ('-n') { get_next ($ARGV[1]); }
+    when ('-s') { set_oid ($ARGV[1], $ARGV[2], $ARGV[3]); }
+    default {
+	warn "$ARGV[0] unknown flag\n";
+	usage;
+    }
+}

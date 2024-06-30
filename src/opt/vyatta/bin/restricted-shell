@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ $# != 0 ]; then
+    echo "Remote command execution is not allowed for operator level users"
+    args=($@)
+    args_str=$(IFS=" " ; echo "${args[*]}")
+    logger "Operator level user $USER attempted remote command execution: $args_str" 
+    exit 1
+fi
+
+exec vbash
