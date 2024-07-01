@@ -14,10 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import sys
 from typing import List
-from vyos.utils.process import rc_cmd
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
+from vyos.utils.process import rc_cmd
 
 
 def print_header(command: str) -> None:
@@ -50,7 +52,15 @@ def execute_command(command: str, header_text: str) -> None:
     print_header(header_text)
     try:
         rc, output = rc_cmd(command)
-        print(output)
+        # Enable unbuffered print param to improve responsiveness of printed
+        # output to end user
+        print(output, flush=True)
+    # Exit gracefully when user interrupts program output
+    # Flush standard streams; redirect remaining output to devnull
+    # Resolves T5633: Bug #1 and 3
+    except (BrokenPipeError, KeyboardInterrupt):
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(1)
     except Exception as e:
         print(f"Error executing command: {command}")
         print(f"Error message: {e}")
@@ -155,13 +165,13 @@ def show_route() -> None:
         "show ip route supernets-only",
         "show ip route table all",
         "show ip route vrf all",
-        "show ipv6 route bgp | head 108",
+        "show ipv6 route bgp | head -108",
         "show ipv6 route cache",
         "show ipv6 route connected",
         "show ipv6 route forward",
         "show ipv6 route isis",
         "show ipv6 route kernel",
-        "show ipv6 route ospf",
+        "show ipv6 route ospfv3",
         "show ipv6 route rip",
         "show ipv6 route static",
         "show ipv6 route summary",
@@ -179,8 +189,9 @@ def show_firewall() -> None:
 
 def show_system() -> None:
     """Prints system parameters."""
-    execute_command(op('show system image version'), 'Show System Image Version')
-    execute_command(op('show system image storage'), 'Show System Image Storage')
+    execute_command(op('show version'), 'Show System Version')
+    execute_command(op('show system storage'), 'Show System Storage')
+    execute_command(op('show system image details'), 'Show System Image Details')
 
 
 def show_date() -> None:
