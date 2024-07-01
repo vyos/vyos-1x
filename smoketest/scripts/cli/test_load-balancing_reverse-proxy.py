@@ -458,6 +458,47 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         config = read_file(HAPROXY_CONF)
         self.assertIn(f'option smtpchk', config)
 
+    def test_09_lb_reverse_proxy_logging(self):
+        # Setup base
+        self.base_config()
+        self.cli_commit()
+
+        # Ensure default logging configuration is present
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('log /dev/log local0', config)
+        self.assertIn('log /dev/log local1 notice', config)
+
+        # Test global-parameters logging options
+        self.cli_set(base_path + ['global-parameters', 'logging', 'facility', 'local1', 'level', 'err'])
+        self.cli_set(base_path + ['global-parameters', 'logging', 'facility', 'local2', 'level', 'warning'])
+        self.cli_commit()
+
+        # Test global logging parameters are generated in configuration file
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('log /dev/log local1 err', config)
+        self.assertIn('log /dev/log local2 warning', config)
+
+        # Test backend logging options
+        backend_path = base_path + ['backend', 'bk-01']
+        self.cli_set(backend_path + ['logging', 'facility', 'local3', 'level', 'debug'])
+        self.cli_set(backend_path + ['logging', 'facility', 'local4', 'level', 'info'])
+        self.cli_commit()
+
+        # Test backend logging parameters are generated in configuration file
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('log /dev/log local3 debug', config)
+        self.assertIn('log /dev/log local4 info', config)
+
+        # Test service logging options
+        service_path = base_path + ['service', 'https_front']
+        self.cli_set(service_path + ['logging', 'facility', 'local5', 'level', 'notice'])
+        self.cli_set(service_path + ['logging', 'facility', 'local6', 'level', 'crit'])
+        self.cli_commit()
+
+        # Test service logging parameters are generated in configuration file
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('log /dev/log local5 notice', config)
+        self.assertIn('log /dev/log local6 crit', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
