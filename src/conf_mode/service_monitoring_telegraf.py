@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -113,6 +113,9 @@ def get_config(config=None):
     if not conf.exists(base + ['azure-data-explorer']):
         del monitoring['azure_data_explorer']
 
+    if not conf.exists(base + ['loki']):
+        del monitoring['loki']
+
     return monitoring
 
 def verify(monitoring):
@@ -158,6 +161,19 @@ def verify(monitoring):
 
         if 'url' not in monitoring['splunk']:
             raise ConfigError(f'Monitoring splunk "url" is mandatory!')
+
+    # Verify Loki
+    if 'loki' in monitoring:
+        if 'url' not in monitoring['loki']:
+            raise ConfigError(f'Monitoring loki "url" is mandatory!')
+        if 'authentication' in monitoring['loki']:
+            if (
+                'username' not in monitoring['loki']['authentication']
+                or 'password' not in monitoring['loki']['authentication']
+            ):
+                raise ConfigError(
+                    f'Authentication "username" and "password" are mandatory!'
+                )
 
     return None
 
