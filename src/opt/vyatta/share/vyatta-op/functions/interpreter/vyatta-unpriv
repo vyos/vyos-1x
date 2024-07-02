@@ -1,0 +1,97 @@
+#!/bin/bash
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2006, 2007 Vyatta, Inc.
+# All Rights Reserved.
+#
+# **** End License ****
+
+source /opt/vyatta/share/vyatta-op/functions/interpreter/vyatta-common
+
+declare -a op_allowed
+declare -a toplevel
+
+op_allowed=( $(cat /opt/vyatta/etc/shell/level/users/allowed-op.in) )
+toplevel=( $(ls /opt/vyatta/share/vyatta-op/templates/) )
+
+vyatta_unpriv_ambiguous ()
+{
+  local -a filtered_cmds=()
+  get_prefix_filtered_list $1 op_allowed filtered_cmds
+  _vyatta_op_node_path=${vyatta_op_templates}
+  comps=$(_vyatta_op_help $1 ${filtered_cmds[@]})
+  echo -ne "\n  Ambiguous command: [$1]\n"
+  echo -e "$comps\n" | sed -e 's/^P/  P/'
+}
+
+vyatta_unpriv_init ()
+{
+  # empty and default line compeletion
+  complete -E -F _vyatta_op_expand
+  complete -D -F _vyatta_op_default_expand
+
+  for cmd in "${op_allowed[@]}"; do
+    if is_elem_of ${cmd} toplevel; then
+      for pos in $(seq 1 ${#cmd}); do
+         case ${cmd:0:$pos} in
+            for|do|done|if|fi|case|while|tr )
+              continue ;;
+            *) ;;
+          esac 
+          local -a filtered_cmds=()
+          get_prefix_filtered_list ${cmd:0:$pos} op_allowed filtered_cmds
+          local found
+          is_elem_of "${cmd:0:$pos}" op_allowed
+          found=$?
+          if [[ "${#filtered_cmds[@]}" == "1" || "${cmd:0:$pos}" == "$cmd"  || "$found" == "0" ]]; then
+            local fcmd
+            if [[ "${#filtered_cmds[@]}" == "1" ]]; then
+              fcmd=${filtered_cmds[0]}
+            elif is_elem_of "${cmd:0:$pos}" op_allowed; then
+              fcmd=${cmd:0:$pos}
+            else
+              fcmd=$cmd
+            fi
+            eval alias ${cmd:0:$pos}=\'_vyatta_op_run $fcmd\'
+          else
+            eval alias ${cmd:0:$pos}=\'vyatta_unpriv_ambiguous ${cmd:0:$pos}\'
+          fi
+          complete -F _vyatta_op_expand ${cmd:0:$pos}
+      done
+    fi
+  done
+  if [[ "$VYATTA_USER_LEVEL_DIR" == "/opt/vyatta/etc/shell/level/users" ]]; then
+    PS1='\u@\h> '
+  fi
+}
+
+vyatta_unpriv_gen_allowed () {
+  local -a allowed_cmds=()
+  rm -rf /opt/vyatta/etc/shell/level/users/allowed-op
+  for cmd in "${op_allowed[@]}"; do
+    if is_elem_of ${cmd} toplevel; then
+      for pos in $(seq 1 ${#cmd}); do
+         case ${cmd:0:$pos} in
+            for|do|done|if|fi|case|while|tr )
+              continue ;;
+            *) ;;
+          esac 
+      if ! is_elem_of ${cmd:0:$pos} allowed_cmds; then
+        allowed_cmds+=( ${cmd:0:$pos} )
+        echo ${cmd:0:$pos} >>  /opt/vyatta/etc/shell/level/users/allowed-op
+      fi
+      done
+    else
+      echo ${cmd} >>  /opt/vyatta/etc/shell/level/users/allowed-op
+    fi
+  done
+}

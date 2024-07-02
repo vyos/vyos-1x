@@ -1,0 +1,240 @@
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2006, 2007 Vyatta, Inc.
+# All Rights Reserved.
+#
+# Author: Tom Grennan
+# Date: 2007
+# Description: setup bash completion for Vyatta operational commands
+#
+# **** End License ****
+
+_vyatta_op_init ()
+{
+    # empty and default line compeletion
+    complete -E -F _vyatta_op_expand
+    complete -D -F _vyatta_op_default_expand
+
+    # create the top level aliases for the unambiguous portions of the commands
+    # this is the only place we need an entire enumerated list of the subcommands
+    for cmd in $( ls /opt/vyatta/share/vyatta-op/templates/ ); do
+      for pos in $(seq 1 ${#cmd}); do
+        case ${cmd:0:$pos} in
+          for|do|done|if|fi|case|while|tr )
+            continue ;;
+          *) ;;
+        esac
+        complete -F _vyatta_op_expand ${cmd:0:$pos}
+        eval alias ${cmd:0:$pos}=\'_vyatta_op_run ${cmd:0:$pos}\'
+      done
+    done
+
+    shopt -s histverify
+}
+
+_vyatta_op_get_node_def_field ()
+{
+    local file=$1 field=$2
+
+    sed -n '/^'"$field"':/,$ {
+# strip field name and hold rest of line
+    s/[a-z]*: *//
+    h
+    :b
+# at EOF, print hold buffer and quit
+    $ { x; p; q }
+# input next line
+    n
+# if start of another field def, print hold buf and quit
+    /^[a-z]*:/ { x; p; q }
+# add to hold buf and branch to input next line
+    H
+    bb
+    }' $file
+}
+
+_vyatta_op_conv_node_path ()
+{
+  # is the node ok, ambiguous, or invalid
+  local node_path
+  local node
+  local -a ARR
+  node_path=$1
+  node=$2
+  ARR=( $(compgen -d $node_path/$node) )
+  if [[ "${#ARR[@]}" == "1" ]]; then
+   echo ${ARR[0]##*/}
+  elif [[ "${#ARR[@]}" == "0" ]]; then
+   if [[ -d "${node_path}/node.tag" ]]; then
+     echo "$node tag"
+   else
+     echo "$node invalid"
+   fi
+  elif [[ -d "$node_path/$node" ]]; then
+    echo $node
+  elif [[ "$VYATTA_USER_LEVEL_DIR" != "/opt/vyatta/etc/shell/level/admin" ]];then
+   # special handling for unprivledged completions.
+   # Since top level commands are different for unprivledged users
+   # we need a handler to expand them properly.
+   local -a filtered_cmds=()
+   local -a allowed=( $(cat $VYATTA_USER_LEVEL_DIR/allowed-op.in) )
+   get_prefix_filtered_list $node allowed filtered_cmds
+   if [[ "${#filtered_cmds[@]}" == "1" ]];then
+      echo ${filtered_cmds[0]}
+   else
+      echo "${node} ambiguous"
+   fi
+  else
+   echo "$node ambiguous"
+  fi  
+}
+
+_vyatta_op_conv_run_cmd ()
+{
+  # Substitue bash positional variables 
+  # for the same value in the expanded array
+  local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
+  shopt -s extglob
+  shopt -u nullglob
+  local run_cmd="$1"
+  local line outline
+  local -i inquote=0;
+  local outcmd='';
+  local OIFS=$IFS
+  local re="([^']*')(.*)"
+
+  toggle_inquote()
+  {
+      if [[ $inquote == 0 ]]; then
+          inquote=1
+      else
+          inquote=0
+      fi
+  }
+
+  process_subline()
+  {
+      if [[ $inquote == 1 ]]; then
+          outline+="$1"
+      else
+          outline+=$(sed -e 's/\$\([0-9]\)/\$\{args\[\1\]\}/g' <<<"$1")
+      fi
+  }
+
+  run_cmd="${run_cmd/\"\$\@\"/${args[*]}}"
+  run_cmd="${run_cmd/\$\*/${args[*]}}"
+  run_cmd="${run_cmd//\\/\\\\}"
+  IFS=$'\n'
+  for line in ${run_cmd[@]}; do
+    outline=''
+    while [[ -n "$line" ]]; do
+        if [[ "$line" =~ $re ]]; then
+            process_subline "${BASH_REMATCH[1]}"
+            toggle_inquote
+        else
+            process_subline "$line"
+        fi
+        line="${BASH_REMATCH[2]}"
+    done
+    outcmd+="$outline\n"
+  done
+  IFS=$OIFS
+  eval "$restore_shopts"
+  echo -ne "$outcmd"
+}
+
+_vyatta_op_run ()
+{
+    # if run with bash builtin "set -/+*" run set and return
+    # this happens when a different completion script runs eval "set ..."
+    # (VyOS T1604)
+    if [[ "$1" == "set" && "$2" =~ ^(-|\+).* ]]; then
+      set "${@:2}"
+      return
+    fi
+
+    local -i estat
+    local tpath=$vyatta_op_templates
+    local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
+    shopt -s extglob nullglob
+
+    _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+    false; estat=$?
+    stty echo 2> /dev/null # turn echo on, this is a workaround for bug 7570
+                           # not a fix we need to look at why the readline library 
+                           # is getting confused on paged help text.
+
+    i=1
+    declare -a args  # array of expanded arguments
+    for arg in "$@"; do
+        local orig_arg=$arg
+        if [[ $arg == "*" ]]; then
+          arg="*" #leave user defined wildcards alone
+        else
+          arg=( $(_vyatta_op_conv_node_path $tpath $arg) )  # expand the arguments
+        fi
+        # output proper error message based on the above expansion
+        if [[ "${arg[1]}" == "ambiguous" ]]; then
+          echo -ne "\n  Ambiguous command: ${args[@]} [$arg]\n" >&2
+          local -a cmds=( $(compgen -d $tpath/$arg) )
+          _vyatta_op_node_path=$tpath
+          local comps=$(_vyatta_op_help $arg ${cmds[@]##*/})
+          echo -e "$comps\n" | sed -e 's/^P/  P/'
+          eval $restore_shopts
+          return 1
+        elif [[ "${arg[1]}" == "invalid" ]]; then
+          echo -ne "\n  Invalid command: ${args[@]} [$arg]\n\n" >&2
+          eval $restore_shopts
+          return 1
+        fi
+
+        if [ -f "$tpath/$arg/node.def" ] ; then
+            tpath+=/$arg
+        elif [ -f $tpath/node.tag/node.def ] ; then
+            tpath+=/node.tag
+        else
+            echo -ne "\n  Invalid command: ${args[@]} [$arg]\n\n" >&2
+            eval $restore_shopts
+            return 1
+        fi
+        if [[ "$arg" == "node.tag" ]]; then
+          args[$i]=$orig_arg
+        else 
+          args[$i]=$arg
+        fi
+        let "i+=1"
+    done
+
+    local run_cmd=$(_vyatta_op_get_node_def_field $tpath/node.def run)
+    run_cmd=$(_vyatta_op_conv_run_cmd "$run_cmd") # convert the positional parameters
+    local ret=0
+    # Exception for the `show file` command
+    local file_cmd='\$\{vyos_op_scripts_dir\}\/file\.py'
+    local cmd_regex="^(LESSOPEN=|less|pager|tail|(sudo )?$file_cmd).*"
+    if [ -n "$run_cmd" ]; then
+      eval $restore_shopts
+      if [[ -t 1 &&  "${args[1]}" == "show" && ! $run_cmd =~ $cmd_regex ]] ; then
+        eval "($run_cmd) | ${VYATTA_PAGER:-cat}"
+      else
+        eval "$run_cmd"
+      fi
+    else
+      echo -ne "\n  Incomplete command: ${args[@]}\n\n" >&2
+      eval $restore_shopts
+      ret=1
+    fi
+    return $ret
+}
+
+###  Local Variables:
+###  mode: shell-script
+###  End:

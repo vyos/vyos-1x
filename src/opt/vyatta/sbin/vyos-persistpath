@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if grep -q -e '^overlay.*/filesystem.squashfs' /proc/mounts; then
+	# Live CD boot
+	exit 2
+	
+elif grep -q 'upperdir=/live/persistence/' /proc/mounts && egrep -q 'overlay / overlay ' /proc/mounts; then
+	# union boot
+	
+	boot_device=`grep -o 'upperdir=/live/persistence/[^/]*/boot' /proc/mounts | cut -d / -f 4`
+	persist_path="/lib/live/mount/persistence/$boot_device"
+	
+	echo $persist_path
+	exit 0
+else
+	# old style boot
+
+	exit 1
+fi
