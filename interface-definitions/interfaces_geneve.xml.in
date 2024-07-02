@@ -52,6 +52,7 @@
           #include <include/interface/mirror.xml.i>
           #include <include/interface/redirect.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
+          #include <include/interface/vrf.xml.i>
           #include <include/vni.xml.i>
         </children>
       </tagNode>
