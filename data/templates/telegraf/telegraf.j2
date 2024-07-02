@@ -130,7 +130,9 @@ metric_name_label = "{{ loki.metric_name_label }}"
 {% if influxdb is vyos_defined %}
 [[inputs.exec]]
   commands = [
+{%     if nft_chains is vyos_defined %}
     "{{ custom_scripts_dir }}/show_firewall_input_filter.py",
+{%     endif %}
     "{{ custom_scripts_dir }}/show_interfaces_input_filter.py",
     "{{ custom_scripts_dir }}/vyos_services_input_filter.py"
   ]
