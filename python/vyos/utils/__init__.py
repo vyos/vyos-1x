@@ -25,6 +25,7 @@ from vyos.utils import file
 from vyos.utils import io
 from vyos.utils import kernel
 from vyos.utils import list
+from vyos.utils import locking
 from vyos.utils import misc
 from vyos.utils import network
 from vyos.utils import permission
