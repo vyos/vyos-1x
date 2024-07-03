@@ -5,9 +5,6 @@
   create
   rotate 5
   size=256k
-  postrotate
-    invoke-rc.d rsyslog rotate > /dev/null
-  endscript
 }
 
 {% if file is vyos_defined %}
@@ -18,9 +15,6 @@
   create
   rotate {{ file_options.archive.file }}
   size={{ file_options.archive.size | int // 1024 }}k
-  postrotate
-    invoke-rc.d rsyslog rotate > /dev/null
-  endscript
 }
 
 {%     endfor %}
