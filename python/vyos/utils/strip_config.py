@@ -20,7 +20,6 @@
 # They shouldn't be used as a basis for a strip-private filter
 # until we figure out if we can pass the config path information to the filter.
 
-import sys
 import copy
 
 import vyos.configtree
