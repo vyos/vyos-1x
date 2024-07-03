@@ -84,6 +84,12 @@ if config.exists(zone_base + ['zone']):
     config.set_tag(['firewall', 'zone'])
 
     for zone in config.list_nodes(zone_base + ['zone']):
+        if 'interface' in config.list_nodes(zone_base + ['zone', zone]):
+            for iface in config.return_values(zone_base + ['zone', zone, 'interface']):
+                if '+' in iface:
+                    config.delete_value(zone_base + ['zone', zone, 'interface'], value=iface)
+                    iface = iface.replace('+', '*')
+                    config.set(zone_base + ['zone', zone, 'interface'], value=iface, replace=False)
         config.copy(zone_base + ['zone', zone], ['firewall', 'zone', zone])
     config.delete(zone_base)
 
