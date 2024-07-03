@@ -47,6 +47,8 @@ def migrate(config: ConfigTree) -> None:
                         tmp = config.return_value(base + [iface, 'interface-name'])
                         if tmp != 'any':
                             config.delete(base + [iface, 'interface-name'])
+                            if '+' in tmp:
+                                tmp = tmp.replace('+', '*')
                             config.set(base + [iface, 'name'], value=tmp)
                         else:
                             config.delete(base + [iface])
