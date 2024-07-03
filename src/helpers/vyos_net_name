@@ -18,42 +18,35 @@ import os
 import re
 import time
 import logging
+import logging.handlers
 import tempfile
-import threading
+from pathlib import Path
 from sys import argv
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
 from vyos.utils.process import cmd
 from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.locking import Lock
 from vyos.migrate import ConfigMigrate
 
+# Define variables
 vyos_udev_dir = directories['vyos_udev_dir']
-vyos_log_dir = '/run/udev/log'
-vyos_log_file = os.path.join(vyos_log_dir, 'vyos-net-name')
-
 config_path = '/opt/vyatta/etc/config/config.boot'
 
-lock = threading.Lock()
-
-try:
-    os.mkdir(vyos_log_dir)
-except FileExistsError:
-    pass
-
-logging.basicConfig(filename=vyos_log_file, level=logging.DEBUG)
 
 def is_available(intfs: dict, intf_name: str) -> bool:
-    """ Check if interface name is already assigned
-    """
+    """Check if interface name is already assigned"""
     if intf_name in list(intfs.values()):
         return False
     return True
 
+
 def find_available(intfs: dict, prefix: str) -> str:
-    """ Find lowest indexed iterface name that is not assigned
-    """
-    index_list = [int(x.replace(prefix, '')) for x in list(intfs.values()) if prefix in x]
+    """Find lowest indexed iterface name that is not assigned"""
+    index_list = [
+        int(x.replace(prefix, '')) for x in list(intfs.values()) if prefix in x
+    ]
     index_list.sort()
     # find 'holes' in list, if any
     missing = sorted(set(range(index_list[0], index_list[-1])) - set(index_list))
@@ -62,21 +55,22 @@ def find_available(intfs: dict, prefix: str) -> str:
 
     return f'{prefix}{len(index_list)}'
 
+
 def mod_ifname(ifname: str) -> str:
-    """ Check interface with names eX and return ifname on the next format eth{ifindex} - 2
-    """
-    if re.match("^e[0-9]+$", ifname):
-        intf = ifname.split("e")
+    """Check interface with names eX and return ifname on the next format eth{ifindex} - 2"""
+    if re.match('^e[0-9]+$', ifname):
+        intf = ifname.split('e')
         if intf[1]:
             if int(intf[1]) >= 2:
-                return "eth" + str(int(intf[1]) - 2)
+                return 'eth' + str(int(intf[1]) - 2)
             else:
-               return "eth" + str(intf[1])
+                return 'eth' + str(intf[1])
 
     return ifname
 
+
 def get_biosdevname(ifname: str) -> str:
-    """ Use legacy vyatta-biosdevname to query for name
+    """Use legacy vyatta-biosdevname to query for name
 
     This is carried over for compatability only, and will likely be dropped
     going forward.
@@ -95,10 +89,11 @@ def get_biosdevname(ifname: str) -> str:
     try:
         biosname = cmd(f'/sbin/biosdevname --policy all_ethN -i {ifname}')
     except Exception as e:
-        logging.error(f'biosdevname error: {e}')
+        logger.error(f'biosdevname error: {e}')
         biosname = ''
 
     return intf if biosname == '' else biosname
+
 
 def leave_rescan_hint(intf_name: str, hwid: str):
     """Write interface information reported by udev
@@ -112,18 +107,18 @@ def leave_rescan_hint(intf_name: str, hwid: str):
     except FileExistsError:
         pass
     except Exception as e:
-        logging.critical(f"Error creating rescan hint directory: {e}")
+        logger.critical(f'Error creating rescan hint directory: {e}')
         exit(1)
 
     try:
         with open(os.path.join(vyos_udev_dir, intf_name), 'w') as f:
             f.write(hwid)
     except OSError as e:
-        logging.critical(f"OSError {e}")
+        logger.critical(f'OSError {e}')
+
 
 def get_configfile_interfaces() -> dict:
-    """Read existing interfaces from config file
-    """
+    """Read existing interfaces from config file"""
     interfaces: dict = {}
 
     if not os.path.isfile(config_path):
@@ -134,14 +129,14 @@ def get_configfile_interfaces() -> dict:
         with open(config_path) as f:
             config_file = f.read()
     except OSError as e:
-        logging.critical(f"OSError {e}")
+        logger.critical(f'OSError {e}')
         exit(1)
 
     try:
         config = ConfigTree(config_file)
     except Exception:
         try:
-            logging.debug(f"updating component version string syntax")
+            logger.debug('updating component version string syntax')
             # this will update the component version string syntax,
             # required for updates 1.2 --> 1.3/1.4
             with tempfile.NamedTemporaryFile() as fp:
@@ -157,7 +152,8 @@ def get_configfile_interfaces() -> dict:
             config = ConfigTree(config_file)
 
         except Exception as e:
-            logging.critical(f"ConfigTree error: {e}")
+            logger.critical(f'ConfigTree error: {e}')
+            exit(1)
 
     base = ['interfaces', 'ethernet']
     if config.exists(base):
@@ -165,11 +161,13 @@ def get_configfile_interfaces() -> dict:
         for intf in eth_intfs:
             path = base + [intf, 'hw-id']
             if not config.exists(path):
-                logging.warning(f"no 'hw-id' entry for {intf}")
+                logger.warning(f"no 'hw-id' entry for {intf}")
                 continue
             hwid = config.return_value(path)
             if hwid in list(interfaces):
-                logging.warning(f"multiple entries for {hwid}: {interfaces[hwid]}, {intf}")
+                logger.warning(
+                    f'multiple entries for {hwid}: {interfaces[hwid]}, {intf}'
+                )
                 continue
             interfaces[hwid] = intf
 
@@ -179,21 +177,23 @@ def get_configfile_interfaces() -> dict:
         for intf in wlan_intfs:
             path = base + [intf, 'hw-id']
             if not config.exists(path):
-                logging.warning(f"no 'hw-id' entry for {intf}")
+                logger.warning(f"no 'hw-id' entry for {intf}")
                 continue
             hwid = config.return_value(path)
             if hwid in list(interfaces):
-                logging.warning(f"multiple entries for {hwid}: {interfaces[hwid]}, {intf}")
+                logger.warning(
+                    f'multiple entries for {hwid}: {interfaces[hwid]}, {intf}'
+                )
                 continue
             interfaces[hwid] = intf
 
-    logging.debug(f"config file entries: {interfaces}")
+    logger.debug(f'config file entries: {interfaces}')
 
     return interfaces
 
+
 def add_assigned_interfaces(intfs: dict):
-    """Add interfaces found by previous invocation of udev rule
-    """
+    """Add interfaces found by previous invocation of udev rule"""
     if not os.path.isdir(vyos_udev_dir):
         return
 
@@ -203,55 +203,74 @@ def add_assigned_interfaces(intfs: dict):
             with open(path) as f:
                 hwid = f.read().rstrip()
         except OSError as e:
-            logging.error(f"OSError {e}")
+            logger.error(f'OSError {e}')
             continue
         intfs[hwid] = intf
 
+
 def on_boot_event(intf_name: str, hwid: str, predefined: str = '') -> str:
-    """Called on boot by vyos-router: 'coldplug' in vyatta_net_name
-    """
-    logging.info(f"lookup {intf_name}, {hwid}")
+    """Called on boot by vyos-router: 'coldplug' in vyatta_net_name"""
+    logger.info(f'lookup {intf_name}, {hwid}')
     interfaces = get_configfile_interfaces()
-    logging.debug(f"config file interfaces are {interfaces}")
+    logger.debug(f'config file interfaces are {interfaces}')
 
     if hwid in list(interfaces):
-        logging.info(f"use mapping from config file: '{hwid}' -> '{interfaces[hwid]}'")
+        logger.info(f"use mapping from config file: '{hwid}' -> '{interfaces[hwid]}'")
         return interfaces[hwid]
 
     add_assigned_interfaces(interfaces)
-    logging.debug(f"adding assigned interfaces: {interfaces}")
+    logger.debug(f'adding assigned interfaces: {interfaces}')
 
     if predefined:
         newname = predefined
-        logging.info(f"predefined interface name for '{intf_name}' is '{newname}'")
+        logger.info(f"predefined interface name for '{intf_name}' is '{newname}'")
     else:
         newname = get_biosdevname(intf_name)
-        logging.info(f"biosdevname returned '{newname}' for '{intf_name}'")
+        logger.info(f"biosdevname returned '{newname}' for '{intf_name}'")
 
     if not is_available(interfaces, newname):
         prefix = re.sub(r'\d+$', '', newname)
         newname = find_available(interfaces, prefix)
 
-    logging.info(f"new name for '{intf_name}' is '{newname}'")
+    logger.info(f"new name for '{intf_name}' is '{newname}'")
 
     leave_rescan_hint(newname, hwid)
 
     return newname
 
+
 def hotplug_event():
     # Not yet implemented, since interface-rescan will only be run on boot.
     pass
 
-if len(argv) > 3:
-    predef_name = argv[3]
-else:
-    predef_name = ''
 
-lock.acquire()
-if not boot_configuration_complete():
-    res = on_boot_event(argv[1], argv[2], predefined=predef_name)
-    logging.debug(f"on boot, returned name is {res}")
-    print(res)
-else:
-    logging.debug("boot configuration complete")
-lock.release()
+if __name__ == '__main__':
+    # Set up logging to syslog
+    syslog_handler = logging.handlers.SysLogHandler(address='/dev/log')
+    formatter = logging.Formatter(f'{Path(__file__).name}: %(message)s')
+    syslog_handler.setFormatter(formatter)
+
+    logger = logging.getLogger()
+    logger.addHandler(syslog_handler)
+    logger.setLevel(logging.DEBUG)
+
+    logger.debug(f'Started with arguments: {argv}')
+
+    if len(argv) > 3:
+        predef_name = argv[3]
+    else:
+        predef_name = ''
+
+    lock = Lock('vyos_net_name')
+    # Wait 60 seconds for other running scripts to finish
+    lock.acquire(60)
+
+    if not boot_configuration_complete():
+        res = on_boot_event(argv[1], argv[2], predefined=predef_name)
+        logger.debug(f'on boot, returned name is {res}')
+        print(res)
+    else:
+        logger.debug('boot configuration complete')
+
+    lock.release()
+    logger.debug('Finished')
