@@ -1,0 +1,82 @@
+# vyatta bash completion common functions
+
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licenses/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at `http://www.gnu.org/copyleft/gpl.html'.
+# You can also obtain it by writing to the Free Software Foundation,
+# Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
+# MA 02110-1301, USA.
+#
+# Author: Vyatta
+# Description: bash completion common functions
+#
+# **** End License ****
+
+get_prefix_filtered_list ()
+{
+  # $1: prefix
+  # $2: \@list
+  # $3: \@filtered
+  declare -a olist
+  local pfx=$1
+  pfx=${pfx#\"}
+  eval "olist=( \"\${$2[@]}\" )"
+  local idx=0
+  for elem in "${olist[@]}"; do
+    local sub="${elem#$pfx}"
+    if [[ "$elem" == "$sub" ]] && [[ -n "$pfx" ]]; then
+      continue
+    fi
+    eval "$3[$idx]=\$elem"
+    (( idx++ ))
+  done
+}
+
+get_prefix_filtered_list2 ()
+{
+  # $1: prefix
+  # $2: \@list
+  # $3: \@filtered
+  # $4: \@list2
+  # $5: \@filtered2
+  declare -a olist
+  local pfx=$1
+  pfx=${pfx#\"}
+  eval "olist=( \"\${$2[@]}\" )"
+  eval "local orig_len=\${#$2[@]}"
+  local orig_idx=0
+  local idx=0
+  for (( orig_idx = 0; orig_idx < orig_len; orig_idx++ )); do
+    eval "local elem=\${$2[$orig_idx]}"
+    eval "local elem2=\${$4[$orig_idx]}"
+    local sub="${elem#$pfx}"
+    if [[ "$elem" == "$sub" ]] && [[ -n "$pfx" ]]; then
+      continue
+    fi
+    eval "$3[$idx]=\$elem"
+    eval "$5[$idx]=\$elem2"
+    (( idx++ ))
+  done
+}
+
+is_elem_of () {
+  local elem="$1"
+  local -a olist
+  eval "olist=( \"\${$2[@]}\" )"
+  for e in "${olist[@]}"; do
+    if [[ "$e" == "$elem" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}

@@ -11,11 +11,11 @@
         echo "Please do it as an administrator level VyOS user instead."
     else
         if grep -q -e '^overlay.*/filesystem.squashfs' /proc/mounts; then
-        echo "WARNING: You are currently configuring a live-ISO environment, changes will not persist until installed"
+            echo "WARNING: You are currently configuring a live-ISO environment, changes will not persist until installed"
         else
             if grep -q -s '1' /tmp/vyos-config-status; then
-            echo "WARNING: There was a config error on boot: saving the configuration now could overwrite data."
-            echo "You may want to check and reload the boot config"
+                echo "WARNING: There was a config error on boot: saving the configuration now could overwrite data."
+                echo "You may want to check and reload the boot config"
             fi
         fi
         history -w

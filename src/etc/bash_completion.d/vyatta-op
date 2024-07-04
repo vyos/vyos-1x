@@ -1,0 +1,685 @@
+# vyatta bash operational mode completion
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2006, 2007 Vyatta, Inc.
+# All Rights Reserved.
+# 
+# Author: Tom Grennan
+# Date: 2007
+# Description: setup bash completion for Vyatta operational commands
+# 
+# **** End License ****
+
+test -z "$_vyatta_less_options" && \
+    declare -r _vyatta_less_options="\
+	--QUIT-AT-EOF\
+	--quit-if-one-screen\
+	--RAW-CONTROL-CHARS\
+	--squeeze-blank-lines\
+	--no-init"
+test -z "$_vyatta_default_pager" && \
+    declare -r _vyatta_default_pager="less \
+	--buffers=64\
+	--auto-buffers\
+	--no-lessopen\
+	$_vyatta_less_options"
+test -z "$VYATTA_PAGER" && \
+    declare -x VYATTA_PAGER=$_vyatta_default_pager
+
+_vyatta_op_do_key_bindings ()
+{
+  if [[ "$SHELL" != "/bin/vbash" && "$SHELL" != "/sbin/radius_shell" ]]; then
+    # only do bindings if vbash and radius_shell
+    return
+  fi
+  nullglob_save=$(shopt -p nullglob)
+  shopt -u nullglob
+  case "$-" in
+    *i*)
+      bind '"?": possible-completions' 
+      bind 'set show-all-if-ambiguous on' 
+      bind_cmds=$(grep '^bind .* # vyatta key binding$' $HOME/.bashrc)
+      eval $bind_cmds 
+    ;;
+  esac
+  eval $nullglob_save
+}
+
+_vyatta_op_do_key_bindings
+
+test -f /etc/default/vyatta && \
+    source /etc/default/vyatta
+
+test ! -d "$vyatta_op_templates" && \
+    return 0
+
+case "$-" in
+  *i*)
+    declare -r _vyatta_op_last_comp_init='>>>>>>LASTCOMP<<<<<<'
+  ;;
+esac
+declare _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+declare _vyatta_op_node_path
+declare -a _vyatta_op_noncompletions _vyatta_op_completions
+declare -x -a _vyatta_pipe_noncompletions _vyatta_pipe_completions
+declare _vyatta_comptype
+declare -x -a reply
+declare -a _vyatta_operator_allowed
+
+if [[ "$VYATTA_USER_LEVEL_DIR" != "/opt/vyatta/etc/shell/level/admin" ]]; then
+   _vyatta_operator_allowed=( $(cat $VYATTA_USER_LEVEL_DIR/allowed-op) )
+fi
+
+declare -a functions
+functions=( /opt/vyatta/share/vyatta-op/functions/interpreter/* )
+
+for file in "${functions[@]}";do
+  source $file;
+done
+
+# $1: label
+# #2...: strings
+_vyatta_op_debug ()
+{
+    echo -ne \\n$1:
+    shift
+    for s ; do
+      echo -ne " \"$s\""
+    done
+}
+
+# this is needed to provide original "default completion" behavior.
+# see "vyatta-cfg" completion script for details.
+_vyatta_op_default_expand ()
+{
+  local wc=${#COMP_WORDS[@]}
+  if [[ "${COMP_WORDS[0]}" =~ "/" ]]; then
+    # if we are looking for a directory on the first completion then do directory completions
+    _filedir_xspec_vyos
+  elif (( wc < 2 )) ||
+     [[ $COMP_CWORD -eq 0 ]] ||
+     [[ $1 == $2 ]]; then
+    _vyatta_op_expand "$@"
+  else
+    # after the first word => cannot be vyatta command so use original default
+    _filedir_xspec_vyos
+  fi
+}
+
+# $1: label
+# $2...: help
+_vyatta_op_print_help ()
+{
+    local label=$1 help=$2
+    if [ ${#label} -eq 0 ] ; then
+     return
+    elif [ ${#help} -eq 0 ] ; then
+      echo -ne "\n  $label"
+    elif [ ${#label} -lt 6 ] ; then
+      echo -ne "\n  $label\t\t\t$help"
+    elif [ ${#label} -lt 14 ] ; then
+      echo -ne "\n  $label\t\t$help"
+    elif [ ${#label} -lt 21 ] ; then
+      echo -ne "\n  $label\t$help"
+    else
+      echo -ne "\n  $label\n\t\t\t$help"
+    fi
+}
+
+# $1: $cur
+# $2...: possible completions
+_vyatta_op_help ()
+{
+    local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
+    shopt -u nullglob
+    local cur=$1; shift
+    local ndef node_tag_help node_run help last_help
+
+    ndef=${_vyatta_op_node_path}/node.tag/node.def
+    [ -f $ndef ] && \
+      node_tag_help=$( _vyatta_op_get_node_def_field $ndef help )
+
+    ndef=${_vyatta_op_node_path}/node.def
+    [ -f $ndef ] && \
+      node_run=$( _vyatta_op_get_node_def_field $ndef run )
+
+    if [[ "$1" == "<nocomps>" ]]; then
+       eval "$restore_shopts"
+       return
+    fi
+    echo -en "\nPossible completions:"
+    if [ -z "$cur" -a -n "$node_run" ]; then
+       _vyatta_op_print_help '<Enter>' "Execute the current command"
+    fi
+    if [ $# -eq 0 ];then
+       _vyatta_op_print_help '<text>' "$node_tag_help"
+       eval "$restore_shopts"
+       return
+    fi
+    for comp ; do
+      if [[ "$comp" == "<Enter>" ]]; then
+        continue
+      fi
+      if [ -z "$comp" ] ; then
+        if [ "X$node_tag_help" == "X$last_help" ] ; then
+          help=""
+        else
+          last_help=$node_tag_help
+          help=$node_tag_help
+        fi
+        _vyatta_op_print_help '*' "$help"
+      elif [[ -z "$cur" || $comp == ${cur}* ]] ; then
+        ndef=${_vyatta_op_node_path}/$comp/node.def
+        if [ -f $ndef ] ; then
+          help=$( _vyatta_op_get_node_def_field $ndef help )
+        else
+          help=$node_tag_help
+        fi
+        if [ "X$help" == "X$last_help" ] ; then
+          help=""
+        else
+          last_help=$help
+        fi
+        _vyatta_op_print_help "$comp" "$help"
+      fi
+    done
+    eval "$restore_shopts"
+}
+
+_vyatta_op_set_node_path ()
+{
+    local node
+    _vyatta_op_node_path=$vyatta_op_templates
+    for (( i=0 ; i<COMP_CWORD ; i++ )) ; do
+        # expand the command so completion continues to work with short versions
+        if [[ "${COMP_WORDS[i]}" == "*" ]]; then
+          node="node.tag" # user defined wildcars are always tag nodes
+        else
+          node=$(_vyatta_op_conv_node_path $_vyatta_op_node_path ${COMP_WORDS[i]})
+        fi
+        if [ -f "${_vyatta_op_node_path}/$node/node.def" ] ; then
+          _vyatta_op_node_path+=/$node
+        elif [ -f ${_vyatta_op_node_path}/node.tag/node.def ] ; then
+          _vyatta_op_node_path+=/node.tag
+        else
+          return 1
+        fi
+    done
+}
+
+_vyatta_op_set_completions ()
+{
+    local -a allowed completions
+    local cur=$1
+    local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
+    for ndef in ${_vyatta_op_node_path}/*/node.def ; do
+      if [[ $ndef == */node.tag/node.def ]] ; then
+        local acmd=$( _vyatta_op_get_node_def_field $ndef allowed )
+        shopt -u extglob nullglob
+        local -a a=($( eval "$acmd" ))
+        eval "$restore_shopts"
+
+        if [ ${#a[@]} -ne 0 ] ; then
+          allowed+=( "${a[@]}" )
+        else
+          allowed+=( "<text>" )
+        fi
+      else
+        local sdir=${ndef%/*}
+        allowed+=( ${sdir##*/} )
+      fi
+    done
+
+    # donot complete entries like <HOSTNAME> or <A.B.C.D>
+    _vyatta_op_noncompletions=( )
+    completions=( )
+
+    # make runable commands have a non-comp
+    ndef=${_vyatta_op_node_path}/node.def
+    [ -f $ndef ] && \
+      node_run=$( _vyatta_op_get_node_def_field $ndef run )
+    if [ -z "$cur" -a -n "$node_run" ]; then
+      _vyatta_op_noncompletions+=('<Enter>')
+    fi
+
+    for (( i=0 ; i<${#allowed[@]} ; i++ )) ; do
+      if [[ "${allowed[i]}" == \<*\> ]] ; then
+        _vyatta_op_noncompletions+=( "${allowed[i]}" )
+      else
+        if [[ "$VYATTA_USER_LEVEL_DIR" == "/opt/vyatta/etc/shell/level/admin" ]]; then
+          completions+=( ${allowed[i]} )
+        elif is_elem_of ${allowed[i]} _vyatta_operator_allowed; then
+          completions+=( ${allowed[i]} )
+        elif [[ $_vyatta_op_node_path == $vyatta_op_templates ]];then
+          continue
+        else 
+          completions+=( ${allowed[i]} )
+        fi
+      fi
+    done
+    
+    # Prefix filter the non empty completions
+    if [ -n "$cur" ]; then
+      _vyatta_op_completions=()
+      get_prefix_filtered_list "$cur" completions _vyatta_op_completions 
+      _vyatta_op_completions=($( printf "%s\n" ${_vyatta_op_completions[@]} | sort -u ))
+    else 
+      _vyatta_op_completions=($( printf "%s\n" ${completions[@]} | sort -u ))
+    fi
+    #shopt -s nullglob
+}
+
+_vyatta_op_comprely_needs_ambiguity ()
+{
+    local -a uniq
+
+    [ ${#COMPREPLY[@]} -eq 1 ] && return
+
+    uniq=( `printf "%s\n" ${COMPREPLY[@]} | cut -c1 | sort -u` )
+
+    [ ${#uniq[@]} -eq 1 ] && return
+    false
+}
+
+_vyatta_op_invalid_completion ()
+{
+      local tpath=$vyatta_op_templates
+      local -a args
+      local i=1 
+      for arg in "${COMP_WORDS[@]}"; do
+        arg=( $(_vyatta_op_conv_node_path $tpath $arg) )  # expand the arguments
+        # output proper error message based on the above expansion
+        if [[ "${arg[1]}" == "ambiguous" ]]; then
+          echo -ne "\n\n  Ambiguous command: ${args[@]} [$arg]\n"
+          local -a cmds=( $(compgen -d $tpath/$arg) )
+          _vyatta_op_node_path=$tpath
+          local comps=$(_vyatta_op_help $arg ${cmds[@]##*/})
+          echo -ne "$comps" | sed -e 's/^P/  P/'
+          break
+        elif [[ "${arg[1]}" == "invalid" ]]; then
+          echo -ne "\n\n  Invalid command: ${args[@]} [$arg]"
+          break
+        fi  
+
+        if [ -f "$tpath/$arg/node.def" ] ; then
+            tpath+=/$arg
+        elif [ -f $tpath/node.tag/node.def ] ; then
+            tpath+=/node.tag
+        else
+            echo -ne "\n\n  Invalid command: ${args[@]} [$arg]" >&2 
+            break
+        fi  
+        args[$i]=$arg
+        let "i+=1"
+        if [ $[${#COMP_WORDS[@]}+1] -eq $i ];then
+          _vyatta_op_help "" \
+            "${_vyatta_op_noncompletions[@]}" \
+            "${_vyatta_op_completions[@]}" \
+            | ${VYATTA_PAGER:-cat}
+        fi
+      done
+}
+
+_vyatta_op_expand ()
+{
+    # We need nospace here and we have to append our own spaces
+    compopt -o nospace
+
+    local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
+    shopt -s extglob nullglob
+    local cur=""
+    local _has_comptype=0
+    local current_prefix=$2
+    local current_word=$3
+    _vyatta_comptype=""
+
+    if (( ${#COMP_WORDS[@]} > 0 )); then
+        cur=${COMP_WORDS[COMP_CWORD]}
+    else
+        (( COMP_CWORD = ${#COMP_WORDS[@]} ))
+    fi
+
+    if _vyatta_pipe_completion "${COMP_WORDS[@]}"; then
+      if [ "${COMP_WORDS[*]}" == "$_vyatta_op_last_comp" ] ||
+         [ ${#_vyatta_pipe_completions[@]} -eq 0 ]; then
+          _vyatta_do_pipe_help
+          COMPREPLY=( "" " " )
+          _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+      else
+          COMPREPLY=( "${_vyatta_pipe_completions[@]}" )
+          _vyatta_op_last_comp="${COMP_WORDS[*]}"
+          if [ ${#COMPREPLY[@]} -eq 1 ]; then
+             COMPREPLY=( "${COMPREPLY[0]} " )
+          fi
+      fi
+      eval "$restore_shopts"
+      return
+    fi
+
+    # this needs to be done on every completion even if it is the 'same' comp.
+    # The cursor can be at different places in the string. 
+    # this will lead to unexpected cases if setting the node path isn't attempted
+    # each time.
+    if ! _vyatta_op_set_node_path ; then
+      echo -ne \\a
+      _vyatta_op_invalid_completion
+      COMPREPLY=( "" " " )
+      eval "$restore_shopts"
+      return 1
+    fi
+    
+    if [ "${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}" != "$_vyatta_op_last_comp" ] ; then
+        _vyatta_set_comptype
+        case $_vyatta_comptype in
+          'imagefiles') 
+              _has_comptype=1
+              _vyatta_image_file_complete
+          ;;
+          *)
+              _has_comptype=0
+              if [[ -z "$current_word" ]]; then
+                _vyatta_op_set_completions $cur
+              else
+                _vyatta_op_set_completions $current_prefix
+              fi
+          ;;
+        esac
+    fi
+    if [[ $_has_comptype == 1 ]]; then
+      COMPREPLY=( "${_vyatta_op_completions[@]}" )
+    else
+      COMPREPLY=($( compgen -W "${_vyatta_op_completions[*]}" -- $current_prefix ))
+    fi
+
+    # if the last command line arg is empty and we have
+    # an empty completion option (meaning wild card),
+    # append a blank(s) to the completion array to force ambiguity
+    if [ -z "$current_prefix" -a -n "$current_word" ] ||
+       [[ "${COMPREPLY[0]}" =~ "$cur" ]]; then
+      for comp ; do
+        if [ -z "$comp" ] ; then
+          if [ ${#COMPREPLY[@]} -eq 0 ] ; then
+            COMPREPLY=( " " "" )
+          elif _vyatta_op_comprely_needs_ambiguity ; then
+            COMPREPLY+=( " " )
+          fi
+        fi
+      done
+    fi
+    # Set this environment to enable and disable debugging on the fly
+    if [[ $DBG_OP_COMPS -eq 1 ]]; then
+      echo -e "\nCurrent: '$cur'"
+      echo -e "Current word: '$current_word'"
+      echo -e "Current prefix: '$current_prefix'"
+      echo "Number of comps: ${#_vyatta_op_completions[*]}"
+      echo "Number of non-comps: ${#_vyatta_op_noncompletions[*]}"
+      echo "_vyatta_op_completions: '${_vyatta_op_completions[*]}'"
+      echo "COMPREPLY: '${COMPREPLY[@]}'"
+      echo "CWORD: $COMP_CWORD"
+      echo "Last comp: '$_vyatta_op_last_comp'"
+      echo -e "Current comp: '${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}'\n"
+    fi
+
+    # This is non obvious... 
+    # To have completion continue to work when working with words that aren't the last word,
+    # we have to set nospace at the beginning of this script and then append the spaces here.
+    if [ ${#COMPREPLY[@]} -eq 1 ] && 
+       [[ $_has_comptype -ne 1 ]]; then
+       COMPREPLY=( "${COMPREPLY[0]} " )
+    fi
+    # if there are no completions then handle invalid commands
+    if [ ${#_vyatta_op_noncompletions[@]} -eq 0 ] &&
+       [ ${#_vyatta_op_completions[@]} -eq 0 ]; then
+          _vyatta_op_invalid_completion 
+          COMPREPLY=( "" " " )
+          _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+    elif [ ${#COMPREPLY[@]} -eq 0 ] &&
+         [ -n "$current_prefix" ]; then
+          _vyatta_op_invalid_completion 
+          COMPREPLY=( "" " " )
+          _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+    # Stop completions from getting stuck
+    elif [ ${#_vyatta_op_completions[@]} -eq 1 ] &&
+         [ -n "$cur" ] &&
+         [[ "${COMPREPLY[0]}" =~ "$cur" ]]; then
+          _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+    elif [ ${#_vyatta_op_completions[@]} -eq 1 ] &&
+         [ -n "$current_prefix" ] &&
+         [[ "${COMPREPLY[0]}" =~ "$current_prefix" ]]; then
+          _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+    # if there are no completions then always show the non-comps
+    elif [ "${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}" == "$_vyatta_op_last_comp" ] || 
+         [ ${#_vyatta_op_completions[@]} -eq 0 ] ||
+         [ -z "$cur" ]; then
+          _vyatta_op_help "$current_prefix" \
+            "${_vyatta_op_noncompletions[@]}" \
+            "${_vyatta_op_completions[@]}" \
+            | ${VYATTA_PAGER:-cat}
+          COMPREPLY=( "" " " )
+          _vyatta_op_last_comp=${_vyatta_op_last_comp_init}
+    else
+      _vyatta_op_last_comp="${COMP_WORDS[*]:0:$[$COMP_CWORD+1]}"
+    fi
+
+    eval "$restore_shopts"
+}
+
+# "pipe" functions
+count ()
+{
+  wc -l
+}
+
+match ()
+{
+  grep -E -e "$1"
+}
+
+no-match ()
+{
+  grep -E -v -e "$1"
+}
+
+no-more ()
+{
+  cat
+}
+
+strip-private ()
+{
+  ${vyos_libexec_dir}/strip-private.py
+}
+
+commands ()
+{
+  if [ "$_OFR_CONFIGURE" != "" ]; then
+      if $(cli-shell-api sessionChanged); then
+          echo "You have uncommited changes, please commit them before using the commands pipe"
+      else
+          vyos-config-to-commands
+      fi
+  else
+      echo "commands pipe is not supported in operational mode"
+  fi
+}
+
+json ()
+{
+  if [ "$_OFR_CONFIGURE" != "" ]; then
+      if $(cli-shell-api sessionChanged); then
+          echo "You have uncommited changes, please commit them before using the JSON pipe"
+      else
+          vyos-config-to-json
+      fi
+  else
+      echo "JSON pipe is not supported in operational mode"
+  fi
+}
+
+# pipe command help
+# $1: command
+_vyatta_pipe_help ()
+{
+  local help="No help text available"
+  case "$1" in
+    count) help="Count the number of lines in the output";;
+    match) help="Only output lines that match specified pattern";;
+    no-match) help="Only output lines that do not match specified pattern";;
+    more) help="Paginate the output";;
+    no-more) help="Do not paginate the output";;
+    strip-private) help="Remove private information from the config";;
+    commands) help="Convert config to set commands";;
+    json) help="Convert config to JSON";;
+    '<pattern>') help="Pattern for matching";;
+  esac
+  echo -n "$help"
+}
+
+_vyatta_do_pipe_help ()
+{
+  local help=''
+  if (( ${#_vyatta_pipe_completions[@]} + ${#_vyatta_pipe_noncompletions[@]}
+       == 0 )); then
+    return
+  fi
+  echo -en "\nPossible completions:"
+  for comp in "${_vyatta_pipe_completions[@]}" \
+              "${_vyatta_pipe_noncompletions[@]}"; do
+    _vyatta_op_print_help "$comp" "$(_vyatta_pipe_help "$comp")"
+  done
+}
+
+# pipe completion
+# $@: words
+_vyatta_pipe_completion ()
+{
+  local -a pipe_cmd=()
+  local -a all_cmds=( 'count' 'match' 'no-match' 'more' 'no-more' 'strip-private' 'commands' 'json' )
+  local found=0
+  _vyatta_pipe_completions=()
+  _vyatta_pipe_noncompletions=()
+
+  for word in "$@"; do
+    if [[ "$found" == "1" || "$word" == "|" ]]; then
+      pipe_cmd+=( "$word" )
+      found=1
+    fi
+  done
+  if (( found == 0 )); then
+    return 1
+  fi
+  if (( ${#pipe_cmd[@]} == 1 )); then
+    # "|" only
+    _vyatta_pipe_completions=( "${all_cmds[@]}" )
+    return 0
+  fi
+  if (( ${#pipe_cmd[@]} == 2 )); then
+    # "|<space, chars, or space+chars>"
+    _vyatta_pipe_completions=($(compgen -W "${all_cmds[*]}" -- ${pipe_cmd[1]}))
+    return 0
+  fi
+  if (( ${#pipe_cmd[@]} == 3 )); then
+    # "|<chars or space+chars><space or space+chars>"
+    case "${pipe_cmd[1]}" in
+      match|no-match) _vyatta_pipe_noncompletions=( '<pattern>' );;
+    esac
+    return 0
+  fi
+  return 0
+}
+
+# comptype
+_vyatta_set_comptype () 
+{
+  local comptype
+  unset _vyatta_comptype
+  for ndef in ${_vyatta_op_node_path}/*/node.def ; do
+    if [[ $ndef == */node.tag/node.def ]] ; then
+      local comptype=$( _vyatta_op_get_node_def_field $ndef comptype )
+      if [[ $comptype == "imagefiles" ]] ; then
+        _vyatta_comptype=$comptype
+        return 0
+      else
+        _vyatta_comptype=""
+        return 1
+      fi
+    else
+      _vyatta_comptype=""
+      return 1
+    fi
+  done
+}
+
+_filedir_xspec_vyos()
+{
+    local cur prev words cword
+    _init_completion || return
+
+    _tilde "$cur" || return 0
+
+    local IFS=$'\n' xspec=${_xspec[${1##*/}]} tmp
+    local -a toks
+
+    toks=( $(
+        compgen -d -- "$(quote_readline "$cur")" | {
+        while read -r tmp; do
+            printf '%s\n' $tmp
+        done
+        }
+        ))
+
+    # Munge xspec to contain uppercase version too
+    # http://thread.gmane.org/gmane.comp.shells.bash.bugs/15294/focus=15306
+    eval xspec="${xspec}"
+    local matchop=!
+    if [[ $xspec == !* ]]; then
+        xspec=${xspec#!}
+        matchop=@
+    fi
+    xspec="$matchop($xspec|${xspec^^})"
+
+    toks+=( $(
+        eval compgen -f -X "!$xspec" -- "\$(quote_readline "\$cur")" | {
+        while read -r tmp; do
+            [[ -n $tmp ]] && printf '%s\n' $tmp
+        done
+        }
+        ))
+
+    if [[ ${#toks[@]} -ne 0 ]]; then
+        compopt -o filenames
+        COMPREPLY=( "${toks[@]}" )
+    fi
+}
+
+nullglob_save=$( shopt -p nullglob )
+shopt -s nullglob
+for f in ${vyatta_datadir}/vyatta-op/functions/allowed/* ; do
+    source $f
+done
+eval $nullglob_save
+unset nullglob_save
+
+# don't initialize if we are in configure mode
+if [ "$_OFR_CONFIGURE" == "ok" ]; then
+  return 0
+fi
+
+if [[ "$VYATTA_USER_LEVEL_DIR" != "/opt/vyatta/etc/shell/level/admin" ]]; then
+  vyatta_unpriv_init $@
+else
+  _vyatta_op_init $@
+fi
+
+###  Local Variables:
+###  mode: shell-script
+###  End:
