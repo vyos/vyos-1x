@@ -117,11 +117,15 @@ def check_unsaved_config():
         pass
 
 def execute_shutdown(time, reboot=True, ask=True):
+    from vyos.utils.process import cmd
+
     check_unsaved_config()
+
+    host = cmd("hostname --fqdn")
 
     action = "reboot" if reboot else "poweroff"
     if not ask:
-        if not ask_yes_no(f"Are you sure you want to {action} this system?"):
+        if not ask_yes_no(f"Are you sure you want to {action} this system ({host})?"):
             exit(0)
     action_cmd = "-r" if reboot else "-P"
 
