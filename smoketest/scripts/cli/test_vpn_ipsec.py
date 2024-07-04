@@ -20,6 +20,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig import Interface
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
@@ -140,6 +141,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(base_path)
         self.cli_delete(tunnel_path)
+        self.cli_delete(vti_path)
         self.cli_commit()
 
         # Check for no longer running process
@@ -342,6 +344,12 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_secrets_lines:
             self.assertRegex(swanctl_conf, fr'{line}')
 
+        # Site-to-site interfaces should start out as 'down'
+        self.assertEqual(Interface(vti).get_admin_state(), 'down')
+
+        # Disable PKI
+        self.tearDownPKI()
+
 
     def test_dmvpn(self):
         tunnel_if = 'tun100'
@@ -477,9 +485,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
-
-        # There is only one VTI test so no need to delete this globally in tearDown()
-        self.cli_delete(vti_path)
 
         # Disable PKI
         self.tearDownPKI()
@@ -1339,6 +1344,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # Check Root CA, Intermediate CA and Peer cert/key pair is present
         self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
         self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
+
+        # Remote access interfaces should be set to 'up' during configure
+        self.assertEqual(Interface(vti).get_admin_state(), 'up')
+
+        # Delete the connection to verify the VTI interfaces is taken down
+        self.cli_delete(base_path + ['remote-access', 'connection', conn_name])
+        self.cli_commit()
+        self.assertEqual(Interface(vti).get_admin_state(), 'down')
 
         self.tearDownPKI()
 

@@ -15,6 +15,7 @@
 
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
+from vyos.utils.vti_updown_db import vti_updown_db_exists, open_vti_updown_db_readonly
 
 @Interface.register
 class VTIIf(Interface):
@@ -26,6 +27,10 @@ class VTIIf(Interface):
             'prefixes': ['vti', ],
         },
     }
+
+    def __init__(self, ifname, **kwargs):
+        self.bypass_vti_updown_db = kwargs.pop("bypass_vti_updown_db", False)
+        super().__init__(ifname, **kwargs)
 
     def _create(self):
         # This table represents a mapping from VyOS internal config dict to
@@ -57,8 +62,18 @@ class VTIIf(Interface):
         self.set_interface('admin_state', 'down')
 
     def set_admin_state(self, state):
-        """ Handled outside by /etc/ipsec.d/vti-up-down """
-        pass
+        """
+        Set interface administrative state to be 'up' or 'down'.
+
+        The interface will only be brought 'up' if ith is attached to an
+        active ipsec site-to-site connection or remote access connection.
+        """
+        if state == 'down' or self.bypass_vti_updown_db:
+            super().set_admin_state(state)
+        elif vti_updown_db_exists():
+            with open_vti_updown_db_readonly() as db:
+                if db.wantsInterfaceUp(self.ifname):
+                    super().set_admin_state(state)
 
     def get_mac(self):
         """ Get a synthetic MAC address. """

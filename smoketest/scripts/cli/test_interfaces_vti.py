@@ -39,7 +39,8 @@ class VTIInterfaceTest(BasicInterfaceTest.TestCase):
 
         self.cli_commit()
 
-        # VTI interface are always down and only brought up by IPSec
+        # VTI interfaces are default down and only brought up when an
+        # IPSec connection is configured to use them
         for intf in self._interfaces:
             self.assertTrue(is_intf_addr_assigned(intf, addr))
             self.assertEqual(Interface(intf).get_admin_state(), 'down')
