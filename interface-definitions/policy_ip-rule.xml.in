@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
-<!-- Policy local-route -->
+<!-- Policy ip-rule -->
 <interfaceDefinition>
   <node name="policy">
     <children>
-      <node name="local-route" owner="${vyos_conf_scripts_dir}/policy_local-route.py">
+      <node name="ip-rule" owner="${vyos_conf_scripts_dir}/policy_ip-rule.py">
         <properties>
           <help>IPv4 policy route of local traffic</help>
           <priority>500</priority>
@@ -11,7 +11,7 @@
         <children>
           <tagNode name="rule">
             <properties>
-              <help>Policy local-route rule set number</help>
+              <help>Policy ip-rule rule set number</help>
               <valueHelp>
                 <!-- table main with prio 32766 -->
                 <format>u32:1-32765</format>
@@ -53,13 +53,13 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/policy/local-route_rule_protocol.xml.i>
+              #include <include/policy/ip-rule_rule_protocol.xml.i>
               <node name="source">
                 <properties>
                   <help>Source parameters</help>
                 </properties>
                 <children>
-                  #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                  #include <include/policy/ip-rule_rule_ipv4_address.xml.i>
                   #include <include/port-number.xml.i>
                 </children>
               </node>
@@ -68,7 +68,7 @@
                   <help>Destination parameters</help>
                 </properties>
                 <children>
-                  #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                  #include <include/policy/ip-rule_rule_ipv4_address.xml.i>
                   #include <include/port-number.xml.i>
                 </children>
               </node>
@@ -77,7 +77,7 @@
           </tagNode>
         </children>
       </node>
-      <node name="local-route6" owner="${vyos_conf_scripts_dir}/policy_local-route.py">
+      <node name="ip-rule6" owner="${vyos_conf_scripts_dir}/policy_ip-rule.py">
         <properties>
           <help>IPv6 policy route of local traffic</help>
           <priority>500</priority>
@@ -85,7 +85,7 @@
         <children>
           <tagNode name="rule">
             <properties>
-              <help>IPv6 policy local-route rule set number</help>
+              <help>IPv6 policy ip-rule rule set number</help>
               <valueHelp>
                 <!-- table main with prio 32766 -->
                 <format>u32:1-32765</format>
@@ -127,13 +127,13 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/policy/local-route_rule_protocol.xml.i>
+              #include <include/policy/ip-rule_rule_protocol.xml.i>
               <node name="source">
                 <properties>
                   <help>Source parameters</help>
                 </properties>
                 <children>
-                  #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                  #include <include/policy/ip-rule_rule_ipv6_address.xml.i>
                   #include <include/port-number.xml.i>
                 </children>
               </node>
@@ -142,7 +142,7 @@
                   <help>Destination parameters</help>
                 </properties>
                 <children>
-                  #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                  #include <include/policy/ip-rule_rule_ipv6_address.xml.i>
                   #include <include/port-number.xml.i>
                 </children>
               </node>
