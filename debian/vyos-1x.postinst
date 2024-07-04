@@ -256,3 +256,6 @@ python3 /usr/lib/python3/dist-packages/vyos/xml_ref/update_cache.py
 if [ ! -f /lib/systemd/system/ssh@.service ]; then
     ln /lib/systemd/system/ssh.service /lib/systemd/system/ssh@.service
 fi
+
+# T4287 - as we have a non-signed kernel use the upstream wireless reulatory database
+update-alternatives --set regulatory.db /lib/firmware/regulatory.db-upstream
