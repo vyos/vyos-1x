@@ -4,10 +4,6 @@ name: Check pull request message format
 on:
   pull_request_target:
     branches:
-      - current
-      - crux
-      - equuleus
-      - sagitta
       - circinus
     types: [opened, synchronize, edited]
 

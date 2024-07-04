@@ -2,10 +2,10 @@ name: "Perform CodeQL Analysis"
 
 on:
   push:
-    branches: [ "current", "sagitta", "equuleus", "circinus" ]
+    branches: [ "circinus" ]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ "current" ]
+    branches: [ "circinus" ]
   schedule:
     - cron: '22 10 * * 0'
 
