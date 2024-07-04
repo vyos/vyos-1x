@@ -9,6 +9,3 @@ dpkg-divert --package vyos-1x --add --no-rename /etc/netplug/netplugd.conf
 dpkg-divert --package vyos-1x --add --no-rename /etc/netplug/netplug
 dpkg-divert --package vyos-1x --add --no-rename /etc/rsyslog.d/45-frr.conf
 dpkg-divert --package vyos-1x --add --no-rename /lib/udev/rules.d/99-systemd.rules
-
-# T4287 - as we have a non-signed kernel use the upstream wireless reulatory database
-update-alternatives --set regulatory.db /lib/firmware/regulatory.db-upstream
