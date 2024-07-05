@@ -89,7 +89,7 @@ network={
     key_mgmt=NONE
 {%     endif %}
 {% endif %}
-{% if security.bssid is vyos_defined %}
-    bssid={{ security.bssid }}
+{% if bssid is vyos_defined %}
+    bssid={{ bssid }}
 {% endif %}
 }
