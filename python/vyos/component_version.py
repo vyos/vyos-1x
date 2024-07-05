@@ -129,6 +129,7 @@ def component_from_string(string: str) -> dict:
     return {k: int(v) for k, v in re.findall(r'([\w,-]+)@(\d+)', string)}
 
 def version_info_from_file(config_file) -> VersionInfo:
+    """Return config file component and release version info."""
     version_info = VersionInfo()
     try:
         with open(config_file) as f:
@@ -166,9 +167,7 @@ def version_info_from_file(config_file) -> VersionInfo:
     return version_info
 
 def version_info_from_system() -> VersionInfo:
-    """
-    Return system component versions.
-    """
+    """Return system component and release version info."""
     d = component_version()
     sort_d = dict(sorted(d.items(), key=lambda x: x[0]))
     version_info = VersionInfo(
@@ -180,20 +179,18 @@ def version_info_from_system() -> VersionInfo:
     return version_info
 
 def version_info_copy(v: VersionInfo) -> VersionInfo:
-    """
-    Make a copy of dataclass.
-    """
+    """Make a copy of dataclass."""
     return replace(v)
 
 def version_info_prune_component(x: VersionInfo, y: VersionInfo) -> VersionInfo:
-    """
-    In place pruning of component keys of x not in y.
-    """
+    """In place pruning of component keys of x not in y."""
+    if x.component is None or y.component is None:
+        return
     x.component = { k: v for k,v in x.component.items() if k in y.component }
 
 def add_system_version(config_str: str = None, out_file: str = None):
-    """
-    Wrap config string with system version and write to out_file.
+    """Wrap config string with system version and write to out_file.
+
     For convenience, calling with no argument will write system version
     string to stdout, for use in bash scripts.
     """
