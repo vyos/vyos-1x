@@ -4,6 +4,9 @@ on:
   pull_request_target:
     branches:
       - current
+    paths-ignore:
+      - '.github/**'
+      - '**/*.md'
 
 permissions:
   pull-requests: write
