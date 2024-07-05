@@ -5,12 +5,14 @@ on:
     branches: [ "current" ]
     paths-ignore:
       - '.github/**'
+      - '.github/workflows/**'
       - '**/*.md'
-  pull_request:
+  pull_request_target:
     # The branches below must be a subset of the branches above
     branches: [ "current" ]
     paths-ignore:
       - '.github/**'
+      - '.github/workflows/**'
       - '**/*.md'
   schedule:
     - cron: '22 10 * * 0'

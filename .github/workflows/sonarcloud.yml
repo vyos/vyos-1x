@@ -5,11 +5,13 @@ on:
       - current
     paths-ignore:
       - '.github/**'
+      - '.github/workflows/**'
       - '**/*.md'
   pull_request_target:
     types: [opened, synchronize, reopened]
     paths-ignore:
       - '.github/**'
+      - '.github/workflows/**'
       - '**/*.md'
 jobs:
   sonar-cloud:

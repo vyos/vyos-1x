@@ -5,6 +5,7 @@ on:
       - current
     paths-ignore:
       - '.github/**'
+      - '.github/workflows/**'
       - '**/*.md'
   workflow_dispatch:
 
