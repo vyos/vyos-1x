@@ -2,7 +2,7 @@ name: Debian Package Build
 on:
   pull_request:
     branches:
-      - current
+      - circinus
 
 jobs:
   package-build:

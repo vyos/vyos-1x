@@ -2,13 +2,11 @@ name: Check for unused imports using Pylint
 on:
   pull_request:
     branches:
-      - current
-      - equuleus
-      - sagitta
       - circinus
   workflow_dispatch:
 
 permissions:
+  pull-requests: write
   contents: read
 
 jobs:
