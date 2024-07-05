@@ -3,8 +3,14 @@ on:
   push:
     branches:
       - current
+    paths-ignore:
+      - '.github/**'
+      - '**/*.md'
   pull_request_target:
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '.github/**'
+      - '**/*.md'
 jobs:
   sonar-cloud:
     name: SonarCloud
