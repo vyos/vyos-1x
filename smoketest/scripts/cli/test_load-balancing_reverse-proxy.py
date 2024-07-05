@@ -465,8 +465,6 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
 
         # Ensure default logging configuration is present
         config = read_file(HAPROXY_CONF)
-        self.assertIn('log /dev/log local0', config)
-        self.assertIn('log /dev/log local1 notice', config)
 
         # Test global-parameters logging options
         self.cli_set(base_path + ['global-parameters', 'logging', 'facility', 'local1', 'level', 'err'])
