@@ -899,15 +899,16 @@
                     </properties>
                     <defaultValue>wpa+wpa2</defaultValue>
                   </leafNode>
+                  #include <include/generic-username.xml.i>
                   <leafNode name="passphrase">
                     <properties>
-                      <help>WPA personal shared pass phrase. If you are using special characters in the WPA passphrase then single quotes are required.</help>
+                      <help>WPA passphrase. If you are using special characters in the WPA passphrase then single quotes are required.</help>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Passphrase of at least 8 but not more than 63 printable characters</description>
+                        <description>Passphrase of at least 8 but not more than 63 printable characters for WPA-Personal and any passphrase for WPA-Enterprise</description>
                       </valueHelp>
                       <constraint>
-                        <regex>.{8,63}</regex>
+                        <regex>[[:ascii:]]{1,256}</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid WPA pass phrase, must be 8 to 63 printable characters!</constraintErrorMessage>
                     </properties>
@@ -938,6 +939,19 @@
                 <regex>.{1,32}</regex>
               </constraint>
               <constraintErrorMessage>Invalid SSID</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="bssid">
+            <properties>
+              <help>Basic Service Set Identifier (BSSID) - currently station mode only</help>
+              <valueHelp>
+                <format>macaddr</format>
+                <description>BSSID (MAC) address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="mac-address"/>
+              </constraint>
+              <constraintErrorMessage>Invalid BSSID</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="type">
