@@ -78,12 +78,13 @@ jobs:
         id: test
         shell: bash
         run: |
-          # always fail first
-          echo "exit_code=1" >> $GITHUB_OUTPUT
+          set -e
           sudo make test
-          exit_code=$?
-          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-          exit $exit_code
+          if [[ $? == 0 ]]; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+          fi
 
   test_config_load:
     needs: build_iso
@@ -108,12 +109,13 @@ jobs:
         id: test
         shell: bash
         run: |
-          # always fail first
-          echo "exit_code=1" >> $GITHUB_OUTPUT
+          set -e
           sudo make testc
-          exit_code=$?
-          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-          exit $exit_code
+          if [[ $? == 0 ]]; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+          fi
 
   test_raid1_install:
     needs: build_iso
@@ -138,12 +140,13 @@ jobs:
         id: test
         shell: bash
         run: |
-          # always fail first
-          echo "exit_code=1" >> $GITHUB_OUTPUT
+          set -e
           sudo make testraid
-          exit_code=$?
-          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-          exit $exit_code
+          if [[ $? == 0 ]]; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+          fi
 
   result:
     needs:
@@ -159,15 +162,15 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message: |
-            CI integration ${{ needs.test_smoketest_cli.outputs.exit_code == 0 && needs.test_config_load.outputs.exit_code == 0 && needs.test_raid1_install.outputs.exit_code == 0 && '👍 passed!' || '❌ failed!' }}
+            CI integration ${{ needs.test_smoketest_cli.outputs.exit_code == 'success' && needs.test_config_load.outputs.exit_code == 'success' && needs.test_raid1_install.outputs.exit_code == 'success' && '👍 passed!' || '❌ failed!' }}
 
             ### Details
 
             [CI logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-            * ${{ needs.test_smoketest_cli.outputs.exit_code == '0' && '👍 passed' || '❌ failed' }} CLI Smoketests returned: ${{ needs.test_smoketest_cli.outputs.exit_code }}
-            * ${{ needs.test_config_load.outputs.exit_code == '0' && '👍 passed' || '❌ failed' }} Config tests returned: ${{ needs.test_config_load.outputs.exit_code }}
-            * ${{ needs.test_raid1_install.outputs.exit_code == '0' && '👍 passed' || '❌ failed' }} RAID1 tests returned: ${{ needs.test_raid1_install.outputs.exit_code }}
+            * CLI Smoketests ${{ needs.test_smoketest_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+            * Config tests ${{ needs.test_config_load.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+            * RAID1 tests ${{ needs.test_raid1_install.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
 
           message-id: "SMOKETEST_RESULTS"
           allow-repeats: false
