@@ -1,8 +1,9 @@
 name: "PR Triage"
 on:
   pull_request_target:
+    branches:
+      - current
     types: [opened, reopened, ready_for_review, locked]
-
 
 permissions:
   pull-requests: write

@@ -4,10 +4,10 @@ on:
   pull_request_target:
     branches:
       - current
-    paths-ignore:
-      - '.github/**'
-      - '.github/workflows/**'
-      - '**/*.md'
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
 
 permissions:
   pull-requests: write
