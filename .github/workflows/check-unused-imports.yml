@@ -4,9 +4,9 @@ on:
     branches:
       - current
     paths-ignore:
-      - '.github/**'
-      - '.github/workflows/**'
-      - '**/*.md'
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
   workflow_dispatch:
 
 permissions:
