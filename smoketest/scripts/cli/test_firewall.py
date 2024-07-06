@@ -995,5 +995,136 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
         self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
+    def test_gre_match(self):
+        name = 'smoketest-gre'
+
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'return'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'protocol', 'gre'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'gre', 'flags', 'key'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'gre', 'flags', 'not', 'checksum'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'gre', 'key', '1234'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'log'])
+
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '2', 'action', 'continue'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '2', 'protocol', 'gre'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '2', 'gre', 'inner-proto', '0x6558'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '2', 'log'])
+
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'protocol', 'gre'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'gre', 'flags', 'checksum'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '3', 'gre', 'key', '4321'])
+
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '4', 'action', 'reject'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '4', 'protocol', 'gre'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '4', 'gre', 'version', 'pptp'])
+
+        self.cli_commit()
+
+        nftables_search_v4 = [
+            ['gre protocol 0x6558', 'continue comment'],
+            ['gre flags & 5 == 4 @th,32,32 0x4d2', 'accept comment'],
+        ]
+
+        nftables_search_v6 = [
+            ['gre flags & 5 == 5 @th,64,32 0x10e1', 'drop comment'],
+            ['gre version 1', 'reject comment'],
+        ]
+
+        self.verify_nftables(nftables_search_v4, 'ip vyos_filter')
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
+
+        # GRE match will only work with protocol GRE
+        self.cli_delete(['firewall', 'ipv4', 'name', name, 'rule', '1', 'protocol', 'gre'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_discard()
+
+        # GREv1 (PPTP) does not include a key field, match not available
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '4', 'gre', 'flags', 'not', 'checksum'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '4', 'gre', 'key', '1234'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_ipsec_metadata_match(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-in4', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-in4', 'rule', '1', 'ipsec', 'match-ipsec-in'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-in4', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-in4', 'rule', '2', 'ipsec', 'match-none-in'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-out4', 'rule', '1', 'action', 'continue'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-out4', 'rule', '1', 'ipsec', 'match-ipsec-out'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-out4', 'rule', '2', 'action', 'reject'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-out4', 'rule', '2', 'ipsec', 'match-none-out'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-in6', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-in6', 'rule', '1', 'ipsec', 'match-ipsec-in'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-in6', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-in6', 'rule', '2', 'ipsec', 'match-none-in'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-out6', 'rule', '1', 'action', 'continue'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-out6', 'rule', '1', 'ipsec', 'match-ipsec-out'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-out6', 'rule', '2', 'action', 'reject'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'smoketest-ipsec-out6', 'rule', '2', 'ipsec', 'match-none-out'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['meta ipsec exists', 'accept comment'],
+            ['meta ipsec missing', 'drop comment'],
+            ['rt ipsec exists', 'continue comment'],
+            ['rt ipsec missing', 'reject comment'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'jump-target', 'smoketest-ipsec-in4'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'jump-target', 'smoketest-ipsec-in4'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'jump-target', 'smoketest-ipsec-in4'])
+        
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '1', 'jump-target', 'smoketest-ipsec-out4'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'jump-target', 'smoketest-ipsec-out4'])
+
+        # All valid directional usage of ipsec matches
+        self.cli_commit()
+
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-in-indirect', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-ipsec-in-indirect', 'rule', '1', 'jump-target', 'smoketest-ipsec-in4'])
+
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '1', 'jump-target', 'smoketest-ipsec-in-indirect'])
+
+        # nft does not support ANY usage of 'meta ipsec' under an output hook, it will fail to load cfg
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_cyclic_jump_validation(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-1', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-1', 'rule', '1', 'jump-target', 'smoketest-cycle-2'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-2', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-2', 'rule', '1', 'jump-target', 'smoketest-cycle-3'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-3', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-3', 'rule', '1', 'log'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'jump-target', 'smoketest-cycle-1'])
+
+        # Multi-level jumps are unwise but allowed
+        self.cli_commit()
+
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-3', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-cycle-3', 'rule', '1', 'jump-target', 'smoketest-cycle-1'])
+
+        # nft will fail to load cyclic jumps in any form, whether the rule is reachable or not. 
+        # It should be caught by conf validation. 
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
