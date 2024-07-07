@@ -46,7 +46,7 @@
 {% endif %}
         }
         children {
-            ikev2-vpn  {
+            {{ name }}-client  {
                 esp_proposals = {{ esp | get_esp_ike_cipher(ike) | join(',') }}
 {% if esp.life_bytes is vyos_defined %}
                 life_bytes = {{ esp.life_bytes }}
