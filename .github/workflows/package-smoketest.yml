@@ -4,6 +4,10 @@ on:
   pull_request_target:
     branches:
       - current
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
 
 permissions:
   pull-requests: write
