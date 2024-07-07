@@ -280,7 +280,8 @@ def verify(ipsec):
                     if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
                         raise ConfigError(f"Invalid dhcp-interface on remote-access connection {name}")
 
-                    ipsec['dhcp_interfaces'].add(dhcp_interface)
+                    if 'disable' not in ra_conf:
+                        ipsec['dhcp_interfaces'].add(dhcp_interface)
 
                     address = get_dhcp_address(dhcp_interface)
                     count = 0
@@ -340,9 +341,10 @@ def verify(ipsec):
                     if not interface_exists(vti_interface):
                         raise ConfigError(f'VTI interface {vti_interface} for remote-access connection {name} does not exist!')
 
-                    ipsec['enabled_vti_interfaces'].add(vti_interface)
-                    # remote access VPN interfaces are always up regardless of whether clients are connected
-                    ipsec['persistent_vti_interfaces'].add(vti_interface)
+                    if 'disable' not in ra_conf:
+                        ipsec['enabled_vti_interfaces'].add(vti_interface)
+                        # remote access VPN interfaces are always up regardless of whether clients are connected
+                        ipsec['persistent_vti_interfaces'].add(vti_interface)
 
                 if 'pool' in ra_conf:
                     if {'dhcp', 'radius'} <= set(ra_conf['pool']):
@@ -507,7 +509,8 @@ def verify(ipsec):
                 if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
                     raise ConfigError(f"Invalid dhcp-interface on site-to-site peer {peer}")
 
-                ipsec['dhcp_interfaces'].add(dhcp_interface)
+                if 'disable' not in peer_conf:
+                    ipsec['dhcp_interfaces'].add(dhcp_interface)
 
                 address = get_dhcp_address(dhcp_interface)
                 count = 0
@@ -529,7 +532,8 @@ def verify(ipsec):
                     vti_interface = peer_conf['vti']['bind']
                     if not interface_exists(vti_interface):
                         raise ConfigError(f'VTI interface {vti_interface} for site-to-site peer {peer} does not exist!')
-                    ipsec['enabled_vti_interfaces'].add(vti_interface)
+                    if 'disable' not in peer_conf:
+                        ipsec['enabled_vti_interfaces'].add(vti_interface)
 
             if 'vti' not in peer_conf and 'tunnel' not in peer_conf:
                 raise ConfigError(f"No VTI or tunnel specified on site-to-site peer {peer}")
