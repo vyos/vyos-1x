@@ -24,7 +24,6 @@ from time import time
 
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import call
-from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.utils.process import STDOUT
 
