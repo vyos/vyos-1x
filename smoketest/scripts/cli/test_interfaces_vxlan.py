@@ -27,6 +27,13 @@ from vyos.utils.network import get_vxlan_vni_filter
 from vyos.template import is_ipv6
 from base_interfaces_test import BasicInterfaceTest
 
+def convert_to_list(ranges_to_convert):
+    result_list = []
+    for r in ranges_to_convert:
+        ranges = r.split('-')
+        result_list.extend([str(i) for i in range(int(ranges[0]), int(ranges[1]) + 1)])
+    return result_list
+
 class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -153,6 +160,11 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             '31': '10031',
         }
 
+        vlan_to_vni_ranges = {
+            '40-43': '10040-10043',
+            '45-47': '10045-10047'
+        }
+
         self.cli_set(self._base_path + [interface, 'parameters', 'external'])
         self.cli_set(self._base_path + [interface, 'source-address', source_address])
 
@@ -184,6 +196,26 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
 
         tmp = get_vxlan_vlan_tunnels('vxlan0')
         self.assertEqual(tmp, list(vlan_to_vni))
+
+        # add ranged VLAN - VNI mapping
+        for vlan, vni in vlan_to_vni_ranges.items():
+            self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
+        self.cli_commit()
+
+        tmp = get_vxlan_vlan_tunnels('vxlan0')
+        vlans_list = convert_to_list(vlan_to_vni_ranges.keys())
+        self.assertEqual(tmp, list(vlan_to_vni) + vlans_list)
+
+        # check validate() - cannot map VNI range to a single VLAN id
+        self.cli_set(self._base_path + [interface, 'vlan-to-vni', '100', 'vni', '100-102'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + [interface, 'vlan-to-vni', '100'])
+
+        # check validate() - cannot map VLAN to VNI with different ranges
+        self.cli_set(self._base_path + [interface, 'vlan-to-vni', '100-102', 'vni', '100-105'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
         self.cli_delete(['interfaces', 'bridge', bridge])
 
@@ -287,6 +319,12 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             '60': '10060',
             '69': '10069',
         }
+
+        vlan_to_vni_ranges = {
+            '70-73': '10070-10073',
+            '75-77': '10075-10077'
+        }
+
         for vlan, vni in vlan_to_vni.items():
             self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
         # we need a bridge ...
@@ -312,6 +350,15 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         # All VNIs configured?
         tmp = get_vxlan_vni_filter(interface)
         self.assertListEqual(list(vlan_to_vni.values()), tmp)
+
+        # add ranged VLAN - VNI mapping
+        for vlan, vni in vlan_to_vni_ranges.items():
+            self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
+        self.cli_commit()
+
+        tmp = get_vxlan_vni_filter(interface)
+        vnis_list = convert_to_list(vlan_to_vni_ranges.values())
+        self.assertListEqual(list(vlan_to_vni.values()) + vnis_list, tmp)
 
         self.cli_delete(['interfaces', 'bridge', bridge])
 

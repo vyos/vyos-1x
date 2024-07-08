@@ -179,13 +179,36 @@ def verify(vxlan):
                               'is member of a bridge interface!')
 
         vnis_used = []
+        vlans_used = []
         for vif, vif_config in vxlan['vlan_to_vni'].items():
             if 'vni' not in vif_config:
                 raise ConfigError(f'Must define VNI for VLAN "{vif}"!')
             vni = vif_config['vni']
-            if vni in vnis_used:
-                raise ConfigError(f'VNI "{vni}" is already assigned to a different VLAN!')
-            vnis_used.append(vni)
+
+            err_msg = f'VLAN range "{vif}" does not match VNI range "{vni}"!'
+            vif_range, vni_range = list(map(int, vif.split('-'))), list(map(int, vni.split('-')))
+
+            if len(vif_range) != len(vni_range):
+                raise ConfigError(err_msg)
+
+            if len(vif_range) > 1:
+                if vni_range[0] > vni_range[-1] or vif_range[0] > vif_range[-1]:
+                    raise ConfigError('The upper bound of the range must be greater than the lower bound!')
+                vni_range = range(vni_range[0], vni_range[1] + 1)
+                vif_range = range(vif_range[0], vif_range[1] + 1)
+
+            if len(vif_range) != len(vni_range):
+                raise ConfigError(err_msg)
+
+            for vni_id in vni_range:
+                if vni_id in vnis_used:
+                    raise ConfigError(f'VNI "{vni_id}" is already assigned to a different VLAN!')
+                vnis_used.append(vni_id)
+
+            for vif_id in vif_range:
+                if vif_id in vlans_used:
+                    raise ConfigError(f'VLAN "{vif_id}" is already in use!')
+                vlans_used.append(vif_id)
 
     if dict_search('parameters.neighbor_suppress', vxlan) != None:
         if 'is_bridge_member' not in vxlan:
