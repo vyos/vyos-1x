@@ -33,6 +33,7 @@
           </properties>
           <children>
             #include <include/firewall/common-rule-ipv6-raw.xml.i>
+            #include <include/firewall/match-ipsec-in.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
             <leafNode name="jump-target">
               <properties>

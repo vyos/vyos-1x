@@ -366,10 +366,14 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         output.append(f'ip{def_suffix} dscp != {{{negated_dscp_str}}}')
 
     if 'ipsec' in rule_conf:
-        if 'match_ipsec' in rule_conf['ipsec']:
+        if 'match_ipsec_in' in rule_conf['ipsec']:
             output.append('meta ipsec == 1')
-        if 'match_none' in rule_conf['ipsec']:
+        if 'match_none_in' in rule_conf['ipsec']:
             output.append('meta ipsec == 0')
+        if 'match_ipsec_out' in rule_conf['ipsec']:
+            output.append('rt ipsec exists')
+        if 'match_none_out' in rule_conf['ipsec']:
+            output.append('rt ipsec missing')
 
     if 'fragment' in rule_conf:
         # Checking for fragmentation after priority -400 is not possible,

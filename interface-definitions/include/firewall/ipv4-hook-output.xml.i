@@ -26,6 +26,7 @@
           </properties>
           <children>
             #include <include/firewall/common-rule-ipv4.xml.i>
+            #include <include/firewall/match-ipsec-out.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
           </children>
         </tagNode>
@@ -53,6 +54,7 @@
           </properties>
           <children>
             #include <include/firewall/common-rule-ipv4-raw.xml.i>
+            #include <include/firewall/match-ipsec-out.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
           </children>
         </tagNode>

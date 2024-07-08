@@ -1,0 +1,60 @@
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#
+# T4694: Adding rt ipsec exists/missing match to firewall configs.
+# This involves a syntax change for IPsec matches, reflecting that different 
+# nftables expressions are required depending on whether we're matching a 
+# decrypted packet or a packet that will be encrypted - it's directional. 
+# The old rules only matched decrypted packets, those matches are now *-in:
+    # from: set firewall <family> <chainspec> rule <rule#> ipsec match-ipsec|match-none
+    #   to: set firewall <family> <chainspec> rule <rule#> ipsec match-ipsec-in|match-none-in
+#
+# The <chainspec> positions this match allowed were:
+# name (any custom chains), forward filter, input filter, prerouting raw.
+# There are positions where it was possible to set, but it would never commit 
+# (nftables rejects 'meta ipsec' in output hooks), they are not considered here.
+#
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+firewall_base = ['firewall']
+
+def migrate_chain(config: ConfigTree, path: list[str]) -> None:
+    for rule_num in config.list_nodes(path + ['rule']):
+        tmp_path = path + ['rule', rule_num, 'ipsec']
+        if config.exists(tmp_path + ['match-ipsec']):
+            config.delete(tmp_path + ['match-ipsec'])
+            config.set(tmp_path + ['match-ipsec-in'])
+        elif config.exists(tmp_path + ['match-none']):
+            config.delete(tmp_path + ['match-none'])
+            config.set(tmp_path + ['match-none-in'])
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(firewall_base):
+        # Nothing to do
+        return
+
+    for family in ['ipv4', 'ipv6']:
+        tmp_path = firewall_base + [family, 'name']
+        if config.exists(tmp_path):
+            for custom_fwname in config.list_nodes(tmp_path):
+                migrate_chain(config, tmp_path + [custom_fwname])
+
+        for base_hook in [['forward', 'filter'], ['input', 'filter'], ['prerouting', 'raw']]:
+            tmp_path = firewall_base + [family] + base_hook
+            if config.exists(tmp_path):
+                migrate_chain(config, tmp_path)
