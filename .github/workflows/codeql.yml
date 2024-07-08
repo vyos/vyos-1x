@@ -3,9 +3,17 @@ name: "Perform CodeQL Analysis"
 on:
   push:
     branches: [ "circinus" ]
-  pull_request:
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
+  pull_request_target:
     # The branches below must be a subset of the branches above
     branches: [ "circinus" ]
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
   schedule:
     - cron: '22 10 * * 0'
 
@@ -16,7 +24,7 @@ permissions:
 
 jobs:
   codeql-analysis-call:
-    uses: vyos/.github/.github/workflows/codeql-analysis.yml@current
+    uses: vyos/.github/.github/workflows/codeql-analysis.yml@circinus
     secrets: inherit
     with:
       languages: "['python']"

@@ -3,8 +3,16 @@ on:
   push:
     branches:
       - circinus-stream
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
   pull_request_target:
     types: [opened, synchronize, reopened]
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
 jobs:
   sonar-cloud:
     name: SonarCloud
