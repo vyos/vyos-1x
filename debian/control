@@ -70,6 +70,7 @@ Depends:
   python3-netifaces,
   python3-paramiko,
   python3-passlib,
+  python3-pyroute2,
   python3-psutil,
   python3-pyhumps,
   python3-pystache,

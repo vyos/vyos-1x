@@ -20,13 +20,16 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.firewall import find_nftables_rule
-from vyos.utils.file import read_file
+from vyos.utils.file import read_file, read_json
 
 base_path = ['system', 'conntrack']
 
 def get_sysctl(parameter):
     tmp = parameter.replace(r'.', r'/')
     return read_file(f'/proc/sys/{tmp}')
+
+def get_logger_config():
+    return read_json('/run/vyos-conntrack-logger.conf')
 
 class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -280,5 +283,35 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables6_search, 'ip6 vyos_conntrack')
 
         self.cli_delete(['firewall'])
+
+    def test_conntrack_log(self):
+        expected_config = {
+            'event': {
+                'destroy': {},
+                'new': {},
+                'update': {},
+            },
+            'queue_size': '10000'
+        }
+        self.cli_set(base_path + ['log', 'event', 'destroy'])
+        self.cli_set(base_path + ['log', 'event', 'new'])
+        self.cli_set(base_path + ['log', 'event', 'update'])
+        self.cli_set(base_path + ['log', 'queue-size', '10000'])
+        self.cli_commit()
+        self.assertEqual(expected_config, get_logger_config())
+        self.assertEqual('0', get_sysctl('net.netfilter.nf_conntrack_timestamp'))
+
+        for event in ['destroy', 'new', 'update']:
+            for proto in ['icmp', 'other', 'tcp', 'udp']:
+                self.cli_set(base_path + ['log', 'event', event, proto])
+                expected_config['event'][event][proto] = {}
+        self.cli_set(base_path + ['log', 'timestamp'])
+        expected_config['timestamp'] = {}
+        self.cli_commit()
+
+        self.assertEqual(expected_config, get_logger_config())
+        self.assertEqual('1', get_sysctl('net.netfilter.nf_conntrack_timestamp'))
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

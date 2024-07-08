@@ -223,41 +223,78 @@
           </node>
           <node name="log">
             <properties>
-              <help>Log connection tracking events per protocol</help>
+              <help>Log connection tracking</help>
             </properties>
             <children>
-              <node name="icmp">
+              <node name="event">
                 <properties>
-                  <help>Log connection tracking events for ICMP</help>
+                  <help>Event type and protocol</help>
                 </properties>
                 <children>
-                  #include <include/conntrack/log-common.xml.i>
+                  <node name="destroy">
+                    <properties>
+                      <help>Log connection deletion</help>
+                    </properties>
+                    <children>
+                      #include <include/conntrack/log-protocols.xml.i>
+                    </children>
+                  </node>
+                  <node name="new">
+                    <properties>
+                      <help>Log connection creation</help>
+                    </properties>
+                    <children>
+                      #include <include/conntrack/log-protocols.xml.i>
+                    </children>
+                  </node>
+                  <node name="update">
+                    <properties>
+                      <help>Log connection updates</help>
+                    </properties>
+                    <children>
+                      #include <include/conntrack/log-protocols.xml.i>
+                    </children>
+                  </node>
                 </children>
               </node>
-              <node name="other">
+              <leafNode name="timestamp">
                 <properties>
-                  <help>Log connection tracking events for all protocols other than TCP, UDP and ICMP</help>
+                  <help>Log connection tracking events include flow-based timestamp</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack/log-common.xml.i>
-                </children>
-              </node>
-              <node name="tcp">
+              </leafNode>
+              <leafNode name="queue-size">
                 <properties>
-                  <help>Log connection tracking events for TCP</help>
+                  <help>Internal message queue size</help>
+                  <valueHelp>
+                    <format>u32:100-999999</format>
+                    <description>Queue size</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-999999"/>
+                  </constraint>
+                  <constraintErrorMessage>Queue size must be between 100 and 999999</constraintErrorMessage>
                 </properties>
-                <children>
-                  #include <include/conntrack/log-common.xml.i>
-                </children>
-              </node>
-              <node name="udp">
+              </leafNode>
+              <leafNode name="log-level">
                 <properties>
-                  <help>Log connection tracking events for UDP</help>
+                  <help>Set log-level. Log must be enable.</help>
+                  <completionHelp>
+                    <list>info debug</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>info</format>
+                    <description>Info log level</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>debug</format>
+                    <description>Debug log level</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(info|debug)</regex>
+                  </constraint>
                 </properties>
-                <children>
-                  #include <include/conntrack/log-common.xml.i>
-                </children>
-              </node>
+              </leafNode>
             </children>
           </node>
           <node name="modules">

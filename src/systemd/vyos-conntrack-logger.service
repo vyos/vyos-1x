@@ -1,0 +1,21 @@
+[Unit]
+Description=VyOS conntrack logger daemon
+
+# Seemingly sensible way to say "as early as the system is ready"
+# All vyos-configd needs is read/write mounted root
+After=conntrackd.service
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-conntrack-logger -c /run/vyos-conntrack-logger.conf
+Type=idle
+
+SyslogIdentifier=vyos-conntrack-logger
+SyslogFacility=daemon
+
+Restart=on-failure
+
+User=root
+Group=vyattacfg
+
+[Install]
+WantedBy=multi-user.target
