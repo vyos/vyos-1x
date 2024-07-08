@@ -3,6 +3,10 @@ on:
   pull_request:
     branches:
       - equuleus
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
 
 jobs:
   package-build:
