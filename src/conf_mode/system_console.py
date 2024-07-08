@@ -19,8 +19,10 @@ from pathlib import Path
 
 from vyos.config import Config
 from vyos.utils.process import call
+from vyos.utils.serial import restart_login_consoles
 from vyos.system import grub_util
 from vyos.template import render
+from vyos.defaults import directories
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -74,7 +76,6 @@ def generate(console):
     for root, dirs, files in os.walk(base_dir):
         for basename in files:
             if 'serial-getty' in basename:
-                call(f'systemctl stop {basename}')
                 os.unlink(os.path.join(root, basename))
 
     if not console or 'device' not in console:
@@ -122,19 +123,17 @@ def apply(console):
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 
+    # Service control moved to vyos.utils.serial to unify checks and prompts. 
+    # If users are connected, we want to show an informational message on completing 
+    # the process, but not halt configuration processing with an interactive prompt. 
+    restart_login_consoles(prompt_user=False, quiet=False)
+
     if not console:
         return None
 
     if 'powersave' in console.keys():
         # Configure screen blank powersaving on VGA console
         call('/usr/bin/setterm -blank 15 -powersave powerdown -powerdown 60 -term linux </dev/tty1 >/dev/tty1 2>&1')
-
-    # Start getty process on configured serial interfaces
-    for device in console['device']:
-        # Only start console if it exists on the running system. If a user
-        # detaches a USB serial console and reboots - it should not fail!
-        if os.path.exists(f'/dev/{device}'):
-            call(f'systemctl restart serial-getty@{device}.service')
 
     return None
 

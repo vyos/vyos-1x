@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="serial">
+        <properties>
+          <help>Restart services on serial ports</help>
+        </properties>
+        <children>
+          <node name="console">
+            <properties>
+              <help>Restart serial console service for login TTYs</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/serial.py restart_console</command>
+            <children>
+              <tagNode name="device">
+                <properties>
+                  <help>Restart specific TTY device</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_login_ttys.py</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/serial.py restart_console --device-name "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
