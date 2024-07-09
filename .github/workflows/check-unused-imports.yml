@@ -3,6 +3,10 @@ on:
   pull_request_target:
     branches:
       - circinus
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
   workflow_dispatch:
 
 permissions:
@@ -11,5 +15,5 @@ permissions:
 
 jobs:
   check-unused-imports:
-    uses: vyos/.github/.github/workflows/check-unused-imports.yml@current
+    uses: vyos/.github/.github/workflows/check-unused-imports.yml@circinus
     secrets: inherit
