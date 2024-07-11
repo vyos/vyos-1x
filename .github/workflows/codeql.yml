@@ -4,10 +4,18 @@ on:
   push:
     branches:
       - equuleus
-  pull_request:
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
+  pull_request_target:
     # The branches below must be a subset of the branches above
     branches:
       - equuleus
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
   schedule:
     - cron: '22 10 * * 0'
   workflow_dispatch:

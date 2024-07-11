@@ -3,6 +3,10 @@ on:
   pull_request_target:
     branches:
       - equuleus
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!**/*.md'
   workflow_dispatch:
 
 permissions:
