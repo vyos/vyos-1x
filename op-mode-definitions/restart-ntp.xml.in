@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="ntp">
+        <properties>
+          <help>Restart NTP service</help>
+        </properties>
+        <command>if cli-shell-api existsActive service ntp; then sudo systemctl restart chrony.service; else echo "Service NTP not configured"; fi</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
