@@ -1,21 +1,19 @@
 name: Trigger PR
+
 on:
-  pull_request_target:
-    types:
-      - closed
-    branches:
-      - current
- 
+    pull_request_target:
+      types:
+        - closed
+      branches:
+        - current
+        
 jobs:
-  trigger-repo-sync:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger PR
-        shell: bash
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.everest-preview+json" \
-            -H "Authorization: Bearer ${{ secrets.PAT }}" \
-            https://api.github.com/repos/${{ secrets.REMOTE_OWNER }}/${{ secrets.REMOTE_REPO }}/actions/workflows/create-pr.yml/dispatches \
-            -d '{"ref": "git-actions", "inputs":{"pr_number":"${{ github.event.pull_request.number }}", "pr_source_branch": "current", "pr_target_branch": "circinus", "pr_message":"${{ github.event.pull_request.title }}", "pr_source_repo":"${{ github.repository }}" }}'
+  trigger-PR:
+    uses: vyos/.github/.github/workflows/trigger-pr.yml@current
+    with:
+      source_branch: 'current'
+      target_branch: 'circinus'
+    secrets:
+      REMOTE_REPO: ${{ secrets.REMOTE_REPO }}
+      REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
+      PAT: ${{ secrets.PAT }}
