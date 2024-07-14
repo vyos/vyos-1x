@@ -33,7 +33,7 @@ if typing.TYPE_CHECKING:
 dependency_dir = os.path.join(directories['data'],
                               'config-mode-dependencies')
 
-dependent_func: dict[str, list[typing.Callable]] = {}
+dependency_list: list[typing.Callable] = []
 
 DEBUG = False
 
@@ -122,26 +122,24 @@ def def_closure(target: str, config: 'Config',
 
 def set_dependents(case: str, config: 'Config',
                    tagnode: typing.Optional[str] = None):
-    global dependent_func
+    global dependency_list
+
+    dependency_list = config.dependency_list
 
     d = get_dependency_dict(config)
     k = caller_name()
-
-    if hasattr(config, 'dependent_func'):
-        dependent_func = getattr(config, 'dependent_func')
-
-    l = dependent_func.setdefault(k, [])
+    l = dependency_list
 
     for target in d[k][case]:
         func = def_closure(target, config, tagnode)
         append_uniq(l, func)
 
-    debug_print(f'set_dependents: caller {k}, dependents {names_of(l)}')
+    debug_print(f'set_dependents: caller {k}, current dependents {names_of(l)}')
 
 def call_dependents():
     k = caller_name()
-    l = dependent_func.get(k, [])
-    debug_print(f'call_dependents: caller {k}, dependents {names_of(l)}')
+    l = dependency_list
+    debug_print(f'call_dependents: caller {k}, remaining dependents {names_of(l)}')
     while l:
         f = l.pop(0)
         debug_print(f'calling: {f.__name__}')
