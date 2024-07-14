@@ -220,6 +220,7 @@ def process_node_data(config, data, last: bool = False) -> int:
 
     script_name = None
     args = []
+    config.dependency_list.clear()
 
     res = re.match(r'^(VYOS_TAGNODE_VALUE=[^/]+)?.*\/([^/]+).py(.*)', data)
     if res.group(1):
