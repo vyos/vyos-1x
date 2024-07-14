@@ -119,7 +119,7 @@
                     <properties>
                       <help>Show summary of bridge custom firewall ruleset</help>
                       <completionHelp>
-                        <path>firewall bridge name ${COMP_WORDS[5]} rule</path>
+                        <path>firewall bridge name ${COMP_WORDS[4]} rule</path>
                       </completionHelp>
                     </properties>
                     <children>
@@ -127,7 +127,7 @@
                         <properties>
                           <help>Show list view of bridge custom firewall rules</help>
                           <completionHelp>
-                            <path>firewall bridge name ${COMP_WORDS[5]} rule detail</path>
+                            <path>firewall bridge name ${COMP_WORDS[4]} rule detail</path>
                           </completionHelp>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7 --detail $8</command>
@@ -299,7 +299,7 @@
                     <properties>
                       <help>Show summary of IPv6 custom firewall ruleset</help>
                       <completionHelp>
-                        <path>firewall ipv6 name ${COMP_WORDS[5]} rule</path>
+                        <path>firewall ipv6 name ${COMP_WORDS[4]} rule</path>
                       </completionHelp>
                     </properties>
                     <children>
@@ -307,7 +307,7 @@
                         <properties>
                           <help>Show list view of IPv6 custom firewall rules</help>
                           <completionHelp>
-                            <path>firewall ipv6 name ${COMP_WORDS[5]} rule detail</path>
+                            <path>firewall ipv6 name ${COMP_WORDS[4]} rule detail</path>
                           </completionHelp>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7 --detail $8</command>
@@ -479,7 +479,7 @@
                     <properties>
                       <help>Show summary of IPv4 custom firewall ruleset</help>
                       <completionHelp>
-                        <path>firewall ipv4 name ${COMP_WORDS[5]} rule</path>
+                        <path>firewall ipv4 name ${COMP_WORDS[4]} rule</path>
                       </completionHelp>
                     </properties>
                     <children>
@@ -487,7 +487,7 @@
                         <properties>
                           <help>Show list view of IPv4 custom firewall ruleset</help>
                           <completionHelp>
-                            <path>firewall ipv4 name ${COMP_WORDS[5]} rule detail</path>
+                            <path>firewall ipv4 name ${COMP_WORDS[4]} rule detail</path>
                           </completionHelp>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7 --detail $8</command>
