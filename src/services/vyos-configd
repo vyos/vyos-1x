@@ -30,7 +30,6 @@ from vyos.defaults import directories
 from vyos.utils.boot import boot_configuration_complete
 from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
-from vyos.configdep import call_dependents
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -134,7 +133,8 @@ def explicit_print(path, mode, msg):
     except OSError:
         logger.critical("error explicit_print")
 
-def run_script(script, config, args) -> int:
+def run_script(script_name, config, args) -> int:
+    script = conf_mode_scripts[script_name]
     script.argv = args
     config.set_level([])
     try:
@@ -143,8 +143,9 @@ def run_script(script, config, args) -> int:
         script.generate(c)
         script.apply(c)
     except ConfigError as e:
-        logger.critical(e)
-        explicit_print(session_out, session_mode, str(e))
+        s = f'{script_name}: {repr(e)}'
+        logger.error(s)
+        explicit_print(session_out, session_mode, s)
         return R_ERROR_COMMIT
     except Exception as e:
         logger.critical(e)
@@ -219,6 +220,7 @@ def process_node_data(config, data, last: bool = False) -> int:
 
     script_name = None
     args = []
+    config.dependency_list.clear()
 
     res = re.match(r'^(VYOS_TAGNODE_VALUE=[^/]+)?.*\/([^/]+).py(.*)', data)
     if res.group(1):
@@ -234,17 +236,10 @@ def process_node_data(config, data, last: bool = False) -> int:
     args.insert(0, f'{script_name}.py')
 
     if script_name not in include_set:
-        # call dependents now if last element of prio queue is run
-        # independent of configd
-        if last:
-            call_dependents(dependent_func=config.dependent_func)
         return R_PASS
 
     with stdout_redirected(session_out, session_mode):
-        result = run_script(conf_mode_scripts[script_name], config, args)
-
-    if last and result == R_SUCCESS:
-        call_dependents(dependent_func=config.dependent_func)
+        result = run_script(script_name, config, args)
 
     return result
 
