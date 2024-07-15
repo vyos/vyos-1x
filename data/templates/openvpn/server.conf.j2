@@ -208,8 +208,8 @@ tls-server
 {%     if encryption.cipher is vyos_defined %}
 cipher {{ encryption.cipher | openvpn_cipher }}
 {%     endif %}
-{%     if encryption.ncp_ciphers is vyos_defined %}
-data-ciphers {{ encryption.ncp_ciphers | openvpn_ncp_ciphers }}
+{%     if encryption.data_ciphers is vyos_defined %}
+data-ciphers {{ encryption.data_ciphers | openvpn_data_ciphers }}
 {%     endif %}
 {% endif %}
 providers default

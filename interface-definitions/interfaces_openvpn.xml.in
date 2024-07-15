@@ -87,7 +87,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="ncp-ciphers">
+              <leafNode name="data-ciphers">
                 <properties>
                   <help>Cipher negotiation list for use in server or client mode</help>
                   <completionHelp>
