@@ -245,7 +245,7 @@
             <properties>
               <help>Restart DHCP server</help>
             </properties>
-            <command>if cli-shell-api existsActive service dhcp-server; then sudo systemctl restart kea-dhcp4-server.service; else echo "DHCP server not configured"; fi</command>
+            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dhcp</command>
           </node>
           <node name="relay-agent">
             <properties>
@@ -264,7 +264,7 @@
             <properties>
               <help>Restart DHCPv6 server</help>
             </properties>
-            <command>if cli-shell-api existsActive service dhcpv6-server; then sudo systemctl restart kea-dhcp6-server.service; else echo "DHCPv6 server not configured"; fi</command>
+            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dhcpv6</command>
           </node>
           <node name="relay-agent">
             <properties>
