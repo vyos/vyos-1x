@@ -34,7 +34,7 @@
         <properties>
           <help>Restart WebProxy service</help>
         </properties>
-        <command>if cli-shell-api existsActive service webproxy; then sudo systemctl restart squid.service; else echo "Service WebProxy not configured"; fi</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name webproxy</command>
       </node>
     </children>
   </node>

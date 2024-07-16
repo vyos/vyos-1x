@@ -73,7 +73,7 @@
             <properties>
               <help>Restart DNS Forwarding service</help>
             </properties>
-            <command>if cli-shell-api existsActive service dns forwarding; then sudo systemctl restart pdns-recursor.service; else echo "DNS forwarding not configured"; fi</command>
+            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dns_forwarding</command>
           </leafNode>
         </children>
       </node>
