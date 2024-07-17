@@ -6,7 +6,7 @@
         <properties>
           <help>Restart reverse-proxy service</help>
         </properties>
-        <command>if cli-shell-api existsActive load-balancing reverse-proxy; then sudo systemctl restart haproxy.service; else echo "Reverse-Proxy not configured"; fi</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name reverse_proxy</command>
       </node>
     </children>
   </node>
