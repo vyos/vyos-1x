@@ -3,7 +3,7 @@
 #    build-command-template: converts new style command definitions in XML
 #      to the old style (bunch of dirs and node.def's) command templates
 #
-#    Copyright (C) 2017 VyOS maintainers <maintainers@vyos.net>
+#    Copyright (C) 2017-2024 VyOS maintainers <maintainers@vyos.net>
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 #    USA
 
+import re
 import sys
 import os
 import argparse
@@ -108,7 +109,8 @@ def get_properties(p):
             for i in lists:
                 comp_exprs.append("echo \"{0}\"".format(i.text))
             for i in paths:
-                comp_exprs.append("/bin/cli-shell-api listActiveNodes {0} | sed -e \"s/'//g\" && echo".format(i.text))
+                path = re.sub(r'\s+', '/', i.text)
+                comp_exprs.append("ls /opt/vyatta/config/active/{0} 2>/dev/null".format(path))
             for i in scripts:
                 comp_exprs.append("{0}".format(i.text))
             if comptype is not None:
