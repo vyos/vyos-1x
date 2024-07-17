@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Adds an explicit old default for 'server topology'
+# to keep old configs working as before even though the default has changed.
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['interfaces', 'openvpn']):
+        # Nothing to do
+        return
+
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
+    for	i in ovpn_intfs:
+        mode = config.return_value(['interfaces', 'openvpn', i, 'mode'])
+        if mode != 'server':
+            # If it's a client or a site-to-site OpenVPN interface,
+            # the topology setting is not applicable
+            # and will cause commit errors on load,
+            # so we must not change such interfaces.
+            continue
+        else:
+            # The default OpenVPN server topology was changed from net30 to subnet
+            # because net30 is deprecated and causes problems with Windows clients.
+            # We add 'net30' to old configs if topology is not set there
+            # to ensure that if anyone relies on net30, their configs work as before.
+            topology_path = ['interfaces', 'openvpn', i, 'server', 'topology']
+            if not config.exists(topology_path):
+                config.set(topology_path, value='net30', replace=False)
