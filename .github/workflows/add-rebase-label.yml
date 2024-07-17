@@ -1,0 +1,14 @@
+name: Add rebase label
+
+on:
+  pull_request_target:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  add-rebase-label:
+    uses: vyos/.github/.github/workflows/add-rebase-label.yml@current
+    secrets: inherit
