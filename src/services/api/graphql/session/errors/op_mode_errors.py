@@ -1,5 +1,6 @@
 op_mode_err_msg = {
     "UnconfiguredSubsystem": "subsystem is not configured or not running",
+    "UnconfiguredObject": "object does not exist in the system configuration",
     "DataUnavailable": "data currently unavailable",
     "PermissionDenied": "client does not have permission",
     "InsufficientResources": "insufficient system resources",
@@ -9,6 +10,7 @@ op_mode_err_msg = {
 
 op_mode_err_code = {
     "UnconfiguredSubsystem": 2000,
+    "UnconfiguredObject": 2003,
     "DataUnavailable": 2001,
     "InsufficientResources": 2002,
     "PermissionDenied": 1003,

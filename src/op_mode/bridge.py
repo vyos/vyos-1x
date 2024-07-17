@@ -70,7 +70,7 @@ def _get_raw_data_fdb(bridge):
     # From iproute2 fdb.c, fdb_show() will only exit(-1) in case of
     # non-existent bridge device; raise error.
     if code == 255:
-        raise vyos.opmode.UnconfiguredSubsystem(f"no such bridge device {bridge}")
+        raise vyos.opmode.UnconfiguredObject(f"bridge {bridge} does not exist in the system")
     data_dict = json.loads(json_data)
     return data_dict
 

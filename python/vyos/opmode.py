@@ -31,7 +31,15 @@ class Error(Exception):
 
 class UnconfiguredSubsystem(Error):
     """ Requested operation is valid, but cannot be completed
-        because corresponding subsystem is not configured and running.
+        because corresponding subsystem is not configured
+        and thus is not running.
+    """
+    pass
+
+class UnconfiguredObject(UnconfiguredSubsystem):
+    """ Requested operation is valid but cannot be completed
+        because its parameter refers to an object that does not exist
+        in the system configuration.
     """
     pass
 

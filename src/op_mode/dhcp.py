@@ -332,7 +332,7 @@ def _verify_client(func):
 
         # Check if config does not exist
         if not config.exists(f'interfaces {interface_path} address dhcp{v}'):
-            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
+            raise vyos.opmode.UnconfiguredObject(unconf_message)
         return func(*args, **kwargs)
     return _wrapper
 
