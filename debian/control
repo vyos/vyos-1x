@@ -54,7 +54,6 @@ Depends:
   at,
   rsync,
   vyatta-bash,
-  vyatta-biosdevname,
   vyatta-cfg,
   vyos-http-api-tools,
   vyos-utils,
