@@ -86,7 +86,8 @@ def get_config(config=None):
     monitoring['custom_scripts_dir'] = custom_scripts_dir
     monitoring['hostname'] = get_hostname()
     monitoring['interfaces_ethernet'] = Section.interfaces('ethernet', vlan=False)
-    monitoring['nft_chains'] = get_nft_filter_chains()
+    if conf.exists('firewall'):
+        monitoring['nft_chains'] = get_nft_filter_chains()
 
     # Redefine azure group-metrics 'single-table' and 'table-per-metric'
     if 'azure_data_explorer' in monitoring:
