@@ -33,10 +33,9 @@ if typing.TYPE_CHECKING:
 dependency_dir = os.path.join(directories['data'],
                               'config-mode-dependencies')
 
-local_dependent_func: dict[str, list[typing.Callable]] = {}
+dependency_list: list[typing.Callable] = []
 
 DEBUG = False
-FORCE_LOCAL = False
 
 def debug_print(s: str):
     if DEBUG:
@@ -50,7 +49,8 @@ def canon_name_of_path(path: str) -> str:
     return canon_name(script)
 
 def caller_name() -> str:
-    return stack()[2].filename
+    filename = stack()[2].filename
+    return canon_name_of_path(filename)
 
 def name_of(f: typing.Callable) -> str:
     return f.__name__
@@ -107,46 +107,47 @@ def run_config_mode_script(script: str, config: 'Config'):
         mod.generate(c)
         mod.apply(c)
     except (VyOSError, ConfigError) as e:
-        raise ConfigError(repr(e))
+        raise ConfigError(str(e)) from e
 
 def def_closure(target: str, config: 'Config',
                 tagnode: typing.Optional[str] = None) -> typing.Callable:
     script = target + '.py'
     def func_impl():
-        if tagnode:
+        if tagnode is not None:
             os.environ['VYOS_TAGNODE_VALUE'] = tagnode
         run_config_mode_script(script, config)
+    tag_ext = f'_{tagnode}' if tagnode is not None else ''
+    func_impl.__name__ = f'{target}{tag_ext}'
     return func_impl
 
 def set_dependents(case: str, config: 'Config',
                    tagnode: typing.Optional[str] = None):
+    global dependency_list
+
+    dependency_list = config.dependency_list
+
     d = get_dependency_dict(config)
-    k = canon_name_of_path(caller_name())
-    tag_ext = f'_{tagnode}' if tagnode is not None else ''
-    if hasattr(config, 'dependent_func') and not FORCE_LOCAL:
-        dependent_func = getattr(config, 'dependent_func')
-        l = dependent_func.setdefault('vyos_configd', [])
-    else:
-        dependent_func = local_dependent_func
-        l = dependent_func.setdefault(k, [])
+    k = caller_name()
+    l = dependency_list
+
     for target in d[k][case]:
         func = def_closure(target, config, tagnode)
-        func.__name__ = f'{target}{tag_ext}'
         append_uniq(l, func)
-    debug_print(f'set_dependents: caller {k}, dependents {names_of(l)}')
 
-def call_dependents(dependent_func: dict = None):
-    k = canon_name_of_path(caller_name())
-    if dependent_func is None or FORCE_LOCAL:
-        dependent_func = local_dependent_func
-        l = dependent_func.get(k, [])
-    else:
-        l = dependent_func.get('vyos_configd', [])
-    debug_print(f'call_dependents: caller {k}, dependents {names_of(l)}')
+    debug_print(f'set_dependents: caller {k}, current dependents {names_of(l)}')
+
+def call_dependents():
+    k = caller_name()
+    l = dependency_list
+    debug_print(f'call_dependents: caller {k}, remaining dependents {names_of(l)}')
     while l:
         f = l.pop(0)
         debug_print(f'calling: {f.__name__}')
-        f()
+        try:
+            f()
+        except ConfigError as e:
+            s = f'dependent {f.__name__}: {str(e)}'
+            raise ConfigError(s) from e
 
 def called_as_dependent() -> bool:
     st = stack()[1:]
