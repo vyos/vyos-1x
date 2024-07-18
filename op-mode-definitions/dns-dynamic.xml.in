@@ -97,7 +97,7 @@
             <properties>
               <help>Restart Dynamic DNS service</help>
             </properties>
-            <command>if cli-shell-api existsActive service dns dynamic; then sudo systemctl restart ddclient.service; else echo "Dynamic DNS not configured"; fi</command>
+            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dns_dynamic</command>
           </node>
         </children>
       </node>

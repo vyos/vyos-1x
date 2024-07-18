@@ -30,7 +30,7 @@
         <properties>
           <help>Restart VRRP (Virtual Router Redundancy Protocol) process</help>
         </properties>
-        <command>sudo systemctl restart keepalived.service</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name vrrp</command>
       </node>
     </children>
   </node>

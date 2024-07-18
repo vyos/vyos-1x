@@ -112,7 +112,7 @@
         <properties>
           <help>Restart the IPsec VPN process</help>
         </properties>
-        <command>if systemctl is-active --quiet strongswan; then sudo systemctl restart strongswan ; echo "IPsec process restarted";  else echo "IPsec process not running" ; fi</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name ipsec</command>
       </node>
     </children>
   </node>

@@ -6,7 +6,7 @@
         <properties>
           <help>Restart SNMP service</help>
         </properties>
-        <command>if cli-shell-api existsActive service snmp; then sudo systemctl restart snmpd.service; else echo "Service SNMP not configured"; fi</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name snmp</command>
       </node>
     </children>
   </node>
