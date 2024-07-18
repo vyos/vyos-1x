@@ -104,7 +104,7 @@ def _convert_config(zones_config: dict, zone: str = None) -> list:
         if zones_config:
             output = [_convert_one_zone_data(zone, zones_config)]
         else:
-            raise vyos.opmode.DataUnavailable(f'Zone {zone} not found')
+            raise vyos.opmode.UnconfiguredObject(f'Zone {zone} not found')
     else:
         if zones_config:
             output = _convert_zones_data(zones_config)

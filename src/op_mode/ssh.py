@@ -65,7 +65,7 @@ def show_fingerprints(raw: bool, ascii: bool):
 def show_dynamic_protection(raw: bool):
     config = ConfigTreeQuery()
     if not config.exists(['service', 'ssh', 'dynamic-protection']):
-        raise vyos.opmode.UnconfiguredSubsystem("SSH server dynamic-protection is not enabled.")
+        raise vyos.opmode.UnconfiguredObject("SSH server dynamic-protection is not enabled.")
 
     attackers = []
     try:
