@@ -589,25 +589,25 @@
                 <properties>
                   <help>Topology for clients</help>
                   <completionHelp>
-                    <list>net30 point-to-point subnet</list>
+                    <list>subnet point-to-point net30</list>
                   </completionHelp>
                   <valueHelp>
-                    <format>net30</format>
-                    <description>net30 topology</description>
+                    <format>subnet</format>
+                    <description>Subnet topology (recommended)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>point-to-point</format>
                     <description>Point-to-point topology</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>subnet</format>
-                    <description>Subnet topology</description>
+                    <format>net30</format>
+                    <description>net30 topology (deprecated)</description>
                   </valueHelp>
                   <constraint>
                     <regex>(subnet|point-to-point|net30)</regex>
                   </constraint>
                 </properties>
-                <defaultValue>net30</defaultValue>
+                <defaultValue>subnet</defaultValue>
               </leafNode>
               <node name="mfa">
                 <properties>
