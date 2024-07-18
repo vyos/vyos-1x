@@ -42,8 +42,10 @@ def _get_formatted_sessions(data):
     ses_list = []
     for ses in data:
         ses_list.append([
-            ses["Device"], ses["Username"], ses["IPv4"], ses["Remote IP"], 
-            ses["_RX"], ses["_TX"], ses["State"], ses["_Connected at"]
+            ses.get("Device", '(none)'), ses.get("Username", '(none)'),
+            ses.get("IPv4", '(none)'), ses.get("Remote IP", '(none)'),
+            ses.get("_RX", '(none)'), ses.get("_TX", '(none)'),
+            ses.get("State", '(none)'), ses.get("_Connected at", '(none)')
         ])
     if len(ses_list) > 0:
         output = tabulate(ses_list, headers)
