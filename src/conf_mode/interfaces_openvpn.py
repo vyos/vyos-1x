@@ -432,6 +432,13 @@ def verify(openvpn):
                                 if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
 
+        if 'topology' in openvpn['server']:
+            if openvpn['server']['topology'] == 'net30':
+                DeprecationWarning('Topology net30 is deprecated '\
+                                   'and will be removed in future VyOS versions. '\
+                                   'Switch to "subnet" or "p2p"'
+                )
+
         # add mfa users to the file the mfa plugin uses
         if dict_search('server.mfa.totp', openvpn):
             user_data = ''
