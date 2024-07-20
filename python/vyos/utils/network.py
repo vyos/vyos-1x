@@ -83,6 +83,19 @@ def get_interface_vrf(interface):
         return tmp['master']
     return 'default'
 
+def get_vrf_tableid(interface: str):
+    """ Return VRF table ID for given interface name or None """
+    from vyos.utils.dict import dict_search
+    table = None
+    tmp = get_interface_config(interface)
+    # Check if we are "the" VRF interface
+    if dict_search('linkinfo.info_kind', tmp) == 'vrf':
+        table = tmp['linkinfo']['info_data']['table']
+    # or an interface bound to a VRF
+    elif dict_search('linkinfo.info_slave_kind', tmp) == 'vrf':
+        table = tmp['linkinfo']['info_slave_data']['table']
+    return table
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
@@ -537,21 +550,21 @@ def ipv6_prefix_length(low, high):
         return None
 
     xor = bytearray(a ^ b for a, b in zip(lo, hi))
-        
+
     plen = 0
     while plen < 128 and xor[plen // 8] == 0:
         plen += 8
-        
+
     if plen == 128:
         return plen
-    
+
     for i in range((plen // 8) + 1, 16):
         if xor[i] != 0:
             return None
-    
+
     for i in range(8):
         msk = ~xor[plen // 8] & 0xff
-        
+
         if msk == bytemasks[i]:
             return plen + i + 1
 

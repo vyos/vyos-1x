@@ -28,6 +28,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.process import process_named_running
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_vrf
+from vyos.utils.network import get_vrf_tableid
 from vyos.utils.process import cmd
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
@@ -256,6 +257,51 @@ class BasicInterfaceTest:
                 self.assertIn(str(tmp), vrf_pids)
 
             self.cli_delete(['vrf', 'name', vrf_name])
+
+        def test_move_interface_between_vrf_instances(self):
+            if not self._test_vrf:
+                self.skipTest('not supported')
+
+            vrf1_name = 'smoketest_mgmt1'
+            vrf1_table = '5424'
+            vrf2_name = 'smoketest_mgmt2'
+            vrf2_table = '7412'
+
+            self.cli_set(['vrf', 'name', vrf1_name, 'table', vrf1_table])
+            self.cli_set(['vrf', 'name', vrf2_name, 'table', vrf2_table])
+
+            # move interface into first VRF
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface, 'vrf', vrf1_name])
+
+            self.cli_commit()
+
+            # check that interface belongs to proper VRF
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, vrf1_name)
+
+                tmp = get_interface_config(vrf1_name)
+                self.assertEqual(int(vrf1_table), get_vrf_tableid(interface))
+
+            # move interface into second VRF
+            for interface in self._interfaces:
+                self.cli_set(self._base_path + [interface, 'vrf', vrf2_name])
+
+            self.cli_commit()
+
+            # check that interface belongs to proper VRF
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, vrf2_name)
+
+                tmp = get_interface_config(vrf2_name)
+                self.assertEqual(int(vrf2_table), get_vrf_tableid(interface))
+
+            self.cli_delete(['vrf', 'name', vrf1_name])
+            self.cli_delete(['vrf', 'name', vrf2_name])
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:
