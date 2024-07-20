@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_vrf_tableid
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
@@ -421,7 +422,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             tmp = get_interface_config(vrf)
 
             # Compare VRF table ID
-            self.assertEqual(tmp['linkinfo']['info_data']['table'], int(vrf_config['table']))
+            self.assertEqual(get_vrf_tableid(vrf), int(vrf_config['table']))
             self.assertEqual(tmp['linkinfo']['info_kind'],          'vrf')
 
             # Verify FRR bgpd configuration
@@ -478,4 +479,4 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     self.assertIn(tmp, frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)
