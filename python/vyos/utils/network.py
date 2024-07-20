@@ -70,6 +70,19 @@ def get_interface_vrf(interface):
         return tmp['master']
     return 'default'
 
+def get_vrf_tableid(interface: str):
+    """ Return VRF table ID for given interface name or None """
+    from vyos.utils.dict import dict_search
+    table = None
+    tmp = get_interface_config(interface)
+    # Check if we are "the" VRF interface
+    if dict_search('linkinfo.info_kind', tmp) == 'vrf':
+        table = tmp['linkinfo']['info_data']['table']
+    # or an interface bound to a VRF
+    elif dict_search('linkinfo.info_slave_kind', tmp) == 'vrf':
+        table = tmp['linkinfo']['info_slave_data']['table']
+    return table
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
