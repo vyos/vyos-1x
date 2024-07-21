@@ -63,6 +63,11 @@
                 life_packets = {{ vti_esp.life_packets }}
 {%     endif %}
                 life_time = {{ vti_esp.lifetime }}s
+{%     if vti_esp.disable_rekey is vyos_defined %}
+                rekey_bytes = 0
+                rekey_packets = 0
+                rekey_time = 0s
+{%     endif %}
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
@@ -108,6 +113,11 @@
                 life_packets = {{ tunnel_esp.life_packets }}
 {%         endif %}
                 life_time = {{ tunnel_esp.lifetime }}s
+{%         if tunnel_esp.disable_rekey is vyos_defined %}
+                rekey_bytes = 0
+                rekey_packets = 0
+                rekey_time = 0s
+{%         endif %}
 {%         if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%             if tunnel_conf.local.prefix is vyos_defined %}
 {%                 set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}

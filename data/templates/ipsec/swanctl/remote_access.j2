@@ -8,6 +8,10 @@
         proposals = {{ ike_group[rw_conf.ike_group] | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
         send_certreq = no
+{% if ike.dead_peer_detection is vyos_defined %}
+        dpd_timeout = {{ ike.dead_peer_detection.timeout }}
+        dpd_delay = {{ ike.dead_peer_detection.interval }}
+{% endif %}
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
 {% if rw_conf.unique is vyos_defined %}
@@ -44,8 +48,18 @@
         children {
             ikev2-vpn  {
                 esp_proposals = {{ esp | get_esp_ike_cipher(ike) | join(',') }}
-                rekey_time = {{ esp.lifetime }}s
-                rand_time = 540s
+{% if esp.life_bytes is vyos_defined %}
+                life_bytes = {{ esp.life_bytes }}
+{% endif %}
+{% if esp.life_packets is vyos_defined %}
+                life_packets = {{ esp.life_packets }}
+{% endif %}
+                life_time = {{ esp.lifetime }}s
+{% if esp.disable_rekey is vyos_defined %}
+                rekey_bytes = 0
+                rekey_packets = 0
+                rekey_time = 0s
+{% endif %}
                 dpd_action = clear
                 inactivity = {{ rw_conf.timeout }}
 {% if rw_conf.replay_window is vyos_defined %}
