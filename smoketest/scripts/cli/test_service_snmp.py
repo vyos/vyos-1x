@@ -246,5 +246,19 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         for excluded in snmpv3_view_oid_exclude:
             self.assertIn(f'view {snmpv3_view} excluded .{excluded}', tmp)
 
+    def test_snmp_script_extensions(self):
+        extensions = {
+            'default': 'snmp_smoketest_extension_script.sh',
+            'external': '/run/external_snmp_smoketest_extension_script.sh'
+        }
+
+        for key, val in extensions.items():
+            self.cli_set(base_path + ['script-extensions', 'extension-name', key, 'script', val])
+        self.cli_commit()
+
+        self.assertEqual(get_config_value('extend default'), f'/config/user-data/{extensions["default"]}')
+        self.assertEqual(get_config_value('extend external'), extensions["external"])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
