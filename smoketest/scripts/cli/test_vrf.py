@@ -25,6 +25,7 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import interface_exists
 from vyos.utils.system import sysctl_read
@@ -111,8 +112,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
 
-            tmp = get_interface_config(vrf)
-            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+            self.assertEqual(int(table), get_vrf_tableid(vrf))
 
             # Increment table ID for the next run
             table = str(int(table) + 1)
@@ -266,8 +266,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for address in addresses:
             self.assertTrue(is_intf_addr_assigned(interface, address))
         # Verify VRF table ID
-        tmp = get_interface_config(vrf)
-        self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+        self.assertEqual(int(table), get_vrf_tableid(vrf))
 
         # Verify interface is assigned to VRF
         tmp = get_interface_config(interface)

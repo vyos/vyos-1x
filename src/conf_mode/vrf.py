@@ -26,7 +26,7 @@ from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
-from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
@@ -160,8 +160,8 @@ def verify(vrf):
 
             # routing table id can't be changed - OS restriction
             if interface_exists(name):
-                tmp = str(dict_search('linkinfo.info_data.table', get_interface_config(name)))
-                if tmp and tmp != vrf_config['table']:
+                tmp = get_vrf_tableid(name)
+                if tmp and tmp != int(vrf_config['table']):
                     raise ConfigError(f'VRF "{name}" table id modification not possible!')
 
             # VRF routing table ID must be unique on the system

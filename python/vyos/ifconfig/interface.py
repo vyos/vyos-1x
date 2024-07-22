@@ -37,6 +37,7 @@ from vyos.utils.network import mac2eui64
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_namespace
+from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import run
@@ -402,7 +403,7 @@ class Interface(Control):
         if netns: cmd = f'ip netns exec {netns} {cmd}'
         return self._cmd(cmd)
 
-    def _set_vrf_ct_zone(self, vrf):
+    def _set_vrf_ct_zone(self, vrf, old_vrf_tableid=None):
         """
         Add/Remove rules in nftables to associate traffic in VRF to an
         individual conntack zone
@@ -411,20 +412,27 @@ class Interface(Control):
         if 'netns' in self.config:
             return None
 
+        def nft_check_and_run(nft_command):
+            # Check if deleting is possible first to avoid raising errors
+            _, err = self._popen(f'nft --check {nft_command}')
+            if not err:
+                # Remove map element
+                self._cmd(f'nft {nft_command}')
+
         if vrf:
             # Get routing table ID for VRF
-            vrf_table_id = get_interface_config(vrf).get('linkinfo', {}).get(
-                'info_data', {}).get('table')
+            vrf_table_id = get_vrf_tableid(vrf)
             # Add map element with interface and zone ID
             if vrf_table_id:
+                # delete old table ID from nftables if it has changed, e.g. interface moved to a different VRF
+                if old_vrf_tableid and old_vrf_tableid != int(vrf_table_id):
+                    nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
+                    nft_check_and_run(nft_del_element)
+
                 self._cmd(f'nft add element inet vrf_zones ct_iface_map {{ "{self.ifname}" : {vrf_table_id} }}')
         else:
             nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
-            # Check if deleting is possible first to avoid raising errors
-            _, err = self._popen(f'nft --check {nft_del_element}')
-            if not err:
-                # Remove map element
-                self._cmd(f'nft {nft_del_element}')
+            nft_check_and_run(nft_del_element)
 
     def get_min_mtu(self):
         """
@@ -601,8 +609,10 @@ class Interface(Control):
         if tmp == vrf:
             return False
 
+        # Get current VRF table ID
+        old_vrf_tableid = get_vrf_tableid(self.ifname)
         self.set_interface('vrf', vrf)
-        self._set_vrf_ct_zone(vrf)
+        self._set_vrf_ct_zone(vrf, old_vrf_tableid)
         return True
 
     def set_arp_cache_tmo(self, tmo):
