@@ -24,6 +24,7 @@ from time import sleep
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configdict import leaf_node_changed
@@ -86,8 +87,21 @@ def get_config(config=None):
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  no_tag_node_value_mangle=True,
                                  get_first_key=True,
-                                 with_recursive_defaults=True,
                                  with_pki=True)
+
+    # We have to cleanup the default dict, as default values could
+    # enable features which are not explicitly enabled on the
+    # CLI. E.g. dead-peer-detection defaults should not be injected
+    # unless the feature is explicitly opted in to by setting the
+    # top-level node
+    default_values = conf.get_config_defaults(**ipsec.kwargs, recursive=True)
+
+    if 'ike_group' in ipsec:
+        for name, ike in ipsec['ike_group'].items():
+            if 'dead_peer_detection' not in ike:
+                del default_values['ike_group'][name]['dead_peer_detection']
+
+    ipsec = config_dict_merge(default_values, ipsec)
 
     ipsec['dhcp_interfaces'] = set()
     ipsec['dhcp_no_address'] = {}
