@@ -235,10 +235,6 @@ def verify_pki(openvpn):
 
 def verify(openvpn):
     if 'deleted' in openvpn:
-        # remove totp secrets file if totp is not configured
-        if os.path.isfile(otp_file.format(**openvpn)):
-            os.remove(otp_file.format(**openvpn))
-
         verify_bridge_delete(openvpn)
         return None
 
@@ -624,9 +620,19 @@ def generate_pki_files(openvpn):
 
 
 def generate(openvpn):
+    if 'deleted' in openvpn:
+        # remove totp secrets file if totp is not configured
+        if os.path.isfile(otp_file.format(**openvpn)):
+            os.remove(otp_file.format(**openvpn))
+        return None
+
+    if 'disable' in openvpn:
+        return None
+
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
     openvpn['plugin_dir'] = '/usr/lib/openvpn'
+
     # create base config directory on demand
     makedir(directory, user, group)
     # enforce proper permissions on /run/openvpn
@@ -642,9 +648,6 @@ def generate(openvpn):
     service_dir = os.path.dirname(service_file.format(**openvpn))
     if os.path.isdir(service_dir):
         rmtree(service_dir, ignore_errors=True)
-
-    if 'deleted' in openvpn or 'disable' in openvpn:
-        return None
 
     # create client config directory on demand
     makedir(ccd_dir, user, group)
