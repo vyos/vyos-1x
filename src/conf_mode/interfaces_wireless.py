@@ -98,6 +98,15 @@ def get_config(config=None):
                 tmp = {'security': {'wpa': {'cipher' : ['CCMP']}}}
             elif wpa_mode == 'both':
                 tmp = {'security': {'wpa': {'cipher' : ['CCMP', 'TKIP']}}}
+            elif wpa_mode == 'wpa3':
+                # According to WiFi specs (https://www.wi-fi.org/file/wpa3-specification)
+                # section 3.5: WPA3-Enterprise 192-bit mode
+                # WiFi NICs which would be able to connect to WPA3-Enterprise managed
+                # networks MUST support GCMP-256.
+                # Reasoning: Provided that chipsets would most likely _not_ be
+                # "private user only", they all would come with built-in support
+                # for GCMP-256.
+                tmp = {'security': {'wpa': {'cipher' : ['CCMP', 'CCMP-256', 'GCMP', 'GCMP-256']}}}
 
             if tmp: wifi = dict_merge(tmp, wifi)
 
@@ -136,6 +145,23 @@ def verify(wifi):
         if 'channel' not in wifi:
             raise ConfigError('Wireless channel must be configured!')
 
+        if 'capabilities' in wifi and 'he' in wifi['capabilities']:
+            if 'channel_set_width' not in wifi['capabilities']['he']:
+                raise ConfigError('Channel width must be configured!')
+
+        # op_modes drawn from:
+        # https://w1.fi/cgit/hostap/tree/src/common/ieee802_11_common.c?id=195cc3d919503fb0d699d9a56a58a72602b25f51#n1525
+        # 802.11ax (WiFi-6e - HE) can use up to 160MHz bandwidth channels
+        six_ghz_op_modes_he = ['131', '132', '133', '134', '135']
+        # 802.11be (WiFi-7 - EHT) can use up to 320MHz bandwidth channels
+        six_ghz_op_modes_eht = six_ghz_op_modes_he.append('137')
+        if 'security' in wifi and 'wpa' in wifi['security'] and 'mode' in wifi['security']['wpa']:
+            if wifi['security']['wpa']['mode'] == 'wpa3':
+                if 'he' in wifi['capabilities']:
+                    if wifi['capabilities']['he']['channel_set_width'] in six_ghz_op_modes_he:
+                        if 'mgmt_frame_protection' not in wifi or wifi['mgmt_frame_protection'] != 'required':
+                            raise ConfigError('Management Frame Protection (MFP) is required with WPA3 at 6GHz! Consider also enabling Beacon Frame Protection (BFP) if your device supports it.')
+
     if 'security' in wifi:
         if {'wep', 'wpa'} <= set(wifi.get('security', {})):
             raise ConfigError('Must either use WEP or WPA security!')
@@ -169,7 +195,8 @@ def verify(wifi):
 
                 if capabilities['vht']['beamform'] == 'single-user-beamformer':
                     if int(capabilities['vht']['antenna_count']) < 3:
-                        # Nasty Gotcha: see https://w1.fi/cgit/hostap/plain/hostapd/hostapd.conf lines 692-705
+                        # Nasty Gotcha: see lines 708-721 in:
+                        # https://w1.fi/cgit/hostap/tree/hostapd/hostapd.conf?h=hostap_2_10&id=cff80b4f7d3c0a47c052e8187d671710f48939e4#n708
                         raise ConfigError('Single-user beam former requires at least 3 antennas!')
 
     if 'station_interfaces' in wifi and wifi['type'] == 'station':
