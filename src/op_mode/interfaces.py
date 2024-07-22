@@ -445,12 +445,24 @@ def _format_show_counters(data: list):
     print (output)
     return output
 
+
+def _show_raw(data: list, intf_name: str):
+    if intf_name is not None and len(data) <= 1:
+        try:
+            return data[0]
+        except IndexError:
+            raise vyos.opmode.UnconfiguredObject(
+                f"Interface {intf_name} does not exist")
+    else:
+        return data
+
+
 def show(raw: bool, intf_name: typing.Optional[str],
                     intf_type: typing.Optional[str],
                     vif: bool, vrrp: bool):
     data = _get_raw_data(intf_name, intf_type, vif, vrrp)
     if raw:
-        return data
+        return _show_raw(data, intf_name)
     return _format_show_data(data)
 
 def show_summary(raw: bool, intf_name: typing.Optional[str],
@@ -458,7 +470,7 @@ def show_summary(raw: bool, intf_name: typing.Optional[str],
                             vif: bool, vrrp: bool):
     data = _get_summary_data(intf_name, intf_type, vif, vrrp)
     if raw:
-        return data
+        return _show_raw(data, intf_name)
     return _format_show_summary(data)
 
 def show_summary_extended(raw: bool, intf_name: typing.Optional[str],
@@ -466,7 +478,7 @@ def show_summary_extended(raw: bool, intf_name: typing.Optional[str],
                             vif: bool, vrrp: bool):
     data = _get_summary_data(intf_name, intf_type, vif, vrrp)
     if raw:
-        return data
+        return _show_raw(data, intf_name)
     return _format_show_summary_extended(data)
 
 def show_counters(raw: bool, intf_name: typing.Optional[str],
@@ -474,7 +486,7 @@ def show_counters(raw: bool, intf_name: typing.Optional[str],
                              vif: bool, vrrp: bool):
     data = _get_counter_data(intf_name, intf_type, vif, vrrp)
     if raw:
-        return data
+        return _show_raw(data, intf_name)
     return _format_show_counters(data)
 
 def clear_counters(intf_name: typing.Optional[str],
