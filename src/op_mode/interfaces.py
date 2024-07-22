@@ -458,7 +458,10 @@ def show_summary(raw: bool, intf_name: typing.Optional[str],
                             vif: bool, vrrp: bool):
     data = _get_summary_data(intf_name, intf_type, vif, vrrp)
     if raw:
-        return data
+        if intf_name is not None and len(data) <= 1:
+            return data[0] if data else {}
+        else:
+            return data
     return _format_show_summary(data)
 
 def show_summary_extended(raw: bool, intf_name: typing.Optional[str],
