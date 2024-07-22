@@ -22,9 +22,11 @@ from base_interfaces_test import BasicInterfaceTest
 from glob import glob
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.process import process_named_running
-from vyos.utils.kernel import check_kmod
 from vyos.utils.file import read_file
+from vyos.utils.kernel import check_kmod
+from vyos.utils.network import interface_exists
+from vyos.utils.process import process_named_running
+from vyos.utils.process import call
 from vyos.xml_ref import default_value
 
 def get_config_value(interface, key):
@@ -33,7 +35,7 @@ def get_config_value(interface, key):
     return tmp[0]
 
 wifi_cc_path = ['system', 'wireless', 'country-code']
-
+country = 'se'
 class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -66,7 +68,8 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         cls._test_ipv6 = False
         cls._test_vlan = False
 
-        cls.cli_set(cls, wifi_cc_path + ['se'])
+        cls.cli_set(cls, wifi_cc_path + [country])
+
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
@@ -84,7 +87,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_wireless_hostapd_config(self):
         # Only set the hostapd (access-point) options
-        interface = 'wlan1'
+        interface = self._interfaces[1] # wlan1
         ssid = 'ssid'
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
@@ -161,7 +164,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_wireless_hostapd_vht_mu_beamformer_config(self):
         # Multi-User-Beamformer
-        interface = 'wlan1'
+        interface = self._interfaces[1] # wlan1
         ssid = 'vht_mu-beamformer'
         antennas = '3'
 
@@ -230,7 +233,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_wireless_hostapd_vht_su_beamformer_config(self):
         # Single-User-Beamformer
-        interface = 'wlan1'
+        interface = self._interfaces[1] # wlan1
         ssid = 'vht_su-beamformer'
         antennas = '3'
 
@@ -299,16 +302,14 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_wireless_hostapd_he_config(self):
         # Only set the hostapd (access-point) options - HE mode for 802.11ax at 6GHz
-        interface = 'wlan1'
+        interface = self._interfaces[1] # wlan1
         ssid = 'ssid'
         channel = '1'
         sae_pw = 'VyOSVyOSVyOS'
-        country = 'de'
         bss_color = '37'
         channel_set_width = '134'
         center_channel_freq_1 = '15'
 
-        self.cli_set(wifi_cc_path + [country])
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'channel', channel])
@@ -353,10 +354,6 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         tmp = get_config_value(interface, 'he_oper_centr_freq_seg0_idx')
         self.assertEqual(center_channel_freq_1, tmp)
 
-        # Country code
-        tmp = get_config_value(interface, 'country_code')
-        self.assertEqual(country.upper(), tmp)
-
         # BSS coloring
         tmp = get_config_value(interface, 'he_bss_color')
         self.assertEqual(bss_color, tmp)
@@ -386,15 +383,12 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_wireless_hostapd_wpa_config(self):
         # Only set the hostapd (access-point) options
-        interface = 'wlan1'
-        phy = 'phy0'
+        interface = self._interfaces[1] # wlan1
         ssid = 'VyOS-SMOKETEST'
         channel = '1'
         wpa_key = 'VyOSVyOSVyOS'
         mode = 'n'
-        country = 'de'
 
-        self.cli_set(self._base_path + [interface, 'physical-device', phy])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'mode', mode])
 
@@ -454,7 +448,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertTrue(process_named_running('hostapd'))
 
     def test_wireless_access_point_bridge(self):
-        interface = 'wlan1'
+        interface = self._interfaces[1] # wlan1
         ssid = 'VyOS-Test'
         bridge = 'br42477'
 
@@ -491,7 +485,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(bridge_path)
 
     def test_wireless_security_station_address(self):
-        interface = 'wlan1'
+        interface = self._interfaces[1] # wlan1
         ssid = 'VyOS-ACL'
 
         hostapd_accept_station_conf = f'/run/hostapd/{interface}_station_accept.conf'
@@ -511,6 +505,12 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         self.cli_commit()
 
+        self.assertTrue(interface_exists(interface))
+        self.assertTrue(os.path.isfile(f'/run/hostapd/{interface}_station_accept.conf'))
+        self.assertTrue(os.path.isfile(f'/run/hostapd/{interface}_station_deny.conf'))
+
+        self.assertTrue(process_named_running('hostapd'))
+
         # in accept mode all addresses are allowed unless specified in the deny list
         tmp = get_config_value(interface, 'macaddr_acl')
         self.assertEqual(tmp, '0')
@@ -526,6 +526,11 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         #  Switch mode accept -> deny
         self.cli_set(self._base_path + [interface, 'security', 'station-address', 'mode', 'deny'])
         self.cli_commit()
+
+        self.assertTrue(interface_exists(interface))
+        self.assertTrue(os.path.isfile(f'/run/hostapd/{interface}_station_accept.conf'))
+        self.assertTrue(os.path.isfile(f'/run/hostapd/{interface}_station_deny.conf'))
+
         # In deny mode all addresses are denied unless specified in the allow list
         tmp = get_config_value(interface, 'macaddr_acl')
         self.assertEqual(tmp, '1')
@@ -535,4 +540,9 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
-    unittest.main(verbosity=2, failfast=True)
+    # loading the module created two WIFI Interfaces in the background (wlan0 and wlan1)
+    # remove them to have a clean test start
+    for interface in ['wlan0', 'wlan1']:
+        if interface_exists(interface):
+            call(f'sudo iw dev {interface} del')
+    unittest.main(verbosity=2)

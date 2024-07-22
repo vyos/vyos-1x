@@ -225,7 +225,7 @@ def process_named_running(name: str, cmdline: str=None, timeout: int=0):
             if not tmp:
                 if time.time() > time_expire:
                     break
-                time.sleep(0.100) # wait 250ms
+                time.sleep(0.100) # wait 100ms
                 continue
             return tmp
     else:
