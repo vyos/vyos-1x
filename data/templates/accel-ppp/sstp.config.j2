@@ -16,6 +16,9 @@ net-snmp
 {% if limits is vyos_defined %}
 connlimit
 {% endif %}
+{% if extended_scripts is vyos_defined %}
+pppd_compat
+{% endif %}
 
 [core]
 thread-count={{ thread_count }}
