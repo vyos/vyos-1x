@@ -14,6 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Optional, Union, Any, TYPE_CHECKING
+from vyos.xml_ref.child_specification import CSChildSpecification
 
 # https://peps.python.org/pep-0484/#forward-references
 # for type 'ConfigDict'
@@ -161,6 +162,12 @@ class Xml:
 
     def priority(self, path: list) -> str:
         return self._least_upper_data(path, 'priority')
+
+    def xml_child_specification(self, path: list[str]) -> CSChildSpecification:
+        p = self._get_ref_path(path)
+        d = self._get_ref_node_data(p, 'child_specification')
+        return CSChildSpecification(d)
+
 
     @staticmethod
     def _dict_get(d: dict, path: list) -> dict:

@@ -18,6 +18,8 @@ import sys
 import json
 from argparse import ArgumentParser
 from argparse import ArgumentTypeError
+from argparse import BooleanOptionalAction
+from pprint import pformat
 from os.path import join
 from os.path import abspath
 from os.path import dirname
@@ -34,7 +36,7 @@ pkg_cache = abspath(join(_here, 'pkg_cache'))
 ref_cache = abspath(join(_here, 'cache.py'))
 
 node_data_fields = ("node_type", "multi", "valueless", "default_value",
-                    "owner", "priority")
+                    "owner", "priority", "child_specification")
 
 def trim_node_data(cache: dict):
     for k in list(cache):
@@ -58,6 +60,8 @@ def main():
     parser.add_argument('--package-name', type=non_trivial, default='vyos-1x',
                         help='name of current package')
     parser.add_argument('--output-path', help='path to generated cache')
+    parser.add_argument('--add-linebreaks', type=bool, default=False, action=BooleanOptionalAction,
+                        help='add additional linebreaks to the generated cache file, reduces the chance of overwhelming readers during manual inspection of the generated file')
     args = vars(parser.parse_args())
 
     xml_dir = abspath(args['xml_dir'])
@@ -66,6 +70,7 @@ def main():
     out_path = args['output_path']
     path = out_path if out_path is not None else pkg_cache
     xml_cache = abspath(join(path, cache_name))
+    add_linebreaks = args['add_linebreaks']
 
     try:
         reference_tree_to_json(xml_dir, xml_tmp)
@@ -106,9 +111,15 @@ def main():
     version = {"component_version": version}
 
     d |= version
+    s = ""
+
+    if add_linebreaks:
+        s = pformat(d)
+    else:
+        s = str(d)
 
     with open(xml_cache, 'w') as f:
-        f.write(f'reference = {str(d)}')
+        f.write(f'reference = {s}')
 
     print(cache_name)
 

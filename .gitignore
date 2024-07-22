@@ -151,3 +151,6 @@ data/configd-include.json
 # We do not use pip
 Pipfile
 Pipfile.lock
+
+# KDE
+.directory

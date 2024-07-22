@@ -21,6 +21,7 @@ import json
 
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
+from vyos.config import Config, ConfigDict
 
 def retrieve_config(path_hash, base_path, config):
     """
@@ -425,7 +426,7 @@ def get_pppoe_interfaces(conf, vrf=None):
 
     return pppoe_interfaces
 
-def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pki=False):
+def get_interface_dict(config: Config, base, ifname='', recursive_defaults=True, with_pki=False) -> tuple[str, ConfigDict]:
     """
     Common utility function to retrieve and mangle the interfaces configuration
     from the CLI input nodes. All interfaces have a common base where value

@@ -30,12 +30,14 @@ from shutil import rmtree
 
 from vyos.base import DeprecationWarning
 from vyos.config import Config
+from vyos.config import ConfigDict
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_bond_bridge_member
+from vyos.configverify import verify_children
 from vyos.ifconfig import VTunIf
 from vyos.pki import load_dh_parameters
 from vyos.pki import load_private_key
@@ -77,7 +79,7 @@ otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
 secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
 service_file = '/run/systemd/system/openvpn@{ifname}.service.d/20-override.conf'
 
-def get_config(config=None):
+def get_config(config:Config=None) -> ConfigDict:
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
@@ -138,7 +140,7 @@ def is_ec_private_key(pki, cert_name):
     key = load_private_key(pki_cert['private']['key'])
     return isinstance(key, ec.EllipticCurvePrivateKey)
 
-def verify_pki(openvpn):
+def verify_pki(openvpn: ConfigDict):
     pki = openvpn['pki']
     interface = openvpn['ifname']
     mode = openvpn['mode']
@@ -233,7 +235,7 @@ def verify_pki(openvpn):
             if tls['crypt_key'] not in pki['openvpn']['shared_secret']:
                 raise ConfigError(f'Invalid crypt-key on openvpn interface {interface}')
 
-def verify(openvpn):
+def verify(openvpn: ConfigDict):
     if 'deleted' in openvpn:
         # remove totp secrets file if totp is not configured
         if os.path.isfile(otp_file.format(**openvpn)):
@@ -242,27 +244,15 @@ def verify(openvpn):
         verify_bridge_delete(openvpn)
         return None
 
-    if 'mode' not in openvpn:
-        raise ConfigError('Must specify OpenVPN operation mode!')
+    # Validate child config against schema definitions
+    verify_children(openvpn)
 
     #
     # OpenVPN client mode - VERIFY
     #
     if openvpn['mode'] == 'client':
-        if 'local_port' in openvpn:
-            raise ConfigError('Cannot specify "local-port" in client mode')
-
-        if 'local_host' in openvpn:
-            raise ConfigError('Cannot specify "local-host" in client mode')
-
-        if 'remote_host' not in openvpn:
-            raise ConfigError('Must specify "remote-host" in client mode')
-
         if openvpn['protocol'] == 'tcp-passive':
             raise ConfigError('Protocol "tcp-passive" is not valid in client mode')
-
-        if dict_search('tls.dh_params', openvpn):
-            raise ConfigError('Cannot specify "tls dh-params" in client mode')
 
     #
     # OpenVPN site-to-site - VERIFY
@@ -326,7 +316,7 @@ def verify(openvpn):
             if v4addr in openvpn['local_address'] and 'subnet_mask' not in openvpn['local_address'][v4addr]:
                 raise ConfigError('Must specify IPv4 "subnet-mask" for local-address')
 
-        if dict_search('encryption.ncp_ciphers', openvpn):
+        if dict_search('encryption.encryption.ncp_ciphers', openvpn):
             raise ConfigError('NCP ciphers can only be used in client or server mode')
 
     else:
@@ -339,18 +329,6 @@ def verify(openvpn):
     # OpenVPN server mode - VERIFY
     #
     if openvpn['mode'] == 'server':
-        if openvpn['protocol'] == 'tcp-active':
-            raise ConfigError('Protocol "tcp-active" is not valid in server mode')
-
-        if dict_search('authentication.username', openvpn) or dict_search('authentication.password', openvpn):
-            raise ConfigError('Cannot specify "authentication" in server mode')
-
-        if 'remote_port' in openvpn:
-            raise ConfigError('Cannot specify "remote-port" in server mode')
-
-        if 'remote_host' in openvpn:
-            raise ConfigError('Cannot specify "remote-host" in server mode')
-
         tmp = dict_search('server.subnet', openvpn)
         if tmp:
             v4_subnets = len([subnet for subnet in tmp if is_ipv4(subnet)])
@@ -383,24 +361,21 @@ def verify(openvpn):
                     raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
 
         if dict_search('server.client_ip_pool', openvpn):
-            if not (dict_search('server.client_ip_pool.start', openvpn) and dict_search('server.client_ip_pool.stop', openvpn)):
-                raise ConfigError('Server client-ip-pool requires both start and stop addresses')
-            else:
-                v4PoolStart = IPv4Address(dict_search('server.client_ip_pool.start', openvpn))
-                v4PoolStop = IPv4Address(dict_search('server.client_ip_pool.stop', openvpn))
-                if v4PoolStart > v4PoolStop:
-                    raise ConfigError(f'Server client-ip-pool start address {v4PoolStart} is larger than stop address {v4PoolStop}')
+            v4PoolStart = IPv4Address(dict_search('server.client_ip_pool.start', openvpn))
+            v4PoolStop = IPv4Address(dict_search('server.client_ip_pool.stop', openvpn))
+            if v4PoolStart > v4PoolStop:
+                raise ConfigError(f'Server client-ip-pool start address {v4PoolStart} is larger than stop address {v4PoolStop}')
 
-                v4PoolSize = int(v4PoolStop) - int(v4PoolStart)
-                if v4PoolSize >= 65536:
-                    raise ConfigError(f'Server client-ip-pool is too large [{v4PoolStart} -> {v4PoolStop} = {v4PoolSize}], maximum is 65536 addresses.')
+            v4PoolSize = int(v4PoolStop) - int(v4PoolStart)
+            if v4PoolSize >= 65536:
+                raise ConfigError(f'Server client-ip-pool is too large [{v4PoolStart} -> {v4PoolStop} = {v4PoolSize}], maximum is 65536 addresses.')
 
-                v4PoolNets = list(summarize_address_range(v4PoolStart, v4PoolStop))
-                for client in (dict_search('client', openvpn) or []):
-                    if client['ip']:
-                        for v4PoolNet in v4PoolNets:
-                            if IPv4Address(client['ip'][0]) in v4PoolNet:
-                                print(f'Warning: Client "{client["name"]}" IP {client["ip"][0]} is in server IP pool, it is not reserved for this client.')
+            v4PoolNets = list(summarize_address_range(v4PoolStart, v4PoolStop))
+            for client in (dict_search('client', openvpn) or []):
+                if client['ip']:
+                    for v4PoolNet in v4PoolNets:
+                        if IPv4Address(client['ip'][0]) in v4PoolNet:
+                            print(f'Warning: Client "{client["name"]}" IP {client["ip"][0]} is in server IP pool, it is not reserved for this client.')
             # configuring a client_ip_pool will set 'server ... nopool' which is currently incompatible with 'server-ipv6' (probably to be fixed upstream)
             for subnet in (dict_search('server.subnet', openvpn) or []):
                 if is_ipv6(subnet):
@@ -464,9 +439,6 @@ def verify(openvpn):
 
     else:
         # checks for both client and site-to-site go here
-        if dict_search('server.reject_unconfigured_clients', openvpn):
-            raise ConfigError('Option reject-unconfigured-clients only supported in server mode')
-
         if 'replace_default_route' in openvpn and 'remote_host' not in openvpn:
             raise ConfigError('Cannot set "replace-default-route" without "remote-host"')
 
@@ -481,41 +453,15 @@ def verify(openvpn):
             print('local-host IP address "{local_host}" not assigned' \
                   ' to any interface'.format(**openvpn))
 
-    # TCP active
-    if openvpn['protocol'] == 'tcp-active':
-        if 'local_port' in openvpn:
-            raise ConfigError('Cannot specify "local-port" with "tcp-active"')
-
-        if 'remote_host' not in openvpn:
-            raise ConfigError('Must specify "remote-host" with "tcp-active"')
-
     #
     # TLS/encryption
     #
-    if 'shared_secret_key' in openvpn:
-        if dict_search('encryption.cipher', openvpn) in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
-            raise ConfigError('GCM encryption with shared-secret-key not supported')
-
     if 'tls' in openvpn:
-        if {'auth_key', 'crypt_key'} <= set(openvpn['tls']):
-            raise ConfigError('TLS auth and crypt keys are mutually exclusive')
-
         tmp = dict_search('tls.role', openvpn)
         if tmp:
             if openvpn['mode'] in ['client', 'server']:
                 if not dict_search('tls.auth_key', openvpn):
                     raise ConfigError('Cannot specify "tls role" in client-server mode')
-
-            if tmp == 'active':
-                if openvpn['protocol'] == 'tcp-passive':
-                    raise ConfigError('Cannot specify "tcp-passive" when "tls role" is "active"')
-
-                if dict_search('tls.dh_params', openvpn):
-                    raise ConfigError('Cannot specify "tls dh-params" when "tls role" is "active"')
-
-            elif tmp == 'passive':
-                if openvpn['protocol'] == 'tcp-active':
-                    raise ConfigError('Cannot specify "tcp-active" when "tls role" is "passive"')
 
         if 'certificate' in openvpn['tls'] and is_ec_private_key(openvpn['pki'], openvpn['tls']['certificate']):
             if 'dh_params' in openvpn['tls']:
@@ -532,25 +478,13 @@ def verify(openvpn):
               'plain text over the network!')
 
     verify_pki(openvpn)
-
-    #
-    # Auth user/pass
-    #
-    if (dict_search('authentication.username', openvpn) and not
-        dict_search('authentication.password', openvpn)):
-            raise ConfigError('Password for authentication is missing')
-
-    if (dict_search('authentication.password', openvpn) and not
-        dict_search('authentication.username', openvpn)):
-            raise ConfigError('Username for authentication is missing')
-
     verify_vrf(openvpn)
     verify_bond_bridge_member(openvpn)
     verify_mirror_redirect(openvpn)
 
     return None
 
-def generate_pki_files(openvpn):
+def generate_pki_files(openvpn: ConfigDict):
     pki = openvpn['pki']
     if not pki:
         return None
@@ -634,7 +568,7 @@ def generate_pki_files(openvpn):
                            user=user, group=group, mode=0o600)
 
 
-def generate(openvpn):
+def generate(openvpn: ConfigDict):
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
     openvpn['plugin_dir'] = '/usr/lib/openvpn'
@@ -697,7 +631,7 @@ def generate(openvpn):
 
     return None
 
-def apply(openvpn):
+def apply(openvpn: ConfigDict):
     interface = openvpn['ifname']
 
     # Do some cleanup when OpenVPN is disabled/deleted

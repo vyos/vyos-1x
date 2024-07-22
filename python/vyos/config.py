@@ -64,7 +64,8 @@ In operational mode, all functions return values from the running config.
 
 import re
 import json
-from typing import Union
+from typing import Union, Any
+from copy import deepcopy
 
 import vyos.configtree
 from vyos.xml_ref import multi_to_list
@@ -79,11 +80,23 @@ from vyos.configsource import ConfigSourceSession
 class ConfigDict(dict):
     _from_defaults = {}
     _dict_kwargs = {}
+    _raw_conf_dict: dict[str, Any]
+    _base: list[str]
+
     def from_defaults(self, path: list[str]) -> bool:
         return from_source(self._from_defaults, path)
+
     @property
     def kwargs(self) -> dict:
         return self._dict_kwargs
+
+    @property
+    def raw_conf_dict(self):
+        return self._raw_conf_dict
+
+    @property
+    def base(self):
+        return self._base
 
 def config_dict_merge(src: dict, dest: Union[dict, ConfigDict]) -> ConfigDict:
     if not isinstance(dest, ConfigDict):
@@ -291,7 +304,7 @@ class Config(object):
                         no_tag_node_value_mangle=False,
                         with_defaults=False,
                         with_recursive_defaults=False,
-                        with_pki=False):
+                        with_pki=False) -> ConfigDict:
         """
         Args:
             path (str list): Configuration tree path, can be empty
@@ -312,6 +325,8 @@ class Config(object):
         lpath = self._make_path(path)
         root_dict = self.get_cached_root_dict(effective)
         conf_dict = get_sub_dict(root_dict, lpath, get_first_key=get_first_key)
+
+        raw_conf_dict = deepcopy(conf_dict)
 
         rpath = lpath if get_first_key else lpath[:-1]
 
@@ -346,6 +361,11 @@ class Config(object):
 
         # save optional args for a call to get_config_defaults
         setattr(conf_dict, '_dict_kwargs', kwargs)
+
+        # save args that are reused during verification
+        setattr(conf_dict, '_raw_conf_dict', raw_conf_dict)
+        setattr(conf_dict, '_base', rpath)
+
 
         return conf_dict
 
