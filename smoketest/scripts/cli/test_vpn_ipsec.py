@@ -252,6 +252,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
 
+        # if dpd is not specified it should not be enabled (see T6599)
+        swanctl_unexpected_lines = [
+            f'dpd_timeout'
+            f'dpd_delay'
+        ]
+
+        for unexpected_line in swanctl_unexpected_lines:
+            self.assertNotIn(unexpected_line, swanctl_conf)
+
         swanctl_secrets_lines = [
             f'id-{regex_uuid4} = "{local_id}"',
             f'id-{regex_uuid4} = "{remote_id}"',
