@@ -63,5 +63,9 @@
     },
     "system_wireless": {
         "wireless": ["interfaces_wireless"]
+    },
+    "system_option": {
+        "ip": ["system_ip"],
+        "ipv6": ["system_ipv6"]
     }
 }
