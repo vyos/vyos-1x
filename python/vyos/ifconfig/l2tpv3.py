@@ -90,8 +90,16 @@ class L2TPv3If(Interface):
         """
 
         if self.exists(self.ifname):
-            # interface is always A/D down. It needs to be enabled explicitly
             self.set_admin_state('down')
+
+            # remove all assigned IP addresses from interface - this is a bit redundant
+            # as the kernel will remove all addresses on interface deletion
+            self.flush_addrs()
+
+            # remove interface from conntrack VRF interface map, here explicitly and do not
+            # rely on the base class implementation as the interface will
+            # vanish as soon as the l2tp session is deleted
+            self._del_interface_from_ct_iface_map()
 
             if {'tunnel_id', 'session_id'} <= set(self.config):
                 cmd = 'ip l2tp del session tunnel_id {tunnel_id}'
@@ -101,3 +109,5 @@ class L2TPv3If(Interface):
             if 'tunnel_id' in self.config:
                 cmd = 'ip l2tp del tunnel tunnel_id {tunnel_id}'
                 self._cmd(cmd.format(**self.config))
+
+            # No need to call the baseclass as the interface is now already gone

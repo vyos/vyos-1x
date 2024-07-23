@@ -20,7 +20,7 @@ import unittest
 
 from base_interfaces_test import BasicInterfaceTest
 from vyos.utils.process import cmd
-
+from vyos.utils.kernel import unload_kmod
 class L2TPv3InterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -62,7 +62,6 @@ if __name__ == '__main__':
     # reloaded on demand - not needed but test more and more features
     for module in ['l2tp_ip6', 'l2tp_ip', 'l2tp_eth', 'l2tp_eth',
                    'l2tp_netlink', 'l2tp_core']:
-        if os.path.exists(f'/sys/module/{module}'):
-            cmd(f'sudo rmmod {module}')
+        unload_kmod(module)
 
     unittest.main(verbosity=2)
