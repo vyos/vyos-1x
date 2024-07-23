@@ -27,7 +27,7 @@
             <children>
               <node name="ht">
                 <properties>
-                  <help>HT (High Throughput) settings</help>
+                  <help>High Throughput (HT) settings</help>
                 </properties>
                 <children>
                   <leafNode name="40mhz-incapable">
@@ -38,7 +38,7 @@
                   </leafNode>
                   <leafNode name="auto-powersave">
                     <properties>
-                      <help>Enable WMM-PS unscheduled automatic power aave delivery [U-APSD]</help>
+                      <help>Enable WMM-PS unscheduled automatic power save delivery [U-APSD]</help>
                       <valueless/>
                     </properties>
                   </leafNode>
@@ -184,25 +184,13 @@
               </node>
               <leafNode name="require-ht">
                 <properties>
-                  <help>Require stations to support HT PHY (reject association if they do not)</help>
-                  <completionHelp>
-                    <script>echo If you reject non-HT, you also disable 802.11g</script>
-                  </completionHelp>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="require-vht">
-                <properties>
-                  <help>Require stations to support VHT PHY (reject association if they do not)</help>
-                  <completionHelp>
-                    <script>echo If you reject non-VHT, you also disable 802.11n</script>
-                  </completionHelp>
+                  <help>Require stations to support HT PHY</help>
                   <valueless/>
                 </properties>
               </leafNode>
               <node name="vht">
                 <properties>
-                  <help>VHT (Very High Throughput) settings</help>
+                  <help>Very High Throughput (VHT) settings</help>
                 </properties>
                 <children>
                   <leafNode name="antenna-count">
@@ -225,7 +213,7 @@
                   </leafNode>
                   <leafNode name="beamform">
                     <properties>
-                      <help>Beamforming capabilities</help>
+                      <help>VHT beamforming capabilities</help>
                       <completionHelp>
                         <list>single-user-beamformer single-user-beamformee multi-user-beamformer multi-user-beamformee</list>
                       </completionHelp>
@@ -274,7 +262,7 @@
                           <help>VHT operating channel center frequency - center freq 2 (for use with the 80+80 mode)</help>
                           <valueHelp>
                             <format>u32:34-173</format>
-                            <description>5Ghz (802.11 a/h/j/n/ac) center channel index (use 58 for primary 80MHz channel 52)</description>
+                            <description>5Ghz (802.11 ac) center channel index (use 58 for secondary 80MHz channel 52)</description>
                           </valueHelp>
                           <constraint>
                             <validator name="numeric" argument="--range 34-173"/>
@@ -428,6 +416,133 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="require-vht">
+                <properties>
+                  <help>Require stations to support VHT PHY</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="he">
+                <properties>
+                  <help>High Efficiency (HE) settings</help>
+                </properties>
+                <children>
+                  <leafNode name="channel-set-width">
+                    <properties>
+                      <help>HE operating channel width</help>
+                      <completionHelp>
+                        <!--
+                          op_modes drawn from:
+                          https://w1.fi/cgit/hostap/tree/src/common/ieee802_11_common.c?id=195cc3d919503fb0d699d9a56a58a72602b25f51#n1525
+                          802.11ax (WiFi-6e - HE) can use up to 160MHz bandwidth channels
+                        -->
+                        <list>131 132 133 134 135</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>131</format>
+                        <description>20 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>132</format>
+                        <description>40 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>133</format>
+                        <description>80 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>134</format>
+                        <description>160 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>135</format>
+                        <description>80+80 MHz channel width</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(131|132|133|134|135)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <node name="center-channel-freq">
+                    <properties>
+                      <help>HE operating channel center frequency</help>
+                    </properties>
+                    <children>
+                      <leafNode name="freq-1">
+                        <properties>
+                          <help>HE operating channel center frequency - center freq 1 (for use with 80, 80+80 and 160 modes)</help>
+                          <valueHelp>
+                            <format>u32:1-233</format>
+                            <description>6Ghz (802.11 ax) center channel index (use 3 (at 40MHz), 7 (at 80MHz) or 15 (at 160MHz) for primary channel 1)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-233"/>
+                          </constraint>
+                          <constraintErrorMessage>Channel center value must be between 1 and 233</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="freq-2">
+                        <properties>
+                          <help>HE operating channel center frequency - center freq 2 (for use with the 80+80 mode)</help>
+                          <valueHelp>
+                            <format>u32:1-233</format>
+                            <description>6Ghz (802.11 ax) center channel index (use 23 (at 80MHz) for secondary channel 17)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-233"/>
+                          </constraint>
+                          <constraintErrorMessage>Channel center value must be between 1 and 233</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="antenna-pattern-fixed">
+                    <properties>
+                      <help>Tell the AP that antenna positions are fixed and will not change during the lifetime of an association</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <node name="beamform">
+                    <properties>
+                      <help>HE beamforming capabilities</help>
+                    </properties>
+                    <children>
+                      <leafNode name="single-user-beamformer">
+                        <properties>
+                          <help>Support for operation as single user beamformer</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="single-user-beamformee">
+                        <properties>
+                          <help>Support for operation as single user beamformee</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="multi-user-beamformer">
+                        <properties>
+                          <help>Support for operation as multi user beamformer</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="bss-color">
+                    <properties>
+                      <help>BSS coloring helps to prevent channel jamming when multiple APs use the same channels</help>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-63"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="require-he">
+                <properties>
+                  <help>Require stations to support HE PHY</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <leafNode name="channel">
@@ -445,8 +560,12 @@
                 <format>u32:34-173</format>
                 <description>5Ghz (802.11 a/h/j/n/ac) Channel</description>
               </valueHelp>
+              <valueHelp>
+                <format>u32:1-233</format>
+                <description>6Ghz (802.11 ax) Channel</description>
+              </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-173"/>
+                <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-173 --range 1-233"/>
               </constraint>
             </properties>
             <defaultValue>0</defaultValue>
@@ -512,6 +631,12 @@
               <constraintErrorMessage>Number of stations must be between 1 and 2007</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="stationary-ap">
+            <properties>
+              <help>Stationary AP config indicates that the AP doesn't move.</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="mgmt-frame-protection">
             <properties>
               <help>Management Frame Protection (MFP) according to IEEE 802.11w</help>
@@ -528,7 +653,7 @@
               </valueHelp>
               <valueHelp>
                 <format>required</format>
-                <description>MFP enforced</description>
+                <description>MFP enforced (mandatory for WPA3)</description>
               </valueHelp>
               <constraint>
                 <regex>(disabled|optional|required)</regex>
@@ -536,11 +661,18 @@
             </properties>
             <defaultValue>disabled</defaultValue>
           </leafNode>
+          <leafNode name="enable-bf-protection">
+            <properties>
+              <help>Beacon Protection: management frame protection for Beacon frames, requires Management Frame Protection (MFP)</help>
+              <valueless/>
+            </properties>
+            <defaultValue>disabled</defaultValue>
+          </leafNode>
           <leafNode name="mode">
             <properties>
               <help>Wireless radio mode</help>
               <completionHelp>
-                <list>a b g n ac</list>
+                <list>a b g n ac ax</list>
               </completionHelp>
               <valueHelp>
                 <format>a</format>
@@ -562,12 +694,24 @@
                 <format>ac</format>
                 <description>802.11ac - 1300 Mbits/sec</description>
               </valueHelp>
+              <valueHelp>
+                <format>ax</format>
+                <description>802.11ax (6GHz only for now)</description>
+              </valueHelp>
               <constraint>
-                <regex>(a|b|g|n|ac)</regex>
+                <regex>(a|b|g|n|ac|ax)</regex>
               </constraint>
             </properties>
             <defaultValue>g</defaultValue>
           </leafNode>
+          <!-- background_radar_detection not yet supported by VyOS's hostapd
+          <leafNode name="background-radar-detection">
+            <properties>
+              <help>Enabling background radar detection feature allows CAC to be run on dedicated radio RF chains while the radio(s) are otherwise running normal AP activities on other channels.</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          -->
           #include <include/interface/mirror.xml.i>
           <leafNode name="physical-device">
             <properties>
@@ -731,8 +875,20 @@
                         <regex>(GCMP-256|GCMP|CCMP-256|CCMP|TKIP)</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid group cipher selection</constraintErrorMessage>
-                      <multi/>
                     </properties>
+                  </leafNode>
+                  <leafNode name="group-mgmt-cipher">
+                    <properties>
+                      <help>Group management cipher suite. All the stations connecting to the BSS will also need to support the selected cipher</help>
+                      <completionHelp>
+                        <list>AES-128-CMAC BIP-CMAC-256 BIP-GMAC-128 BIP-GMAC-256</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(AES-128-CMAC|BIP-CMAC-256|BIP-GMAC-128|BIP-GMAC-256)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid group management cipher selection</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>AES-128-CMAC</defaultValue>
                   </leafNode>
                   <leafNode name="mode">
                     <properties>
@@ -751,6 +907,10 @@
                       <valueHelp>
                         <format>wpa+wpa2</format>
                         <description>Allow both WPA and WPA2</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>wpa3</format>
+                        <description>WPA3 (required for 802.11ax, you must also set mgmt-frame-protection as required)</description>
                       </valueHelp>
                       <constraint>
                         <regex>(wpa|wpa2|wpa\+wpa2|wpa3)</regex>
