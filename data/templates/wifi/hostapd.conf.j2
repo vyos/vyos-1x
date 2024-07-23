@@ -383,23 +383,25 @@ vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
 {%     for short_gi in capabilities.vht.short_gi if capabilities.vht.short_gi is vyos_defined %}
 {%         set output.value = output.value ~ '[SHORT-GI-' ~ short_gi | upper ~ ']'  %}
 {%     endfor %}
-{%     for beamform in capabilities.vht.beamform if capabilities.vht.beamform is vyos_defined %}
-{%         set output.value = output.value ~ '[SU-BEAMFORMER]' if beamform is vyos_defined('single-user-beamformer') else '' %}
-{%         set output.value = output.value ~ '[SU-BEAMFORMEE]' if beamform is vyos_defined('single-user-beamformee') else '' %}
-{%         set output.value = output.value ~ '[MU-BEAMFORMER]' if beamform is vyos_defined('multi-user-beamformer')  else '' %}
-{%         set output.value = output.value ~ '[MU-BEAMFORMEE]' if beamform is vyos_defined('multi-user-beamformee')  else '' %}
-{%     endfor %}
-{%     if capabilities.vht.antenna_count is vyos_defined and capabilities.vht.antenna_count | int > 1  %}
-{%         if capabilities.vht.beamform is vyos_defined %}
-{%             if capabilities.vht.beamform == 'single-user-beamformer' %}
+{%     if capabilities.vht.beamform is vyos_defined %}
+{%         for bf in capabilities.vht.beamform %}
+{%             set output.value = output.value ~ '[SU-BEAMFORMER]' if bf is vyos_defined('single-user-beamformer') else output.value %}
+{%             set output.value = output.value ~ '[SU-BEAMFORMEE]' if bf is vyos_defined('single-user-beamformee') else output.value %}
+{%             set output.value = output.value ~ '[MU-BEAMFORMER]' if bf is vyos_defined('multi-user-beamformer') else output.value %}
+{%             set output.value = output.value ~ '[MU-BEAMFORMEE]' if bf is vyos_defined('multi-user-beamformee') else output.value %}
+{%         endfor %}
+{%         if capabilities.vht.antenna_count is vyos_defined and capabilities.vht.antenna_count | int > 1  %}
+{%             if 'single-user-beamformer' in capabilities.vht.beamform %}
 {%                 if capabilities.vht.antenna_count is vyos_defined and capabilities.vht.antenna_count | int > 1 and capabilities.vht.antenna_count | int < 6  %}
-{%                     set output.value = output.value ~ '[BF-ANTENNA-' ~ capabilities.vht.antenna_count | int -1 ~ ']' %}
-{%                     set output.value = output.value ~ '[SOUNDING-DIMENSION-' ~ capabilities.vht.antenna_count | int -1 ~ ']' %}
+{%                     set dimension = capabilities.vht.antenna_count | int - 1 %}
+{%                     set output.value = output.value ~ '[BF-ANTENNA-' ~ dimension ~ ']' %}
+{%                     set output.value = output.value ~ '[SOUNDING-DIMENSION-' ~ dimension ~ ']' %}
 {%                 endif %}
-{%             endif %}
-{%             if capabilities.vht.antenna_count is vyos_defined and capabilities.vht.antenna_count | int > 1 and capabilities.vht.antenna_count | int < 5  %}
-{%                 set output.value = output.value ~ '[BF-ANTENNA-' ~ capabilities.vht.antenna_count ~ ']' %}
-{%                 set output.value = output.value ~ '[SOUNDING-DIMENSION-' ~ capabilities.vht.antenna_count ~ ']' %}
+{%             else %}
+{%                 if capabilities.vht.antenna_count is vyos_defined and capabilities.vht.antenna_count | int > 1 and capabilities.vht.antenna_count | int < 5  %}
+{%                     set output.value = output.value ~ '[BF-ANTENNA-' ~ capabilities.vht.antenna_count ~ ']' %}
+{%                     set output.value = output.value ~ '[SOUNDING-DIMENSION-' ~ capabilities.vht.antenna_count ~ ']' %}
+{%                 endif %}
 {%             endif %}
 {%         endif %}
 {%     endif %}
