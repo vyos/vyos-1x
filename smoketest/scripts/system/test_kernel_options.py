@@ -19,8 +19,9 @@ import os
 import platform
 import unittest
 
-kernel = platform.release()
+from vyos.utils.kernel import check_kmod
 
+kernel = platform.release()
 class TestKernelModules(unittest.TestCase):
     """ VyOS makes use of a lot of Kernel drivers, modules and features. The
     required modules which are essential for VyOS should be tested that they are
@@ -35,9 +36,8 @@ class TestKernelModules(unittest.TestCase):
 
         super(TestKernelModules, cls).setUpClass()
         CONFIG = '/proc/config.gz'
-
         if not os.path.isfile(CONFIG):
-            call('sudo modprobe configs')
+            check_kmod('configs')
 
         with gzip.open(CONFIG, 'rt') as f:
             cls._config_data = f.read()
