@@ -19,6 +19,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_mirror_redirect
+from vyos.configverify import verify_vrf
 from vyos.ifconfig import VTIIf
 from vyos import ConfigError
 from vyos import airbag
@@ -38,6 +39,7 @@ def get_config(config=None):
     return vti
 
 def verify(vti):
+    verify_vrf(vti)
     verify_mirror_redirect(vti)
     return None
 
