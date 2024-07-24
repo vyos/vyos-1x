@@ -97,7 +97,7 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--connect", help="Bring up a connection-oriented network interface", action="store_true")
     group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store_true")
-    group.add_argument("--interface", help="Interface name", action="store", required=True)
+    parser.add_argument("--interface", help="Interface name", action="store", required=True)
     args = parser.parse_args()
 
     if args.connect or args.disconnect:
