@@ -95,8 +95,14 @@ def disconnect(interface):
 def main():
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group()
+<<<<<<< HEAD
     group.add_argument("--connect", help="Bring up a connection-oriented network interface", action="store")
     group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store")
+=======
+    group.add_argument("--connect", help="Bring up a connection-oriented network interface", action="store_true")
+    group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store_true")
+    parser.add_argument("--interface", help="Interface name", action="store", required=True)
+>>>>>>> 79407cd5b (op_mode: T6596: pppoe operation command failed)
     args = parser.parse_args()
 
     if args.connect:
