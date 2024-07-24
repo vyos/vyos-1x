@@ -16,7 +16,6 @@
 
 import unittest
 
-from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
@@ -27,6 +26,7 @@ PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
 
 route_map = 'foo-bar-baz10'
+dummy_if = 'dum3562'
 
 class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -38,6 +38,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+        cls.cli_set(cls, ['interfaces', 'dummy', dummy_if])
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -46,6 +47,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['policy', 'route-map', route_map])
+        cls.cli_delete(cls, ['interfaces', 'dummy', dummy_if])
         super(TestProtocolsOSPF, cls).tearDownClass()
 
     def tearDown(self):
@@ -441,14 +443,13 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         global_block_high = "399"
         local_block_low = "400"
         local_block_high = "499"
-        interface = 'lo'
         maximum_stack_size = '5'
         prefix_one = '192.168.0.1/32'
         prefix_two = '192.168.0.2/32'
         prefix_one_value = '1'
         prefix_two_value = '2'
 
-        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['interface', dummy_if])
         self.cli_set(base_path + ['segment-routing', 'maximum-label-depth', maximum_stack_size])
         self.cli_set(base_path + ['segment-routing', 'global-block', 'low-label-value', global_block_low])
         self.cli_set(base_path + ['segment-routing', 'global-block', 'high-label-value', global_block_high])
@@ -472,16 +473,13 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
     def test_ospf_15_ldp_sync(self):
         holddown = "500"
-        interface = 'lo'
         interfaces = Section.interfaces('ethernet')
 
-        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['interface', dummy_if])
         self.cli_set(base_path + ['ldp-sync', 'holddown', holddown])
 
         # Commit main OSPF changes
         self.cli_commit()
-
-        sleep(10)
 
         # Verify main OSPF changes
         frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
@@ -514,7 +512,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf dead-interval 40', config)
-            self.assertIn(f' no ip ospf mpls ldp-sync', config)
+            self.assertNotIn(f' ip ospf mpls ldp-sync', config)
 
     def test_ospf_16_graceful_restart(self):
         period = '300'
