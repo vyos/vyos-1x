@@ -569,3 +569,31 @@ def ipv6_prefix_length(low, high):
             return plen + i + 1
 
     return None
+
+def get_nft_vrf_zone_mapping() -> dict:
+    """
+    Retrieve current nftables conntrack mapping list from Kernel
+
+    returns: [{'interface': 'red', 'vrf_tableid': 1000},
+              {'interface': 'eth2', 'vrf_tableid': 1000},
+              {'interface': 'blue', 'vrf_tableid': 2000}]
+    """
+    from json import loads
+    from jmespath import search
+    from vyos.utils.process import cmd
+    output = []
+    tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+    # {'nftables': [{'metainfo': {'json_schema_version': 1,
+    #                     'release_name': 'Old Doc Yak #3',
+    #                     'version': '1.0.9'}},
+    #       {'table': {'family': 'inet', 'handle': 6, 'name': 'vrf_zones'}},
+    #       {'map': {'elem': [['eth0', 666],
+    #                         ['dum0', 666],
+    #                         ['wg500', 666],
+    #                         ['bond10.666', 666]],
+    vrf_list = search('nftables[].map.elem | [0]', tmp)
+    if not vrf_list:
+        return output
+    for (vrf_name, vrf_id) in vrf_list:
+        output.append({'interface' : vrf_name, 'vrf_tableid' : vrf_id})
+    return output

@@ -383,6 +383,9 @@ class Interface(Control):
         # can not delete ALL interfaces, see below
         self.flush_addrs()
 
+        # remove interface from conntrack VRF interface map
+        self._del_interface_from_ct_iface_map()
+
         # ---------------------------------------------------------------------
         # Any class can define an eternal regex in its definition
         # interface matching the regex will not be deleted
@@ -403,36 +406,20 @@ class Interface(Control):
         if netns: cmd = f'ip netns exec {netns} {cmd}'
         return self._cmd(cmd)
 
-    def _set_vrf_ct_zone(self, vrf, old_vrf_tableid=None):
-        """
-        Add/Remove rules in nftables to associate traffic in VRF to an
-        individual conntack zone
-        """
-        # Don't allow for netns yet
-        if 'netns' in self.config:
-            return None
+    def _nft_check_and_run(self, nft_command):
+        # Check if deleting is possible first to avoid raising errors
+        _, err = self._popen(f'nft --check {nft_command}')
+        if not err:
+            # Remove map element
+            self._cmd(f'nft {nft_command}')
 
-        def nft_check_and_run(nft_command):
-            # Check if deleting is possible first to avoid raising errors
-            _, err = self._popen(f'nft --check {nft_command}')
-            if not err:
-                # Remove map element
-                self._cmd(f'nft {nft_command}')
+    def _del_interface_from_ct_iface_map(self):
+        nft_command = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
+        self._nft_check_and_run(nft_command)
 
-        if vrf:
-            # Get routing table ID for VRF
-            vrf_table_id = get_vrf_tableid(vrf)
-            # Add map element with interface and zone ID
-            if vrf_table_id:
-                # delete old table ID from nftables if it has changed, e.g. interface moved to a different VRF
-                if old_vrf_tableid and old_vrf_tableid != int(vrf_table_id):
-                    nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
-                    nft_check_and_run(nft_del_element)
-
-                self._cmd(f'nft add element inet vrf_zones ct_iface_map {{ "{self.ifname}" : {vrf_table_id} }}')
-        else:
-            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
-            nft_check_and_run(nft_del_element)
+    def _add_interface_to_ct_iface_map(self, vrf_table_id: int):
+        nft_command = f'add element inet vrf_zones ct_iface_map {{ "{self.ifname}" : {vrf_table_id} }}'
+        self._nft_check_and_run(nft_command)
 
     def get_min_mtu(self):
         """
@@ -605,6 +592,10 @@ class Interface(Control):
         >>> Interface('eth0').set_vrf()
         """
 
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return False
+
         tmp = self.get_interface('vrf')
         if tmp == vrf:
             return False
@@ -612,7 +603,19 @@ class Interface(Control):
         # Get current VRF table ID
         old_vrf_tableid = get_vrf_tableid(self.ifname)
         self.set_interface('vrf', vrf)
-        self._set_vrf_ct_zone(vrf, old_vrf_tableid)
+
+        if vrf:
+            # Get routing table ID number for VRF
+            vrf_table_id = get_vrf_tableid(vrf)
+            # Add map element with interface and zone ID
+            if vrf_table_id:
+                # delete old table ID from nftables if it has changed, e.g. interface moved to a different VRF
+                if old_vrf_tableid and old_vrf_tableid != int(vrf_table_id):
+                    self._del_interface_from_ct_iface_map()
+                self._add_interface_to_ct_iface_map(vrf_table_id)
+        else:
+            self._del_interface_from_ct_iface_map()
+
         return True
 
     def set_arp_cache_tmo(self, tmo):
