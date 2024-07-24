@@ -31,6 +31,7 @@ from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_intf_addr_assigned
+from vyos.configdep import set_dependents, call_dependents
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -54,6 +55,12 @@ def get_config(config=None):
     options = conf.get_config_dict(base, key_mangling=('-', '_'),
                                    get_first_key=True,
                                    with_recursive_defaults=True)
+
+    if 'performance' in options:
+        # Update IPv4 and IPv6 options after TuneD reapplies
+        # sysctl from config files
+        for protocol in ['ip', 'ipv6']:
+            set_dependents(protocol, conf)
 
     return options
 
@@ -144,6 +151,8 @@ def apply(options):
         cmd('tuned-adm profile network-{performance}'.format(**options))
     else:
         cmd('systemctl stop tuned.service')
+
+    call_dependents()
 
     # Keyboard layout - there will be always the default key inside the dict
     # but we check for key existence anyway
