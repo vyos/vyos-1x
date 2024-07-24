@@ -32,6 +32,11 @@
       </properties>
       <children>
         #include <include/firewall/common-rule-bridge.xml.i>
+        #include <include/firewall/connection-mark.xml.i>
+        #include <include/firewall/connection-status.xml.i>
+        #include <include/firewall/state.xml.i>
+        #include <include/firewall/inbound-interface.xml.i>
+        #include <include/firewall/outbound-interface.xml.i>
       </children>
     </tagNode>
   </children>

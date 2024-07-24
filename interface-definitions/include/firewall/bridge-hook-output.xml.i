@@ -1,12 +1,12 @@
-<!-- include start from firewall/bridge-hook-forward.xml.i -->
-<node name="forward">
+<!-- include start from firewall/bridge-hook-output.xml.i -->
+<node name="output">
   <properties>
-    <help>Bridge forward firewall</help>
+    <help>Bridge output firewall</help>
   </properties>
   <children>
     <node name="filter">
       <properties>
-        <help>Bridge firewall forward filter</help>
+        <help>Bridge firewall output filter</help>
       </properties>
       <children>
         #include <include/firewall/default-action-base-chains.xml.i>
@@ -14,7 +14,7 @@
         #include <include/generic-description.xml.i>
         <tagNode name="rule">
           <properties>
-            <help>Bridge Firewall forward filter rule number</help>
+            <help>Bridge Firewall output filter rule number</help>
             <valueHelp>
               <format>u32:1-999999</format>
               <description>Number for this firewall rule</description>
@@ -29,7 +29,6 @@
             #include <include/firewall/connection-mark.xml.i>
             #include <include/firewall/connection-status.xml.i>
             #include <include/firewall/state.xml.i>
-            #include <include/firewall/inbound-interface.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
           </children>
         </tagNode>

@@ -339,7 +339,104 @@ table ip6 vyos_filter {
 delete table bridge vyos_filter
 {% endif %}
 table bridge vyos_filter {
-{{ bridge_tmpl.bridge(bridge) }}
-{{ group_tmpl.groups(group, False, False) }}
+{% if bridge is vyos_defined %}
+{%     if bridge.forward is vyos_defined %}
+{%         for prior, conf in bridge.forward.items() %}
+    chain VYOS_FORWARD_{{ prior }} {
+        type filter hook forward priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{%             endif %}
+{%             if conf.rule is vyos_defined %}
+{%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+        {{ rule_conf | nft_rule('FWD', prior, rule_id, 'bri') }}
+{%                 endfor %}
+{%             endif %}
+        {{ conf | nft_default_rule('FWD-' + prior, 'bri') }}
+    }
+{%         endfor %}
+{%     endif %}
 
+{%     if bridge.input is vyos_defined %}
+{%         for prior, conf in bridge.input.items() %}
+    chain VYOS_INPUT_{{ prior }} {
+        type filter hook input priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{%             endif %}
+{%             if conf.rule is vyos_defined %}
+{%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+        {{ rule_conf | nft_rule('INP', prior, rule_id, 'bri') }}
+{%                 endfor %}
+{%             endif %}
+        {{ conf | nft_default_rule('INP-' + prior, 'bri') }}
+    }
+{%         endfor %}
+{%     endif %}
+
+{%     if bridge.output is vyos_defined %}
+{%         for prior, conf in bridge.output.items() %}
+    chain VYOS_OUTUT_{{ prior }} {
+        type filter hook output priority {{ prior }}; policy accept;
+{%             if global_options.state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{%             endif %}
+{%             if conf.rule is vyos_defined %}
+{%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+        {{ rule_conf | nft_rule('OUT', prior, rule_id, 'bri') }}
+{%                 endfor %}
+{%             endif %}
+        {{ conf | nft_default_rule('OUT-' + prior, 'bri') }}
+    }
+{%         endfor %}
+{%     endif %}
+
+{%     if bridge.prerouting is vyos_defined %}
+{%         for prior, conf in bridge.prerouting.items() %}
+    chain VYOS_PREROUTING_{{ prior }} {
+        type filter hook prerouting priority {{ prior }}; policy accept;
+{%             if conf.rule is vyos_defined %}
+{%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+        {{ rule_conf | nft_rule('PRE', prior, rule_id, 'bri') }}
+{%                 endfor %}
+{%             endif %}
+        {{ conf | nft_default_rule('PRE-' + prior, 'bri') }}
+    }
+{%         endfor %}
+{%     endif %}
+
+{%     if bridge.name is vyos_defined %}
+{%         for name_text, conf in bridge.name.items() %}
+    chain NAME_{{ name_text }} {
+{%             if conf.rule is vyos_defined %}
+{%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+        {{ rule_conf | nft_rule('NAM', name_text, rule_id, 'bri') }}
+{%                     if rule_conf.recent is vyos_defined %}
+{%                         set ns.sets = ns.sets + ['NAM_' + name_text + '_' + rule_id] %}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
+        {{ conf | nft_default_rule(name_text, 'bri') }}
+    }
+{%         endfor %}
+{%     endif %}
+
+{% endif %}
+{{ group_tmpl.groups(group, False, False) }}
+{{ group_tmpl.groups(group, True, False) }}
+
+{% if global_options.state_policy is vyos_defined %}
+    chain VYOS_STATE_POLICY {
+{%     if global_options.state_policy.established is vyos_defined %}
+        {{ global_options.state_policy.established | nft_state_policy('established') }}
+{%     endif %}
+{%     if global_options.state_policy.invalid is vyos_defined %}
+        {{ global_options.state_policy.invalid | nft_state_policy('invalid') }}
+{%     endif %}
+{%     if global_options.state_policy.related is vyos_defined %}
+        {{ global_options.state_policy.related | nft_state_policy('related') }}
+{%     endif %}
+        return
+    }
+{% endif %}
 }
