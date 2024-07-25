@@ -303,6 +303,24 @@ class BasicInterfaceTest:
             self.cli_delete(['vrf', 'name', vrf1_name])
             self.cli_delete(['vrf', 'name', vrf2_name])
 
+        def test_add_to_invalid_vrf(self):
+            if not self._test_vrf:
+                self.skipTest('not supported')
+
+            # move interface into first VRF
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+                self.cli_set(self._base_path + [interface, 'vrf', 'invalid'])
+
+            # check validate() - can not use a non-existing VRF
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'vrf', 'invalid'])
+                self.cli_set(self._base_path + [interface, 'description', 'test_add_to_invalid_vrf'])
+
         def test_span_mirror(self):
             if not self._mirror_interfaces:
                 self.skipTest('not supported')
