@@ -844,7 +844,8 @@ def import_openvpn_secret(name, path):
     key_version = '1'
 
     with open(path) as f:
-        key_lines = f.read().split("\n")
+        key_lines = f.read().strip().split("\n")
+        key_lines = list(filter(lambda line: not line.strip().startswith('#'), key_lines)) # Remove commented lines
         key_data = "".join(key_lines[1:-1]) # Remove wrapper tags and line endings
 
     version_search = re.search(r'BEGIN OpenVPN Static key V(\d+)', key_lines[0]) # Future-proofing (hopefully)
