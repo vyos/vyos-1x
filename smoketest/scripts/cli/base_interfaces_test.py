@@ -15,7 +15,6 @@
 from netifaces import AF_INET
 from netifaces import AF_INET6
 from netifaces import ifaddresses
-from netifaces import interfaces
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -25,13 +24,15 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.dict import dict_search
+from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import get_vrf_tableid
-from vyos.utils.process import cmd
+from vyos.utils.network import interface_exists
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
+from vyos.utils.network import get_nft_vrf_zone_mapping
 from vyos.xml_ref import cli_defined
 
 dhclient_base_dir = directories['isc_dhclient_dir']
@@ -117,8 +118,11 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             # Verify that no previously interface remained on the system
+            ct_map = get_nft_vrf_zone_mapping()
             for intf in self._interfaces:
-                self.assertNotIn(intf, interfaces())
+                self.assertFalse(interface_exists(intf))
+                for map_entry in ct_map:
+                     self.assertNotEqual(intf, map_entry['interface'])
 
             # No daemon started during tests should remain running
             for daemon in ['dhcp6c', 'dhclient']:
