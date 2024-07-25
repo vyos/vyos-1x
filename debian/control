@@ -307,7 +307,7 @@ Depends:
   kbd,
 # End "system option keyboard-layout"
 # For "container"
-  podman,
+  podman (>=4.9.5),
   netavark,
   aardvark-dns,
 # iptables is only used for containers now, not the the firewall CLI
