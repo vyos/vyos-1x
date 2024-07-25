@@ -99,6 +99,12 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="disable-rekey">
+                <properties>
+                  <help>Do not locally initiate a re-key of the SA, remote peer must re-key before expiration</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="mode">
                 <properties>
                   <help>ESP mode</help>

@@ -252,6 +252,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
 
+        # if dpd is not specified it should not be enabled (see T6599)
+        swanctl_unexpected_lines = [
+            f'dpd_timeout'
+            f'dpd_delay'
+        ]
+
+        for unexpected_line in swanctl_unexpected_lines:
+            self.assertNotIn(unexpected_line, swanctl_conf)
+
         swanctl_secrets_lines = [
             f'id-{regex_uuid4} = "{local_id}"',
             f'id-{regex_uuid4} = "{remote_id}"',
@@ -639,8 +648,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'auth = eap-mschapv2',
             f'eap_id = %any',
             f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
-            f'rekey_time = {eap_lifetime}s',
-            f'rand_time = 540s',
+            f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'replay_window = 32',
             f'inactivity = 28800',
@@ -761,8 +769,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'auth = eap-tls',
             f'eap_id = %any',
             f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
-            f'rekey_time = {eap_lifetime}s',
-            f'rand_time = 540s',
+            f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'inactivity = 28800',
             f'local_ts = 0.0.0.0/0,::/0',
@@ -876,8 +883,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'certs = peer1.pem',
             f'cacerts = MyVyOS-CA.pem,MyVyOS-IntCA.pem',
             f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
-            f'rekey_time = {eap_lifetime}s',
-            f'rand_time = 540s',
+            f'life_time = {eap_lifetime}s',
             f'dpd_action = clear',
             f'inactivity = 28800',
             f'local_ts = 0.0.0.0/0,::/0',
@@ -965,6 +971,118 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'{interface}.{vif}', dhcp_interfaces) # Ensure dhcp interface was added for dhclient hook
 
         self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
+
+        self.tearDownPKI()
+
+    def test_remote_access_no_rekey(self):
+        # In some RA secnarios, disabling server-initiated rekey of IKE and CHILD SA is desired
+        self.setupPKI()
+
+        ike_group = 'IKE-RW'
+        esp_group = 'ESP-RW'
+
+        conn_name = 'vyos-rw'
+        local_address = '192.0.2.1'
+        ip_pool_name = 'ra-rw-ipv4'
+        ike_lifetime = '7200'
+        eap_lifetime = '3600'
+        local_id = 'ipsec.vyos.net'
+
+        name_servers = ['172.16.254.100', '172.16.254.101']
+        prefix = '172.16.250.0/28'
+
+        # IKE
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', '0'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'hash', 'sha512'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2',  'hash', 'sha256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'dh-group', '2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '3',  'hash', 'sha256'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'dh-group', '14'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'encryption', 'aes128gcm128'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '10', 'hash', 'sha256'])
+
+        # ESP
+        self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', eap_lifetime])
+        self.cli_set(base_path + ['esp-group', esp_group, 'pfs', 'disable'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'disable-rekey'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1',  'hash', 'sha512'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2',  'hash', 'sha384'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3',  'hash', 'sha256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '4',  'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '4',  'hash', 'sha1'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '10', 'encryption', 'aes128gcm128'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '10', 'hash', 'sha256'])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'local-id', local_id])
+        # Use client-mode x509 instead of default EAP-MSCHAPv2
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'client-mode', 'x509'])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'server-mode', 'x509'])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'certificate', peer_name])
+        # verify() - CA cert required for x509 auth
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'ca-certificate', ca_name])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'authentication', 'x509', 'ca-certificate', int_ca_name])
+
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'esp-group', esp_group])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'ike-group', ike_group])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'local-address', local_address])
+        self.cli_set(base_path + ['remote-access', 'connection', conn_name, 'pool', ip_pool_name])
+
+        for ns in name_servers:
+            self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'name-server', ns])
+        self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'prefix', prefix])
+
+        self.cli_commit()
+
+        # verify applied configuration
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_lines = [
+            f'{conn_name}',
+            f'remote_addrs = %any',
+            f'local_addrs = {local_address}',
+            f'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+            f'version = 2',
+            f'send_certreq = no',
+            f'rekey_time = 0s',
+            f'keyingtries = 0',
+            f'pools = {ip_pool_name}',
+            f'id = "{local_id}"',
+            f'auth = pubkey',
+            f'certs = peer1.pem',
+            f'cacerts = MyVyOS-CA.pem,MyVyOS-IntCA.pem',
+            f'esp_proposals = aes256-sha512,aes256-sha384,aes256-sha256,aes256-sha1,aes128gcm128-sha256',
+            f'life_time = {eap_lifetime}s',
+            f'rekey_time = 0s',
+            f'dpd_action = clear',
+            f'inactivity = 28800',
+            f'local_ts = 0.0.0.0/0,::/0',
+        ]
+        for line in swanctl_lines:
+            self.assertIn(line, swanctl_conf)
+
+        swanctl_pool_lines = [
+            f'{ip_pool_name}',
+            f'addrs = {prefix}',
+            f'dns = {",".join(name_servers)}',
+        ]
+        for line in swanctl_pool_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # Check Root CA, Intermediate CA and Peer cert/key pair is present
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{ca_name}.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         self.tearDownPKI()
 
