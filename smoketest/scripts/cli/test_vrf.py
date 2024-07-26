@@ -19,6 +19,8 @@ import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from json import loads
+from jmespath import search
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
@@ -28,6 +30,7 @@ from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import interface_exists
+from vyos.utils.process import cmd
 from vyos.utils.system import sysctl_read
 
 base_path = ['vrf']
@@ -557,25 +560,38 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             self.assertNotIn(f' no ipv6 nht resolve-via-default', frrconfig)
 
     def test_vrf_conntrack(self):
-        table = '1000'
+        table = '8710'
         nftables_rules = {
             'vrf_zones_ct_in': ['ct original zone set iifname map @ct_iface_map'],
             'vrf_zones_ct_out': ['ct original zone set oifname map @ct_iface_map']
         }
 
-        self.cli_set(base_path + ['name', 'blue', 'table', table])
+        self.cli_set(base_path + ['name', 'randomVRF', 'table', '1000'])
         self.cli_commit()
 
         # Conntrack rules should not be present
         for chain, rule in nftables_rules.items():
             self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=True)
 
+        # conntrack is only enabled once NAT, NAT66 or firewalling is enabled
         self.cli_set(['nat'])
-        self.cli_commit()
+
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', table])
+            table = str(int(table) + 1)
+            # We need the commit inside the loop to trigger the bug in T6603
+            self.cli_commit()
 
         # Conntrack rules should now be present
         for chain, rule in nftables_rules.items():
             self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=False)
+
+        # T6603: there should be only ONE entry for the iifname/oifname in the chains
+        tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+        num_rules = len(search("nftables[].rule[].chain", tmp))
+        # ['vrf_zones_ct_in', 'vrf_zones_ct_out']
+        self.assertEqual(num_rules, 2)
 
         self.cli_delete(['nat'])
 
