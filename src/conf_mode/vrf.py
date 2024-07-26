@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
+from jmespath import search
 from json import loads
 
 from vyos.config import Config
@@ -69,6 +70,14 @@ def has_rule(af : str, priority : int, table : str=None):
             if tmp['priority'] == priority:
                 return True
     return False
+
+def is_nft_vrf_zone_rule_setup() -> bool:
+    """
+    Check if an nftables connection tracking rule already exists
+    """
+    tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+    num_rules = len(search("nftables[].rule[].chain", tmp))
+    return bool(num_rules)
 
 def vrf_interfaces(c, match):
     matched = []
@@ -302,7 +311,8 @@ def apply(vrf):
             nft_add_element = f'add element inet vrf_zones ct_iface_map {{ "{name}" : {table} }}'
             cmd(f'nft {nft_add_element}')
 
-        if vrf['conntrack']:
+        # Install nftables conntrack rules only once
+        if vrf['conntrack'] and not is_nft_vrf_zone_rule_setup():
             for chain, rule in nftables_rules.items():
                 cmd(f'nft add rule inet vrf_zones {chain} {rule}')
 
