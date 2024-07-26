@@ -273,6 +273,7 @@ def apply(vrf):
             if not has_rule(afi, 2000, 'l3mdev'):
                 call(f'ip {afi} rule add pref 2000 l3mdev unreachable')
 
+        nft_vrf_zone_rule_setup = False
         for name, config in vrf['name'].items():
             table = config['table']
             if not interface_exists(name):
@@ -311,8 +312,12 @@ def apply(vrf):
             nft_add_element = f'add element inet vrf_zones ct_iface_map {{ "{name}" : {table} }}'
             cmd(f'nft {nft_add_element}')
 
+        # Only call into nftables as long as there is nothing setup to avoid wasting
+        # CPU time and thus lenghten the commit process
+        if not nft_vrf_zone_rule_setup:
+            nft_vrf_zone_rule_setup = is_nft_vrf_zone_rule_setup()
         # Install nftables conntrack rules only once
-        if vrf['conntrack'] and not is_nft_vrf_zone_rule_setup():
+        if vrf['conntrack'] and not nft_vrf_zone_rule_setup:
             for chain, rule in nftables_rules.items():
                 cmd(f'nft add rule inet vrf_zones {chain} {rule}')
 
