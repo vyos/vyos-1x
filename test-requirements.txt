@@ -5,3 +5,4 @@ nose
 coverage
 jinja2
 requests==2.32.3
+markdown==3.6
