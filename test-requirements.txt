@@ -4,3 +4,4 @@ pylint
 nose
 coverage
 jinja2
+requests==2.32.3
