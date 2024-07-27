@@ -7,6 +7,12 @@
           <help>Show IPv6 networking information</help>
         </properties>
         <children>
+          <leafNode name="groups">
+            <properties>
+              <help>Show IPv6 multicast group membership</help>
+            </properties>
+            <command>netstat -gn6</command>
+          </leafNode>
           <node name="access-list">
             <properties>
               <help>Show all IPv6 access-lists</help>
@@ -27,6 +33,32 @@
               <help>Show IPv6 forwarding status</help>
             </properties>
             <command>vtysh -c "show ipv6 forwarding"</command>
+          </node>
+          <node name="neighbors">
+            <properties>
+              <help>Show IPv6 neighbor (NDP) table</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show IPv6 neighbor table for specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6 --interface "$5"</command>
+              </tagNode>
+              <tagNode name="state">
+                <properties>
+                  <help>Show IPv6 neighbors with specified state</help>
+                  <completionHelp>
+                    <list>reachable stale failed permanent</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6 --state "$5"</command>
+              </tagNode>
+            </children>
           </node>
           #include <include/show-nht.xml.i>
           <node name="ripng">

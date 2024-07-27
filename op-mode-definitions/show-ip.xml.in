@@ -7,6 +7,12 @@
           <help>Show IPv4 networking information</help>
         </properties>
         <children>
+          <leafNode name="groups">
+            <properties>
+              <help>Show IP multicast group membership</help>
+            </properties>
+            <command>netstat -gn4</command>
+          </leafNode>
           <node name="neighbors">
             <properties>
               <help>Show IPv4 neighbor (ARP) table</help>
