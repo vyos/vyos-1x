@@ -15,6 +15,7 @@
 import os
 import unittest
 import paramiko
+import pprint
 
 from time import sleep
 from typing import Type
@@ -87,13 +88,25 @@ class VyOSUnitTestSHIM:
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
 
+        def op_mode(self, path : list) -> None:
+            """
+            Execute OP-mode command and return stdout
+            """
+            if self.debug:
+                print('commit')
+            path = ' '.join(path)
+            out = cmd(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {path}')
+            if self.debug:
+                print(f'\n\ncommand "{path}" returned:\n')
+                pprint.pprint(out)
+            return out
+
         def getFRRconfig(self, string=None, end='$', endsection='^!', daemon=''):
             """ Retrieve current "running configuration" from FRR """
             command = f'vtysh -c "show run {daemon} no-header"'
             if string: command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
             out = cmd(command)
             if self.debug:
-                import pprint
                 print(f'\n\ncommand "{command}" returned:\n')
                 pprint.pprint(out)
             return out
