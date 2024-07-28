@@ -143,9 +143,8 @@ def run_script(script_name, config, args) -> int:
         script.generate(c)
         script.apply(c)
     except ConfigError as e:
-        s = f'{script_name}: {repr(e)}'
-        logger.error(s)
-        explicit_print(session_out, session_mode, s)
+        logger.error(e)
+        explicit_print(session_out, session_mode, str(e))
         return R_ERROR_COMMIT
     except Exception as e:
         logger.critical(e)
