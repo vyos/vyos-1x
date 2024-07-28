@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2023 VyOS maintainers and contributors
+# Copyright (C) 2022-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import pprint
 import re
 import sys
 import typing
@@ -25,6 +26,7 @@ from vyos.utils.convert import convert_data
 from vyos.utils.convert import seconds_to_human
 from vyos.utils.process import cmd
 from vyos.configquery import ConfigTreeQuery
+from vyos.base import Warning
 
 import vyos.opmode
 import vyos.ipsec
@@ -43,7 +45,7 @@ def _get_raw_data_sas():
         get_sas = vyos.ipsec.get_vici_sas()
         sas = convert_data(get_sas)
         return sas
-    except (vyos.ipsec.ViciInitiateError) as err:
+    except vyos.ipsec.ViciInitiateError as err:
         raise vyos.opmode.UnconfiguredSubsystem(err)
 
 
@@ -56,11 +58,10 @@ def _get_output_swanctl_sas_from_list(ra_output_list: list) -> str:
     :return: formatted string
     :rtype: str
     """
-    output = '';
+    output = ''
     for sa_val in ra_output_list:
         for sa in sa_val.values():
-            swanctl_output: str = cmd(
-                f'sudo swanctl -l --ike-id {sa["uniqueid"]}')
+            swanctl_output: str = cmd(f'sudo swanctl -l --ike-id {sa["uniqueid"]}')
         output = f'{output}{swanctl_output}\n\n'
     return output
 
@@ -72,7 +73,9 @@ def _get_formatted_output_sas(sas):
             # create an item for each child-sa
             for child_sa in parent_sa.get('child-sas', {}).values():
                 # prepare a list for output data
-                sa_out_name = sa_out_state = sa_out_uptime = sa_out_bytes = sa_out_packets = sa_out_remote_addr = sa_out_remote_id = sa_out_proposal = 'N/A'
+                sa_out_name = sa_out_state = sa_out_uptime = sa_out_bytes = (
+                    sa_out_packets
+                ) = sa_out_remote_addr = sa_out_remote_id = sa_out_proposal = 'N/A'
 
                 # collect raw data
                 sa_name = child_sa.get('name')
@@ -104,10 +107,8 @@ def _get_formatted_output_sas(sas):
                     bytes_out = filesize.size(int(sa_bytes_out))
                     sa_out_bytes = f'{bytes_in}/{bytes_out}'
                 if sa_packets_in and sa_packets_out:
-                    packets_in = filesize.size(int(sa_packets_in),
-                                               system=filesize.si)
-                    packets_out = filesize.size(int(sa_packets_out),
-                                                system=filesize.si)
+                    packets_in = filesize.size(int(sa_packets_in), system=filesize.si)
+                    packets_out = filesize.size(int(sa_packets_out), system=filesize.si)
                     packets_str = f'{packets_in}/{packets_out}'
                     sa_out_packets = re.sub(r'B', r'', packets_str)
                 if sa_remote_addr:
@@ -119,7 +120,9 @@ def _get_formatted_output_sas(sas):
                     sa_out_proposal = sa_proposal_encr_alg
                 if sa_proposal_encr_keysize:
                     sa_proposal_encr_keysize_str = sa_proposal_encr_keysize
-                    sa_out_proposal = f'{sa_out_proposal}_{sa_proposal_encr_keysize_str}'
+                    sa_out_proposal = (
+                        f'{sa_out_proposal}_{sa_proposal_encr_keysize_str}'
+                    )
                 if sa_proposal_integ_alg:
                     sa_proposal_integ_alg_str = sa_proposal_integ_alg
                     sa_out_proposal = f'{sa_out_proposal}/{sa_proposal_integ_alg_str}'
@@ -128,15 +131,28 @@ def _get_formatted_output_sas(sas):
                     sa_out_proposal = f'{sa_out_proposal}/{sa_proposal_dh_group_str}'
 
                 # add a new item to output data
-                sa_data.append([
-                    sa_out_name, sa_out_state, sa_out_uptime, sa_out_bytes,
-                    sa_out_packets, sa_out_remote_addr, sa_out_remote_id,
-                    sa_out_proposal
-                ])
+                sa_data.append(
+                    [
+                        sa_out_name,
+                        sa_out_state,
+                        sa_out_uptime,
+                        sa_out_bytes,
+                        sa_out_packets,
+                        sa_out_remote_addr,
+                        sa_out_remote_id,
+                        sa_out_proposal,
+                    ]
+                )
 
     headers = [
-        "Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out",
-        "Remote address", "Remote ID", "Proposal"
+        'Connection',
+        'State',
+        'Uptime',
+        'Bytes In/Out',
+        'Packets In/Out',
+        'Remote address',
+        'Remote ID',
+        'Proposal',
     ]
     sa_data = sorted(sa_data, key=_alphanum_key)
     output = tabulate(sa_data, headers)
@@ -145,13 +161,15 @@ def _get_formatted_output_sas(sas):
 
 # Connections block
 
+
 def _get_convert_data_connections():
     try:
         get_connections = vyos.ipsec.get_vici_connections()
         connections = convert_data(get_connections)
         return connections
-    except (vyos.ipsec.ViciInitiateError) as err:
+    except vyos.ipsec.ViciInitiateError as err:
         raise vyos.opmode.UnconfiguredSubsystem(err)
+
 
 def _get_parent_sa_proposal(connection_name: str, data: list) -> dict:
     """Get parent SA proposals by connection name
@@ -184,7 +202,7 @@ def _get_parent_sa_proposal(connection_name: str, data: list) -> dict:
                 'mode': mode,
                 'key_size': encr_keysize,
                 'hash': integ_alg,
-                'dh': dh_group
+                'dh': dh_group,
             }
             return proposal
         return {}
@@ -213,8 +231,7 @@ def _get_parent_sa_state(connection_name: str, data: list) -> str:
     return ike_state
 
 
-def _get_child_sa_state(connection_name: str, tunnel_name: str,
-                        data: list) -> str:
+def _get_child_sa_state(connection_name: str, tunnel_name: str, data: list) -> str:
     """Get child SA state by connection and tunnel name
 
     Args:
@@ -236,14 +253,12 @@ def _get_child_sa_state(connection_name: str, tunnel_name: str,
         # Get all child SA states
         # there can be multiple SAs per tunnel
         child_sa_states = [
-            v['state'] for k, v in child_sas.items() if
-            v['name'] == tunnel_name
+            v['state'] for k, v in child_sas.items() if v['name'] == tunnel_name
         ]
         return 'up' if 'INSTALLED' in child_sa_states else child_sa
 
 
-def _get_child_sa_info(connection_name: str, tunnel_name: str,
-                       data: list) -> dict:
+def _get_child_sa_info(connection_name: str, tunnel_name: str, data: list) -> dict:
     """Get child SA installed info by connection and tunnel name
 
     Args:
@@ -264,8 +279,9 @@ def _get_child_sa_info(connection_name: str, tunnel_name: str,
         # {'OFFICE-B-tunnel-0-46': {'name': 'OFFICE-B-tunnel-0'}...}
         # i.e get all data after 'OFFICE-B-tunnel-0-46'
         child_sa_info = [
-            v for k, v in child_sas.items() if 'name' in v and
-            v['name'] == tunnel_name and v['state'] == 'INSTALLED'
+            v
+            for k, v in child_sas.items()
+            if 'name' in v and v['name'] == tunnel_name and v['state'] == 'INSTALLED'
         ]
         return child_sa_info[-1] if child_sa_info else {}
 
@@ -283,7 +299,7 @@ def _get_child_sa_proposal(child_sa_data: dict) -> dict:
             'mode': mode,
             'key_size': key_size,
             'hash': integ_alg,
-            'dh': dh_group
+            'dh': dh_group,
         }
         return proposal
     return {}
@@ -305,10 +321,10 @@ def _get_raw_data_connections(list_connections: list, list_sas: list) -> list:
         for connection, conn_conf in connections.items():
             base_list['ike_connection_name'] = connection
             base_list['ike_connection_state'] = _get_parent_sa_state(
-                connection, list_sas)
+                connection, list_sas
+            )
             base_list['ike_remote_address'] = conn_conf['remote_addrs']
-            base_list['ike_proposal'] = _get_parent_sa_proposal(
-                connection, list_sas)
+            base_list['ike_proposal'] = _get_parent_sa_proposal(connection, list_sas)
             base_list['local_id'] = conn_conf.get('local-1', '').get('id')
             base_list['remote_id'] = conn_conf.get('remote-1', '').get('id')
             base_list['version'] = conn_conf.get('version', 'IKE')
@@ -322,22 +338,25 @@ def _get_raw_data_connections(list_connections: list, list_sas: list) -> list:
                 close_action = tun_options.get('close_action')
                 sa_info = _get_child_sa_info(connection, tunnel, list_sas)
                 esp_proposal = _get_child_sa_proposal(sa_info)
-                base_list['children'].append({
-                    'name': tunnel,
-                    'state': state,
-                    'local_ts': local_ts,
-                    'remote_ts': remote_ts,
-                    'dpd_action': dpd_action,
-                    'close_action': close_action,
-                    'sa': sa_info,
-                    'esp_proposal': esp_proposal
-                })
+                base_list['children'].append(
+                    {
+                        'name': tunnel,
+                        'state': state,
+                        'local_ts': local_ts,
+                        'remote_ts': remote_ts,
+                        'dpd_action': dpd_action,
+                        'close_action': close_action,
+                        'sa': sa_info,
+                        'esp_proposal': esp_proposal,
+                    }
+                )
         base_dict.append(base_list)
     return base_dict
 
 
 def _get_raw_connections_summary(list_conn, list_sas):
     import jmespath
+
     data = _get_raw_data_connections(list_conn, list_sas)
     match = '[*].children[]'
     child = jmespath.search(match, data)
@@ -347,17 +366,16 @@ def _get_raw_connections_summary(list_conn, list_sas):
         'tunnels': child,
         'total': len(child),
         'down': tunnels_down,
-        'up': tunnels_up
+        'up': tunnels_up,
     }
     return tun_dict
 
 
 def _get_formatted_output_conections(data):
     from tabulate import tabulate
-    data_entries = ''
+
     connections = []
     for entry in data:
-        tunnels = []
         ike_name = entry['ike_connection_name']
         ike_state = entry['ike_connection_state']
         conn_type = entry.get('version', 'IKE')
@@ -367,15 +385,26 @@ def _get_formatted_output_conections(data):
         remote_id = entry['remote_id']
         proposal = '-'
         if entry.get('ike_proposal'):
-            proposal = (f'{entry["ike_proposal"]["cipher"]}_'
-                        f'{entry["ike_proposal"]["mode"]}/'
-                        f'{entry["ike_proposal"]["key_size"]}/'
-                        f'{entry["ike_proposal"]["hash"]}/'
-                        f'{entry["ike_proposal"]["dh"]}')
-        connections.append([
-            ike_name, ike_state, conn_type, remote_addrs, local_ts, remote_ts,
-            local_id, remote_id, proposal
-        ])
+            proposal = (
+                f'{entry["ike_proposal"]["cipher"]}_'
+                f'{entry["ike_proposal"]["mode"]}/'
+                f'{entry["ike_proposal"]["key_size"]}/'
+                f'{entry["ike_proposal"]["hash"]}/'
+                f'{entry["ike_proposal"]["dh"]}'
+            )
+        connections.append(
+            [
+                ike_name,
+                ike_state,
+                conn_type,
+                remote_addrs,
+                local_ts,
+                remote_ts,
+                local_id,
+                remote_id,
+                proposal,
+            ]
+        )
         for tun in entry['children']:
             tun_name = tun.get('name')
             tun_state = tun.get('state')
@@ -384,18 +413,36 @@ def _get_formatted_output_conections(data):
             remote_ts = '\n'.join(tun.get('remote_ts'))
             proposal = '-'
             if tun.get('esp_proposal'):
-                proposal = (f'{tun["esp_proposal"]["cipher"]}_'
-                            f'{tun["esp_proposal"]["mode"]}/'
-                            f'{tun["esp_proposal"]["key_size"]}/'
-                            f'{tun["esp_proposal"]["hash"]}/'
-                            f'{tun["esp_proposal"]["dh"]}')
-            connections.append([
-                tun_name, tun_state, conn_type, remote_addrs, local_ts,
-                remote_ts, local_id, remote_id, proposal
-            ])
+                proposal = (
+                    f'{tun["esp_proposal"]["cipher"]}_'
+                    f'{tun["esp_proposal"]["mode"]}/'
+                    f'{tun["esp_proposal"]["key_size"]}/'
+                    f'{tun["esp_proposal"]["hash"]}/'
+                    f'{tun["esp_proposal"]["dh"]}'
+                )
+            connections.append(
+                [
+                    tun_name,
+                    tun_state,
+                    conn_type,
+                    remote_addrs,
+                    local_ts,
+                    remote_ts,
+                    local_id,
+                    remote_id,
+                    proposal,
+                ]
+            )
     connection_headers = [
-        'Connection', 'State', 'Type', 'Remote address', 'Local TS',
-        'Remote TS', 'Local id', 'Remote id', 'Proposal'
+        'Connection',
+        'State',
+        'Type',
+        'Remote address',
+        'Local TS',
+        'Remote TS',
+        'Local id',
+        'Remote id',
+        'Proposal',
     ]
     output = tabulate(connections, connection_headers, numalign='left')
     return output
@@ -421,6 +468,31 @@ def _get_childsa_id_list(ike_sas: list) -> list:
     return list_childsa_id
 
 
+def _get_con_childsa_name_list(
+    ike_sas: list, filter_dict: typing.Optional[dict] = None
+) -> list:
+    """
+    Generate list of CHILD SA ids based on list of OrderingDict
+    wich is returned by vici
+    :param ike_sas: list of IKE SAs connections generated by vici
+    :type ike_sas: list
+    :param filter_dict: dict of filter options
+    :type filter_dict: dict
+    :return: list of IKE SAs name
+    :rtype: list
+    """
+    list_childsa_name: list = []
+    for ike in ike_sas:
+        for ike_name, ike_values in ike.items():
+            for sa, sa_values in ike_values['children'].items():
+                if filter_dict:
+                    if filter_dict.items() <= sa_values.items():
+                        list_childsa_name.append(sa)
+                else:
+                    list_childsa_name.append(sa)
+    return list_childsa_name
+
+
 def _get_all_sitetosite_peers_name_list() -> list:
     """
     Return site-to-site peers configuration
@@ -429,53 +501,142 @@ def _get_all_sitetosite_peers_name_list() -> list:
     """
     conf: ConfigTreeQuery = ConfigTreeQuery()
     config_path = ['vpn', 'ipsec', 'site-to-site', 'peer']
-    peers_config = conf.get_config_dict(config_path, key_mangling=('-', '_'),
-                                       get_first_key=True,
-                                       no_tag_node_value_mangle=True)
+    peers_config = conf.get_config_dict(
+        config_path,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
     peers_list: list = []
     for name in peers_config:
         peers_list.append(name)
     return peers_list
 
 
-def reset_peer(peer: str, tunnel: typing.Optional[str] = None):
-    # Convert tunnel to Strongwan format of CHILD_SA
+def _get_tunnel_sw_format(peer: str, tunnel: str) -> str:
+    """
+    Convert tunnel to Strongwan format of CHILD_SA
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param tunnel: tunnel number (CHILD_SA)
+    :type tunnel: str
+    :return: Converted tunnel name (CHILD_SA)
+    :rtype: str
+    """
     tunnel_sw = None
     if tunnel:
         if tunnel.isnumeric():
             tunnel_sw = f'{peer}-tunnel-{tunnel}'
         elif tunnel == 'vti':
             tunnel_sw = f'{peer}-vti'
+    return tunnel_sw
+
+
+def _initiate_peer_with_childsas(
+    peer: str, tunnel: typing.Optional[str] = None
+) -> None:
+    """
+    Initiate IPSEC peer SAs by vici.
+    If tunnel is None it initiates all peers tunnels
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param tunnel: tunnel number (CHILD_SA)
+    :type tunnel: str
+    """
+    tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
     try:
-        sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, tunnel_sw)
-        if not sa_list:
+        con_list: list = vyos.ipsec.get_vici_connection_by_name(peer)
+        if not con_list:
             raise vyos.opmode.IncorrectValue(
-                f'Peer\'s {peer} SA(s) not found, aborting')
-        if tunnel and sa_list:
-            childsa_id_list: list = _get_childsa_id_list(sa_list)
-            if not childsa_id_list:
-                raise vyos.opmode.IncorrectValue(
-                    f'Peer {peer} tunnel {tunnel} SA(s) not found, aborting')
-        vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
-        print(f'Peer {peer} reset result: success')
-    except (vyos.ipsec.ViciInitiateError) as err:
+                f"Peer's {peer} SA(s) not loaded. Initiation was failed"
+            )
+        childsa_name_list: list = _get_con_childsa_name_list(con_list)
+
+        if not tunnel_sw:
+            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, childsa_name_list)
+            print(f'Peer {peer} initiate result: success')
+            return
+
+        if tunnel_sw in childsa_name_list:
+            vyos.ipsec.vici_initiate_all_child_sa_by_ike(peer, [tunnel_sw])
+            print(f'Peer {peer} tunnel {tunnel} initiate result: success')
+            return
+
+        raise vyos.opmode.IncorrectValue(f'Peer {peer} SA {tunnel} not found, aborting')
+
+    except vyos.ipsec.ViciInitiateError as err:
         raise vyos.opmode.UnconfiguredSubsystem(err)
-    except (vyos.ipsec.ViciCommandError) as err:
+    except vyos.ipsec.ViciCommandError as err:
         raise vyos.opmode.IncorrectValue(err)
 
 
-def reset_all_peers():
+def _terminate_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
+    """
+    Terminate IPSEC peer SAs by vici.
+    If tunnel is None it terminates all peers tunnels
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param tunnel: tunnel number (CHILD_SA)
+    :type tunnel: str
+    """
+    # Convert tunnel to Strongwan format of CHILD_SA
+    tunnel_sw = _get_tunnel_sw_format(peer, tunnel)
+    try:
+        sa_list: list = vyos.ipsec.get_vici_sas_by_name(peer, tunnel_sw)
+        if sa_list:
+            if tunnel:
+                childsa_id_list: list = _get_childsa_id_list(sa_list)
+                if childsa_id_list:
+                    vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
+                    print(f'Peer {peer} tunnel {tunnel} terminate result: success')
+                else:
+                    Warning(
+                        f'Peer {peer} tunnel {tunnel} SA is not initiated. Nothing to terminate'
+                    )
+            else:
+                vyos.ipsec.terminate_vici_by_name(peer, tunnel_sw)
+                print(f'Peer {peer} terminate result: success')
+        else:
+            Warning(f"Peer's {peer} SAs are not initiated. Nothing to terminate")
+
+    except vyos.ipsec.ViciInitiateError as err:
+        raise vyos.opmode.UnconfiguredSubsystem(err)
+    except vyos.ipsec.ViciCommandError as err:
+        raise vyos.opmode.IncorrectValue(err)
+
+
+def reset_peer(peer: str, tunnel: typing.Optional[str] = None) -> None:
+    """
+    Reset IPSEC peer SAs.
+    If tunnel is None it resets all peers tunnels
+    :param peer: Peer name (IKE_SA)
+    :type peer: str
+    :param tunnel: tunnel number (CHILD_SA)
+    :type tunnel: str
+    """
+    _terminate_peer(peer, tunnel)
+    peer_config = _get_sitetosite_peer_config(peer)
+    # initiate SAs only if 'connection-type=initiate'
+    if (
+        'connection_type' in peer_config
+        and peer_config['connection_type'] == 'initiate'
+    ):
+        _initiate_peer_with_childsas(peer, tunnel)
+
+
+def reset_all_peers() -> None:
     sitetosite_list = _get_all_sitetosite_peers_name_list()
     if sitetosite_list:
         for peer_name in sitetosite_list:
             try:
                 reset_peer(peer_name)
-            except (vyos.opmode.IncorrectValue) as err:
+            except vyos.opmode.IncorrectValue as err:
                 print(err)
         print('Peers reset result: success')
     else:
         raise vyos.opmode.UnconfiguredSubsystem(
-            'VPN IPSec site-to-site is not configured, aborting')
+            'VPN IPSec site-to-site is not configured, aborting'
+        )
 
 
 def _get_ra_session_list_by_username(username: typing.Optional[str] = None):
@@ -500,7 +661,7 @@ def _get_ra_session_list_by_username(username: typing.Optional[str] = None):
 
 
 def reset_ra(username: typing.Optional[str] = None):
-    #Reset remote-access ipsec sessions
+    # Reset remote-access ipsec sessions
     if username:
         list_sa_id = _get_ra_session_list_by_username(username)
     else:
@@ -514,32 +675,47 @@ def reset_profile_dst(profile: str, tunnel: str, nbma_dst: str):
         ike_sa_name = f'dmvpn-{profile}-{tunnel}'
         try:
             # Get IKE SAs
-            sa_list = convert_data(
-                vyos.ipsec.get_vici_sas_by_name(ike_sa_name, None))
+            sa_list = convert_data(vyos.ipsec.get_vici_sas_by_name(ike_sa_name, None))
             if not sa_list:
                 raise vyos.opmode.IncorrectValue(
-                    f'SA(s) for profile {profile} tunnel {tunnel} not found, aborting')
-            sa_nbma_list = list([x for x in sa_list if
-                                 ike_sa_name in x and x[ike_sa_name][
-                                     'remote-host'] == nbma_dst])
+                    f'SA(s) for profile {profile} tunnel {tunnel} not found, aborting'
+                )
+            sa_nbma_list = list(
+                [
+                    x
+                    for x in sa_list
+                    if ike_sa_name in x and x[ike_sa_name]['remote-host'] == nbma_dst
+                ]
+            )
             if not sa_nbma_list:
                 raise vyos.opmode.IncorrectValue(
-                    f'SA(s) for profile {profile} tunnel {tunnel} remote-host {nbma_dst} not found, aborting')
+                    f'SA(s) for profile {profile} tunnel {tunnel} remote-host {nbma_dst} not found, aborting'
+                )
             # terminate IKE SAs
-            vyos.ipsec.terminate_vici_ikeid_list(list(
-                [x[ike_sa_name]['uniqueid'] for x in sa_nbma_list if
-                 ike_sa_name in x]))
+            vyos.ipsec.terminate_vici_ikeid_list(
+                list(
+                    [
+                        x[ike_sa_name]['uniqueid']
+                        for x in sa_nbma_list
+                        if ike_sa_name in x
+                    ]
+                )
+            )
             # initiate IKE SAs
             for ike in sa_nbma_list:
                 if ike_sa_name in ike:
-                    vyos.ipsec.vici_initiate(ike_sa_name, 'dmvpn',
-                                             ike[ike_sa_name]['local-host'],
-                                             ike[ike_sa_name]['remote-host'])
+                    vyos.ipsec.vici_initiate(
+                        ike_sa_name,
+                        'dmvpn',
+                        ike[ike_sa_name]['local-host'],
+                        ike[ike_sa_name]['remote-host'],
+                    )
             print(
-                f'Profile {profile} tunnel {tunnel} remote-host {nbma_dst} reset result: success')
-        except (vyos.ipsec.ViciInitiateError) as err:
+                f'Profile {profile} tunnel {tunnel} remote-host {nbma_dst} reset result: success'
+            )
+        except vyos.ipsec.ViciInitiateError as err:
             raise vyos.opmode.UnconfiguredSubsystem(err)
-        except (vyos.ipsec.ViciCommandError) as err:
+        except vyos.ipsec.ViciCommandError as err:
             raise vyos.opmode.IncorrectValue(err)
 
 
@@ -549,24 +725,30 @@ def reset_profile_all(profile: str, tunnel: str):
         try:
             # Get IKE SAs
             sa_list: list = convert_data(
-                vyos.ipsec.get_vici_sas_by_name(ike_sa_name, None))
+                vyos.ipsec.get_vici_sas_by_name(ike_sa_name, None)
+            )
             if not sa_list:
                 raise vyos.opmode.IncorrectValue(
-                    f'SA(s) for profile {profile} tunnel {tunnel} not found, aborting')
+                    f'SA(s) for profile {profile} tunnel {tunnel} not found, aborting'
+                )
             # terminate IKE SAs
             vyos.ipsec.terminate_vici_by_name(ike_sa_name, None)
             # initiate IKE SAs
             for ike in sa_list:
                 if ike_sa_name in ike:
-                    vyos.ipsec.vici_initiate(ike_sa_name, 'dmvpn',
-                                             ike[ike_sa_name]['local-host'],
-                                             ike[ike_sa_name]['remote-host'])
+                    vyos.ipsec.vici_initiate(
+                        ike_sa_name,
+                        'dmvpn',
+                        ike[ike_sa_name]['local-host'],
+                        ike[ike_sa_name]['remote-host'],
+                    )
                 print(
-                    f'Profile {profile} tunnel {tunnel} remote-host {ike[ike_sa_name]["remote-host"]} reset result: success')
+                    f'Profile {profile} tunnel {tunnel} remote-host {ike[ike_sa_name]["remote-host"]} reset result: success'
+                )
             print(f'Profile {profile} tunnel {tunnel} reset result: success')
-        except (vyos.ipsec.ViciInitiateError) as err:
+        except vyos.ipsec.ViciInitiateError as err:
             raise vyos.opmode.UnconfiguredSubsystem(err)
-        except (vyos.ipsec.ViciCommandError) as err:
+        except vyos.ipsec.ViciCommandError as err:
             raise vyos.opmode.IncorrectValue(err)
 
 
@@ -734,36 +916,56 @@ def _get_formatted_output_ra_summary(ra_output_list: list):
             if child_sa_key:
                 child_sa = sa['child-sas'][child_sa_key]
                 sa_ipsec_proposal = _get_formatted_ipsec_proposal(child_sa)
-                sa_state = "UP"
+                sa_state = 'UP'
                 sa_uptime = seconds_to_human(sa['established'])
             else:
                 sa_ipsec_proposal = ''
-                sa_state = "DOWN"
+                sa_state = 'DOWN'
                 sa_uptime = ''
             sa_data.append(
-                [sa_id, sa_username, sa_protocol, sa_state, sa_uptime,
-                 sa_tunnel_ip,
-                 sa_remotehost, sa_remoteid, sa_ike_proposal,
-                 sa_ipsec_proposal])
+                [
+                    sa_id,
+                    sa_username,
+                    sa_protocol,
+                    sa_state,
+                    sa_uptime,
+                    sa_tunnel_ip,
+                    sa_remotehost,
+                    sa_remoteid,
+                    sa_ike_proposal,
+                    sa_ipsec_proposal,
+                ]
+            )
 
-    headers = ["Connection ID", "Username", "Protocol", "State", "Uptime",
-               "Tunnel IP", "Remote Host", "Remote ID", "IKE Proposal",
-               "IPSec Proposal"]
+    headers = [
+        'Connection ID',
+        'Username',
+        'Protocol',
+        'State',
+        'Uptime',
+        'Tunnel IP',
+        'Remote Host',
+        'Remote ID',
+        'IKE Proposal',
+        'IPSec Proposal',
+    ]
     sa_data = sorted(sa_data, key=_alphanum_key)
     output = tabulate(sa_data, headers)
     return output
 
 
-def show_ra_detail(raw: bool, username: typing.Optional[str] = None,
-                   conn_id: typing.Optional[str] = None):
+def show_ra_detail(
+    raw: bool,
+    username: typing.Optional[str] = None,
+    conn_id: typing.Optional[str] = None,
+):
     list_sa: list = _get_ra_sessions()
     if username:
         list_sa = _filter_ikesas(list_sa, 'remote-eap-id', username)
     elif conn_id:
         list_sa = _filter_ikesas(list_sa, 'uniqueid', conn_id)
     if not list_sa:
-        raise vyos.opmode.IncorrectValue(
-            f'No active connections found, aborting')
+        raise vyos.opmode.IncorrectValue('No active connections found, aborting')
     if raw:
         return list_sa
     return _get_output_ra_sas_detail(list_sa)
@@ -772,8 +974,7 @@ def show_ra_detail(raw: bool, username: typing.Optional[str] = None,
 def show_ra_summary(raw: bool):
     list_sa: list = _get_ra_sessions()
     if not list_sa:
-        raise vyos.opmode.IncorrectValue(
-            f'No active connections found, aborting')
+        raise vyos.opmode.IncorrectValue('No active connections found, aborting')
     if raw:
         return list_sa
     return _get_formatted_output_ra_summary(list_sa)
@@ -783,9 +984,12 @@ def show_ra_summary(raw: bool):
 def _get_raw_psk():
     conf: ConfigTreeQuery = ConfigTreeQuery()
     config_path = ['vpn', 'ipsec', 'authentication', 'psk']
-    psk_config = conf.get_config_dict(config_path, key_mangling=('-', '_'),
-                                       get_first_key=True,
-                                       no_tag_node_value_mangle=True)
+    psk_config = conf.get_config_dict(
+        config_path,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
 
     psk_list = []
     for psk, psk_data in psk_config.items():
@@ -796,11 +1000,13 @@ def _get_raw_psk():
 
 
 def _get_formatted_psk(psk_list):
-    headers = ["PSK", "Id", "Secret"]
+    headers = ['PSK', 'Id', 'Secret']
     formatted_data = []
 
     for psk_data in psk_list:
-        formatted_data.append([psk_data["psk"], "\n".join(psk_data["id"]), psk_data["secret"]])
+        formatted_data.append(
+            [psk_data['psk'], '\n'.join(psk_data['id']), psk_data['secret']]
+        )
 
     return tabulate(formatted_data, headers=headers)
 
@@ -808,14 +1014,34 @@ def _get_formatted_psk(psk_list):
 def show_psk(raw: bool):
     config = ConfigTreeQuery()
     if not config.exists('vpn ipsec authentication psk'):
-        raise vyos.opmode.UnconfiguredSubsystem('VPN ipsec psk authentication is not configured')
+        raise vyos.opmode.UnconfiguredSubsystem(
+            'VPN ipsec psk authentication is not configured'
+        )
 
     psk = _get_raw_psk()
     if raw:
         return psk
     return _get_formatted_psk(psk)
 
+
 # PSK block end
+
+
+def _get_sitetosite_peer_config(peer: str):
+    """
+    Return site-to-site peers configuration
+    :return: site-to-site peers configuration
+    :rtype: list
+    """
+    conf: ConfigTreeQuery = ConfigTreeQuery()
+    config_path = ['vpn', 'ipsec', 'site-to-site', 'peer', peer]
+    peers_config = conf.get_config_dict(
+        config_path,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+    return peers_config
 
 
 if __name__ == '__main__':
