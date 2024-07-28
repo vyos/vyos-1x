@@ -59,5 +59,9 @@
         "wireguard": ["interfaces_wireguard"],
         "wireless": ["interfaces_wireless"],
         "wwan": ["interfaces_wwan"]
+    },
+    "system_option": {
+        "ip": ["system_ip"],
+        "ipv6": ["system_ipv6"]
     }
 }
