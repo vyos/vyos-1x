@@ -127,7 +127,7 @@ Depends:
   pciutils,
   pdns-recursor,
   pmacct (>= 1.6.0),
-  podman,
+  podman (>=4.9.5),
   pppoe,
   procps,
   python3,
