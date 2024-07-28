@@ -53,8 +53,8 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_syslog_basic(self):
-        host1 = '198.51.100.1'
-        host2 = '192.0.2.1'
+        host1 = '127.0.0.10'
+        host2 = '127.0.0.20'
 
         self.cli_set(base_path + ['host', host1, 'port', '999'])
         self.cli_set(base_path + ['host', host1, 'facility', 'all', 'level', 'all'])
@@ -68,7 +68,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         # *.* @198.51.100.1:999
         # kern.err @192.0.2.1:514
         config = [get_config_value('\*.\*'), get_config_value('kern.err'), get_config_value('\*.warning')]
-        expected = ['@198.51.100.1:999', '@192.0.2.1:514', '/dev/console']
+        expected = [f'@{host1}:999', f'@{host2}:514', '/dev/console']
 
         for i in range(0,3):
             self.assertIn(expected[i], config[i])
