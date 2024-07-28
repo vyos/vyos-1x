@@ -1,3 +1,3 @@
 <!-- include start from include/version/firewall-version.xml.i -->
-<syntaxVersion component='firewall' version='16'></syntaxVersion>
+<syntaxVersion component='firewall' version='17'></syntaxVersion>
 <!-- include end -->

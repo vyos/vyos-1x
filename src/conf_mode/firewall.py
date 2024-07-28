@@ -128,7 +128,49 @@ def get_config(config=None):
 
     return firewall
 
-def verify_rule(firewall, rule_conf, ipv6):
+def verify_jump_target(firewall, root_chain, jump_target, ipv6, recursive=False):
+    targets_seen = []
+    targets_pending = [jump_target]
+
+    while targets_pending:
+        target = targets_pending.pop()
+
+        if not ipv6:
+            if target not in dict_search_args(firewall, 'ipv4', 'name'):
+                raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
+            target_rules = dict_search_args(firewall, 'ipv4', 'name', target, 'rule')
+        else:
+            if target not in dict_search_args(firewall, 'ipv6', 'name'):
+                raise ConfigError(f'Invalid jump-target. Firewall ipv6 name {target} does not exist on the system')
+            target_rules = dict_search_args(firewall, 'ipv6', 'name', target, 'rule')
+
+        no_ipsec_in = root_chain in ('output', )
+
+        if target_rules:
+            for target_rule_conf in target_rules.values():
+                # Output hook types will not tolerate 'meta ipsec exists' matches even in jump targets:
+                if no_ipsec_in and (dict_search_args(target_rule_conf, 'ipsec', 'match_ipsec_in') is not None \
+                                    or dict_search_args(target_rule_conf, 'ipsec', 'match_none_in') is not None):
+                    if not ipv6:
+                        raise ConfigError(f'Invalid jump-target for {root_chain}. Firewall name {target} rules contain incompatible ipsec inbound matches')
+                    else:
+                        raise ConfigError(f'Invalid jump-target for {root_chain}. Firewall ipv6 name {target} rules contain incompatible ipsec inbound matches')
+                # Make sure we're not looping back on ourselves somewhere:
+                if recursive and 'jump_target' in target_rule_conf:
+                    child_target = target_rule_conf['jump_target']
+                    if child_target in targets_seen:
+                        if not ipv6:
+                            raise ConfigError(f'Loop detected in jump-targets, firewall name {target} refers to previously traversed name {child_target}')
+                        else:
+                            raise ConfigError(f'Loop detected in jump-targets, firewall ipv6 name {target} refers to previously traversed ipv6 name {child_target}')
+                    targets_pending.append(child_target)
+                    if len(targets_seen) == 7:
+                        path_txt = ' -> '.join(targets_seen)
+                        Warning(f'Deep nesting of jump targets has reached 8 levels deep, following the path {path_txt} -> {child_target}!')
+
+        targets_seen.append(target)
+
+def verify_rule(firewall, chain_name, rule_conf, ipv6):
     if 'action' not in rule_conf:
         raise ConfigError('Rule action must be defined')
 
@@ -139,12 +181,10 @@ def verify_rule(firewall, rule_conf, ipv6):
         if 'jump' not in rule_conf['action']:
             raise ConfigError('jump-target defined, but action jump needed and it is not defined')
         target = rule_conf['jump_target']
-        if not ipv6:
-            if target not in dict_search_args(firewall, 'ipv4', 'name'):
-                raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
+        if chain_name != 'name': # This is a bit clumsy, but consolidates a chunk of code. 
+            verify_jump_target(firewall, chain_name, target, ipv6, recursive=True)
         else:
-            if target not in dict_search_args(firewall, 'ipv6', 'name'):
-                raise ConfigError(f'Invalid jump-target. Firewall ipv6 name {target} does not exist on the system')
+            verify_jump_target(firewall, chain_name, target, ipv6, recursive=False)
 
     if rule_conf['action'] == 'offload':
         if 'offload_target' not in rule_conf:
@@ -185,8 +225,10 @@ def verify_rule(firewall, rule_conf, ipv6):
                 raise ConfigError('Limit rate integer cannot be less than 1')
 
     if 'ipsec' in rule_conf:
-        if {'match_ipsec', 'match_non_ipsec'} <= set(rule_conf['ipsec']):
-            raise ConfigError('Cannot specify both "match-ipsec" and "match-non-ipsec"')
+        if {'match_ipsec_in', 'match_none_in'} <= set(rule_conf['ipsec']):
+            raise ConfigError('Cannot specify both "match-ipsec" and "match-none"')
+        if {'match_ipsec_out', 'match_none_out'} <= set(rule_conf['ipsec']):
+            raise ConfigError('Cannot specify both "match-ipsec" and "match-none"')
 
     if 'recent' in rule_conf:
         if not {'count', 'time'} <= set(rule_conf['recent']):
@@ -349,13 +391,11 @@ def verify(firewall):
                             raise ConfigError('default-jump-target defined, but default-action jump needed and it is not defined')
                         if name_conf['default_jump_target'] == name_id:
                             raise ConfigError(f'Loop detected on default-jump-target.')
-                        ## Now need to check that default-jump-target exists (other firewall chain/name)
-                        if target not in dict_search_args(firewall['ipv4'], 'name'):
-                            raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
+                        verify_jump_target(firewall, name, target, False, recursive=True)
 
                     if 'rule' in name_conf:
                         for rule_id, rule_conf in name_conf['rule'].items():
-                            verify_rule(firewall, rule_conf, False)
+                            verify_rule(firewall, name, rule_conf, False)
 
     if 'ipv6' in firewall:
         for name in ['name','forward','input','output', 'prerouting']:
@@ -369,13 +409,11 @@ def verify(firewall):
                             raise ConfigError('default-jump-target defined, but default-action jump needed and it is not defined')
                         if name_conf['default_jump_target'] == name_id:
                             raise ConfigError(f'Loop detected on default-jump-target.')
-                        ## Now need to check that default-jump-target exists (other firewall chain/name)
-                        if target not in dict_search_args(firewall['ipv6'], 'name'):
-                            raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
+                        verify_jump_target(firewall, name, target, True, recursive=True)
 
                     if 'rule' in name_conf:
                         for rule_id, rule_conf in name_conf['rule'].items():
-                            verify_rule(firewall, rule_conf, True)
+                            verify_rule(firewall, name, rule_conf, True)
 
     #### ZONESSSS
     local_zone = False
