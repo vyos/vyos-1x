@@ -244,6 +244,9 @@
                   <format>text</format>
                   <description>Comma-seperated parameters for Shortel phone configuration</description>
                 </valueHelp>
+                <constraint>
+                  <validator name="shoretel-server"/>
+                </constraint>
               </properties>
             </leafNode>
           </children>

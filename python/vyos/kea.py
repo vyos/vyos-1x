@@ -99,6 +99,14 @@ def kea_parse_options(config):
             'space': 'ubnt'
         })
 
+    shoretel_server = dict_search_args(config, 'vendor_option', 'shoretel', 'shoretel_server')
+    if shoretel_server:
+        options.append({
+            'name': 'shoretel-server',
+            'data': shoretel_server,
+            'space': 'ShoreTel IP Phone'
+        })
+
     return options
 
 def kea_parse_subnet(subnet, config):
