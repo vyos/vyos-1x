@@ -18,11 +18,7 @@
 from vyos.configtree import ConfigTree
 
 def migrate(config: ConfigTree) -> None:
-    if not config.exists(['interfaces', 'openvpn']):
-        # Nothing to do
-        return
-
-    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'], path_must_exist=False)
     for i in ovpn_intfs:
         #Rename 'encryption ncp-ciphers' with 'encryption data-ciphers'
         ncp_cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers']
