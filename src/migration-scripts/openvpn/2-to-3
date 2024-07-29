@@ -20,12 +20,8 @@
 from vyos.configtree import ConfigTree
 
 def migrate(config: ConfigTree) -> None:
-    if not config.exists(['interfaces', 'openvpn']):
-        # Nothing to do
-        return
-
-    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
-    for	i in ovpn_intfs:
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'], path_must_exist=False)
+    for i in ovpn_intfs:
         mode = config.return_value(['interfaces', 'openvpn', i, 'mode'])
         if mode != 'server':
             # If it's a client or a site-to-site OpenVPN interface,

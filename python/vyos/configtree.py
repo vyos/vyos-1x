@@ -1,5 +1,5 @@
 # configtree -- a standalone VyOS config file manipulation library (Python bindings)
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2024 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -290,7 +290,7 @@ class ConfigTree(object):
         else:
             return True
 
-    def list_nodes(self, path):
+    def list_nodes(self, path, path_must_exist=True):
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
 
@@ -298,7 +298,10 @@ class ConfigTree(object):
         res = json.loads(res_json)
 
         if res is None:
-            raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
+            if path_must_exist:
+                raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
+            else:
+                return []
         else:
             return res
 
