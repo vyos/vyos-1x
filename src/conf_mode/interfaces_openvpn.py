@@ -322,8 +322,8 @@ def verify(openvpn):
             if v4addr in openvpn['local_address'] and 'subnet_mask' not in openvpn['local_address'][v4addr]:
                 raise ConfigError('Must specify IPv4 "subnet-mask" for local-address')
 
-        if dict_search('encryption.ncp_ciphers', openvpn):
-            raise ConfigError('NCP ciphers can only be used in client or server mode')
+        if dict_search('encryption.data_ciphers', openvpn):
+            raise ConfigError('Cipher negotiation can only be used in client or server mode')
 
     else:
         # checks for client-server or site-to-site bridged
@@ -520,7 +520,7 @@ def verify(openvpn):
 
         if dict_search('encryption.cipher', openvpn):
             raise ConfigError('"encryption cipher" option is deprecated for TLS mode. '
-                              'Use "encryption ncp-ciphers" instead')
+                              'Use "encryption data-ciphers" instead')
 
     if dict_search('encryption.cipher', openvpn) == 'none':
         print('Warning: "encryption none" was specified!')

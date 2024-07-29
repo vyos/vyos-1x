@@ -556,8 +556,8 @@ def get_openvpn_cipher(cipher):
         return openvpn_translate[cipher].upper()
     return cipher.upper()
 
-@register_filter('openvpn_ncp_ciphers')
-def get_openvpn_ncp_ciphers(ciphers):
+@register_filter('openvpn_data_ciphers')
+def get_openvpn_data_ciphers(ciphers):
     out = []
     for cipher in ciphers:
         if cipher in openvpn_translate:
