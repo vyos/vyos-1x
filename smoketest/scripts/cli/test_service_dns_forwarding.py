@@ -26,6 +26,7 @@ from vyos.utils.process import process_named_running
 
 PDNS_REC_RUN_DIR = '/run/pdns-recursor'
 CONFIG_FILE = f'{PDNS_REC_RUN_DIR}/recursor.conf'
+PDNS_REC_LUA_CONF_FILE = f'{PDNS_REC_RUN_DIR}/recursor.conf.lua'
 FORWARD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.forward-zones.conf'
 HOSTSD_FILE = f'{PDNS_REC_RUN_DIR}/recursor.vyos-hostsd.conf.lua'
 PROCESS_NAME= 'pdns_recursor'
@@ -299,6 +300,44 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         zone_config = read_file(f'{PDNS_REC_RUN_DIR}/zone.{test_zone}.conf')
         self.assertRegex(zone_config, fr'test\s+\d+\s+NS\s+ns1\.{test_zone}\.')
         self.assertRegex(zone_config, fr'test\s+\d+\s+NS\s+ns2\.{test_zone}\.')
+
+    def test_zone_cache_url(self):
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'source', 'url', 'https://www.internic.net/domain/root.zone'])
+        self.cli_commit()
+
+        lua_config = read_file(PDNS_REC_LUA_CONF_FILE)
+        self.assertIn('zoneToCache("smoketest", "url", "https://www.internic.net/domain/root.zone", { dnssec = "validate", zonemd = "validate", maxReceivedMBytes = 0, retryOnErrorPeriod = 60, refreshPeriod = 86400, timeout = 20 })', lua_config)
+
+    def test_zone_cache_axfr(self):
+
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'source', 'axfr', '127.0.0.1'])
+        self.cli_commit()
+
+        lua_config = read_file(PDNS_REC_LUA_CONF_FILE)
+        self.assertIn('zoneToCache("smoketest", "axfr", "127.0.0.1", { dnssec = "validate", zonemd = "validate", maxReceivedMBytes = 0, retryOnErrorPeriod = 60, refreshPeriod = 86400, timeout = 20 })', lua_config)
+
+    def test_zone_cache_options(self):
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'source', 'url', 'https://www.internic.net/domain/root.zone'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'options', 'dnssec', 'ignore'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'options', 'max-zone-size', '100'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'options', 'refresh', 'interval', '10'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'options', 'retry-interval', '90'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'options', 'timeout', '50'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'options', 'zonemd', 'require'])
+        self.cli_commit()
+
+        lua_config = read_file(PDNS_REC_LUA_CONF_FILE)
+        self.assertIn('zoneToCache("smoketest", "url", "https://www.internic.net/domain/root.zone", { dnssec = "ignore", maxReceivedMBytes = 100, refreshPeriod = 10, retryOnErrorPeriod = 90, timeout = 50, zonemd = "require" })', lua_config)
+
+    def test_zone_cache_wrong_source(self):
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'source', 'url', 'https://www.internic.net/domain/root.zone'])
+        self.cli_set(base_path + ['zone-cache', 'smoketest', 'source', 'axfr', '127.0.0.1'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        # correct config to correct finish the test
+        self.cli_delete(base_path + ['zone-cache', 'smoketest', 'source', 'axfr'])
+        self.cli_commit()
 
 
 if __name__ == '__main__':

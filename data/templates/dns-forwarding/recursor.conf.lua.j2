@@ -6,3 +6,31 @@ dofile("/usr/share/pdns-recursor/lua-config/rootkeys.lua")
 
 -- Load lua from vyos-hostsd --
 dofile("{{ config_dir }}/recursor.vyos-hostsd.conf.lua")
+
+-- ZoneToCache --
+{% if zone_cache is vyos_defined %}
+{%     set option_mapping = {
+    'refresh': 'refreshPeriod',
+    'retry_interval': 'retryOnErrorPeriod',
+    'max_zone_size': 'maxReceivedMBytes'
+} %}
+{%     for name, conf in zone_cache.items() %}
+{%         set source = conf.source.items() | first %}
+{%         set settings = [] %}
+{%         for key, val in conf.options.items() %}
+{%             set mapped_key = option_mapping.get(key, key) %}
+{%             if key == 'refresh' %}
+{%                 set val = val['interval'] %}
+{%             endif %}
+{%             if key in ['dnssec', 'zonemd'] %}
+{%                 set _ = settings.append(mapped_key ~ ' = "' ~ val ~ '"') %}
+{%             else %}
+{%                 set _ = settings.append(mapped_key ~ ' = ' ~ val) %}
+{%             endif %}
+{%         endfor %}
+
+zoneToCache("{{ name }}", "{{ source[0] }}", "{{ source[1] }}", { {{ settings | join(', ') }} })
+
+{%     endfor %}
+
+{% endif %}
