@@ -27,13 +27,14 @@
 # (nftables rejects 'meta ipsec' in output hooks), they are not considered here.
 #
 
-import sys
-
 from vyos.configtree import ConfigTree
 
 firewall_base = ['firewall']
 
 def migrate_chain(config: ConfigTree, path: list[str]) -> None:
+    if not config.exists(path + ['rule']):
+        return 
+
     for rule_num in config.list_nodes(path + ['rule']):
         tmp_path = path + ['rule', rule_num, 'ipsec']
         if config.exists(tmp_path + ['match-ipsec']):
@@ -56,5 +57,4 @@ def migrate(config: ConfigTree) -> None:
 
         for base_hook in [['forward', 'filter'], ['input', 'filter'], ['prerouting', 'raw']]:
             tmp_path = firewall_base + [family] + base_hook
-            if config.exists(tmp_path):
-                migrate_chain(config, tmp_path)
+            migrate_chain(config, tmp_path)
