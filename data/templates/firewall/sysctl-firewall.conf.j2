@@ -17,7 +17,7 @@ net.ipv4.tcp_rfc1337 = {{ 1 if global_options.twa_hazards_protection == 'enable'
 net.bridge.bridge-nf-call-iptables = {{ 1 if global_options.apply_for_bridge.ipv4 is vyos_defined else 0 }}
 net.bridge.bridge-nf-call-ip6tables = {{ 1 if global_options.apply_for_bridge.ipv6 is vyos_defined else 0 }}
 {% else %}
-net.bridge.bridge-nf-call-iptables =0
+net.bridge.bridge-nf-call-iptables = 0
 net.bridge.bridge-nf-call-ip6tables = 0
 {% endif %}
 
