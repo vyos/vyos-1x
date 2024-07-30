@@ -25,6 +25,8 @@ conn_mark = '555'
 conn_mark_set = '111'
 table_mark_offset = 0x7fffffff
 table_id = '101'
+vrf = 'PBRVRF'
+vrf_table_id = '102'
 interface = 'eth0'
 interface_wc = 'ppp*'
 interface_ip = '172.16.10.1/24'
@@ -39,11 +41,14 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
         cls.cli_set(cls, ['protocols', 'static', 'table', table_id, 'route', '0.0.0.0/0', 'interface', interface])
+        
+        cls.cli_set(cls, ['vrf', 'name', vrf, 'table', vrf_table_id])
 
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
         cls.cli_delete(cls, ['protocols', 'static', 'table', table_id])
+        cls.cli_delete(cls, ['vrf', 'name', vrf])
 
         super(TestPolicyRoute, cls).tearDownClass()
 
@@ -175,6 +180,50 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         ip_rule_search = [
             ['fwmark ' + hex(table_mark_offset - int(table_id)), 'lookup ' + table_id]
+        ]
+
+        self.verify_rules(ip_rule_search)
+
+
+    def test_pbr_vrf(self):
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'port', '8888'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'tcp', 'flags', 'syn'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'set', 'vrf', vrf])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'destination', 'port', '8888'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'set', 'vrf', vrf])
+
+        self.cli_set(['policy', 'route', 'smoketest', 'interface', interface])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'interface', interface])
+
+        self.cli_commit()
+
+        mark_hex = "{0:#010x}".format(table_mark_offset - int(vrf_table_id))
+
+        # IPv4
+
+        nftables_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR_UD_smoketest'],
+            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'meta mark set ' + mark_hex]
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_mangle')
+
+        # IPv6
+
+        nftables6_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR6_UD_smoketest'],
+            ['meta l4proto { tcp, udp }', 'th dport 8888', 'meta mark set ' + mark_hex]
+        ]
+
+        self.verify_nftables(nftables6_search, 'ip6 vyos_mangle')
+
+        # IP rule fwmark -> table
+
+        ip_rule_search = [
+            ['fwmark ' + hex(table_mark_offset - int(vrf_table_id)), 'lookup ' + vrf]
         ]
 
         self.verify_rules(ip_rule_search)

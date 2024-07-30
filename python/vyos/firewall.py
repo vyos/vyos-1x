@@ -30,6 +30,9 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
 from vyos.utils.process import run
+from vyos.utils.network import get_vrf_table_id
+from vyos.defaults import rt_global_table
+from vyos.defaults import rt_global_vrf
 
 # Conntrack
 def conntrack_required(conf):
@@ -473,11 +476,20 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if 'mark' in rule_conf['set']:
             mark = rule_conf['set']['mark']
             output.append(f'meta mark set {mark}')
+        if 'vrf' in rule_conf['set']:
+            set_table = True
+            vrf_name = rule_conf['set']['vrf']
+            if vrf_name == 'default':
+                table = rt_global_vrf
+            else:
+                # NOTE: VRF->table ID lookup depends on the VRF iface already existing. 
+                table = get_vrf_table_id(vrf_name)
         if 'table' in rule_conf['set']:
             set_table = True
             table = rule_conf['set']['table']
             if table == 'main':
-                table = '254'
+                table = rt_global_table
+        if set_table:
             mark = 0x7FFFFFFF - int(table)
             output.append(f'meta mark set {mark}')
         if 'tcp_mss' in rule_conf['set']:
