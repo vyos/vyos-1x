@@ -182,6 +182,12 @@ def initialization(socket):
     sudo_user_string = socket.recv().decode("utf-8", "ignore")
     resp = "sudo_user"
     socket.send(resp.encode())
+    temp_config_dir_string = socket.recv().decode("utf-8", "ignore")
+    resp = "temp_config_dir"
+    socket.send(resp.encode())
+    changes_only_dir_string = socket.recv().decode("utf-8", "ignore")
+    resp = "changes_only_dir"
+    socket.send(resp.encode())
 
     logger.debug(f"config session pid is {pid_string}")
     logger.debug(f"config session sudo_user is {sudo_user_string}")
@@ -198,6 +204,10 @@ def initialization(socket):
         session_mode = 'a'
 
     os.environ['SUDO_USER'] = sudo_user_string
+    if temp_config_dir_string:
+        os.environ['VYATTA_TEMP_CONFIG_DIR'] = temp_config_dir_string
+    if changes_only_dir_string:
+        os.environ['VYATTA_CHANGES_ONLY_DIR'] = changes_only_dir_string
 
     try:
         configsource = ConfigSourceString(running_config_text=active_string,
