@@ -1,11 +1,11 @@
 name: Repo-sync circinus
 
 on:
-    pull_request_target:
-      types:
-        - closed
-      branches:
-        - circinus
+    # pull_request_target:
+    #   types:
+    #     - closed
+    #   branches:
+    #     - circinus
     workflow_dispatch:
 
 jobs:
