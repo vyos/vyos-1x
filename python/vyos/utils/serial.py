@@ -90,17 +90,18 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
 
     if connected:
         if not quiet:
-            print('There are user sessions connected via serial console that will be terminated\n' \
-                  'when serial console settings are changed.\n') # extra newline is deliberate. 
+            Warning('There are user sessions connected via serial console that '\
+                    'will be terminated when serial console settings are changed!')
             if not prompt_user:
                 # This flag is used by conf_mode/system_console.py to reset things, if there's
-                # a problem, the user should issue a manual restart for serial-getty. 
-                print('Please ensure all settings are committed and saved before issuing a\n' \
-                      '"restart serial console" command to apply new configuration.')
+                # a problem, the user should issue a manual restart for serial-getty.
+                Warning('Please ensure all settings are committed and saved before issuing a ' \
+                      '"restart serial console" command to apply new configuration!')
         if not prompt_user:
             return False
-        if not ask_yes_no('Any uncommitted changes from these sessions will be lost and in-progress actions\n' \
-                          'may be left in an inconsistent state. Continue?'):
+        if not ask_yes_no('Any uncommitted changes from these sessions will be lost\n' \
+                          'and in-progress actions may be left in an inconsistent state.\n'\
+                          '\nContinue?'):
             return False
 
     for unit in units:
