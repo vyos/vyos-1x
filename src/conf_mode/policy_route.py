@@ -25,7 +25,7 @@ from vyos.template import render
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.utils.network import get_vrf_table_id
+from vyos.utils.network import get_vrf_tableid
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
 from vyos import ConfigError
@@ -165,14 +165,14 @@ def apply_table_marks(policy):
                             if set_vrf == 'default':
                                 vrf_table_id = rt_global_vrf
                             else:
-                                vrf_table_id = get_vrf_table_id(set_vrf)
+                                vrf_table_id = get_vrf_tableid(set_vrf)
                         elif set_table:
                             if set_table == 'main':
                                 vrf_table_id = rt_global_table
                             else:
                                 vrf_table_id = set_table
                         if vrf_table_id is not None:
-                            vrf_table_id = int(vrf_table_id) 
+                            vrf_table_id = int(vrf_table_id)
                             if vrf_table_id in tables:
                                 continue
                             tables.append(vrf_table_id)

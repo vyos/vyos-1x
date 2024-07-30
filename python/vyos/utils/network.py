@@ -74,9 +74,6 @@ def get_vrf_members(vrf: str) -> list:
         pass
     return interfaces
 
-def get_vrf_table_id(vrf: str):
-    return get_interface_config(vrf)['linkinfo']['info_data']['table']
-
 def get_interface_vrf(interface):
     """ Returns VRF of given interface """
     from vyos.utils.dict import dict_search
