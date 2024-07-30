@@ -50,3 +50,13 @@ commit_lock = os.path.join(directories['vyos_configdir'], '.lock')
 component_version_json = os.path.join(directories['data'], 'component-versions.json')
 
 config_default = os.path.join(directories['data'], 'config.boot.default')
+
+rt_symbolic_names = {
+  # Standard routing tables for Linux & reserved IDs for VyOS
+  'default': 253, # Confusingly, a final fallthru, not the default. 
+  'main': 254,    # The actual global table used by iproute2 unless told otherwise. 
+  'local': 255,   # Special kernel loopback table.
+}
+
+rt_global_vrf = rt_symbolic_names['main']
+rt_global_table = rt_symbolic_names['main']

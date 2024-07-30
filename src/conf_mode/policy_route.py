@@ -25,6 +25,9 @@ from vyos.template import render
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
+from vyos.utils.network import get_vrf_tableid
+from vyos.defaults import rt_global_table
+from vyos.defaults import rt_global_vrf
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -82,6 +85,9 @@ def verify_rule(policy, name, rule_conf, ipv6, rule_id):
             tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
             if not tcp_flags or 'syn' not in tcp_flags:
                 raise ConfigError(f'{name} rule {rule_id}: TCP SYN flag must be set to modify TCP-MSS')
+
+        if 'vrf' in rule_conf['set'] and 'table' in rule_conf['set']:
+            raise ConfigError(f'{name} rule {rule_id}: Cannot set both forwarding route table and VRF')
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
@@ -152,15 +158,26 @@ def apply_table_marks(policy):
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
+                        vrf_table_id = None
                         set_table = dict_search_args(rule_conf, 'set', 'table')
-                        if set_table:
+                        set_vrf = dict_search_args(rule_conf, 'set', 'vrf')
+                        if set_vrf:
+                            if set_vrf == 'default':
+                                vrf_table_id = rt_global_vrf
+                            else:
+                                vrf_table_id = get_vrf_tableid(set_vrf)
+                        elif set_table:
                             if set_table == 'main':
-                                set_table = '254'
-                            if set_table in tables:
+                                vrf_table_id = rt_global_table
+                            else:
+                                vrf_table_id = set_table
+                        if vrf_table_id is not None:
+                            vrf_table_id = int(vrf_table_id)
+                            if vrf_table_id in tables:
                                 continue
-                            tables.append(set_table)
-                            table_mark = mark_offset - int(set_table)
-                            cmd(f'{cmd_str} rule add pref {set_table} fwmark {table_mark} table {set_table}')
+                            tables.append(vrf_table_id)
+                            table_mark = mark_offset - vrf_table_id
+                            cmd(f'{cmd_str} rule add pref {vrf_table_id} fwmark {table_mark} table {vrf_table_id}')
 
 def cleanup_table_marks():
     for cmd_str in ['ip', 'ip -6']:
