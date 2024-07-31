@@ -1,13 +1,4 @@
 !
-{% for route_gr in old_mroute %}
-{%     for nh in old_mroute[route_gr] %}
-{%         if old_mroute[route_gr][nh] %}
-no ip mroute {{ route_gr }} {{ nh }} {{ old_mroute[route_gr][nh] }}
-{%         else %}
-no ip mroute {{ route_gr }} {{ nh }}
-{%         endif %}
-{%     endfor %}
-{% endfor %}
 {% for route_gr in mroute %}
 {%     for nh in mroute[route_gr] %}
 {%         if mroute[route_gr][nh] %}
