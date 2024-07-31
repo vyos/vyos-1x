@@ -36,6 +36,7 @@
               </leafNode>
               #include <include/generic-description.xml.i>
               #include <include/listen-address.xml.i>
+              #include <include/haproxy/logging.xml.i>
               #include <include/haproxy/mode.xml.i>
               #include <include/port-number.xml.i>
               #include <include/haproxy/rule-frontend.xml.i>
@@ -91,6 +92,7 @@
                 <defaultValue>round-robin</defaultValue>
               </leafNode>
               #include <include/generic-description.xml.i>
+              #include <include/haproxy/logging.xml.i>
               #include <include/haproxy/mode.xml.i>
               #include <include/haproxy/http-response-headers.xml.i>
               <node name="http-check">
@@ -254,6 +256,7 @@
               <help>Global perfomance parameters and limits</help>
             </properties>
             <children>
+              #include <include/haproxy/logging.xml.i>
               <leafNode name="max-connections">
                 <properties>
                   <help>Maximum allowed connections</help>
