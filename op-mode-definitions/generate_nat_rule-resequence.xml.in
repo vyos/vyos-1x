@@ -2,9 +2,9 @@
 <interfaceDefinition>
   <node name="generate">
     <children>
-      <node name="firewall">
+      <node name="nat">
         <properties>
-          <help>Firewall</help>
+          <help>Network Address Translation (NAT)</help>
         </properties>
         <children>
           #include <include/rule-resequence.xml.i>
