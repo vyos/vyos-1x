@@ -1,7 +1,6 @@
 <!-- include start from firewall/common-rule-bridge.xml.i -->
 #include <include/generic-description.xml.i>
 #include <include/generic-disable-node.xml.i>
-#include <include/firewall/action-l2.xml.i>
 #include <include/firewall/dscp.xml.i>
 #include <include/firewall/firewall-mark.xml.i>
 #include <include/firewall/fragment.xml.i>

@@ -708,7 +708,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'group', 'ipv6-address-group', 'AGV6', 'address', '2001:db1::1'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
-        self.cli_set(['firewall', 'global-options', 'apply-for-bridge', 'ipv4'])
+        self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'ipv4'])
 
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-log'])
@@ -731,9 +731,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'source', 'address', '192.0.2.2'])
         self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'state', 'new'])
 
-        self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'action', 'notrack'])
         self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'destination', 'group', 'ipv6-address-group', 'AGV6'])
-
 
         self.cli_commit()
 
@@ -755,7 +754,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state new', 'ip saddr 192.0.2.2', f'iifname "{interface_in}"', 'accept'],
             ['chain VYOS_PREROUTING_filter'],
             ['type filter hook prerouting priority filter; policy accept;'],
-            ['ip6 daddr @A6_AGV6', 'drop']
+            ['ip6 daddr @A6_AGV6', 'notrack']
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')

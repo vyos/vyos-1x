@@ -14,7 +14,7 @@
         #include <include/generic-description.xml.i>
         <tagNode name="rule">
           <properties>
-            <help>Bridge Firewall prerouting filter rule number</help>
+            <help>Bridge firewall prerouting filter rule number</help>
             <valueHelp>
               <format>u32:1-999999</format>
               <description>Number for this firewall rule</description>
@@ -26,7 +26,7 @@
           </properties>
           <children>
             #include <include/firewall/common-rule-bridge.xml.i>
-            #include <include/firewall/set-packet-modifications.xml.i>
+            #include <include/firewall/action-and-notrack.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
           </children>
         </tagNode>

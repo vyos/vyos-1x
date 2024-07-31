@@ -44,7 +44,7 @@
       </properties>
       <defaultValue>disable</defaultValue>
     </leafNode>
-    <node name="apply-for-bridge">
+    <node name="apply-to-bridged-traffic">
       <properties>
         <help>Apply configured firewall rules to traffic switched by bridges</help>
       </properties>
