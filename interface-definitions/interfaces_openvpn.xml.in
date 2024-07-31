@@ -445,6 +445,62 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <node name="server-bridge">
+                <properties>
+                  <help>Used with TAP device (layer 2)</help>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  <leafNode name="start">
+                    <properties>
+                      <help>First IP address in the pool</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="stop">
+                    <properties>
+                      <help>Last IP address in the pool</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="subnet-mask">
+                    <properties>
+                      <help>Subnet mask pushed to dynamic clients.</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 subnet mask</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="gateway">
+                    <properties>
+                      <help>Gateway IP address</help>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="client-ip-pool">
                 <properties>
                   <help>Pool of client IPv4 addresses</help>
