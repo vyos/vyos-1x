@@ -46,7 +46,12 @@ def get_config(config: Config | None = None) -> None:
     base = ["nat64"]
     nat64 = config.get_config_dict(base, key_mangling=("-", "_"), get_first_key=True)
 
-    base_src = base + ["source", "rule"]
+    return nat64
+
+
+def verify(nat64) -> None:
+    check_kmod(["jool"])
+    base_src = ["nat64", "source", "rule"]
 
     # Load in existing instances so we can destroy any unknown
     lines = cmd("jool instance display --csv").splitlines()
@@ -76,12 +81,8 @@ def get_config(config: Config | None = None) -> None:
         ):
             rules[num]["recreate"] = True
 
-    return nat64
-
-
-def verify(nat64) -> None:
     if not nat64:
-        # no need to verify the CLI as nat64 is going to be deactivated
+        # nothing left to do
         return
 
     if dict_search("source.rule", nat64):
@@ -128,6 +129,9 @@ def verify(nat64) -> None:
 
 
 def generate(nat64) -> None:
+    if not nat64:
+        return
+
     os.makedirs(JOOL_CONFIG_DIR, exist_ok=True)
 
     if dict_search("source.rule", nat64):
@@ -184,6 +188,7 @@ def generate(nat64) -> None:
 
 def apply(nat64) -> None:
     if not nat64:
+        unload_kmod(['jool'])
         return
 
     if dict_search("source.rule", nat64):
@@ -211,7 +216,6 @@ def apply(nat64) -> None:
 
 if __name__ == "__main__":
     try:
-        check_kmod(["jool"])
         c = get_config()
         verify(c)
         generate(c)
