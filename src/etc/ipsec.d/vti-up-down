@@ -27,40 +27,41 @@ from syslog import LOG_INFO
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import get_interface_dict
-from vyos.ifconfig import VTIIf
+from vyos.utils.commit import wait_for_commit_lock
 from vyos.utils.process import call
-from vyos.utils.network import get_interface_config
+from vyos.utils.vti_updown_db import open_vti_updown_db_for_update
+
+def supply_interface_dict(interface):
+    # Lazy-load the running config on first invocation
+    try:
+        conf = supply_interface_dict.cached_config
+    except AttributeError:
+        conf = ConfigTreeQuery()
+        supply_interface_dict.cached_config = conf
+
+    _, vti = get_interface_dict(conf.config, ['interfaces', 'vti'], interface)
+    return vti
 
 if __name__ == '__main__':
     verb = os.getenv('PLUTO_VERB')
     connection = os.getenv('PLUTO_CONNECTION')
     interface = sys.argv[1]
 
+    if verb.endswith('-v6'):
+        protocol = 'v6'
+    else:
+        protocol = 'v4'
+
     openlog(ident=f'vti-up-down', logoption=LOG_PID, facility=LOG_INFO)
     syslog(f'Interface {interface} {verb} {connection}')
 
-    if verb in ['up-client', 'up-host']:
-        call('sudo ip route delete default table 220')
+    wait_for_commit_lock()
 
-    vti_link = get_interface_config(interface)
-
-    if not vti_link:
-        syslog(f'Interface {interface} not found')
-        sys.exit(0)
-
-    vti_link_up = (vti_link['operstate'] != 'DOWN' if 'operstate' in vti_link else False)
-
-    if verb in ['up-client', 'up-host']:
-        if not vti_link_up:
-            conf = ConfigTreeQuery()
-            _, vti = get_interface_dict(conf.config, ['interfaces', 'vti'], interface)
-            if 'disable' not in vti:
-                tmp = VTIIf(interface)
-                tmp.update(vti)
-                call(f'sudo ip link set {interface} up')
-            else:
-                call(f'sudo ip link set {interface} down')
-                syslog(f'Interface {interface} is admin down ...')
-    elif verb in ['down-client', 'down-host']:
-        if vti_link_up:
-            call(f'sudo ip link set {interface} down')
+    if verb in ['up-client', 'up-client-v6', 'up-host', 'up-host-v6']:
+        with open_vti_updown_db_for_update() as db:
+            db.add(interface, connection, protocol)
+            db.commit(supply_interface_dict)
+    elif verb in ['down-client', 'down-client-v6', 'down-host', 'down-host-v6']:
+        with open_vti_updown_db_for_update() as db:
+            db.remove(interface, connection, protocol)
+            db.commit(supply_interface_dict)
