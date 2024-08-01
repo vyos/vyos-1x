@@ -1,3 +1,4 @@
+{% set zabbix_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
 [Unit]
 After=
 After=vyos-router.service
@@ -5,9 +6,11 @@ ConditionPathExists=
 ConditionPathExists=/run/zabbix/zabbix-agent2.conf
 
 [Service]
+User=
+User=root
 EnvironmentFile=
 ExecStart=
-ExecStart=/usr/sbin/zabbix_agent2 --config /run/zabbix/zabbix-agent2.conf --foreground
+ExecStart={{ zabbix_command }}/usr/sbin/zabbix_agent2 --config /run/zabbix/zabbix-agent2.conf --foreground
 WorkingDirectory=
 WorkingDirectory=/run/zabbix
 Restart=always
