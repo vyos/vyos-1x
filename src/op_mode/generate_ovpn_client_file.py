@@ -51,12 +51,12 @@ verb 3
 } %}
 
 {% if encryption is defined and encryption is not none %}
-{%     if encryption.ncp_ciphers is defined and encryption.ncp_ciphers is not none %}
-cipher {% for algo in encryption.ncp_ciphers %}
+{%     if encryption.data_ciphers is defined and encryption.data_ciphers is not none %}
+cipher {% for algo in encryption.data_ciphers %}
 {{ encryption_map[algo] if algo in encryption_map.keys() else algo }}{% if not loop.last %}:{% endif %}
 {%      endfor %}
 
-data-ciphers {% for algo in encryption.ncp_ciphers %}
+data-ciphers {% for algo in encryption.data_ciphers %}
 {{ encryption_map[algo] if algo in encryption_map.keys() else algo }}{% if not loop.last %}:{% endif %}
 {%      endfor %}
 {%     endif %}
