@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ports">
+        <children>
+            <properties>
+              <help>show opened ports on a remote host (scan popular ports)</help>
+			  <completionHelp>
+              <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/scan_ports_popular.py  ${@:2}</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ports">
+        <children>
+          <node name="local">
+            <properties>
+              <help>show opened ports on a local host</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/scan_localhost.py</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
