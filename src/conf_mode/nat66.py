@@ -112,6 +112,8 @@ def apply(nat):
     if not nat:
         return None
 
+    check_kmod(k_mod)
+
     cmd(f'nft --file {nftables_nat66_config}')
     call_dependents()
 
@@ -119,7 +121,6 @@ def apply(nat):
 
 if __name__ == '__main__':
     try:
-        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
