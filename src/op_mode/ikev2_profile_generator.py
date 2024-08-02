@@ -105,10 +105,39 @@ vyos2windows_integrity = {
 }
 
 # IOS 14.2 and later do no support dh-group 1,2 and 5. Supported DH groups would
-# be: 14, 15, 16, 17, 18, 19, 20, 21, 31
-ios_supported_dh_groups = ['14', '15', '16', '17', '18', '19', '20', '21', '31']
-# Windows 10 only allows a limited set of DH groups
-windows_supported_dh_groups = ['1', '2', '14', '24']
+# be: 14, 15, 16, 17, 18, 19, 20, 21, 31, 32
+vyos2apple_dh_group = {
+    '14' : '14',
+    '15' : '15',
+    '16' : '16',
+    '17' : '17',
+    '18' : '18',
+    '19' : '19',
+    '20' : '20',
+    '21' : '21',
+    '31' : '31',
+    '32' : '32'
+}
+
+# Newer versions of Windows support groups 19 and 20, albeit under a different naming convention
+vyos2windows_dh_group = {
+    '1'  : 'Group1',
+    '2'  : 'Group2',
+    '14' : 'Group14',
+    '19' : 'ECP256',
+    '20' : 'ECP384',
+    '24' : 'Group24'
+}
+
+# For PFS, Windows also has its own inconsistent naming scheme for each group
+vyos2windows_pfs_group = {
+    '1'  : 'PFS1',
+    '2'  : 'PFS2',
+    '14' : 'PFS2048',
+    '19' : 'ECP256',
+    '20' : 'ECP384',
+    '24' : 'PFS24'
+}
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--os', const='all', nargs='?', choices=['ios', 'windows'], help='Operating system used for config generation', required=True)
@@ -181,7 +210,7 @@ if args.os == 'ios':
     # https://stackoverflow.com/a/9427216
     data['ca_certificates'] = [dict(t) for t in {tuple(d.items()) for d in data['ca_certificates']}]
 
-esp_proposals = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group'], 'proposal'],
+esp_group = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group']],
                                      key_mangling=('-', '_'), get_first_key=True)
 ike_proposal = conf.get_config_dict(ipsec_base + ['ike-group', data['ike_group'], 'proposal'],
                                     key_mangling=('-', '_'), get_first_key=True)
@@ -192,7 +221,29 @@ ike_proposal = conf.get_config_dict(ipsec_base + ['ike-group', data['ike_group']
 
 vyos2client_cipher = vyos2apple_cipher if args.os == 'ios' else vyos2windows_cipher;
 vyos2client_integrity = vyos2apple_integrity if args.os == 'ios' else vyos2windows_integrity;
-supported_dh_groups = ios_supported_dh_groups if args.os == 'ios' else windows_supported_dh_groups;
+vyos2client_dh_group = vyos2apple_dh_group if args.os == 'ios' else vyos2windows_dh_group
+
+def transform_pfs(pfs, ike_dh_group):
+    pfs_enabled = (pfs != 'disable')
+    if pfs == 'enable':
+        pfs_dh_group = ike_dh_group
+    elif pfs.startswith('dh-group'):
+        pfs_dh_group = pfs.removeprefix('dh-group')
+
+    if args.os == 'ios':
+        if pfs_enabled:
+            if pfs_dh_group not in set(vyos2apple_dh_group):
+                exit(f'The PFS group configured for "{args.connection}" is not supported by the client!')
+            return pfs_dh_group
+        else:
+            return None
+    else:
+        if pfs_enabled:
+            if pfs_dh_group not in set(vyos2windows_pfs_group):
+                exit(f'The PFS group configured for "{args.connection}" is not supported by the client!')
+            return vyos2windows_pfs_group[ pfs_dh_group ]
+        else:
+            return 'None'
 
 # Create a dictionary containing client conform IKE settings
 ike = {}
@@ -201,24 +252,28 @@ for _, proposal in ike_proposal.items():
     if {'dh_group', 'encryption', 'hash'} <= set(proposal):
         if (proposal['encryption'] in set(vyos2client_cipher) and
             proposal['hash'] in set(vyos2client_integrity) and
-            proposal['dh_group'] in set(supported_dh_groups)):
+            proposal['dh_group'] in set(vyos2client_dh_group)):
 
             # We 're-code' from the VyOS IPsec proposals to the Apple naming scheme
             proposal['encryption'] = vyos2client_cipher[ proposal['encryption'] ]
             proposal['hash'] = vyos2client_integrity[ proposal['hash'] ]
+            # DH group will need to be transformed later after we calculate PFS group
 
             ike.update( { str(count) : proposal } )
             count += 1
 
-# Create a dictionary containing Apple conform ESP settings
+# Create a dictionary containing client conform ESP settings
 esp = {}
 count = 1
-for _, proposal in esp_proposals.items():
+for _, proposal in esp_group['proposal'].items():
     if {'encryption', 'hash'} <= set(proposal):
         if proposal['encryption'] in set(vyos2client_cipher) and proposal['hash'] in set(vyos2client_integrity):
             # We 're-code' from the VyOS IPsec proposals to the Apple naming scheme
             proposal['encryption'] = vyos2client_cipher[ proposal['encryption'] ]
             proposal['hash'] = vyos2client_integrity[ proposal['hash'] ]
+            # Copy PFS setting from the group, if present (we will need to
+            # transform this later once the IKE group is selected)
+            proposal['pfs'] = esp_group.get('pfs', 'enable')
 
             esp.update( { str(count) : proposal } )
             count += 1
@@ -230,8 +285,10 @@ try:
             tmp += f'({number}) Encryption {options["encryption"]}, Integrity {options["hash"]}, DH group {options["dh_group"]}\n'
         tmp += '\nSelect one of the above IKE groups: '
         data['ike_encryption'] = ike[ ask_input(tmp, valid_responses=list(ike)) ]
-    else:
+    elif len(ike) == 1:
         data['ike_encryption'] = ike['1']
+    else:
+        exit(f'None of the configured IKE proposals for "{args.connection}" are supported by the client!')
 
     if len(esp) > 1:
         tmp = '\n'
@@ -239,11 +296,17 @@ try:
             tmp += f'({number}) Encryption {options["encryption"]}, Integrity {options["hash"]}\n'
         tmp += '\nSelect one of the above ESP groups: '
         data['esp_encryption'] = esp[ ask_input(tmp, valid_responses=list(esp)) ]
-    else:
+    elif len(esp) == 1:
         data['esp_encryption'] = esp['1']
+    else:
+        exit(f'None of the configured ESP  proposals for "{args.connection}" are supported by the client!')
 
 except KeyboardInterrupt:
     exit("Interrupted")
+
+# Transform the DH and PFS groups now that all selections are known
+data['esp_encryption']['pfs'] = transform_pfs(data['esp_encryption']['pfs'], data['ike_encryption']['dh_group'])
+data['ike_encryption']['dh_group'] = vyos2client_dh_group[ data['ike_encryption']['dh_group'] ]
 
 print('\n\n==== <snip> ====')
 if args.os == 'ios':
