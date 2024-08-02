@@ -445,7 +445,7 @@
                   </leafNode>
                 </children>
               </tagNode>
-              <node name="server-bridge">
+              <node name="bridge">
                 <properties>
                   <help>Used with TAP device (layer 2)</help>
                 </properties>

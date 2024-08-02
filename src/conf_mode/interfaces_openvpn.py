@@ -378,21 +378,21 @@ def verify(openvpn):
                 if (client_v.get('ip') and len(client_v['ip']) > 1) or (client_v.get('ipv6_ip') and len(client_v['ipv6_ip']) > 1):
                     raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
 
-        if dict_search('server.server_bridge', openvpn):
+        if dict_search('server.bridge', openvpn):
             # check if server-bridge is a tap interfaces
-            if not openvpn['device_type'] == 'tap' and dict_search('server.server_bridge', openvpn):
-               raise ConfigError('Must specify "device-type tap" with server-bridge mode')
-            elif not (dict_search('server.server_bridge.start', openvpn) and dict_search('server.server_bridge.stop', openvpn)):
-                raise ConfigError('Server server-bridge requires both start and stop addresses')
+            if not openvpn['device_type'] == 'tap' and dict_search('server.bridge', openvpn):
+               raise ConfigError('Must specify "device-type tap" with server bridge mode')
+            elif not (dict_search('server.bridge.start', openvpn) and dict_search('server.bridge.stop', openvpn)):
+                raise ConfigError('Server server bridge requires both start and stop addresses')
             else:
-                v4PoolStart = IPv4Address(dict_search('server.server_bridge.start', openvpn))
-                v4PoolStop = IPv4Address(dict_search('server.server_bridge.stop', openvpn))
+                v4PoolStart = IPv4Address(dict_search('server.bridge.start', openvpn))
+                v4PoolStop = IPv4Address(dict_search('server.bridge.stop', openvpn))
                 if v4PoolStart > v4PoolStop:
-                    raise ConfigError(f'Server server-bridge start address {v4PoolStart} is larger than stop address {v4PoolStop}')
+                    raise ConfigError(f'Server server bridge start address {v4PoolStart} is larger than stop address {v4PoolStop}')
 
                 v4PoolSize = int(v4PoolStop) - int(v4PoolStart)
                 if v4PoolSize >= 65536:
-                    raise ConfigError(f'Server server_bridge is too large [{v4PoolStart} -> {v4PoolStop} = {v4PoolSize}], maximum is 65536 addresses.')
+                    raise ConfigError(f'Server bridge is too large [{v4PoolStart} -> {v4PoolStop} = {v4PoolSize}], maximum is 65536 addresses.')
 
         if dict_search('server.client_ip_pool', openvpn):
             if not (dict_search('server.client_ip_pool.start', openvpn) and dict_search('server.client_ip_pool.stop', openvpn)):

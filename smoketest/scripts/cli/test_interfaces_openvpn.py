@@ -628,7 +628,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
 
     def test_openvpn_server_server_bridge(self):
-        # Create OpenVPN server interface using server-bridge.
+        # Create OpenVPN server interface using bridge.
         # Validate configuration afterwards.
         br_if = 'br0'
         vtun_if = 'vtun5010'
@@ -644,10 +644,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['encryption', 'data-ciphers', 'aes192'])
         self.cli_set(path + ['hash', auth_hash])
         self.cli_set(path + ['mode', 'server'])
-        self.cli_set(path + ['server', 'server-bridge', 'gateway', gw_subnet])
-        self.cli_set(path + ['server', 'server-bridge', 'start', start_subnet])
-        self.cli_set(path + ['server', 'server-bridge', 'stop', stop_subnet])
-        self.cli_set(path + ['server', 'server-bridge', 'subnet-mask', mask_subnet])
+        self.cli_set(path + ['server', 'bridge', 'gateway', gw_subnet])
+        self.cli_set(path + ['server', 'bridge', 'start', start_subnet])
+        self.cli_set(path + ['server', 'bridge', 'stop', stop_subnet])
+        self.cli_set(path + ['server', 'bridge', 'subnet-mask', mask_subnet])
         self.cli_set(path + ['keep-alive', 'failure-count', '5'])
         self.cli_set(path + ['keep-alive', 'interval', '5'])
         self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
