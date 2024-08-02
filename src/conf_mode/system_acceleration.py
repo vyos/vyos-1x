@@ -79,6 +79,9 @@ def verify(qat):
         if not data:
             raise ConfigError('No QAT acceleration device found')
 
+def generate(qat):
+    return
+
 def apply(qat):
     # Shutdown VPN service which can use QAT
     if 'ipsec' in qat:
