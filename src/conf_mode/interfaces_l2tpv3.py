@@ -86,6 +86,8 @@ def generate(l2tpv3):
     return None
 
 def apply(l2tpv3):
+    check_kmod(k_mod)
+
     # Check if L2TPv3 interface already exists
     if interface_exists(l2tpv3['ifname']):
         # L2TPv3 is picky when changing tunnels/sessions, thus we can simply
@@ -102,7 +104,6 @@ def apply(l2tpv3):
 
 if __name__ == '__main__':
     try:
-        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
