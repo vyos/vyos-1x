@@ -103,6 +103,9 @@ def verify(wireguard):
 
         public_keys.append(peer['public_key'])
 
+def generate(wireguard):
+    return None
+
 def apply(wireguard):
     if 'rebuild_required' in wireguard or 'deleted' in wireguard:
         wg = WireGuardIf(**wireguard)
