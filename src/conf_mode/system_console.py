@@ -22,7 +22,6 @@ from vyos.utils.process import call
 from vyos.utils.serial import restart_login_consoles
 from vyos.system import grub_util
 from vyos.template import render
-from vyos.defaults import directories
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
