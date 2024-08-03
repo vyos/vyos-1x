@@ -225,6 +225,8 @@ def verify(wifi):
     return None
 
 def generate(wifi):
+    check_kmod('mac80211')
+
     interface = wifi['ifname']
 
     # Delete config files if interface is removed
@@ -319,7 +321,6 @@ def apply(wifi):
 
 if __name__ == '__main__':
     try:
-        check_kmod('mac80211')
         c = get_config()
         verify(c)
         generate(c)

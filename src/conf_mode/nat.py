@@ -240,6 +240,8 @@ def generate(nat):
     return None
 
 def apply(nat):
+    check_kmod(k_mod)
+
     cmd(f'nft --file {nftables_nat_config}')
     cmd(f'nft --file {nftables_static_nat_conf}')
 
@@ -253,7 +255,6 @@ def apply(nat):
 
 if __name__ == '__main__':
     try:
-        check_kmod(k_mod)
         c = get_config()
         verify(c)
         generate(c)
