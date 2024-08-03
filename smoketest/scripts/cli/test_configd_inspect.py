@@ -58,8 +58,7 @@ class TestConfigdInclude(unittest.TestCase):
             m = import_script(s)
             for i in f_list:
                 f = getattr(m, i, None)
-                if not f:
-                    continue
+                self.assertIsNotNone(f, f"'{s}': missing function '{i}'")
                 sig = signature(f)
                 par = sig.parameters
                 l = len(par)
