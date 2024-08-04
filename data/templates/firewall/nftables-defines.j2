@@ -1,7 +1,7 @@
 {% macro groups(group, is_ipv6, is_l3) %}
 {% if group is vyos_defined %}
 {%     set ip_type = 'ipv6_addr' if is_ipv6 else 'ipv4_addr' %}
-{%     if group.address_group is vyos_defined and not is_ipv6 and is_l3 %}
+{%     if group.address_group is vyos_defined and not is_ipv6 %}
 {%         for group_name, group_conf in group.address_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
     set A_{{ group_name }} {
@@ -14,7 +14,7 @@
     }
 {%         endfor %}
 {%     endif %}
-{%     if group.ipv6_address_group is vyos_defined and is_ipv6 and is_l3 %}
+{%     if group.ipv6_address_group is vyos_defined and is_ipv6 %}
 {%         for group_name, group_conf in group.ipv6_address_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
     set A6_{{ group_name }} {
@@ -46,7 +46,7 @@
     }
 {%         endfor %}
 {%     endif %}
-{%     if group.network_group is vyos_defined and not is_ipv6 and is_l3 %}
+{%     if group.network_group is vyos_defined and not is_ipv6 %}
 {%         for group_name, group_conf in group.network_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
     set N_{{ group_name }} {
@@ -59,7 +59,7 @@
     }
 {%         endfor %}
 {%     endif %}
-{%     if group.ipv6_network_group is vyos_defined and is_ipv6 and is_l3 %}
+{%     if group.ipv6_network_group is vyos_defined and is_ipv6 %}
 {%         for group_name, group_conf in group.ipv6_network_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
     set N6_{{ group_name }} {
@@ -72,7 +72,7 @@
     }
 {%         endfor %}
 {%     endif %}
-{%     if group.port_group is vyos_defined and is_l3 %}
+{%     if group.port_group is vyos_defined %}
 {%         for group_name, group_conf in group.port_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
     set P_{{ group_name }} {

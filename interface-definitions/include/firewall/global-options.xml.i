@@ -44,6 +44,25 @@
       </properties>
       <defaultValue>disable</defaultValue>
     </leafNode>
+    <node name="apply-to-bridged-traffic">
+      <properties>
+        <help>Apply configured firewall rules to traffic switched by bridges</help>
+      </properties>
+      <children>
+        <leafNode name="ipv4">
+          <properties>
+            <help>Apply configured IPv4 firewall rules</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        <leafNode name="ipv6">
+          <properties>
+            <help>Apply configured IPv6 firewall rules</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
     <leafNode name="directed-broadcast">
       <properties>
         <help>Policy for handling IPv4 directed broadcast forwarding on all interfaces</help>

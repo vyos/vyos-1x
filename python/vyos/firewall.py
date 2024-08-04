@@ -167,7 +167,10 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if address_mask:
                     operator = '!=' if exclude else '=='
                     operator = f'& {address_mask} {operator} '
-                output.append(f'{ip_name} {prefix}addr {operator}{suffix}')
+                if is_ipv4(suffix):
+                    output.append(f'ip {prefix}addr {operator}{suffix}')
+                else:
+                    output.append(f'ip6 {prefix}addr {operator}{suffix}')
 
             if 'fqdn' in side_conf:
                 fqdn = side_conf['fqdn']
@@ -236,22 +239,38 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
             if 'group' in side_conf:
                 group = side_conf['group']
-                if 'address_group' in group:
-                    group_name = group['address_group']
-                    operator = ''
-                    exclude = group_name[0] == "!"
-                    if exclude:
-                        operator = '!='
-                        group_name = group_name[1:]
-                    if address_mask:
-                        operator = '!=' if exclude else '=='
-                        operator = f'& {address_mask} {operator}'
-                    output.append(f'{ip_name} {prefix}addr {operator} @A{def_suffix}_{group_name}')
-                elif 'dynamic_address_group' in group:
+                for ipvx_address_group in ['address_group', 'ipv4_address_group', 'ipv6_address_group']:
+                    if ipvx_address_group in group:
+                        group_name = group[ipvx_address_group]
+                        operator = ''
+                        exclude = group_name[0] == "!"
+                        if exclude:
+                            operator = '!='
+                            group_name = group_name[1:]
+                        if address_mask:
+                            operator = '!=' if exclude else '=='
+                            operator = f'& {address_mask} {operator}'
+                        # for bridge, change ip_name
+                        if ip_name == 'bri':
+                            ip_name = 'ip' if ipvx_address_group == 'ipv4_address_group' else 'ip6'
+                            def_suffix = '6' if ipvx_address_group == 'ipv6_address_group' else ''
+                        output.append(f'{ip_name} {prefix}addr {operator} @A{def_suffix}_{group_name}')
+                for ipvx_network_group in ['network_group', 'ipv4_network_group', 'ipv6_network_group']:
+                    if ipvx_network_group in group:
+                        group_name = group[ipvx_network_group]
+                        operator = ''
+                        if group_name[0] == "!":
+                            operator = '!='
+                            group_name = group_name[1:]
+                        # for bridge, change ip_name
+                        if ip_name == 'bri':
+                            ip_name = 'ip' if ipvx_network_group == 'ipv4_network_group' else 'ip6'
+                            def_suffix = '6' if ipvx_network_group == 'ipv6_network_group' else ''
+                        output.append(f'{ip_name} {prefix}addr {operator} @N{def_suffix}_{group_name}')
+                if 'dynamic_address_group' in group:
                     group_name = group['dynamic_address_group']
                     operator = ''
-                    exclude = group_name[0] == "!"
-                    if exclude:
+                    if group_name[0] == "!":
                         operator = '!='
                         group_name = group_name[1:]
                     output.append(f'{ip_name} {prefix}addr {operator} @DA{def_suffix}_{group_name}')
@@ -263,13 +282,6 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                         operator = '!='
                         group_name = group_name[1:]
                     output.append(f'{ip_name} {prefix}addr {operator} @D_{group_name}')
-                elif 'network_group' in group:
-                    group_name = group['network_group']
-                    operator = ''
-                    if group_name[0] == '!':
-                        operator = '!='
-                        group_name = group_name[1:]
-                    output.append(f'{ip_name} {prefix}addr {operator} @N{def_suffix}_{group_name}')
                 if 'mac_group' in group:
                     group_name = group['mac_group']
                     operator = ''

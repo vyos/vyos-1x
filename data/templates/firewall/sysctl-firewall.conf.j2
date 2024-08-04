@@ -13,6 +13,14 @@ net.ipv4.conf.*.send_redirects = {{ 1 if global_options.send_redirects == 'enabl
 net.ipv4.tcp_syncookies = {{ 1 if global_options.syn_cookies == 'enable' else 0 }}
 net.ipv4.tcp_rfc1337 = {{ 1 if global_options.twa_hazards_protection == 'enable' else 0 }}
 
+{% if global_options.apply_to_bridged_traffic is vyos_defined %}
+net.bridge.bridge-nf-call-iptables = {{ 1 if global_options.apply_to_bridged_traffic.ipv4 is vyos_defined else 0 }}
+net.bridge.bridge-nf-call-ip6tables = {{ 1 if global_options.apply_to_bridged_traffic.ipv6 is vyos_defined else 0 }}
+{% else %}
+net.bridge.bridge-nf-call-iptables = 0
+net.bridge.bridge-nf-call-ip6tables = 0
+{% endif %}
+
 ## Timeout values:
 net.netfilter.nf_conntrack_icmp_timeout = {{ global_options.timeout.icmp }}
 net.netfilter.nf_conntrack_generic_timeout = {{ global_options.timeout.other }}

@@ -367,6 +367,9 @@
         </properties>
         <children>
           #include <include/firewall/bridge-hook-forward.xml.i>
+          #include <include/firewall/bridge-hook-input.xml.i>
+          #include <include/firewall/bridge-hook-output.xml.i>
+          #include <include/firewall/bridge-hook-prerouting.xml.i>
           #include <include/firewall/bridge-custom-name.xml.i>
         </children>
       </node>

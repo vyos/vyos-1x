@@ -695,12 +695,20 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
         self.verify_nftables_chain([['return']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
-    def test_bridge_basic_rules(self):
+    def test_bridge_firewall(self):
         name = 'smoketest'
         interface_in = 'eth0'
         mac_address = '00:53:00:00:00:01'
         vlan_id = '12'
         vlan_prior = '3'
+
+        # Check bridge-nf-call-iptables default value: 0
+        self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-iptables'), '0')
+        self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-ip6tables'), '0')
+
+        self.cli_set(['firewall', 'group', 'ipv6-address-group', 'AGV6', 'address', '2001:db1::1'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'ipv4'])
 
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-log'])
@@ -718,20 +726,41 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'jump-target', name])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'vlan', 'priority', vlan_prior])
 
+        self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'inbound-interface', 'name', interface_in])
+        self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'source', 'address', '192.0.2.2'])
+        self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'state', 'new'])
+
+        self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'action', 'notrack'])
+        self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'destination', 'group', 'ipv6-address-group', 'AGV6'])
+
         self.cli_commit()
 
         nftables_search = [
+            ['set A6_AGV6'],
+            ['type ipv6_addr'],
+            ['elements', '2001:db1::1'],
             ['chain VYOS_FORWARD_filter'],
             ['type filter hook forward priority filter; policy accept;'],
+            ['jump VYOS_STATE_POLICY'],
             [f'vlan id {vlan_id}', 'accept'],
             [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
             ['log prefix "[bri-FWD-filter-default-D]"', 'drop', 'FWD-filter default-action drop'],
             [f'chain NAME_{name}'],
             [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept'],
-            ['accept', f'{name} default-action accept']
+            ['accept', f'{name} default-action accept'],
+            ['chain VYOS_INPUT_filter'],
+            ['type filter hook input priority filter; policy accept;'],
+            ['ct state new', 'ip saddr 192.0.2.2', f'iifname "{interface_in}"', 'accept'],
+            ['chain VYOS_PREROUTING_filter'],
+            ['type filter hook prerouting priority filter; policy accept;'],
+            ['ip6 daddr @A6_AGV6', 'notrack']
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
+        ## Check bridge-nf-call-iptables is set to 1, and for ipv6 remains on default 0
+        self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-iptables'), '1')
+        self.assertEqual(get_sysctl('net.bridge.bridge-nf-call-ip6tables'), '0')
 
     def test_source_validation(self):
         # Strict
