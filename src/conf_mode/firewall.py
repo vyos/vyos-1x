@@ -231,6 +231,36 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         if not {'count', 'time'} <= set(rule_conf['recent']):
             raise ConfigError('Recent "count" and "time" values must be defined')
 
+    if 'gre' in rule_conf:
+        if dict_search_args(rule_conf, 'protocol') != 'gre':
+            raise ConfigError('Protocol must be gre when matching GRE flags and fields')
+
+        if dict_search_args(rule_conf, 'gre', 'key'):
+            if dict_search_args(rule_conf, 'gre', 'version') == 'pptp':
+                raise ConfigError('GRE tunnel keys are not present in PPTP')
+
+            if dict_search_args(rule_conf, 'gre', 'flags', 'checksum') is None:
+                # There is no builtin match in nftables for the GRE key, so we need to do a raw lookup.
+                # The offset of the key within the packet shifts depending on the C-flag. 
+                # 99% of the time, nobody will have checksums enabled - it's usually a manual config option. 
+                # We can either assume it is unset unless otherwise directed 
+                # (confusing, requires doco to explain why it doesn't work sometimes)
+                # or, demand an explicit selection to be made for this specific match rule. 
+                # This check enforces the latter. The user is free to create rules for both cases. 
+                raise ConfigError('Matching GRE tunnel key requires an explicit checksum flag match. For most cases, use "gre flags checksum unset"')
+
+            if dict_search_args(rule_conf, 'gre', 'flags', 'key', 'unset') is not None:
+                raise ConfigError('Matching GRE tunnel key implies "flags key", cannot specify "flags key unset"')
+
+        gre_inner_proto = dict_search_args(rule_conf, 'gre', 'inner_proto')
+        if gre_inner_proto is not None:
+            try:
+                gre_inner_value = int(gre_inner_proto, 0)
+                if gre_inner_value < 0 or gre_inner_value > 65535:
+                    raise ConfigError('inner-proto outside valid ethertype range 0-65535')
+            except ValueError:
+                pass # Symbolic constant, pre-validated before reaching here. 
+
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
         if dict_search_args(rule_conf, 'protocol') != 'tcp':
