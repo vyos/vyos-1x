@@ -25,7 +25,6 @@ from ipaddress import ip_address
 from netaddr import IPNetwork
 from netaddr import IPRange
 
-from vyos.base import Warning
 from vyos.config import Config
 from vyos.config import config_dict_merge
 from vyos.configdep import set_dependents
