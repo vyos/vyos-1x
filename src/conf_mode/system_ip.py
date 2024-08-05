@@ -24,7 +24,8 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_write
-
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -52,6 +53,11 @@ def get_config(config=None):
                                                           get_first_key=True)}}
     # Merge policy dict into "regular" config dict
     opt = dict_merge(tmp, opt)
+
+    # If IPv4 ARP table size is set here and also manually in sysctl, the more
+    # fine grained value from sysctl must win
+    set_dependents('sysctl', conf)
+
     return opt
 
 def verify(opt):
@@ -126,6 +132,8 @@ def apply(opt):
         if 'frr_zebra_config' in opt:
             frr_cfg.add_before(frr.default_add_before, opt['frr_zebra_config'])
         frr_cfg.commit_configuration(zebra_daemon)
+
+    call_dependents()
 
 if __name__ == '__main__':
     try:
