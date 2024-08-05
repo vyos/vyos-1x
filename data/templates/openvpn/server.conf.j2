@@ -90,7 +90,9 @@ server-ipv6 {{ subnet }}
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
-
+{%         if server.bridge is vyos_defined and server.bridge.disable is not vyos_defined %}
+server-bridge {{ server.bridge.gateway }} {{ server.bridge.subnet_mask }} {{ server.bridge.start }} {{ server.bridge.stop if server.bridge.stop is vyos_defined }}
+{%         endif %}
 {%         if server.client_ip_pool is vyos_defined and server.client_ip_pool.disable is not vyos_defined %}
 ifconfig-pool {{ server.client_ip_pool.start }} {{ server.client_ip_pool.stop }} {{ server.client_ip_pool.subnet_mask if server.client_ip_pool.subnet_mask is vyos_defined }}
 {%         endif %}
