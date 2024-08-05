@@ -35,7 +35,8 @@ directories = {
   'vyos_udev_dir' : '/run/udev/vyos',
   'isc_dhclient_dir' : '/run/dhclient',
   'dhcp6_client_dir' : '/run/dhcp6c',
-  'vyos_configdir' : '/opt/vyatta/config'
+  'vyos_configdir' : '/opt/vyatta/config',
+  'completion_dir' : f'{base_dir}/completion'
 }
 
 config_status = '/tmp/vyos-config-status'
