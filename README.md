@@ -71,3 +71,9 @@ Runtime tests are executed by the CI system on a running VyOS instance inside
 QEMU. The testcases can be found inside the smoketest subdirectory which will
 be placed into the vyos-1x-smoketest package.
 
+
+### Thanks to all the people who already contributed!
+
+<a href="https://github.com/vyos/vyos-1x/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=vyos/vyos-1x" />
+</a>
