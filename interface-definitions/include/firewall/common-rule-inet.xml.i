@@ -19,5 +19,6 @@
 #include <include/firewall/synproxy.xml.i>
 #include <include/firewall/tcp-flags.xml.i>
 #include <include/firewall/tcp-mss.xml.i>
+#include <include/firewall/gre.xml.i>
 #include <include/firewall/time.xml.i>
 <!-- include end -->

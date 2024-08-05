@@ -409,6 +409,41 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         time = rule_conf['recent']['time']
         output.append(f'add @RECENT{def_suffix}_{hook}_{fw_name}_{rule_id} {{ {ip_name} saddr limit rate over {count}/{time} burst {count} packets }}')
 
+    if 'gre' in rule_conf:
+        gre_key = dict_search_args(rule_conf, 'gre', 'key')
+
+        gre_flags = dict_search_args(rule_conf, 'gre', 'flags')
+        output.append(parse_gre_flags(gre_flags or {}, force_keyed=gre_key is not None))
+
+        gre_proto_alias_map = {
+            '802.1q': '8021q',
+            '802.1ad': '8021ad',
+            'gretap': '0x6558',
+        }
+
+        gre_proto = dict_search_args(rule_conf, 'gre', 'inner_proto')
+        if gre_proto is not None:
+            gre_proto = gre_proto_alias_map.get(gre_proto, gre_proto)
+            output.append(f'gre protocol {gre_proto}')
+
+        gre_ver = dict_search_args(rule_conf, 'gre', 'version')
+        if gre_ver == 'gre':
+            output.append('gre version 0')
+        elif gre_ver == 'pptp':
+            output.append('gre version 1')
+
+        if gre_key:
+            # The offset of the key within the packet shifts depending on the C-flag. 
+            # nftables cannot handle complex enough expressions to match multiple 
+            # offsets based on bitfields elsewhere.
+            # We enforce a specific match for the checksum flag in validation, so the 
+            # gre_flags dict will always have a 'checksum' key when gre_key is populated. 
+            if not gre_flags['checksum']: 
+                # No "unset" child node means C is set, we offset key lookup +32 bits
+                output.append(f'@th,64,32 == {gre_key}')                
+            else:
+                output.append(f'@th,32,32 == {gre_key}')
+
     if 'time' in rule_conf:
         output.append(parse_time(rule_conf['time']))
 
@@ -543,6 +578,32 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
     output.append(f'comment "{family}-{hook}-{fw_name}-{rule_id}"')
     return " ".join(output)
+
+def parse_gre_flags(flags, force_keyed=False):
+    flag_map = { # nft does not have symbolic names for these. 
+        'checksum': 1<<0,
+        'routing':  1<<1,
+        'key':      1<<2,
+        'sequence': 1<<3,
+        'strict_routing': 1<<4,
+    }
+
+    include = 0
+    exclude = 0
+    for fl_name, fl_state in flags.items():
+        if not fl_state: 
+            include |= flag_map[fl_name]
+        else: # 'unset' child tag
+            exclude |= flag_map[fl_name]
+
+    if force_keyed:
+        # Implied by a key-match.
+        include |= flag_map['key']
+
+    if include == 0 and exclude == 0:
+        return '' # Don't bother extracting and matching no bits
+
+    return f'gre flags & {include + exclude} == {include}'
 
 def parse_tcp_flags(flags):
     include = [flag for flag in flags if flag != 'not']
