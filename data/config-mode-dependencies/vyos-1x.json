@@ -60,8 +60,14 @@
         "wireless": ["interfaces_wireless"],
         "wwan": ["interfaces_wwan"]
     },
+    "system_ip": {
+        "sysctl": ["system_sysctl"]
+    },
+    "system_ipv6": {
+        "sysctl": ["system_sysctl"]
+    },
     "system_option": {
-        "ip": ["system_ip"],
-        "ipv6": ["system_ipv6"]
+        "ip_ipv6": ["system_ip", "system_ipv6"],
+        "sysctl": ["system_sysctl"]
     }
 }
