@@ -33,7 +33,7 @@
                 <valueless/>
               </properties>
             </leafNode>
-          </children>            
+          </children>
         </node>
         <node name="sequence">
           <properties>
@@ -94,7 +94,7 @@
         </constraint>
       </properties>
     </leafNode>
-    #include <interface/parameters-key.xml.i>
+    #include <include/interface/parameters-key.xml.i>
     <leafNode name="version">
       <properties>
         <help>GRE Version</help>

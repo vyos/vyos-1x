@@ -678,7 +678,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'dh /run/openvpn/{vtun_if}_dh.pem', config)
 
         # check that no interface remained after deleting them
-        self.cli_delete((['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
+        self.cli_delete(['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
         self.cli_delete(base_path)
         self.cli_commit()
 
