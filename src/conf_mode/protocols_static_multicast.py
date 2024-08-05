@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 
 from ipaddress import IPv4Address
 from sys import exit
@@ -22,8 +21,7 @@ from sys import exit
 from vyos import ConfigError
 from vyos import frr
 from vyos.config import Config
-from vyos.utils.process import call
-from vyos.template import render, render_to_string
+from vyos.template import render_to_string
 
 from vyos import airbag
 airbag.enable()
