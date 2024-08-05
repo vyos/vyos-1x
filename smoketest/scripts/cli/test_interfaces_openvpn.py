@@ -656,8 +656,6 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-
-
         config_file = f'/run/openvpn/{vtun_if}.conf'
         config = read_file(config_file)
         self.assertIn(f'dev {vtun_if}', config)
@@ -667,9 +665,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'data-ciphers AES-192-CBC', config)
         self.assertIn(f'mode server', config)
         self.assertIn(f'server-bridge {gw_subnet} {mask_subnet} {start_subnet} {stop_subnet}', config)
-        elf.assertIn(f'keepalive 5 25', config)
-
-
+        self.assertIn(f'keepalive 5 25', config)
 
         # TLS options
         self.assertIn(f'ca /run/openvpn/{vtun_if}_ca.pem', config)
