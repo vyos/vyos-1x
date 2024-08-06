@@ -15,8 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.utils.process import cmd
 from vyos.version import get_version
 
 base_path = ['show']
@@ -28,6 +30,11 @@ class TestOPModeShow(VyOSUnitTestSHIM.TestCase):
         # Validate
         version = get_version()
         self.assertIn(f'Version:          VyOS {version}', tmp)
+
+    def test_op_mode_show_version_kernel(self):
+        # Retrieve output of "show version" OP-mode command
+        tmp = self.op_mode(base_path + ['version', 'kernel'])
+        self.assertEqual(cmd('uname -r'), tmp)
 
     def test_op_mode_show_vrf(self):
         # Retrieve output of "show version" OP-mode command
