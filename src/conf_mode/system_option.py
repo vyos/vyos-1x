@@ -31,7 +31,8 @@ from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_intf_addr_assigned
-from vyos.configdep import set_dependents, call_dependents
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -57,10 +58,9 @@ def get_config(config=None):
                                    with_recursive_defaults=True)
 
     if 'performance' in options:
-        # Update IPv4 and IPv6 options after TuneD reapplies
-        # sysctl from config files
-        for protocol in ['ip', 'ipv6']:
-            set_dependents(protocol, conf)
+        # Update IPv4/IPv6 and sysctl options after tuned applied it's settings
+        set_dependents('ip_ipv6', conf)
+        set_dependents('sysctl', conf)
 
     return options
 
@@ -111,10 +111,11 @@ def generate(options):
 
 def apply(options):
     # System bootup beep
+    beep_service = 'vyos-beep.service'
     if 'startup_beep' in options:
-        cmd('systemctl enable vyos-beep.service')
+        cmd(f'systemctl enable {beep_service}')
     else:
-        cmd('systemctl disable vyos-beep.service')
+        cmd(f'systemctl disable {beep_service}')
 
     # Ctrl-Alt-Delete action
     if os.path.exists(systemd_action_file):
