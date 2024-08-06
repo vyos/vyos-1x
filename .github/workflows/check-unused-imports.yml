@@ -1,13 +1,17 @@
 name: Check for unused imports using Pylint
 on:
-  pull_request_target:
+  pull_request:
     branches:
+<<<<<<< HEAD
       - sagitta
     paths:
       - '**'
       - '!.github/**'
       - '!**/*.md'
   workflow_dispatch:
+=======
+      - current
+>>>>>>> b67786df8 (T6637: py files filter added for unused import check)
 
 permissions:
   pull-requests: write
