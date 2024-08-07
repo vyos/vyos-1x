@@ -204,6 +204,8 @@ class ConfigSourceSession(ConfigSource):
         Returns:
             True if called from a configuration session, False otherwise.
         """
+        if os.getenv('VYOS_CONFIGD', ''):
+            return False
         try:
             self._run(self._make_command('inSession', ''))
             return True

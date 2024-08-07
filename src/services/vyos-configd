@@ -267,6 +267,8 @@ if __name__ == '__main__':
     cfg_group = grp.getgrnam(CFG_GROUP)
     os.setgid(cfg_group.gr_gid)
 
+    os.environ['VYOS_CONFIGD'] = 't'
+
     def sig_handler(signum, frame):
         shutdown()
 
