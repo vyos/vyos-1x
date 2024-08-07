@@ -30,7 +30,7 @@ def _get_raw_data(command: str) -> dict:
     # more parameters, make sure to include them all below.
     # See to chronyc(1) for definition of key variables
     match command:
-        case "chronyc -c activity":
+        case "sudo chronyc -c activity":
             keys: list = [
             'sources_online',
             'sources_offline',
@@ -39,7 +39,7 @@ def _get_raw_data(command: str) -> dict:
             'sources_with_unknown_address'
             ]
 
-        case "chronyc -c sources":
+        case "sudo chronyc -c sources":
             keys: list = [
             'm',
             's',
@@ -53,7 +53,7 @@ def _get_raw_data(command: str) -> dict:
             'last_sample_est_error'
             ]
 
-        case "chronyc -c sourcestats":
+        case "sudo chronyc -c sourcestats":
             keys: list = [
             'name_ip_address',
             'np',
@@ -65,7 +65,7 @@ def _get_raw_data(command: str) -> dict:
             'std_dev'
             ]
 
-        case "chronyc -c tracking":
+        case "sudo chronyc -c tracking":
             keys: list = [
             'ref_id',
             'ref_id_name',
@@ -112,7 +112,7 @@ def _is_configured():
 
 def show_activity(raw: bool):
     _is_configured()
-    command = f'chronyc'
+    command = f'sudo chronyc'
 
     if raw:
        command += f" -c activity"
@@ -123,7 +123,7 @@ def show_activity(raw: bool):
 
 def show_sources(raw: bool):
     _is_configured()
-    command = f'chronyc'
+    command = f'sudo chronyc'
 
     if raw:
        command += f" -c sources"
@@ -134,7 +134,7 @@ def show_sources(raw: bool):
 
 def show_tracking(raw: bool):
     _is_configured()
-    command = f'chronyc'
+    command = f'sudo chronyc'
 
     if raw:
        command += f" -c tracking"
@@ -145,7 +145,7 @@ def show_tracking(raw: bool):
 
 def show_sourcestats(raw: bool):
     _is_configured()
-    command = f'chronyc'
+    command = f'sudo chronyc'
 
     if raw:
        command += f" -c sourcestats"
