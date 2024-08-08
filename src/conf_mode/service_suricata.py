@@ -59,7 +59,7 @@ def topological_sort(source):
         temporary_marks.add(n)
 
         for m in v.get('group', []):
-            m = m.lstrip('!')
+            m = m.lstrip('!').replace('-', '_')
             if m not in source:
                 raise ConfigError(f'Undefined referenced group "{m}"')
             visit(m, source[m])
