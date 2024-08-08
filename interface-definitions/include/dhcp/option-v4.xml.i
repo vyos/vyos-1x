@@ -234,15 +234,15 @@
         </node>
         <node name="shoretel">
           <properties>
-            <help>Shoretel-specfic parameters</help>
+            <help>ShoreTel-specfic parameters</help>
           </properties>
           <children>
             <leafNode name="shoretel-server">
               <properties>
-                <help>Shoretel phone configuration</help>
+                <help>ShoreTel phone configuration</help>
                 <valueHelp>
                   <format>text</format>
-                  <description>Comma-seperated parameters for Shortel phone configuration</description>
+                  <description>Comma-seperated parameters for ShorTel phone configuration</description>
                 </valueHelp>
                 <constraint>
                   <validator name="shoretel-server"/>
