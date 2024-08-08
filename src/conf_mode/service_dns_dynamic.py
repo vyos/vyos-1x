@@ -104,7 +104,7 @@ def verify(dyndns):
                     Warning(f'Interface "{config["address"]["interface"]}" does not exist yet and '
                             f'cannot be used for Dynamic DNS service "{service}" until it is up!')
             else:
-                verify_interface_exists(config['address']['interface'])
+                verify_interface_exists(dyndns, config['address']['interface'])
 
         if 'web' in config['address']:
             # If 'skip' is specified, 'url' is required as well

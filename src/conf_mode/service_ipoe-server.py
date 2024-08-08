@@ -66,7 +66,7 @@ def verify(ipoe):
         raise ConfigError('No IPoE interface configured')
 
     for interface, iface_config in ipoe['interface'].items():
-        verify_interface_exists(interface, warning_only=True)
+        verify_interface_exists(ipoe, interface, warning_only=True)
         if 'client_subnet' in iface_config and 'vlan' in iface_config:
             raise ConfigError('Option "client-subnet" and "vlan" are mutually exclusive, '
                               'use "client-ip-pool" instead!')

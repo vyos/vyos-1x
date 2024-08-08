@@ -127,7 +127,7 @@ def verify(ospfv3):
 
     if 'interface' in ospfv3:
         for interface, interface_config in ospfv3['interface'].items():
-            verify_interface_exists(interface)
+            verify_interface_exists(ospfv3, interface)
             if 'ifmtu' in interface_config:
                 mtu = Interface(interface).get_mtu()
                 if int(interface_config['ifmtu']) > int(mtu):

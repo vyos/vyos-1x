@@ -65,7 +65,7 @@ def verify(igmp_proxy):
 
     upstream = 0
     for interface, config in igmp_proxy['interface'].items():
-        verify_interface_exists(interface)
+        verify_interface_exists(igmp_proxy, interface)
         if dict_search('role', config) == 'upstream':
             upstream += 1
 
