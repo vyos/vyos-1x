@@ -67,7 +67,7 @@ def verify(conntrack):
 
     has_peer = False
     for interface, interface_config in conntrack['interface'].items():
-        verify_interface_exists(interface)
+        verify_interface_exists(conntrack, interface)
         # Interface must not only exist, it must also carry an IP address
         if len(get_ipv4(interface)) < 1:
             raise ConfigError(f'Interface {interface} requires an IP address!')
