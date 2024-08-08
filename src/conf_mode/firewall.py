@@ -402,7 +402,7 @@ def verify(firewall):
                 raise ConfigError(f'Flowtable "{flowtable}" requires at least one interface')
 
             for ifname in flowtable_conf['interface']:
-                verify_interface_exists(ifname)
+                verify_interface_exists(firewall, ifname)
 
             if dict_search_args(flowtable_conf, 'offload') == 'hardware':
                 interfaces = flowtable_conf['interface']

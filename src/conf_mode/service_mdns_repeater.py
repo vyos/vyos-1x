@@ -65,7 +65,7 @@ def verify(mdns):
     # For mdns-repeater to work it is essential that the interfaces has
     # an IPv4 address assigned
     for interface in mdns['interface']:
-        verify_interface_exists(interface)
+        verify_interface_exists(mdns, interface)
 
         if mdns['ip_version'] in ['ipv4', 'both'] and AF_INET not in ifaddresses(interface):
             raise ConfigError('mDNS repeater requires an IPv4 address to be '

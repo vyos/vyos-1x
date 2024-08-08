@@ -210,9 +210,9 @@ def verify(ipsec):
         for interface in ipsec['interface']:
             # exclude check interface for dynamic interfaces
             if tmp.match(interface):
-                verify_interface_exists(interface, warning_only=True)
+                verify_interface_exists(ipsec, interface, warning_only=True)
             else:
-                verify_interface_exists(interface)
+                verify_interface_exists(ipsec, interface)
 
     if 'l2tp' in ipsec:
         if 'esp_group' in ipsec['l2tp']:
@@ -273,7 +273,7 @@ def verify(ipsec):
                 if 'dhcp_interface' in ra_conf:
                     dhcp_interface = ra_conf['dhcp_interface']
 
-                    verify_interface_exists(dhcp_interface)
+                    verify_interface_exists(ipsec, dhcp_interface)
                     dhcp_base = directories['isc_dhclient_dir']
 
                     if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
@@ -502,7 +502,7 @@ def verify(ipsec):
             if 'dhcp_interface' in peer_conf:
                 dhcp_interface = peer_conf['dhcp_interface']
 
-                verify_interface_exists(dhcp_interface)
+                verify_interface_exists(ipsec, dhcp_interface)
                 dhcp_base = directories['isc_dhclient_dir']
 
                 if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
