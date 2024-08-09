@@ -66,3 +66,14 @@ bindaddress {{ address }}
 binddevice {{ interface }}
 {%     endif %}
 {% endif %}
+
+{% if offload.timestamp.interface is vyos_defined %}
+# Enable hardware timestamping on the specified interfaces
+{%     for interface, config in offload.timestamp.interface.items() %}
+hwtimestamp {{ interface }} {{- ' rxfilter ' ~ config.receive_filter if config.receive_filter is vyos_defined }}
+{%     endfor %}
+{% endif %}
+{% if offload.timestamp.default_enable is vyos_defined %}
+# Enable hardware timestamping on all supported interfaces not otherwise configured
+hwtimestamp *
+{% endif %}

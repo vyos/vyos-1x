@@ -13,6 +13,66 @@
           #include <include/generic-interface.xml.i>
           #include <include/listen-address.xml.i>
           #include <include/interface/vrf.xml.i>
+          <node name="offload">
+            <properties>
+              <help>Configurable offload options</help>
+            </properties>
+            <children>
+              <node name="timestamp">
+                <properties>
+                  <help>Enable timestamping of packets in the NIC hardware</help>
+                </properties>
+                <children>
+                  <leafNode name="default-enable">
+                    <properties>
+                      <help>Enable timestamping on all supported interfaces</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Interface to enable timestamping on</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.i>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="receive-filter">
+                        <properties>
+                          <help>Selects which inbound packets are timestamped by the NIC</help>
+                          <completionHelp>
+                            <list>all ntp none</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>All received packets are timestamped</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ntp</format>
+                            <description>Only NTP packets are timestamped</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>none</format>
+                            <description>No received packets are timestamped</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(all|ntp|none)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <leafNode name="leap-second">
             <properties>
               <help>Leap second behavior</help>
