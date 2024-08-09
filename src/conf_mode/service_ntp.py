@@ -87,6 +87,15 @@ def verify(ntp):
         if ipv6_addresses > 1:
             raise ConfigError(f'NTP Only admits one ipv6 value for listen-address parameter ')
 
+    if 'server' in ntp:
+        for host, server in ntp['server'].items():
+            if 'ptp_transport' in server:
+                if 'ptp_transport' not in ntp:
+                    raise ConfigError('ptp-transport must be enabled on the service '\
+                                      f'before it can be used with server {host}')
+                else:
+                    break
+
     return None
 
 def generate(ntp):

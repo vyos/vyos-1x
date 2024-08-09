@@ -48,7 +48,7 @@
                         <properties>
                           <help>Selects which inbound packets are timestamped by the NIC</help>
                           <completionHelp>
-                            <list>all ntp none</list>
+                            <list>all ntp ptp none</list>
                           </completionHelp>
                           <valueHelp>
                             <format>all</format>
@@ -59,11 +59,15 @@
                             <description>Only NTP packets are timestamped</description>
                           </valueHelp>
                           <valueHelp>
+                            <format>ptp</format>
+                            <description>Only PTP packets, or NTP packets using the PTP transport, are timestamped</description>
+                          </valueHelp>
+                          <valueHelp>
                             <format>none</format>
                             <description>No received packets are timestamped</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(all|ntp|none)</regex>
+                            <regex>(all|ntp|ptp|none)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -73,6 +77,12 @@
               </node>
             </children>
           </node>
+          <leafNode name="ptp-transport">
+            <properties>
+              <help>Enables the PTP transport for NTP packets</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="leap-second">
             <properties>
               <help>Leap second behavior</help>
@@ -143,6 +153,12 @@
               <leafNode name="prefer">
                 <properties>
                   <help>Marks the server as preferred</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ptp-transport">
+                <properties>
+                  <help>Use the PTP transport for the server</help>
                   <valueless/>
                 </properties>
               </leafNode>

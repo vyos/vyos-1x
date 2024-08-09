@@ -224,5 +224,39 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.assertIn('hwtimestamp *', config)
 
+    def test_ptp_transport(self):
+        # Test offloading of NIC timestamp
+        servers = ['192.0.2.1', '192.0.2.2']
+        options = ['prefer']
+
+        for server in servers:
+            for option in options:
+                self.cli_set(base_path + ['server', server, option])
+            self.cli_set(base_path + ['server', server, 'ptp-transport'])
+
+        # commit changes (expected to fail)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # add the required top-level option and commit
+        self.cli_set(base_path + ['ptp-transport'])
+        self.cli_commit()
+
+        # Check generated configuration
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn('driftfile /run/chrony/drift', config)
+        self.assertIn('dumpdir /run/chrony', config)
+        self.assertIn('ntsdumpdir /run/chrony', config)
+        self.assertIn('clientloglimit 1048576', config)
+        self.assertIn('rtcsync', config)
+        self.assertIn('makestep 1.0 3', config)
+        self.assertIn('leapsectz right/UTC', config)
+
+        for server in servers:
+            self.assertIn(f'server {server} iburst ' + ' '.join(options) + ' port 319', config)
+
+        self.assertIn('ptpport 319', config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
