@@ -311,7 +311,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '7', 'dscp-exclude', '21-25'])
 
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'source', 'address', '198.51.100.1'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'source', 'address', '198.51.100.1-198.51.100.50'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'mark', '1010'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'jump-target', name])
@@ -331,7 +331,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
             ['type filter hook forward priority filter; policy accept;'],
-            ['ip saddr 198.51.100.1', 'meta mark 0x000003f2', f'jump NAME_{name}'],
+            ['ip saddr 198.51.100.1-198.51.100.50', 'meta mark 0x000003f2', f'jump NAME_{name}'],
             ['FWD-filter default-action drop', 'drop'],
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
@@ -455,7 +455,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-log'])
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'source', 'address', '2002::1'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'source', 'address', '2002::1-2002::10'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'destination', 'address', '2002::1:1'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
@@ -510,7 +510,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp dport 23', 'drop'],
             ['PRE-raw default-action accept', 'accept'],
             [f'chain NAME6_{name}'],
-            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
+            ['saddr 2002::1-2002::10', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
             [f'"{name} default-action drop"', f'log prefix "[ipv6-{name}-default-D]"', 'drop'],
             ['jump VYOS_STATE_POLICY6'],
             ['chain VYOS_STATE_POLICY6'],
