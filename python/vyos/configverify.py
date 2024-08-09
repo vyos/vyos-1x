@@ -237,7 +237,7 @@ def verify_bridge_delete(config):
         raise ConfigError(f'Interface "{interface}" cannot be deleted as it '
                           f'is a member of bridge "{bridge_name}"!')
 
-def verify_interface_exists(ifname, warning_only=False):
+def verify_interface_exists(ifname, state_required=False, warning_only=False):
     """
     Common helper function used by interface implementations to perform
     recurring validation if an interface actually exists. We first probe
@@ -249,11 +249,12 @@ def verify_interface_exists(ifname, warning_only=False):
     from vyos.utils.dict import dict_search_recursive
     from vyos.utils.network import interface_exists
 
-    # Check if interface is present in CLI config
-    config = ConfigTreeQuery()
-    tmp = config.get_config_dict(['interfaces'], get_first_key=True)
-    if bool(list(dict_search_recursive(tmp, ifname))):
-        return True
+    if not state_required:
+        # Check if interface is present in CLI config
+        config = ConfigTreeQuery()
+        tmp = config.get_config_dict(['interfaces'], get_first_key=True)
+        if bool(list(dict_search_recursive(tmp, ifname))):
+            return True
 
     # Interface not found on CLI, try Linux Kernel
     if interface_exists(ifname):
