@@ -164,7 +164,19 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if address_mask:
                     operator = '!=' if exclude else '=='
                     operator = f'& {address_mask} {operator} '
-                output.append(f'{ip_name} {prefix}addr {operator}{suffix}')
+
+                if suffix.find('-') != -1:
+                    # Range
+                    start, end = suffix.split('-')
+                    if is_ipv4(start):
+                        output.append(f'ip {prefix}addr {operator}{suffix}')
+                    else:
+                        output.append(f'ip6 {prefix}addr {operator}{suffix}')
+                else:
+                    if is_ipv4(suffix):
+                        output.append(f'ip {prefix}addr {operator}{suffix}')
+                    else:
+                        output.append(f'ip6 {prefix}addr {operator}{suffix}')
 
             if 'fqdn' in side_conf:
                 fqdn = side_conf['fqdn']
