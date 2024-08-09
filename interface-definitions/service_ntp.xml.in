@@ -86,6 +86,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="interleave">
+                <properties>
+                  <help>Use the interleaved mode for the server</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
         </children>
