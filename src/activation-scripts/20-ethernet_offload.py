@@ -18,6 +18,8 @@
 # T3787: Remove deprecated UDP fragmentation offloading option
 # T6006: add to activation-scripts: migration-scripts/interfaces/20-to-21
 
+# test commit added for test
+
 from vyos.ethtool import Ethtool
 from vyos.configtree import ConfigTree
 
