@@ -78,6 +78,18 @@
         <multi/>
       </properties>
     </leafNode>
+    <leafNode name="info-refresh-time">
+      <properties>
+      <help>Time (in seconds) that stateless clients should wait between refreshing the information they were given</help>
+      <valueHelp>
+        <format>u32:1-4294967295</format>
+        <description>DHCPv6 information refresh time</description>
+      </valueHelp>
+      <constraint>
+        <validator name="numeric" argument="--range 1-4294967295"/>
+      </constraint>
+      </properties>
+    </leafNode>
     <node name="vendor-option">
       <properties>
         <help>Vendor Specific Options</help>

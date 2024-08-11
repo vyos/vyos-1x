@@ -922,8 +922,8 @@ def kea6_shared_network_json(shared_networks):
             'subnet6': []
         }
 
-        if 'common_options' in config:
-            network['option-data'] = kea6_parse_options(config['common_options'])
+        if 'option' in config:
+            network['option-data'] = kea6_parse_options(config['option'])
 
         if 'interface' in config:
             network['interface'] = config['interface']
