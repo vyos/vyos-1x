@@ -37,12 +37,12 @@ def get_config(config=None):
 
     pbr = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    for route in ['local_route', 'local_route6']:
-        dict_id = 'rule_remove' if route == 'local_route' else 'rule6_remove'
-        route_key = 'local-route' if route == 'local_route' else 'local-route6'
+    for route in ['ip_rule', 'ip_rule6']:
+        dict_id = 'rule_remove' if route == 'ip_rule' else 'rule6_remove'
+        route_key = 'ip-rule' if route == 'ip_rule' else 'ip-rule6'
         base_rule = base + [route_key, 'rule']
 
-        # delete policy local-route
+        # delete policy ip-rule
         dict = {}
         tmp = node_changed(conf, base_rule, key_mangling=('-', '_'))
         if tmp:
@@ -78,9 +78,9 @@ def get_config(config=None):
         if not route in pbr:
             continue
 
-        # delete policy local-route rule x source x.x.x.x
-        # delete policy local-route rule x fwmark x
-        # delete policy local-route rule x destination x.x.x.x
+        # delete policy ip-rule rule x source x.x.x.x
+        # delete policy ip-rule rule x fwmark x
+        # delete policy ip-rule rule x destination x.x.x.x
         if 'rule' in pbr[route]:
             for rule, rule_config in pbr[route]['rule'].items():
                 src = leaf_node_changed(conf, base_rule + [rule, 'source', 'address'])
@@ -202,7 +202,7 @@ def verify(pbr):
     if not pbr:
         return None
 
-    for route in ['local_route', 'local_route6']:
+    for route in ['ip_rule', 'ip_rule6']:
         if not route in pbr:
             continue
 
@@ -267,11 +267,11 @@ def apply(pbr):
                     call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_proto}{f_src_port}{f_dst_port}{f_fwmk}{f_iif}{f_table}')
 
     # Generate new config
-    for route in ['local_route', 'local_route6']:
+    for route in ['ip_rule', 'ip_rule6']:
         if not route in pbr:
             continue
 
-        v6 = " -6" if route == 'local_route6' else ""
+        v6 = " -6" if route == 'ip_rule6' else ""
         pbr_route = pbr[route]
 
         if 'rule' in pbr_route:

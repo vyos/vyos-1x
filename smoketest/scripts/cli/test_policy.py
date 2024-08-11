@@ -1488,7 +1488,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for some sources
     def test_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         sources = ['203.0.113.1', '203.0.113.2']
         rule = '50'
@@ -1509,7 +1509,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for fwmark
     def test_fwmark_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         fwmk = '24'
         rule = '101'
@@ -1529,7 +1529,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for destination
     def test_destination_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         dst = '203.0.113.1'
         rule = '102'
@@ -1549,7 +1549,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for destination and protocol
     def test_protocol_destination_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         dst = '203.0.113.12'
         rule = '85'
@@ -1571,7 +1571,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for destination, source, protocol, fwmark and port
     def test_protocol_port_address_fwmark_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         dst = '203.0.113.5'
         src_list = ['203.0.113.1', '203.0.113.2']
@@ -1621,7 +1621,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for sources with fwmark
     def test_fwmark_sources_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         sources = ['203.0.113.11', '203.0.113.12']
         fwmk = '23'
@@ -1644,7 +1644,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for sources with iif
     def test_iif_sources_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         sources = ['203.0.113.11', '203.0.113.12']
         iif = 'lo'
@@ -1670,7 +1670,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for sources and destinations with fwmark
     def test_fwmark_sources_destination_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         sources = ['203.0.113.11', '203.0.113.12']
         destinations = ['203.0.113.13', '203.0.113.15']
@@ -1698,7 +1698,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table ipv6 for some sources ipv6
     def test_ipv6_table_id(self):
-        path = base_path + ['local-route6']
+        path = base_path + ['ip-rule6']
 
         sources = ['2001:db8:123::/48', '2001:db8:126::/48']
         rule = '50'
@@ -1719,7 +1719,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for fwmark ipv6
     def test_fwmark_ipv6_table_id(self):
-        path = base_path + ['local-route6']
+        path = base_path + ['ip-rule6']
 
         fwmk = '24'
         rule = '100'
@@ -1739,7 +1739,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for destination ipv6
     def test_destination_ipv6_table_id(self):
-        path = base_path + ['local-route6']
+        path = base_path + ['ip-rule6']
 
         dst = '2001:db8:1337::/126'
         rule = '101'
@@ -1759,7 +1759,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for sources with fwmark ipv6
     def test_fwmark_sources_ipv6_table_id(self):
-        path = base_path + ['local-route6']
+        path = base_path + ['ip-rule6']
 
         sources = ['2001:db8:1338::/126', '2001:db8:1339::/126']
         fwmk = '23'
@@ -1782,7 +1782,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for sources with iif ipv6
     def test_iif_sources_ipv6_table_id(self):
-        path = base_path + ['local-route6']
+        path = base_path + ['ip-rule6']
 
         sources = ['2001:db8:1338::/126', '2001:db8:1339::/126']
         iif = 'lo'
@@ -1807,7 +1807,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test set table for sources and destinations with fwmark ipv6
     def test_fwmark_sources_destination_ipv6_table_id(self):
-        path = base_path + ['local-route6']
+        path = base_path + ['ip-rule6']
 
         sources = ['2001:db8:1338::/126', '2001:db8:1339::/56']
         destinations = ['2001:db8:13::/48', '2001:db8:16::/48']
@@ -1835,8 +1835,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test delete table for sources and destination with fwmark ipv4/ipv6
     def test_delete_ipv4_ipv6_table_id(self):
-        path = base_path + ['local-route']
-        path_v6 = base_path + ['local-route6']
+        path = base_path + ['ip-rule']
+        path_v6 = base_path + ['ip-rule6']
 
         sources = ['203.0.113.0/24', '203.0.114.5']
         destinations = ['203.0.112.0/24', '203.0.116.5']
@@ -1891,7 +1891,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
     # Test multiple commits ipv4
     def test_multiple_commit_ipv4_table_id(self):
-        path = base_path + ['local-route']
+        path = base_path + ['ip-rule']
 
         sources = ['192.0.2.1', '192.0.2.2']
         destination = '203.0.113.25'
