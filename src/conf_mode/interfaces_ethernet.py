@@ -310,7 +310,7 @@ def verify_bond_member(ethernet):
     :type ethernet: dict
     """
     ifname = ethernet['ifname']
-    verify_interface_exists(ifname)
+    verify_interface_exists(ethernet, ifname)
     verify_eapol(ethernet)
     verify_mirror_redirect(ethernet)
     ethtool = Ethtool(ifname)
@@ -327,7 +327,7 @@ def verify_ethernet(ethernet):
     :type ethernet: dict
     """
     ifname = ethernet['ifname']
-    verify_interface_exists(ifname)
+    verify_interface_exists(ethernet, ifname)
     verify_mtu(ethernet)
     verify_mtu_ipv6(ethernet)
     verify_dhcpv6(ethernet)

@@ -59,7 +59,7 @@ def verify(relay):
             raise ConfigError('At least two interfaces are required for UDP broadcast relay "{instance}"')
 
         for interface in config.get('interface', []):
-            verify_interface_exists(interface)
+            verify_interface_exists(relay, interface)
             if not is_afi_configured(interface, AF_INET):
                 raise ConfigError(f'Interface "{interface}" has no IPv4 address configured!')
 

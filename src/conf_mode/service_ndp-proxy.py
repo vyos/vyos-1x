@@ -50,7 +50,7 @@ def verify(ndpp):
 
     if 'interface' in ndpp:
         for interface, interface_config in ndpp['interface'].items():
-            verify_interface_exists(interface)
+            verify_interface_exists(ndpp, interface)
 
             if 'rule' in interface_config:
                 for rule, rule_config in interface_config['rule'].items():

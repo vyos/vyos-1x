@@ -97,7 +97,7 @@ def verify(pim):
         raise ConfigError('PIM require defined interfaces!')
 
     for interface, interface_config in pim['interface'].items():
-        verify_interface_exists(interface)
+        verify_interface_exists(pim, interface)
 
         # Check join group in reserved net
         if 'igmp' in interface_config and 'join' in interface_config['igmp']:

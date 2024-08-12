@@ -49,7 +49,7 @@ def verify(mpls):
 
     if 'interface' in mpls:
         for interface in mpls['interface']:
-            verify_interface_exists(interface)
+            verify_interface_exists(mpls, interface)
 
     # Checks to see if LDP is properly configured
     if 'ldp' in mpls:

@@ -70,7 +70,7 @@ def verify(salt):
         Warning('Do not use sha1 hashing algorithm, upgrade to sha256 or later!')
 
     if 'source_interface' in salt:
-        verify_interface_exists(salt['source_interface'])
+        verify_interface_exists(salt, salt['source_interface'])
 
     return None
 

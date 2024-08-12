@@ -64,7 +64,7 @@ def verify(ntp):
     if 'interface' in ntp:
         # If ntpd should listen on a given interface, ensure it exists
         interface = ntp['interface']
-        verify_interface_exists(interface)
+        verify_interface_exists(ntp, interface)
 
         # If we run in a VRF, our interface must belong to this VRF, too
         if 'vrf' in ntp:
