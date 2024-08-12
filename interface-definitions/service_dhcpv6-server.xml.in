@@ -63,27 +63,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <node name="common-options">
-                <properties>
-                  <help>Common options to distribute to all clients, including stateless clients</help>
-                </properties>
-                <children>
-                  <leafNode name="info-refresh-time">
-                    <properties>
-                      <help>Time (in seconds) that stateless clients should wait between refreshing the information they were given</help>
-                      <valueHelp>
-                        <format>u32:1-4294967295</format>
-                        <description>DHCPv6 information refresh time</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-4294967295"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  #include <include/dhcp/domain-search.xml.i>
-                  #include <include/name-server-ipv6.xml.i>
-                </children>
-              </node>
+              #include <include/dhcp/option-v6.xml.i>
               <tagNode name="subnet">
                 <properties>
                   <help>IPv6 DHCP subnet for this shared network</help>
