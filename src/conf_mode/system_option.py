@@ -68,7 +68,7 @@ def verify(options):
     if 'http_client' in options:
         config = options['http_client']
         if 'source_interface' in config:
-            verify_interface_exists(config['source_interface'])
+            verify_interface_exists(options, config['source_interface'])
 
         if {'source_address', 'source_interface'} <= set(config):
             raise ConfigError('Can not define both HTTP source-interface and source-address')
