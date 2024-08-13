@@ -8,9 +8,9 @@ ConditionPathExists=/run/zabbix/zabbix-agent2.conf
 [Service]
 User=
 User=root
-EnvironmentFile=
 ExecStart=
-ExecStart={{ zabbix_command }}/usr/sbin/zabbix_agent2 --config /run/zabbix/zabbix-agent2.conf --foreground
+ExecStart={{ zabbix_command }}sudo -E -n -u zabbix /usr/sbin/zabbix_agent2 --config /run/zabbix/zabbix-agent2.conf --foreground
+EnvironmentFile=
 WorkingDirectory=
 WorkingDirectory=/run/zabbix
 Restart=always

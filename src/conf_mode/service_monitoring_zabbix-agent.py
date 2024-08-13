@@ -18,15 +18,19 @@ import os
 
 from vyos.config import Config
 from vyos.template import render
+from vyos.utils.permission import chown
 from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 
+user = 'zabbix'
+group = user
 service_name = 'zabbix-agent2'
 service_conf = f'/run/zabbix/{service_name}.conf'
 systemd_override = r'/run/systemd/system/zabbix-agent2.service.d/10-override.conf'
+log_file = '/var/log/zabbix/zabbix_agent2.log'
 
 
 def get_config(config=None):
@@ -75,6 +79,8 @@ def generate(config):
     # Write configuration file
     render(service_conf, 'zabbix-agent/zabbix-agent.conf.j2', config)
     render(systemd_override, 'zabbix-agent/10-override.conf.j2', config)
+
+    chown(log_file, user, group)
 
     return None
 
