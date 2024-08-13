@@ -46,7 +46,7 @@ Schema checks are performed at build time, so a package with malformed interface
 The guidelines in a nutshell:
 
 * Use separate functions for retrieving configuration data, validating it, and generating taret config
-* Use a template processor when the format is more complex than just one line (jinja2 and pystache are acceptable options) 
+* Use a template processor when the format is more complex than just one line (jinja2 and pystache are acceptable options)
 
 ## Tests
 
