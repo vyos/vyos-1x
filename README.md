@@ -51,8 +51,6 @@ The guidelines in a nutshell:
 
 
 
-
-
   generating taret config, see our
   [documentation](https://docs.vyos.io/en/latest/contributing/development.html#python)
   for the common structure
