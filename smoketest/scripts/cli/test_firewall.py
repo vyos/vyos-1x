@@ -280,7 +280,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[ipv4-NAM-smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
-            ['log prefix "[ipv4-smoketest-default-D]"','smoketest default-action', 'drop']
+            ['log prefix "[ipv4-NAM-smoketest-default-D]"','smoketest default-action', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -341,7 +341,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             [f'chain NAME_{name}'],
             ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[ipv4-NAM-{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'accept'],
-            [f'log prefix "[ipv4-{name}-default-D]"', 'drop']
+            [f'log prefix "[ipv4-NAM-{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -511,7 +511,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['PRE-raw default-action accept', 'accept'],
             [f'chain NAME6_{name}'],
             ['saddr 2002::1-2002::10', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
-            [f'"{name} default-action drop"', f'log prefix "[ipv6-{name}-default-D]"', 'drop'],
+            [f'"NAM-{name} default-action drop"', f'log prefix "[ipv6-NAM-{name}-default-D]"', 'drop'],
             ['jump VYOS_STATE_POLICY6'],
             ['chain VYOS_STATE_POLICY6'],
             ['ct state established', 'accept'],
@@ -522,9 +522,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
     def test_ipv6_advanced(self):
-        name = 'v6-smoketest-adv'
-        name2 = 'v6-smoketest-adv2'
-        interface = 'eth0'
+        name = 'v6-smoke-adv'
 
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-log'])
@@ -559,7 +557,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip6 saddr 2001:db8::/64', 'meta mark != 0x000019ff-0x00001e56', f'jump NAME6_{name}'],
             [f'chain NAME6_{name}'],
             ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'accept'],
-            [f'log prefix "[ipv6-{name}-default-D]"', 'drop']
+            [f'log prefix "[ipv6-NAM-{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
@@ -686,7 +684,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state new', 'ct status dnat', 'accept'],
             ['ct state { established, new }', 'ct status snat', 'accept'],
             ['ct state related', 'ct helper { "ftp", "pptp" }', 'accept'],
-            ['drop', f'comment "{name} default-action drop"']
+            ['drop', f'comment "NAM-{name} default-action drop"']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
