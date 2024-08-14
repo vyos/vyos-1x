@@ -6,6 +6,7 @@ clear
 connect
 delete
 disconnect
+execute
 exit
 force
 monitor
