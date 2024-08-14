@@ -15,6 +15,7 @@
 
 from typing import Optional, Union, TYPE_CHECKING
 from vyos.xml_ref import definition
+from vyos.xml_ref import op_definition
 
 if TYPE_CHECKING:
     from vyos.config import ConfigDict
@@ -87,3 +88,25 @@ def from_source(d: dict, path: list) -> bool:
 
 def ext_dict_merge(source: dict, destination: Union[dict, 'ConfigDict']):
     return definition.ext_dict_merge(source, destination)
+
+def load_op_reference(op_cache=[]):
+    if op_cache:
+        return op_cache[0]
+
+    op_xml = op_definition.OpXml()
+
+    try:
+        from vyos.xml_ref.op_cache import op_reference
+    except Exception:
+        raise ImportError('no xml op reference cache !!')
+
+    if not op_reference:
+        raise ValueError('empty xml op reference cache !!')
+
+    op_xml.define(op_reference)
+    op_cache.append(op_xml)
+
+    return op_xml
+
+def get_op_ref_path(path: list) -> list[op_definition.PathData]:
+    return load_op_reference()._get_op_ref_path(path)
