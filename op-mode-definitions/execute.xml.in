@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="execute">
+    <properties>
+      <help>Initiate an operation</help>
+    </properties>
+  </node>
+</interfaceDefinition>
