@@ -209,6 +209,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'source', 'address', '192.0.2.1'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'destination', 'group', 'address-group', address_group])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'protocol', 'all'])
 
         self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'source', 'address', 'fe80::1'])
         self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'destination', 'address', 'fe80::2'])

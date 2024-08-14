@@ -694,7 +694,8 @@ def conntrack_rule(rule_conf, rule_id, action, ipv6=False):
         else:
             for protocol, protocol_config in rule_conf['protocol'].items():
                 proto = protocol
-        output.append(f'meta l4proto {proto}')
+        if proto != 'all':
+            output.append(f'meta l4proto {proto}')
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags and action != 'timeout':
