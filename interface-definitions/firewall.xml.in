@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="firewall" owner="${vyos_conf_scripts_dir}/firewall.py">
     <properties>
-      <priority>319</priority>
+      <priority>489</priority>
       <help>Firewall</help>
     </properties>
     <children>
