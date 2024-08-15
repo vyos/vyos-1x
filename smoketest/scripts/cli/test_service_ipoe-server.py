@@ -21,6 +21,7 @@ from collections import OrderedDict
 from base_accel_ppp_test import BasicAccelPPPTest
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
+from vyos.template import range_to_regex
 from configparser import ConfigParser
 from configparser import RawConfigParser
 
@@ -227,6 +228,37 @@ gw-ip-address={third_gateway.split('/')[0]}
 delegate={delegate_1_prefix},{delegate_mask},name={pool_name}
 delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.assertIn(pool_config, config)
+
+    def test_ipoe_server_vlan(self):
+        vlans = ['100', '200', '300-310']
+
+        # Test configuration of local authentication for PPPoE server
+        self.basic_config()
+        # cannot use "client-subnet" option with "vlan" option
+        # have to delete it
+        self.delete(['interface', interface, 'client-subnet'])
+        self.cli_commit()
+
+        self.set(['interface', interface, 'vlan-mon'])
+
+        # cannot use option "vlan-mon" if no "vlan" set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        for vlan in vlans:
+            self.set(['interface', interface, 'vlan', vlan])
+
+        # commit changes
+        self.cli_commit()
+
+        # Validate configuration values
+        conf = ConfigParser(allow_no_value=True, delimiters='=', strict=False)
+        conf.read(self._config_file)
+        tmp = range_to_regex(vlans)
+        self.assertIn(f're:^{interface}\.{tmp}$', conf['ipoe']['interface'])
+
+        tmp = ','.join(vlans)
+        self.assertIn(f'{interface},{tmp}', conf['ipoe']['vlan-mon'])
 
     @unittest.skip("PPP is not a part of IPoE")
     def test_accel_ppp_options(self):

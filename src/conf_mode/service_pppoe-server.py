@@ -121,8 +121,11 @@ def verify(pppoe):
         raise ConfigError('At least one listen interface must be defined!')
 
     # Check is interface exists in the system
-    for interface in pppoe['interface']:
+    for interface, interface_config in pppoe['interface'].items():
         verify_interface_exists(pppoe, interface, warning_only=True)
+
+        if 'vlan_mon' in interface_config and not 'vlan' in interface_config:
+            raise ConfigError('Option "vlan-mon" requires "vlan" to be set!')
 
     return None
 
