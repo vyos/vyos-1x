@@ -51,7 +51,7 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=N
     If directory of file is not present, it is auto-created.
     """
     dirname = os.path.dirname(fname)
-    if not os.path.isdir(dirname):
+    if dirname and not os.path.isdir(dirname):
         os.makedirs(dirname, mode=0o755, exist_ok=False)
         chown(dirname, user, group)
 
