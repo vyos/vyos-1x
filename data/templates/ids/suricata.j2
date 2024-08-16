@@ -79,7 +79,7 @@ af-packet:
 {% for interface in suricata.interface %}
   - interface: {{ interface }}
     # Default clusterid. AF_PACKET will load balance packets based on flow.
-    cluster-id: 99
+    cluster-id: {{ 100 - loop.index }}
     # Default AF_PACKET cluster type. AF_PACKET can load balance per flow or per hash.
     # This is only supported for Linux kernel > 3.1
     # possible value are:
