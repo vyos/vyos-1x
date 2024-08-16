@@ -175,6 +175,7 @@
                 </children>
               </node>
               #include <include/accel-ppp/vlan.xml.i>
+              #include <include/accel-ppp/vlan-mon.xml.i>
             </children>
           </tagNode>
           #include <include/accel-ppp/client-ip-pool.xml.i>

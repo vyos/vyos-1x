@@ -64,6 +64,7 @@
             </properties>
             <children>
               #include <include/accel-ppp/vlan.xml.i>
+              #include <include/accel-ppp/vlan-mon.xml.i>
             </children>
           </tagNode>
           <leafNode name="service-name">
