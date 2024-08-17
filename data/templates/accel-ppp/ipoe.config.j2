@@ -56,7 +56,7 @@ verbose=1
 {%         set relay = ',' ~ 'relay=' ~ iface_config.external_dhcp.dhcp_relay  if iface_config.external_dhcp.dhcp_relay is vyos_defined else '' %}
 {%         set giaddr = ',' ~ 'giaddr=' ~ iface_config.external_dhcp.giaddr if iface_config.external_dhcp.giaddr is vyos_defined else '' %}
 {{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,{{ range }}start=dhcpv4,ipv6=1{{ relay }}{{ giaddr }}
-{%         if iface_config.vlan is vyos_defined %}
+{%         if iface_config.vlan_mon is vyos_defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {%         endif %}
 {%     endfor %}
