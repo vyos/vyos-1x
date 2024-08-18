@@ -13,15 +13,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import re
 import sys
 import json
 import glob
+
 from argparse import ArgumentParser
-from argparse import ArgumentTypeError
 from os.path import join
 from os.path import abspath
 from os.path import dirname
