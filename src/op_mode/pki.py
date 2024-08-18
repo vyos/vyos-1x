@@ -316,7 +316,13 @@ def generate_certificate_request(private_key=None, key_type=None, return_request
 
     default_values = get_default_values()
     subject = {}
-    subject['country'] = ask_input('Enter country code:', default=default_values['country'])
+    while True:
+        country = ask_input('Enter country code:', default=default_values['country'])
+        if len(country) != 2:
+            print("Country name must be a 2 character country code")
+            continue
+        subject['country'] = country
+        break
     subject['state'] = ask_input('Enter state:', default=default_values['state'])
     subject['locality'] = ask_input('Enter locality:', default=default_values['locality'])
     subject['organization'] = ask_input('Enter organization name:', default=default_values['organization'])
