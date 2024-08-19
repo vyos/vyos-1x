@@ -95,7 +95,7 @@ def verify(wwan):
     if not 'apn' in wwan:
         raise ConfigError(f'No APN configured for "{ifname}"!')
 
-    verify_interface_exists(ifname)
+    verify_interface_exists(wwan, ifname)
     verify_authentication(wwan)
     verify_vrf(wwan)
     verify_mirror_redirect(wwan)

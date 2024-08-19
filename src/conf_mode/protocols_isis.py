@@ -102,7 +102,7 @@ def verify(isis):
         raise ConfigError('Interface used for routing updates is mandatory!')
 
     for interface in isis['interface']:
-        verify_interface_exists(interface)
+        verify_interface_exists(isis, interface)
         # Interface MTU must be >= configured lsp-mtu
         mtu = Interface(interface).get_mtu()
         area_mtu = isis['lsp_mtu']

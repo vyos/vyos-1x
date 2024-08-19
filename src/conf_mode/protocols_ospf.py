@@ -144,7 +144,7 @@ def verify(ospf):
 
     if 'interface' in ospf:
         for interface, interface_config in ospf['interface'].items():
-            verify_interface_exists(interface)
+            verify_interface_exists(ospf, interface)
             # One can not use dead-interval and hello-multiplier at the same
             # time. FRR will only activate the last option set via CLI.
             if {'hello_multiplier', 'dead_interval'} <= set(interface_config):

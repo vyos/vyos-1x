@@ -183,7 +183,7 @@ def verify(flow_config):
 
     # check that all configured interfaces exists in the system
     for interface in flow_config['interface']:
-        verify_interface_exists(interface, warning_only=True)
+        verify_interface_exists(flow_config, interface, warning_only=True)
 
     # check sFlow configuration
     if 'sflow' in flow_config:

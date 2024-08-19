@@ -223,7 +223,7 @@ def verify(pbr):
 
                 if 'inbound_interface' in pbr_route['rule'][rule]:
                     interface = pbr_route['rule'][rule]['inbound_interface']
-                    verify_interface_exists(interface)
+                    verify_interface_exists(pbr, interface)
 
     return None
 

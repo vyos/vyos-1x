@@ -63,7 +63,7 @@ def verify(pim6):
         return
 
     for interface, interface_config in pim6.get('interface', {}).items():
-        verify_interface_exists(interface)
+        verify_interface_exists(pim6, interface)
         if 'mld' in interface_config:
             mld = interface_config['mld']
             for group in mld.get('join', {}).keys():

@@ -344,6 +344,9 @@ class Config(object):
 
             conf_dict['pki'] = pki_dict
 
+        interfaces_root = root_dict.get('interfaces', {})
+        setattr(conf_dict, 'interfaces_root', interfaces_root)
+
         # save optional args for a call to get_config_defaults
         setattr(conf_dict, '_dict_kwargs', kwargs)
 
