@@ -104,7 +104,7 @@ def kea_parse_options(config):
         options.append({
             'name': 'shoretel-server',
             'data': shoretel_server,
-            'space': 'ShoreTel IP Phone'
+            'space': 'shoretel'
         })
 
     return options
