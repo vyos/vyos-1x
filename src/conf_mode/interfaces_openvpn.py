@@ -123,6 +123,18 @@ def get_config(config=None):
             openvpn['module_load_dco'] = {}
             break
 
+    # Calculate the protocol modifier. This is concatenated to the protocol string to direct
+    # OpenVPN to use a specific IP protocol version. If unspecified, the kernel decides which
+    # type of socket to open. In server mode, an additional "ipv6-dual-stack" option forces
+    # binding the socket in IPv6 mode, which can also receive IPv4 traffic (when using the
+    # default "ipv6" mode, we specify "bind ipv6only" to disable kernel dual-stack behaviors).
+    if openvpn['ip_version'] == 'ipv4':
+        openvpn['protocol_modifier'] = '4'
+    elif openvpn['ip_version'] in ['ipv6', 'dual-stack']:
+        openvpn['protocol_modifier']  = '6'
+    else:
+        openvpn['protocol_modifier'] = ''
+
     return openvpn
 
 def is_ec_private_key(pki, cert_name):
@@ -257,6 +269,9 @@ def verify(openvpn):
         if openvpn['protocol'] == 'tcp-passive':
             raise ConfigError('Protocol "tcp-passive" is not valid in client mode')
 
+        if 'ip_version' in openvpn and openvpn['ip_version'] == 'dual-stack':
+            raise ConfigError('"ip-version dual-stack" is not supported in client mode')
+
         if dict_search('tls.dh_params', openvpn):
             raise ConfigError('Cannot specify "tls dh-params" in client mode')
 
@@ -264,6 +279,9 @@ def verify(openvpn):
     # OpenVPN site-to-site - VERIFY
     #
     elif openvpn['mode'] == 'site-to-site':
+        if 'ip_version' in openvpn and openvpn['ip_version'] == 'dual-stack':
+            raise ConfigError('"ip-version dual-stack" is not supported in site-to-site mode')
+
         if 'local_address' not in openvpn and 'is_bridge_member' not in openvpn:
             raise ConfigError('Must specify "local-address" or add interface to bridge')
 
@@ -486,6 +504,25 @@ def verify(openvpn):
     # OpenVPN common verification section
     # not depending on any operation mode
     #
+
+    # verify that local_host/remote_host match with any ip_version override
+    # specified (if a dns name is specified for remote_host, no attempt is made
+    # to verify that record resolves to an address of the configured family)
+    if 'local_host' in openvpn:
+        if openvpn['ip_version'] == 'ipv4' and is_ipv6(openvpn['local_host']):
+            raise ConfigError('Cannot use an IPv6 "local-host" with "ip-version ipv4"')
+        elif openvpn['ip_version'] == 'ipv6' and is_ipv4(openvpn['local_host']):
+            raise ConfigError('Cannot use an IPv4 "local-host" with "ip-version ipv6"')
+        elif openvpn['ip_version'] == 'dual-stack':
+            raise ConfigError('Cannot use "local-host" with "ip-version dual-stack". "dual-stack" is only supported when OpenVPN binds to all available interfaces.')
+
+    if 'remote_host' in openvpn:
+        remote_hosts = dict_search('remote_host', openvpn)
+        for remote_host in remote_hosts:
+            if openvpn['ip_version'] == 'ipv4' and is_ipv6(remote_host):
+                raise ConfigError('Cannot use an IPv6 "remote-host" with "ip-version ipv4"')
+            elif openvpn['ip_version'] == 'ipv6' and is_ipv4(remote_host):
+                raise ConfigError('Cannot use an IPv4 "remote-host" with "ip-version ipv6"')
 
     # verify specified IP address is present on any interface on this system
     if 'local_host' in openvpn:

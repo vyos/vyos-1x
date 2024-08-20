@@ -318,6 +318,34 @@
             </properties>
             <defaultValue>udp</defaultValue>
           </leafNode>
+          <leafNode name="ip-version">
+            <properties>
+              <help>Force OpenVPN to use a specific IP protocol version</help>
+              <completionHelp>
+                <list>auto ipv4 ipv6 dual-stack</list>
+              </completionHelp>
+              <valueHelp>
+                <format>auto</format>
+                <description>Select one IP protocol to use based on local or remote host</description>
+              </valueHelp>
+              <valueHelp>
+                <format>_ipv4</format>
+                <description>Accept connections on or initate connections to IPv4 addresses only</description>
+              </valueHelp>
+              <valueHelp>
+                <format>_ipv6</format>
+                <description>Accept connections on or initate connections to IPv6 addresses only</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dual-stack</format>
+                <description>Accept connections on both protocols simultaneously (only supported in server mode)</description>
+              </valueHelp>
+              <constraint>
+                <regex>(auto|ipv4|ipv6|dual-stack)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>auto</defaultValue>
+          </leafNode>
           <leafNode name="remote-address">
             <properties>
               <help>IP address of remote end of tunnel</help>

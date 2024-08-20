@@ -11,11 +11,11 @@ dev-type {{ device_type }}
 dev {{ ifname }}
 persist-key
 {% if protocol is vyos_defined('tcp-active') %}
-proto tcp-client
+proto tcp{{ protocol_modifier }}-client
 {% elif protocol is vyos_defined('tcp-passive') %}
-proto tcp-server
+proto tcp{{ protocol_modifier }}-server
 {% else %}
-proto udp
+proto udp{{ protocol_modifier }}
 {% endif %}
 {% if local_host is vyos_defined %}
 local {{ local_host }}
@@ -63,6 +63,9 @@ nobind
 #
 # OpenVPN Server mode
 #
+{%     if ip_version is vyos_defined('ipv6') %}
+bind ipv6only
+{%     endif %}
 mode server
 tls-server
 {%     if server is vyos_defined %}
@@ -131,6 +134,9 @@ plugin "{{ plugin_dir }}/openvpn-otp.so" "otp_secrets=/config/auth/openvpn/{{ if
 #
 # OpenVPN site-2-site mode
 #
+{%     if ip_version is vyos_defined('ipv6') %}
+bind ipv6only
+{%     endif %}
 ping {{ keep_alive.interval }}
 ping-restart {{ keep_alive.failure_count }}
 
