@@ -699,7 +699,7 @@ def generate_wireguard_psk(interface=None, peer=None, install=False):
         print(f'Pre-shared key: {psk}')
 
 # Import functions
-def import_ca_certificate(name, path=None, key_path=None):
+def import_ca_certificate(name, path=None, key_path=None, no_prompt=False, passphrase=None):
     if path:
         if not os.path.exists(path):
             print(f'File not found: {path}')
@@ -723,19 +723,20 @@ def import_ca_certificate(name, path=None, key_path=None):
             return
 
         key = None
-        passphrase = ask_input('Enter private key passphrase: ') or None
+        if not no_prompt:
+            passphrase = ask_input('Enter private key passphrase: ') or None
 
         with open(key_path) as f:
             key_data = f.read()
             key = load_private_key(key_data, passphrase=passphrase, wrap_tags=False)
 
         if not key:
-            print(f'Invalid private key or passphrase: {path}')
+            print(f'Invalid private key or passphrase: {key_path}')
             return
 
         install_certificate(name, private_key=key, is_ca=True)
 
-def import_certificate(name, path=None, key_path=None):
+def import_certificate(name, path=None, key_path=None, no_prompt=False, passphrase=None):
     if path:
         if not os.path.exists(path):
             print(f'File not found: {path}')
@@ -759,14 +760,15 @@ def import_certificate(name, path=None, key_path=None):
             return
 
         key = None
-        passphrase = ask_input('Enter private key passphrase: ') or None
+        if not no_prompt:
+            passphrase = ask_input('Enter private key passphrase: ') or None
 
         with open(key_path) as f:
             key_data = f.read()
             key = load_private_key(key_data, passphrase=passphrase, wrap_tags=False)
 
         if not key:
-            print(f'Invalid private key or passphrase: {path}')
+            print(f'Invalid private key or passphrase: {key_path}')
             return
 
         install_certificate(name, private_key=key, is_ca=False)
@@ -805,7 +807,7 @@ def import_dh_parameters(name, path):
 
     install_dh_parameters(name, dh)
 
-def import_keypair(name, path=None, key_path=None):
+def import_keypair(name, path=None, key_path=None, no_prompt=False, passphrase=None):
     if path:
         if not os.path.exists(path):
             print(f'File not found: {path}')
@@ -829,14 +831,15 @@ def import_keypair(name, path=None, key_path=None):
             return
 
         key = None
-        passphrase = ask_input('Enter private key passphrase: ') or None
+        if not no_prompt:
+            passphrase = ask_input('Enter private key passphrase: ') or None
 
         with open(key_path) as f:
             key_data = f.read()
             key = load_private_key(key_data, passphrase=passphrase, wrap_tags=False)
 
         if not key:
-            print(f'Invalid private key or passphrase: {path}')
+            print(f'Invalid private key or passphrase: {key_path}')
             return
 
         install_keypair(name, None, private_key=key, prompt=False)
@@ -1017,6 +1020,9 @@ if __name__ == '__main__':
     parser.add_argument('--filename', help='Write certificate into specified filename', action='store')
     parser.add_argument('--key-filename', help='Write key into specified filename', action='store')
 
+    parser.add_argument('--no-prompt', action='store_true', help='Perform action non-interactively')
+    parser.add_argument('--passphrase', help='A passphrase to decrypt the private key')
+
     args = parser.parse_args()
 
     try:
@@ -1060,15 +1066,18 @@ if __name__ == '__main__':
                     generate_wireguard_psk(args.interface, peer=args.peer, install=args.install)
         elif args.action == 'import':
             if args.ca:
-                import_ca_certificate(args.ca, path=args.filename, key_path=args.key_filename)
+                import_ca_certificate(args.ca, path=args.filename, key_path=args.key_filename,
+                                      no_prompt=args.no_prompt, passphrase=args.passphrase)
             elif args.certificate:
-                import_certificate(args.certificate, path=args.filename, key_path=args.key_filename)
+                import_certificate(args.certificate, path=args.filename, key_path=args.key_filename,
+                                   no_prompt=args.no_prompt, passphrase=args.passphrase)
             elif args.crl:
                 import_crl(args.crl, args.filename)
             elif args.dh:
                 import_dh_parameters(args.dh, args.filename)
             elif args.keypair:
-                import_keypair(args.keypair, path=args.filename, key_path=args.key_filename)
+                import_keypair(args.keypair, path=args.filename, key_path=args.key_filename,
+                               no_prompt=args.no_prompt, passphrase=args.passphrase)
             elif args.openvpn:
                 import_openvpn_secret(args.openvpn, args.filename)
         elif args.action == 'show':

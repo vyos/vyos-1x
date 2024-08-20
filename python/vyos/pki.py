@@ -271,7 +271,7 @@ def load_private_key(raw_data, passphrase=None, wrap_tags=True):
 
     try:
         return serialization.load_pem_private_key(bytes(raw_data, 'utf-8'), password=passphrase)
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 def load_openssh_public_key(raw_data, type):
