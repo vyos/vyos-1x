@@ -80,5 +80,19 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh2'), gc_thresh2)
         self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh3'), gc_thresh3)
 
+    def test_ssh_client_options(self):
+        loopback = 'lo'
+        ssh_client_opt_file = '/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
+
+        self.cli_set(['system', 'option', 'ssh-client', 'source-interface', loopback])
+        self.cli_commit()
+
+        tmp = read_file(ssh_client_opt_file)
+        self.assertEqual(tmp, f'BindInterface {loopback}')
+
+        self.cli_delete(['system', 'option'])
+        self.cli_commit()
+        self.assertFalse(os.path.exists(ssh_client_opt_file))
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
