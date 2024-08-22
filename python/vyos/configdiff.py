@@ -15,6 +15,7 @@
 
 from enum import IntFlag
 from enum import auto
+from itertools import chain
 
 from vyos.config import Config
 from vyos.configtree import DiffTree
@@ -22,7 +23,10 @@ from vyos.configdict import dict_merge
 from vyos.utils.dict import get_sub_dict
 from vyos.utils.dict import mangle_dict_keys
 from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_to_key_paths
 from vyos.xml_ref import get_defaults
+from vyos.xml_ref import owner
+from vyos.xml_ref import priority
 
 class ConfigDiffError(Exception):
     """
@@ -93,6 +97,39 @@ def get_config_diff(config, key_mangling=None):
 
     return ConfigDiff(config, key_mangling, diff_tree=diff_t,
                                             diff_dict=diff_d)
+
+def get_commit_scripts(config) -> list:
+    """Return the list of config scripts to be executed by commit
+
+    Return a list of the scripts to be called by commit for the proposed
+    config. The list is ordered by priority for reference, however, the
+    actual order of execution by the commit algorithm is not reflected
+    (delete vs. add queue), nor needed for current use.
+    """
+    if not config or not isinstance(config, Config):
+        raise TypeError("argument must me a Config instance")
+
+    if hasattr(config, 'commit_scripts'):
+        return getattr(config, 'commit_scripts')
+
+    D = get_config_diff(config)
+    d = D._diff_dict
+    s = set()
+    for p in chain(dict_to_key_paths(d['sub']), dict_to_key_paths(d['add'])):
+        p_owner = owner(p, with_tag=True)
+        if not p_owner:
+            continue
+        p_priority = priority(p)
+        if not p_priority:
+            # default priority in legacy commit-algorithm
+            p_priority = 0
+        p_priority = int(p_priority)
+        s.add((p_priority, p_owner))
+
+    res = [x[1] for x in sorted(s, key=lambda x: x[0])]
+    setattr(config, 'commit_scripts', res)
+
+    return res
 
 class ConfigDiff(object):
     """
