@@ -267,6 +267,7 @@ def dict_to_paths_values(conf: dict) -> dict:
         dict_of_options[path] = dict_search(path,conf)
 
     return dict_of_options
+
 def dict_to_key_paths(d: dict) -> list:
     """ Generator to return list of key paths from dict of list[str]|str
     """
