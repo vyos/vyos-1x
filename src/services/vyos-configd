@@ -30,6 +30,7 @@ from vyos.defaults import directories
 from vyos.utils.boot import boot_configuration_complete
 from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
+from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
 from vyos import ConfigError
 
@@ -203,6 +204,12 @@ def initialization(socket):
     dependent_func: dict[str, list[typing.Callable]] = {}
     setattr(config, 'dependent_func', dependent_func)
 
+    commit_scripts = get_commit_scripts(config)
+    logger.debug(f'commit_scripts: {commit_scripts}')
+
+    scripts_called = []
+    setattr(config, 'scripts_called', scripts_called)
+
     return config
 
 def process_node_data(config, data, last: bool = False) -> int:
@@ -211,6 +218,7 @@ def process_node_data(config, data, last: bool = False) -> int:
         return R_ERROR_DAEMON
 
     script_name = None
+    os.environ['VYOS_TAGNODE_VALUE'] = ''
     args = []
     config.dependency_list.clear()
 
@@ -226,6 +234,12 @@ def process_node_data(config, data, last: bool = False) -> int:
     if res.group(3):
         args = res.group(3).split()
     args.insert(0, f'{script_name}.py')
+
+    tag_value = os.getenv('VYOS_TAGNODE_VALUE', '')
+    tag_ext = f'_{tag_value}' if tag_value else ''
+    script_record = f'{script_name}{tag_ext}'
+    scripts_called = getattr(config, 'scripts_called', [])
+    scripts_called.append(script_record)
 
     if script_name not in include_set:
         return R_PASS
@@ -286,11 +300,12 @@ if __name__ == '__main__':
             socket.send(resp.encode())
             config = initialization(socket)
         elif message["type"] == "node":
-            if message["last"]:
-                logger.debug(f'final element of priority queue')
             res = process_node_data(config, message["data"], message["last"])
             response = res.to_bytes(1, byteorder=sys.byteorder)
             logger.debug(f"Sending response {res}")
             socket.send(response)
+            if message["last"] and config:
+                scripts_called = getattr(config, 'scripts_called', [])
+                logger.debug(f'scripts_called: {scripts_called}')
         else:
             logger.critical(f"Unexpected message: {message}")
