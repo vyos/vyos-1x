@@ -12,6 +12,14 @@
               </completionHelp>
             </properties>
             <command>ip macsec show</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed MACsec interface information</help>
+                </properties>
+                <command>ip -s macsec show</command>
+              </leafNode>
+            </children>      
           </node>
           <tagNode name="macsec">
             <properties>
