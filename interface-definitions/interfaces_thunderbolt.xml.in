@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="interfaces">
     <children>
-      <tagNode name="thunderbolt" owner="${vyos_conf_scripts_dir}/interfaces.py">
+      <tagNode name="thunderbolt" owner="${vyos_conf_scripts_dir}/interfaces_thunderbolt.py">
         <properties>
           <help>Thunderbolt Interface</help>
           <priority>330</priority>
