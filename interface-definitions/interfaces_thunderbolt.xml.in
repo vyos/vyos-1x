@@ -34,8 +34,23 @@
           #include <include/interface/redirect.xml.i>
           #include <include/interface/vif-s.xml.i>
           #include <include/interface/vif.xml.i>
-          </children>
-        </tagNode>
-      </children>
-    </node>
-  </interfaceDefinition>
+          <leafNode name="pci-address">
+            <properties>
+              <help>PCI address of the Thunderbolt controller port</help>
+              <completionHelp>
+                <list>00:0d.2 00:0d.3</list>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>PCI address of the Thunderbolt controller port</description>
+              </valueHelp>
+              <constraint>
+                <regex>[0-9a-fA-F]{2}:[0-9a-fA-F]{2}.[0-9]+</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
