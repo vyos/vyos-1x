@@ -85,6 +85,8 @@ def verify(options):
                 raise ConfigError('No interface with address "{address}" configured!')
 
         if 'source_interface' in config:
+            # verify_source_interface reuires key 'ifname'
+            config['ifname'] = config['source_interface']
             verify_source_interface(config)
             if 'source_address' in config:
                 address = config['source_address']
