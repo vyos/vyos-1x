@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="install">
+    <children>
+      <leafNode name="mok">
+        <properties>
+          <help>Install Secure Boot MOK (Machine Owner Key)</help>
+        </properties>
+        <command>if test -f /var/lib/shim-signed/mok/MOK.der; then sudo mokutil --ignore-keyring --import /var/lib/shim-signed/mok/MOK.der; else echo "Secure Boot Machine Owner Key not found"; fi</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
