@@ -57,4 +57,7 @@ Cmnd_Alias KEA_IP6_ROUTES = /sbin/ip -6 route replace *,\
 # Allow members of group sudo to execute any command
 %sudo ALL=NOPASSWD: ALL
 
+# Allow any user to query Machine Owner Key status
+%sudo ALL=NOPASSWD: /usr/bin/mokutil
+
 _kea ALL=NOPASSWD: KEA_IP6_ROUTES

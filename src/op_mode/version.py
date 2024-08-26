@@ -25,6 +25,9 @@ import vyos.opmode
 import vyos.version
 import vyos.limericks
 
+from vyos.utils.boot import is_uefi_system
+from vyos.utils.system import get_secure_boot_state
+
 from jinja2 import Template
 
 version_output_tmpl = """
@@ -43,6 +46,7 @@ Build comment:    {{build_comment}}
 Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
 System type:      {{system_type}}
+Secure Boot:      {{secure_boot}}
 
 Hardware vendor:  {{hardware_vendor}}
 Hardware model:   {{hardware_model}}
@@ -57,6 +61,11 @@ Copyright:        VyOS maintainers and contributors
 
 def _get_raw_data(funny=False):
     version_data = vyos.version.get_full_version_data()
+    version_data["secure_boot"] = "n/a (BIOS)"
+    if is_uefi_system():
+        version_data["secure_boot"] = "disabled"
+        if get_secure_boot_state():
+            version_data["secure_boot"] = "enabled"
 
     if funny:
         version_data["limerick"] = vyos.limericks.get_random()

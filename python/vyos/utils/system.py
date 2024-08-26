@@ -139,3 +139,11 @@ def get_load_averages():
     res[15] = float(matches["fifteen"]) / core_count
 
     return res
+
+def get_secure_boot_state() -> bool:
+    from vyos.utils.process import cmd
+    from vyos.utils.boot import is_uefi_system
+    if not is_uefi_system():
+        return False
+    tmp = cmd('mokutil --sb-state')
+    return bool('enabled' in tmp)
