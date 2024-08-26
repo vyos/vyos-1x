@@ -82,7 +82,7 @@ def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS', chro
         f'{chroot_cmd} grub-install --no-floppy --recheck --target={efi_installation_arch}-efi \
             --force-extra-removable --boot-directory={boot_dir} \
             --efi-directory={efi_dir} --bootloader-id="{id}" \
-            --no-uefi-secure-boot'
+            --uefi-secure-boot'
     )
 
 
