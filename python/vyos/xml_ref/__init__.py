@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -54,8 +54,8 @@ def is_valueless(path: list) -> bool:
 def is_leaf(path: list) -> bool:
     return load_reference().is_leaf(path)
 
-def owner(path: list) -> str:
-    return load_reference().owner(path)
+def owner(path: list, with_tag=False) -> str:
+    return load_reference().owner(path, with_tag=with_tag)
 
 def priority(path: list) -> str:
     return load_reference().priority(path)
