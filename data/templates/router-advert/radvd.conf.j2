@@ -19,7 +19,7 @@ interface {{ iface }} {
 {%         if iface_config.reachable_time is vyos_defined %}
     AdvReachableTime {{ iface_config.reachable_time }};
 {%         endif %}
-    AdvIntervalOpt {{ 'off' if iface_config.no_send_advert is vyos_defined else 'on' }};
+    AdvIntervalOpt {{ 'off' if iface_config.no_send_interval is vyos_defined else 'on' }};
     AdvSendAdvert {{ 'off' if iface_config.no_send_advert is vyos_defined else 'on' }};
 {%         if iface_config.default_lifetime is vyos_defined %}
     AdvDefaultLifetime {{ iface_config.default_lifetime }};
