@@ -1,8 +1,11 @@
 #!/usr/sbin/nft -f
 
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
+
 {% if first_install is not vyos_defined %}
 delete table ip6 vyos_nat
 {% endif %}
+{% if deleted is not vyos_defined %}
 table ip6 vyos_nat {
     #
     # Destination NAT66 rules build up here
@@ -10,11 +13,11 @@ table ip6 vyos_nat {
     chain PREROUTING {
         type nat hook prerouting priority -100; policy accept;
         counter jump VYOS_DNPT_HOOK
-{% if destination.rule is vyos_defined %}
-{%     for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
-        {{ config | nat_rule(rule, 'destination', ipv6=True) }}
-{%     endfor %}
-{% endif %}
+{%     if destination.rule is vyos_defined %}
+{%         for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
+         {{ config | nat_rule(rule, 'destination', ipv6=True) }}
+{%         endfor %}
+{%     endif %}
     }
 
     #
@@ -23,11 +26,11 @@ table ip6 vyos_nat {
     chain POSTROUTING {
         type nat hook postrouting priority 100; policy accept;
         counter jump VYOS_SNPT_HOOK
-{% if source.rule is vyos_defined %}
-{%     for rule, config in source.rule.items() if config.disable is not vyos_defined %}
+{%     if source.rule is vyos_defined %}
+{%         for rule, config in source.rule.items() if config.disable is not vyos_defined %}
         {{ config | nat_rule(rule, 'source', ipv6=True) }}
-{%     endfor %}
-{% endif %}
+{%         endfor %}
+{%     endif %}
     }
 
     chain VYOS_DNPT_HOOK {
@@ -37,4 +40,7 @@ table ip6 vyos_nat {
     chain VYOS_SNPT_HOOK {
         return
     }
+
+{{ group_tmpl.groups(firewall_group, True, True) }}
 }
+{% endif %}

@@ -199,7 +199,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 if group_name[0] == '!':
                     operator = '!='
                     group_name = group_name[1:]
-                output.append(f'{ip_prefix} {prefix}addr {operator} @A_{group_name}')
+                if ipv6:
+                    output.append(f'{ip_prefix} {prefix}addr {operator} @A6_{group_name}')
+                else:
+                    output.append(f'{ip_prefix} {prefix}addr {operator} @A_{group_name}')
             # Generate firewall group domain-group
             elif 'domain_group' in group and not (ignore_type_addr and target == nat_type):
                 group_name = group['domain_group']
@@ -214,7 +217,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 if group_name[0] == '!':
                     operator = '!='
                     group_name = group_name[1:]
-                output.append(f'{ip_prefix} {prefix}addr {operator} @N_{group_name}')
+                if ipv6:
+                    output.append(f'{ip_prefix} {prefix}addr {operator} @N6_{group_name}')
+                else:
+                    output.append(f'{ip_prefix} {prefix}addr {operator} @N_{group_name}')
             if 'mac_group' in group:
                 group_name = group['mac_group']
                 operator = ''
