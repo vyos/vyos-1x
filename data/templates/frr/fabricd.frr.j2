@@ -1,0 +1,72 @@
+!
+{% for name, router_config in domain.items() %}
+{%     if router_config.interface is vyos_defined %}
+{%         for iface, iface_config in router_config.interface.items() %}
+interface {{ iface }}
+{%             if iface_config.address_family.ipv4 is vyos_defined %}
+ ip router openfabric {{ name }}
+{%             endif %}
+{%             if iface_config.address_family.ipv6 is vyos_defined %}
+ ipv6 router openfabric {{ name }}
+{%             endif %}
+{%             if iface_config.csnp_interval is vyos_defined %}
+ openfabric csnp-interval {{ iface_config.csnp_interval }}
+{%             endif %}
+{%             if iface_config.hello_interval is vyos_defined %}
+ openfabric hello-interval {{ iface_config.hello_interval }}
+{%             endif %}
+{%             if iface_config.hello_multiplier is vyos_defined %}
+ openfabric hello-multiplier {{ iface_config.hello_multiplier }}
+{%             endif %}
+{%             if iface_config.metric is vyos_defined %}
+ openfabric metric {{ iface_config.metric }}
+{%             endif %}
+{%             if iface_config.passive is vyos_defined or iface == 'lo' %}
+ openfabric passive
+{%             endif %}
+{%             if iface_config.password.md5 is vyos_defined %}
+ openfabric password md5 {{ iface_config.password.md5 }}
+{%             elif iface_config.password.plaintext_password is vyos_defined %}
+ openfabric password clear {{ iface_config.password.plaintext_password }}
+{%             endif %}
+{%             if iface_config.psnp_interval is vyos_defined %}
+ openfabric psnp-interval {{ iface_config.psnp_interval }}
+{%             endif %}
+exit
+!
+{%         endfor %}
+{%     endif %}
+router openfabric {{ name }}
+ net {{ net }}
+{%     if router_config.domain_password.md5 is vyos_defined %}
+ domain-password md5 {{ router_config.domain_password.plaintext_password }}
+{%     elif router_config.domain_password.plaintext_password is vyos_defined %}
+ domain-password clear {{ router_config.domain_password.plaintext_password }}
+{%     endif %}
+{%     if router_config.log_adjacency_changes is vyos_defined %}
+ log-adjacency-changes
+{%     endif %}
+{%     if router_config.set_overload_bit is vyos_defined %}
+ set-overload-bit
+{%     endif %}
+{%     if router_config.purge_originator is vyos_defined %}
+ purge-originator
+{%     endif %}
+{%     if router_config.fabric_tier is vyos_defined %}
+ fabric-tier {{ router_config.fabric_tier }}
+{%     endif %}
+{%     if router_config.lsp_gen_interval is vyos_defined %}
+ lsp-gen-interval {{ router_config.lsp_gen_interval }}
+{%     endif %}
+{%     if router_config.lsp_refresh_interval is vyos_defined %}
+ lsp-refresh-interval  {{ router_config.lsp_refresh_interval }}
+{%     endif %}
+{%     if router_config.max_lsp_lifetime is vyos_defined %}
+ max-lsp-lifetime {{ router_config.max_lsp_lifetime }}
+{%     endif %}
+{%     if router_config.spf_interval is vyos_defined %}
+ spf-interval {{ router_config.spf_interval }}
+{%     endif %}
+exit
+!
+{% endfor %}

@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="openfabric">
+        <properties>
+          <help>Show OpenFabric routing protocol</help>
+        </properties>
+        <children>
+          <node name="database">
+            <properties>
+              <help>Show OpenFabric link state database</help>
+            </properties>
+            <children>
+              #include <include/vtysh-generic-detail.xml.i>
+            </children>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </node>
+          <node name="interface">
+            <properties>
+              <help>Show OpenFabric interfaces</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+            </properties>
+            <children>
+              #include <include/vtysh-generic-detail.xml.i>
+            </children>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </node>
+          #include <include/vtysh-generic-interface-tagNode.xml.i>
+          <node name="neighbor">
+            <properties>
+              <help>Show OpenFabric neighbor adjacencies</help>
+            </properties>
+            <children>
+              #include <include/vtysh-generic-detail.xml.i>
+            </children>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </node>
+          <leafNode name="summary">
+            <properties>
+              <help>Show OpenFabric information summary</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

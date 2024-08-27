@@ -46,6 +46,7 @@
                 <command>ip -s -f inet6 route list $5</command>
               </tagNode>
               #include <include/show-route-isis.xml.i>
+              #include <include/show-route-openfabric.xml.i>
               #include <include/show-route-kernel.xml.i>
               #include <include/show-route-ospfv3.xml.i>
               #include <include/show-route-ripng.xml.i>

@@ -56,6 +56,12 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon isisd</command>
       </leafNode>
+      <leafNode name="openfabric">
+        <properties>
+          <help>Restart OpenFabric routing daemon</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon fabricd</command>
+      </leafNode>
       <leafNode name="pim6">
         <properties>
           <help>Restart IPv6 Protocol Independent Multicast (PIM) daemon</help>

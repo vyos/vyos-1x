@@ -642,6 +642,12 @@
                 </properties>
                 <command>journalctl --boot /usr/lib/frr/isisd</command>
               </leafNode>
+              <leafNode name="openfabric">
+                <properties>
+                  <help>Show log for OpenFabric</help>
+                </properties>
+                <command>journalctl --boot /usr/lib/frr/fabricd</command>
+              </leafNode>
               <leafNode name="nhrp">
                 <properties>
                   <help>Show log for NHRP</help>
