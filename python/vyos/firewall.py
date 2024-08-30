@@ -53,25 +53,32 @@ def conntrack_required(conf):
 
 # Domain Resolver
 
-def fqdn_config_parse(firewall):
-    firewall['ip_fqdn'] = {}
-    firewall['ip6_fqdn'] = {}
+def fqdn_config_parse(config, node):
+    config['ip_fqdn'] = {}
+    config['ip6_fqdn'] = {}
 
-    for domain, path in dict_search_recursive(firewall, 'fqdn'):
-        hook_name = path[1]
-        priority = path[2]
+    for domain, path in dict_search_recursive(config, 'fqdn'):
+        if node != 'nat':
+            hook_name = path[1]
+            priority = path[2]
 
-        fw_name = path[2]
-        rule = path[4]
-        suffix = path[5][0]
-        set_name = f'{hook_name}_{priority}_{rule}_{suffix}'
+            rule = path[4]
+            suffix = path[5][0]
+            set_name = f'{hook_name}_{priority}_{rule}_{suffix}'
 
-        if (path[0] == 'ipv4') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
-            firewall['ip_fqdn'][set_name] = domain
-        elif (path[0] == 'ipv6') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
-            if path[1] == 'name':
-                set_name = f'name6_{priority}_{rule}_{suffix}'
-            firewall['ip6_fqdn'][set_name] = domain
+            if (path[0] == 'ipv4') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
+                config['ip_fqdn'][set_name] = domain
+            elif (path[0] == 'ipv6') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
+                if path[1] == 'name':
+                    set_name = f'name6_{priority}_{rule}_{suffix}'
+                config['ip6_fqdn'][set_name] = domain
+        else:
+            # Parse FQDN for NAT
+            nat_direction = path[0]
+            nat_rule = path[2]
+            suffix = path[3][0]
+            set_name = f'{nat_direction}_{nat_rule}_{suffix}'
+            config['ip_fqdn'][set_name] = domain
 
 def fqdn_resolve(fqdn, ipv6=False):
     try:
@@ -79,8 +86,6 @@ def fqdn_resolve(fqdn, ipv6=False):
         return set(item[4][0] for item in res)
     except:
         return None
-
-# End Domain Resolver
 
 def find_nftables_rule(table, chain, rule_matches=[]):
     # Find rule in table/chain that matches all criteria and return the handle

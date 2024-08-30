@@ -1,6 +1,7 @@
 [Unit]
 Description=VyOS firewall domain resolver
 After=vyos-router.service
+ConditionPathExistsGlob=/run/use-vyos-domain-resolver*
 
 [Service]
 Type=simple
