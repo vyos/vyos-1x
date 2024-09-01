@@ -224,5 +224,34 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.assertIn(tmp, config)
         self.assertIn('AdvValidLifetime 65528;', config) # default
 
+    def test_advsendadvert_advintervalopt(self):
+        ra_src = ['fe80::1', 'fe80::2']
+
+        self.cli_set(base_path + ['prefix', prefix])
+        self.cli_set(base_path + ['no-send-advert'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        config = read_file(RADVD_CONF)
+        tmp = get_config_value('AdvSendAdvert')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('AdvIntervalOpt')
+        self.assertEqual(tmp, 'on')
+
+        self.cli_set(base_path + ['no-send-interval'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        config = read_file(RADVD_CONF)
+        tmp = get_config_value('AdvSendAdvert')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('AdvIntervalOpt')
+        self.assertEqual(tmp, 'off')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
