@@ -22,7 +22,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
-from vyos.ifconfig.thunderbolt import ThunderboltIf
+from vyos.ifconfig import ThunderboltIf
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
