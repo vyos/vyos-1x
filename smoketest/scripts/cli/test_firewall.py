@@ -707,6 +707,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'ipv6-address-group', 'AGV6', 'address', '2001:db1::1'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'ipv4'])
+        self.cli_set(['firewall', 'global-options', 'apply-to-bridged-traffic', 'invalid-connections'])
 
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'name', name, 'default-log'])
@@ -731,6 +732,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'action', 'notrack'])
         self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '1', 'destination', 'group', 'ipv6-address-group', 'AGV6'])
+        self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '2', 'ethernet-type', 'arp'])
+        self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '2', 'action', 'accept'])
+
 
         self.cli_commit()
 
@@ -750,9 +754,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
             ['ct state new', 'ip saddr 192.0.2.2', f'iifname "{interface_in}"', 'accept'],
+            ['chain VYOS_OUTPUT_filter'],
+            ['type filter hook output priority filter; policy accept;'],
+            ['ct state invalid', 'udp sport 67', 'udp dport 68', 'accept'],
+            ['ct state invalid', 'ether type arp', 'accept'],
             ['chain VYOS_PREROUTING_filter'],
             ['type filter hook prerouting priority filter; policy accept;'],
-            ['ip6 daddr @A6_AGV6', 'notrack']
+            ['ip6 daddr @A6_AGV6', 'notrack'],
+            ['ether type arp', 'accept']
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
