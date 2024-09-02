@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="thunderbolt">
+            <properties>
+              <help>Show specified Thunderbolt interface information</help>
+              <completionHelp>
+                <path>interfaces thunderbolt</path>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=thunderbolt</command>
+            <children>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show summary of the specified thunderbolt interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=thunderbolt</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="thunderbolt">
+            <properties>
+              <help>Show Thunderbolt interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=thunderbolt</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed thunderbolt interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=thunderbolt</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
