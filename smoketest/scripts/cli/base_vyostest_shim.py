@@ -147,6 +147,18 @@ class VyOSUnitTestSHIM:
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
 
+        # Verify ip rule output
+        def verify_rules(self, rules_search, inverse=False, addr_family='inet'):
+            rule_output = cmd(f'ip -family {addr_family} rule show')
+
+            for search in rules_search:
+                matched = False
+                for line in rule_output.split("\n"):
+                    if all(item in line for item in search):
+                        matched = True
+                        break
+                self.assertTrue(not matched if inverse else matched, msg=search)
+
 # standard construction; typing suggestion: https://stackoverflow.com/a/70292317
 def ignore_warning(warning: Type[Warning]):
     import warnings

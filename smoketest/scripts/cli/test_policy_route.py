@@ -18,8 +18,6 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.utils.process import cmd
-
 mark = '100'
 conn_mark = '555'
 conn_mark_set = '111'
@@ -41,7 +39,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
         cls.cli_set(cls, ['protocols', 'static', 'table', table_id, 'route', '0.0.0.0/0', 'interface', interface])
-        
+
         cls.cli_set(cls, ['vrf', 'name', vrf, 'table', vrf_table_id])
 
     @classmethod
@@ -72,17 +70,6 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_rules(ip_rule_search, inverse=True)
-
-    def verify_rules(self, rules_search, inverse=False):
-        rule_output = cmd('ip rule show')
-
-        for search in rules_search:
-            matched = False
-            for line in rule_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(not matched if inverse else matched, msg=search)
 
     def test_pbr_group(self):
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])

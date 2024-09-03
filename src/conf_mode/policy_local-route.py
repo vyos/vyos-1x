@@ -54,6 +54,7 @@ def get_config(config=None):
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination', 'address'])
                 dst_port = leaf_node_changed(conf, base_rule + [rule, 'destination', 'port'])
                 table = leaf_node_changed(conf, base_rule + [rule, 'set', 'table'])
+                vrf = leaf_node_changed(conf, base_rule + [rule, 'set', 'vrf'])
                 proto = leaf_node_changed(conf, base_rule + [rule, 'protocol'])
                 rule_def = {}
                 if src:
@@ -70,6 +71,8 @@ def get_config(config=None):
                     rule_def = dict_merge({'destination': {'port': dst_port}}, rule_def)
                 if table:
                     rule_def = dict_merge({'table' : table}, rule_def)
+                if vrf:
+                    rule_def = dict_merge({'vrf' : vrf}, rule_def)
                 if proto:
                     rule_def = dict_merge({'protocol' : proto}, rule_def)
                 dict = dict_merge({dict_id : {rule : rule_def}}, dict)
@@ -90,6 +93,7 @@ def get_config(config=None):
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination', 'address'])
                 dst_port = leaf_node_changed(conf, base_rule + [rule, 'destination', 'port'])
                 table = leaf_node_changed(conf, base_rule + [rule, 'set', 'table'])
+                vrf = leaf_node_changed(conf, base_rule + [rule, 'set', 'vrf'])
                 proto = leaf_node_changed(conf, base_rule + [rule, 'protocol'])
                 # keep track of changes in configuration
                 # otherwise we might remove an existing node although nothing else has changed
@@ -179,6 +183,15 @@ def get_config(config=None):
                     if len(table) > 0:
                         rule_def = dict_merge({'table' : table}, rule_def)
 
+                # vrf
+                if vrf is None:
+                    if 'set' in rule_config and 'vrf' in rule_config['set']:
+                        rule_def = dict_merge({'vrf': [rule_config['set']['vrf']]}, rule_def)
+                else:
+                    changed = True
+                    if len(vrf) > 0:
+                        rule_def = dict_merge({'vrf' : vrf}, rule_def)
+
                 # protocol
                 if proto is None:
                     if 'protocol' in rule_config:
@@ -218,8 +231,15 @@ def verify(pbr):
                 ):
                     raise ConfigError('Source or destination address or fwmark or inbound-interface or protocol is required!')
 
-                if 'set' not in pbr_route['rule'][rule] or 'table' not in pbr_route['rule'][rule]['set']:
-                    raise ConfigError('Table set is required!')
+                if 'set' not in pbr_route['rule'][rule]:
+                    raise ConfigError('Either set table or set vrf is required!')
+
+                set_tgts = pbr_route['rule'][rule]['set']
+                if 'table' not in set_tgts and 'vrf' not in set_tgts:
+                    raise ConfigError('Either set table or set vrf is required!')
+
+                if 'table' in set_tgts and 'vrf' in set_tgts:
+                    raise ConfigError('set table and set vrf cannot both be set!')
 
                 if 'inbound_interface' in pbr_route['rule'][rule]:
                     interface = pbr_route['rule'][rule]['inbound_interface']
@@ -250,11 +270,14 @@ def apply(pbr):
                 fwmark = rule_config.get('fwmark', [''])
                 inbound_interface = rule_config.get('inbound_interface', [''])
                 protocol = rule_config.get('protocol', [''])
-                table = rule_config.get('table', [''])
+                # VRF 'default' is actually table 'main' for RIB rules
+                vrf = [ 'main' if x == 'default' else x for x in rule_config.get('vrf', ['']) ]
+                # See generate section below for table/vrf overlap explanation 
+                table_or_vrf = rule_config.get('table', vrf)
 
-                for src, dst, src_port, dst_port, fwmk, iif, proto, table in product(
+                for src, dst, src_port, dst_port, fwmk, iif, proto, table_or_vrf in product(
                         source, destination, source_port, destination_port,
-                        fwmark, inbound_interface, protocol, table):
+                        fwmark, inbound_interface, protocol, table_or_vrf):
                     f_src = '' if src == '' else f' from {src} '
                     f_src_port = '' if src_port == '' else f' sport {src_port} '
                     f_dst = '' if dst == '' else f' to {dst} '
@@ -262,7 +285,7 @@ def apply(pbr):
                     f_fwmk = '' if fwmk == '' else f' fwmark {fwmk} '
                     f_iif = '' if iif == '' else f' iif {iif} '
                     f_proto = '' if proto == '' else f' ipproto {proto} '
-                    f_table = '' if table == '' else f' lookup {table} '
+                    f_table = '' if table_or_vrf == '' else f' lookup {table_or_vrf} '
 
                     call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_proto}{f_src_port}{f_dst_port}{f_fwmk}{f_iif}{f_table}')
 
@@ -276,7 +299,13 @@ def apply(pbr):
 
         if 'rule' in pbr_route:
             for rule, rule_config in pbr_route['rule'].items():
-                table = rule_config['set'].get('table', '')
+                # VRFs get configred as route table alias names for iproute2 and only 
+                # one 'set' can get past validation. Either can be fed to lookup. 
+                vrf = rule_config['set'].get('vrf', '')
+                if vrf == 'default':
+                    table_or_vrf = 'main'
+                else:
+                    table_or_vrf = rule_config['set'].get('table', vrf)
                 source = rule_config.get('source', {}).get('address', ['all'])
                 source_port = rule_config.get('source', {}).get('port', '')
                 destination = rule_config.get('destination', {}).get('address', ['all'])
@@ -295,7 +324,7 @@ def apply(pbr):
                         f_iif = f' iif {inbound_interface} ' if inbound_interface else ''
                         f_proto = f' ipproto {protocol} ' if protocol else ''
 
-                        call(f'ip{v6} rule add prio {rule}{f_src}{f_dst}{f_proto}{f_src_port}{f_dst_port}{f_fwmk}{f_iif} lookup {table}')
+                        call(f'ip{v6} rule add prio {rule}{f_src}{f_dst}{f_proto}{f_src_port}{f_dst_port}{f_fwmk}{f_iif} lookup {table_or_vrf}')
 
     return None
 
