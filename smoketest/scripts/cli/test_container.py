@@ -208,6 +208,22 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(c['NetworkSettings']['Networks'][net_name]['Gateway']          , str(ip_interface(prefix4).ip + 1))
             self.assertEqual(c['NetworkSettings']['Networks'][net_name]['IPAddress']        , str(ip_interface(prefix4).ip + ii))
 
+    def test_no_name_server(self):
+        prefix = '192.0.2.0/24'
+        base_name = 'ipv4'
+        net_name = 'NET01'
+
+        self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
+        self.cli_set(base_path + ['network', net_name, 'no-name-server'])
+
+        name = f'{base_name}-2'
+        self.cli_set(base_path + ['name', name, 'image', cont_image])
+        self.cli_set(base_path + ['name', name, 'network', net_name, 'address', str(ip_interface(prefix).ip + 2)])
+        self.cli_commit()
+
+        n = cmd_to_json(f'sudo podman network inspect {net_name}')
+        self.assertEqual(n['dns_enabled'], False)
+
     def test_uid_gid(self):
         cont_name = 'uid-test'
         gid = '100'
