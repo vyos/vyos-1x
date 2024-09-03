@@ -496,6 +496,19 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             output.append(f'vlan id {rule_conf["vlan"]["id"]}')
         if 'priority' in rule_conf['vlan']:
             output.append(f'vlan pcp {rule_conf["vlan"]["priority"]}')
+        if 'ethernet_type' in rule_conf['vlan']:
+            ether_type_mapping = {
+                '802.1q': '8021q',
+                '802.1ad': '8021ad',
+                'ipv6': 'ip6',
+                'ipv4': 'ip',
+                'arp': 'arp'
+            }
+            ether_type = rule_conf['vlan']['ethernet_type']
+            operator = '!=' if ether_type.startswith('!') else ''
+            ether_type = ether_type.lstrip('!')
+            ether_type = ether_type_mapping.get(ether_type, ether_type)
+            output.append(f'vlan type {operator} {ether_type}')
 
     if 'log' in rule_conf:
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'

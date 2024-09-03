@@ -721,6 +721,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-log'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'ethernet-type', 'ipv4'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'jump-target', name])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'vlan', 'priority', vlan_prior])
@@ -745,7 +746,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_FORWARD_filter'],
             ['type filter hook forward priority filter; policy accept;'],
             ['jump VYOS_STATE_POLICY'],
-            [f'vlan id {vlan_id}', 'accept'],
+            [f'vlan id {vlan_id}', 'vlan type ip', 'accept'],
             [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
             ['log prefix "[bri-FWD-filter-default-D]"', 'drop', 'FWD-filter default-action drop'],
             [f'chain NAME_{name}'],
