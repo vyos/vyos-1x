@@ -242,7 +242,7 @@
                 <help>ShoreTel phone configuration</help>
                 <valueHelp>
                   <format>text</format>
-                  <description>Comma-seperated parameters for ShoreTel phone configuration</description>
+                  <description>Comma-separated parameters for ShoreTel phone configuration</description>
                 </valueHelp>
                 <constraint>
                   <validator name="shoretel-server"/>
