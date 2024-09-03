@@ -390,6 +390,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="no-send-interval">
+                <properties>
+                  <help>Do not send Advertisement Interval option in RAs</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
         </children>
