@@ -421,6 +421,10 @@ def generate(container):
                     'driver': 'host-local'
                 }
             }
+
+            if 'no_name_server' in network_config:
+                tmp['dns_enabled'] = False
+
             for prefix in network_config['prefix']:
                 net = {'subnet': prefix, 'gateway': inc_ip(prefix, 1)}
                 tmp['subnets'].append(net)

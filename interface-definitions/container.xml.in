@@ -519,6 +519,12 @@
               <multi/>
             </properties>
           </leafNode>
+          <leafNode name="no-name-server">
+            <properties>
+              <help>Disable Domain Name System (DNS) plugin for this network</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
