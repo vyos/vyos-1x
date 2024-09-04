@@ -248,26 +248,26 @@
                         <properties>
                           <help>VHT operating channel center frequency - center freq 1 (for use with 80, 80+80 and 160 modes)</help>
                           <valueHelp>
-                            <format>u32:34-173</format>
+                            <format>u32:34-177</format>
                             <description>5Ghz (802.11 a/h/j/n/ac) center channel index (use 42 for primary 80MHz channel 36)</description>
                           </valueHelp>
                           <constraint>
-                            <validator name="numeric" argument="--range 34-173"/>
+                            <validator name="numeric" argument="--range 34-177"/>
                           </constraint>
-                          <constraintErrorMessage>Channel center value must be between 34 and 173</constraintErrorMessage>
+                          <constraintErrorMessage>Channel center value must be between 34 and 177</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="freq-2">
                         <properties>
                           <help>VHT operating channel center frequency - center freq 2 (for use with the 80+80 mode)</help>
                           <valueHelp>
-                            <format>u32:34-173</format>
+                            <format>u32:34-177</format>
                             <description>5Ghz (802.11 ac) center channel index (use 58 for secondary 80MHz channel 52)</description>
                           </valueHelp>
                           <constraint>
-                            <validator name="numeric" argument="--range 34-173"/>
+                            <validator name="numeric" argument="--range 34-177"/>
                           </constraint>
-                          <constraintErrorMessage>Channel center value must be between 34 and 173</constraintErrorMessage>
+                          <constraintErrorMessage>Channel center value must be between 34 and 177</constraintErrorMessage>
                         </properties>
                       </leafNode>
                     </children>
@@ -436,30 +436,42 @@
                           https://w1.fi/cgit/hostap/tree/src/common/ieee802_11_common.c?id=195cc3d919503fb0d699d9a56a58a72602b25f51#n1525
                           802.11ax (WiFi-6e - HE) can use up to 160MHz bandwidth channels
                         -->
-                        <list>131 132 133 134 135</list>
+                        <list>81 83 84 131 132 133 134 135</list>
                       </completionHelp>
                       <valueHelp>
+                        <format>81</format>
+                        <description>2.4GHz, 20 MHz channel width</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>83</format>
+                        <description>2.4GHz, 40 MHz channel width, secondary 20MHz channel above primary channel</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>84</format>
+                        <description>2.4GHz, 40 MHz channel width, secondary 20MHz channel below primary channel</description>
+                      </valueHelp>
+                      <valueHelp>
                         <format>131</format>
-                        <description>20 MHz channel width</description>
+                        <description>6GHz, 20 MHz channel width</description>
                       </valueHelp>
                       <valueHelp>
                         <format>132</format>
-                        <description>40 MHz channel width</description>
+                        <description>6GHz, 40 MHz channel width</description>
                       </valueHelp>
                       <valueHelp>
                         <format>133</format>
-                        <description>80 MHz channel width</description>
+                        <description>6GHz, 80 MHz channel width</description>
                       </valueHelp>
                       <valueHelp>
                         <format>134</format>
-                        <description>160 MHz channel width</description>
+                        <description>6GHz, 160 MHz channel width</description>
                       </valueHelp>
                       <valueHelp>
                         <format>135</format>
-                        <description>80+80 MHz channel width</description>
+                        <description>6GHz, 80+80 MHz channel width</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(131|132|133|134|135)</regex>
+                        <regex>(81|83|84|131|132|133|134|135)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -535,6 +547,30 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="coding-scheme">
+                    <properties>
+                      <help>Spacial Stream and Modulation Coding Scheme settings</help>
+                      <valueHelp>
+                        <format>u32:0</format>
+                        <description>HE-MCS 0-7</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:1</format>
+                        <description>HE-MCS 0-9</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:2</format>
+                        <description>HE-MCS 0-11</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:3</format>
+                        <description>HE-MCS is not supported</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-3"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <leafNode name="require-he">
@@ -554,10 +590,10 @@
               </valueHelp>
               <valueHelp>
                 <format>u32:1-14</format>
-                <description>2.4Ghz (802.11 b/g/n) Channel</description>
+                <description>2.4Ghz (802.11 b/g/n/ax) Channel</description>
               </valueHelp>
               <valueHelp>
-                <format>u32:34-173</format>
+                <format>u32:34-177</format>
                 <description>5Ghz (802.11 a/h/j/n/ac) Channel</description>
               </valueHelp>
               <valueHelp>
@@ -565,7 +601,7 @@
                 <description>6Ghz (802.11 ax) Channel</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-173 --range 1-233"/>
+                <validator name="numeric" argument="--range 0-0 --range 1-14 --range 34-177 --range 1-233"/>
               </constraint>
             </properties>
             <defaultValue>0</defaultValue>
