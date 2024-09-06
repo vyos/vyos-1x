@@ -925,7 +925,7 @@ def kea_shared_network_json(shared_networks):
 
             if kea_client_classes(config):
                 if kea_client_classes(config, 'shoretel'):
-                    etwork['require-client-classes'] = ['shoretel']
+                    network['require-client-classes'] = ['shoretel']
 
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
