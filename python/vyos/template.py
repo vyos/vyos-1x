@@ -892,7 +892,7 @@ def kea_client_classes(shared_networks, client_class=None):
             for subnet, subnet_config in config['subnet'].items():
                 if 'disable' in config:
                     continue
-                if result := dict_search_args(config, path):
+                if result := dict_search_args(config, *path):
                     break
 
     return result
