@@ -1,26 +1,30 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="wake-on-lan">
-    <properties>
-      <help>Send Wake-On-LAN (WOL) Magic Packet</help>
-    </properties>
+  <node name="execute">
     <children>
-      <tagNode name="interface">
+      <node name="wake-on-lan">
         <properties>
-          <help>Interface where the station is connected</help>
-          <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces</script>
-          </completionHelp>
+          <help>Send Wake-On-LAN (WOL) Magic Packet</help>
         </properties>
         <children>
-          <tagNode name="host">
+          <tagNode name="interface">
             <properties>
-              <help>Station (MAC) address to wake up</help>
+              <help>Interface where the station is connected</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
             </properties>
-            <command>sudo /usr/sbin/etherwake -i "$3" "$5"</command>
-          </tagNode>
+            <children>
+              <tagNode name="host">
+                <properties>
+                  <help>Station (MAC) address to wake up</help>
+                </properties>
+                <command>sudo /usr/sbin/etherwake -i "$3" "$5"</command>
+              </tagNode>
+            </children>
+            </tagNode>
         </children>
-        </tagNode>
+      </node>
     </children>
   </node>
 </interfaceDefinition>

@@ -10,6 +10,7 @@
 #include <include/firewall/limit.xml.i>
 #include <include/firewall/log.xml.i>
 #include <include/firewall/log-options.xml.i>
+#include <include/firewall/match-ether-type.xml.i>
 #include <include/firewall/match-ipsec.xml.i>
 #include <include/firewall/match-vlan.xml.i>
 #include <include/firewall/nft-queue.xml.i>

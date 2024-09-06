@@ -151,6 +151,20 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             proto = '{tcp, udp}'
         output.append(f'meta l4proto {operator} {proto}')
 
+    if 'ethernet_type' in rule_conf:
+        ether_type_mapping = {
+            '802.1q': '8021q',
+            '802.1ad': '8021ad',
+            'ipv6': 'ip6',
+            'ipv4': 'ip',
+            'arp': 'arp'
+        }
+        ether_type = rule_conf['ethernet_type']
+        operator = '!=' if ether_type.startswith('!') else ''
+        ether_type = ether_type.lstrip('!')
+        ether_type = ether_type_mapping.get(ether_type, ether_type)
+        output.append(f'ether type {operator} {ether_type}')
+
     for side in ['destination', 'source']:
         if side in rule_conf:
             prefix = side[0]

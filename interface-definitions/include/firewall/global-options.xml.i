@@ -49,6 +49,12 @@
         <help>Apply configured firewall rules to traffic switched by bridges</help>
       </properties>
       <children>
+        <leafNode name="invalid-connections">
+          <properties>
+            <help>Accept ARP and DHCP despite they are marked as invalid connection</help>
+            <valueless/>
+          </properties>
+        </leafNode>
         <leafNode name="ipv4">
           <properties>
             <help>Apply configured IPv4 firewall rules</help>
