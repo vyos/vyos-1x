@@ -187,6 +187,9 @@ fi
 # Enable Cloud-init pre-configuration service
 systemctl enable vyos-config-cloud-init.service
 
+# Enable Podman API
+systemctl enable podman.service
+
 # Generate API GraphQL schema
 /usr/libexec/vyos/services/api/graphql/generate/generate_schema.py
 
