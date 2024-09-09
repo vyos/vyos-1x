@@ -230,5 +230,23 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         tmp = cmd(f'sudo podman exec -it {cont_name} id -g')
         self.assertEqual(tmp, gid)
 
+    def test_api_socket(self):
+        base_name = 'api-test'
+        container_list = range(1, 5)
+
+        for ii in container_list:
+            name = f'{base_name}-{ii}'
+            self.cli_set(base_path + ['name', name, 'image', cont_image])
+            self.cli_set(base_path + ['name', name, 'allow-host-networks'])
+
+        self.cli_commit()
+
+        # Query API about running containers
+        tmp = cmd("sudo curl --unix-socket /run/podman/podman.sock -H 'content-type: application/json' -sf http://localhost/containers/json")
+        tmp = json.loads(tmp)
+
+        # We expect the same amount of containers from the API that we started above
+        self.assertEqual(len(container_list), len(tmp))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
