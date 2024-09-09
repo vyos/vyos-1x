@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="execute">
+    <children>
+      <node name="port-scan">
+        <properties>
+          <help>Scan network for open ports</help>
+        </properties>
+        <children>
+          <tagNode name="host">
+            <properties>
+              <help>IP address or domain name of the host to scan (scan all ports 1-65535)</help>
+              <completionHelp>
+                <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>nmap -p- -T4 --max-retries=1 --host-timeout=30s "$4"</command>
+            <children>
+              <leafNode name="node.tag">
+                <properties>
+                  <help>Port scan options</help>
+                  <completionHelp>
+                    <script>${vyos_op_scripts_dir}/execute_port-scan.py --get-options-nested "${COMP_WORDS[@]}"</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/execute_port-scan.py "${@:4}"</command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
