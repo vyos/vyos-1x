@@ -64,6 +64,7 @@ op_mode_definitions: $(op_xml_obj)
 	ln -s ../node.tag $(OP_TMPL_DIR)/mtr/node.tag/node.tag/
 	ln -s ../node.tag $(OP_TMPL_DIR)/monitor/traceroute/node.tag/node.tag/
 	ln -s ../node.tag $(OP_TMPL_DIR)/monitor/traffic/interface/node.tag/node.tag/
+	ln -s ../node.tag $(OP_TMPL_DIR)/execute/port-scan/host/node.tag/node.tag/
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
