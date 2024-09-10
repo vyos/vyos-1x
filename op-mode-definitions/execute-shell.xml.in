@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="execute">
+    <children>
+      <node name="shell">
+        <properties>
+          <help>Execute shell</help>
+        </properties>
+        <children>
+          <tagNode name="netns">
+            <properties>
+              <help>Execute shell in given Network Namespace</help>
+              <completionHelp>
+                <path>netns name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ip netns exec $4 su - $(whoami)</command>
+          </tagNode>
+          <tagNode name="vrf">
+            <properties>
+              <help>Execute shell in given VRF instance</help>
+              <completionHelp>
+                <path>vrf name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ip vrf exec $4 su - $(whoami)</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
