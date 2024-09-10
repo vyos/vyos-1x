@@ -77,6 +77,18 @@
               <multi/>
             </properties>
           </leafNode>
+          <leafNode name="accept-any-service">
+            <properties>
+              <help>Accept any service name in PPPoE Active Discovery Request (PADR)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="accept-blank-service">
+            <properties>
+              <help>Accept blank service name in PADR</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <tagNode name="pado-delay">
             <properties>
               <help>PADO delays</help>
