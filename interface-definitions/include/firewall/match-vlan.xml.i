@@ -36,6 +36,7 @@
         </constraint>
       </properties>
     </leafNode>
+    #include <include/firewall/match-ether-type.xml.i>
   </children>
 </node>
 <!-- include end -->
