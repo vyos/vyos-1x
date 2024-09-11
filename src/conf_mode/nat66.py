@@ -26,6 +26,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmd
+from vyos.utils.process import run
 from vyos.template import is_ipv6
 from vyos import ConfigError
 from vyos import airbag
@@ -48,6 +49,14 @@ def get_config(config=None):
 
     if not conf.exists(base):
         nat['deleted'] = ''
+        return nat
+
+    nat['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+
+    # Remove dynamic firewall groups if present:
+    if 'dynamic_group' in nat['firewall_group']:
+        del nat['firewall_group']['dynamic_group']
 
     return nat
 
@@ -99,22 +108,33 @@ def verify(nat):
                         if not interface_exists(interface_name):
                             Warning(f'Interface "{interface_name}" for destination NAT66 rule "{rule}" does not exist!')
 
+            if 'destination' in config and 'group' in config['destination']:
+                if len({'address_group', 'network_group', 'domain_group'} & set(config['destination']['group'])) > 1:
+                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+
     return None
 
 def generate(nat):
     if not os.path.exists(nftables_nat66_config):
         nat['first_install'] = True
 
-    render(nftables_nat66_config, 'firewall/nftables-nat66.j2', nat, permission=0o755)
+    render(nftables_nat66_config, 'firewall/nftables-nat66.j2', nat)
+
+    # dry-run newly generated configuration
+    tmp = run(f'nft --check --file {nftables_nat66_config}')
+    if tmp > 0:
+        raise ConfigError('Configuration file errors encountered!')
+
     return None
 
 def apply(nat):
-    if not nat:
-        return None
-
     check_kmod(k_mod)
 
     cmd(f'nft --file {nftables_nat66_config}')
+
+    if not nat or 'deleted' in nat:
+        os.unlink(nftables_nat66_config)
+
     call_dependents()
 
     return None
