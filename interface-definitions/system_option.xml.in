@@ -57,15 +57,15 @@
                   </completionHelp>
                   <valueHelp>
                     <format>active</format>
-                    <description>This is the low-level firmware control mode based on the profile set and the system governor has no effect</description>
+                    <description>The firmware controls performance states and the system governor has no effect</description>
                   </valueHelp>
                   <valueHelp>
                     <format>passive</format>
-                    <description>The driver allows the system governor to manage CPU frequency while providing available performance states</description>
+                    <description>Allow the system governor to manage performance states</description>
                   </valueHelp>
                   <valueHelp>
                     <format>guided</format>
-                    <description>The driver allows to set desired performance levels and the firmware selects a performance level in this range and fitting to the current workload</description>
+                    <description>The firmware controls performance states guided by the system governor</description>
                   </valueHelp>
                 </properties>
               </leafNode>
