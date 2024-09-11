@@ -46,7 +46,14 @@ hw_mode=a
 ieee80211h=1
 ieee80211ac=1
 {%     elif mode is vyos_defined('ax') %}
+{#{%         if capabilities.ht is vyos_defined and capabilities.vht not vyos_defined %}#}
+{%         if capabilities.he.channel_set_width is vyos_defined('81') or capabilities.he.channel_set_width is vyos_defined('83') or capabilities.he.channel_set_width is vyos_defined('84') %}
+{#         This is almost certainly a 2.4GHz network #}
+hw_mode=g
+{%         else %}
+{#         This is likely a 5GHz or 6GHz network #}
 hw_mode=a
+{%         endif %}
 ieee80211h=1
 ieee80211ax=1
 {%     else %}
@@ -202,7 +209,7 @@ require_he=1
 {% else %}
 ieee80211n={{ '1' if 'n' in mode or 'ac' in mode or 'ax' in mode else '0' }}
 {% endif %}
-{# HE (802.11ax 6GHz) #}
+{# HE (802.11ax) #}
 {% if capabilities.he is vyos_defined and mode in 'ax' %}
 {# For now, hard-code power levels for indoor-only AP #}
 he_6ghz_reg_pwr_type=0
@@ -219,6 +226,9 @@ op_class={{ capabilities.he.channel_set_width }}
 {%     endif %}
 {%     if capabilities.he.bss_color is vyos_defined %}
 he_bss_color={{ capabilities.he.bss_color }}
+{%     endif %}
+{%     if capabilities.he.coding_scheme is vyos_defined %}
+he_basic_mcs_nss_set={{ capabilities.he.coding_scheme }}
 {%     endif %}
 he_6ghz_rx_ant_pat={{ '1' if capabilities.he.antenna_pattern_fixed is vyos_defined else '0' }}
 he_su_beamformer={{ '1' if capabilities.he.beamform.single_user_beamformer is vyos_defined else '0' }}

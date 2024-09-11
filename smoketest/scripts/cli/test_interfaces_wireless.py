@@ -303,7 +303,89 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         for key, value in vht_opt.items():
             self.assertIn(value, tmp)
 
-    def test_wireless_hostapd_he_config(self):
+    def test_wireless_hostapd_he_2ghz_config(self):
+        # Only set the hostapd (access-point) options - HE mode for 802.11ax at 2.4GHz
+        interface = self._interfaces[1] # wlan1
+        ssid = 'ssid'
+        channel = '1'
+        sae_pw = 'VyOSVyOSVyOS'
+        bss_color = '13'
+        channel_set_width = '81'
+
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'channel', channel])
+        self.cli_set(self._base_path + [interface, 'mode', 'ax'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'mode', 'wpa2'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'passphrase', sae_pw])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'CCMP'])
+        self.cli_set(self._base_path + [interface, 'security', 'wpa', 'cipher', 'GCMP'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', '40mhz-incapable'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', 'channel-set-width', 'ht20'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', 'channel-set-width', 'ht40+'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', 'channel-set-width', 'ht40-'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', 'short-gi', '20'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'ht', 'short-gi', '40'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'bss-color', bss_color])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'channel-set-width', channel_set_width])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'multi-user-beamformer'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'single-user-beamformer'])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'single-user-beamformee'])
+
+        self.cli_commit()
+
+        #
+        # Validate Config
+        #
+        tmp = get_config_value(interface, 'interface')
+        self.assertEqual(interface, tmp)
+
+        # ssid
+        tmp = get_config_value(interface, 'ssid')
+        self.assertEqual(ssid, tmp)
+
+        # mode of operation resulting from [interface, 'mode', 'ax']
+        tmp = get_config_value(interface, 'hw_mode')
+        self.assertEqual('g', tmp)
+        tmp = get_config_value(interface, 'ieee80211h')
+        self.assertEqual('1', tmp)
+        tmp = get_config_value(interface, 'ieee80211ax')
+        self.assertEqual('1', tmp)
+
+        # channel and channel width
+        tmp = get_config_value(interface, 'channel')
+        self.assertEqual(channel, tmp)
+        tmp = get_config_value(interface, 'op_class')
+        self.assertEqual(channel_set_width, tmp)
+
+        # BSS coloring
+        tmp = get_config_value(interface, 'he_bss_color')
+        self.assertEqual(bss_color, tmp)
+
+        # sae_password
+        tmp = get_config_value(interface, 'wpa_passphrase')
+        self.assertEqual(sae_pw, tmp)
+
+        # WPA3 and dependencies
+        tmp = get_config_value(interface, 'wpa')
+        self.assertEqual('2', tmp)
+        tmp = get_config_value(interface, 'rsn_pairwise')
+        self.assertEqual('CCMP GCMP', tmp)
+        tmp = get_config_value(interface, 'wpa_key_mgmt')
+        self.assertEqual('WPA-PSK WPA-PSK-SHA256', tmp)
+
+        # beamforming
+        tmp = get_config_value(interface, 'he_mu_beamformer')
+        self.assertEqual('1', tmp)
+        tmp = get_config_value(interface, 'he_su_beamformee')
+        self.assertEqual('1', tmp)
+        tmp = get_config_value(interface, 'he_mu_beamformer')
+        self.assertEqual('1', tmp)
+
+        # Check for running process
+        self.assertTrue(process_named_running('hostapd'))
+
+    def test_wireless_hostapd_he_6ghz_config(self):
         # Only set the hostapd (access-point) options - HE mode for 802.11ax at 6GHz
         interface = self._interfaces[1] # wlan1
         ssid = 'ssid'
@@ -327,6 +409,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'bss-color', bss_color])
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'channel-set-width', channel_set_width])
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'center-channel-freq', 'freq-1', center_channel_freq_1])
+        self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'antenna-pattern-fixed'])
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'multi-user-beamformer'])
         self.cli_set(self._base_path + [interface, 'capabilities', 'he', 'beamform', 'single-user-beamformer'])
 
@@ -373,6 +456,10 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual('CCMP GCMP', tmp)
         tmp = get_config_value(interface, 'wpa_key_mgmt')
         self.assertEqual('SAE', tmp)
+
+        # antenna pattern
+        tmp = get_config_value(interface, 'he_6ghz_rx_ant_pat')
+        self.assertEqual('1', tmp)
 
         # beamforming
         tmp = get_config_value(interface, 'he_mu_beamformer')
