@@ -12,41 +12,72 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+import re
+
+# Define the number of seconds in each time unit
+time_units = {
+    'y': 60 * 60 * 24 * 365.25,  # year
+    'w': 60 * 60 * 24 * 7,       # week
+    'd': 60 * 60 * 24,           # day
+    'h': 60 * 60,                # hour
+    'm': 60,                     # minute
+    's': 1                       # second
+}
+
+
+def human_to_seconds(time_str):
+    """ Converts a human-readable interval such as 1w4d18h35m59s
+    to number of seconds
+    """
+
+    time_patterns = {
+        'y': r'(\d+)\s*y',
+        'w': r'(\d+)\s*w',
+        'd': r'(\d+)\s*d',
+        'h': r'(\d+)\s*h',
+        'm': r'(\d+)\s*m',
+        's': r'(\d+)\s*s'
+    }
+
+    total_seconds = 0
+
+    for unit, pattern in time_patterns.items():
+        match = re.search(pattern, time_str)
+        if match:
+            value = int(match.group(1))
+            total_seconds += value * time_units[unit]
+
+    return int(total_seconds)
+
 
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable
     interval such as 1w4d18h35m59s
     """
     s = int(s)
-
-    year = 60 * 60 * 24 * 365.25
-    week = 60 * 60 * 24 * 7
-    day = 60 * 60 * 24
-    hour = 60 * 60
-
     result = []
 
-    years = s // year
+    years = s // time_units['y']
     if years > 0:
         result.append(f'{int(years)}y')
-        s = int(s % year)
+        s = int(s % time_units['y'])
 
-    weeks = s // week
+    weeks = s // time_units['w']
     if weeks > 0:
         result.append(f'{weeks}w')
-        s = s % week
+        s = s % time_units['w']
 
-    days = s // day
+    days = s // time_units['d']
     if days > 0:
         result.append(f'{days}d')
-        s = s % day
+        s = s % time_units['d']
 
-    hours = s // hour
+    hours = s // time_units['h']
     if hours > 0:
         result.append(f'{hours}h')
-        s = s % hour
+        s = s % time_units['h']
 
-    minutes = s // 60
+    minutes = s // time_units['m']
     if minutes > 0:
         result.append(f'{minutes}m')
         s = s % 60
@@ -56,6 +87,7 @@ def seconds_to_human(s, separator=""):
         result.append(f'{seconds}s')
 
     return separator.join(result)
+
 
 def bytes_to_human(bytes, initial_exponent=0, precision=2,
                    int_below_exponent=0):

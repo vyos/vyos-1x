@@ -793,6 +793,179 @@
                   </leafNode>
                 </children>
               </node>
+              <tagNode name="zone-cache">
+                <properties>
+                  <help>Load a zone into the recursor cache</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Domain name</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="source">
+                    <properties>
+                      <help>Zone source</help>
+                    </properties>
+                    <children>
+                      <leafNode name="axfr">
+                        <properties>
+                          <help>DNS server address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="url">
+                        <properties>
+                          <help>Source URL</help>
+                          <valueHelp>
+                            <format>url</format>
+                            <description>Zone file URL</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="url" argument="--scheme http --scheme https"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="options">
+                    <properties>
+                      <help>Zone caching options</help>
+                    </properties>
+                    <children>
+                      <leafNode name="timeout">
+                        <properties>
+                          <help>Zone retrieval timeout</help>
+                          <valueHelp>
+                            <format>u32:1-3600</format>
+                            <description>Request timeout in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-3600"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>20</defaultValue>
+                      </leafNode>
+                      <node name="refresh">
+                        <properties>
+                          <help>Zone caching options</help>
+                        </properties>
+                        <children>
+                          <leafNode name="on-reload">
+                            <properties>
+                              <help>Retrieval zone only at startup and on reload</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="interval">
+                            <properties>
+                              <help>Periodic zone retrieval interval</help>
+                              <valueHelp>
+                                <format>u32:0-31536000</format>
+                                <description>Retrieval interval in seconds</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 0-31536000"/>
+                              </constraint>
+                            </properties>
+                            <defaultValue>86400</defaultValue>
+                          </leafNode>
+                        </children>
+                      </node>
+                      <leafNode name="retry-interval">
+                        <properties>
+                          <help>Retry interval after zone retrieval errors</help>
+                          <valueHelp>
+                            <format>u32:1-86400</format>
+                            <description>Retry period in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-86400"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>60</defaultValue>
+                      </leafNode>
+                      <leafNode name="max-zone-size">
+                        <properties>
+                          <help>Maximum zone size in megabytes</help>
+                          <valueHelp>
+                            <format>u32:0</format>
+                            <description>No restriction</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>u32:1-1024</format>
+                            <description>Size in megabytes</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 0-1024"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>0</defaultValue>
+                      </leafNode>
+                      <leafNode name="zonemd">
+                        <properties>
+                          <help>Message Digest for DNS Zones (RFC 8976)</help>
+                          <completionHelp>
+                            <list>ignore validate require</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>ignore</format>
+                            <description>Ignore ZONEMD records</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>validate</format>
+                            <description>Validate ZONEMD if present</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>require</format>
+                            <description>Require valid ZONEMD record to be present</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(ignore|validate|require)</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>validate</defaultValue>
+                      </leafNode>
+                      <leafNode name="dnssec">
+                        <properties>
+                          <help>DNSSEC mode</help>
+                          <completionHelp>
+                            <list>ignore validate require</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>ignore</format>
+                            <description>Do not do DNSSEC validation</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>validate</format>
+                            <description>Reject zones with incorrect signatures but accept unsigned zones</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>require</format>
+                            <description>Require DNSSEC validation</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(ignore|validate|require)</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>validate</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
             </children>
           </node>
         </children>

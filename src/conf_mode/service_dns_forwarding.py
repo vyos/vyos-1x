@@ -224,6 +224,18 @@ def get_config(config=None):
 
             dns['authoritative_zones'].append(zone)
 
+    if 'zone_cache' in dns:
+        # convert refresh interval to sec:
+        for _, zone_conf in dns['zone_cache'].items():
+            if 'options' in zone_conf \
+                    and 'refresh' in zone_conf['options']:
+
+                if 'on_reload' in zone_conf['options']['refresh']:
+                    interval = 0
+                else:
+                    interval = zone_conf['options']['refresh']['interval']
+                zone_conf['options']['refresh']['interval'] = interval
+
     return dns
 
 def verify(dns):
@@ -259,7 +271,15 @@ def verify(dns):
         if not 'system_name_server' in dns:
             print('Warning: No "system name-server" configured')
 
+    if 'zone_cache' in dns:
+        for name, conf in dns['zone_cache'].items():
+            if ('source' not in conf) \
+                    or ('url' in conf['source'] and 'axfr' in conf['source']):
+                raise ConfigError(f'Invalid configuration for zone "{name}": '
+                                  f'Please select one source type "url" or "axfr".')
+
     return None
+
 
 def generate(dns):
     # bail out early - looks like removal from running config
