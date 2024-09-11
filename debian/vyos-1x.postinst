@@ -21,6 +21,11 @@ if ! grep -q '^openvpn' /etc/passwd; then
     adduser --quiet --firstuid 100 --system --group --shell /usr/sbin/nologin openvpn
 fi
 
+# node_exporter should get its own user
+if ! grep -q '^node_exporter' /etc/passwd; then
+    adduser --quiet --firstuid 100 --system --group --shell /bin/false node_exporter
+fi
+
 # We need to have a group for RADIUS service users to use it inside PAM rules
 if ! grep -q '^radius' /etc/group; then
     addgroup --firstgid 1000 --quiet radius
