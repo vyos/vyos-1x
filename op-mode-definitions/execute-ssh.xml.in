@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="execute">
+    <children>
+      <node name="ssh">
+        <properties>
+          <help>SSH to a node</help>
+        </properties>
+        <children>
+          <tagNode name="host">
+            <properties>
+              <help>Hostname or IP address</help>
+              <completionHelp>
+                <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/ssh $4</command>
+            <children>
+              <tagNode name="user">
+                <properties>
+                  <help>Remote server username</help>
+                  <completionHelp>
+                    <list>&lt;username&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>/usr/bin/ssh $6@$4</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
