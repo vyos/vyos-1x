@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="force">
+  <node name="execute">
     <children>
       <tagNode name="owping">
         <properties>
