@@ -134,14 +134,14 @@ init_bootfile () {
     if [ ! -r $DEFAULT_BOOTFILE ]; then
         if [ -f $vyos_data_dir/config.boot.default ]; then
             cp $vyos_data_dir/config.boot.default $DEFAULT_BOOTFILE
-            $vyos_libexec_dir/system-versions-foot.py >> $DEFAULT_BOOTFILE
+            $vyos_libexec_dir/add-system-version.py >> $DEFAULT_BOOTFILE
         fi
     fi
     if [ ! -r $BOOTFILE ] ; then
         if [ -f $DEFAULT_BOOTFILE ]; then
             cp $DEFAULT_BOOTFILE $BOOTFILE
         else
-            $vyos_libexec_dir/system-versions-foot.py > $BOOTFILE
+            $vyos_libexec_dir/add-system-version.py > $BOOTFILE
         fi
         chgrp ${GROUP} $BOOTFILE
         chmod 660 $BOOTFILE

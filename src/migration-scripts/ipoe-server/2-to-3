@@ -1,58 +1,40 @@
-#!/usr/bin/env python3
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Migrating to named ipv6 pools
 
-from sys import argv
-from sys import exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 base = ['service', 'ipoe-server']
 pool_base = base + ['client-ipv6-pool']
-if not config.exists(base):
-    exit(0)
 
-if not config.exists(pool_base):
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
 
-ipv6_pool_name = 'ipv6-pool'
-config.copy(pool_base, pool_base + [ipv6_pool_name])
+    if not config.exists(pool_base):
+        return
 
-if config.exists(pool_base + ['prefix']):
-    config.delete(pool_base + ['prefix'])
-    config.set(base + ['default-ipv6-pool'], value=ipv6_pool_name)
-if config.exists(pool_base + ['delegate']):
-    config.delete(pool_base + ['delegate'])
+    ipv6_pool_name = 'ipv6-pool'
+    config.copy(pool_base, pool_base + [ipv6_pool_name])
 
-# format as tag node
-config.set_tag(pool_base)
+    if config.exists(pool_base + ['prefix']):
+        config.delete(pool_base + ['prefix'])
+        config.set(base + ['default-ipv6-pool'], value=ipv6_pool_name)
+    if config.exists(pool_base + ['delegate']):
+        config.delete(pool_base + ['delegate'])
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+    # format as tag node
+    config.set_tag(pool_base)

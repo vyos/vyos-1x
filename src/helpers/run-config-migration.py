@@ -1,86 +1,78 @@
-#!/usr/bin/python3
-
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+#!/usr/bin/env python3
 #
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation; either
-# version 2.1 of the License, or (at your option) any later version.
+# Copyright (C) 2019-2024 VyOS maintainers and contributors
 #
-# This library is distributed in the hope that it will be useful,
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import sys
-import argparse
-import datetime
+import time
+from argparse import ArgumentParser
+from shutil import copyfile
 
-from vyos.utils.process import cmd
-from vyos.migrator import Migrator, VirtualMigrator
+from vyos.migrate import ConfigMigrate
+from vyos.migrate import ConfigMigrateError
 
-def main():
-    argparser = argparse.ArgumentParser(
-            formatter_class=argparse.RawTextHelpFormatter)
-    argparser.add_argument('config_file', type=str,
-            help="configuration file to migrate")
-    argparser.add_argument('--force', action='store_true',
-            help="Force calling of all migration scripts.")
-    argparser.add_argument('--set-vintage', type=str,
-            choices=['vyatta', 'vyos'],
-            help="Set the format for the config version footer in config"
-            " file:\n"
-            "set to 'vyatta':\n"
-            "(for '/* === vyatta-config-version ... */' format)\n"
-            "or 'vyos':\n"
-            "(for '// vyos-config-version ...' format).")
-    argparser.add_argument('--virtual', action='store_true',
-            help="Update the format of the trailing comments in"
-                 " config file,\nfrom 'vyatta' to 'vyos'; no migration"
-                 " scripts are run.")
-    args = argparser.parse_args()
+parser = ArgumentParser()
+parser.add_argument('config_file', type=str,
+                    help="configuration file to migrate")
+parser.add_argument('--test-script', type=str,
+                    help="test named script")
+parser.add_argument('--output-file', type=str,
+                    help="write to named output file instead of config file")
+parser.add_argument('--force', action='store_true',
+                    help="force run of all migration scripts")
 
-    config_file_name = args.config_file
-    force_on = args.force
-    vintage = args.set_vintage
-    virtual = args.virtual
+args = parser.parse_args()
 
-    if not os.access(config_file_name, os.R_OK):
-        print("Read error: {}.".format(config_file_name))
+config_file = args.config_file
+out_file = args.output_file
+test_script = args.test_script
+force = args.force
+
+if not os.access(config_file, os.R_OK):
+    print(f"Config file '{config_file}' not readable")
+    sys.exit(1)
+
+if out_file is None:
+    if not os.access(config_file, os.W_OK):
+        print(f"Config file '{config_file}' not writeable")
+        sys.exit(1)
+else:
+    try:
+        open(out_file, 'w').close()
+    except OSError:
+        print(f"Output file '{out_file}' not writeable")
         sys.exit(1)
 
-    if not os.access(config_file_name, os.W_OK):
-        print("Write error: {}.".format(config_file_name))
-        sys.exit(1)
+config_migrate = ConfigMigrate(config_file, force=force, output_file=out_file)
 
-    separator = "."
-    backup_file_name = separator.join([config_file_name,
-            '{0:%Y-%m-%d-%H%M%S}'.format(datetime.datetime.now()),
-            'pre-migration'])
+if test_script:
+    # run_script and exit
+    config_migrate.run_script(test_script)
+    sys.exit(0)
 
-    cmd(f'cp -p {config_file_name} {backup_file_name}')
+backup = None
+if out_file is None:
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    backup = f'{config_file}.{timestr}.pre-migration'
+    copyfile(config_file, backup)
 
-    if not virtual:
-        virtual_migration = VirtualMigrator(config_file_name)
-        virtual_migration.run()
+try:
+    config_migrate.run()
+except ConfigMigrateError as e:
+    print(f'Error: {e}')
+    sys.exit(1)
 
-        migration = Migrator(config_file_name, force=force_on)
-        migration.run()
-
-        if not migration.config_changed():
-            os.remove(backup_file_name)
-    else:
-        virtual_migration = VirtualMigrator(config_file_name,
-                                            set_vintage=vintage)
-
-        virtual_migration.run()
-
-        if not virtual_migration.config_changed():
-            os.remove(backup_file_name)
-
-if __name__ == '__main__':
-    main()
+if backup is not None and not config_migrate.config_modified:
+    os.unlink(backup)

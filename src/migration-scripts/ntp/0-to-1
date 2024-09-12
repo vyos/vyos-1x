@@ -1,36 +1,32 @@
 #!/usr/bin/env python3
 
-# Delete "set system ntp server <n> dynamic" option
+# Copyright 2018-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
+# Delete "set system ntp server <n> dynamic" option
 
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['system', 'ntp', 'server']):
+        # Nothing to do
+        return
 
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
-if not config.exists(['system', 'ntp', 'server']):
-    # Nothing to do
-    sys.exit(0)
-else:
     # Delete abandoned leaf node if found inside tag node for
     # "set system ntp server <n> dynamic"
     base = ['system', 'ntp', 'server']
     for server in config.list_nodes(base):
         if config.exists(base + [server, 'dynamic']):
             config.delete(base + [server, 'dynamic'])
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

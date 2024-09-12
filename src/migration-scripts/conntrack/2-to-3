@@ -1,36 +1,31 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Conntrack syntax version 3
 # Enables all conntrack modules (previous default behaviour) and omits manually disabled modules.
 
-import sys
-
 from vyos.configtree import ConfigTree
-
-if len(sys.argv) < 2:
-    print('Must specify file name!')
-    sys.exit(1)
-
-filename = sys.argv[1]
-
-with open(filename, 'r') as f:
-    config = ConfigTree(f.read())
 
 module_path = ['system', 'conntrack', 'modules']
 
-# Go over all conntrack modules available as of v1.3.0.
-for module in ['ftp', 'h323', 'nfs', 'pptp', 'sip', 'sqlnet', 'tftp']:
-    # 'disable' is being phased out.
-    if config.exists(module_path + [module, 'disable']):
-        config.delete(module_path + [module])
-    # If it wasn't manually 'disable'd, it was enabled by default.
-    else:
-        config.set(module_path + [module])
-
-try:
-    if config.exists(module_path):
-        with open(filename, 'w') as f:
-            f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    sys.exit(1)
+def migrate(config: ConfigTree) -> None:
+    # Go over all conntrack modules available as of v1.3.0.
+    for module in ['ftp', 'h323', 'nfs', 'pptp', 'sip', 'sqlnet', 'tftp']:
+        # 'disable' is being phased out.
+        if config.exists(module_path + [module, 'disable']):
+            config.delete(module_path + [module])
+        # If it wasn't manually 'disable'd, it was enabled by default.
+        else:
+            config.set(module_path + [module])

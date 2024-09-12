@@ -1,38 +1,28 @@
-#!/usr/bin/env python3
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2022-2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from ipaddress import ip_interface
 from ipaddress import ip_address
-from sys import exit, argv
+
 from vyos.configtree import ConfigTree
 from vyos.template import is_ipv4
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['protocols', 'static', 'arp']
 tmp_base = ['protocols', 'static', 'arp-tmp']
-config = ConfigTree(config_file)
 
-def fixup_cli(config, path, interface):
+def fixup_cli(config, path, interface, host):
     if config.exists(path + ['address']):
         for address in config.return_values(path + ['address']):
             tmp = ip_interface(address)
@@ -47,41 +37,35 @@ def fixup_cli(config, path, interface):
                 config.set_tag(iface_path + [interface, 'address'])
                 continue
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-# We need a temporary copy of the config tree as the original one needs to be
-# deleted first due to a change iun thge tagNode structure.
-config.copy(base, tmp_base)
-config.delete(base)
+    # We need a temporary copy of the config tree as the original one needs to be
+    # deleted first due to a change iun thge tagNode structure.
+    config.copy(base, tmp_base)
+    config.delete(base)
 
-for host in config.list_nodes(tmp_base):
-    for type in config.list_nodes(['interfaces']):
-        for interface in config.list_nodes(['interfaces', type]):
-            if_base = ['interfaces', type, interface]
-            fixup_cli(config, if_base, interface)
+    for host in config.list_nodes(tmp_base):
+        for type in config.list_nodes(['interfaces']):
+            for interface in config.list_nodes(['interfaces', type]):
+                if_base = ['interfaces', type, interface]
+                fixup_cli(config, if_base, interface, host)
 
-            if config.exists(if_base + ['vif']):
-                for vif in config.list_nodes(if_base + ['vif']):
-                    vif_base = ['interfaces', type, interface, 'vif', vif]
-                    fixup_cli(config, vif_base, f'{interface}.{vif}')
+                if config.exists(if_base + ['vif']):
+                    for vif in config.list_nodes(if_base + ['vif']):
+                        vif_base = ['interfaces', type, interface, 'vif', vif]
+                        fixup_cli(config, vif_base, f'{interface}.{vif}', host)
 
-            if config.exists(if_base + ['vif-s']):
-                for vif_s in config.list_nodes(if_base + ['vif-s']):
-                    vif_s_base = ['interfaces', type, interface, 'vif-s', vif_s]
-                    fixup_cli(config, vif_s_base, f'{interface}.{vif_s}')
+                if config.exists(if_base + ['vif-s']):
+                    for vif_s in config.list_nodes(if_base + ['vif-s']):
+                        vif_s_base = ['interfaces', type, interface, 'vif-s', vif_s]
+                        fixup_cli(config, vif_s_base, f'{interface}.{vif_s}', host)
 
-                    if config.exists(if_base + ['vif-s', vif_s, 'vif-c']):
-                        for vif_c in config.list_nodes(if_base + ['vif-s', vif_s, 'vif-c']):
-                            vif_c_base = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c', vif_c]
-                            fixup_cli(config, vif_c_base, f'{interface}.{vif_s}.{vif_c}')
+                        if config.exists(if_base + ['vif-s', vif_s, 'vif-c']):
+                            for vif_c in config.list_nodes(if_base + ['vif-s', vif_s, 'vif-c']):
+                                vif_c_base = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c', vif_c]
+                                fixup_cli(config, vif_c_base, f'{interface}.{vif_s}.{vif_c}', host)
 
-config.delete(tmp_base)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    config.delete(tmp_base)

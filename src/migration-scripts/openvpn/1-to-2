@@ -17,25 +17,13 @@
 # Removes --cipher option (deprecated) from OpenVPN configs
 # and moves it to --data-ciphers for server and client modes
 
-import sys
-
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['interfaces', 'openvpn']):
+        # Nothing to do
+        return
 
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
-if not config.exists(['interfaces', 'openvpn']):
-    # Nothing to do
-    sys.exit(0)
-else:
     ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
     for	i in ovpn_intfs:
         # Remove 'encryption cipher' and add this value to 'encryption ncp-ciphers'
@@ -65,10 +53,3 @@ else:
 
             for c in ncp_ciphers:
                 config.set(ncp_cipher_path, value=c, replace=False)
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

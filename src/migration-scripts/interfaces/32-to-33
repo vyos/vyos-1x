@@ -16,42 +16,25 @@
 #
 # T6318: WiFi country-code should be set system-wide instead of per-device
 
-from sys import argv
-from sys import exit
 from vyos.configtree import ConfigTree
-
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-with open(file_name, 'r') as f:
-    config_file = f.read()
 
 base = ['interfaces', 'wireless']
 
-config = ConfigTree(config_file)
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-installed = False
-for interface in config.list_nodes(base):
-    cc_path = base + [interface, 'country-code']
-    if config.exists(cc_path):
-        tmp = config.return_value(cc_path)
-        config.delete(cc_path)
+    installed = False
+    for interface in config.list_nodes(base):
+        cc_path = base + [interface, 'country-code']
+        if config.exists(cc_path):
+            tmp = config.return_value(cc_path)
+            config.delete(cc_path)
 
-        # There can be only ONE wireless country-code per device, everything
-        # else makes no sense as a WIFI router can not operate in two
-        # different countries
-        if not installed:
-            config.set(['system', 'wireless', 'country-code'], value=tmp)
-            installed = True
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+            # There can be only ONE wireless country-code per device, everything
+            # else makes no sense as a WIFI router can not operate in two
+            # different countries
+            if not installed:
+                config.set(['system', 'wireless', 'country-code'], value=tmp)
+                installed = True

@@ -98,3 +98,15 @@ def load_as_module(name: str, path: str):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+def load_as_module_source(name: str, path: str):
+    """ Necessary modification of load_as_module for files without *.py
+    extension """
+    import importlib.util
+    from importlib.machinery import SourceFileLoader
+
+    loader = SourceFileLoader(name, path)
+    spec = importlib.util.spec_from_loader(name, loader)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod

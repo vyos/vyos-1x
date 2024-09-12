@@ -14,58 +14,53 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# T3417: migrate IS-IS tagNode to node as we can only have one IS-IS process
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import argv
-from sys import exit
+# T3417: migrate IS-IS tagNode to node as we can only have one IS-IS process
 
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['service', 'monitoring', 'telegraf']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-if config.exists(base + ['authentication', 'organization']):
-    tmp = config.return_value(base + ['authentication', 'organization'])
-    config.delete(base + ['authentication', 'organization'])
-    config.set(base + ['influxdb', 'authentication', 'organization'], value=tmp)
+    if config.exists(base + ['authentication', 'organization']):
+        tmp = config.return_value(base + ['authentication', 'organization'])
+        config.delete(base + ['authentication', 'organization'])
+        config.set(base + ['influxdb', 'authentication', 'organization'], value=tmp)
 
-if config.exists(base + ['authentication', 'token']):
-    tmp = config.return_value(base + ['authentication', 'token'])
-    config.delete(base + ['authentication', 'token'])
-    config.set(base + ['influxdb', 'authentication', 'token'], value=tmp)
+    if config.exists(base + ['authentication', 'token']):
+        tmp = config.return_value(base + ['authentication', 'token'])
+        config.delete(base + ['authentication', 'token'])
+        config.set(base + ['influxdb', 'authentication', 'token'], value=tmp)
 
-if config.exists(base + ['bucket']):
-    tmp = config.return_value(base + ['bucket'])
-    config.delete(base + ['bucket'])
-    config.set(base + ['influxdb', 'bucket'], value=tmp)
+    if config.exists(base + ['bucket']):
+        tmp = config.return_value(base + ['bucket'])
+        config.delete(base + ['bucket'])
+        config.set(base + ['influxdb', 'bucket'], value=tmp)
 
-if config.exists(base + ['port']):
-    tmp = config.return_value(base + ['port'])
-    config.delete(base + ['port'])
-    config.set(base + ['influxdb', 'port'], value=tmp)
+    if config.exists(base + ['port']):
+        tmp = config.return_value(base + ['port'])
+        config.delete(base + ['port'])
+        config.set(base + ['influxdb', 'port'], value=tmp)
 
-if config.exists(base + ['url']):
-    tmp = config.return_value(base + ['url'])
-    config.delete(base + ['url'])
-    config.set(base + ['influxdb', 'url'], value=tmp)
-
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    if config.exists(base + ['url']):
+        tmp = config.return_value(base + ['url'])
+        config.delete(base + ['url'])
+        config.set(base + ['influxdb', 'url'], value=tmp)

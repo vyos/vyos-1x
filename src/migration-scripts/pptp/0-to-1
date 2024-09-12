@@ -1,29 +1,31 @@
-#!/usr/bin/env python3
+# Copyright 2018-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # Unclutter PPTP VPN configuiration - move radius-server top level tag
 # nodes to a regular node which now also configures the radius source address
 # used when querying a radius server
 
-import sys
-
 from vyos.configtree import ConfigTree
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 cfg_base = ['vpn', 'pptp', 'remote-access', 'authentication']
-if not config.exists(cfg_base):
-    # Nothing to do
-    sys.exit(0)
-else:
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(cfg_base):
+        # Nothing to do
+        return
+
     # Migrate "vpn pptp authentication radius-source-address" to new
     # "vpn pptp authentication radius source-address"
     if config.exists(cfg_base + ['radius-source-address']):
@@ -50,10 +52,3 @@ else:
     # delete top level tag node
     if config.exists(cfg_base + ['radius-server']):
         config.delete(cfg_base + ['radius-server'])
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        sys.exit(1)

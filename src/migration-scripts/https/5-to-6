@@ -1,25 +1,23 @@
-#!/usr/bin/env python3
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5886: Add support for ACME protocol (LetsEncrypt), migrate https certbot
 #        to new "pki certificate" CLI tree
 # T5902: Remove virtual-host
 
 import os
-import sys
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
@@ -27,81 +25,65 @@ from vyos.utils.process import cmd
 
 vyos_certbot_dir = directories['certbot']
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 base = ['service', 'https']
-if not config.exists(base):
-    # Nothing to do
-    sys.exit(0)
 
-if config.exists(base + ['certificates', 'certbot']):
-    # both domain-name and email must be set on CLI - ensured by previous verify()
-    domain_names = config.return_values(base + ['certificates', 'certbot', 'domain-name'])
-    email = config.return_value(base + ['certificates', 'certbot', 'email'])
-    config.delete(base + ['certificates', 'certbot'])
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-    # Set default certname based on domain-name
-    cert_name = 'https-' + domain_names[0].split('.')[0]
-    # Overwrite certname from previous certbot calls if available
-    # We can not use python code like os.scandir due to filesystem permissions.
-    # This must be run as root
-    certbot_live = f'{vyos_certbot_dir}/live/' # we need the trailing /
-    if os.path.exists(certbot_live):
-        tmp = cmd(f'sudo find {certbot_live} -maxdepth 1 -type d')
-        tmp = tmp.split() # tmp = ['/config/auth/letsencrypt/live', '/config/auth/letsencrypt/live/router.vyos.net']
-        tmp.remove(certbot_live)
-        cert_name = tmp[0].replace(certbot_live, '')
+    if config.exists(base + ['certificates', 'certbot']):
+        # both domain-name and email must be set on CLI - ensured by previous verify()
+        domain_names = config.return_values(base + ['certificates', 'certbot', 'domain-name'])
+        email = config.return_value(base + ['certificates', 'certbot', 'email'])
+        config.delete(base + ['certificates', 'certbot'])
 
-    config.set(['pki', 'certificate', cert_name, 'acme', 'email'], value=email)
-    config.set_tag(['pki', 'certificate'])
-    for domain in domain_names:
-        config.set(['pki', 'certificate', cert_name, 'acme', 'domain-name'], value=domain, replace=False)
+        # Set default certname based on domain-name
+        cert_name = 'https-' + domain_names[0].split('.')[0]
+        # Overwrite certname from previous certbot calls if available
+        # We can not use python code like os.scandir due to filesystem permissions.
+        # This must be run as root
+        certbot_live = f'{vyos_certbot_dir}/live/' # we need the trailing /
+        if os.path.exists(certbot_live):
+            tmp = cmd(f'sudo find {certbot_live} -maxdepth 1 -type d')
+            tmp = tmp.split() # tmp = ['/config/auth/letsencrypt/live', '/config/auth/letsencrypt/live/router.vyos.net']
+            tmp.remove(certbot_live)
+            cert_name = tmp[0].replace(certbot_live, '')
 
-    # Update Webserver certificate
-    config.set(base + ['certificates', 'certificate'], value=cert_name)
+        config.set(['pki', 'certificate', cert_name, 'acme', 'email'], value=email)
+        config.set_tag(['pki', 'certificate'])
+        for domain in domain_names:
+            config.set(['pki', 'certificate', cert_name, 'acme', 'domain-name'], value=domain, replace=False)
 
-if config.exists(base + ['virtual-host']):
-    allow_client = []
-    listen_port = []
-    listen_address = []
-    for virtual_host in config.list_nodes(base + ['virtual-host']):
-        allow_path = base + ['virtual-host', virtual_host, 'allow-client', 'address']
-        if config.exists(allow_path):
-            tmp = config.return_values(allow_path)
-            allow_client.extend(tmp)
+        # Update Webserver certificate
+        config.set(base + ['certificates', 'certificate'], value=cert_name)
 
-        port_path = base + ['virtual-host', virtual_host, 'port']
-        if config.exists(port_path):
-            tmp = config.return_value(port_path)
-            listen_port.append(tmp)
-
-        listen_address_path = base + ['virtual-host', virtual_host, 'listen-address']
-        if config.exists(listen_address_path):
-            tmp = config.return_value(listen_address_path)
-            listen_address.append(tmp)
-
-    config.delete(base + ['virtual-host'])
-    for client in allow_client:
-        config.set(base + ['allow-client', 'address'], value=client, replace=False)
-
-    #  clear listen-address if "all" were specified
-    if '*' in listen_address:
+    if config.exists(base + ['virtual-host']):
+        allow_client = []
+        listen_port = []
         listen_address = []
-    for address in listen_address:
-        config.set(base + ['listen-address'], value=address, replace=False)
+        for virtual_host in config.list_nodes(base + ['virtual-host']):
+            allow_path = base + ['virtual-host', virtual_host, 'allow-client', 'address']
+            if config.exists(allow_path):
+                tmp = config.return_values(allow_path)
+                allow_client.extend(tmp)
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+            port_path = base + ['virtual-host', virtual_host, 'port']
+            if config.exists(port_path):
+                tmp = config.return_value(port_path)
+                listen_port.append(tmp)
+
+            listen_address_path = base + ['virtual-host', virtual_host, 'listen-address']
+            if config.exists(listen_address_path):
+                tmp = config.return_value(listen_address_path)
+                listen_address.append(tmp)
+
+        config.delete(base + ['virtual-host'])
+        for client in allow_client:
+            config.set(base + ['allow-client', 'address'], value=client, replace=False)
+
+        #  clear listen-address if "all" were specified
+        if '*' in listen_address:
+            listen_address = []
+        for address in listen_address:
+            config.set(base + ['listen-address'], value=address, replace=False)

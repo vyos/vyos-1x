@@ -1,22 +1,19 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # * Migrate system signed certificate to use PKI
-
-import sys
 
 from vyos.configtree import ConfigTree
 from vyos.pki import create_certificate
@@ -25,22 +22,8 @@ from vyos.pki import create_private_key
 from vyos.pki import encode_certificate
 from vyos.pki import encode_private_key
 
-if len(sys.argv) < 2:
-    print("Must specify file name!")
-    sys.exit(1)
-
-file_name = sys.argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 base = ['service', 'https', 'certificates']
 pki_base = ['pki']
-
-if not config.exists(base + ['system-generated-certificate']):
-    sys.exit(0)
 
 def wrapped_pem_to_config_value(pem):
     out = []
@@ -50,37 +33,34 @@ def wrapped_pem_to_config_value(pem):
         out.append(line)
     return "".join(out)
 
-if not config.exists(pki_base + ['certificate']):
-    config.set(pki_base + ['certificate'])
-    config.set_tag(pki_base + ['certificate'])
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base + ['system-generated-certificate']):
+        return
 
-valid_days = 365
-if config.exists(base + ['system-generated-certificate', 'lifetime']):
-    valid_days = int(config.return_value(base + ['system-generated-certificate', 'lifetime']))
+    if not config.exists(pki_base + ['certificate']):
+        config.set(pki_base + ['certificate'])
+        config.set_tag(pki_base + ['certificate'])
 
-key = create_private_key('rsa', 2048)
-subject = {'country': 'GB', 'state': 'N/A', 'locality': 'N/A', 'organization': 'VyOS', 'common_name': 'vyos'}
-cert_req = create_certificate_request(subject, key, ['vyos'])
-cert = create_certificate(cert_req, cert_req, key, valid_days)
+    valid_days = 365
+    if config.exists(base + ['system-generated-certificate', 'lifetime']):
+        valid_days = int(config.return_value(base + ['system-generated-certificate', 'lifetime']))
 
-if cert:
-    cert_pem = encode_certificate(cert)
-    config.set(pki_base + ['certificate', 'generated_https', 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
+    key = create_private_key('rsa', 2048)
+    subject = {'country': 'GB', 'state': 'N/A', 'locality': 'N/A', 'organization': 'VyOS', 'common_name': 'vyos'}
+    cert_req = create_certificate_request(subject, key, ['vyos'])
+    cert = create_certificate(cert_req, cert_req, key, valid_days)
 
-if key:
-    key_pem = encode_private_key(key)
-    config.set(pki_base + ['certificate', 'generated_https', 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
+    if cert:
+        cert_pem = encode_certificate(cert)
+        config.set(pki_base + ['certificate', 'generated_https', 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
 
-if cert and key:
-    config.set(base + ['certificate'], value='generated_https')
-else:
-    print('Failed to migrate system-generated-certificate from https service')
+    if key:
+        key_pem = encode_private_key(key)
+        config.set(pki_base + ['certificate', 'generated_https', 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
 
-config.delete(base + ['system-generated-certificate'])
+    if cert and key:
+        config.set(base + ['certificate'], value='generated_https')
+    else:
+        print('Failed to migrate system-generated-certificate from https service')
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    sys.exit(1)
+    config.delete(base + ['system-generated-certificate'])

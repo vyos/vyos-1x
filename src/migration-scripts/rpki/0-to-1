@@ -1,63 +1,44 @@
-#!/usr/bin/env python3
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import exit
-from sys import argv
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base = ['protocols', 'rpki']
-config = ConfigTree(config_file)
 
-# Nothing to do
-if not config.exists(base):
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    # Nothing to do
+    if not config.exists(base):
+        return
 
-if config.exists(base + ['cache']):
-    preference = 1
-    for cache in config.list_nodes(base + ['cache']):
-        address_node = base + ['cache', cache, 'address']
-        if config.exists(address_node):
-            address = config.return_value(address_node)
-            # We do not longer support the address leafNode, RPKI cache server
-            # IP address is now used from the tagNode
-            config.delete(address_node)
-            # VyOS 1.2 had no per instance preference, setting new defaults
-            config.set(base + ['cache', cache, 'preference'], value=preference)
-            # Increase preference for the next caching peer - actually VyOS 1.2
-            # supported only one but better save then sorry (T3253)
-            preference += 1
+    if config.exists(base + ['cache']):
+        preference = 1
+        for cache in config.list_nodes(base + ['cache']):
+            address_node = base + ['cache', cache, 'address']
+            if config.exists(address_node):
+                address = config.return_value(address_node)
+                # We do not longer support the address leafNode, RPKI cache server
+                # IP address is now used from the tagNode
+                config.delete(address_node)
+                # VyOS 1.2 had no per instance preference, setting new defaults
+                config.set(base + ['cache', cache, 'preference'], value=preference)
+                # Increase preference for the next caching peer - actually VyOS 1.2
+                # supported only one but better save then sorry (T3253)
+                preference += 1
 
-            # T3293: If the RPKI cache name equals the configured address,
-            # renaming is not possible, as rename expects the new path to not
-            # exist.
-            if not config.exists(base + ['cache', address]):
-                config.rename(base + ['cache', cache], address)
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+                # T3293: If the RPKI cache name equals the configured address,
+                # renaming is not possible, as rename expects the new path to not
+                # exist.
+                if not config.exists(base + ['cache', address]):
+                    config.rename(base + ['cache', cache], address)

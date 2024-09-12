@@ -1,19 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # This migration script will remove the deprecated 'listen-on' statement
 # from the dns forwarding service and will add the corresponding
@@ -21,66 +19,49 @@
 # on interface addresses and not on interface names.
 
 from ipaddress import ip_interface
-from sys import argv, exit
 from vyos.ifconfig import Interface
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
-
 base = ['service', 'dns', 'forwarding']
-if not config.exists(base + ['listen-on']):
-    # Nothing to do
-    exit(0)
 
-listen_intf = config.return_values(base + ['listen-on'])
-# Delete node with abandoned command
-config.delete(base + ['listen-on'])
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base + ['listen-on']):
+        # Nothing to do
+        return
 
-# retrieve interface addresses for every configured listen-on interface
-listen_addr = []
-for intf in listen_intf:
-    # we need to evaluate the interface section before manipulating the 'intf' variable
-    section = Interface.section(intf)
-    if not section:
-        raise ValueError(f'Invalid interface name {intf}')
+    listen_intf = config.return_values(base + ['listen-on'])
+    # Delete node with abandoned command
+    config.delete(base + ['listen-on'])
 
-    # we need to treat vif and vif-s interfaces differently,
-    # both "real interfaces" use dots for vlan identifiers - those
-    # need to be exchanged with vif and vif-s identifiers
-    if intf.count('.') == 1:
-        # this is a regular VLAN interface
-        intf = intf.split('.')[0] + ' vif ' + intf.split('.')[1]
-    elif intf.count('.') == 2:
-        # this is a QinQ VLAN interface
-        intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
+    # retrieve interface addresses for every configured listen-on interface
+    listen_addr = []
+    for intf in listen_intf:
+        # we need to evaluate the interface section before manipulating the 'intf' variable
+        section = Interface.section(intf)
+        if not section:
+            raise ValueError(f'Invalid interface name {intf}')
 
-    # retrieve corresponding interface addresses in CIDR format
-    # those need to be converted in pure IP addresses without network information
-    path = ['interfaces', section, intf, 'address']
-    try:
-        for addr in config.return_values(path):
-            listen_addr.append( ip_interface(addr).ip )
-    except:
-        # Some interface types do not use "address" option (e.g. OpenVPN)
-        # and may not even have a fixed address
-        print("Could not retrieve the address of the interface {} from the config".format(intf))
-        print("You will need to update your DNS forwarding configuration manually")
+        # we need to treat vif and vif-s interfaces differently,
+        # both "real interfaces" use dots for vlan identifiers - those
+        # need to be exchanged with vif and vif-s identifiers
+        if intf.count('.') == 1:
+            # this is a regular VLAN interface
+            intf = intf.split('.')[0] + ' vif ' + intf.split('.')[1]
+        elif intf.count('.') == 2:
+            # this is a QinQ VLAN interface
+            intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
 
-for addr in listen_addr:
-    config.set(base + ['listen-address'], value=addr, replace=False)
+        # retrieve corresponding interface addresses in CIDR format
+        # those need to be converted in pure IP addresses without network information
+        path = ['interfaces', section, intf, 'address']
+        try:
+            for addr in config.return_values(path):
+                listen_addr.append( ip_interface(addr).ip )
+        except:
+            # Some interface types do not use "address" option (e.g. OpenVPN)
+            # and may not even have a fixed address
+            print("Could not retrieve the address of the interface {} from the config".format(intf))
+            print("You will need to update your DNS forwarding configuration manually")
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+    for addr in listen_addr:
+        config.set(base + ['listen-address'], value=addr, replace=False)

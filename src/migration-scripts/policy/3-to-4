@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2022-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T4660: change cli
 #     from: set policy route-map FOO rule 10 set community 'TEXT'
@@ -32,9 +31,6 @@
 #     from: set policy route-map FOO rule 10 set extecommunity [rt|soo] 'TEXT'
 #     Multiple value
 #     to: set policy route-map FOO rule 10 set extcommunity [rt|soo] <community>
-
-from sys import argv
-from sys import exit
 
 from vyos.configtree import ConfigTree
 
@@ -96,67 +92,52 @@ def extcommunity_migrate(config: ConfigTree, rule: list[str]) -> None:
             config.set(rule + ['soo'], value=community, replace=False)
 
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name: str = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
 base: list[str] = ['policy', 'route-map']
-config = ConfigTree(config_file)
 
-if not config.exists(base):
-    # Nothing to do
-    exit(0)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
 
-for route_map in config.list_nodes(base):
-    if not config.exists(base + [route_map, 'rule']):
-        continue
-    for rule in config.list_nodes(base + [route_map, 'rule']):
-        base_rule: list[str] = base + [route_map, 'rule', rule, 'set']
+    for route_map in config.list_nodes(base):
+        if not config.exists(base + [route_map, 'rule']):
+            continue
+        for rule in config.list_nodes(base + [route_map, 'rule']):
+            base_rule: list[str] = base + [route_map, 'rule', rule, 'set']
 
-        # IF additive presents in coummunity then comm-list is redundant
-        isAdditive: bool = True
-        #### Change Set community ########
-        if config.exists(base_rule + ['community']):
-            isAdditive = community_migrate(config,
-                                           base_rule + ['community'])
+            # IF additive presents in coummunity then comm-list is redundant
+            isAdditive: bool = True
+            #### Change Set community ########
+            if config.exists(base_rule + ['community']):
+                isAdditive = community_migrate(config,
+                                               base_rule + ['community'])
 
-        #### Change Set community-list delete migrate ########
-        if config.exists(base_rule + ['comm-list', 'comm-list']):
-            if isAdditive:
-                tmp = config.return_value(
-                    base_rule + ['comm-list', 'comm-list'])
-                config.delete(base_rule + ['comm-list'])
-                config.set(base_rule + ['community', 'delete'], value=tmp)
-            else:
-                config.delete(base_rule + ['comm-list'])
+            #### Change Set community-list delete migrate ########
+            if config.exists(base_rule + ['comm-list', 'comm-list']):
+                if isAdditive:
+                    tmp = config.return_value(
+                        base_rule + ['comm-list', 'comm-list'])
+                    config.delete(base_rule + ['comm-list'])
+                    config.set(base_rule + ['community', 'delete'], value=tmp)
+                else:
+                    config.delete(base_rule + ['comm-list'])
 
-        isAdditive = False
-        #### Change Set large-community ########
-        if config.exists(base_rule + ['large-community']):
-            isAdditive = community_migrate(config,
-                                           base_rule + ['large-community'])
+            isAdditive = False
+            #### Change Set large-community ########
+            if config.exists(base_rule + ['large-community']):
+                isAdditive = community_migrate(config,
+                                               base_rule + ['large-community'])
 
-        #### Change Set large-community delete by List ########
-        if config.exists(base_rule + ['large-comm-list-delete']):
-            if isAdditive:
-                tmp = config.return_value(
-                    base_rule + ['large-comm-list-delete'])
-                config.delete(base_rule + ['large-comm-list-delete'])
-                config.set(base_rule + ['large-community', 'delete'],
-                           value=tmp)
-            else:
-                config.delete(base_rule + ['large-comm-list-delete'])
+            #### Change Set large-community delete by List ########
+            if config.exists(base_rule + ['large-comm-list-delete']):
+                if isAdditive:
+                    tmp = config.return_value(
+                        base_rule + ['large-comm-list-delete'])
+                    config.delete(base_rule + ['large-comm-list-delete'])
+                    config.set(base_rule + ['large-community', 'delete'],
+                               value=tmp)
+                else:
+                    config.delete(base_rule + ['large-comm-list-delete'])
 
-        #### Change Set extcommunity ########
-        extcommunity_migrate(config, base_rule + ['extcommunity'])
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print(f'Failed to save the modified config: {e}')
-    exit(1)
+            #### Change Set extcommunity ########
+            extcommunity_migrate(config, base_rule + ['extcommunity'])

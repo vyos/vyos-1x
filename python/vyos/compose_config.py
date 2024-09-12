@@ -17,12 +17,13 @@
 config.
 """
 
+import traceback
 from pathlib import Path
 from typing import TypeAlias, Union, Callable
 
 from vyos.configtree import ConfigTree
 from vyos.configtree import deep_copy as ct_deep_copy
-from vyos.utils.system import load_as_module
+from vyos.utils.system import load_as_module_source
 
 ConfigObj: TypeAlias = Union[str, ConfigTree]
 
@@ -54,7 +55,8 @@ class ComposeConfig:
         try:
             func(self.config_tree)
         except Exception as e:
-            self.config_tree = self.checkpoint
+            if self.checkpoint_file is not None:
+                self.config_tree = self.checkpoint
             raise ComposeConfigError(e) from e
 
     def apply_file(self, func_file: str, func_name: str):
@@ -62,7 +64,7 @@ class ComposeConfig:
         """
         try:
             mod_name = Path(func_file).stem.replace('-', '_')
-            mod = load_as_module(mod_name, func_file)
+            mod = load_as_module_source(mod_name, func_file)
             func = getattr(mod, func_name)
         except Exception as e:
             raise ComposeConfigError(f'Error with {func_file}: {e}') from e
@@ -70,7 +72,9 @@ class ComposeConfig:
         try:
             self.apply_func(func)
         except ComposeConfigError as e:
-            raise ComposeConfigError(f'Error in {func_file}: {e}') from e
+            msg = str(e)
+            tb = f'{traceback.format_exc()}'
+            raise ComposeConfigError(f'Error in {func_file}: {msg}\n{tb}') from e
 
     def to_string(self, with_version=False) -> str:
         """Return the rendered config tree.

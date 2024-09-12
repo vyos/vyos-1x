@@ -34,7 +34,7 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
         otherwise they are always lists of strings.
     """
     import re
-    key_value_re = re.compile('([^:]+)\s*\:\s*(.*)')
+    key_value_re = re.compile(r'([^:]+)\s*\:\s*(.*)')
 
     data_raw = re.split('\n', data_string)
 

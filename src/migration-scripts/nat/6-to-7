@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2023 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T5681: Firewall re-writing. Simplify cli when mathcing interface
 # From
@@ -23,51 +22,33 @@
 #   'set nat [source|destination] rule X [inbound-interface|outbound interface] group <iface_group>'
 # Also remove command if interface == any
 
-from sys import argv,exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['nat']):
+        # Nothing to do
+        return
 
-file_name = argv[1]
+    for direction in ['source', 'destination']:
+        # If a node doesn't exist, we obviously have nothing to do.
+        if not config.exists(['nat', direction]):
+            continue
 
-with open(file_name, 'r') as f:
-    config_file = f.read()
+        # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
+        # but there are no rules under it.
+        if not config.list_nodes(['nat', direction]):
+            continue
 
-config = ConfigTree(config_file)
-
-if not config.exists(['nat']):
-    # Nothing to do
-    exit(0)
-
-for direction in ['source', 'destination']:
-    # If a node doesn't exist, we obviously have nothing to do.
-    if not config.exists(['nat', direction]):
-        continue
-
-    # However, we also need to handle the case when a 'source' or 'destination' sub-node does exist,
-    # but there are no rules under it.
-    if not config.list_nodes(['nat', direction]):
-        continue
-
-    for rule in config.list_nodes(['nat', direction, 'rule']):
-        base = ['nat', direction, 'rule', rule]
-        for iface in ['inbound-interface','outbound-interface']:
-            if config.exists(base + [iface]):
-                if config.exists(base + [iface, 'interface-name']):
-                    tmp = config.return_value(base + [iface, 'interface-name'])
-                    if tmp != 'any':
-                        config.delete(base + [iface, 'interface-name'])
-                        if '+' in tmp:
-                            tmp = tmp.replace('+', '*')
-                        config.set(base + [iface, 'name'], value=tmp)
-                    else:
-                        config.delete(base + [iface])
-
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+        for rule in config.list_nodes(['nat', direction, 'rule']):
+            base = ['nat', direction, 'rule', rule]
+            for iface in ['inbound-interface','outbound-interface']:
+                if config.exists(base + [iface]):
+                    if config.exists(base + [iface, 'interface-name']):
+                        tmp = config.return_value(base + [iface, 'interface-name'])
+                        if tmp != 'any':
+                            config.delete(base + [iface, 'interface-name'])
+                            if '+' in tmp:
+                                tmp = tmp.replace('+', '*')
+                            config.set(base + [iface, 'name'], value=tmp)
+                        else:
+                            config.delete(base + [iface])

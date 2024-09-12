@@ -1,106 +1,88 @@
-#!/usr/bin/env python3
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
+# This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from sys import argv
-from sys import exit
 from vyos.configtree import ConfigTree
 
-if len(argv) < 2:
-    print("Must specify file name!")
-    exit(1)
-
-file_name = argv[1]
-
-with open(file_name, 'r') as f:
-    config_file = f.read()
-
-config = ConfigTree(config_file)
 base = ['vpn', 'l2tp', 'remote-access']
-if not config.exists(base):
-    exit(0)
 
-#migrate idle to ppp option lcp-echo-timeout
-idle_path = base + ['idle']
-if config.exists(idle_path):
-    config.set(base + ['ppp-options', 'lcp-echo-timeout'],
-               value=config.return_value(idle_path))
-    config.delete(idle_path)
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
 
-#migrate mppe from authentication to ppp-otion
-mppe_path = base + ['authentication', 'mppe']
-if config.exists(mppe_path):
-    config.set(base + ['ppp-options', 'mppe'],
-               value=config.return_value(mppe_path))
-    config.delete(mppe_path)
+    #migrate idle to ppp option lcp-echo-timeout
+    idle_path = base + ['idle']
+    if config.exists(idle_path):
+        config.set(base + ['ppp-options', 'lcp-echo-timeout'],
+                   value=config.return_value(idle_path))
+        config.delete(idle_path)
 
-#migrate require to protocol
-require_path = base + ['authentication', 'require']
-if config.exists(require_path):
-    protocols = list(config.return_values(require_path))
-    for protocol in protocols:
-        config.set(base + ['authentication', 'protocols'], value=protocol,
-                   replace=False)
-    config.delete(require_path)
-else:
-    config.set(base + ['authentication', 'protocols'], value='mschap-v2')
+    #migrate mppe from authentication to ppp-otion
+    mppe_path = base + ['authentication', 'mppe']
+    if config.exists(mppe_path):
+        config.set(base + ['ppp-options', 'mppe'],
+                   value=config.return_value(mppe_path))
+        config.delete(mppe_path)
 
-#migrate default gateway if not exist
-if not config.exists(base + ['gateway-address']):
-    config.set(base + ['gateway-address'], value='10.255.255.0')
+    #migrate require to protocol
+    require_path = base + ['authentication', 'require']
+    if config.exists(require_path):
+        protocols = list(config.return_values(require_path))
+        for protocol in protocols:
+            config.set(base + ['authentication', 'protocols'], value=protocol,
+                       replace=False)
+        config.delete(require_path)
+    else:
+        config.set(base + ['authentication', 'protocols'], value='mschap-v2')
 
-#migrate authentication radius timeout
-rad_timeout_path = base + ['authentication', 'radius', 'timeout']
-if config.exists(rad_timeout_path):
-    if int(config.return_value(rad_timeout_path)) > 60:
-        config.set(rad_timeout_path, value=60)
+    #migrate default gateway if not exist
+    if not config.exists(base + ['gateway-address']):
+        config.set(base + ['gateway-address'], value='10.255.255.0')
 
-#migrate authentication radius acct timeout
-rad_acct_timeout_path = base + ['authentication', 'radius', 'acct-timeout']
-if config.exists(rad_acct_timeout_path):
-    if int(config.return_value(rad_acct_timeout_path)) > 60:
-        config.set(rad_acct_timeout_path,value=60)
+    #migrate authentication radius timeout
+    rad_timeout_path = base + ['authentication', 'radius', 'timeout']
+    if config.exists(rad_timeout_path):
+        if int(config.return_value(rad_timeout_path)) > 60:
+            config.set(rad_timeout_path, value=60)
 
-#migrate authentication radius max-try
-rad_max_try_path = base + ['authentication', 'radius', 'max-try']
-if config.exists(rad_max_try_path):
-    if int(config.return_value(rad_max_try_path)) > 20:
-        config.set(rad_max_try_path, value=20)
+    #migrate authentication radius acct timeout
+    rad_acct_timeout_path = base + ['authentication', 'radius', 'acct-timeout']
+    if config.exists(rad_acct_timeout_path):
+        if int(config.return_value(rad_acct_timeout_path)) > 60:
+            config.set(rad_acct_timeout_path,value=60)
 
-#migrate dae-server to dynamic-author
-dae_path_old = base + ['authentication', 'radius', 'dae-server']
-dae_path_new = base + ['authentication', 'radius', 'dynamic-author']
+    #migrate authentication radius max-try
+    rad_max_try_path = base + ['authentication', 'radius', 'max-try']
+    if config.exists(rad_max_try_path):
+        if int(config.return_value(rad_max_try_path)) > 20:
+            config.set(rad_max_try_path, value=20)
 
-if config.exists(dae_path_old + ['ip-address']):
-    config.set(dae_path_new + ['server'],
-               value=config.return_value(dae_path_old + ['ip-address']))
+    #migrate dae-server to dynamic-author
+    dae_path_old = base + ['authentication', 'radius', 'dae-server']
+    dae_path_new = base + ['authentication', 'radius', 'dynamic-author']
 
-if config.exists(dae_path_old + ['port']):
-    config.set(dae_path_new + ['port'],
-               value=config.return_value(dae_path_old + ['port']))
+    if config.exists(dae_path_old + ['ip-address']):
+        config.set(dae_path_new + ['server'],
+                   value=config.return_value(dae_path_old + ['ip-address']))
 
-if config.exists(dae_path_old + ['secret']):
-    config.set(dae_path_new + ['key'],
-               value=config.return_value(dae_path_old + ['secret']))
+    if config.exists(dae_path_old + ['port']):
+        config.set(dae_path_new + ['port'],
+                   value=config.return_value(dae_path_old + ['port']))
 
-if config.exists(dae_path_old):
-    config.delete(dae_path_old)
+    if config.exists(dae_path_old + ['secret']):
+        config.set(dae_path_new + ['key'],
+                   value=config.return_value(dae_path_old + ['secret']))
 
-try:
-    with open(file_name, 'w') as f:
-        f.write(config.to_string())
-except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
-    exit(1)
+    if config.exists(dae_path_old):
+        config.delete(dae_path_old)
