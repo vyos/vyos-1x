@@ -70,6 +70,12 @@ vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {% if service_name %}
 service-name={{ service_name | join(',') }}
 {% endif %}
+{% if accept_any_service is vyos_defined %}
+accept-any-service=1
+{% endif %}
+{% if accept_blank_service is vyos_defined %}
+accept-blank-service=1
+{% endif %}
 {% if pado_delay %}
 {%     set delay_without_sessions = pado_delay.delays_without_sessions[0] | default('0') %}
 {%     set pado_delay_param = namespace(value=delay_without_sessions) %}

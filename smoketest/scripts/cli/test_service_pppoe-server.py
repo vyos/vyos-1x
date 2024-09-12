@@ -195,6 +195,22 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         config = read_file(self._config_file)
         self.assertIn('any-login=1', config)
 
+    def test_pppoe_server_accept_service(self):
+        services = ['user1-service', 'user2-service']
+        self.basic_config()
+
+        for service in services:
+            self.set(['service-name', service])
+        self.set(['accept-any-service'])
+        self.set(['accept-blank-service'])
+        self.cli_commit()
+
+        # Validate configuration values
+        config = read_file(self._config_file)
+        self.assertIn(f'service-name={",".join(services)}', config)
+        self.assertIn('accept-any-service=1', config)
+        self.assertIn('accept-blank-service=1', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
