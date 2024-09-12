@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="openfabric" owner="${vyos_conf_scripts_dir}/protocols_openfabric.py">
+        <properties>
+          <help>OpenFabric protocol</help>
+          <priority>680</priority>
+        </properties>
+        <children>
+          #include <include/net.xml.i>
+          <tagNode name="domain">
+            <properties>
+              <help>OpenFabric process name</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Domain name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Interface params</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Interface name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="address-family">
+                    <properties>
+                      <help>Openfabric address family</help>
+                    </properties>
+                    <children>
+                      <leafNode name="ipv4">
+                        <properties>
+                          <help>IPv4 OpenFabric</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="ipv6">
+                        <properties>
+                          <help>IPv6 OpenFabric</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="csnp-interval">
+                    <properties>
+                      <help>Complete Sequence Number Packets (CSNP) interval</help>
+                      <valueHelp>
+                        <format>u32:1-600</format>
+                        <description>CSNP interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-600"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="hello-interval">
+                    <properties>
+                      <help>Hello interval</help>
+                      <valueHelp>
+                        <format>u32:1-600</format>
+                        <description>Hello interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-600"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="hello-multiplier">
+                    <properties>
+                      <help>Multiplier for Hello holding time</help>
+                      <valueHelp>
+                        <format>u32:2-100</format>
+                        <description>Multiplier for Hello holding time</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-100"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="metric">
+                    <properties>
+                      <help>Interface metric value</help>
+                      <valueHelp>
+                        <format>u32:0-16777215</format>
+                        <description>Interface metric value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-16777215"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="passive">
+                    <properties>
+                      <help>Do not initiate adjacencies to the interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <node name="password">
+                    <properties>
+                      <help>Authentication password for the interface</help>
+                    </properties>
+                    <children>
+                      #include <include/openfabric/password.xml.i>
+                    </children>
+                  </node>
+                  <leafNode name="psnp-interval">
+                    <properties>
+                      <help>Partial Sequence Number Packets (PSNP) interval</help>
+                      <valueHelp>
+                        <format>u32:0-120</format>
+                        <description>PSNP interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-120"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="domain-password">
+                <properties>
+                  <help>Authentication password for a routing domain</help>
+                </properties>
+                <children>
+                  #include <include/openfabric/password.xml.i>
+                </children>
+              </node>
+              #include <include/log-adjacency-changes.xml.i>
+              <leafNode name="set-overload-bit">
+                <properties>
+                  <help>Overload bit to avoid any transit traffic</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="purge-originator">
+                <properties>
+                  <help>RFC 6232 purge originator identification</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="fabric-tier">
+                <properties>
+                  <help>Static tier number to advertise as location in the fabric</help>
+                  <valueHelp>
+                    <format>u32:0-14</format>
+                    <description>Static tier number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-14"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="lsp-gen-interval">
+                <properties>
+                  <help>Minimum interval between regenerating same link-state packet (LSP)</help>
+                  <valueHelp>
+                    <format>u32:1-120</format>
+                    <description>Minimum interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-120"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="lsp-refresh-interval">
+                <properties>
+                  <help>Link-state packet (LSP) refresh interval</help>
+                  <valueHelp>
+                    <format>u32:1-65235</format>
+                    <description>LSP refresh interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65235"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="max-lsp-lifetime">
+                <properties>
+                  <help>Maximum link-state packet lifetime</help>
+                  <valueHelp>
+                    <format>u32:360-65535</format>
+                    <description>Maximum LSP lifetime in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 360-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="spf-interval">
+                <properties>
+                  <help>Minimum interval between SPF calculations</help>
+                  <valueHelp>
+                    <format>u32:1-120</format>
+                    <description>Interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-120"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

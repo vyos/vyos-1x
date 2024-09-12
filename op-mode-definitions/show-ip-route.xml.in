@@ -46,6 +46,7 @@
                 <command>ip -s route list $5</command>
               </tagNode>
               #include <include/show-route-isis.xml.i>
+              #include <include/show-route-openfabric.xml.i>
               #include <include/show-route-kernel.xml.i>
               #include <include/show-route-ospf.xml.i>
               #include <include/show-route-rip.xml.i>
