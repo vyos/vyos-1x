@@ -54,12 +54,10 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {%         endif %}
 {%         if host_options.protocol is vyos_defined('tcp') %}
 {%             if host_options.format.octet_counted is vyos_defined %}
-{{ tmp | join(';') }} @@(o){{ host_name | bracketize_ipv6 }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
-{%             else %}
-{{ tmp | join(';') }} @@{{ host_name | bracketize_ipv6 }}:{{ host_options.port }}
+{{ tmp | join(';') }} @@{{ '(o)' if host_options.format.octet_counted is vyos_defined }}{{ host_name | bracketize_ipv6 }}:{{ host_options.port }}{{ ';RSYSLOG_SyslogProtocol23Format' if host_options.format.include_timezone is vyos_defined }}
 {%             endif %}
 {%         else %}
-{{ tmp | join(';') }} @{{ host_name | bracketize_ipv6 }}:{{ host_options.port }}{{ ';RSYSLOG_SyslogProtocol23Format' if host_options.format.octet_counted is vyos_defined }}
+{{ tmp | join(';') }} @{{ host_name | bracketize_ipv6 }}:{{ host_options.port }}{{ ';RSYSLOG_SyslogProtocol23Format' if host_options.format.include_timezone is vyos_defined }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
