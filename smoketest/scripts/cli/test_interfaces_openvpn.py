@@ -625,7 +625,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
         self.cli_set(path + ['device-type', 'tap'])
-        self.cli_set(path + ['encryption', 'data-ciphers', 'aes192'])
+        self.cli_set(path + ['encryption', 'ncp-ciphers', 'aes192'])
         self.cli_set(path + ['hash', auth_hash])
         self.cli_set(path + ['mode', 'server'])
         self.cli_set(path + ['server', 'bridge', 'gateway', gw_subnet])
