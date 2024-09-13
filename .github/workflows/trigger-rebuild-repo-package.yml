@@ -1,7 +1,7 @@
 name: Trigger to build a deb package from repo
 
 on:
-  pull_request:
+  pull_request_target:
     types:
       - closed
     branches:
@@ -23,7 +23,10 @@ jobs:
     needs: get_repo_name
     uses: vyos/.github/.github/workflows/trigger-rebuild-repo-package.yml@current
     with:
-        branch: ${{ github.ref_name }}
-        package_name: ${{ needs.get_repo_name.outputs.PACKAGE_NAME }}
-        REF: main # optinal because the default value is main
-    secrets: inherit
+      branch: ${{ github.ref_name }}
+      package_name: ${{ needs.get_repo_name.outputs.PACKAGE_NAME }}
+    secrets:
+      REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
+      REMOTE_REPO: ${{ secrets.REMOTE_REUSE_REPO }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+      PAT: ${{ secrets.PAT }}
