@@ -313,6 +313,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         channel_set_width = '81'
 
         self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'country-code', country])
         self.cli_set(self._base_path + [interface, 'type', 'access-point'])
         self.cli_set(self._base_path + [interface, 'channel', channel])
         self.cli_set(self._base_path + [interface, 'mode', 'ax'])
