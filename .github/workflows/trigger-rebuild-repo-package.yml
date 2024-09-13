@@ -26,8 +26,4 @@ jobs:
         branch: ${{ github.ref_name }}
         package_name: ${{ needs.get_repo_name.outputs.PACKAGE_NAME }}
         REF: main # optinal because the default value is main
-    secrets:
-        REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
-        REMOTE_REUSE_REPO: ${{ secrets.REMOTE_REUSE_REPO }}
-        GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-        PAT: ${{ secrets.PAT }}
+    secrets: inherit
