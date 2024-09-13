@@ -167,10 +167,10 @@ def verify(policy):
                 continue
 
             for rule, rule_config in route_map_config['rule'].items():
-                # Action 'deny' cannot be used with "continue"
-                # FRR does not validate it T4827
-                if rule_config['action'] == 'deny' and 'continue' in rule_config:
-                    raise ConfigError(f'rule {rule} "continue" cannot be used with action deny!')
+                # Action 'deny' cannot be used with "continue" or "on-match"
+                # FRR does not validate it T4827, T6676
+                if rule_config['action'] == 'deny' and ('continue' in rule_config or 'on_match' in rule_config):
+                    raise ConfigError(f'rule {rule} "continue" or "on-match" cannot be used with action deny!')
 
                 # Specified community-list must exist
                 tmp = dict_search('match.community.community_list',
