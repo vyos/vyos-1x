@@ -32,6 +32,12 @@ from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
 from vyos.defaults import directories
+from vyos.pki import find_chain
+from vyos.pki import encode_certificate
+from vyos.pki import load_certificate
+from vyos.pki import wrap_private_key
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.template import render
 from vyos.utils.network import mac2eui64
 from vyos.utils.dict import dict_search
@@ -41,9 +47,8 @@ from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import run
-from vyos.template import is_ipv4
-from vyos.template import is_ipv6
 from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.assertion import assert_boolean
@@ -52,7 +57,6 @@ from vyos.utils.assertion import assert_mac
 from vyos.utils.assertion import assert_mtu
 from vyos.utils.assertion import assert_positive
 from vyos.utils.assertion import assert_range
-
 from vyos.ifconfig.control import Control
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
@@ -377,6 +381,9 @@ class Interface(Control):
         >>> i = Interface('eth0')
         >>> i.remove()
         """
+        # Stop WPA supplicant if EAPoL was in use
+        if is_systemd_service_active(f'wpa_supplicant-wired@{self.ifname}'):
+            self._cmd(f'systemctl stop wpa_supplicant-wired@{self.ifname}')
 
         # remove all assigned IP addresses from interface - this is a bit redundant
         # as the kernel will remove all addresses on interface deletion, but we
@@ -1522,6 +1529,61 @@ class Interface(Control):
             return None
         self.set_interface('per_client_thread', enable)
 
+    def set_eapol(self) -> None:
+        """ Take care about EAPoL supplicant daemon """
+
+        # XXX: wpa_supplicant works on the source interface
+        cfg_dir = '/run/wpa_supplicant'
+        wpa_supplicant_conf = f'{cfg_dir}/{self.ifname}.conf'
+        eapol_action='stop'
+
+        if 'eapol' in self.config:
+            # The default is a fallback to hw_id which is not present for any interface
+            # other then an ethernet interface. Thus we emulate hw_id by reading back the
+            # Kernel assigned MAC address
+            if 'hw_id' not in self.config:
+                self.config['hw_id'] = read_file(f'/sys/class/net/{self.ifname}/address')
+            render(wpa_supplicant_conf, 'ethernet/wpa_supplicant.conf.j2', self.config)
+
+            cert_file_path = os.path.join(cfg_dir, f'{self.ifname}_cert.pem')
+            cert_key_path = os.path.join(cfg_dir, f'{self.ifname}_cert.key')
+
+            cert_name = self.config['eapol']['certificate']
+            pki_cert = self.config['pki']['certificate'][cert_name]
+
+            loaded_pki_cert = load_certificate(pki_cert['certificate'])
+            loaded_ca_certs = {load_certificate(c['certificate'])
+                for c in self.config['pki']['ca'].values()} if 'ca' in self.config['pki'] else {}
+
+            cert_full_chain = find_chain(loaded_pki_cert, loaded_ca_certs)
+
+            write_file(cert_file_path,
+                    '\n'.join(encode_certificate(c) for c in cert_full_chain))
+            write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
+
+            if 'ca_certificate' in self.config['eapol']:
+                ca_cert_file_path = os.path.join(cfg_dir, f'{self.ifname}_ca.pem')
+                ca_chains = []
+
+                for ca_cert_name in self.config['eapol']['ca_certificate']:
+                    pki_ca_cert = self.config['pki']['ca'][ca_cert_name]
+                    loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
+                    ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+                    ca_chains.append(
+                        '\n'.join(encode_certificate(c) for c in ca_full_chain))
+
+                write_file(ca_cert_file_path, '\n'.join(ca_chains))
+
+            eapol_action='reload-or-restart'
+
+        # start/stop WPA supplicant service
+        self._cmd(f'systemctl {eapol_action} wpa_supplicant-wired@{self.ifname}')
+
+        if 'eapol' not in self.config:
+            # delete configuration on interface removal
+            if os.path.isfile(wpa_supplicant_conf):
+                os.unlink(wpa_supplicant_conf)
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -1609,7 +1671,6 @@ class Interface(Control):
             tmp = get_interface_config(config['ifname'])
             if 'master' in tmp and tmp['master'] != bridge_if:
                 self.set_vrf('')
-
         else:
             self.set_vrf(config.get('vrf', ''))
 
@@ -1751,6 +1812,9 @@ class Interface(Control):
         tmp = dict_search('per_client_thread', config)
         value = '1' if (tmp != None) else '0'
         self.set_per_client_thread(value)
+
+        # enable/disable EAPoL (Extensible Authentication Protocol over Local Area Network)
+        self.set_eapol()
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
