@@ -1240,6 +1240,8 @@ class BasicInterfaceTest:
             if not self._test_eapol:
                 self.skipTest('not supported')
 
+            cfg_dir = '/run/wpa_supplicant'
+
             ca_certs = {
                 'eapol-server-ca-root': server_ca_root_cert_data,
                 'eapol-server-ca-intermediate': server_ca_intermediate_cert_data,
@@ -1274,9 +1276,6 @@ class BasicInterfaceTest:
 
             self.cli_commit()
 
-            # Check for running process
-            self.assertTrue(process_named_running('wpa_supplicant'))
-
             # Validate interface config
             for interface in self._interfaces:
                 tmp = get_wpa_supplicant_value(interface, 'key_mgmt')
@@ -1289,29 +1288,33 @@ class BasicInterfaceTest:
                 self.assertEqual('0', tmp)
 
                 tmp = get_wpa_supplicant_value(interface, 'ca_cert')
-                self.assertEqual(f'"/run/wpa_supplicant/{interface}_ca.pem"', tmp)
+                self.assertEqual(f'"{cfg_dir}/{interface}_ca.pem"', tmp)
 
                 tmp = get_wpa_supplicant_value(interface, 'client_cert')
-                self.assertEqual(f'"/run/wpa_supplicant/{interface}_cert.pem"', tmp)
+                self.assertEqual(f'"{cfg_dir}/{interface}_cert.pem"', tmp)
 
                 tmp = get_wpa_supplicant_value(interface, 'private_key')
-                self.assertEqual(f'"/run/wpa_supplicant/{interface}_cert.key"', tmp)
+                self.assertEqual(f'"{cfg_dir}/{interface}_cert.key"', tmp)
 
                 mac = read_file(f'/sys/class/net/{interface}/address')
                 tmp = get_wpa_supplicant_value(interface, 'identity')
                 self.assertEqual(f'"{mac}"', tmp)
 
-            # Check certificate files have the full chain
-            self.assertEqual(get_certificate_count(interface, 'ca'), 2)
-            self.assertEqual(get_certificate_count(interface, 'cert'), 3)
+                # Check certificate files have the full chain
+                self.assertEqual(get_certificate_count(interface, 'ca'), 2)
+                self.assertEqual(get_certificate_count(interface, 'cert'), 3)
+
+                # Check for running process
+                self.assertTrue(process_named_running('wpa_supplicant', cmdline=f'-i{interface}'))
+
+            # Remove EAPoL configuration
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'eapol'])
+
+            # Commit and check that process is no longer running
+            self.cli_commit()
+            self.assertFalse(process_named_running('wpa_supplicant'))
 
             for name in ca_certs:
                 self.cli_delete(['pki', 'ca', name])
             self.cli_delete(['pki', 'certificate', cert_name])
-
-            # Remove EAPoL configuration
-            self.cli_delete(self._base_path + [interface, 'eapol'])
-            # Commit
-            self.cli_commit()
-            # Daemon must no longer be running
-            self.assertFalse(process_named_running('wpa_supplicant'))

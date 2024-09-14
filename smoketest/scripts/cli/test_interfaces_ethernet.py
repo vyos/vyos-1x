@@ -223,4 +223,4 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertIn(f' evpn mh uplink', frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
