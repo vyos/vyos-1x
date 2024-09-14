@@ -520,3 +520,20 @@ def verify_pki_dh_parameters(config: dict, dh_name: str, min_key_size: int=0):
         dh_bits = dh_numbers.p.bit_length()
         if dh_bits < min_key_size:
             raise ConfigError(f'Minimum DH key-size is {min_key_size} bits!')
+
+def verify_eapol(config: dict):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of EAPoL configuration.
+    """
+    if 'eapol' not in config:
+        return
+
+    if 'certificate' not in config['eapol']:
+        raise ConfigError('Certificate must be specified when using EAPoL!')
+
+    verify_pki_certificate(config, config['eapol']['certificate'], no_password_protected=True)
+
+    if 'ca_certificate' in config['eapol']:
+        for ca_cert in config['eapol']['ca_certificate']:
+            verify_pki_ca_certificate(config, ca_cert)
