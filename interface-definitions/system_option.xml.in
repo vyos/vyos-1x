@@ -49,6 +49,26 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="amd-pstate-driver">
+                <properties>
+                  <help>Enables and configures pstate driver for AMD Ryzen and Epyc CPUs</help>
+                  <completionHelp>
+                    <list>active passive guided</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>active</format>
+                    <description>The firmware controls performance states and the system governor has no effect</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>passive</format>
+                    <description>Allow the system governor to manage performance states</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>guided</format>
+                    <description>The firmware controls performance states guided by the system governor</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
               <node name="debug">
                 <properties>
                   <help>Dynamic debugging for kernel module</help>

@@ -19,11 +19,13 @@ import os
 from sys import exit
 from time import sleep
 
+
 from vyos.config import Config
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
 from vyos.system import grub_util
 from vyos.template import render
+from vyos.utils.cpu import get_cpus
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
@@ -35,6 +37,7 @@ from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 curlrc_config = r'/etc/curlrc'
@@ -42,10 +45,8 @@ ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 usb_autosuspend = r'/etc/udev/rules.d/40-usb-autosuspend.rules'
 kernel_dynamic_debug = r'/sys/kernel/debug/dynamic_debug/control'
-time_format_to_locale = {
-    '12-hour': 'en_US.UTF-8',
-    '24-hour': 'en_GB.UTF-8'
-}
+time_format_to_locale = {'12-hour': 'en_US.UTF-8', '24-hour': 'en_GB.UTF-8'}
+
 
 def get_config(config=None):
     if config:
@@ -53,9 +54,9 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['system', 'option']
-    options = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                   get_first_key=True,
-                                   with_recursive_defaults=True)
+    options = conf.get_config_dict(
+        base, key_mangling=('-', '_'), get_first_key=True, with_recursive_defaults=True
+    )
 
     if 'performance' in options:
         # Update IPv4/IPv6 and sysctl options after tuned applied it's settings
@@ -64,6 +65,7 @@ def get_config(config=None):
 
     return options
 
+
 def verify(options):
     if 'http_client' in options:
         config = options['http_client']
@@ -71,7 +73,9 @@ def verify(options):
             verify_interface_exists(options, config['source_interface'])
 
         if {'source_address', 'source_interface'} <= set(config):
-            raise ConfigError('Can not define both HTTP source-interface and source-address')
+            raise ConfigError(
+                'Can not define both HTTP source-interface and source-address'
+            )
 
         if 'source_address' in config:
             if not is_addr_assigned(config['source_address']):
@@ -92,9 +96,19 @@ def verify(options):
                 address = config['source_address']
                 interface = config['source_interface']
                 if not is_intf_addr_assigned(interface, address):
-                    raise ConfigError(f'Address "{address}" not assigned on interface "{interface}"!')
+                    raise ConfigError(
+                        f'Address "{address}" not assigned on interface "{interface}"!'
+                    )
+
+    if 'kernel' in options:
+        cpu_vendor = get_cpus()[0]['vendor_id']
+        if 'amd_pstate_driver' in options['kernel'] and cpu_vendor != 'AuthenticAMD':
+            raise ConfigError(
+                f'AMD pstate driver cannot be used with "{cpu_vendor}" CPU!'
+            )
 
     return None
+
 
 def generate(options):
     render(curlrc_config, 'system/curlrc.j2', options)
@@ -107,9 +121,15 @@ def generate(options):
             cmdline_options.append('mitigations=off')
         if 'disable_power_saving' in options['kernel']:
             cmdline_options.append('intel_idle.max_cstate=0 processor.max_cstate=1')
+        if 'amd_pstate_driver' in options['kernel']:
+            mode = options['kernel']['amd_pstate_driver']
+            cmdline_options.append(
+                f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}'
+            )
     grub_util.update_kernel_cmdline_options(' '.join(cmdline_options))
 
     return None
+
 
 def apply(options):
     # System bootup beep
@@ -149,7 +169,7 @@ def apply(options):
     if 'performance' in options:
         cmd('systemctl restart tuned.service')
         # wait until daemon has started before sending configuration
-        while (not is_systemd_service_running('tuned.service')):
+        while not is_systemd_service_running('tuned.service'):
             sleep(0.250)
         cmd('tuned-adm profile network-{performance}'.format(**options))
     else:
@@ -164,9 +184,9 @@ def apply(options):
 
     # Enable/diable root-partition-auto-resize SystemD service
     if 'root_partition_auto_resize' in options:
-      cmd('systemctl enable root-partition-auto-resize.service')
+        cmd('systemctl enable root-partition-auto-resize.service')
     else:
-      cmd('systemctl disable root-partition-auto-resize.service')
+        cmd('systemctl disable root-partition-auto-resize.service')
 
     # Time format 12|24-hour
     if 'time_format' in options:
@@ -184,6 +204,7 @@ def apply(options):
             write_file(kernel_dynamic_debug, f'module {module} +p')
         else:
             write_file(kernel_dynamic_debug, f'module {module} -p')
+
 
 if __name__ == '__main__':
     try:
