@@ -15,6 +15,9 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for PR comments
+  BUILD_BY: autobuild@vyos.net
+  DEBIAN_MIRROR: http://deb.debian.org/debian/
+  VYOS_MIRROR: https://rolling-packages.vyos.net/current/
 
 jobs:
   build_iso:
@@ -23,9 +26,6 @@ jobs:
     container:
       image: vyos/vyos-build:current
       options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
-    env:
-      BUILD_BY: autobuild@vyos.net
-      DEBIAN_MIRROR: http://deb.debian.org/debian/
     outputs:
       build_version: ${{ steps.version.outputs.build_version }}
     steps:
@@ -52,9 +52,11 @@ jobs:
           sudo --preserve-env ./build-vyos-image \
           --architecture amd64 \
           --build-by $BUILD_BY \
+          --build-type release \
+          --custom-package vyos-1x-smoketest \
           --debian-mirror $DEBIAN_MIRROR \
           --version ${{ steps.version.outputs.build_version }} \
-          --build-type release \
+          --vyos-mirror $VYOS_MIRROR \
           generic
       - uses: actions/upload-artifact@v4
         with:
@@ -154,11 +156,43 @@ jobs:
             echo "exit_code=fail" >> $GITHUB_OUTPUT
           fi
 
+  test_encrypted_config_tpm:
+    needs: build_iso
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    outputs:
+      exit_code: ${{ steps.test.outputs.exit_code }}
+    steps:
+      # We need the test script from vyos-build repo
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyos-${{ needs.build_iso.outputs.build_version }}
+          path: build
+      - name: VyOS TPM encryption tests
+        id: test
+        shell: bash
+        run: |
+          set -e
+          sudo make testtpm
+          if [[ $? == 0 ]]; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+          fi
+
   result:
     needs:
       - test_smoketest_cli
       - test_config_load
       - test_raid1_install
+      - test_encrypted_config_tpm
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: always()
@@ -177,6 +211,7 @@ jobs:
             * CLI Smoketests ${{ needs.test_smoketest_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
             * Config tests ${{ needs.test_config_load.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
             * RAID1 tests ${{ needs.test_raid1_install.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+            * TPM tests ${{ needs.test_encrypted_config_tpm.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
 
           message-id: "SMOKETEST_RESULTS"
           allow-repeats: false
