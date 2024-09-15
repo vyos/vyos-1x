@@ -38,6 +38,8 @@ def ike_sa(peer, nat):
     peers = []
     for conn in sas:
         for name, sa in conn.items():
+            if peer and s(sa['remote-host']) != peer:
+                continue
             if name.startswith('peer_') and name in peers:
                 continue
             if nat and 'nat-local' not in sa:
