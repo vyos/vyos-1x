@@ -25,6 +25,7 @@ from vyos.configdict import is_source_interface
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
+from vyos.configverify import verify_eapol
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
@@ -73,7 +74,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'bonding']
-    ifname, bond = get_interface_dict(conf, base)
+    ifname, bond = get_interface_dict(conf, base, with_pki=True)
 
     # To make our own life easier transfor the list of member interfaces
     # into a dictionary - we will use this to add additional information
@@ -196,6 +197,7 @@ def verify(bond):
     verify_dhcpv6(bond)
     verify_vrf(bond)
     verify_mirror_redirect(bond)
+    verify_eapol(bond)
 
     # use common function to verify VLAN configuration
     verify_vlan_config(bond)
