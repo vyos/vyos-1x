@@ -17,9 +17,12 @@
 #        CLI. See https://vyos.dev/T3619#102254 for all the details.
 # T3787: Remove deprecated UDP fragmentation offloading option
 # T6006: add to activation-scripts: migration-scripts/interfaces/20-to-21
+# T6716: Honor the configured offload settings and don't automatically add
+#        them to the config if the kernel has them set (unless its a live boot)
 
 from vyos.ethtool import Ethtool
 from vyos.configtree import ConfigTree
+from vyos.system.image import is_live_boot
 
 def activate(config: ConfigTree):
     base = ['interfaces', 'ethernet']
@@ -36,7 +39,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_generic_receive_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'gro'])
-        elif enabled and not fixed:
+        elif is_live_boot() and enabled and not fixed:
             config.set(base + [ifname, 'offload', 'gro'])
 
         # If GSO is enabled by the Kernel - we reflect this on the CLI. If GSO is
@@ -45,7 +48,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_generic_segmentation_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'gso'])
-        elif enabled and not fixed:
+        elif is_live_boot() and enabled and not fixed:
             config.set(base + [ifname, 'offload', 'gso'])
 
         # If LRO is enabled by the Kernel - we reflect this on the CLI. If LRO is
@@ -54,7 +57,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_large_receive_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'lro'])
-        elif enabled and not fixed:
+        elif is_live_boot() and enabled and not fixed:
             config.set(base + [ifname, 'offload', 'lro'])
 
         # If SG is enabled by the Kernel - we reflect this on the CLI. If SG is
@@ -63,7 +66,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_scatter_gather()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'sg'])
-        elif enabled and not fixed:
+        elif is_live_boot() and enabled and not fixed:
             config.set(base + [ifname, 'offload', 'sg'])
 
         # If TSO is enabled by the Kernel - we reflect this on the CLI. If TSO is
@@ -72,7 +75,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_tcp_segmentation_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'tso'])
-        elif enabled and not fixed:
+        elif is_live_boot() and enabled and not fixed:
             config.set(base + [ifname, 'offload', 'tso'])
 
         # Remove deprecated UDP fragmentation offloading option
