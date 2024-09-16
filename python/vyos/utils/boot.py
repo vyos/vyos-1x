@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -33,3 +33,7 @@ def boot_configuration_success() -> bool:
     if int(res) == 0:
         return True
     return False
+
+def is_uefi_system() -> bool:
+    efi_fw_dir = '/sys/firmware/efi'
+    return os.path.exists(efi_fw_dir) and os.path.isdir(efi_fw_dir)

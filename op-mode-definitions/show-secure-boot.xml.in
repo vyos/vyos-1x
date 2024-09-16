@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="secure-boot">
+        <properties>
+          <help>Show Secure Boot state</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/secure_boot.py show</command>
+        <children>
+          <leafNode name="keys">
+            <properties>
+              <help>Show enrolled certificates</help>
+            </properties>
+            <command>mokutil --list-enrolled</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
