@@ -1,0 +1,32 @@
+name: Trigger to build a deb package from repo
+
+on:
+  pull_request_target:
+    types:
+      - closed
+    branches:
+      - sagitta
+  workflow_dispatch:
+
+jobs:
+  get_repo_name:
+    runs-on: ubuntu-latest
+    outputs:
+      PACKAGE_NAME: ${{ steps.package_name.outputs.PACKAGE_NAME }}
+    steps:
+      - name: Set variables
+        id: package_name
+        run: |
+          echo "PACKAGE_NAME=$(basename ${{ github.repository }})" >> $GITHUB_OUTPUT
+
+  trigger-build:
+    needs: get_repo_name
+    uses: vyos/.github/.github/workflows/trigger-rebuild-repo-package.yml@sagitta
+    with:
+      branch: ${{ github.ref_name }}
+      package_name: ${{ needs.get_repo_name.outputs.PACKAGE_NAME }}
+    secrets:
+      REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
+      REMOTE_REUSE_REPO: ${{ secrets.REMOTE_REUSE_REPO }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+      PAT: ${{ secrets.PAT }}
