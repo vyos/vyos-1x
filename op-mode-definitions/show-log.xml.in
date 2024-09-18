@@ -172,6 +172,81 @@
                       </node>
                     </children>
                   </node>
+                  <node name="input">
+                    <properties>
+                      <help>Show Bridge input firewall log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep bri-INP</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show Bridge firewall input filter</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep bri-INP-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall bridge input filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[bri-INP-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="output">
+                    <properties>
+                      <help>Show Bridge output firewall log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep bri-OUT</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show Bridge firewall output filter</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep bri-OUT-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall bridge output filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[bri-OUT-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="prerouting">
+                    <properties>
+                      <help>Show Bridge prerouting firewall log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep bri-PRE</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show Bridge firewall prerouting filter</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep bri-PRE-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall bridge prerouting filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[bri-PRE-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                   <tagNode name="name">
                     <properties>
                       <help>Show custom Bridge firewall log</help>
@@ -295,6 +370,31 @@
                       </node>
                     </children>
                   </node>
+                  <node name="prerouting">
+                    <properties>
+                      <help>Show firewall IPv4 prerouting log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv4-PRE</command>
+                    <children>
+                      <node name="raw">
+                        <properties>
+                          <help>Show firewall IPv4 prerouting raw log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv4-PRE-raw</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv4 prerouting raw rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv4-PRE-raw-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                 </children>
               </node>
               <node name="ipv6">
@@ -393,6 +493,31 @@
                               </completionHelp>
                             </properties>
                             <command>journalctl --no-hostname --boot -k | egrep "\[ipv6-OUT-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="prerouting">
+                    <properties>
+                      <help>Show firewall IPv6 prerouting log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv6-PRE</command>
+                    <children>
+                      <node name="raw">
+                        <properties>
+                          <help>Show firewall IPv6 prerouting raw log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv6-PRE-raw</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv6 prerouting raw rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv6-PRE-raw-$8-[ADRJC]\]"</command>
                           </tagNode>
                         </children>
                       </node>
