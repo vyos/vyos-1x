@@ -1813,9 +1813,6 @@ class Interface(Control):
         value = '1' if (tmp != None) else '0'
         self.set_per_client_thread(value)
 
-        # enable/disable EAPoL (Extensible Authentication Protocol over Local Area Network)
-        self.set_eapol()
-
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
         # function. We will only enable the interface if 'up' was called as
