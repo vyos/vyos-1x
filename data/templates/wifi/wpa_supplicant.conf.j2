@@ -61,6 +61,8 @@ network={
     # If not set, this defaults to: WPA-PSK WPA-EAP
 {%     if security.wpa.mode is vyos_defined('wpa3') %}
     key_mgmt=SAE
+{%     elif security.wpa.username is vyos_defined %}
+    key_mgmt=WPA-EAP WPA-EAP-SHA256
 {%     else %}
     key_mgmt=WPA-PSK WPA-PSK-SHA256
 {%     endif %}
@@ -76,8 +78,18 @@ network={
     # from ASCII passphrase. This process uses lot of CPU and wpa_supplicant
     # startup and reconfiguration time can be optimized by generating the PSK only
     # only when the passphrase or SSID has actually changed.
+{%     if security.wpa.username is vyos_defined %}
+    identity="{{ security.wpa.username }}"
+    password="{{ security.wpa.passphrase }}"
+    phase2="auth=MSCHAPV2"
+    eap=PEAP
+{%     elif security.wpa.username is not vyos_defined %}
     psk="{{ security.wpa.passphrase }}"
-{% else %}
+{%     else %}
     key_mgmt=NONE
+{%     endif %}
+{% endif %}
+{% if bssid is vyos_defined %}
+    bssid={{ bssid }}
 {% endif %}
 }
