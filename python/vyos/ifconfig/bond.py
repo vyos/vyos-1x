@@ -504,3 +504,6 @@ class BondIf(Interface):
 
         # call base class first
         super().update(config)
+
+        # enable/disable EAPoL (Extensible Authentication Protocol over Local Area Network)
+        self.set_eapol()
