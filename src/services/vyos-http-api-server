@@ -577,7 +577,9 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
             background_tasks.add_task(call_commit, session)
             msg = self_ref_msg
         else:
-            session.commit()
+            # capture non-fatal warnings
+            out = session.commit()
+            msg = out if out else msg
 
         logger.info(f"Configuration modified via HTTP API using key '{app.state.vyos_id}'")
     except ConfigSessionError as e:
