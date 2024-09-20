@@ -452,3 +452,6 @@ class EthernetIf(Interface):
 
         # call base class last
         super().update(config)
+
+        # enable/disable EAPoL (Extensible Authentication Protocol over Local Area Network)
+        self.set_eapol()
