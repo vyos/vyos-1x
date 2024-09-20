@@ -67,6 +67,8 @@ void timer_handler(int);
 
 double get_posix_clock_time(void);
 
+static char * s_recv_string (void *, int);
+
 int main(int argc, char* argv[])
 {
     // string for node data: conf_mode script and tagnode, if applicable
@@ -119,31 +121,44 @@ int main(int argc, char* argv[])
     zmq_recv(requester, error_code, 1, 0);
     debug_print("Received node data receipt\n");
 
-    int err = (int)error_code[0];
+    char msg_size_str[7];
+    zmq_send(requester, "msg_size", 8, 0);
+    zmq_recv(requester, msg_size_str, 6, 0);
+    msg_size_str[6] = '\0';
+    int msg_size = (int)strtol(msg_size_str, NULL, 16);
+    debug_print("msg_size: %d\n", msg_size);
+
+    if (msg_size > 0) {
+        zmq_send(requester, "send", 4, 0);
+        char *msg = s_recv_string(requester, msg_size);
+        printf("%s", msg);
+        free(msg);
+    }
 
     free(string_node_data_msg);
 
-    zmq_close(requester);
-    zmq_ctx_destroy(context);
+    int err = (int)error_code[0];
+    int ret = 0;
 
     if (err & PASS) {
         debug_print("Received PASS\n");
-        int ret = pass_through(argv, ex_index);
-        return ret;
+        ret = pass_through(argv, ex_index);
     }
 
     if (err & ERROR_DAEMON) {
         debug_print("Received ERROR_DAEMON\n");
-        int ret = pass_through(argv, ex_index);
-        return ret;
+        ret = pass_through(argv, ex_index);
     }
 
     if (err & ERROR_COMMIT) {
         debug_print("Received ERROR_COMMIT\n");
-        return -1;
+        ret = -1;
     }
 
-    return 0;
+    zmq_close(requester);
+    zmq_ctx_destroy(context);
+
+    return ret;
 }
 
 int initialization(void* Requester)
@@ -342,3 +357,15 @@ double get_posix_clock_time(void)
 double get_posix_clock_time(void)
 {return (double)0;}
 #endif
+
+//  Receive string from socket and convert into C string
+static char * s_recv_string (void *socket, int bufsize) {
+    char * buffer = (char *)malloc(bufsize+1);
+    int size = zmq_recv(socket, buffer, bufsize, 0);
+    if (size == -1)
+        return NULL;
+    if (size > bufsize)
+        size = bufsize;
+    buffer[size] = '\0';
+    return buffer;
+}

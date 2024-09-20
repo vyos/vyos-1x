@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=redefined-outer-name
+
 import os
 import sys
 import grp
@@ -23,8 +25,10 @@ import typing
 import logging
 import signal
 import importlib.util
+import io
+from contextlib import redirect_stdout
+
 import zmq
-from contextlib import contextmanager
 
 from vyos.defaults import directories
 from vyos.utils.boot import boot_configuration_complete
@@ -49,7 +53,8 @@ if debug:
 else:
     logger.setLevel(logging.INFO)
 
-SOCKET_PATH = "ipc:///run/vyos-configd.sock"
+SOCKET_PATH = 'ipc:///run/vyos-configd.sock'
+MAX_MSG_SIZE = 65535
 
 # Response error codes
 R_SUCCESS = 1
@@ -64,9 +69,6 @@ configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-uns
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
 
-session_out = None
-session_mode = None
-
 def key_name_from_file_name(f):
     return os.path.splitext(f)[0]
 
@@ -76,16 +78,18 @@ def module_name_from_key(k):
 def path_from_file_name(f):
     return os.path.join(vyos_conf_scripts_dir, f)
 
+
 # opt-in to be run by daemon
 with open(configd_include_file) as f:
     try:
         include = json.load(f)
     except OSError as e:
-        logger.critical(f"configd include file error: {e}")
+        logger.critical(f'configd include file error: {e}')
         sys.exit(1)
     except json.JSONDecodeError as e:
-        logger.critical(f"JSON load error: {e}")
+        logger.critical(f'JSON load error: {e}')
         sys.exit(1)
+
 
 # import conf_mode scripts
 (_, _, filenames) = next(iter(os.walk(vyos_conf_scripts_dir)))
@@ -110,31 +114,17 @@ conf_mode_scripts = dict(zip(imports, modules))
 exclude_set = {key_name_from_file_name(f) for f in filenames if f not in include}
 include_set = {key_name_from_file_name(f) for f in filenames if f in include}
 
-@contextmanager
-def stdout_redirected(filename, mode):
-    saved_stdout_fd = None
-    destination_file = None
-    try:
-        sys.stdout.flush()
-        saved_stdout_fd = os.dup(sys.stdout.fileno())
-        destination_file = open(filename, mode)
-        os.dup2(destination_file.fileno(), sys.stdout.fileno())
-        yield
-    finally:
-        if saved_stdout_fd is not None:
-            os.dup2(saved_stdout_fd, sys.stdout.fileno())
-            os.close(saved_stdout_fd)
-        if destination_file is not None:
-            destination_file.close()
 
-def explicit_print(path, mode, msg):
-    try:
-        with open(path, mode) as f:
-            f.write(f"\n{msg}\n\n")
-    except OSError:
-        logger.critical("error explicit_print")
+def write_stdout_log(file_name, msg):
+    if boot_configuration_complete():
+        return
+    with open(file_name, 'a') as f:
+        f.write(msg)
 
-def run_script(script_name, config, args) -> int:
+
+def run_script(script_name, config, args) -> tuple[int, str]:
+    # pylint: disable=broad-exception-caught
+
     script = conf_mode_scripts[script_name]
     script.argv = args
     config.set_level([])
@@ -145,64 +135,53 @@ def run_script(script_name, config, args) -> int:
         script.apply(c)
     except ConfigError as e:
         logger.error(e)
-        explicit_print(session_out, session_mode, str(e))
-        return R_ERROR_COMMIT
+        return R_ERROR_COMMIT, str(e)
     except Exception as e:
         logger.critical(e)
-        return R_ERROR_DAEMON
+        return R_ERROR_DAEMON, str(e)
 
-    return R_SUCCESS
+    return R_SUCCESS, ''
+
 
 def initialization(socket):
-    global session_out
-    global session_mode
+    # pylint: disable=broad-exception-caught,too-many-locals
+
     # Reset config strings:
     active_string = ''
     session_string = ''
     # check first for resent init msg, in case of client timeout
     while True:
-        msg = socket.recv().decode("utf-8", "ignore")
+        msg = socket.recv().decode('utf-8', 'ignore')
         try:
             message = json.loads(msg)
-            if message["type"] == "init":
-                resp = "init"
+            if message['type'] == 'init':
+                resp = 'init'
                 socket.send(resp.encode())
-        except:
+        except Exception:
             break
 
     # zmq synchronous for ipc from single client:
     active_string = msg
-    resp = "active"
+    resp = 'active'
     socket.send(resp.encode())
-    session_string = socket.recv().decode("utf-8", "ignore")
-    resp = "session"
+    session_string = socket.recv().decode('utf-8', 'ignore')
+    resp = 'session'
     socket.send(resp.encode())
-    pid_string = socket.recv().decode("utf-8", "ignore")
-    resp = "pid"
+    pid_string = socket.recv().decode('utf-8', 'ignore')
+    resp = 'pid'
     socket.send(resp.encode())
-    sudo_user_string = socket.recv().decode("utf-8", "ignore")
-    resp = "sudo_user"
+    sudo_user_string = socket.recv().decode('utf-8', 'ignore')
+    resp = 'sudo_user'
     socket.send(resp.encode())
-    temp_config_dir_string = socket.recv().decode("utf-8", "ignore")
-    resp = "temp_config_dir"
+    temp_config_dir_string = socket.recv().decode('utf-8', 'ignore')
+    resp = 'temp_config_dir'
     socket.send(resp.encode())
-    changes_only_dir_string = socket.recv().decode("utf-8", "ignore")
-    resp = "changes_only_dir"
+    changes_only_dir_string = socket.recv().decode('utf-8', 'ignore')
+    resp = 'changes_only_dir'
     socket.send(resp.encode())
 
-    logger.debug(f"config session pid is {pid_string}")
-    logger.debug(f"config session sudo_user is {sudo_user_string}")
-
-    try:
-        session_out = os.readlink(f"/proc/{pid_string}/fd/1")
-        session_mode = 'w'
-    except FileNotFoundError:
-        session_out = None
-
-    # if not a 'live' session, for example on boot, write to file
-    if not session_out or not boot_configuration_complete():
-        session_out = script_stdout_log
-        session_mode = 'a'
+    logger.debug(f'config session pid is {pid_string}')
+    logger.debug(f'config session sudo_user is {sudo_user_string}')
 
     os.environ['SUDO_USER'] = sudo_user_string
     if temp_config_dir_string:
@@ -229,10 +208,12 @@ def initialization(socket):
 
     return config
 
-def process_node_data(config, data, last: bool = False) -> int:
+
+def process_node_data(config, data, _last: bool = False) -> tuple[int, str]:
     if not config:
-        logger.critical(f"Empty config")
-        return R_ERROR_DAEMON
+        out = 'Empty config'
+        logger.critical(out)
+        return R_ERROR_DAEMON, out
 
     script_name = None
     os.environ['VYOS_TAGNODE_VALUE'] = ''
@@ -246,8 +227,9 @@ def process_node_data(config, data, last: bool = False) -> int:
     if res.group(2):
         script_name = res.group(2)
     if not script_name:
-        logger.critical(f"Missing script_name")
-        return R_ERROR_DAEMON
+        out = 'Missing script_name'
+        logger.critical(out)
+        return R_ERROR_DAEMON, out
     if res.group(3):
         args = res.group(3).split()
     args.insert(0, f'{script_name}.py')
@@ -259,25 +241,54 @@ def process_node_data(config, data, last: bool = False) -> int:
     scripts_called.append(script_record)
 
     if script_name not in include_set:
-        return R_PASS
+        return R_PASS, ''
 
-    with stdout_redirected(session_out, session_mode):
-        result = run_script(script_name, config, args)
+    with redirect_stdout(io.StringIO()) as o:
+        result, err_out = run_script(script_name, config, args)
+    amb_out = o.getvalue()
+    o.close()
 
-    return result
+    out = amb_out + err_out
+
+    return result, out
+
+
+def send_result(sock, err, msg):
+    msg_size = min(MAX_MSG_SIZE, len(msg)) if msg else 0
+
+    err_rep = err.to_bytes(1, byteorder=sys.byteorder)
+    logger.debug(f'Sending reply: {err}')
+    sock.send(err_rep)
+
+    # size req from vyshim client
+    size_req = sock.recv().decode()
+    logger.debug(f'Received request: {size_req}')
+    msg_size_rep = hex(msg_size).encode()
+    sock.send(msg_size_rep)
+    logger.debug(f'Sending reply: {msg_size}')
+
+    if msg_size > 0:
+        # send req is sent from vyshim client only if msg_size > 0
+        send_req = sock.recv().decode()
+        logger.debug(f'Received request: {send_req}')
+        sock.send(msg.encode())
+        logger.debug('Sending reply with output')
+
+    write_stdout_log(script_stdout_log, msg)
+
 
 def remove_if_file(f: str):
     try:
         os.remove(f)
     except FileNotFoundError:
         pass
-    except OSError:
-        raise
+
 
 def shutdown():
     remove_if_file(configd_env_file)
     os.symlink(configd_env_unset_file, configd_env_file)
     sys.exit(0)
+
 
 if __name__ == '__main__':
     context = zmq.Context()
@@ -294,6 +305,7 @@ if __name__ == '__main__':
     os.environ['VYOS_CONFIGD'] = 't'
 
     def sig_handler(signum, frame):
+        # pylint: disable=unused-argument
         shutdown()
 
     signal.signal(signal.SIGTERM, sig_handler)
@@ -308,20 +320,19 @@ if __name__ == '__main__':
     while True:
         #  Wait for next request from client
         msg = socket.recv().decode()
-        logger.debug(f"Received message: {msg}")
+        logger.debug(f'Received message: {msg}')
         message = json.loads(msg)
 
-        if message["type"] == "init":
-            resp = "init"
+        if message['type'] == 'init':
+            resp = 'init'
             socket.send(resp.encode())
             config = initialization(socket)
-        elif message["type"] == "node":
-            res = process_node_data(config, message["data"], message["last"])
-            response = res.to_bytes(1, byteorder=sys.byteorder)
-            logger.debug(f"Sending response {res}")
-            socket.send(response)
-            if message["last"] and config:
+        elif message['type'] == 'node':
+            res, out = process_node_data(config, message['data'], message['last'])
+            send_result(socket, res, out)
+
+            if message['last'] and config:
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
         else:
-            logger.critical(f"Unexpected message: {message}")
+            logger.critical(f'Unexpected message: {message}')
