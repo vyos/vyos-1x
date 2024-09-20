@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'chronyd'
 NTP_CONF = '/run/chrony/chrony.conf'
@@ -229,17 +230,19 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['prefer']
 
+        default_ptp_port = default_value(base_path + ['ptp', 'port'])
+
         for server in servers:
             for option in options:
                 self.cli_set(base_path + ['server', server, option])
-            self.cli_set(base_path + ['server', server, 'ptp-transport'])
+            self.cli_set(base_path + ['server', server, 'ptp'])
 
         # commit changes (expected to fail)
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
         # add the required top-level option and commit
-        self.cli_set(base_path + ['ptp-transport'])
+        self.cli_set(base_path + ['ptp'])
         self.cli_commit()
 
         # Check generated configuration
@@ -254,9 +257,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('leapsectz right/UTC', config)
 
         for server in servers:
-            self.assertIn(f'server {server} iburst ' + ' '.join(options) + ' port 319', config)
+            self.assertIn(f'server {server} iburst ' + ' '.join(options) + f' port {default_ptp_port}', config)
 
-        self.assertIn('ptpport 319', config)
+        self.assertIn(f'ptpport {default_ptp_port}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

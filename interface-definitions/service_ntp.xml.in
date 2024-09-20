@@ -77,12 +77,17 @@
               </node>
             </children>
           </node>
-          <leafNode name="ptp-transport">
+          <node name="ptp">
             <properties>
-              <help>Enables the PTP transport for NTP packets</help>
-              <valueless/>
+              <help>Enable Precision Time Protocol (PTP) transport</help>
             </properties>
-          </leafNode>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>319</defaultValue>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="leap-second">
             <properties>
               <help>Leap second behavior</help>
@@ -156,9 +161,9 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="ptp-transport">
+              <leafNode name="ptp">
                 <properties>
-                  <help>Use the PTP transport for the server</help>
+                  <help>Use Precision Time Protocol (PTP) transport for the server</help>
                   <valueless/>
                 </properties>
               </leafNode>
