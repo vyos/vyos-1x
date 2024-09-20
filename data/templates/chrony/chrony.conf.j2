@@ -67,15 +67,14 @@ binddevice {{ interface }}
 {%     endif %}
 {% endif %}
 
-{% if offload.timestamp.interface is vyos_defined %}
+{% if ptp.timestamp.interface is vyos_defined %}
 # Enable hardware timestamping on the specified interfaces
-{%     for interface, config in offload.timestamp.interface.items() %}
-hwtimestamp {{ interface }} {{- ' rxfilter ' ~ config.receive_filter if config.receive_filter is vyos_defined }}
+{%     for iface, iface_config in ptp.timestamp.interface.items() %}
+{%         if iface == "all" %}
+{%             set iface = "*" %}
+{%         endif %}
+hwtimestamp {{ iface }} {{- ' rxfilter ' ~ iface_config.receive_filter if iface_config.receive_filter is vyos_defined }}
 {%     endfor %}
-{% endif %}
-{% if offload.timestamp.default_enable is vyos_defined %}
-# Enable hardware timestamping on all supported interfaces not otherwise configured
-hwtimestamp *
 {% endif %}
 
 {% if ptp.port is vyos_defined %}

@@ -171,7 +171,6 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         # name is not a 1:1 mapping from VyOS config
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['prefer']
-        offload_interface = 'eth0'
 
         for server in servers:
             for option in options:
@@ -198,13 +197,13 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
     def test_offload_timestamp_default(self):
         # Test offloading of NIC timestamp
         servers = ['192.0.2.1', '192.0.2.2']
-        options = ['prefer']
+        ptp_port = '8319'
 
         for server in servers:
-            for option in options:
-                self.cli_set(base_path + ['server', server, option])
+            self.cli_set(base_path + ['server', server, 'ptp'])
 
-        self.cli_set(base_path + ['offload', 'timestamp', 'default-enable'])
+        self.cli_set(base_path + ['ptp', 'port', ptp_port])
+        self.cli_set(base_path + ['ptp', 'timestamp', 'interface', 'all'])
 
         # commit changes
         self.cli_commit()
@@ -221,7 +220,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('leapsectz right/UTC', config)
 
         for server in servers:
-            self.assertIn(f'server {server} iburst ' + ' '.join(options), config)
+            self.assertIn(f'server {server} iburst port {ptp_port}', config)
 
         self.assertIn('hwtimestamp *', config)
 
