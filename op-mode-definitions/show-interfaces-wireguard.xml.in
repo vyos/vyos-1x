@@ -41,7 +41,7 @@
                 <properties>
                   <help>Shows current configuration and device information</help>
                 </properties>
-                <command>sudo wg show "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces_wireguard.py show_summary --intf-name="$4"</command>
               </leafNode>
             </children>
           </tagNode>
