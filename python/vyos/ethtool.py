@@ -56,11 +56,8 @@ class Ethtool:
     #   '100' : {'full': '', 'half': ''},
     #   '1000': {'full': ''}
     #  }
-    _speed_duplex = {'auto': {'auto': ''}}
     _ring_buffer = None
     _driver_name = None
-    _auto_negotiation = False
-    _auto_negotiation_supported = None
     _flow_control = None
 
     def __init__(self, ifname):
@@ -74,56 +71,51 @@ class Ethtool:
             self._driver_name = driver.group(1)
 
         # Build a dictinary of supported link-speed and dupley settings.
-        out, _ = popen(f'ethtool {ifname}')
-        reading = False
-        pattern = re.compile(r'\d+base.*')
-        for line in out.splitlines()[1:]:
-            line = line.lstrip()
-            if 'Supported link modes:' in line:
-                reading = True
-            if 'Supported pause frame use:' in line:
-                reading = False
-            if reading:
-                for block in line.split():
-                    if pattern.search(block):
-                        speed = block.split('base')[0]
-                        duplex = block.split('/')[-1].lower()
-                        if speed not in self._speed_duplex:
-                            self._speed_duplex.update({ speed : {}})
-                        if duplex not in self._speed_duplex[speed]:
-                            self._speed_duplex[speed].update({ duplex : ''})
-            if 'Supports auto-negotiation:' in line:
-                # Split the following string: Auto-negotiation: off
-                # we are only interested in off or on
-                tmp = line.split()[-1]
-                self._auto_negotiation_supported = bool(tmp == 'Yes')
-            # Only read in if Auto-negotiation is supported
-            if self._auto_negotiation_supported and 'Auto-negotiation:' in line:
-                # Split the following string: Auto-negotiation: off
-                # we are only interested in off or on
-                tmp = line.split()[-1]
-                self._auto_negotiation = bool(tmp == 'on')
+        # [ {
+        #     "ifname": "eth0",
+        #     "supported-ports": [ "TP" ],
+        #     "supported-link-modes": [ "10baseT/Half","10baseT/Full","100baseT/Half","100baseT/Full","1000baseT/Full" ],
+        #     "supported-pause-frame-use": "Symmetric",
+        #     "supports-auto-negotiation": true,
+        #     "supported-fec-modes": [ ],
+        #     "advertised-link-modes": [ "10baseT/Half","10baseT/Full","100baseT/Half","100baseT/Full","1000baseT/Full" ],
+        #     "advertised-pause-frame-use": "Symmetric",
+        #     "advertised-auto-negotiation": true,
+        #     "advertised-fec-modes": [ ],
+        #     "speed": 1000,
+        #     "duplex": "Full",
+        #     "auto-negotiation": false,
+        #     "port": "Twisted Pair",
+        #     "phyad": 1,
+        #     "transceiver": "internal",
+        #     "supports-wake-on": "pumbg",
+        #     "wake-on": "g",
+        #     "current-message-level": 7,
+        #     "link-detected": true
+        # } ]
+        out, _ = popen(f'ethtool --json {ifname}')
+        self._base_settings = loads(out)[0]
 
         # Now populate driver features
         out, _ = popen(f'ethtool --json --show-features {ifname}')
-        self._features = loads(out)
+        self._features = loads(out)[0]
 
         # Get information about NIC ring buffers
         out, _ = popen(f'ethtool --json --show-ring {ifname}')
-        self._ring_buffer = loads(out)
+        self._ring_buffer = loads(out)[0]
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
         out, err = popen(f'ethtool --json --show-pause {ifname}')
         if not bool(err):
-            self._flow_control = loads(out)
+            self._flow_control = loads(out)[0]
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
-        return self._auto_negotiation_supported
+        return self._base_settings['supports-auto-negotiation']
 
     def get_auto_negotiation(self):
-        return self._auto_negotiation_supported and self._auto_negotiation
+        return self._base_settings['supports-auto-negotiation'] and self._base_settings['auto-negotiation']
 
     def get_driver_name(self):
         return self._driver_name
@@ -137,9 +129,9 @@ class Ethtool:
         """
         active = False
         fixed = True
-        if feature in self._features[0]:
-            active = bool(self._features[0][feature]['active'])
-            fixed = bool(self._features[0][feature]['fixed'])
+        if feature in self._features:
+            active = bool(self._features[feature]['active'])
+            fixed = bool(self._features[feature]['fixed'])
         return active, fixed
 
     def get_generic_receive_offload(self):
@@ -165,14 +157,14 @@ class Ethtool:
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
             ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return str(self._ring_buffer[0].get(f'{rx_tx}-max', None))
+        return str(self._ring_buffer.get(f'{rx_tx}-max', None))
 
     def get_ring_buffer(self, rx_tx):
         # Configuration of RX/TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
             ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return str(self._ring_buffer[0].get(rx_tx, None))
+        return str(self._ring_buffer.get(rx_tx, None))
 
     def check_speed_duplex(self, speed, duplex):
         """ Check if the passed speed and duplex combination is supported by
@@ -184,12 +176,16 @@ class Ethtool:
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError(f'Value "{duplex}" for duplex is invalid!')
 
+        if speed == 'auto' and duplex == 'auto':
+            return True
+
         if self.get_driver_name() in _drivers_without_speed_duplex_flow:
             return False
 
-        if speed in self._speed_duplex:
-            if duplex in self._speed_duplex[speed]:
-                return True
+        # ['10baset/half', '10baset/full', '100baset/half', '100baset/full', '1000baset/full']
+        tmp = [x.lower() for x in self._base_settings['supported-link-modes']]
+        if f'{speed}baset/{duplex}' in tmp:
+            return True
         return False
 
     def check_flow_control(self):
@@ -201,4 +197,4 @@ class Ethtool:
             raise ValueError('Interface does not support changing '\
                              'flow-control settings!')
 
-        return 'on' if bool(self._flow_control[0]['autonegotiate']) else 'off'
+        return 'on' if bool(self._flow_control['autonegotiate']) else 'off'
