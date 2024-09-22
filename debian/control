@@ -94,7 +94,7 @@ Depends:
   linux-cpupower,
 # ipaddrcheck is widely used in IP value validators
   ipaddrcheck,
-  ethtool,
+  ethtool (>= 6.10),
   lm-sensors,
   procps,
   netplug,
