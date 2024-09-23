@@ -33,7 +33,7 @@ from fastapi import BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
-from pydantic import BaseModel, StrictStr, validator, model_validator
+from pydantic import BaseModel, StrictStr, field_validator, model_validator
 from starlette.middleware.cors import CORSMiddleware
 from starlette.datastructures import FormData
 from starlette.formparsers import FormParser, MultiPartParser
@@ -91,9 +91,9 @@ def success(data):
     return HTMLResponse(resp)
 
 # Pydantic models for validation
-# Pydantic will cast when possible, so use StrictStr
-# validators added as needed for additional constraints
-# schema_extra adds anotations to OpenAPI, to add examples
+# Pydantic will cast when possible, so use StrictStr validators added as
+# needed for additional constraints
+# json_schema_extra adds anotations to OpenAPI to add examples
 
 class ApiModel(BaseModel):
     key: StrictStr
@@ -102,8 +102,9 @@ class BasePathModel(BaseModel):
     op: StrictStr
     path: List[StrictStr]
 
-    @validator("path")
-    def check_non_empty(cls, path):
+    @field_validator("path")
+    @classmethod
+    def check_non_empty(cls, path: str) -> str:
         if not len(path) > 0:
             raise ValueError('path must be non-empty')
         return path
@@ -113,7 +114,7 @@ class BaseConfigureModel(BasePathModel):
 
 class ConfigureModel(ApiModel, BaseConfigureModel):
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "set | delete | comment",
@@ -125,7 +126,7 @@ class ConfigureListModel(ApiModel):
     commands: List[BaseConfigureModel]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "commands": "list of commands",
@@ -155,7 +156,7 @@ class RetrieveModel(ApiModel):
     configFormat: StrictStr = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "returnValue | returnValues | exists | showConfig",
@@ -170,7 +171,7 @@ class ConfigFileModel(ApiModel):
     file: StrictStr = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "save | load",
@@ -203,7 +204,7 @@ class ImageModel(ApiModel):
         return self
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "add | delete | show | set_default",
@@ -218,7 +219,7 @@ class ImportPkiModel(ApiModel):
     passphrase: StrictStr = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "import_pki",
@@ -233,7 +234,7 @@ class ContainerImageModel(ApiModel):
     name: StrictStr = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "add | delete | show",
@@ -246,7 +247,7 @@ class GenerateModel(ApiModel):
     path: List[StrictStr]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "generate",
@@ -259,7 +260,7 @@ class ShowModel(ApiModel):
     path: List[StrictStr]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "show",
@@ -272,7 +273,7 @@ class RebootModel(ApiModel):
     path: List[StrictStr]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "reboot",
@@ -285,7 +286,7 @@ class ResetModel(ApiModel):
     path: List[StrictStr]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "reset",
@@ -298,7 +299,7 @@ class PoweroffModel(ApiModel):
     path: List[StrictStr]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "key": "id_key",
                 "op": "poweroff",
