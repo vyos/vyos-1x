@@ -23,6 +23,10 @@
                 <script>${vyos_completion_dir}/list_interfaces</script>
                 <list>all</list>
               </completionHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+                <regex>all</regex>
+              </constraint>
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
