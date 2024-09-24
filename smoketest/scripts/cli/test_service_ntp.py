@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'chronyd'
 NTP_CONF = '/run/chrony/chrony.conf'
@@ -164,6 +165,100 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'leapsecmode slew', config)
                 self.assertIn(f'maxslewrate 1000', config)
                 self.assertIn(f'smoothtime 400 0.001024 leaponly', config)
+
+    def test_interleave_option(self):
+        # "interleave" option differs from some others in that the
+        # name is not a 1:1 mapping from VyOS config
+        servers = ['192.0.2.1', '192.0.2.2']
+        options = ['prefer']
+
+        for server in servers:
+            for option in options:
+                self.cli_set(base_path + ['server', server, option])
+            self.cli_set(base_path + ['server', server, 'interleave'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check generated configuration
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn('driftfile /run/chrony/drift', config)
+        self.assertIn('dumpdir /run/chrony', config)
+        self.assertIn('ntsdumpdir /run/chrony', config)
+        self.assertIn('clientloglimit 1048576', config)
+        self.assertIn('rtcsync', config)
+        self.assertIn('makestep 1.0 3', config)
+        self.assertIn('leapsectz right/UTC', config)
+
+        for server in servers:
+            self.assertIn(f'server {server} iburst ' + ' '.join(options) + ' xleave', config)
+
+    def test_offload_timestamp_default(self):
+        # Test offloading of NIC timestamp
+        servers = ['192.0.2.1', '192.0.2.2']
+        ptp_port = '8319'
+
+        for server in servers:
+            self.cli_set(base_path + ['server', server, 'ptp'])
+
+        self.cli_set(base_path + ['ptp', 'port', ptp_port])
+        self.cli_set(base_path + ['ptp', 'timestamp', 'interface', 'all'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check generated configuration
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn('driftfile /run/chrony/drift', config)
+        self.assertIn('dumpdir /run/chrony', config)
+        self.assertIn('ntsdumpdir /run/chrony', config)
+        self.assertIn('clientloglimit 1048576', config)
+        self.assertIn('rtcsync', config)
+        self.assertIn('makestep 1.0 3', config)
+        self.assertIn('leapsectz right/UTC', config)
+
+        for server in servers:
+            self.assertIn(f'server {server} iburst port {ptp_port}', config)
+
+        self.assertIn('hwtimestamp *', config)
+
+    def test_ptp_transport(self):
+        # Test offloading of NIC timestamp
+        servers = ['192.0.2.1', '192.0.2.2']
+        options = ['prefer']
+
+        default_ptp_port = default_value(base_path + ['ptp', 'port'])
+
+        for server in servers:
+            for option in options:
+                self.cli_set(base_path + ['server', server, option])
+            self.cli_set(base_path + ['server', server, 'ptp'])
+
+        # commit changes (expected to fail)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # add the required top-level option and commit
+        self.cli_set(base_path + ['ptp'])
+        self.cli_commit()
+
+        # Check generated configuration
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn('driftfile /run/chrony/drift', config)
+        self.assertIn('dumpdir /run/chrony', config)
+        self.assertIn('ntsdumpdir /run/chrony', config)
+        self.assertIn('clientloglimit 1048576', config)
+        self.assertIn('rtcsync', config)
+        self.assertIn('makestep 1.0 3', config)
+        self.assertIn('leapsectz right/UTC', config)
+
+        for server in servers:
+            self.assertIn(f'server {server} iburst ' + ' '.join(options) + f' port {default_ptp_port}', config)
+
+        self.assertIn(f'ptpport {default_ptp_port}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

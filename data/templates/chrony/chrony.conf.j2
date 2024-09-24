@@ -42,7 +42,7 @@ user {{ user }}
 {%         if config.pool is vyos_defined %}
 {%             set association = 'pool' %}
 {%         endif %}
-{{ association }} {{ server | replace('_', '-') }} iburst {{ 'nts' if config.nts is vyos_defined }} {{ 'noselect' if config.noselect is vyos_defined }} {{ 'prefer' if config.prefer is vyos_defined }}
+{{ association }} {{ server | replace('_', '-') }} iburst {{- ' nts' if config.nts is vyos_defined }} {{- ' noselect' if config.noselect is vyos_defined }} {{- ' prefer' if config.prefer is vyos_defined }} {{- ' xleave' if config.interleave is vyos_defined }} {{- ' port ' ~ ptp.port if ptp.port is vyos_defined and config.ptp is vyos_defined }}
 {%     endfor %}
 {% endif %}
 
@@ -65,4 +65,19 @@ bindaddress {{ address }}
 {%     if interface is vyos_defined %}
 binddevice {{ interface }}
 {%     endif %}
+{% endif %}
+
+{% if ptp.timestamp.interface is vyos_defined %}
+# Enable hardware timestamping on the specified interfaces
+{%     for iface, iface_config in ptp.timestamp.interface.items() %}
+{%         if iface == "all" %}
+{%             set iface = "*" %}
+{%         endif %}
+hwtimestamp {{ iface }} {{- ' rxfilter ' ~ iface_config.receive_filter if iface_config.receive_filter is vyos_defined }}
+{%     endfor %}
+{% endif %}
+
+{% if ptp.port is vyos_defined %}
+# Enable sending and receiving NTP over PTP packets (PTP transport)
+ptpport {{ ptp.port }}
 {% endif %}

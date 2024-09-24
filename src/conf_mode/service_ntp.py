@@ -17,6 +17,7 @@
 import os
 
 from vyos.config import Config
+from vyos.config import config_dict_merge
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
@@ -42,13 +43,21 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, with_defaults=True)
+    ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     ntp['config_file'] = config_file
     ntp['user'] = user_group
 
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: ntp.update({'restart_required': {}})
 
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = conf.get_config_defaults(**ntp.kwargs, recursive=True)
+    # Only defined PTP default port, if PTP feature is in use
+    if 'ptp' not in ntp:
+        del default_values['ptp']
+
+    ntp = config_dict_merge(default_values, ntp)
     return ntp
 
 def verify(ntp):
@@ -86,6 +95,15 @@ def verify(ntp):
             raise ConfigError(f'NTP Only admits one ipv4 value for listen-address parameter ')
         if ipv6_addresses > 1:
             raise ConfigError(f'NTP Only admits one ipv6 value for listen-address parameter ')
+
+    if 'server' in ntp:
+        for host, server in ntp['server'].items():
+            if 'ptp' in server:
+                if 'ptp' not in ntp:
+                    raise ConfigError('PTP must be enabled for the NTP service '\
+                                      f'before it can be used for server "{host}"')
+                else:
+                    break
 
     return None
 

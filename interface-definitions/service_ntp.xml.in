@@ -13,6 +13,74 @@
           #include <include/generic-interface.xml.i>
           #include <include/listen-address.xml.i>
           #include <include/interface/vrf.xml.i>
+          <node name="ptp">
+            <properties>
+              <help>Enable Precision Time Protocol (PTP) transport</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>319</defaultValue>
+              </leafNode>
+              <node name="timestamp">
+                <properties>
+                  <help>Enable timestamping of packets in the NIC hardware</help>
+                </properties>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Interface to enable timestamping on</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                        <list>all</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>all</format>
+                        <description>Select all interfaces</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.i>
+                        <regex>all</regex>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="receive-filter">
+                        <properties>
+                          <help>Selects which inbound packets are timestamped by the NIC</help>
+                          <completionHelp>
+                            <list>all ntp ptp none</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>all</format>
+                            <description>All packets are timestamped</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ntp</format>
+                            <description>Only NTP packets are timestamped</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ptp</format>
+                            <description>Only PTP or NTP packets using the PTP transport are timestamped</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>none</format>
+                            <description>No packet is timestamped</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(all|ntp|ptp|none)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <leafNode name="leap-second">
             <properties>
               <help>Leap second behavior</help>
@@ -83,6 +151,18 @@
               <leafNode name="prefer">
                 <properties>
                   <help>Marks the server as preferred</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ptp">
+                <properties>
+                  <help>Use Precision Time Protocol (PTP) transport for the server</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="interleave">
+                <properties>
+                  <help>Use the interleaved mode for the server</help>
                   <valueless/>
                 </properties>
               </leafNode>
