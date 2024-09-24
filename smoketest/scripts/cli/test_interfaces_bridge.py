@@ -22,6 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 from copy import deepcopy
 from glob import glob
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.template import ip_from_cidr
 from vyos.utils.process import cmd
@@ -459,6 +460,39 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         for interface in self._interfaces:
             tmp = get_interface_config(interface)
             self.assertEqual(protocol, tmp['linkinfo']['info_data']['vlan_protocol'])
+
+    def test_bridge_delete_with_vxlan_heighbor_suppress(self):
+        vxlan_if = 'vxlan0'
+        vni = '123'
+        br_if = 'br0'
+        eth0_addr = '192.0.2.2/30'
+
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'parameters', 'neighbor-suppress'])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'mtu', '1426'])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'source-address', ip_from_cidr(eth0_addr)])
+        self.cli_set(['interfaces', 'vxlan', vxlan_if, 'vni', vni])
+
+        self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', vxlan_if])
+
+        self.cli_commit()
+
+        self.assertTrue(interface_exists(vxlan_if))
+        self.assertTrue(interface_exists(br_if))
+
+        # cannot delete bridge interface if "neighbor-suppress" parameter is configured for VXLAN interface
+        self.cli_delete(['interfaces', 'bridge', br_if])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(['interfaces', 'vxlan', vxlan_if, 'parameters', 'neighbor-suppress'])
+
+        self.cli_commit()
+
+        self.assertFalse(interface_exists(br_if))
+
+        self.cli_delete(['interfaces', 'vxlan', vxlan_if])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
