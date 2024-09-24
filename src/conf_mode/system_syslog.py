@@ -53,6 +53,17 @@ def get_config(config=None):
     if syslog.from_defaults(['global']):
         del syslog['global']
 
+    if (
+        'global' in syslog
+        and 'preserve_fqdn' in syslog['global']
+        and conf.exists(['system', 'host-name'])
+        and conf.exists(['system', 'domain-name'])
+    ):
+        hostname = conf.return_value(['system', 'host-name'])
+        domain = conf.return_value(['system', 'domain-name'])
+        fqdn = f'{hostname}.{domain}'
+        syslog['global']['local_host_name'] = fqdn
+
     return syslog
 
 def verify(syslog):
