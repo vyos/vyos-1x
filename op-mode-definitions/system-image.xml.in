@@ -135,16 +135,27 @@
               <help>Remove an installed image from the system</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete</command>
+            <children>
+              <tagNode name="name">
+                <properties>
+                  <help>Image name</help>
+                  <completionHelp>
+                    <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image-name "${5}"</command>
+              </tagNode>
+              <tagNode name="index">
+                <properties>
+                  <help>Image index</help>
+                  <completionHelp>
+                    <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action indexed_list</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image-index "${5}"</command>
+              </tagNode>
+            </children>
           </node>
-          <tagNode name="image">
-            <properties>
-              <help>Remove an installed image from the system</help>
-              <completionHelp>
-                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
-              </completionHelp>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image-name "${4}"</command>
-          </tagNode>
         </children>
       </node>
     </children>

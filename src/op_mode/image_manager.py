@@ -30,10 +30,15 @@ SET_IMAGE_LIST_MSG: str = 'The following images are available:'
 SET_IMAGE_PROMPT_MSG: str = 'Select an image to set as default:'
 DELETE_IMAGE_LIST_MSG: str = 'The following images are installed:'
 DELETE_IMAGE_PROMPT_MSG: str = 'Select an image to delete:'
-MSG_DELETE_IMAGE_RUNNING: str = 'Currently running image cannot be deleted; reboot into another image first'
-MSG_DELETE_IMAGE_DEFAULT: str = 'Default image cannot be deleted; set another image as default first'
+MSG_DELETE_IMAGE_RUNNING: str = (
+    'Currently running image cannot be deleted; reboot into another image first'
+)
+MSG_DELETE_IMAGE_DEFAULT: str = (
+    'Default image cannot be deleted; set another image as default first'
+)
 
 ConsoleType: TypeAlias = Literal['tty', 'ttyS']
+
 
 def annotate_list(images_list: list[str]) -> list[str]:
     """Annotate list of images with additional info
@@ -55,30 +60,49 @@ def annotate_list(images_list: list[str]) -> list[str]:
         annotated[default] = annotated[default] + ' (default boot)'
     return annotated
 
+
 def define_format(images):
     annotated = annotate_list(images)
+
     def format_selection(image_name):
         return annotated[image_name]
+
     return format_selection
 
+
 @compat.grub_cfg_update
-def delete_image(image_name: Optional[str] = None,
-                 no_prompt: bool = False) -> None:
+def delete_image(
+    image_name: Optional[str] = None,
+    image_index: Optional[str] = None,
+    no_prompt: bool = False,
+) -> None:
     """Remove installed image files and boot entry
 
     Args:
         image_name (str): a name of image to delete
+        image_index (str): an index of image to delete
     """
     available_images: list[str] = grub.version_list()
     format_selection = define_format(available_images)
-    if image_name is None:
+    if image_name is None and image_index is None:
         if no_prompt:
             exit('An image name is required for delete action')
         else:
-            image_name = select_entry(available_images,
-                                      DELETE_IMAGE_LIST_MSG,
-                                      DELETE_IMAGE_PROMPT_MSG,
-                                      format_selection)
+            image_name = select_entry(
+                available_images,
+                DELETE_IMAGE_LIST_MSG,
+                DELETE_IMAGE_PROMPT_MSG,
+                format_selection,
+            )
+    if image_index is not None:
+        image_index = image_index.split(':')[0]
+        if not image_index.isnumeric() or int(image_index) not in range(
+            1, len(available_images) + 1
+        ):
+            exit('Not a valid image index')
+        en = list(enumerate(available_images, 1))
+        image_name = next(filter(lambda x: x[0] == int(image_index), en))[1]
+
     if image_name == image.get_running_image():
         exit(MSG_DELETE_IMAGE_RUNNING)
     if image_name == image.get_default_image():
@@ -89,9 +113,9 @@ def delete_image(image_name: Optional[str] = None,
     if not persistence_storage:
         exit('Persistence storage cannot be found')
 
-    if (not no_prompt and
-        not ask_yes_no(f'Do you really want to delete the image {image_name}?',
-                       default=False)):
+    if not no_prompt and not ask_yes_no(
+        f'Do you really want to delete the image {image_name}?', default=False
+    ):
         exit()
 
     # remove files and menu entry
@@ -114,8 +138,7 @@ def delete_image(image_name: Optional[str] = None,
 
 
 @compat.grub_cfg_update
-def set_image(image_name: Optional[str] = None,
-              prompt: bool = True) -> None:
+def set_image(image_name: Optional[str] = None, prompt: bool = True) -> None:
     """Set default boot image
 
     Args:
@@ -127,10 +150,12 @@ def set_image(image_name: Optional[str] = None,
         if not prompt:
             exit('An image name is required for set action')
         else:
-            image_name = select_entry(available_images,
-                                      SET_IMAGE_LIST_MSG,
-                                      SET_IMAGE_PROMPT_MSG,
-                                      format_selection)
+            image_name = select_entry(
+                available_images,
+                SET_IMAGE_LIST_MSG,
+                SET_IMAGE_PROMPT_MSG,
+                format_selection,
+            )
     if image_name == image.get_default_image():
         exit(f'The image "{image_name}" already configured as default')
     if image_name not in available_images:
@@ -170,9 +195,9 @@ def rename_image(name_old: str, name_new: str) -> None:
         exit('Persistence storage cannot be found')
 
     if not ask_yes_no(
-            f'Do you really want to rename the image {name_old} '
-            f'to the {name_new}?',
-            default=False):
+        f'Do you really want to rename the image {name_old} to the {name_new}?',
+        default=False,
+    ):
         exit()
 
     try:
@@ -199,16 +224,20 @@ def rename_image(name_old: str, name_new: str) -> None:
         try:
             new_luks_path: Path = Path(f'{persistence_storage}/luks/{name_new}')
             old_luks_path.rename(new_luks_path)
-            print(f'The encrypted config for "{name_old}" was successfully renamed to "{name_new}"')
+            print(
+                f'The encrypted config for "{name_old}" was successfully renamed to "{name_new}"'
+            )
         except Exception as err:
-            exit(f'Unable to rename the encrypted config for "{name_old}" to "{name_new}": {err}')
+            exit(
+                f'Unable to rename the encrypted config for "{name_old}" to "{name_new}": {err}'
+            )
 
 
 @compat.grub_cfg_update
 def set_console_type(console_type: ConsoleType) -> None:
     console_choice = get_args(ConsoleType)
     if console_type not in console_choice:
-        exit(f'console type \'{console_type}\' not available')
+        exit(f"console type '{console_type}' not available")
 
     grub.set_console_type(console_type)
 
@@ -218,6 +247,14 @@ def list_images() -> None:
     images_list: list[str] = grub.version_list()
     for image_name in images_list:
         print(image_name)
+
+
+def list_idexed_images() -> None:
+    """Print indexed list of available images for CLI hints"""
+    images_list: list[str] = grub.version_list()
+    en = list(enumerate(images_list, 1))
+    for i, e in en:
+        print(f'{i}:__{e}')
 
 
 def list_console_types() -> None:
@@ -234,23 +271,33 @@ def parse_arguments() -> Namespace:
         Namespace: a namespace with parsed arguments
     """
     parser: ArgumentParser = ArgumentParser(description='Manage system images')
-    parser.add_argument('--action',
-                        choices=['delete', 'set', 'set_console_type',
-                                 'rename', 'list', 'list_console_types'],
-                        required=True,
-                        help='action to perform with an image')
-    parser.add_argument('--no-prompt', action='store_true',
-                        help='perform action non-interactively')
+    parser.add_argument(
+        '--action',
+        choices=[
+            'delete',
+            'set',
+            'set_console_type',
+            'rename',
+            'list',
+            'list_console_types',
+            'indexed_list',
+        ],
+        required=True,
+        help='action to perform with an image',
+    )
+    parser.add_argument(
+        '--no-prompt', action='store_true', help='perform action non-interactively'
+    )
     parser.add_argument(
         '--image-name',
-        help=
-        'a name of an image to add, delete, install, rename, or set as default')
+        help='a name of an image to add, delete, install, rename, or set as default',
+    )
+    parser.add_argument('--image-index', help='an index of an image to delete')
     parser.add_argument('--image-new-name', help='a new name for image')
     parser.add_argument('--console-type', help='console type for boot')
     args: Namespace = parser.parse_args()
     # Validate arguments
-    if args.action == 'rename' and (not args.image_name or
-                                    not args.image_new_name):
+    if args.action == 'rename' and (not args.image_name or not args.image_new_name):
         exit('Both old and new image names are required for rename action')
 
     return args
@@ -260,7 +307,7 @@ if __name__ == '__main__':
     try:
         args: Namespace = parse_arguments()
         if args.action == 'delete':
-            delete_image(args.image_name, args.no_prompt)
+            delete_image(args.image_name, args.image_index, args.no_prompt)
         if args.action == 'set':
             set_image(args.image_name)
         if args.action == 'set_console_type':
@@ -269,6 +316,8 @@ if __name__ == '__main__':
             rename_image(args.image_name, args.image_new_name)
         if args.action == 'list':
             list_images()
+        if args.action == 'indexed_list':
+            list_idexed_images()
         if args.action == 'list_console_types':
             list_console_types()
 
