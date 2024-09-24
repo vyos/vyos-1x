@@ -10,6 +10,10 @@ $MarkMessagePeriod {{ global.marker.interval }}
 $PreserveFQDN on
 {% endif %}
 
+{% if global.local_host_name is vyos_defined %}
+$LocalHostName {{ global.local_host_name }}
+{% endif %}
+
 # We always log to /var/log/messages
 $outchannel global,/var/log/messages,262144,/usr/sbin/logrotate {{ logrotate }}
 {% if global.facility is vyos_defined %}
