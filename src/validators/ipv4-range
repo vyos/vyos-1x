@@ -18,12 +18,12 @@ if [[ "$1" =~ "-" ]]; then
   # hyphen as delimiter
   readarray -d - -t strarr <<< $1
 
-  ipaddrcheck --is-ipv4-single ${strarr[0]}
+  ipaddrcheck --is-ipv4-single "${strarr[0]}"
   if [ $? -gt 0 ]; then
     error_exit $1
   fi
 
-  ipaddrcheck --is-ipv4-single ${strarr[1]}
+  ipaddrcheck --is-ipv4-single "${strarr[1]}"
   if [ $? -gt 0 ]; then
     error_exit $1
   fi
