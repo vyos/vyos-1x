@@ -24,6 +24,7 @@ import json
 import typing
 import logging
 import signal
+import traceback
 import importlib.util
 import io
 from contextlib import redirect_stdout
@@ -136,9 +137,10 @@ def run_script(script_name, config, args) -> tuple[int, str]:
     except ConfigError as e:
         logger.error(e)
         return R_ERROR_COMMIT, str(e)
-    except Exception as e:
-        logger.critical(e)
-        return R_ERROR_DAEMON, str(e)
+    except Exception:
+        tb = traceback.format_exc()
+        logger.error(tb)
+        return R_ERROR_COMMIT, tb
 
     return R_SUCCESS, ''
 
