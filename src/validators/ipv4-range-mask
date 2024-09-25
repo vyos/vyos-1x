@@ -17,7 +17,7 @@ do
 done
 
 if [[ "${range}" =~ "-" ]]&&[[ ! -z ${mask} ]]; then
-  ipaddrcheck --range-prefix-length ${mask} --is-ipv4-range ${range}
+  ipaddrcheck --range-prefix-length "${mask}" --is-ipv4-range "${range}"
   if [ $? -gt 0 ]; then
     error_exit ${range} ${mask}
   fi
