@@ -45,9 +45,53 @@ def get_config(config=None):
     interfaces_removed = node_changed(conf, base + ['interface'])
     if interfaces_removed:
         sr['interface_removed'] = list(interfaces_removed)
+    
+    if dict_search('traffic_engineering', sr):
+        # Check for traffic engineering database import having more than one 
+        # protocol configured concurrently
+        if dict_search('traffic_engineering.database_import_protocol', sr):
+            if 'isis' in (sr['traffic_engineering']['database_import_protocol'].keys()) \
+            and 'ospfv2' in (sr['traffic_engineering']['database_import_protocol'].keys()):
+                raise ConfigError('Segment routing traffic engineering database import cannot ' \
+                                  'have isis and ospfv2 configured at the same time!')
 
-    import pprint
-    pprint.pprint(sr)
+        # Check for traffic engineering per segment list per index nai adjacency 
+        # and prefix configured concurrently
+        if dict_search('traffic_engineering.segment_list', sr):
+            for segment_list in sr['traffic_engineering']['segment_list']:
+                for index in sr['traffic_engineering']['segment_list'][segment_list]['index']['value']:
+                    if dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai', sr):
+                        if 'adjacency' in (dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai', sr)) \
+                        and 'prefix' in (dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai', sr)):
+                            raise ConfigError(f'Segment routing traffic engineering segment list ' \
+                                              f'{segment_list} on index {index} cannot have prefix and ' \
+                                               'adjacency segment values configured at the same time!')
+
+        # Check for traffic engineering per segment list per index nai adjacency
+        # ipv4 and ipv6 configured concurrently
+        if dict_search('traffic_engineering.segment_list', sr):
+            for segment_list in sr['traffic_engineering']['segment_list']:
+                for index in sr['traffic_engineering']['segment_list'][segment_list]['index']['value']:
+                    if dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai', sr):
+                        if dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai.adjacency', sr):
+                            if 'ipv4' in (dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai.adjacency', sr)) \
+                            and 'ipv6' in (dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai.adjacency', sr)):
+                                raise ConfigError(f'Segment routing traffic engineering segment list ' \
+                                                  f'{segment_list} on index {index} on nai adjacency cannot ' \
+                                                   'have ipv4 and ipv6 address families configured at the same time!')
+
+        # Check for traffic engineering per segment list per index nai prefix
+        # ipv4 and ipv6 configured concurrently
+        if dict_search('traffic_engineering.segment_list', sr):
+            for segment_list in sr['traffic_engineering']['segment_list']:
+                for index in sr['traffic_engineering']['segment_list'][segment_list]['index']['value']:
+                    if dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai', sr):
+                        if dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai.prefix', sr):
+                            if 'ipv4' in (dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai.prefix', sr)) \
+                            and 'ipv6' in (dict_search(f'traffic_engineering.segment_list.{segment_list}.index.value.{index}.nai.prefix', sr)):
+                                raise ConfigError(f'Segment routing traffic engineering segment list ' \
+                                                  f'{segment_list} on index {index} on nai prefix cannot ' \
+                                                   'have ipv4 and ipv6 address families configured at the same time!')
     return sr
 
 def verify(sr):
