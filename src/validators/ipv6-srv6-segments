@@ -3,7 +3,7 @@ segments="$1"
 export IFS="/"
 
 for ipv6addr in $segments; do
-    ipaddrcheck --is-ipv6-single $ipv6addr
+    ipaddrcheck --is-ipv6-single "$ipv6addr"
     if [ $? -gt 0 ]; then
         echo "Error: $1 is not a valid IPv6 address"
         exit 1
