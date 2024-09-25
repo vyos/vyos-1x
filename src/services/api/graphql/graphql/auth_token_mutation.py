@@ -21,7 +21,7 @@ from graphql import GraphQLResolveInfo
 
 from .. libs.token_auth import generate_token
 from .. session.session import get_user_info
-from .. import state
+from ... session import SessionState
 
 auth_token_mutation = ObjectType("Mutation")
 
@@ -31,8 +31,10 @@ def auth_token_resolver(obj: Any, info: GraphQLResolveInfo, data: Dict):
     user = data['username']
     passwd = data['password']
 
-    secret = state.settings['secret']
-    exp_interval = int(state.settings['app'].state.vyos_token_exp)
+    state = SessionState()
+
+    secret = getattr(state, 'secret', '')
+    exp_interval = int(state.token_exp)
     expiration = (datetime.datetime.now(tz=datetime.timezone.utc) +
                   datetime.timedelta(seconds=exp_interval))
 

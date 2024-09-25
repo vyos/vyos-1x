@@ -21,10 +21,10 @@ from makefun import with_signature
 from typing import Any, Dict, Optional # pylint: disable=W0611
 from graphql import GraphQLResolveInfo # pylint: disable=W0611
 
-from .. import state
+from ... session import SessionState
 from .. libs import key_auth
-from api.graphql.session.session import Session
-from api.graphql.session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
+from .. session.session import Session
+from .. session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
 from vyos.opmode import Error as OpModeError
 
 query = ObjectType("Query")
@@ -45,12 +45,13 @@ def make_query_resolver(query_name, class_name, session_func):
     func_base_name = convert_camel_case_to_snake(class_name)
     resolver_name = f'resolve_{func_base_name}'
     func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Optional[Dict]=None)'
+    state = SessionState()
 
     @query.field(query_name)
     @with_signature(func_sig, func_name=resolver_name)
     async def func_impl(*args, **kwargs):
         try:
-            auth_type = state.settings['app'].state.vyos_auth_type
+            auth_type = state.auth_type
 
             if auth_type == 'key':
                 data = kwargs['data']
@@ -86,11 +87,11 @@ def make_query_resolver(query_name, class_name, session_func):
                     }
             else:
                 # AtrributeError will have already been raised if no
-                # vyos_auth_type; validation and defaultValue ensure it is
+                # auth_type; validation and defaultValue ensure it is
                 # one of the previous cases, so this is never reached.
                 pass
 
-            session = state.settings['app'].state.vyos_session
+            session = state.session
 
             # one may override the session functions with a local subclass
             try:

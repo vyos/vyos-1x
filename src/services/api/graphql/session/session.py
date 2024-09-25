@@ -138,7 +138,6 @@ class Session:
         return res
 
     def show_user_info(self):
-        session = self._session
         data = self._data
 
         user_info = {}
@@ -151,10 +150,9 @@ class Session:
         return user_info
 
     def system_status(self):
-        import api.graphql.session.composite.system_status as system_status
+        from api.graphql.session.composite import system_status
 
         session = self._session
-        data = self._data
 
         status = {}
         status['host_name'] = session.show(['host', 'name']).strip()
@@ -165,7 +163,6 @@ class Session:
         return status
 
     def gen_op_query(self):
-        session = self._session
         data = self._data
         name = self._name
         op_mode_list = self._op_mode_list
@@ -189,7 +186,6 @@ class Session:
         return res
 
     def gen_op_mutation(self):
-        session = self._session
         data = self._data
         name = self._name
         op_mode_list = self._op_mode_list
