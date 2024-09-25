@@ -38,6 +38,10 @@ def graphql_init(app: "FastAPI"):
 
     in_spec = state.introspection
 
+    # remove route and reinstall below, for any changes; alternatively, test
+    # for config_diff before proceeding
+    graphql_clear(app)
+
     if state.origins:
         origins = state.origins
         app.add_route('/graphql', CORSMiddleware(GraphQL(schema,
@@ -52,3 +56,9 @@ def graphql_init(app: "FastAPI"):
                                           context_value=get_user_context,
                                           debug=True,
                                           introspection=in_spec))
+
+
+def graphql_clear(app: "FastAPI"):
+    for r in app.routes:
+        if r.path == '/graphql':
+            app.routes.remove(r)

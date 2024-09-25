@@ -682,4 +682,12 @@ def poweroff_op(data: PoweroffModel):
 
 
 def rest_init(app: "FastAPI"):
+    if all(r in app.routes for r in router.routes):
+        return
     app.include_router(router)
+
+
+def rest_clear(app: "FastAPI"):
+    for r in router.routes:
+        if r in app.routes:
+            app.routes.remove(r)

@@ -159,11 +159,21 @@ def initialization(session: SessionState, app: FastAPI = app):
     if session.rest:
         from api.rest.routers import rest_init
         rest_init(app)
+    else:
+        from api.rest.routers import rest_clear
+        rest_clear(app)
 
     # add GraphQL route
     if session.graphql:
         from api.graphql.routers import graphql_init
         graphql_init(app)
+    else:
+        from api.graphql.routers import graphql_clear
+        graphql_clear(app)
+
+    LOG.debug('Active routes are:')
+    for r in app.routes:
+        LOG.debug(f'{r.path}')
 
     config = ApiServerConfig(app, uds="/run/api.sock", proxy_headers=True)
     server = ApiServer(config)
