@@ -53,20 +53,22 @@ def get_config(config=None):
     tmp = node_changed(conf, base + [ifname, 'member', 'interface'])
     if tmp:
         if 'member' in bridge:
-            bridge['member'].update({'interface_remove' : tmp })
+            bridge['member'].update({'interface_remove': {t: {} for t in tmp}})
         else:
-            bridge.update({'member' : {'interface_remove' : tmp }})
-            for interface in tmp:
-                # When using VXLAN member interfaces that are configured for Single
-                # VXLAN Device (SVD) we need to call the VXLAN conf-mode script to
-                # re-create VLAN to VNI mappings if required, but only if the interface
-                # is already live on the system - this must not be done on first commit
-                if interface.startswith('vxlan') and interface_exists(interface):
-                    set_dependents('vxlan', conf, interface)
-                # When using Wireless member interfaces we need to inform hostapd
-                # to properly set-up the bridge
-                elif interface.startswith('wlan') and interface_exists(interface):
-                    set_dependents('wlan', conf, interface)
+            bridge.update({'member': {'interface_remove': {t: {} for t in tmp}}})
+        for interface in tmp:
+            # When using VXLAN member interfaces that are configured for Single
+            # VXLAN Device (SVD) we need to call the VXLAN conf-mode script to
+            # re-create VLAN to VNI mappings if required, but only if the interface
+            # is already live on the system - this must not be done on first commit
+            if interface.startswith('vxlan') and interface_exists(interface):
+                set_dependents('vxlan', conf, interface)
+                _, vxlan = get_interface_dict(conf, ['interfaces', 'vxlan'], ifname=interface)
+                bridge['member']['interface_remove'].update({interface: vxlan})
+            # When using Wireless member interfaces we need to inform hostapd
+            # to properly set-up the bridge
+            elif interface.startswith('wlan') and interface_exists(interface):
+                set_dependents('wlan', conf, interface)
 
     if dict_search('member.interface', bridge) is not None:
         for interface in list(bridge['member']['interface']):
@@ -118,6 +120,16 @@ def get_config(config=None):
     return bridge
 
 def verify(bridge):
+    # to delete interface or remove a member interface VXLAN first need to check if
+    # VXLAN does not require to be a member of a bridge interface
+    if dict_search('member.interface_remove', bridge):
+        for iface, iface_config in bridge['member']['interface_remove'].items():
+            if iface.startswith('vxlan') and dict_search('parameters.neighbor_suppress', iface_config) != None:
+                raise ConfigError(
+                    f'To detach interface {iface} from bridge you must first '
+                    f'disable "neighbor-suppress" parameter in the VXLAN interface {iface}'
+                )
+
     if 'deleted' in bridge:
         return None
 
@@ -192,7 +204,7 @@ def apply(bridge):
             try:
                 call_dependents()
             except ConfigError:
-                raise ConfigError('Error updating member interface configuration after changing bridge!')
+                raise ConfigError(f'Error updating member interface {interface} configuration after changing bridge!')
 
     return None
 
