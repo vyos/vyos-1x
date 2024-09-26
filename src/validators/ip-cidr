@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ipaddrcheck --is-any-cidr $1
+ipaddrcheck --is-any-cidr "$1"
 
 if [ $? -gt 0 ]; then
     echo "Error: $1 is not a valid IP CIDR"
