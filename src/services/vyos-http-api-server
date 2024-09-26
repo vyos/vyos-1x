@@ -113,6 +113,19 @@ def flatten_keys(d: dict) -> list[dict]:
     return keys_list
 
 
+def regenerate_docs(app: FastAPI) -> None:
+    docs = ('/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc')
+    remove = []
+    for r in app.routes:
+        if r.path in docs:
+            remove.append(r)
+    for r in remove:
+        app.routes.remove(r)
+
+    app.openapi_schema = None
+    app.setup()
+
+
 def initialization(session: SessionState, app: FastAPI = app):
     # pylint: disable=global-statement,broad-exception-caught,import-outside-toplevel
 
@@ -170,6 +183,8 @@ def initialization(session: SessionState, app: FastAPI = app):
     else:
         from api.graphql.routers import graphql_clear
         graphql_clear(app)
+
+    regenerate_docs(app)
 
     LOG.debug('Active routes are:')
     for r in app.routes:
