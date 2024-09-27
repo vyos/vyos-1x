@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ipaddrcheck --is-ipv4 "$1"
+ipaddrcheck --is-ipv4 $1
 
 if [ $? -gt 0 ]; then
     echo "Error: $1 is not IPv4"
