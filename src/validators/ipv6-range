@@ -1,20 +1,10 @@
-#!/usr/bin/env python3
+#!/bin/sh
 
-from ipaddress import IPv6Address
-from sys import argv, exit
+ipaddrcheck --verbose --is-ipv6-range "$1"
 
-if __name__ == '__main__':
-    if len(argv) > 1:
-        # try to pass validation and raise an error if failed
-        try:
-            ipv6_range = argv[1]
-            range_left = ipv6_range.split('-')[0]
-            range_right = ipv6_range.split('-')[1]
-            if not IPv6Address(range_left) < IPv6Address(range_right):
-                raise ValueError(f'left element {range_left} must be less than right element {range_right}')
-        except Exception as err:
-            print(f'Error: {ipv6_range} is not a valid IPv6 range: {err}')
-            exit(1)
-    else:
-        print('Error: an IPv6 range argument must be provided')
-        exit(1)
+if [ $? -gt 0 ]; then
+    echo "Error: $1 is not a valid IPv6 address range"
+    exit 1
+fi
+
+exit 0
