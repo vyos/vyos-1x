@@ -1,3 +1,3 @@
 #!/bin/sh
 
-ipaddrcheck --is-ipv4-host $1 || ipaddrcheck --is-ipv6-host $1 
+ipaddrcheck --is-any-host "$1"
