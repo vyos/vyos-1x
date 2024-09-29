@@ -88,6 +88,10 @@ class ConfigTree(object):
         self.__to_json_ast.argtypes = [c_void_p]
         self.__to_json_ast.restype = c_char_p
 
+        self.__create_node = self.__lib.create_node
+        self.__create_node.argtypes = [c_void_p, c_char_p]
+        self.__create_node.restype = c_int
+
         self.__set_add_value = self.__lib.set_add_value
         self.__set_add_value.argtypes = [c_void_p, c_char_p, c_char_p]
         self.__set_add_value.restype = c_int
@@ -139,6 +143,14 @@ class ConfigTree(object):
         self.__set_tag = self.__lib.set_tag
         self.__set_tag.argtypes = [c_void_p, c_char_p]
         self.__set_tag.restype = c_int
+
+        self.__is_leaf = self.__lib.is_leaf
+        self.__is_leaf.argtypes = [c_void_p, c_char_p]
+        self.__is_leaf.restype = c_bool
+
+        self.__set_leaf = self.__lib.set_leaf
+        self.__set_leaf.argtypes = [c_void_p, c_char_p, c_bool]
+        self.__set_leaf.restype = c_int
 
         self.__get_subtree = self.__lib.get_subtree
         self.__get_subtree.argtypes = [c_void_p, c_char_p]
@@ -196,6 +208,14 @@ class ConfigTree(object):
 
     def to_json_ast(self):
         return self.__to_json_ast(self.__config).decode()
+
+    def create_node(self, path):
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+
+        res = self.__create_node(self.__config, path_str)
+        if (res != 0):
+            raise ConfigTreeError(f"Path already exists: {path}")
 
     def set(self, path, value=None, replace=True):
         """Set new entry in VyOS configuration.
@@ -344,6 +364,22 @@ class ConfigTree(object):
         path_str = " ".join(map(str, path)).encode()
 
         res = self.__set_tag(self.__config, path_str)
+        if (res == 0):
+            return True
+        else:
+            raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
+
+    def is_leaf(self, path):
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+
+        return self.__is_leaf(self.__config, path_str)
+
+    def set_leaf(self, path, value):
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+
+        res = self.__set_leaf(self.__config, path_str, value)
         if (res == 0):
             return True
         else:
