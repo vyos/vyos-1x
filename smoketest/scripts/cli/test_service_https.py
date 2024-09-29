@@ -154,6 +154,8 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         key = 'MySuperSecretVyOS'
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
 
+        self.cli_set(base_path + ['api', 'rest'])
+
         self.cli_set(base_path + ['listen-address', address])
 
         self.cli_commit()
@@ -304,6 +306,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(r.status_code, 503)
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
         sleep(2)
 
@@ -326,6 +329,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -343,6 +347,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -362,6 +367,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         conf_address = '192.0.2.44/32'
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload_path = [
@@ -385,6 +391,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -402,6 +409,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -419,6 +427,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -462,6 +471,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         # load config via HTTP requires nginx config
