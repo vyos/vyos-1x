@@ -11,9 +11,6 @@
             </properties>
             <children>
               #include <include/listen-address.xml.i>
-              <leafNode name="listen-address">
-                <defaultValue>0.0.0.0</defaultValue>
-              </leafNode>
               #include <include/port-number.xml.i>
               <leafNode name="port">
                 <defaultValue>9100</defaultValue>

@@ -9,9 +9,12 @@ After=network.target
 User=node_exporter
 {% endif %}
 ExecStart={{ vrf_command }}/usr/sbin/node_exporter \
-{% for address in listen_address %}
+{% if listen_address is vyos_defined %}
+{%     for address in listen_address %}
         --web.listen-address={{ address }}:{{ port }}
-{% endfor %}
-
+{%     endfor %}
+{% else %}
+        --web.listen-address=:{{ port }}
+{% endif %}
 [Install]
 WantedBy=multi-user.target

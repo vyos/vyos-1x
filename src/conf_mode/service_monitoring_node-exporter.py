@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -88,9 +88,6 @@ def apply(config_data):
         systemd_action = 'restart'
 
     call(f'systemctl {systemd_action} {systemd_service}')
-
-    # Telegraf include custom rsyslog config changes
-    call('systemctl reload-or-restart rsyslog')
 
 
 if __name__ == '__main__':
