@@ -202,11 +202,11 @@
                 <properties>
                   <help>Regular expression to match against a community-list</help>
                   <completionHelp>
-                    <list>local-AS no-advertise no-export internet additive</list>
+                    <list>local-AS no-advertise no-export internet graceful-shutdown accept-own-nexthop accept-own route-filter-translated-v4 route-filter-v4 route-filter-translated-v6 route-filter-v6 llgr-stale no-llgr blackhole no-peer additive</list>
                   </completionHelp>
                   <valueHelp>
                     <format>&lt;aa:nn&gt;</format>
-                    <description>Community number in AA:NN format</description>
+                    <description>Community number in AA:NN format where AA and NN are (0-65535)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>local-AS</format>
@@ -223,6 +223,50 @@
                   <valueHelp>
                     <format>internet</format>
                     <description>Well-known communities value 0</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>graceful-shutdown</format>
+                    <description>Well-known communities value GRACEFUL_SHUTDOWN 0xFFFF0000</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>accept-own-nexthop</format>
+                    <description>Well-known communities value ACCEPT_OWN_NEXTHOP 0xFFFF0008</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>accept-own</format>
+                    <description>Well-known communities value ACCEPT_OWN 0xFFFF0001 65535:1</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>route-filter-translated-v4</format>
+                    <description>Well-known communities value ROUTE_FILTER_TRANSLATED_v4 0xFFFF0002 65535:2</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>route-filter-v4</format>
+                    <description>Well-known communities value ROUTE_FILTER_v4 0xFFFF0003 65535:3</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>route-filter-translated-v6</format>
+                    <description>Well-known communities value ROUTE_FILTER_TRANSLATED_v6 0xFFFF0004 65535:4</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>route-filter-v6</format>
+                    <description>Well-known communities value ROUTE_FILTER_v6 0xFFFF0005 65535:5</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>llgr-stale</format>
+                    <description>Well-known communities value LLGR_STALE 0xFFFF0006 65535:6</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no-llgr</format>
+                    <description>Well-known communities value NO_LLGR 0xFFFF0007 65535:7</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>blackhole</format>
+                    <description>Well-known communities value BLACKHOLE 0xFFFF029A 65535:666</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no-peer</format>
+                    <description>Well-known communities value NOPEER 0xFFFFFF04 65535:65284</description>
                   </valueHelp>
                   <valueHelp>
                     <format>additive</format>
