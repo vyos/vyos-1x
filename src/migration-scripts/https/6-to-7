@@ -1,0 +1,43 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6736: move REST API to distinct node
+
+
+from vyos.configtree import ConfigTree
+
+
+base = ['service', 'https', 'api']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # Move REST API configuration to new node
+    # REST API was previously enabled if base path exists
+    config.set(['service', 'https', 'api', 'rest'])
+    for entry in ('debug', 'strict'):
+        if config.exists(base + [entry]):
+            config.set(base + ['rest', entry])
+            config.delete(base + [entry])
+
+    # Move CORS settings under GraphQL
+    # CORS is not implemented for REST API
+    if config.exists(base + ['cors']):
+        old_base = base + ['cors']
+        new_base = base + ['graphql', 'cors']
+        config.copy(old_base, new_base)
+        config.delete(old_base)
