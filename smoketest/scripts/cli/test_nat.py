@@ -304,5 +304,31 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
 
+    def test_nat_fqdn(self):
+        source_domain = 'vyos.dev'
+        destination_domain = 'vyos.io'
+
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'name', 'eth0'])
+        self.cli_set(src_path + ['rule', '1', 'source', 'fqdn', source_domain])
+        self.cli_set(src_path + ['rule', '1', 'translation', 'address', 'masquerade'])
+
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'fqdn', destination_domain])
+        self.cli_set(dst_path + ['rule', '1', 'source', 'fqdn', source_domain])
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'port', '5122'])
+        self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
+        self.cli_set(dst_path + ['rule', '1', 'translation', 'address', '198.51.100.1'])
+        self.cli_set(dst_path + ['rule', '1', 'translation', 'port', '22'])
+
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['set FQDN_nat_destination_1_d'],
+            ['set FQDN_nat_source_1_s'],
+            ['oifname "eth0"', 'ip saddr @FQDN_nat_source_1_s', 'masquerade', 'comment "SRC-NAT-1"'],
+            ['tcp dport 5122', 'ip saddr @FQDN_nat_destination_1_s', 'ip daddr @FQDN_nat_destination_1_d', 'dnat to 198.51.100.1:22', 'comment "DST-NAT-1"']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
 if __name__ == '__main__':
     unittest.main(verbosity=2)
