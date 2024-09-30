@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import os
+import sys
+import argparse
+
+from signal import signal, SIGPIPE, SIG_DFL
+
+def get_config(path):
+    from vyos.utils.process import rc_cmd
+    res, out  = rc_cmd(f"cli-shell-api showCfg {path}")
+    if res > 0:
+        print("Error: failed to retrieve the config", file=sys.stderr)
+        sys.exit(1)
+    else:
+        return out
+
+def strip_config(config):
+    from vyos.utils.strip_config import strip_config_source
+    return strip_config_source(config)
+
+if __name__ == '__main__':
+    signal(SIGPIPE,SIG_DFL)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--strip-private",
+      help="Strip private information from the config",
+      action="store_true")
+
+    args, path_args = parser.parse_known_args()
+
+    config = get_config(" ".join(path_args))
+
+    if args.strip_private:
+        edit_level = os.getenv("VYATTA_EDIT_LEVEL")
+        if (edit_level != "/") or (len(path_args) > 0):
+            print("Error: show --strip-private only works at the top level",
+              file=sys.stderr)
+            sys.exit(1)
+        else:
+            print(strip_config(config))
+    else:
+        print(config)
