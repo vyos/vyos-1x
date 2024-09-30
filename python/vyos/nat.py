@@ -236,6 +236,13 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
 
                 output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
+        if 'fqdn' in side_conf:
+            fqdn = side_conf['fqdn']
+            operator = ''
+            if fqdn[0] == '!':
+                operator = '!='
+            output.append(f' ip {prefix}addr {operator} @FQDN_nat_{nat_type}_{rule_id}_{prefix}')
+
     output.append('counter')
 
     if 'log' in rule_conf:

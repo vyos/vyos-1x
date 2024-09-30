@@ -18,6 +18,7 @@
         <help>NAT destination parameters</help>
       </properties>
       <children>
+        #include <include/firewall/fqdn.xml.i>
         #include <include/nat-address.xml.i>
         #include <include/nat-port.xml.i>
         #include <include/firewall/source-destination-group.xml.i>
@@ -315,6 +316,7 @@
         <help>NAT source parameters</help>
       </properties>
       <children>
+        #include <include/firewall/fqdn.xml.i>
         #include <include/nat-address.xml.i>
         #include <include/nat-port.xml.i>
         #include <include/firewall/source-destination-group.xml.i>
