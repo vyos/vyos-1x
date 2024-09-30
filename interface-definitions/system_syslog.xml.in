@@ -66,6 +66,12 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="include-timezone">
+                    <properties>
+                      <help>Include system timezone in syslog message</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
             </children>
