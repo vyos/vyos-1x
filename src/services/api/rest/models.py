@@ -17,6 +17,7 @@
 # pylint: disable=too-few-public-methods
 
 import json
+from html import escape
 from enum import Enum
 from typing import List
 from typing import Union
@@ -31,6 +32,7 @@ from fastapi.responses import HTMLResponse
 
 
 def error(code, msg):
+    msg = escape(msg, quote=False)
     resp = {'success': False, 'error': msg, 'data': None}
     resp = json.dumps(resp)
     return HTMLResponse(resp, status_code=code)
