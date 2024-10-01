@@ -28,27 +28,37 @@ from api.graphql.libs.op_mode import normalize_output
 
 op_mode_include_file = os.path.join(directories['data'], 'op-mode-standardized.json')
 
-def get_config_dict(path=[], effective=False, key_mangling=None,
-                     get_first_key=False, no_multi_convert=False,
-                     no_tag_node_value_mangle=False):
+
+def get_config_dict(
+    path=[],
+    effective=False,
+    key_mangling=None,
+    get_first_key=False,
+    no_multi_convert=False,
+    no_tag_node_value_mangle=False,
+):
     config = Config()
-    return config.get_config_dict(path=path, effective=effective,
-                                  key_mangling=key_mangling,
-                                  get_first_key=get_first_key,
-                                  no_multi_convert=no_multi_convert,
-                                  no_tag_node_value_mangle=no_tag_node_value_mangle)
+    return config.get_config_dict(
+        path=path,
+        effective=effective,
+        key_mangling=key_mangling,
+        get_first_key=get_first_key,
+        no_multi_convert=no_multi_convert,
+        no_tag_node_value_mangle=no_tag_node_value_mangle,
+    )
+
 
 def get_user_info(user):
     user_info = {}
-    info = get_config_dict(['system', 'login', 'user', user],
-                           get_first_key=True)
+    info = get_config_dict(['system', 'login', 'user', user], get_first_key=True)
     if not info:
-        raise ValueError("No such user")
+        raise ValueError('No such user')
 
     user_info['user'] = user
     user_info['full_name'] = info.get('full-name', '')
 
     return user_info
+
 
 class Session:
     """
@@ -56,6 +66,7 @@ class Session:
     Non-nullable fields in the respective schema allow avoiding a key check
     in 'data'.
     """
+
     def __init__(self, session, data):
         self._session = session
         self._data = data

@@ -26,14 +26,15 @@ if typing.TYPE_CHECKING:
     from fastapi import FastAPI
 
 
-def graphql_init(app: "FastAPI"):
-    from .. session import SessionState
+def graphql_init(app: 'FastAPI'):
+    from ..session import SessionState
     from .libs.token_auth import get_user_context
 
     state = SessionState()
 
     # import after initializaion of state
     from .bindings import generate_schema
+
     schema = generate_schema()
 
     in_spec = state.introspection
@@ -44,21 +45,33 @@ def graphql_init(app: "FastAPI"):
 
     if state.origins:
         origins = state.origins
-        app.add_route('/graphql', CORSMiddleware(GraphQL(schema,
-                                                         context_value=get_user_context,
-                                                         debug=True,
-                                                         introspection=in_spec),
-                                                 allow_origins=origins,
-                                                 allow_methods=("GET", "POST", "OPTIONS"),
-                                                 allow_headers=("Authorization",)))
+        app.add_route(
+            '/graphql',
+            CORSMiddleware(
+                GraphQL(
+                    schema,
+                    context_value=get_user_context,
+                    debug=True,
+                    introspection=in_spec,
+                ),
+                allow_origins=origins,
+                allow_methods=('GET', 'POST', 'OPTIONS'),
+                allow_headers=('Authorization',),
+            ),
+        )
     else:
-        app.add_route('/graphql', GraphQL(schema,
-                                          context_value=get_user_context,
-                                          debug=True,
-                                          introspection=in_spec))
+        app.add_route(
+            '/graphql',
+            GraphQL(
+                schema,
+                context_value=get_user_context,
+                debug=True,
+                introspection=in_spec,
+            ),
+        )
 
 
-def graphql_clear(app: "FastAPI"):
+def graphql_clear(app: 'FastAPI'):
     for r in app.routes:
         if r.path == '/graphql':
             app.routes.remove(r)

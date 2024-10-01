@@ -19,7 +19,7 @@ import uuid
 import pam
 from secrets import token_hex
 
-from ... session import SessionState
+from ...session import SessionState
 
 
 def _check_passwd_pam(username: str, passwd: str) -> bool:
@@ -48,13 +48,13 @@ def generate_token(user: str, passwd: str, secret: str, exp: int) -> dict:
         payload_data = {'iss': user, 'sub': user_id, 'exp': exp}
         secret = getattr(state, 'secret', None)
         if secret is None:
-            return {"errors": ['missing secret']}
-        token = jwt.encode(payload=payload_data, key=secret, algorithm="HS256")
+            return {'errors': ['missing secret']}
+        token = jwt.encode(payload=payload_data, key=secret, algorithm='HS256')
 
         users |= {user_id: user}
         return {'token': token}
     else:
-        return {"errors": ['failed pam authentication']}
+        return {'errors': ['failed pam authentication']}
 
 
 def get_user_context(request):
@@ -70,7 +70,7 @@ def get_user_context(request):
 
         try:
             secret = getattr(state, 'secret', None)
-            payload = jwt.decode(token, secret, algorithms=["HS256"])
+            payload = jwt.decode(token, secret, algorithms=['HS256'])
             user_id: str = payload.get('sub')
             if user_id is None:
                 return context

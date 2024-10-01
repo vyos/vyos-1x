@@ -14,7 +14,8 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from ... session import SessionState
+from ...session import SessionState
+
 
 def check_auth(key_list, key):
     if not key_list:
@@ -24,6 +25,7 @@ def check_auth(key_list, key):
         if k['key'] == key:
             key_id = k['id']
     return key_id
+
 
 def auth_required(key):
     state = SessionState()

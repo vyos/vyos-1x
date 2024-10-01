@@ -31,74 +31,87 @@ from fastapi.responses import HTMLResponse
 
 
 def error(code, msg):
-    resp = {"success": False, "error": msg, "data": None}
+    resp = {'success': False, 'error': msg, 'data': None}
     resp = json.dumps(resp)
     return HTMLResponse(resp, status_code=code)
 
+
 def success(data):
-    resp = {"success": True, "data": data, "error": None}
+    resp = {'success': True, 'data': data, 'error': None}
     resp = json.dumps(resp)
     return HTMLResponse(resp)
+
 
 # Pydantic models for validation
 # Pydantic will cast when possible, so use StrictStr validators added as
 # needed for additional constraints
 # json_schema_extra adds anotations to OpenAPI to add examples
 
+
 class ApiModel(BaseModel):
     key: StrictStr
+
 
 class BasePathModel(BaseModel):
     op: StrictStr
     path: List[StrictStr]
 
-    @field_validator("path")
+    @field_validator('path')
     @classmethod
     def check_non_empty(cls, path: str) -> str:
         if not len(path) > 0:
             raise ValueError('path must be non-empty')
         return path
 
+
 class BaseConfigureModel(BasePathModel):
     value: StrictStr = None
+
 
 class ConfigureModel(ApiModel, BaseConfigureModel):
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "set | delete | comment",
-                "path": ["config", "mode", "path"],
+            'example': {
+                'key': 'id_key',
+                'op': 'set | delete | comment',
+                'path': ['config', 'mode', 'path'],
             }
         }
+
 
 class ConfigureListModel(ApiModel):
     commands: List[BaseConfigureModel]
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "commands": "list of commands",
+            'example': {
+                'key': 'id_key',
+                'commands': 'list of commands',
             }
         }
+
 
 class BaseConfigSectionModel(BasePathModel):
     section: Dict
 
+
 class ConfigSectionModel(ApiModel, BaseConfigSectionModel):
     pass
 
+
 class ConfigSectionListModel(ApiModel):
     commands: List[BaseConfigSectionModel]
+
 
 class BaseConfigSectionTreeModel(BaseModel):
     op: StrictStr
     mask: Dict
     config: Dict
 
+
 class ConfigSectionTreeModel(ApiModel, BaseConfigSectionTreeModel):
     pass
+
 
 class RetrieveModel(ApiModel):
     op: StrictStr
@@ -107,14 +120,14 @@ class RetrieveModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "returnValue | returnValues | exists | showConfig",
-                "path": ["config", "mode", "path"],
-                "configFormat": "json (default) | json_ast | raw",
-
+            'example': {
+                'key': 'id_key',
+                'op': 'returnValue | returnValues | exists | showConfig',
+                'path': ['config', 'mode', 'path'],
+                'configFormat': 'json (default) | json_ast | raw',
             }
         }
+
 
 class ConfigFileModel(ApiModel):
     op: StrictStr
@@ -122,19 +135,19 @@ class ConfigFileModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "save | load",
-                "file": "filename",
+            'example': {
+                'key': 'id_key',
+                'op': 'save | load',
+                'file': 'filename',
             }
         }
 
 
 class ImageOp(str, Enum):
-    add = "add"
-    delete = "delete"
-    show = "show"
-    set_default = "set_default"
+    add = 'add'
+    delete = 'delete'
+    show = 'show'
+    set_default = 'set_default'
 
 
 class ImageModel(ApiModel):
@@ -146,22 +159,23 @@ class ImageModel(ApiModel):
     def check_data(self) -> Self:
         if self.op == 'add':
             if not self.url:
-                raise ValueError("Missing required field \"url\"")
+                raise ValueError('Missing required field "url"')
         elif self.op in ['delete', 'set_default']:
             if not self.name:
-                raise ValueError("Missing required field \"name\"")
+                raise ValueError('Missing required field "name"')
 
         return self
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "add | delete | show | set_default",
-                "url": "imagelocation",
-                "name": "imagename",
+            'example': {
+                'key': 'id_key',
+                'op': 'add | delete | show | set_default',
+                'url': 'imagelocation',
+                'name': 'imagename',
             }
         }
+
 
 class ImportPkiModel(ApiModel):
     op: StrictStr
@@ -170,11 +184,11 @@ class ImportPkiModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "import_pki",
-                "path": ["op", "mode", "path"],
-                "passphrase": "passphrase",
+            'example': {
+                'key': 'id_key',
+                'op': 'import_pki',
+                'path': ['op', 'mode', 'path'],
+                'passphrase': 'passphrase',
             }
         }
 
@@ -185,12 +199,13 @@ class ContainerImageModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "add | delete | show",
-                "name": "imagename",
+            'example': {
+                'key': 'id_key',
+                'op': 'add | delete | show',
+                'name': 'imagename',
             }
         }
+
 
 class GenerateModel(ApiModel):
     op: StrictStr
@@ -198,12 +213,13 @@ class GenerateModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "generate",
-                "path": ["op", "mode", "path"],
+            'example': {
+                'key': 'id_key',
+                'op': 'generate',
+                'path': ['op', 'mode', 'path'],
             }
         }
+
 
 class ShowModel(ApiModel):
     op: StrictStr
@@ -211,12 +227,13 @@ class ShowModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "show",
-                "path": ["op", "mode", "path"],
+            'example': {
+                'key': 'id_key',
+                'op': 'show',
+                'path': ['op', 'mode', 'path'],
             }
         }
+
 
 class RebootModel(ApiModel):
     op: StrictStr
@@ -224,12 +241,13 @@ class RebootModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "reboot",
-                "path": ["op", "mode", "path"],
+            'example': {
+                'key': 'id_key',
+                'op': 'reboot',
+                'path': ['op', 'mode', 'path'],
             }
         }
+
 
 class ResetModel(ApiModel):
     op: StrictStr
@@ -237,12 +255,13 @@ class ResetModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "reset",
-                "path": ["op", "mode", "path"],
+            'example': {
+                'key': 'id_key',
+                'op': 'reset',
+                'path': ['op', 'mode', 'path'],
             }
         }
+
 
 class PoweroffModel(ApiModel):
     op: StrictStr
@@ -250,10 +269,10 @@ class PoweroffModel(ApiModel):
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "poweroff",
-                "path": ["op", "mode", "path"],
+            'example': {
+                'key': 'id_key',
+                'op': 'poweroff',
+                'path': ['op', 'mode', 'path'],
             }
         }
 
@@ -263,14 +282,16 @@ class Success(BaseModel):
     data: Union[str, bool, Dict]
     error: str
 
+
 class Error(BaseModel):
     success: bool = False
     data: Union[str, bool, Dict]
     error: str
 
+
 responses = {
     200: {'model': Success},
     400: {'model': Error},
     422: {'model': Error, 'description': 'Validation Error'},
-    500: {'model': Error}
+    500: {'model': Error},
 }
