@@ -10,12 +10,128 @@
         </properties>
         <children>
           #include <include/generic-disable-node.xml.i>
-          <leafNode name="dynamic-dns-update">
+          <node name="dynamic-dns-update">
             <properties>
               <help>Dynamically update Domain Name System (RFC4702)</help>
-              <valueless/>
             </properties>
-          </leafNode>
+            <children>
+              <tagNode name="tsig-key-name">
+                <properties>
+                  <help>Name of the TSIG key for DNS updates</help>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="algorithm">
+                    <properties>
+                      <help>TSIG key algorithm</help>
+                      <completionHelp>
+                        <list>hmac-md5 hmac-sha1 hmac-sha224 hmac-sha256 hmac-sha384 hmac-sha512</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>hmac-md5</format>
+                        <description>MD5 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha1</format>
+                        <description>SHA1 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha224</format>
+                        <description>SHA224 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha256</format>
+                        <description>SHA256 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha384</format>
+                        <description>SHA384 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha512</format>
+                        <description>SHA512 HMAC algorithm</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(hmac-md5|hmac-sha1|hmac-sha224|hmac-sha256|hmac-sha384|hmac-sha512)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid TSIG key algorithm</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="secret">
+                    <properties>
+                      <help>TSIG key secret (base64-encoded)</help>
+                      <constraint>
+                        <validator name="base64"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <tagNode name="forward-ddns-domain-name">
+                <properties>
+                  <help>Forward DNS domain name</help>
+                  <constraint>
+                    #include <include/constraint/domain-name.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Invalid forward DNS domain name</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="key-name">
+                    <properties>
+                      <help>TSIG key name for forward DNS updates</help>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="dns-server">
+                    <properties>
+                      <help>DNS server specification</help>
+                      <valueHelp>
+                        <format>u32:1-999999</format>
+                        <description>Number for this DNS server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-999999"/>
+                      </constraint>
+                      <constraintErrorMessage>DNS server number must be between 1 and 999999</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>DNS server IP address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>DNS server IP address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="port">
+                        <properties>
+                          <help>DNS server port</help>
+                          <valueHelp>
+                            <format>u16</format>
+                            <description>DNS server port</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
+                          <constraintErrorMessage>Invalid forward DNS server port</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           <node name="high-availability">
             <properties>
               <help>DHCP high availability configuration</help>
