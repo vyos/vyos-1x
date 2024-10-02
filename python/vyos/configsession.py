@@ -268,6 +268,15 @@ class ConfigSession(object):
         out = self.__run_command(LOAD_CONFIG + [file_path])
         return out
 
+    def load_explicit(self, file_path):
+        from vyos.load_config import load
+        from vyos.load_config import LoadConfigError
+
+        try:
+            load(file_path, switch='explicit')
+        except LoadConfigError as e:
+            raise ConfigSessionError(e) from e
+
     def migrate_and_load_config(self, file_path):
         out = self.__run_command(MIGRATE_LOAD_CONFIG + [file_path])
         return out

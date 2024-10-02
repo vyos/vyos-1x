@@ -33,6 +33,8 @@ from urllib.parse import urlunsplit
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.configtree import ConfigTreeError
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.configtree import show_diff
 from vyos.load_config import load
 from vyos.load_config import LoadConfigError
@@ -139,13 +141,19 @@ class ConfigMgmt:
             config = Config()
 
         d = config.get_config_dict(
-            ['system', 'config-management'], key_mangling=('-', '_'), get_first_key=True
+            ['system', 'config-management'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            with_defaults=True,
         )
 
         self.max_revisions = int(d.get('commit_revisions', 0))
         self.num_revisions = 0
         self.locations = d.get('commit_archive', {}).get('location', [])
         self.source_address = d.get('commit_archive', {}).get('source_address', '')
+        self.reboot_unconfirmed = bool(d.get('commit_confirm') == 'reboot')
+        self.config_dict = d
+
         if config.exists(['system', 'host-name']):
             self.hostname = config.return_value(['system', 'host-name'])
             if config.exists(['system', 'domain-name']):
@@ -175,42 +183,63 @@ class ConfigMgmt:
     def commit_confirm(
         self, minutes: int = DEFAULT_TIME_MINUTES, no_prompt: bool = False
     ) -> Tuple[str, int]:
-        """Commit with reboot to saved config in 'minutes' minutes if
+        """Commit with reload/reboot to saved config in 'minutes' minutes if
         'confirm' call is not issued.
         """
         if is_systemd_service_active(f'{timer_name}.timer'):
             msg = 'Another confirm is pending'
             return msg, 1
 
-        if unsaved_commits():
+        if self.reboot_unconfirmed and unsaved_commits():
             W = '\nYou should save previous commits before commit-confirm !\n'
         else:
             W = ''
 
-        prompt_str = f"""
+        if self.reboot_unconfirmed:
+            prompt_str = f"""
 commit-confirm will automatically reboot in {minutes} minutes unless changes
-are confirmed.\n
+are confirmed.
 Proceed ?"""
+        else:
+            prompt_str = f"""
+commit-confirm will automatically reload previous config in {minutes} minutes
+unless changes are confirmed.
+Proceed ?"""
+
         prompt_str = W + prompt_str
         if not no_prompt and not ask_yes_no(prompt_str, default=True):
             msg = 'commit-confirm canceled'
             return msg, 1
 
-        action = 'sg vyattacfg "/usr/bin/config-mgmt revert"'
+        if self.reboot_unconfirmed:
+            action = 'sg vyattacfg "/usr/bin/config-mgmt revert"'
+        else:
+            action = 'sg vyattacfg "/usr/bin/config-mgmt revert_soft"'
+
         cmd = f'sudo systemd-run --quiet --on-active={minutes}m --unit={timer_name} {action}'
         rc, out = rc_cmd(cmd)
         if rc != 0:
             raise ConfigMgmtError(out)
 
         # start notify
-        cmd = f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py {minutes}'
+        if self.reboot_unconfirmed:
+            cmd = (
+                f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py --reboot {minutes}'
+            )
+        else:
+            cmd = f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py {minutes}'
+
         os.system(cmd)
 
-        msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reboot'
+        if self.reboot_unconfirmed:
+            msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reboot'
+        else:
+            msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reload'
+
         return msg, 0
 
     def confirm(self) -> Tuple[str, int]:
-        """Do not reboot to saved config following 'commit-confirm'.
+        """Do not reboot/reload to saved/completed config following 'commit-confirm'.
         Update commit log and archive.
         """
         if not is_systemd_service_active(f'{timer_name}.timer'):
@@ -234,7 +263,11 @@ Proceed ?"""
             self._add_log_entry(**entry)
             self._update_archive()
 
-        msg = 'Reboot timer stopped'
+        if self.reboot_unconfirmed:
+            msg = 'Reboot timer stopped'
+        else:
+            msg = 'Reload timer stopped'
+
         return msg, 0
 
     def revert(self) -> Tuple[str, int]:
@@ -245,6 +278,28 @@ Proceed ?"""
         rc, out = rc_cmd('sudo systemctl reboot')
         if rc != 0:
             raise ConfigMgmtError(out)
+
+        return '', 0
+
+    def revert_soft(self) -> Tuple[str, int]:
+        """Reload last revision, dropping commits from 'commit-confirm'."""
+        _ = self._read_tmp_log_entry()
+
+        # commits under commit-confirm are not added to revision list unless
+        # confirmed, hence a soft revert is to revision 0
+        revert_ct = self._get_config_tree_revision(0)
+
+        mask = os.umask(0o002)
+        session = ConfigSession(os.getpid(), app='config-mgmt')
+
+        try:
+            session.load_explicit(revert_ct)
+            session.commit()
+        except ConfigSessionError as e:
+            raise ConfigMgmtError(e) from e
+        finally:
+            os.umask(mask)
+            del session
 
         return '', 0
 
@@ -684,7 +739,10 @@ Proceed ?"""
                 entry = f.read()
             os.unlink(tmp_log_entry)
         except OSError as e:
-            logger.critical(f'error on file {tmp_log_entry}: {e}')
+            logger.info(f'error on file {tmp_log_entry}: {e}')
+            # fail gracefully in corner case:
+            # delete commit-revisions; commit-confirm
+            return {}
 
         return self._get_log_entry(entry)
 
@@ -752,7 +810,8 @@ def run():
     )
 
     subparsers.add_parser('confirm', help='Confirm commit')
-    subparsers.add_parser('revert', help='Revert commit-confirm')
+    subparsers.add_parser('revert', help='Revert commit-confirm with reboot')
+    subparsers.add_parser('revert_soft', help='Revert commit-confirm with reload')
 
     rollback = subparsers.add_parser('rollback', help='Rollback to earlier config')
     rollback.add_argument('--rev', type=int, help='Revision number for rollback')
