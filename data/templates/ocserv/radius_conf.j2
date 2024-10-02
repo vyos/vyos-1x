@@ -22,7 +22,7 @@ authserver {{ authsrv }}
 {%         endif %}
 {%     endfor %}
 radius_timeout {{ authentication['radius']['timeout'] }}
-{%     if source_address %}
+{%     if authentication.radius.source_address is vyos_defined %}
 bindaddr {{ authentication['radius']['source_address'] }}
 {%     else %}
 bindaddr *
