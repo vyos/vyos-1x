@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos.config_mgmt import ConfigMgmt
 from vyos.config_mgmt import commit_post_hook_dir, commit_hooks
 
+
 def get_config(config=None):
     if config:
         conf = config
@@ -36,8 +37,10 @@ def get_config(config=None):
 
     return mgmt
 
+
 def verify(_mgmt):
     return
+
 
 def generate(mgmt):
     if mgmt is None:
@@ -45,13 +48,13 @@ def generate(mgmt):
 
     mgmt.initialize_revision()
 
+
 def apply(mgmt):
     if mgmt is None:
         return
 
     locations = mgmt.locations
-    archive_target = os.path.join(commit_post_hook_dir,
-                               commit_hooks['commit_archive'])
+    archive_target = os.path.join(commit_post_hook_dir, commit_hooks['commit_archive'])
     if locations:
         try:
             os.symlink('/usr/bin/config-mgmt', archive_target)
@@ -68,8 +71,9 @@ def apply(mgmt):
             raise ConfigError from exc
 
     revisions = mgmt.max_revisions
-    revision_target = os.path.join(commit_post_hook_dir,
-                               commit_hooks['commit_revision'])
+    revision_target = os.path.join(
+        commit_post_hook_dir, commit_hooks['commit_revision']
+    )
     if revisions > 0:
         try:
             os.symlink('/usr/bin/config-mgmt', revision_target)
@@ -84,6 +88,7 @@ def apply(mgmt):
             pass
         except OSError as exc:
             raise ConfigError from exc
+
 
 if __name__ == '__main__':
     try:
