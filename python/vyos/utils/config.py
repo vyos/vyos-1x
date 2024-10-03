@@ -14,7 +14,13 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from typing import TYPE_CHECKING
+
 from vyos.defaults import directories
+
+# https://peps.python.org/pep-0484/#forward-references
+if TYPE_CHECKING:
+    from vyos.configtree import ConfigTree
 
 config_file = os.path.join(directories['config'], 'config.boot')
 
@@ -37,6 +43,25 @@ def read_saved_value(path: list):
     if len(res) == 1:
         return ' '.join(res)
     return res
+
+def flag(l: list) -> list:
+    res = [l[0:i] for i,_ in enumerate(l, start=1)]
+    return res
+
+def tag_node_of_path(p: list) -> list:
+    from vyos.xml_ref import is_tag
+
+    fl = flag(p)
+    res = list(map(is_tag, fl))
+
+    return res
+
+def set_tags(ct: 'ConfigTree', path: list) -> None:
+    fl = flag(path)
+    if_tag = tag_node_of_path(path)
+    for condition, target in zip(if_tag, fl):
+        if condition:
+            ct.set_tag(target)
 
 def parse_commands(cmds: str) -> dict:
     from re import split as re_split

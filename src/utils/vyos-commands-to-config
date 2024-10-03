@@ -20,7 +20,7 @@ import json
 
 from vyos.configtree import ConfigTree
 from vyos.utils.config import parse_commands
-
+from vyos.utils.config import set_tags
 
 def commands_to_config(cmds):
     ct = ConfigTree('')
@@ -31,8 +31,10 @@ def commands_to_config(cmds):
             if c["is_leaf"]:
                 replace = False if c["is_multi"] else True
                 ct.set(c["path"], value=c["value"], replace=replace)
+                set_tags(ct, c["path"])
             else:
                 ct.create_node(c["path"])
+                set_tags(ct, c["path"])
         else:
             raise ValueError(
               f"\"{c['op']}\" is not a supported config operation")
@@ -44,7 +46,8 @@ if __name__ == '__main__':
     try:
         cmds = sys.stdin.read()
         ct = commands_to_config(cmds)
-        print(str(ct))
+        out = ConfigTree(ct.to_string())
+        print(str(out))
     except Exception as e:
         print(e)
         sys.exit(1)
