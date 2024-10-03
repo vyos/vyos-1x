@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import time
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -558,6 +559,22 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
+        # Required to prevent the race condition T6761
+        retry_count = 0
+        max_retries = 60
+
+        while not frrconfig and retry_count < max_retries:
+            # Log every 10 seconds
+            if retry_count % 10 == 0:
+                print(f"Attempt {retry_count}: FRR config is still empty. Retrying...")
+
+            retry_count += 1
+            time.sleep(1)
+            frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
+
+        if not frrconfig:
+            print("Failed to retrieve FRR config after 60 seconds")
+
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' network {network} area {area1}', frrconfig)
 
