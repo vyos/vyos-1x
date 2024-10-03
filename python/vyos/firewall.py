@@ -583,6 +583,12 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if 'tcp_mss' in rule_conf['set']:
             mss = rule_conf['set']['tcp_mss']
             output.append(f'tcp option maxseg size set {mss}')
+        if 'ttl' in rule_conf['set']:
+            ttl = rule_conf['set']['ttl']
+            output.append(f'ip ttl set {ttl}')
+        if 'hop_limit' in rule_conf['set']:
+            hoplimit = rule_conf['set']['hop_limit']
+            output.append(f'ip6 hoplimit set {hoplimit}')
 
     if 'action' in rule_conf:
         if rule_conf['action'] == 'offload':

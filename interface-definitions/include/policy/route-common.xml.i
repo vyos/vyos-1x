@@ -66,7 +66,11 @@
     </leafNode>
   </children>
 </node>
-#include <include/firewall/set-packet-modifications.xml.i>
+#include <include/firewall/set-packet-modifications-conn-mark.xml.i>
+#include <include/firewall/set-packet-modifications-dscp.xml.i>
+#include <include/firewall/set-packet-modifications-mark.xml.i>
+#include <include/firewall/set-packet-modifications-table-and-vrf.xml.i>
+#include <include/firewall/set-packet-modifications-tcp-mss.xml.i>
 #include <include/firewall/state.xml.i>
 #include <include/firewall/tcp-flags.xml.i>
 #include <include/firewall/tcp-mss.xml.i>
