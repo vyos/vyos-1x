@@ -28,6 +28,7 @@ usr/bin/initial-setup
 usr/bin/vyos-config-file-query
 usr/bin/vyos-config-to-commands
 usr/bin/vyos-config-to-json
+usr/bin/vyos-commands-to-config
 usr/bin/vyos-hostsd-client
 usr/lib
 usr/libexec/vyos/activate

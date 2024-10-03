@@ -37,3 +37,44 @@ def read_saved_value(path: list):
     if len(res) == 1:
         return ' '.join(res)
     return res
+
+def parse_commands(cmds: str) -> dict:
+    from re import split as re_split
+    from shlex import split as shlex_split
+
+    from vyos.xml_ref import definition
+    from vyos.xml_ref.pkg_cache.vyos_1x_cache import reference
+
+    ref_tree = definition.Xml()
+    ref_tree.define(reference)
+
+    res = []
+
+    cmds = re_split(r'\n+', cmds)
+    for c in cmds:
+        cmd_parts = shlex_split(c)
+
+        if not cmd_parts:
+            # Ignore empty lines
+            continue
+
+        path = cmd_parts[1:]
+        op = cmd_parts[0]
+
+        try:
+            path, value = ref_tree.split_path(path)
+        except ValueError as e:
+            raise ValueError(f'Incorrect command: {e}')
+
+        entry = {}
+        entry["op"] = op
+        entry["path"] = path
+        entry["value"] = value
+
+        entry["is_multi"] = ref_tree.is_multi(path)
+        entry["is_leaf"] = ref_tree.is_leaf(path)
+        entry["is_tag"] = ref_tree.is_tag(path)
+
+        res.append(entry)
+
+    return res
