@@ -898,10 +898,15 @@ def kea_dynamic_dns_update_main_json(config):
     return dumps(data, indent=4)[1:-1]
 
 @register_filter('kea_dynamic_dns_update_tsig_key_json')
-def kea_dynamic_dns_update_tsig_key_json(tsig_keys):
-    from kea import kea_parse_tsig_algo
+def kea_dynamic_dns_update_tsig_key_json(config):
+    from vyos.kea import kea_parse_tsig_algo
     from json import dumps
     out = []
+
+    if 'tsig_key_name' not in config:
+        return dumps(out)
+
+    tsig_keys = config['tsig_key_name']
 
     for tsig_key_name, tsig_key_config in tsig_keys.items():
         tsig_key = {
@@ -911,12 +916,17 @@ def kea_dynamic_dns_update_tsig_key_json(tsig_keys):
         }
         out.append(tsig_key)
 
-    return dumps(out, indent=4)
+    return dumps(out, indent=12)
 
 @register_filter('kea_dynamic_dns_update_domains')
-def kea_dynamic_dns_update_domains(domains):
+def kea_dynamic_dns_update_domains(config, type_key):
     from json import dumps
     out = []
+
+    if type_key not in config:
+        return dumps(out)
+
+    domains = config[type_key]
 
     for domain_name, domain_config in domains.items():
         domain = {
@@ -928,9 +938,9 @@ def kea_dynamic_dns_update_domains(domains):
 
         if 'dns_server' in domain_config:
             dns_servers = []
-            for dns_server_no, dns_server_config in domain_config['dns_server'].items():
+            for dns_server_config in domain_config['dns_server'].values():
                 dns_server = {
-                    'ip-address': dns_server_config['ip_address']
+                    'ip-address': dns_server_config['address']
                 }
                 if 'port' in dns_server_config:
                     dns_server['port'] = dns_server_config['port']
@@ -939,7 +949,7 @@ def kea_dynamic_dns_update_domains(domains):
 
         out.append(domain)
 
-    return dumps(out, indent=4)
+    return dumps(out, indent=12)
 
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):

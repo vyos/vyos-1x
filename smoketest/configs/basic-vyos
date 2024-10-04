@@ -78,6 +78,35 @@ protocols {
 }
 service {
     dhcp-server {
+        dynamic-dns-update {
+            enable-updates
+            forward-ddns-domain-name domain.lan {
+                dns-server 1 {
+                    address 192.168.0.1
+                }
+                dns-server 2 {
+                    address 100.100.0.1
+                }
+                key-name domain-lan-updates
+            }
+            reverse-ddns-domain-name 0.168.192.in-addr.arpa {
+                dns-server 1 {
+                    address 192.168.0.1
+                }
+                dns-server 2 {
+                    address 100.100.0.1
+                }
+                key-name reverse-0-168-192
+            }
+            tsig-key-name domain-lan-updates {
+                algorithm hmac-sha256
+                secret SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==
+            }
+            tsig-key-name reverse-0-168-192 {
+                algorithm hmac-sha256
+                secret VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==
+            }
+        }
         shared-network-name LAN {
             authoritative
             subnet 192.168.0.0/24 {

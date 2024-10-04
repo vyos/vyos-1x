@@ -12,22 +12,8 @@
     <constraintErrorMessage>DNS server number must be between 1 and 999999</constraintErrorMessage>
   </properties>
   <children>
-    <leafNode name="address">
-      <properties>
-        <help>DNS server IP address</help>
-        <valueHelp>
-          <format>ipv4</format>
-          <description>DNS server IP address</description>
-        </valueHelp>
-        <constraint>
-          <validator name="ipv4-address"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/address-ipv4-ipv6-single.xml.i>
     #include <include/port-number.xml.i>
-    <leafNode name="port">
-      <defaultValue>53</defaultValue>
-    </leafNode>
   </children>
 </tagNode>
 <!-- include end -->

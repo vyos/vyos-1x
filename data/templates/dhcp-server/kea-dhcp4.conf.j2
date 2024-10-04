@@ -61,7 +61,7 @@
             "ncr-protocol": "UDP",
             "ncr-format": "JSON"
         },
-        {{ dynamic_dns_update | kea_dynamic_dns_update_main_json }}
+        {{ dynamic_dns_update | kea_dynamic_dns_update_main_json }},
 {% endif %}
         "hooks-libraries": [
 {% if high_availability is vyos_defined %}
