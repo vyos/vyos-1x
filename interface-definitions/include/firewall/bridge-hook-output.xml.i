@@ -31,6 +31,12 @@
             #include <include/firewall/connection-status.xml.i>
             #include <include/firewall/state.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
+            #include <include/firewall/set-packet-modifications-dscp.xml.i>
+            #include <include/firewall/set-packet-modifications-conn-mark.xml.i>
+            #include <include/firewall/set-packet-modifications-mark.xml.i>
+            #include <include/firewall/set-packet-modifications-tcp-mss.xml.i>
+            #include <include/firewall/set-packet-modifications-ttl.xml.i>
+            #include <include/firewall/set-packet-modifications-hop-limit.xml.i>
           </children>
         </tagNode>
       </children>

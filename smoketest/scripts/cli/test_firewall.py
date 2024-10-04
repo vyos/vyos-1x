@@ -248,6 +248,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'action', 'notrack'])
         self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'destination', 'port', '23'])
+        self.cli_set(['firewall', 'ipv4', 'prerouting', 'raw', 'rule', '1', 'set', 'mark', '55'])
 
         self.cli_commit()
 
@@ -275,7 +276,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['OUT-raw default-action drop', 'drop'],
             ['chain VYOS_PREROUTING_raw'],
             ['type filter hook prerouting priority raw; policy accept;'],
-            ['tcp dport 23', 'notrack'],
+            ['tcp dport 23', 'meta mark set 0x00000037', 'notrack'],
             ['PRE-raw default-action accept', 'accept'],
             ['chain NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
@@ -315,6 +316,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'mark', '1010'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'jump-target', name])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'set', 'dscp', '32'])
 
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'mark', '!98765'])
@@ -331,7 +333,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
             ['type filter hook forward priority filter; policy accept;'],
-            ['ip saddr 198.51.100.1-198.51.100.50', 'meta mark 0x000003f2', f'jump NAME_{name}'],
+            ['ip saddr 198.51.100.1-198.51.100.50', 'meta mark 0x000003f2', 'ip dscp set cs4', f'jump NAME_{name}'],
             ['FWD-filter default-action drop', 'drop'],
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
@@ -485,6 +487,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'destination', 'port', '23'])
+        self.cli_set(['firewall', 'ipv6', 'prerouting', 'raw', 'rule', '1', 'set', 'hop-limit', '79'])
 
         self.cli_commit()
 
@@ -507,7 +510,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['OUT-raw default-action drop', 'drop'],
             ['chain VYOS_IPV6_PREROUTING_raw'],
             ['type filter hook prerouting priority raw; policy accept;'],
-            ['tcp dport 23', 'drop'],
+            ['tcp dport 23', 'ip6 hoplimit set 79', 'drop'],
             ['PRE-raw default-action accept', 'accept'],
             [f'chain NAME6_{name}'],
             ['saddr 2002::1-2002::10', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
@@ -722,9 +725,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'ethernet-type', 'ipv4'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'set', 'connection-mark', '123123'])
+
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'jump-target', name])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'vlan', 'priority', vlan_prior])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'set', 'ttl', '128'])
 
         self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'input', 'filter', 'rule', '1', 'inbound-interface', 'name', interface_in])
@@ -746,8 +752,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_FORWARD_filter'],
             ['type filter hook forward priority filter; policy accept;'],
             ['jump VYOS_STATE_POLICY'],
-            [f'vlan id {vlan_id}', 'vlan type ip', 'accept'],
-            [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
+            [f'vlan id {vlan_id}', 'vlan type ip', 'ct mark set 0x0001e0f3', 'accept'],
+            [f'vlan pcp {vlan_prior}', 'ip ttl set 128', f'jump NAME_{name}'],
             ['log prefix "[bri-FWD-filter-default-D]"', 'drop', 'FWD-filter default-action drop'],
             [f'chain NAME_{name}'],
             [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept'],

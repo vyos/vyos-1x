@@ -28,6 +28,11 @@
             #include <include/firewall/common-rule-bridge.xml.i>
             #include <include/firewall/action-and-notrack.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
+            #include <include/firewall/set-packet-modifications-dscp.xml.i>
+            #include <include/firewall/set-packet-modifications-mark.xml.i>
+            #include <include/firewall/set-packet-modifications-tcp-mss.xml.i>
+            #include <include/firewall/set-packet-modifications-ttl.xml.i>
+            #include <include/firewall/set-packet-modifications-hop-limit.xml.i>
           </children>
         </tagNode>
       </children>

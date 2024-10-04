@@ -35,6 +35,10 @@
             #include <include/firewall/common-rule-ipv6-raw.xml.i>
             #include <include/firewall/match-ipsec-in.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
+            #include <include/firewall/set-packet-modifications-dscp.xml.i>
+            #include <include/firewall/set-packet-modifications-mark.xml.i>
+            #include <include/firewall/set-packet-modifications-tcp-mss.xml.i>
+            #include <include/firewall/set-packet-modifications-hop-limit.xml.i>
             <leafNode name="jump-target">
               <properties>
                 <help>Set jump target. Action jump must be defined to use this setting</help>

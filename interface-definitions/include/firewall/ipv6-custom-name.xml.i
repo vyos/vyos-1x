@@ -36,6 +36,11 @@
         #include <include/firewall/match-ipsec.xml.i>
         #include <include/firewall/offload-target.xml.i>
         #include <include/firewall/outbound-interface.xml.i>
+        #include <include/firewall/set-packet-modifications-dscp.xml.i>
+        #include <include/firewall/set-packet-modifications-conn-mark.xml.i>
+        #include <include/firewall/set-packet-modifications-mark.xml.i>
+        #include <include/firewall/set-packet-modifications-tcp-mss.xml.i>
+        #include <include/firewall/set-packet-modifications-hop-limit.xml.i>
       </children>
     </tagNode>
   </children>
