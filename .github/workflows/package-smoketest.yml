@@ -17,7 +17,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for PR comments
   BUILD_BY: autobuild@vyos.net
   DEBIAN_MIRROR: http://deb.debian.org/debian/
-  VYOS_MIRROR: https://rolling-packages.vyos.net/current/
+  VYOS_MIRROR: https://packages.vyos.net/repositories/current/
 
 jobs:
   build_iso:
