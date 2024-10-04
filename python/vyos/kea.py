@@ -295,6 +295,17 @@ def kea6_parse_subnet(subnet, config):
 
     return out
 
+def kea_parse_tsig_algo(algo_spec):
+    translate = {
+        'hmac-md5': 'HMAC-MD5',
+        'hmac-sha1': 'HMAC-SHA1',
+        'hmac-sha224': 'HMAC-SHA224',
+        'hmac-sha256': 'HMAC-SHA256',
+        'hmac-sha384': 'HMAC-SHA384',
+        'hmac-sha512': 'HMAC-SHA512'
+    }
+    return translate[algo_spec]
+
 def _ctrl_socket_command(inet, command, args=None):
     path = kea_ctrl_socket.format(inet=inet)
 

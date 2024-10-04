@@ -871,6 +871,76 @@ def kea_high_availability_json(config):
 
     return dumps(data)
 
+@register_filter('kea_dynamic_dns_update_main_json')
+def kea_dynamic_dns_update_main_json(config):
+    from json import dumps
+
+    data = {
+        "ddns-send-updates": True,
+        "ddns-override-no-update": 'override_no_update' in config,
+        "ddns-override-client-update": 'override_client_update' in config,
+        "ddns-update-on-renew": 'update_on_renew' in config,
+    }
+
+    if 'replace_client_name' in config:
+        data['ddns-replace-client-name'] = config['replace_client_name']
+    if 'conflict_resolution_mode' in config:
+        data['ddns-conflict-resolution-mode'] = config['conflict_resolution_mode']
+    if 'generated_prefix' in config:
+        data['ddns-generated-prefix'] = config['generated_prefix']
+    if 'qualifying_suffix' in config:
+        data['ddns-qualifying-suffix'] = config['qualifying_suffix']
+    if 'hostname_char_set' in config:
+        data['hostname-char-set'] = config['hostname_char_set']
+    if 'hostname_char_replacement' in config:
+        data['hostname-char-replacement'] = config['hostname_char_replacement']
+
+    return dumps(data, indent=4)[1:-1]
+
+@register_filter('kea_dynamic_dns_update_tsig_key_json')
+def kea_dynamic_dns_update_tsig_key_json(tsig_keys):
+    from kea import kea_parse_tsig_algo
+    from json import dumps
+    out = []
+
+    for tsig_key_name, tsig_key_config in tsig_keys.items():
+        tsig_key = {
+            'name': tsig_key_name,
+            'algorithm': kea_parse_tsig_algo(tsig_key_config['algorithm']),
+            'secret': tsig_key_config['secret']
+        }
+        out.append(tsig_key)
+
+    return dumps(out, indent=4)
+
+@register_filter('kea_dynamic_dns_update_domains')
+def kea_dynamic_dns_update_domains(domains):
+    from json import dumps
+    out = []
+
+    for domain_name, domain_config in domains.items():
+        domain = {
+            'name': domain_name,
+
+        }
+        if 'key_name' in domain_config:
+            domain['key-name'] = domain_config['key_name']
+
+        if 'dns_server' in domain_config:
+            dns_servers = []
+            for dns_server_no, dns_server_config in domain_config['dns_server'].items():
+                dns_server = {
+                    'ip-address': dns_server_config['ip_address']
+                }
+                if 'port' in dns_server_config:
+                    dns_server['port'] = dns_server_config['port']
+                dns_servers.append(dns_server)
+            domain['dns-servers'] = dns_servers
+
+        out.append(domain)
+
+    return dumps(out, indent=4)
+
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):
     from vyos.kea import kea_parse_options

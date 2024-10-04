@@ -1,0 +1,26 @@
+{
+    "DhcpDdns": {
+        "ip-address": "127.0.0.1",
+        "port": 53001,
+        "control-socket": {
+            "socket-type": "unix",
+            "socket-name": "/run/kea/kea-ddns-ctrl-socket"
+        },
+        "tsig-keys": {{ tsig_key_name | kea_dynamic_dns_update_tsig_key_json }},
+        "forward-ddns" : {{ forward_ddns_domain_name | kea_dynamic_dns_update_domains }},
+        "reverse-ddns" : {{ reverse_ddns_domain_name | kea_dynamic_dns_update_domains }},
+        "loggers": [
+            {
+                "name": "kea-dhcp-ddns",
+                "output_options": [
+                    {
+                        "output": "stdout",
+                        "pattern": "%-5p %m\n"
+                    }
+                ],
+                "severity": "INFO",
+                "debuglevel": 0
+            }
+        ]
+    }
+}
