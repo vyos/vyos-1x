@@ -43,6 +43,7 @@ airbag.enable()
 
 ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
 config_file = '/run/kea/kea-dhcp4.conf'
+config_file_d2 = '/run/kea/kea-dhcp-ddns.conf'
 lease_file = '/config/dhcp/dhcp4-leases.csv'
 lease_file_glob = '/config/dhcp/dhcp4-leases*'
 user_group = '_kea'
@@ -170,6 +171,15 @@ def get_config(config=None):
 
     return dhcp
 
+def verify_ddns_domain_servers(domain_type, domain):
+    if 'dns_server' in domain:
+        invalid_servers = []
+        for server_no, server_config in domain['dns_server'].items():
+            if 'address' not in server_config:
+                invalid_servers.append(server_no)
+        if len(invalid_servers) > 0:
+            raise ConfigError(f'{domain_type} DNS servers {", ".join(invalid_servers)} in DDNS configuration need to have an IP address')
+    return None
 
 def verify(dhcp):
     # bail out early - looks like removal from running config
@@ -422,6 +432,22 @@ def verify(dhcp):
         if not interface_exists(interface):
             raise ConfigError(f'listen-interface "{interface}" does not exist')
 
+    if 'dynamic_dns_update' in dhcp:
+        ddns = dhcp['dynamic_dns_update']
+        if 'tsig_key_name' in ddns:
+            invalid_keys = []
+            for tsig_key_name, tsig_key_config in ddns['tsig_key_name'].items():
+                if not ('algorithm' in tsig_key_config and 'secret' in tsig_key_config):
+                    invalid_keys.append(tsig_key_name)
+            if len(invalid_keys) > 0:
+                raise ConfigError(f'Both algorithm and secret need to be set for TSIG keys: {", ".join(invalid_keys)}')
+
+        if 'forward_ddns_domain_name' in ddns:
+            verify_ddns_domain_servers('Forward', ddns['forward_ddns_domain_name'])
+
+        if 'reverse_ddns_domain_name' in ddns:
+            verify_ddns_domain_servers('Reverse', ddns['reverse_ddns_domain_name'])
+
     return None
 
 
@@ -485,6 +511,14 @@ def generate(dhcp):
         user=user_group,
         group=user_group,
     )
+    if 'dynamic_dns_update' in dhcp:
+        render(
+            config_file_d2,
+            'dhcp-server/kea-dhcp-ddns.conf.j2',
+            dhcp,
+            user=user_group,
+            group=user_group
+        )
 
     return None
 

@@ -28,6 +28,17 @@ set protocols static arp interface eth2.200.201 address 100.64.201.20 mac '00:50
 set protocols static arp interface eth2.200.202 address 100.64.202.30 mac '00:50:00:00:00:30'
 set protocols static arp interface eth2.200.202 address 100.64.202.40 mac '00:50:00:00:00:40'
 set protocols static route 0.0.0.0/0 next-hop 100.64.0.1
+set service dhcp-server dynamic-dns-update enable-updates
+set service dhcp-server dynamic-dns-update tsig-key-name domain-lan-updates algorithm 'hmac-sha256'
+set service dhcp-server dynamic-dns-update tsig-key-name domain-lan-updates secret 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='
+set service dhcp-server dynamic-dns-update tsig-key-name reverse-0-168-192 algorithm 'hmac-sha256'
+set service dhcp-server dynamic-dns-update tsig-key-name reverse-0-168-192 secret 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='
+set service dhcp-server dynamic-dns-update forward-ddns-domain-name domain.lan dns-server 1 address '192.168.0.1'
+set service dhcp-server dynamic-dns-update forward-ddns-domain-name domain.lan dns-server 2 address '100.100.0.1'
+set service dhcp-server dynamic-dns-update forward-ddns-domain-name domain.lan key-name 'domain-lan-updates'
+set service dhcp-server dynamic-dns-update reverse-ddns-domain-name 0.168.192.in-addr.arpa dns-server 1 address '192.168.0.1'
+set service dhcp-server dynamic-dns-update reverse-ddns-domain-name 0.168.192.in-addr.arpa dns-server 2 address '100.100.0.1'
+set service dhcp-server dynamic-dns-update reverse-ddns-domain-name 0.168.192.in-addr.arpa key-name 'reverse-0-168-192'
 set service dhcp-server shared-network-name LAN authoritative
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option default-router '192.168.0.1'
 set service dhcp-server shared-network-name LAN subnet 192.168.0.0/24 option domain-name 'vyos.net'
