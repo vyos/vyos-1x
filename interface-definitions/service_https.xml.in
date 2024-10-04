@@ -32,22 +32,29 @@
                   </tagNode>
                 </children>
               </node>
-              <leafNode name="strict">
+              <node name="rest">
                 <properties>
-                  <help>Enforce strict path checking</help>
-                  <valueless/>
+                  <help>REST API</help>
                 </properties>
-              </leafNode>
-              <leafNode name="debug">
-                <properties>
-                  <help>Debug</help>
-                  <valueless/>
-                  <hidden/>
-                </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="strict">
+                    <properties>
+                      <help>Enforce strict path checking</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="debug">
+                    <properties>
+                      <help>Debug</help>
+                      <valueless/>
+                      <hidden/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="graphql">
                 <properties>
-                  <help>GraphQL support</help>
+                  <help>GraphQL API</help>
                 </properties>
                 <children>
                   <leafNode name="introspection">
@@ -109,19 +116,19 @@
                       </leafNode>
                     </children>
                   </node>
-                </children>
-              </node>
-              <node name="cors">
-                <properties>
-                  <help>Set CORS options</help>
-                </properties>
-                <children>
-                  <leafNode name="allow-origin">
+                  <node name="cors">
                     <properties>
-                      <help>Allow resource request from origin</help>
-                      <multi/>
+                      <help>Set CORS options</help>
                     </properties>
-                  </leafNode>
+                    <children>
+                      <leafNode name="allow-origin">
+                        <properties>
+                          <help>Allow resource request from origin</help>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </node>
             </children>

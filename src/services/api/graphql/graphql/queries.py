@@ -14,20 +14,23 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from importlib import import_module
+
+# used below by func_sig
+from typing import Any, Dict, Optional  # pylint: disable=W0611 # noqa: F401
+from graphql import GraphQLResolveInfo  # pylint: disable=W0611 # noqa: F401
+
 from ariadne import ObjectType, convert_camel_case_to_snake
 from makefun import with_signature
 
-# used below by func_sig
-from typing import Any, Dict, Optional # pylint: disable=W0611
-from graphql import GraphQLResolveInfo # pylint: disable=W0611
-
-from .. import state
-from .. libs import key_auth
-from api.graphql.session.session import Session
-from api.graphql.session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
 from vyos.opmode import Error as OpModeError
 
-query = ObjectType("Query")
+from ...session import SessionState
+from ..libs import key_auth
+from ..session.session import Session
+from ..session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
+
+query = ObjectType('Query')
+
 
 def make_query_resolver(query_name, class_name, session_func):
     """Dynamically generate a resolver for the query named in the
@@ -45,12 +48,13 @@ def make_query_resolver(query_name, class_name, session_func):
     func_base_name = convert_camel_case_to_snake(class_name)
     resolver_name = f'resolve_{func_base_name}'
     func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Optional[Dict]=None)'
+    state = SessionState()
 
     @query.field(query_name)
     @with_signature(func_sig, func_name=resolver_name)
     async def func_impl(*args, **kwargs):
         try:
-            auth_type = state.settings['app'].state.vyos_auth_type
+            auth_type = state.auth_type
 
             if auth_type == 'key':
                 data = kwargs['data']
@@ -58,10 +62,7 @@ def make_query_resolver(query_name, class_name, session_func):
 
                 auth = key_auth.auth_required(key)
                 if auth is None:
-                    return {
-                         "success": False,
-                         "errors": ['invalid API key']
-                    }
+                    return {'success': False, 'errors': ['invalid API key']}
 
                 # We are finished with the 'key' entry, and may remove so as to
                 # pass the rest of data (if any) to function.
@@ -76,21 +77,15 @@ def make_query_resolver(query_name, class_name, session_func):
                 if user is None:
                     error = info.context.get('error')
                     if error is not None:
-                        return {
-                            "success": False,
-                            "errors": [error]
-                        }
-                    return {
-                        "success": False,
-                        "errors": ['not authenticated']
-                    }
+                        return {'success': False, 'errors': [error]}
+                    return {'success': False, 'errors': ['not authenticated']}
             else:
                 # AtrributeError will have already been raised if no
-                # vyos_auth_type; validation and defaultValue ensure it is
+                # auth_type; validation and defaultValue ensure it is
                 # one of the previous cases, so this is never reached.
                 pass
 
-            session = state.settings['app'].state.vyos_session
+            session = state.session
 
             # one may override the session functions with a local subclass
             try:
@@ -105,35 +100,36 @@ def make_query_resolver(query_name, class_name, session_func):
             result = method()
             data['result'] = result
 
-            return {
-                "success": True,
-                "data": data
-            }
+            return {'success': True, 'data': data}
         except OpModeError as e:
             typename = type(e).__name__
             msg = str(e)
             return {
-                "success": False,
-                "errors": ['op_mode_error'],
-                "op_mode_error": {"name": f"{typename}",
-                                 "message": msg if msg else op_mode_err_msg.get(typename, "Unknown"),
-                                 "vyos_code": op_mode_err_code.get(typename, 9999)}
+                'success': False,
+                'errors': ['op_mode_error'],
+                'op_mode_error': {
+                    'name': f'{typename}',
+                    'message': msg if msg else op_mode_err_msg.get(typename, 'Unknown'),
+                    'vyos_code': op_mode_err_code.get(typename, 9999),
+                },
             }
         except Exception as error:
-            return {
-                "success": False,
-                "errors": [repr(error)]
-            }
+            return {'success': False, 'errors': [repr(error)]}
 
     return func_impl
 
+
 def make_config_session_query_resolver(query_name):
-    return make_query_resolver(query_name, query_name,
-                               convert_camel_case_to_snake(query_name))
+    return make_query_resolver(
+        query_name, query_name, convert_camel_case_to_snake(query_name)
+    )
+
 
 def make_gen_op_query_resolver(query_name):
     return make_query_resolver(query_name, query_name, 'gen_op_query')
 
+
 def make_composite_query_resolver(query_name):
-    return make_query_resolver(query_name, query_name,
-                               convert_camel_case_to_snake(query_name))
+    return make_query_resolver(
+        query_name, query_name, convert_camel_case_to_snake(query_name)
+    )

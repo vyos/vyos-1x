@@ -89,6 +89,7 @@ server {
 
 PROCESS_NAME = 'nginx'
 
+
 class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -120,19 +121,29 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         # verify() - certificates do not exist (yet)
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(pki_base + ['certificate', cert_name, 'certificate', cert_data.replace('\n','')])
-        self.cli_set(pki_base + ['certificate', cert_name, 'private', 'key', key_data.replace('\n','')])
+        self.cli_set(
+            pki_base
+            + ['certificate', cert_name, 'certificate', cert_data.replace('\n', '')]
+        )
+        self.cli_set(
+            pki_base
+            + ['certificate', cert_name, 'private', 'key', key_data.replace('\n', '')]
+        )
 
         self.cli_set(base_path + ['certificates', 'dh-params', dh_name])
         # verify() - dh-params do not exist (yet)
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(pki_base + ['dh', dh_name, 'parameters', dh_1024.replace('\n','')])
+        self.cli_set(
+            pki_base + ['dh', dh_name, 'parameters', dh_1024.replace('\n', '')]
+        )
         # verify() - dh-param minimum length is 2048 bit
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(pki_base + ['dh', dh_name, 'parameters', dh_2048.replace('\n','')])
+        self.cli_set(
+            pki_base + ['dh', dh_name, 'parameters', dh_2048.replace('\n', '')]
+        )
 
         self.cli_commit()
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -154,13 +165,15 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         key = 'MySuperSecretVyOS'
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
 
+        self.cli_set(base_path + ['api', 'rest'])
+
         self.cli_set(base_path + ['listen-address', address])
 
         self.cli_commit()
 
         nginx_config = read_file('/etc/nginx/sites-enabled/default')
         self.assertIn(f'listen {address}:{port} ssl;', nginx_config)
-        self.assertIn(f'ssl_protocols TLSv1.2 TLSv1.3;', nginx_config) # default
+        self.assertIn('ssl_protocols TLSv1.2 TLSv1.3;', nginx_config)  # default
 
         url = f'https://{address}/retrieve'
         payload = {'data': '{"op": "showConfig", "path": []}', 'key': f'{key}'}
@@ -180,11 +193,16 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(r.status_code, 401)
 
         # Check path config
-        payload = {'data': '{"op": "showConfig", "path": ["system", "login"]}', 'key': f'{key}'}
+        payload = {
+            'data': '{"op": "showConfig", "path": ["system", "login"]}',
+            'key': f'{key}',
+        }
         r = request('POST', url, verify=False, headers=headers, data=payload)
         response = r.json()
         vyos_user_exists = 'vyos' in response.get('data', {}).get('user', {})
-        self.assertTrue(vyos_user_exists, "The 'vyos' user does not exist in the response.")
+        self.assertTrue(
+            vyos_user_exists, "The 'vyos' user does not exist in the response."
+        )
 
         # GraphQL auth test: a missing key will return status code 400, as
         # 'key' is a non-nullable field in the schema; an incorrect key is
@@ -208,7 +226,13 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }}
         """
 
-        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_valid_key})
+        r = request(
+            'POST',
+            graphql_url,
+            verify=False,
+            headers=headers,
+            json={'query': query_valid_key},
+        )
         success = r.json()['data']['SystemStatus']['success']
         self.assertTrue(success)
 
@@ -224,7 +248,13 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }
         """
 
-        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_invalid_key})
+        r = request(
+            'POST',
+            graphql_url,
+            verify=False,
+            headers=headers,
+            json={'query': query_invalid_key},
+        )
         success = r.json()['data']['SystemStatus']['success']
         self.assertFalse(success)
 
@@ -240,7 +270,13 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }
         """
 
-        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_no_key})
+        r = request(
+            'POST',
+            graphql_url,
+            verify=False,
+            headers=headers,
+            json={'query': query_no_key},
+        )
         success = r.json()['data']['SystemStatus']['success']
         self.assertFalse(success)
 
@@ -261,7 +297,9 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
           }
         }
         """
-        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': mutation})
+        r = request(
+            'POST', graphql_url, verify=False, headers=headers, json={'query': mutation}
+        )
 
         token = r.json()['data']['AuthToken']['data']['result']['token']
 
@@ -284,7 +322,9 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }
         """
 
-        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query})
+        r = request(
+            'POST', graphql_url, verify=False, headers=headers, json={'query': query}
+        )
         success = r.json()['data']['ShowVersion']['success']
         self.assertTrue(success)
 
@@ -304,6 +344,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(r.status_code, 503)
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
         sleep(2)
 
@@ -326,6 +367,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -343,6 +385,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -362,17 +405,18 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         conf_address = '192.0.2.44/32'
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload_path = [
-            "interfaces",
-            "dummy",
-            f"{conf_interface}",
-            "address",
-            f"{conf_address}",
+            'interfaces',
+            'dummy',
+            f'{conf_interface}',
+            'address',
+            f'{conf_address}',
         ]
 
-        payload = {'data': json.dumps({"op": "set", "path": payload_path}), 'key': key}
+        payload = {'data': json.dumps({'op': 'set', 'path': payload_path}), 'key': key}
 
         r = request('POST', url, verify=False, headers=headers, data=payload)
         self.assertEqual(r.status_code, 200)
@@ -385,6 +429,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -402,6 +447,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -419,6 +465,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         payload = {
@@ -462,6 +509,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         headers = {}
 
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_set(base_path + ['api', 'rest'])
         self.cli_commit()
 
         # load config via HTTP requires nginx config
@@ -497,6 +545,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         # cleanup tmp nginx conf
         call(f'sudo rm -f {nginx_tmp_site}')
         call('sudo systemctl reload nginx')
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=5)

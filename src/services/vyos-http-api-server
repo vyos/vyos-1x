@@ -17,917 +17,51 @@
 import os
 import sys
 import grp
-import copy
 import json
 import logging
 import signal
-import traceback
-import threading
-from enum import Enum
-
 from time import sleep
-from typing import List, Union, Callable, Dict, Self
 
-from fastapi import FastAPI, Depends, Request, Response, HTTPException
-from fastapi import BackgroundTasks
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi.routing import APIRoute
-from pydantic import BaseModel, StrictStr, validator, model_validator
-from starlette.middleware.cors import CORSMiddleware
-from starlette.datastructures import FormData
-from starlette.formparsers import FormParser, MultiPartParser
-from multipart.multipart import parse_options_header
 from uvicorn import Config as UvicornConfig
 from uvicorn import Server as UvicornServer
 
-from ariadne.asgi import GraphQL
-
-from vyos.config import Config
-from vyos.configtree import ConfigTree
-from vyos.configdiff import get_config_diff
 from vyos.configsession import ConfigSession
-from vyos.configsession import ConfigSessionError
 from vyos.defaults import api_config_state
 
-import api.graphql.state
+from api.session import SessionState
+from api.rest.models import error
 
 CFG_GROUP = 'vyattacfg'
 
 debug = True
 
-logger = logging.getLogger(__name__)
+LOG = logging.getLogger('http_api')
 logs_handler = logging.StreamHandler()
-logger.addHandler(logs_handler)
+LOG.addHandler(logs_handler)
 
 if debug:
-    logger.setLevel(logging.DEBUG)
+    LOG.setLevel(logging.DEBUG)
 else:
-    logger.setLevel(logging.INFO)
+    LOG.setLevel(logging.INFO)
 
-# Giant lock!
-lock = threading.Lock()
 
 def load_server_config():
     with open(api_config_state) as f:
         config = json.load(f)
     return config
 
-def check_auth(key_list, key):
-    key_id = None
-    for k in key_list:
-        if k['key'] == key:
-            key_id = k['id']
-    return key_id
-
-def error(code, msg):
-    resp = {"success": False, "error": msg, "data": None}
-    resp = json.dumps(resp)
-    return HTMLResponse(resp, status_code=code)
-
-def success(data):
-    resp = {"success": True, "data": data, "error": None}
-    resp = json.dumps(resp)
-    return HTMLResponse(resp)
-
-# Pydantic models for validation
-# Pydantic will cast when possible, so use StrictStr
-# validators added as needed for additional constraints
-# schema_extra adds anotations to OpenAPI, to add examples
-
-class ApiModel(BaseModel):
-    key: StrictStr
-
-class BasePathModel(BaseModel):
-    op: StrictStr
-    path: List[StrictStr]
-
-    @validator("path")
-    def check_non_empty(cls, path):
-        if not len(path) > 0:
-            raise ValueError('path must be non-empty')
-        return path
-
-class BaseConfigureModel(BasePathModel):
-    value: StrictStr = None
-
-class ConfigureModel(ApiModel, BaseConfigureModel):
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "set | delete | comment",
-                "path": ['config', 'mode', 'path'],
-            }
-        }
-
-class ConfigureListModel(ApiModel):
-    commands: List[BaseConfigureModel]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "commands": "list of commands",
-            }
-        }
-
-class BaseConfigSectionModel(BasePathModel):
-    section: Dict
-
-class ConfigSectionModel(ApiModel, BaseConfigSectionModel):
-    pass
-
-class ConfigSectionListModel(ApiModel):
-    commands: List[BaseConfigSectionModel]
-
-class BaseConfigSectionTreeModel(BaseModel):
-    op: StrictStr
-    mask: Dict
-    config: Dict
-
-class ConfigSectionTreeModel(ApiModel, BaseConfigSectionTreeModel):
-    pass
-
-class RetrieveModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-    configFormat: StrictStr = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "returnValue | returnValues | exists | showConfig",
-                "path": ['config', 'mode', 'path'],
-                "configFormat": "json (default) | json_ast | raw",
-
-            }
-        }
-
-class ConfigFileModel(ApiModel):
-    op: StrictStr
-    file: StrictStr = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "save | load",
-                "file": "filename",
-            }
-        }
-
-
-class ImageOp(str, Enum):
-    add = "add"
-    delete = "delete"
-    show = "show"
-    set_default = "set_default"
-
-
-class ImageModel(ApiModel):
-    op: ImageOp
-    url: StrictStr = None
-    name: StrictStr = None
-
-    @model_validator(mode='after')
-    def check_data(self) -> Self:
-        if self.op == 'add':
-            if not self.url:
-                raise ValueError("Missing required field \"url\"")
-        elif self.op in ['delete', 'set_default']:
-            if not self.name:
-                raise ValueError("Missing required field \"name\"")
-
-        return self
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "add | delete | show | set_default",
-                "url": "imagelocation",
-                "name": "imagename",
-            }
-        }
-
-class ImportPkiModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-    passphrase: StrictStr = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "import_pki",
-                "path": ["op", "mode", "path"],
-                "passphrase": "passphrase",
-            }
-        }
-
-
-class ContainerImageModel(ApiModel):
-    op: StrictStr
-    name: StrictStr = None
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "add | delete | show",
-                "name": "imagename",
-            }
-        }
-
-class GenerateModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "generate",
-                "path": ["op", "mode", "path"],
-            }
-        }
-
-class ShowModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "show",
-                "path": ["op", "mode", "path"],
-            }
-        }
-
-class RebootModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "reboot",
-                "path": ["op", "mode", "path"],
-            }
-        }
-
-class ResetModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "reset",
-                "path": ["op", "mode", "path"],
-            }
-        }
-
-class PoweroffModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "key": "id_key",
-                "op": "poweroff",
-                "path": ["op", "mode", "path"],
-            }
-        }
-
-
-class Success(BaseModel):
-    success: bool
-    data: Union[str, bool, Dict]
-    error: str
-
-class Error(BaseModel):
-    success: bool = False
-    data: Union[str, bool, Dict]
-    error: str
-
-responses = {
-    200: {'model': Success},
-    400: {'model': Error},
-    422: {'model': Error, 'description': 'Validation Error'},
-    500: {'model': Error}
-}
-
-def auth_required(data: ApiModel):
-    key = data.key
-    api_keys = app.state.vyos_keys
-    key_id = check_auth(api_keys, key)
-    if not key_id:
-        raise HTTPException(status_code=401, detail="Valid API key is required")
-    app.state.vyos_id = key_id
-
-# override Request and APIRoute classes in order to convert form request to json;
-# do all explicit validation here, for backwards compatability of error messages;
-# the explicit validation may be dropped, if desired, in favor of native
-# validation by FastAPI/Pydantic, as is used for application/json requests
-class MultipartRequest(Request):
-    _form_err = ()
-    @property
-    def form_err(self):
-        return self._form_err
-
-    @form_err.setter
-    def form_err(self, val):
-        if not self._form_err:
-            self._form_err = val
-
-    @property
-    def orig_headers(self):
-        self._orig_headers = super().headers
-        return self._orig_headers
-
-    @property
-    def headers(self):
-        self._headers = super().headers.mutablecopy()
-        self._headers['content-type'] = 'application/json'
-        return self._headers
-
-    async def form(self) -> FormData:
-        if self._form is None:
-            assert (
-                parse_options_header is not None
-            ), "The `python-multipart` library must be installed to use form parsing."
-            content_type_header = self.orig_headers.get("Content-Type")
-            content_type, options = parse_options_header(content_type_header)
-            if content_type == b"multipart/form-data":
-                multipart_parser = MultiPartParser(self.orig_headers, self.stream())
-                self._form = await multipart_parser.parse()
-            elif content_type == b"application/x-www-form-urlencoded":
-                form_parser = FormParser(self.orig_headers, self.stream())
-                self._form = await form_parser.parse()
-            else:
-                self._form = FormData()
-        return self._form
-
-    async def body(self) -> bytes:
-        if not hasattr(self, "_body"):
-            forms = {}
-            merge = {}
-            body = await super().body()
-            self._body = body
-
-            form_data = await self.form()
-            if form_data:
-                endpoint = self.url.path
-                logger.debug("processing form data")
-                for k, v in form_data.multi_items():
-                    forms[k] = v
-
-                if 'data' not in forms:
-                    self.form_err = (422, "Non-empty data field is required")
-                    return self._body
-                else:
-                    try:
-                        tmp = json.loads(forms['data'])
-                    except json.JSONDecodeError as e:
-                        self.form_err = (400, f'Failed to parse JSON: {e}')
-                        return self._body
-                    if isinstance(tmp, list):
-                        merge['commands'] = tmp
-                    else:
-                        merge = tmp
-
-                if 'commands' in merge:
-                    cmds = merge['commands']
-                else:
-                    cmds = copy.deepcopy(merge)
-                    cmds = [cmds]
-
-                for c in cmds:
-                    if not isinstance(c, dict):
-                        self.form_err = (400,
-                        f"Malformed command '{c}': any command must be JSON of dict")
-                        return self._body
-                    if 'op' not in c:
-                        self.form_err = (400,
-                        f"Malformed command '{c}': missing 'op' field")
-                    if endpoint not in ('/config-file', '/container-image',
-                                        '/image', '/configure-section'):
-                        if 'path' not in c:
-                            self.form_err = (400,
-                            f"Malformed command '{c}': missing 'path' field")
-                        elif not isinstance(c['path'], list):
-                            self.form_err = (400,
-                            f"Malformed command '{c}': 'path' field must be a list")
-                        elif not all(isinstance(el, str) for el in c['path']):
-                            self.form_err = (400,
-                            f"Malformed command '{0}': 'path' field must be a list of strings")
-                    if endpoint in ('/configure'):
-                        if not c['path']:
-                            self.form_err = (400,
-                            f"Malformed command '{c}': 'path' list must be non-empty")
-                        if 'value' in c and not isinstance(c['value'], str):
-                            self.form_err = (400,
-                            f"Malformed command '{c}': 'value' field must be a string")
-                    if endpoint in ('/configure-section'):
-                        if 'section' not in c and 'config' not in c:
-                            self.form_err = (400,
-                            f"Malformed command '{c}': missing 'section' or 'config' field")
-
-                if 'key' not in forms and 'key' not in merge:
-                    self.form_err = (401, "Valid API key is required")
-                if 'key' in forms and 'key' not in merge:
-                    merge['key'] = forms['key']
-
-                new_body = json.dumps(merge)
-                new_body = new_body.encode()
-                self._body = new_body
-
-        return self._body
-
-class MultipartRoute(APIRoute):
-    def get_route_handler(self) -> Callable:
-        original_route_handler = super().get_route_handler()
-
-        async def custom_route_handler(request: Request) -> Response:
-            request = MultipartRequest(request.scope, request.receive)
-            try:
-                response: Response = await original_route_handler(request)
-            except HTTPException as e:
-                return error(e.status_code, e.detail)
-            except Exception as e:
-                form_err = request.form_err
-                if form_err:
-                    return error(*form_err)
-                raise e
-
-            return response
-
-        return custom_route_handler
 
 app = FastAPI(debug=True,
               title="VyOS API",
-              version="0.1.0",
-              responses={**responses},
-              dependencies=[Depends(auth_required)])
-
-app.router.route_class = MultipartRoute
+              version="0.1.0")
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
+async def validation_exception_handler(_request, exc):
     return error(400, str(exc.errors()[0]))
 
-self_ref_msg = "Requested HTTP API server configuration change; commit will be called in the background"
 
-def call_commit(s: ConfigSession):
-    try:
-        s.commit()
-    except ConfigSessionError as e:
-        s.discard()
-        if app.state.vyos_debug:
-            logger.warning(f"ConfigSessionError:\n {traceback.format_exc()}")
-        else:
-            logger.warning(f"ConfigSessionError: {e}")
-
-def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
-                              ConfigSectionModel, ConfigSectionListModel,
-                              ConfigSectionTreeModel],
-                  request: Request, background_tasks: BackgroundTasks):
-    session = app.state.vyos_session
-    env = session.get_session_env()
-
-    endpoint = request.url.path
-
-    # Allow users to pass just one command
-    if not isinstance(data, (ConfigureListModel, ConfigSectionListModel)):
-        data = [data]
-    else:
-        data = data.commands
-
-    # We don't want multiple people/apps to be able to commit at once,
-    # or modify the shared session while someone else is doing the same,
-    # so the lock is really global
-    lock.acquire()
-
-    config = Config(session_env=env)
-
-    status = 200
-    msg = None
-    error_msg = None
-    try:
-        for c in data:
-            op = c.op
-            if not isinstance(c, BaseConfigSectionTreeModel):
-                path = c.path
-
-            if isinstance(c, BaseConfigureModel):
-                if c.value:
-                    value = c.value
-                else:
-                    value = ""
-                # For vyos.configsession calls that have no separate value arguments,
-                # and for type checking too
-                cfg_path = " ".join(path + [value]).strip()
-
-            elif isinstance(c, BaseConfigSectionModel):
-                section = c.section
-
-            elif isinstance(c, BaseConfigSectionTreeModel):
-                mask = c.mask
-                config = c.config
-
-            if isinstance(c, BaseConfigureModel):
-                if op == 'set':
-                    session.set(path, value=value)
-                elif op == 'delete':
-                    if app.state.vyos_strict and not config.exists(cfg_path):
-                        raise ConfigSessionError(f"Cannot delete [{cfg_path}]: path/value does not exist")
-                    session.delete(path, value=value)
-                elif op == 'comment':
-                    session.comment(path, value=value)
-                else:
-                    raise ConfigSessionError(f"'{op}' is not a valid operation")
-
-            elif isinstance(c, BaseConfigSectionModel):
-                if op == 'set':
-                    session.set_section(path, section)
-                elif op == 'load':
-                    session.load_section(path, section)
-                else:
-                    raise ConfigSessionError(f"'{op}' is not a valid operation")
-
-            elif isinstance(c, BaseConfigSectionTreeModel):
-                if op == 'set':
-                    session.set_section_tree(config)
-                elif op == 'load':
-                    session.load_section_tree(mask, config)
-                else:
-                    raise ConfigSessionError(f"'{op}' is not a valid operation")
-        # end for
-        config = Config(session_env=env)
-        d = get_config_diff(config)
-
-        if d.is_node_changed(['service', 'https']):
-            background_tasks.add_task(call_commit, session)
-            msg = self_ref_msg
-        else:
-            # capture non-fatal warnings
-            out = session.commit()
-            msg = out if out else msg
-
-        logger.info(f"Configuration modified via HTTP API using key '{app.state.vyos_id}'")
-    except ConfigSessionError as e:
-        session.discard()
-        status = 400
-        if app.state.vyos_debug:
-            logger.critical(f"ConfigSessionError:\n {traceback.format_exc()}")
-        error_msg = str(e)
-    except Exception as e:
-        session.discard()
-        logger.critical(traceback.format_exc())
-        status = 500
-
-        # Don't give the details away to the outer world
-        error_msg = "An internal error occured. Check the logs for details."
-    finally:
-        lock.release()
-
-    if status != 200:
-        return error(status, error_msg)
-
-    return success(msg)
-
-def create_path_import_pki_no_prompt(path):
-    correct_paths = ['ca', 'certificate', 'key-pair']
-    if path[1] not in correct_paths:
-        return False
-    path[1] = '--' + path[1].replace('-', '')
-    path[3] = '--key-filename'
-    return path[1:]
-
-@app.post('/configure')
-def configure_op(data: Union[ConfigureModel,
-                             ConfigureListModel],
-                       request: Request, background_tasks: BackgroundTasks):
-    return _configure_op(data, request, background_tasks)
-
-@app.post('/configure-section')
-def configure_section_op(data: Union[ConfigSectionModel,
-                                     ConfigSectionListModel,
-                                     ConfigSectionTreeModel],
-                               request: Request, background_tasks: BackgroundTasks):
-    return _configure_op(data, request, background_tasks)
-
-@app.post("/retrieve")
-async def retrieve_op(data: RetrieveModel):
-    session = app.state.vyos_session
-    env = session.get_session_env()
-    config = Config(session_env=env)
-
-    op = data.op
-    path = " ".join(data.path)
-
-    try:
-        if op == 'returnValue':
-            res = config.return_value(path)
-        elif op == 'returnValues':
-            res = config.return_values(path)
-        elif op == 'exists':
-            res = config.exists(path)
-        elif op == 'showConfig':
-            config_format = 'json'
-            if data.configFormat:
-                config_format = data.configFormat
-
-            res = session.show_config(path=data.path)
-            if config_format == 'json':
-                config_tree = ConfigTree(res)
-                res = json.loads(config_tree.to_json())
-            elif config_format == 'json_ast':
-                config_tree = ConfigTree(res)
-                res = json.loads(config_tree.to_json_ast())
-            elif config_format == 'raw':
-                pass
-            else:
-                return error(400, f"'{config_format}' is not a valid config format")
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/config-file')
-def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
-    session = app.state.vyos_session
-    env = session.get_session_env()
-    op = data.op
-    msg = None
-
-    try:
-        if op == 'save':
-            if data.file:
-                path = data.file
-            else:
-                path = '/config/config.boot'
-            msg = session.save_config(path)
-        elif op == 'load':
-            if data.file:
-                path = data.file
-            else:
-                return error(400, "Missing required field \"file\"")
-
-            session.migrate_and_load_config(path)
-
-            config = Config(session_env=env)
-            d = get_config_diff(config)
-
-            if d.is_node_changed(['service', 'https']):
-                background_tasks.add_task(call_commit, session)
-                msg = self_ref_msg
-            else:
-                session.commit()
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(msg)
-
-@app.post('/image')
-def image_op(data: ImageModel):
-    session = app.state.vyos_session
-
-    op = data.op
-
-    try:
-        if op == 'add':
-            res = session.install_image(data.url)
-        elif op == 'delete':
-            res = session.remove_image(data.name)
-        elif op == 'show':
-            res = session.show(["system", "image"])
-        elif op == 'set_default':
-            res = session.set_default_image(data.name)
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/container-image')
-def container_image_op(data: ContainerImageModel):
-    session = app.state.vyos_session
-
-    op = data.op
-
-    try:
-        if op == 'add':
-            if data.name:
-                name = data.name
-            else:
-                return error(400, "Missing required field \"name\"")
-            res = session.add_container_image(name)
-        elif op == 'delete':
-            if data.name:
-                name = data.name
-            else:
-                return error(400, "Missing required field \"name\"")
-            res = session.delete_container_image(name)
-        elif op == 'show':
-            res = session.show_container_image()
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/generate')
-def generate_op(data: GenerateModel):
-    session = app.state.vyos_session
-
-    op = data.op
-    path = data.path
-
-    try:
-        if op == 'generate':
-            res = session.generate(path)
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/show')
-def show_op(data: ShowModel):
-    session = app.state.vyos_session
-
-    op = data.op
-    path = data.path
-
-    try:
-        if op == 'show':
-            res = session.show(path)
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/reboot')
-def reboot_op(data: RebootModel):
-    session = app.state.vyos_session
-
-    op = data.op
-    path = data.path
-
-    try:
-        if op == 'reboot':
-            res = session.reboot(path)
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/reset')
-def reset_op(data: ResetModel):
-    session = app.state.vyos_session
-
-    op = data.op
-    path = data.path
-
-    try:
-        if op == 'reset':
-            res = session.reset(path)
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-@app.post('/import-pki')
-def import_pki(data: ImportPkiModel):
-    session = app.state.vyos_session
-
-    op = data.op
-    path = data.path
-
-    lock.acquire()
-
-    try:
-        if op == 'import-pki':
-            # need to get rid or interactive mode for private key
-            if len(path) == 5 and path[3] in ['key-file', 'private-key']:
-                path_no_prompt = create_path_import_pki_no_prompt(path)
-                if not path_no_prompt:
-                    return error(400, f"Invalid command: {' '.join(path)}")
-                if data.passphrase:
-                    path_no_prompt += ['--passphrase', data.passphrase]
-                res = session.import_pki_no_prompt(path_no_prompt)
-            else:
-                res = session.import_pki(path)
-            if not res[0].isdigit():
-                return error(400, res)
-            # commit changes
-            session.commit()
-            res = res.split('. ')[0]
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-    finally:
-        lock.release()
-
-    return success(res)
-
-@app.post('/poweroff')
-def poweroff_op(data: PoweroffModel):
-    session = app.state.vyos_session
-
-    op = data.op
-    path = data.path
-
-    try:
-        if op == 'poweroff':
-            res = session.poweroff(path)
-        else:
-            return error(400, f"'{op}' is not a valid operation")
-    except ConfigSessionError as e:
-        return error(400, str(e))
-    except Exception as e:
-        logger.critical(traceback.format_exc())
-        return error(500, "An internal error occured. Check the logs for details.")
-
-    return success(res)
-
-
-###
-# GraphQL integration
-###
-
-def graphql_init(app: FastAPI = app):
-    from api.graphql.libs.token_auth import get_user_context
-    api.graphql.state.init()
-    api.graphql.state.settings['app'] = app
-
-    # import after initializaion of state
-    from api.graphql.bindings import generate_schema
-    schema = generate_schema()
-
-    in_spec = app.state.vyos_introspection
-
-    if app.state.vyos_origins:
-        origins = app.state.vyos_origins
-        app.add_route('/graphql', CORSMiddleware(GraphQL(schema,
-                                                         context_value=get_user_context,
-                                                         debug=True,
-                                                         introspection=in_spec),
-                                                 allow_origins=origins,
-                                                 allow_methods=("GET", "POST", "OPTIONS"),
-                                                 allow_headers=("Authorization",)))
-    else:
-        app.add_route('/graphql', GraphQL(schema,
-                                          context_value=get_user_context,
-                                          debug=True,
-                                          introspection=in_spec))
 ###
 # Modify uvicorn to allow reloading server within the configsession
 ###
@@ -935,29 +69,40 @@ def graphql_init(app: FastAPI = app):
 server = None
 shutdown = False
 
+
 class ApiServerConfig(UvicornConfig):
     pass
+
 
 class ApiServer(UvicornServer):
     def install_signal_handlers(self):
         pass
 
+
 def reload_handler(signum, frame):
+    # pylint: disable=global-statement
+
     global server
-    logger.debug('Reload signal received...')
+    LOG.debug('Reload signal received...')
     if server is not None:
         server.handle_exit(signum, frame)
         server = None
-        logger.info('Server stopping for reload...')
+        LOG.info('Server stopping for reload...')
     else:
-        logger.warning('Reload called for non-running server...')
+        LOG.warning('Reload called for non-running server...')
+
 
 def shutdown_handler(signum, frame):
+    # pylint: disable=global-statement
+
     global shutdown
-    logger.debug('Shutdown signal received...')
+    LOG.debug('Shutdown signal received...')
     server.handle_exit(signum, frame)
-    logger.info('Server shutdown...')
+    LOG.info('Server shutdown...')
     shutdown = True
+
+# end modify uvicorn
+
 
 def flatten_keys(d: dict) -> list[dict]:
     keys_list = []
@@ -967,49 +112,87 @@ def flatten_keys(d: dict) -> list[dict]:
             keys_list.append({'id': el, 'key': key})
     return keys_list
 
-def initialization(session: ConfigSession, app: FastAPI = app):
+
+def regenerate_docs(app: FastAPI) -> None:
+    docs = ('/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc')
+    remove = []
+    for r in app.routes:
+        if r.path in docs:
+            remove.append(r)
+    for r in remove:
+        app.routes.remove(r)
+
+    app.openapi_schema = None
+    app.setup()
+
+
+def initialization(session: SessionState, app: FastAPI = app):
+    # pylint: disable=global-statement,broad-exception-caught,import-outside-toplevel
+
     global server
     try:
         server_config = load_server_config()
     except Exception as e:
-        logger.critical(f'Failed to load the HTTP API server config: {e}')
+        LOG.critical(f'Failed to load the HTTP API server config: {e}')
         sys.exit(1)
 
-    app.state.vyos_session = session
-    app.state.vyos_keys = []
-
     if 'keys' in server_config:
-        app.state.vyos_keys = flatten_keys(server_config)
+        session.keys = flatten_keys(server_config)
 
-    app.state.vyos_debug = bool('debug' in server_config)
-    app.state.vyos_strict = bool('strict' in server_config)
-    app.state.vyos_origins = server_config.get('cors', {}).get('allow_origin', [])
+    rest_config = server_config.get('rest', {})
+    session.debug = bool('debug' in rest_config)
+    session.strict = bool('strict' in rest_config)
+
+    graphql_config = server_config.get('graphql', {})
+    session.origins = graphql_config.get('cors', {}).get('allow_origin', [])
+
+    if 'rest' in server_config:
+        session.rest = True
+    else:
+        session.rest = False
+
     if 'graphql' in server_config:
-        app.state.vyos_graphql = True
+        session.graphql = True
         if isinstance(server_config['graphql'], dict):
             if 'introspection' in server_config['graphql']:
-                app.state.vyos_introspection = True
+                session.introspection = True
             else:
-                app.state.vyos_introspection = False
+                session.introspection = False
             # default values if not set explicitly
-            app.state.vyos_auth_type = server_config['graphql']['authentication']['type']
-            app.state.vyos_token_exp = server_config['graphql']['authentication']['expiration']
-            app.state.vyos_secret_len = server_config['graphql']['authentication']['secret_length']
+            session.auth_type = server_config['graphql']['authentication']['type']
+            session.token_exp = server_config['graphql']['authentication']['expiration']
+            session.secret_len = server_config['graphql']['authentication']['secret_length']
     else:
-        app.state.vyos_graphql = False
+        session.graphql = False
 
-    if app.state.vyos_graphql:
+    # pass session state
+    app.state = session
+
+    # add REST routes
+    if session.rest:
+        from api.rest.routers import rest_init
+        rest_init(app)
+    else:
+        from api.rest.routers import rest_clear
+        rest_clear(app)
+
+    # add GraphQL route
+    if session.graphql:
+        from api.graphql.routers import graphql_init
         graphql_init(app)
+    else:
+        from api.graphql.routers import graphql_clear
+        graphql_clear(app)
+
+    regenerate_docs(app)
+
+    LOG.debug('Active routes are:')
+    for r in app.routes:
+        LOG.debug(f'{r.path}')
 
     config = ApiServerConfig(app, uds="/run/api.sock", proxy_headers=True)
     server = ApiServer(config)
 
-def run_server():
-    try:
-        server.run()
-    except OSError as e:
-        logger.critical(e)
-        sys.exit(1)
 
 if __name__ == '__main__':
     # systemd's user and group options don't work, do it by hand here,
@@ -1024,13 +207,14 @@ if __name__ == '__main__':
     signal.signal(signal.SIGHUP, reload_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
-    config_session = ConfigSession(os.getpid())
+    session_state = SessionState()
+    session_state.session = ConfigSession(os.getpid())
 
     while True:
-        logger.debug('Enter main loop...')
+        LOG.debug('Enter main loop...')
         if shutdown:
             break
         if server is None:
-            initialization(config_session)
+            initialization(session_state)
             server.run()
         sleep(1)
