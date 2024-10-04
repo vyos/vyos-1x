@@ -214,6 +214,19 @@ def verify(ipsec):
             else:
                 verify_interface_exists(ipsec, interface)
 
+    # need to use a pseudo-random function (PRF) with an authenticated encryption algorithm.
+    # If a hash algorithm is defined then it will be mapped to an equivalent PRF
+    if 'ike_group' in ipsec:
+        for _, ike_config in ipsec['ike_group'].items():
+            for proposal, proposal_config in ike_config.get('proposal', {}).items():
+                if 'encryption' in proposal_config and 'prf' not in proposal_config:
+                    # list of hash algorithms that cannot be mapped to an equivalent PRF
+                    algs = ['aes128gmac', 'aes192gmac', 'aes256gmac', 'sha256_96']
+                    if 'hash' in proposal_config and proposal_config['hash'] in algs:
+                        raise ConfigError(
+                            f"A PRF algorithm is mandatory in IKE proposal {proposal}"
+                        )
+
     if 'l2tp' in ipsec:
         if 'esp_group' in ipsec['l2tp']:
             if 'esp_group' not in ipsec or ipsec['l2tp']['esp_group'] not in ipsec['esp_group']:

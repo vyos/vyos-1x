@@ -947,7 +947,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', ike_lifetime])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'dh-group', '14'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'encryption', 'aes256'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'hash', 'sha512'])
+        # a hash algorithm that cannot be mapped to an equivalent PRF
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'hash', 'aes192gmac'])
 
         # ESP
         self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', eap_lifetime])
@@ -968,6 +969,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'name-server', name_server])
         self.cli_set(base_path + ['remote-access', 'pool', ip_pool_name, 'prefix', prefix])
 
+        # verify() - IKE group use not mapped hash algorithm
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'hash', 'sha512'])
         self.cli_commit()
 
         self.assertTrue(os.path.exists(dhcp_interfaces_file))
