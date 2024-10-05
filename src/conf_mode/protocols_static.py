@@ -88,7 +88,7 @@ def verify(static):
 
             if {'blackhole', 'reject'} <= set(prefix_options):
                 raise ConfigError(f'Can not use both blackhole and reject for '\
-                                  'prefix "{prefix}"!')
+                                  f'prefix "{prefix}"!')
 
     return None
 
