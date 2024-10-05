@@ -178,6 +178,7 @@ mtr = {
     6: '/bin/mtr -6',
 }
 
+
 class List(list):
     def first(self):
         return self.pop(0) if self else ''
@@ -218,12 +219,15 @@ def complete(prefix):
 
 
 def convert(command, args):
+    to_json = False
     while args:
         shortname = args.first()
         longnames = complete(shortname)
         if len(longnames) != 1:
             expension_failure(shortname, longnames)
         longname = longnames[0]
+        if longname == 'json':
+            to_json = True
         if options[longname]['type'] == 'noarg':
             command = options[longname]['mtr'].format(
                 command=command, value='')
@@ -232,7 +236,7 @@ def convert(command, args):
         else:
             command = options[longname]['mtr'].format(
                 command=command, value=args.first())
-    return command
+    return command, to_json
 
 
 if __name__ == '__main__':
@@ -241,7 +245,6 @@ if __name__ == '__main__':
 
     if not host:
         sys.exit("mtr: Missing host")
-
 
     if host == '--get-options' or host == '--get-options-nested':
         if host == '--get-options-nested':
@@ -302,5 +305,8 @@ if __name__ == '__main__':
     except ValueError:
         sys.exit(f'mtr: Unknown host: {host}')
 
-    command = convert(mtr[version], args)
-    call(f'{command} --curses --displaymode 0 {host}')
+    command, to_json = convert(mtr[version], args)
+    if to_json:
+        call(f'{command} {host}')
+    else:
+        call(f'{command} --curses --displaymode 0 {host}')
