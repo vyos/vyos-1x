@@ -235,6 +235,9 @@ Depends:
   squidclient,
   squidguard,
 # End "service webproxy"
+# For "service monitoring node-exporter"
+  node-exporter,
+# End "service monitoring node-exporter"
 # For "service monitoring telegraf"
   telegraf (>= 1.20),
 # End "service monitoring telegraf"
