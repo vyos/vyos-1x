@@ -15,114 +15,7 @@
               <help>Dynamically update Domain Name System (RFC4702)</help>
             </properties>
             <children>
-              <leafNode name="enable-updates">
-                <properties>
-                  <help>Enable DDNS updates</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="override-client-update">
-                <properties>
-                  <help>Override client delegation</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="override-no-update">
-                <properties>
-                  <help>Override client delegation</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="replace-client-name">
-                <properties>
-                  <help>Replace client name mode</help>
-                  <completionHelp>
-                    <list>never always when-present when-not-present</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>never</format>
-                    <description>Use the name the client sent. If the client sent no name, do not generate one. This is the default behavior</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>always</format>
-                    <description>Replace the name the client sent. If the client sent no name, generate one for the client</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>when-present</format>
-                    <description>Replace the name the client sent. If the client sent no name, do not generate one</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>when-not-present</format>
-                    <description>Use the name the client sent. If the client sent no name, generate one for the client</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(never|always|when-present|when-not-present)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Invalid replace client name mode</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="generated-prefix">
-                <properties>
-                  <help>The prefix used in the generation of an FQDN</help>
-                  <constraint>
-                    <validator name="fqdn"/>
-                  </constraint>
-                  <constraintErrorMessage>Invalid generated prefix</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="qualifying-suffix">
-                <properties>
-                  <help>The suffix used when generating an FQDN, or when qualifying a partial name</help>
-                  <constraint>
-                    <validator name="fqdn"/>
-                  </constraint>
-                  <constraintErrorMessage>Invalid qualifying suffix</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="update-on-renew">
-                <properties>
-                  <help>Update DNS record on lease renew</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <leafNode name="conflict-resolution-mode">
-                <properties>
-                  <help>Defines DNS conflict resolution behavior</help>
-                  <completionHelp>
-                    <list>check-with-dhcid no-check-with-dhcid check-exists-with-dhcid no-check-without-dhcid</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>check-with-dhcid</format>
-                    <description>Carry out RFC 4703-compliant conflict resolution. Existing DNS entries may only be overwritten if they have a DHCID record and it matches the client's DHCID. This is the default behavior</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>no-check-with-dhcid</format>
-                    <description>Existing DNS entries may be overwritten by any client, whether those entries include a DHCID record or not. The new entries will include a DHCID record for the client to whom they belong</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>check-exists-with-dhcid</format>
-                    <description>Existing DNS entries may only be overwritten if they have a DHCID record. The DHCID record need not match the client's DHCID</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>no-check-without-dhcid</format>
-                    <description>Existing DNS entries may be overwritten by any client; new entries will not include DHCID records</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(check-with-dhcid|no-check-with-dhcid|check-exists-with-dhcid|no-check-without-dhcid)</regex>
-                  </constraint>
-                  <constraintErrorMessage>Invalid DNS conflict resolution mode</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="hostname-char-set">
-                <properties>
-                  <help>A regular expression describing the invalid character set in the host name</help>
-                </properties>
-              </leafNode>
-              <leafNode name="hostname-char-replacement">
-                <properties>
-                  <help>A string of zero or more characters with which to replace each invalid character in the host name</help>
-                </properties>
-              </leafNode>
+              #include <include/dhcp/ddns-settings.xml.i>
               <tagNode name="tsig-key-name">
                 <properties>
                   <help>Name of the TSIG key for DNS updates</help>
@@ -196,7 +89,7 @@
                       <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
                     </properties>
                   </leafNode>
-                  #include <include/dhcp/ddns-server.xml.i>
+                  #include <include/dhcp/ddns-dns-server.xml.i>
                 </children>
               </tagNode>
               <tagNode name="reverse-ddns-domain-name">
@@ -217,7 +110,7 @@
                       <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
                     </properties>
                   </leafNode>
-                  #include <include/dhcp/ddns-server.xml.i>
+                  #include <include/dhcp/ddns-dns-server.xml.i>
                 </children>
               </tagNode>
             </children>
@@ -311,6 +204,14 @@
               <constraintErrorMessage>Invalid shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
             </properties>
             <children>
+              <node name="dynamic-dns-update">
+                <properties>
+                  <help>Dynamically update Domain Name System (RFC4702)</help>
+                </properties>
+                <children>
+                  #include <include/dhcp/ddns-settings.xml.i>
+                </children>
+              </node>
               <leafNode name="authoritative">
                 <properties>
                   <help>Option to make DHCP server authoritative for this physical network</help>
@@ -336,6 +237,14 @@
                   #include <include/dhcp/option-v4.xml.i>
                   #include <include/generic-description.xml.i>
                   #include <include/generic-disable-node.xml.i>
+                  <node name="dynamic-dns-update">
+                    <properties>
+                      <help>Dynamically update Domain Name System (RFC4702)</help>
+                    </properties>
+                    <children>
+                      #include <include/dhcp/ddns-settings.xml.i>
+                    </children>
+                  </node>
                   <leafNode name="exclude">
                     <properties>
                       <help>IP address to exclude from DHCP lease range</help>

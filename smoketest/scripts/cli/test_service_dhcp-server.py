@@ -804,6 +804,29 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
 
     def test_dhcp_dynamic_dns_update(self):
+        shared_net_name = 'SMOKE-1'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+        range_1_start = inc_ip(subnet, 40)
+        range_1_stop  = inc_ip(subnet, 50)
+
+        self.cli_set(base_path + ['listen-interface', interface])
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['ignore-client-id'])
+        # we use the first subnet IP address as default gateway
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'domain-name', domain_name])
+
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['range', '1', 'start', range_1_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_1_stop])
+
         ddns = base_path + ['dynamic-dns-update']
 
         self.cli_set(ddns + ['enable-updates'])
@@ -839,47 +862,60 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         d2_obj = loads(d2_config)
 
         # Verify DDNS parameters in the main config file
-        self.verify_config_object(
+        self.verify_config_value(
             obj,
-            ['Dhcp4', 'dhcp-ddns'],
+            ['Dhcp4'], 'dhcp-ddns',
             {'enable-updates': True, 'server-ip': '127.0.0.1', 'server-port': 53001, 'sender-ip': '', 'sender-port': 0,
                 'max-queue-size': 1024, 'ncr-protocol': 'UDP', 'ncr-format': 'JSON'})
 
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-send-updates', True)
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-conflict-resolution-mode', 'check-exists-with-dhcid')
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-generated-prefix', 'myfunnyprefix', True)
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-qualifying-suffix', 'suffix.lan', True)
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-hostname-char-set', 'xXyYzZ', True)
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-hostname-char-replacement', '_xXx_', True)
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-generated-prefix', 'myfunnyprefix')
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-qualifying-suffix', 'suffix.lan')
+        self.verify_config_value(obj, ['Dhcp4'], 'hostname-char-set', 'xXyYzZ')
+        self.verify_config_value(obj, ['Dhcp4'], 'hostname-char-replacement', '_xXx_')
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-override-no-update', True)
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-override-client-update', True)
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-replace-client-name', 'always', True)
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-replace-client-name', 'always')
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-update-on-renew', True)
 
         # Verify keys and domains configuration in the D2 config
         self.verify_config_object(
             d2_obj,
-            ['DhcpDdns', 'tsig-keys', 0],
+            ['DhcpDdns', 'tsig-keys'],
             {'name': 'domain-lan-updates', 'algorithm': 'HMAC-SHA256', 'secret': 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='}
         )
         self.verify_config_object(
             d2_obj,
-            ['DhcpDdns', 'tsig-keys', 1],
+            ['DhcpDdns', 'tsig-keys'],
             {'name': 'reverse-0-168-192', 'algorithm': 'HMAC-SHA256', 'secret': 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='}
         )
 
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0], 'name', 'domain.lan')
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0], 'key-name', 'domain-lan-updates')
         self.verify_config_object(
             d2_obj,
-            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0],
-            {'name': 'domain.lan', 'key-name': 'domain-lan-updates',
-                'dns-servers': [{'ip-address': '192.168.0.1'}, {'ip-address': '100.100.0.1'}]}
-        )
+            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '192.168.0.1'}
+            )
         self.verify_config_object(
             d2_obj,
-            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0],
-            {'name': '0.168.192.in-addr.arpa', 'key-name': 'reverse-0-168-192',
-                'dns-servers': [{'ip-address': '192.168.0.1', 'port': 1053}, {'ip-address': '100.100.0.1', 'port': 1153}]}
-        )
+            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '100.100.0.1'}
+            )
+
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0], 'name', '0.168.192.in-addr.arpa')
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0], 'key-name', 'reverse-0-168-192')
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '192.168.0.1', 'port': 1053}
+            )
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '100.100.0.1', 'port': 1153}
+            )
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

@@ -1,4 +1,4 @@
-<!-- include start from dhcp/ddns-server.xml.i -->
+<!-- include start from dhcp/ddns-dns-server.xml.i -->
 <tagNode name="dns-server">
   <properties>
     <help>DNS server specification</help>
