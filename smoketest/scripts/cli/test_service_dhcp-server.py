@@ -804,28 +804,18 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
 
     def test_dhcp_dynamic_dns_update(self):
-        shared_net_name = 'SMOKE-1'
+        shared_net_name = 'SMOKE-1DDNS'
 
         range_0_start = inc_ip(subnet, 10)
         range_0_stop  = inc_ip(subnet, 20)
-        range_1_start = inc_ip(subnet, 40)
-        range_1_stop  = inc_ip(subnet, 50)
 
         self.cli_set(base_path + ['listen-interface', interface])
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
-        self.cli_set(pool + ['ignore-client-id'])
-        # we use the first subnet IP address as default gateway
-        self.cli_set(pool + ['option', 'default-router', router])
-        self.cli_set(pool + ['option', 'name-server', dns_1])
-        self.cli_set(pool + ['option', 'name-server', dns_2])
-        self.cli_set(pool + ['option', 'domain-name', domain_name])
 
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
-        self.cli_set(pool + ['range', '1', 'start', range_1_start])
-        self.cli_set(pool + ['range', '1', 'stop', range_1_stop])
 
         ddns = base_path + ['dynamic-dns-update']
 

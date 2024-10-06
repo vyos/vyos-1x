@@ -75,6 +75,15 @@
     <valueless/>
 </properties>
 </leafNode>
+<leafNode name="ttl-percent">
+<properties>
+    <help>Calculate TTL of the DNS record as a percentage of the lease lifetime</help>
+    <constraint>
+    <validator name="numeric" argument="--range 1-100"/>
+    </constraint>
+    <constraintErrorMessage>Invalid qualifying suffix</constraintErrorMessage>
+</properties>
+</leafNode>
 <leafNode name="hostname-char-set">
 <properties>
     <help>A regular expression describing the invalid character set in the host name</help>

@@ -324,6 +324,8 @@ def kea_parse_ddns_settings(config):
         data['ddns-generated-prefix'] = config['generated_prefix']
     if 'qualifying_suffix' in config:
         data['ddns-qualifying-suffix'] = config['qualifying_suffix']
+    if 'ttl_percent' in config:
+        data['ddns-ttl-percent'] = int(config['ttl_percent']) / 100
     if 'hostname_char_set' in config:
         data['hostname-char-set'] = config['hostname_char_set']
     if 'hostname_char_replacement' in config:
