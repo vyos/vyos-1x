@@ -68,7 +68,7 @@
              <properties>
                <help>System keyboard layout, type ISO2</help>
                <completionHelp>
-                 <list>us uk fr de es fi jp106 no dk se-latin1 dvorak</list>
+                 <list>us uk fr de es fi it jp106 no dk se-latin1 dvorak</list>
                </completionHelp>
                <valueHelp>
                  <format>us</format>
@@ -95,6 +95,10 @@
                  <description>Finland</description>
                </valueHelp>
                <valueHelp>
+                <format>it</format>
+                <description>Italy</description>
+              </valueHelp>
+               <valueHelp>
                  <format>jp106</format>
                  <description>Japan</description>
                </valueHelp>
@@ -115,7 +119,7 @@
                  <description>Dvorak</description>
                </valueHelp>
                <constraint>
-                <regex>(us|uk|fr|de|es|fi|jp106|no|dk|se-latin1|dvorak)</regex>
+                <regex>(us|uk|fr|de|es|fi|it|jp106|no|dk|se-latin1|dvorak)</regex>
               </constraint>
               <constraintErrorMessage>Invalid keyboard layout</constraintErrorMessage>
              </properties>
