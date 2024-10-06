@@ -811,20 +811,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['listen-interface', interface])
 
-        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
-        self.cli_set(pool + ['subnet-id', '1'])
-
-        self.cli_set(pool + ['range', '0', 'start', range_0_start])
-        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
-
         ddns = base_path + ['dynamic-dns-update']
 
-        self.cli_set(ddns + ['enable-updates'])
-        self.cli_set(ddns + ['conflict-resolution-mode', 'check-exists-with-dhcid'])
-        self.cli_set(ddns + ['generated-prefix', 'myfunnyprefix'])
-        self.cli_set(ddns + ['qualifying-suffix', 'suffix.lan'])
-        self.cli_set(ddns + ['hostname-char-set', 'xXyYzZ'])
-        self.cli_set(ddns + ['hostname-char-replacement', '_xXx_'])
+        self.cli_set(ddns + ['send-updates'])
+        self.cli_set(ddns + ['use-conflict-resolution'])
         self.cli_set(ddns + ['override-no-update'])
         self.cli_set(ddns + ['override-client-update'])
         self.cli_set(ddns + ['replace-client-name', 'always'])
@@ -843,6 +833,25 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(ddns + ['reverse-ddns-domain-name', '0.168.192.in-addr.arpa', 'dns-server', '2', 'port', '1153'])
         self.cli_set(ddns + ['reverse-ddns-domain-name', '0.168.192.in-addr.arpa', 'key-name', 'reverse-0-168-192'])
 
+        shared = base_path + ['shared-network-name', shared_net_name]
+
+        self.cli_set(shared + ['dynamic-dns-update', 'send-updates'])
+        self.cli_set(shared + ['dynamic-dns-update', 'use-conflict-resolution'])
+        self.cli_set(shared + ['dynamic-dns-update', 'ttl-percent', '75'])
+
+        pool = shared + [ 'subnet', subnet]
+
+        self.cli_set(pool + ['subnet-id', '1'])
+
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        self.cli_set(pool + ['dynamic-dns-update', 'send-updates'])
+        self.cli_set(pool + ['dynamic-dns-update', 'generated-prefix', 'myfunnyprefix'])
+        self.cli_set(pool + ['dynamic-dns-update', 'qualifying-suffix', 'suffix.lan'])
+        self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-set', 'xXyYzZ'])
+        self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-replacement', '_xXx_'])
+
         self.cli_commit()
 
         config = read_file(KEA4_CONF)
@@ -851,7 +860,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         obj = loads(config)
         d2_obj = loads(d2_config)
 
-        # Verify DDNS parameters in the main config file
+        # Verify global DDNS parameters in the main config file
         self.verify_config_value(
             obj,
             ['Dhcp4'], 'dhcp-ddns',
@@ -859,15 +868,25 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'max-queue-size': 1024, 'ncr-protocol': 'UDP', 'ncr-format': 'JSON'})
 
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-send-updates', True)
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-conflict-resolution-mode', 'check-exists-with-dhcid')
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-generated-prefix', 'myfunnyprefix')
-        self.verify_config_value(obj, ['Dhcp4'], 'ddns-qualifying-suffix', 'suffix.lan')
-        self.verify_config_value(obj, ['Dhcp4'], 'hostname-char-set', 'xXyYzZ')
-        self.verify_config_value(obj, ['Dhcp4'], 'hostname-char-replacement', '_xXx_')
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-use-conflict-resolution', True)
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-override-no-update', True)
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-override-client-update', True)
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-replace-client-name', 'always')
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-update-on-renew', True)
+
+        # Verify scoped DDNS parameters in the main config file
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-send-updates', True)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-use-conflict-resolution', True)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-ttl-percent', 75)
+
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-send-updates', True)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-generated-prefix', 'myfunnyprefix')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-qualifying-suffix', 'suffix.lan')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-hostname-char-set', 'xXyYzZ')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-hostname-char-replacement', '_xXx_')
 
         # Verify keys and domains configuration in the D2 config
         self.verify_config_object(
