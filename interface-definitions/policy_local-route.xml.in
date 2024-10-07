@@ -39,6 +39,7 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
+                  #include <include/firewall/vrf.xml.i>
                 </children>
               </node>
               <leafNode name="fwmark">
@@ -113,6 +114,7 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
+                  #include <include/firewall/vrf.xml.i>
                 </children>
               </node>
               <leafNode name="fwmark">
