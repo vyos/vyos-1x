@@ -26,13 +26,22 @@ from cryptography.x509.oid import ExtendedKeyUsageOID
 
 from vyos.config import Config
 from vyos.config import config_dict_mangle_acme
-from vyos.pki import encode_certificate, encode_public_key, encode_private_key, encode_dh_parameters
+from vyos.pki import encode_certificate
+from vyos.pki import encode_public_key
+from vyos.pki import encode_private_key
+from vyos.pki import encode_dh_parameters
 from vyos.pki import get_certificate_fingerprint
-from vyos.pki import create_certificate, create_certificate_request, create_certificate_revocation_list
+from vyos.pki import create_certificate
+from vyos.pki import create_certificate_request
+from vyos.pki import create_certificate_revocation_list
 from vyos.pki import create_private_key
 from vyos.pki import create_dh_parameters
-from vyos.pki import load_certificate, load_certificate_request, load_private_key
-from vyos.pki import load_crl, load_dh_parameters, load_public_key
+from vyos.pki import load_certificate
+from vyos.pki import load_certificate_request
+from vyos.pki import load_private_key
+from vyos.pki import load_crl
+from vyos.pki import load_dh_parameters
+from vyos.pki import load_public_key
 from vyos.pki import verify_certificate
 from vyos.utils.io import ask_input
 from vyos.utils.io import ask_yes_no
