@@ -141,7 +141,7 @@ class ConfigTree(object):
         self.__is_tag.restype = c_int
 
         self.__set_tag = self.__lib.set_tag
-        self.__set_tag.argtypes = [c_void_p, c_char_p]
+        self.__set_tag.argtypes = [c_void_p, c_char_p, c_bool]
         self.__set_tag.restype = c_int
 
         self.__is_leaf = self.__lib.is_leaf
@@ -359,11 +359,11 @@ class ConfigTree(object):
         else:
             return False
 
-    def set_tag(self, path):
+    def set_tag(self, path, value=True):
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
 
-        res = self.__set_tag(self.__config, path_str)
+        res = self.__set_tag(self.__config, path_str, value)
         if (res == 0):
             return True
         else:
