@@ -1,0 +1,53 @@
+#! /usr/bin/python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import sys
+import json
+
+from vyos.configtree import ConfigTree
+from vyos.utils.config import parse_commands
+from vyos.utils.config import set_tags
+
+def commands_to_config(cmds):
+    ct = ConfigTree('')
+    cmds = parse_commands(cmds)
+
+    for c in cmds:
+        if c["op"] == "set":
+            if c["is_leaf"]:
+                replace = False if c["is_multi"] else True
+                ct.set(c["path"], value=c["value"], replace=replace)
+                set_tags(ct, c["path"])
+            else:
+                ct.create_node(c["path"])
+                set_tags(ct, c["path"])
+        else:
+            raise ValueError(
+              f"\"{c['op']}\" is not a supported config operation")
+
+    return ct
+
+
+if __name__ == '__main__':
+    try:
+        cmds = sys.stdin.read()
+        ct = commands_to_config(cmds)
+        out = ConfigTree(ct.to_string())
+        print(str(out))
+    except Exception as e:
+        print(e)
+        sys.exit(1)
