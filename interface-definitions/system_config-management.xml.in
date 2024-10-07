@@ -67,26 +67,33 @@
               <constraintErrorMessage>Number of revisions must be between 0 and 65535</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="commit-confirm">
+          <node name="commit-confirm">
             <properties>
-              <help>Commit confirm rollback type if no confirmation</help>
-              <completionHelp>
-                <list>reload reboot</list>
-              </completionHelp>
-              <valueHelp>
-                <format>reload</format>
-                <description>Reload previous configuration if not confirmed</description>
-              </valueHelp>
-              <valueHelp>
-                <format>reboot</format>
-                <description>Reboot to saved configuration if not confirmed</description>
-              </valueHelp>
-              <constraint>
-                <regex>(reload|reboot)</regex>
-              </constraint>
+              <help>Commit confirm options</help>
             </properties>
-            <defaultValue>reboot</defaultValue>
-          </leafNode>
+            <children>
+              <leafNode name="action">
+                <properties>
+                  <help>Commit confirm revert action</help>
+                  <completionHelp>
+                    <list>reload reboot</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>reload</format>
+                    <description>Reload previous configuration if not confirmed</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>reboot</format>
+                    <description>Reboot to saved configuration if not confirmed</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(reload|reboot)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>reboot</defaultValue>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

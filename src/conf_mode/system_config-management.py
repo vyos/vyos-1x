@@ -40,7 +40,8 @@ def get_config(config=None):
 
 def verify(mgmt):
     d = mgmt.config_dict
-    if d.get('commit_confirm', '') == 'reload' and 'commit_revisions' not in d:
+    confirm = d.get('commit_confirm', {})
+    if confirm.get('action', '') == 'reload' and 'commit_revisions' not in d:
         raise ConfigError('commit-confirm reload requires non-zero commit-revisions')
 
     return
