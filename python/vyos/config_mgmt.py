@@ -33,6 +33,8 @@ from urllib.parse import urlunsplit
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.configtree import ConfigTreeError
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.configtree import show_diff
 from vyos.load_config import load
 from vyos.load_config import LoadConfigError
@@ -49,8 +51,10 @@ config_json = '/run/vyatta/config/config.json'
 # created by vyatta-cfg-postinst
 commit_post_hook_dir = '/etc/commit/post-hooks.d'
 
-commit_hooks = {'commit_revision': '01vyos-commit-revision',
-                'commit_archive': '02vyos-commit-archive'}
+commit_hooks = {
+    'commit_revision': '01vyos-commit-revision',
+    'commit_archive': '02vyos-commit-archive',
+}
 
 DEFAULT_TIME_MINUTES = 10
 timer_name = 'commit-confirm'
@@ -72,6 +76,7 @@ formatter = logging.Formatter('%(funcName)s: %(levelname)s:%(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+
 def save_config(target, json_out=None):
     if json_out is None:
         cmd = f'{SAVE_CONFIG} {target}'
@@ -80,6 +85,7 @@ def save_config(target, json_out=None):
     rc, out = rc_cmd(cmd)
     if rc != 0:
         logger.critical(f'save config failed: {out}')
+
 
 def unsaved_commits(allow_missing_config=False) -> bool:
     if get_full_version_data()['boot_via'] == 'livecd':
@@ -92,6 +98,7 @@ def unsaved_commits(allow_missing_config=False) -> bool:
     os.unlink(tmp_save)
     return ret
 
+
 def get_file_revision(rev: int):
     revision = os.path.join(archive_dir, f'config.boot.{rev}.gz')
     try:
@@ -102,12 +109,15 @@ def get_file_revision(rev: int):
         return ''
     return r
 
+
 def get_config_tree_revision(rev: int):
     c = get_file_revision(rev)
     return ConfigTree(c)
 
+
 def is_node_revised(path: list = [], rev1: int = 1, rev2: int = 0) -> bool:
     from vyos.configtree import DiffTree
+
     left = get_config_tree_revision(rev1)
     right = get_config_tree_revision(rev2)
     diff_tree = DiffTree(left, right)
@@ -115,8 +125,10 @@ def is_node_revised(path: list = [], rev1: int = 1, rev2: int = 0) -> bool:
         return True
     return False
 
+
 class ConfigMgmtError(Exception):
     pass
+
 
 class ConfigMgmt:
     def __init__(self, session_env=None, config=None):
@@ -128,15 +140,20 @@ class ConfigMgmt:
         if config is None:
             config = Config()
 
-        d = config.get_config_dict(['system', 'config-management'],
-                                   key_mangling=('-', '_'),
-                                   get_first_key=True)
+        d = config.get_config_dict(
+            ['system', 'config-management'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            with_defaults=True,
+        )
 
         self.max_revisions = int(d.get('commit_revisions', 0))
         self.num_revisions = 0
         self.locations = d.get('commit_archive', {}).get('location', [])
-        self.source_address = d.get('commit_archive',
-                                    {}).get('source_address', '')
+        self.source_address = d.get('commit_archive', {}).get('source_address', '')
+        self.reboot_unconfirmed = bool(d.get('commit_confirm') == 'reboot')
+        self.config_dict = d
+
         if config.exists(['system', 'host-name']):
             self.hostname = config.return_value(['system', 'host-name'])
             if config.exists(['system', 'domain-name']):
@@ -156,51 +173,73 @@ class ConfigMgmt:
 
         # a call to compare without args is edit_level aware
         edit_level = os.getenv('VYATTA_EDIT_LEVEL', '')
-        self.edit_path = [l for l in edit_level.split('/') if l]
+        self.edit_path = [l for l in edit_level.split('/') if l]  # noqa: E741
 
         self.active_config = config._running_config
         self.working_config = config._session_config
 
     # Console script functions
     #
-    def commit_confirm(self, minutes: int=DEFAULT_TIME_MINUTES,
-                       no_prompt: bool=False) -> Tuple[str,int]:
-        """Commit with reboot to saved config in 'minutes' minutes if
+    def commit_confirm(
+        self, minutes: int = DEFAULT_TIME_MINUTES, no_prompt: bool = False
+    ) -> Tuple[str, int]:
+        """Commit with reload/reboot to saved config in 'minutes' minutes if
         'confirm' call is not issued.
         """
         if is_systemd_service_active(f'{timer_name}.timer'):
             msg = 'Another confirm is pending'
             return msg, 1
 
-        if unsaved_commits():
+        if self.reboot_unconfirmed and unsaved_commits():
             W = '\nYou should save previous commits before commit-confirm !\n'
         else:
             W = ''
 
-        prompt_str = f'''
+        if self.reboot_unconfirmed:
+            prompt_str = f"""
 commit-confirm will automatically reboot in {minutes} minutes unless changes
-are confirmed.\n
-Proceed ?'''
+are confirmed.
+Proceed ?"""
+        else:
+            prompt_str = f"""
+commit-confirm will automatically reload previous config in {minutes} minutes
+unless changes are confirmed.
+Proceed ?"""
+
         prompt_str = W + prompt_str
         if not no_prompt and not ask_yes_no(prompt_str, default=True):
             msg = 'commit-confirm canceled'
             return msg, 1
 
-        action = 'sg vyattacfg "/usr/bin/config-mgmt revert"'
+        if self.reboot_unconfirmed:
+            action = 'sg vyattacfg "/usr/bin/config-mgmt revert"'
+        else:
+            action = 'sg vyattacfg "/usr/bin/config-mgmt revert_soft"'
+
         cmd = f'sudo systemd-run --quiet --on-active={minutes}m --unit={timer_name} {action}'
         rc, out = rc_cmd(cmd)
         if rc != 0:
             raise ConfigMgmtError(out)
 
         # start notify
-        cmd = f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py {minutes}'
+        if self.reboot_unconfirmed:
+            cmd = (
+                f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py --reboot {minutes}'
+            )
+        else:
+            cmd = f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py {minutes}'
+
         os.system(cmd)
 
-        msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reboot'
+        if self.reboot_unconfirmed:
+            msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reboot'
+        else:
+            msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reload'
+
         return msg, 0
 
-    def confirm(self) -> Tuple[str,int]:
-        """Do not reboot to saved config following 'commit-confirm'.
+    def confirm(self) -> Tuple[str, int]:
+        """Do not reboot/reload to saved/completed config following 'commit-confirm'.
         Update commit log and archive.
         """
         if not is_systemd_service_active(f'{timer_name}.timer'):
@@ -224,12 +263,15 @@ Proceed ?'''
             self._add_log_entry(**entry)
             self._update_archive()
 
-        msg = 'Reboot timer stopped'
+        if self.reboot_unconfirmed:
+            msg = 'Reboot timer stopped'
+        else:
+            msg = 'Reload timer stopped'
+
         return msg, 0
 
-    def revert(self) -> Tuple[str,int]:
-        """Reboot to saved config, dropping commits from 'commit-confirm'.
-        """
+    def revert(self) -> Tuple[str, int]:
+        """Reboot to saved config, dropping commits from 'commit-confirm'."""
         _ = self._read_tmp_log_entry()
 
         # archived config will be reverted on boot
@@ -239,13 +281,39 @@ Proceed ?'''
 
         return '', 0
 
-    def rollback(self, rev: int, no_prompt: bool=False) -> Tuple[str,int]:
-        """Reboot to config revision 'rev'.
-        """
+    def revert_soft(self) -> Tuple[str, int]:
+        """Reload last revision, dropping commits from 'commit-confirm'."""
+        _ = self._read_tmp_log_entry()
+
+        # commits under commit-confirm are not added to revision list unless
+        # confirmed, hence a soft revert is to revision 0
+        revert_ct = self._get_config_tree_revision(0)
+
+        message = '[commit-confirm] Reverting to previous config now'
+        os.system('wall -n ' + message)
+
+        mask = os.umask(0o002)
+        session = ConfigSession(os.getpid(), app='config-mgmt')
+
+        try:
+            session.load_explicit(revert_ct)
+            session.commit()
+        except ConfigSessionError as e:
+            raise ConfigMgmtError(e) from e
+        finally:
+            os.umask(mask)
+            del session
+
+        return '', 0
+
+    def rollback(self, rev: int, no_prompt: bool = False) -> Tuple[str, int]:
+        """Reboot to config revision 'rev'."""
         msg = ''
 
         if not self._check_revision_number(rev):
-            msg = f'Invalid revision number {rev}: must be 0 < rev < {self.num_revisions}'
+            msg = (
+                f'Invalid revision number {rev}: must be 0 < rev < {self.num_revisions}'
+            )
             return msg, 1
 
         prompt_str = 'Proceed with reboot ?'
@@ -274,12 +342,13 @@ Proceed ?'''
         return msg, 0
 
     def rollback_soft(self, rev: int):
-        """Rollback without reboot (rollback-soft)
-        """
+        """Rollback without reboot (rollback-soft)"""
         msg = ''
 
         if not self._check_revision_number(rev):
-            msg = f'Invalid revision number {rev}: must be 0 < rev < {self.num_revisions}'
+            msg = (
+                f'Invalid revision number {rev}: must be 0 < rev < {self.num_revisions}'
+            )
             return msg, 1
 
         rollback_ct = self._get_config_tree_revision(rev)
@@ -292,9 +361,13 @@ Proceed ?'''
 
         return msg, 0
 
-    def compare(self, saved: bool=False, commands: bool=False,
-                rev1: Optional[int]=None,
-                rev2: Optional[int]=None) -> Tuple[str,int]:
+    def compare(
+        self,
+        saved: bool = False,
+        commands: bool = False,
+        rev1: Optional[int] = None,
+        rev2: Optional[int] = None,
+    ) -> Tuple[str, int]:
         """General compare function for config file revisions:
         revision n vs. revision m; working version vs. active version;
         or working version vs. saved version.
@@ -335,7 +408,7 @@ Proceed ?'''
 
         return msg, 0
 
-    def wrap_compare(self, options) -> Tuple[str,int]:
+    def wrap_compare(self, options) -> Tuple[str, int]:
         """Interface to vyatta-cfg-run: args collected as 'options' to parse
         for compare.
         """
@@ -343,7 +416,7 @@ Proceed ?'''
         r1 = None
         r2 = None
         if 'commands' in options:
-            cmnds=True
+            cmnds = True
             options.remove('commands')
         for i in options:
             if not i.isnumeric():
@@ -358,8 +431,7 @@ Proceed ?'''
     # Initialization and post-commit hooks for conf-mode
     #
     def initialize_revision(self):
-        """Initialize config archive, logrotate conf, and commit log.
-        """
+        """Initialize config archive, logrotate conf, and commit log."""
         mask = os.umask(0o002)
         os.makedirs(archive_dir, exist_ok=True)
         json_dir = os.path.dirname(config_json)
@@ -371,8 +443,7 @@ Proceed ?'''
 
         self._add_logrotate_conf()
 
-        if (not os.path.exists(commit_log_file) or
-            self._get_number_of_revisions() == 0):
+        if not os.path.exists(commit_log_file) or self._get_number_of_revisions() == 0:
             user = self._get_user()
             via = 'init'
             comment = ''
@@ -399,8 +470,7 @@ Proceed ?'''
             self._update_archive()
 
     def commit_archive(self):
-        """Upload config to remote archive.
-        """
+        """Upload config to remote archive."""
         from vyos.remote import upload
 
         hostname = self.hostname
@@ -410,20 +480,23 @@ Proceed ?'''
         source_address = self.source_address
 
         if self.effective_locations:
-            print("Archiving config...")
+            print('Archiving config...')
         for location in self.effective_locations:
             url = urlsplit(location)
-            _, _, netloc = url.netloc.rpartition("@")
+            _, _, netloc = url.netloc.rpartition('@')
             redacted_location = urlunsplit(url._replace(netloc=netloc))
-            print(f"  {redacted_location}", end=" ", flush=True)
-            upload(archive_config_file, f'{location}/{remote_file}',
-                   source_host=source_address)
+            print(f'  {redacted_location}', end=' ', flush=True)
+            upload(
+                archive_config_file,
+                f'{location}/{remote_file}',
+                source_host=source_address,
+            )
 
     # op-mode functions
     #
     def get_raw_log_data(self) -> list:
         """Return list of dicts of log data:
-           keys: [timestamp, user, commit_via, commit_comment]
+        keys: [timestamp, user, commit_via, commit_comment]
         """
         log = self._get_log_entries()
         res_l = []
@@ -435,20 +508,20 @@ Proceed ?'''
 
     @staticmethod
     def format_log_data(data: list) -> str:
-        """Return formatted log data as str.
-        """
+        """Return formatted log data as str."""
         res_l = []
-        for l_no, l in enumerate(data):
-            time_d = datetime.fromtimestamp(int(l['timestamp']))
-            time_str = time_d.strftime("%Y-%m-%d %H:%M:%S")
+        for l_no, l_val in enumerate(data):
+            time_d = datetime.fromtimestamp(int(l_val['timestamp']))
+            time_str = time_d.strftime('%Y-%m-%d %H:%M:%S')
 
-            res_l.append([l_no, time_str,
-                          f"by {l['user']}", f"via {l['commit_via']}"])
+            res_l.append(
+                [l_no, time_str, f"by {l_val['user']}", f"via {l_val['commit_via']}"]
+            )
 
-            if l['commit_comment'] != 'commit': # default comment
-                res_l.append([None, l['commit_comment']])
+            if l_val['commit_comment'] != 'commit':  # default comment
+                res_l.append([None, l_val['commit_comment']])
 
-        ret = tabulate(res_l, tablefmt="plain")
+        ret = tabulate(res_l, tablefmt='plain')
         return ret
 
     @staticmethod
@@ -459,23 +532,25 @@ Proceed ?'''
         'rollback'.
         """
         res_l = []
-        for l_no, l in enumerate(data):
-            time_d = datetime.fromtimestamp(int(l['timestamp']))
-            time_str = time_d.strftime("%Y-%m-%d %H:%M:%S")
+        for l_no, l_val in enumerate(data):
+            time_d = datetime.fromtimestamp(int(l_val['timestamp']))
+            time_str = time_d.strftime('%Y-%m-%d %H:%M:%S')
 
-            res_l.append(['\t', l_no, time_str,
-                          f"{l['user']}", f"by {l['commit_via']}"])
+            res_l.append(
+                ['\t', l_no, time_str, f"{l_val['user']}", f"by {l_val['commit_via']}"]
+            )
 
-        ret = tabulate(res_l, tablefmt="plain")
+        ret = tabulate(res_l, tablefmt='plain')
         return ret
 
-    def show_commit_diff(self, rev: int, rev2: Optional[int]=None,
-                         commands: bool=False) -> str:
+    def show_commit_diff(
+        self, rev: int, rev2: Optional[int] = None, commands: bool = False
+    ) -> str:
         """Show commit diff at revision number, compared to previous
         revision, or to another revision.
         """
         if rev2 is None:
-            out, _ = self.compare(commands=commands, rev1=rev, rev2=(rev+1))
+            out, _ = self.compare(commands=commands, rev1=rev, rev2=(rev + 1))
             return out
 
         out, _ = self.compare(commands=commands, rev1=rev, rev2=rev2)
@@ -519,8 +594,9 @@ Proceed ?'''
         conf_file.chmod(0o644)
 
     def _archive_active_config(self) -> bool:
-        save_to_tmp = (boot_configuration_complete() or not
-                       os.path.isfile(archive_config_file))
+        save_to_tmp = boot_configuration_complete() or not os.path.isfile(
+            archive_config_file
+        )
         mask = os.umask(0o113)
 
         ext = os.getpid()
@@ -560,15 +636,14 @@ Proceed ?'''
 
     @staticmethod
     def _update_archive():
-        cmd = f"sudo logrotate -f -s {logrotate_state} {logrotate_conf}"
+        cmd = f'sudo logrotate -f -s {logrotate_state} {logrotate_conf}'
         rc, out = rc_cmd(cmd)
         if rc != 0:
             logger.critical(f'logrotate failure: {out}')
 
     @staticmethod
     def _get_log_entries() -> list:
-        """Return lines of commit log as list of strings
-        """
+        """Return lines of commit log as list of strings"""
         entries = []
         if os.path.exists(commit_log_file):
             with open(commit_log_file) as f:
@@ -577,8 +652,8 @@ Proceed ?'''
         return entries
 
     def _get_number_of_revisions(self) -> int:
-        l = self._get_log_entries()
-        return len(l)
+        log_entries = self._get_log_entries()
+        return len(log_entries)
 
     def _check_revision_number(self, rev: int) -> bool:
         self.num_revisions = self._get_number_of_revisions()
@@ -599,9 +674,14 @@ Proceed ?'''
                 user = 'unknown'
         return user
 
-    def _new_log_entry(self, user: str='', commit_via: str='',
-                       commit_comment: str='', timestamp: Optional[int]=None,
-                       tmp_file: str=None) -> Optional[str]:
+    def _new_log_entry(
+        self,
+        user: str = '',
+        commit_via: str = '',
+        commit_comment: str = '',
+        timestamp: Optional[int] = None,
+        tmp_file: str = None,
+    ) -> Optional[str]:
         # Format log entry and return str or write to file.
         #
         # Usage is within a post-commit hook, using env values. In case of
@@ -647,12 +727,12 @@ Proceed ?'''
             logger.critical(f'Invalid log format {line}')
             return {}
 
-        timestamp, user, commit_via, commit_comment = (
-        tuple(line.strip().strip('|').split('|')))
+        timestamp, user, commit_via, commit_comment = tuple(
+            line.strip().strip('|').split('|')
+        )
 
         commit_comment = commit_comment.replace('%%', '|')
-        d = dict(zip(keys, [user, commit_via,
-                            commit_comment, timestamp]))
+        d = dict(zip(keys, [user, commit_via, commit_comment, timestamp]))
 
         return d
 
@@ -662,17 +742,28 @@ Proceed ?'''
                 entry = f.read()
             os.unlink(tmp_log_entry)
         except OSError as e:
-            logger.critical(f'error on file {tmp_log_entry}: {e}')
+            logger.info(f'error on file {tmp_log_entry}: {e}')
+            # fail gracefully in corner case:
+            # delete commit-revisions; commit-confirm
+            return {}
 
         return self._get_log_entry(entry)
 
-    def _add_log_entry(self, user: str='', commit_via: str='',
-                       commit_comment: str='', timestamp: Optional[int]=None):
+    def _add_log_entry(
+        self,
+        user: str = '',
+        commit_via: str = '',
+        commit_comment: str = '',
+        timestamp: Optional[int] = None,
+    ):
         mask = os.umask(0o113)
 
-        entry = self._new_log_entry(user=user, commit_via=commit_via,
-                                    commit_comment=commit_comment,
-                                    timestamp=timestamp)
+        entry = self._new_log_entry(
+            user=user,
+            commit_via=commit_via,
+            commit_comment=commit_comment,
+            timestamp=timestamp,
+        )
 
         log_entries = self._get_log_entries()
         log_entries.insert(0, entry)
@@ -686,6 +777,7 @@ Proceed ?'''
             logger.critical(e)
 
         os.umask(mask)
+
 
 # entry_point for console script
 #
@@ -706,43 +798,54 @@ def run():
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(dest='subcommand')
 
-    commit_confirm = subparsers.add_parser('commit_confirm',
-                     help="Commit with opt-out reboot to saved config")
-    commit_confirm.add_argument('-t', dest='minutes', type=int,
-                                default=DEFAULT_TIME_MINUTES,
-                                help="Minutes until reboot, unless 'confirm'")
-    commit_confirm.add_argument('-y', dest='no_prompt', action='store_true',
-                                help="Execute without prompt")
+    commit_confirm = subparsers.add_parser(
+        'commit_confirm', help='Commit with opt-out reboot to saved config'
+    )
+    commit_confirm.add_argument(
+        '-t',
+        dest='minutes',
+        type=int,
+        default=DEFAULT_TIME_MINUTES,
+        help="Minutes until reboot, unless 'confirm'",
+    )
+    commit_confirm.add_argument(
+        '-y', dest='no_prompt', action='store_true', help='Execute without prompt'
+    )
 
-    subparsers.add_parser('confirm', help="Confirm commit")
-    subparsers.add_parser('revert', help="Revert commit-confirm")
+    subparsers.add_parser('confirm', help='Confirm commit')
+    subparsers.add_parser('revert', help='Revert commit-confirm with reboot')
+    subparsers.add_parser('revert_soft', help='Revert commit-confirm with reload')
 
-    rollback = subparsers.add_parser('rollback',
-                                     help="Rollback to earlier config")
-    rollback.add_argument('--rev', type=int,
-                          help="Revision number for rollback")
-    rollback.add_argument('-y', dest='no_prompt', action='store_true',
-                          help="Excute without prompt")
+    rollback = subparsers.add_parser('rollback', help='Rollback to earlier config')
+    rollback.add_argument('--rev', type=int, help='Revision number for rollback')
+    rollback.add_argument(
+        '-y', dest='no_prompt', action='store_true', help='Excute without prompt'
+    )
 
-    rollback_soft = subparsers.add_parser('rollback_soft',
-                                     help="Rollback to earlier config")
-    rollback_soft.add_argument('--rev', type=int,
-                          help="Revision number for rollback")
+    rollback_soft = subparsers.add_parser(
+        'rollback_soft', help='Rollback to earlier config'
+    )
+    rollback_soft.add_argument('--rev', type=int, help='Revision number for rollback')
 
-    compare = subparsers.add_parser('compare',
-                                    help="Compare config files")
+    compare = subparsers.add_parser('compare', help='Compare config files')
 
-    compare.add_argument('--saved', action='store_true',
-                         help="Compare session config with saved config")
-    compare.add_argument('--commands', action='store_true',
-                         help="Show difference between commands")
-    compare.add_argument('--rev1', type=int, default=None,
-                         help="Compare revision with session config or other revision")
-    compare.add_argument('--rev2', type=int, default=None,
-                         help="Compare revisions")
+    compare.add_argument(
+        '--saved', action='store_true', help='Compare session config with saved config'
+    )
+    compare.add_argument(
+        '--commands', action='store_true', help='Show difference between commands'
+    )
+    compare.add_argument(
+        '--rev1',
+        type=int,
+        default=None,
+        help='Compare revision with session config or other revision',
+    )
+    compare.add_argument('--rev2', type=int, default=None, help='Compare revisions')
 
-    wrap_compare = subparsers.add_parser('wrap_compare',
-                                         help="Wrapper interface for vyatta-cfg-run")
+    wrap_compare = subparsers.add_parser(
+        'wrap_compare', help='Wrapper interface for vyatta-cfg-run'
+    )
     wrap_compare.add_argument('--options', nargs=REMAINDER)
 
     args = vars(parser.parse_args())

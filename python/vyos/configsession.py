@@ -32,15 +32,34 @@ SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
 MIGRATE_LOAD_CONFIG = ['/usr/libexec/vyos/vyos-load-config.py']
 SAVE_CONFIG = ['/usr/libexec/vyos/vyos-save-config.py']
-INSTALL_IMAGE = ['/usr/libexec/vyos/op_mode/image_installer.py',
-                 '--action', 'add', '--no-prompt', '--image-path']
+INSTALL_IMAGE = [
+    '/usr/libexec/vyos/op_mode/image_installer.py',
+    '--action',
+    'add',
+    '--no-prompt',
+    '--image-path',
+]
 IMPORT_PKI = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'import']
-IMPORT_PKI_NO_PROMPT = ['/usr/libexec/vyos/op_mode/pki.py',
-                        '--action', 'import', '--no-prompt']
-REMOVE_IMAGE = ['/usr/libexec/vyos/op_mode/image_manager.py',
-                '--action', 'delete', '--no-prompt', '--image-name']
-SET_DEFAULT_IMAGE = ['/usr/libexec/vyos/op_mode/image_manager.py',
-                '--action', 'set', '--no-prompt', '--image-name']
+IMPORT_PKI_NO_PROMPT = [
+    '/usr/libexec/vyos/op_mode/pki.py',
+    '--action',
+    'import',
+    '--no-prompt',
+]
+REMOVE_IMAGE = [
+    '/usr/libexec/vyos/op_mode/image_manager.py',
+    '--action',
+    'delete',
+    '--no-prompt',
+    '--image-name',
+]
+SET_DEFAULT_IMAGE = [
+    '/usr/libexec/vyos/op_mode/image_manager.py',
+    '--action',
+    'set',
+    '--no-prompt',
+    '--image-name',
+]
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
@@ -50,7 +69,8 @@ OP_CMD_ADD = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'add']
 OP_CMD_DELETE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'delete']
 
 # Default "commit via" string
-APP = "vyos-http-api"
+APP = 'vyos-http-api'
+
 
 # When started as a service rather than from a user shell,
 # the process lacks the VyOS-specific environment that comes
@@ -61,7 +81,7 @@ def inject_vyos_env(env):
     env['VYATTA_USER_LEVEL_DIR'] = '/opt/vyatta/etc/shell/level/admin'
     env['VYATTA_PROCESS_CLIENT'] = 'gui2_rest'
     env['VYOS_HEADLESS_CLIENT'] = 'vyos_http_api'
-    env['vyatta_bindir']= '/opt/vyatta/bin'
+    env['vyatta_bindir'] = '/opt/vyatta/bin'
     env['vyatta_cfg_templates'] = '/opt/vyatta/share/vyatta-cfg/templates'
     env['vyatta_configdir'] = directories['vyos_configdir']
     env['vyatta_datadir'] = '/opt/vyatta/share'
@@ -78,7 +98,7 @@ def inject_vyos_env(env):
     env['vyos_configdir'] = directories['vyos_configdir']
     env['vyos_conf_scripts_dir'] = '/usr/libexec/vyos/conf_mode'
     env['vyos_datadir'] = '/opt/vyatta/share'
-    env['vyos_datarootdir']= '/opt/vyatta/share'
+    env['vyos_datarootdir'] = '/opt/vyatta/share'
     env['vyos_libdir'] = '/opt/vyatta/lib'
     env['vyos_libexec_dir'] = '/usr/libexec/vyos'
     env['vyos_op_scripts_dir'] = '/usr/libexec/vyos/op_mode'
@@ -102,6 +122,7 @@ class ConfigSession(object):
     """
     The write API of VyOS.
     """
+
     def __init__(self, session_id, app=APP):
         """
          Creates a new config session.
@@ -116,7 +137,9 @@ class ConfigSession(object):
             and used the PID for the session identifier.
         """
 
-        env_str = subprocess.check_output([CLI_SHELL_API, 'getSessionEnv', str(session_id)])
+        env_str = subprocess.check_output(
+            [CLI_SHELL_API, 'getSessionEnv', str(session_id)]
+        )
         self.__session_id = session_id
 
         # Extract actual variables from the chunk of shell it outputs
@@ -129,20 +152,39 @@ class ConfigSession(object):
             session_env[k] = v
 
         self.__session_env = session_env
-        self.__session_env["COMMIT_VIA"] = app
+        self.__session_env['COMMIT_VIA'] = app
 
         self.__run_command([CLI_SHELL_API, 'setupSession'])
 
     def __del__(self):
         try:
-            output = subprocess.check_output([CLI_SHELL_API, 'teardownSession'], env=self.__session_env).decode().strip()
+            output = (
+                subprocess.check_output(
+                    [CLI_SHELL_API, 'teardownSession'], env=self.__session_env
+                )
+                .decode()
+                .strip()
+            )
             if output:
-                print("cli-shell-api teardownSession output for sesion {0}: {1}".format(self.__session_id, output), file=sys.stderr)
+                print(
+                    'cli-shell-api teardownSession output for sesion {0}: {1}'.format(
+                        self.__session_id, output
+                    ),
+                    file=sys.stderr,
+                )
         except Exception as e:
-            print("Could not tear down session {0}: {1}".format(self.__session_id, e), file=sys.stderr)
+            print(
+                'Could not tear down session {0}: {1}'.format(self.__session_id, e),
+                file=sys.stderr,
+            )
 
     def __run_command(self, cmd_list):
-        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=self.__session_env)
+        p = subprocess.Popen(
+            cmd_list,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=self.__session_env,
+        )
         (stdout_data, stderr_data) = p.communicate()
         output = stdout_data.decode()
         result = p.wait()
@@ -204,7 +246,7 @@ class ConfigSession(object):
 
     def comment(self, path, value=None):
         if not value:
-            value = [""]
+            value = ['']
         else:
             value = [value]
         self.__run_command([COMMENT] + path + value)
@@ -225,6 +267,15 @@ class ConfigSession(object):
     def load_config(self, file_path):
         out = self.__run_command(LOAD_CONFIG + [file_path])
         return out
+
+    def load_explicit(self, file_path):
+        from vyos.load_config import load
+        from vyos.load_config import LoadConfigError
+
+        try:
+            load(file_path, switch='explicit')
+        except LoadConfigError as e:
+            raise ConfigSessionError(e) from e
 
     def migrate_and_load_config(self, file_path):
         out = self.__run_command(MIGRATE_LOAD_CONFIG + [file_path])
