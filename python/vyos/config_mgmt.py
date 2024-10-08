@@ -289,6 +289,9 @@ Proceed ?"""
         # confirmed, hence a soft revert is to revision 0
         revert_ct = self._get_config_tree_revision(0)
 
+        message = '[commit-confirm] Reverting to previous config now'
+        os.system('wall -n ' + message)
+
         mask = os.umask(0o002)
         session = ConfigSession(os.getpid(), app='config-mgmt')
 
