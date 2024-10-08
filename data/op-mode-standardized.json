@@ -13,6 +13,7 @@
 "evpn.py",
 "interfaces.py",
 "ipsec.py",
+"load-balancing_wan.py",
 "lldp.py",
 "log.py",
 "memory.py",
