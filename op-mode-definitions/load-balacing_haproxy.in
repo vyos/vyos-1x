@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="haproxy">
+        <properties>
+          <help>Restart haproxy service</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name haproxy</command>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="haproxy">
+        <properties>
+          <help>Show load-balancing haproxy</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/load-balacing_haproxy.py show</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

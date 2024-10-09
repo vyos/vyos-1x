@@ -48,7 +48,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['load-balancing', 'reverse-proxy']
+    base = ['load-balancing', 'haproxy']
     if not conf.exists(base):
         return None
     lb = conf.get_config_dict(base,

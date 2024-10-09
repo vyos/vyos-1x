@@ -2,9 +2,9 @@
 <interfaceDefinition>
   <node name="load-balancing">
     <children>
-      <node name="reverse-proxy" owner="${vyos_conf_scripts_dir}/load-balancing_reverse-proxy.py">
+      <node name="haproxy" owner="${vyos_conf_scripts_dir}/load-balancing_haproxy.py">
         <properties>
-          <help>Configure reverse-proxy</help>
+          <help>Configure haproxy</help>
           <priority>900</priority>
         </properties>
         <children>
@@ -26,10 +26,10 @@
                   <constraintErrorMessage>Backend name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Name of reverse-proxy backend system</description>
+                    <description>Name of haproxy backend system</description>
                   </valueHelp>
                   <completionHelp>
-                    <path>load-balancing reverse-proxy backend</path>
+                    <path>load-balancing haproxy backend</path>
                   </completionHelp>
                   <multi/>
                 </properties>

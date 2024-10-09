@@ -71,7 +71,7 @@ sync_search = [
     },
     {
         'keys': ['certificate', 'ca_certificate'],
-        'path': ['load_balancing', 'reverse_proxy'],
+        'path': ['load_balancing', 'haproxy'],
     },
     {
         'keys': ['key'],
