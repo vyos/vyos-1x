@@ -1,0 +1,20 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' runuser -u frr -- ' if vrf is vyos_defined else '' %}
+[Unit]
+Description=FRR Exporter
+Documentation=https://github.com/tynany/frr_exporter
+After=network.target
+
+[Service]
+{% if vrf is not vyos_defined %}
+User=frr
+{% endif %}
+ExecStart={{ vrf_command }}/usr/sbin/frr_exporter \
+{% if listen_address is vyos_defined %}
+{%     for address in listen_address %}
+        --web.listen-address={{ address }}:{{ port }}
+{%     endfor %}
+{% else %}
+        --web.listen-address=:{{ port }}
+{% endif %}
+[Install]
+WantedBy=multi-user.target
