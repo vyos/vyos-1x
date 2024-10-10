@@ -39,6 +39,7 @@ config_file_client  = r'/etc/snmp/snmp.conf'
 config_file_daemon  = r'/etc/snmp/snmpd.conf'
 config_file_access  = r'/usr/share/snmp/snmpd.conf'
 config_file_user    = r'/var/lib/snmp/snmpd.conf'
+default_script_dir  = r'/config/user-data/'
 systemd_override    = r'/run/systemd/system/snmpd.service.d/override.conf'
 systemd_service     = 'snmpd.service'
 
@@ -83,7 +84,19 @@ def get_config(config=None):
             tmp = {'::1': {'port': '161'}}
             snmp['listen_address'] = dict_merge(tmp, snmp['listen_address'])
 
+    if 'script_extensions' in snmp and 'extension_name' in snmp['script_extensions']:
+        for key, val in snmp['script_extensions']['extension_name'].items():
+            if 'script' not in val:
+                continue
+            script_path = val['script']
+            # if script has not absolute path, use pre configured path
+            if not os.path.isabs(script_path):
+                script_path = os.path.join(default_script_dir, script_path)
+
+            snmp['script_extensions']['extension_name'][key]['script'] = script_path
+
     return snmp
+
 
 def verify(snmp):
     if 'deleted' in snmp:
