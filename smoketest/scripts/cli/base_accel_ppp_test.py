@@ -14,6 +14,7 @@
 
 import re
 
+from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
 
@@ -641,6 +642,11 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
             for log_level in range(0, 5):
                 self.set(['log', 'level', str(log_level)])
                 self.cli_commit()
+
+                # Systemd comes with a default of 5 restarts in 10 seconds policy,
+                # this limit can be hit by this reastart sequence, slow down a bit
+                sleep(5)
+
                 # Validate configuration values
                 conf = ConfigParser(allow_no_value=True)
                 conf.read(self._config_file)
