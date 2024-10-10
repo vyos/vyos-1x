@@ -32,6 +32,27 @@ interfaces {
     loopback lo {
     }
 }
+load-balancing {
+    reverse-proxy {
+        backend bk-01 {
+            balance "round-robin"
+            mode "tcp"
+            server srv01 {
+                address "192.0.2.11"
+                port "8881"
+            }
+            server srv02 {
+                address "192.0.2.12"
+                port "8882"
+            }
+        }
+        service my-tcp-api {
+            backend "bk-01"
+            mode "tcp"
+            port "8888"
+        }
+    }
+}
 protocols {
     static {
         arp 192.168.0.20 {

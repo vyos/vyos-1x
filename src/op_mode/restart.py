@@ -41,6 +41,10 @@ service_map = {
         'systemd_service': 'pdns-recursor',
         'path': ['service', 'dns', 'forwarding'],
     },
+    'haproxy': {
+        'systemd_service': 'haproxy',
+        'path': ['load-balancing', 'haproxy'],
+    },
     'igmp_proxy': {
         'systemd_service': 'igmpproxy',
         'path': ['protocols', 'igmp-proxy'],
@@ -52,10 +56,6 @@ service_map = {
     'mdns_repeater': {
         'systemd_service': 'avahi-daemon',
         'path': ['service', 'mdns', 'repeater'],
-    },
-    'reverse_proxy': {
-        'systemd_service': 'haproxy',
-        'path': ['load-balancing', 'reverse-proxy'],
     },
     'router_advert': {
         'systemd_service': 'radvd',
@@ -83,10 +83,10 @@ services = typing.Literal[
     'dhcpv6',
     'dns_dynamic',
     'dns_forwarding',
+    'haproxy',
     'igmp_proxy',
     'ipsec',
     'mdns_repeater',
-    'reverse_proxy',
     'router_advert',
     'snmp',
     'ssh',

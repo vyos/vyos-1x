@@ -24,7 +24,7 @@ from vyos.utils.file import read_file
 
 PROCESS_NAME = 'haproxy'
 HAPROXY_CONF = '/run/haproxy/haproxy.cfg'
-base_path = ['load-balancing', 'reverse-proxy']
+base_path = ['load-balancing', 'haproxy']
 proxy_interface = 'eth1'
 
 valid_ca_cert = """

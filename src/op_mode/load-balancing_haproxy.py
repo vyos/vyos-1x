@@ -217,8 +217,8 @@ def _get_formatted_output(data):
 
 def show(raw: bool):
     config = ConfigTreeQuery()
-    if not config.exists('load-balancing reverse-proxy'):
-        raise vyos.opmode.UnconfiguredSubsystem('Reverse-proxy is not configured')
+    if not config.exists('load-balancing haproxy'):
+        raise vyos.opmode.UnconfiguredSubsystem('Haproxy is not configured')
 
     data = _get_raw_data()
     if raw:

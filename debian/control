@@ -202,9 +202,9 @@ Depends:
 # For "service router-advert"
   radvd,
 # End "service route-advert"
-# For "load-balancing reverse-proxy"
+# For "load-balancing haproxy"
   haproxy,
-# End "load-balancing reverse-proxy"
+# End "load-balancing haproxy"
 # For "load-balancing wan"
   vyatta-wanloadbalance,
 # End "load-balancing wan"
