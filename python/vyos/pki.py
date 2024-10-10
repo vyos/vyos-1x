@@ -33,6 +33,8 @@ CERT_BEGIN='-----BEGIN CERTIFICATE-----\n'
 CERT_END='\n-----END CERTIFICATE-----'
 KEY_BEGIN='-----BEGIN PRIVATE KEY-----\n'
 KEY_END='\n-----END PRIVATE KEY-----'
+KEY_EC_BEGIN='-----BEGIN EC PRIVATE KEY-----\n'
+KEY_EC_END='\n-----END EC PRIVATE KEY-----'
 KEY_ENC_BEGIN='-----BEGIN ENCRYPTED PRIVATE KEY-----\n'
 KEY_ENC_END='\n-----END ENCRYPTED PRIVATE KEY-----'
 KEY_PUB_BEGIN='-----BEGIN PUBLIC KEY-----\n'
@@ -228,8 +230,18 @@ def create_dh_parameters(bits=2048):
 def wrap_public_key(raw_data):
     return KEY_PUB_BEGIN + raw_data + KEY_PUB_END
 
-def wrap_private_key(raw_data, passphrase=None):
-    return (KEY_ENC_BEGIN if passphrase else KEY_BEGIN) + raw_data + (KEY_ENC_END if passphrase else KEY_END)
+def wrap_private_key(raw_data, passphrase=None, ec=False):
+    begin = KEY_BEGIN
+    end = KEY_END
+
+    if passphrase:
+        begin = KEY_ENC_BEGIN
+        end = KEY_ENC_END
+    elif ec:
+        begin = KEY_EC_BEGIN
+        end = KEY_EC_END
+
+    return begin + raw_data + end
 
 def wrap_openssh_public_key(raw_data, type):
     return f'{type} {raw_data}'
@@ -262,17 +274,26 @@ def load_public_key(raw_data, wrap_tags=True):
     except ValueError:
         return False
 
-def load_private_key(raw_data, passphrase=None, wrap_tags=True):
-    if wrap_tags:
-        raw_data = wrap_private_key(raw_data, passphrase)
-
-    if passphrase is not None:
-        passphrase = bytes(passphrase, 'utf-8')
-
+def _load_private_key(raw_data, passphrase):
     try:
         return serialization.load_pem_private_key(bytes(raw_data, 'utf-8'), password=passphrase)
     except (ValueError, TypeError):
         return False
+
+def load_private_key(raw_data, passphrase=None, wrap_tags=True):
+    if passphrase is not None:
+        passphrase = bytes(passphrase, 'utf-8')
+
+    result = False
+
+    if wrap_tags:
+        for ec_test in [False, True]:
+            wrapped_data = wrap_private_key(raw_data, passphrase, ec_test)
+            if result := _load_private_key(wrapped_data, passphrase):
+                return result
+        return False
+    else:
+        return _load_private_key(raw_data, passphrase)
 
 def load_openssh_public_key(raw_data, type):
     try:
