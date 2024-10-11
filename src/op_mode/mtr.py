@@ -23,7 +23,7 @@ from vyos.utils.network import vrf_list
 from vyos.utils.process import call
 
 options = {
-    'report': {
+    'report-mode': {
         'mtr': '{command} --report',
         'type': 'noarg',
         'help': 'This option puts mtr into report mode. When in this mode, mtr will run for the number of cycles specified by the -c option, and then print statistics and exit.'

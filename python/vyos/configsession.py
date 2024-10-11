@@ -48,6 +48,16 @@ REBOOT = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reboot']
 POWEROFF = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'poweroff']
 OP_CMD_ADD = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'add']
 OP_CMD_DELETE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'delete']
+TRACEROUTE = [
+    '/usr/libexec/vyos/op_mode/mtr_execute.py',
+    'mtr',
+    '--for-api',
+    '--report-mode',
+    '--report-cycles',
+    '1',
+    '--json',
+    '--host',
+]
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -284,4 +294,8 @@ class ConfigSession(object):
 
     def show_container_image(self):
         out = self.__run_command(SHOW + ['container', 'image'])
+        return out
+
+    def traceroute(self, host):
+        out = self.__run_command(TRACEROUTE + [host])
         return out
