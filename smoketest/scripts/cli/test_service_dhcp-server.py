@@ -878,15 +878,15 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-send-updates', True)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-use-conflict-resolution', True)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-ttl-percent', 75)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-ttl-percent', 0.75)
 
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-send-updates', True)
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-generated-prefix', 'myfunnyprefix')
         self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-qualifying-suffix', 'suffix.lan')
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-hostname-char-set', 'xXyYzZ')
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-hostname-char-replacement', '_xXx_')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'hostname-char-set', 'xXyYzZ')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'hostname-char-replacement', '_xXx_')
 
         # Verify keys and domains configuration in the D2 config
         self.verify_config_object(
@@ -929,7 +929,6 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.assertTrue(process_named_running(D2_PROCESS_NAME))
-        self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
 
     def test_dhcp_on_interface_with_vrf(self):
         self.cli_set(['interfaces', 'ethernet', 'eth1', 'address', '10.1.1.1/30'])

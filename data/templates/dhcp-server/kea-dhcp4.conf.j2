@@ -50,7 +50,7 @@
                 "space": "ubnt"
             }
         ],
-{% if dynamic_dns_update.enable_updates is vyos_defined %}
+{% if dynamic_dns_update is vyos_defined %}
         "dhcp-ddns": {
             "enable-updates": true,
             "server-ip": "127.0.0.1",
