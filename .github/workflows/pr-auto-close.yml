@@ -7,6 +7,10 @@ on:
     branches:
       - circinus
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
