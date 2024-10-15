@@ -1,0 +1,17 @@
+name: Auto-Close Pull Requests Circinus
+
+on:
+  pull_request:
+    branches:
+      - circinus
+
+jobs:
+  auto_close_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close PR
+        run: |
+          set -eux
+          gh pr close ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --comment "Pull requests to this branch are not accepted and have been closed automatically."
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
