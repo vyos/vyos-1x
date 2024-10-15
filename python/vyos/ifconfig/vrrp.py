@@ -99,11 +99,11 @@ class VRRP(object):
               timeout=30)
 
             return read_file(fname)
+        except FileNotFoundError:
+            raise VRRPNoData("VRRP data is not available (process not running or no active groups)")
         except OSError:
             # raised by vyos.utils.file.read_file
             raise VRRPNoData("VRRP data is not available (wait time exceeded)")
-        except FileNotFoundError:
-            raise VRRPNoData("VRRP data is not available (process not running or no active groups)")
         except Exception:
             name = cls._name[what]
             raise VRRPError(f'VRRP {name} is not available')
@@ -136,7 +136,7 @@ class VRRP(object):
         headers = ["Name", "Interface", "VRID", "State", "Priority", "Last Transition"]
         groups = []
 
-        data = json.loads(data)
+        data = json.loads(data) if isinstance(data, str) else data
         for group in data:
             data = group['data']
 
