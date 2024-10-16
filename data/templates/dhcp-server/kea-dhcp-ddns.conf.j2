@@ -8,10 +8,10 @@
         },
         "tsig-keys": {{ dynamic_dns_update | kea_dynamic_dns_update_tsig_key_json }},
         "forward-ddns" : {
-            "ddns-domains": {{ dynamic_dns_update | kea_dynamic_dns_update_domains('forward_ddns_domain_name') }}
+            "ddns-domains": {{ dynamic_dns_update | kea_dynamic_dns_update_domains('forward_domain') }}
         },
         "reverse-ddns" : {
-            "ddns-domains": {{ dynamic_dns_update | kea_dynamic_dns_update_domains('reverse_ddns_domain_name') }}
+            "ddns-domains": {{ dynamic_dns_update | kea_dynamic_dns_update_domains('reverse_domain') }}
         },
         "loggers": [
             {

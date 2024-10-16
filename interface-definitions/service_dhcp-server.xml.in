@@ -16,13 +16,13 @@
             </properties>
             <children>
               #include <include/dhcp/ddns-settings.xml.i>
-              <tagNode name="tsig-key-name">
+              <tagNode name="tsig-key">
                 <properties>
-                  <help>Name of the TSIG key for DNS updates</help>
+                  <help>TSIG key definition for DNS updates</help>
                   <constraint>
                     #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                   </constraint>
-                  <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
+                  <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, hyphen and underscore</constraintErrorMessage>
                 </properties>
                 <children>
                   <leafNode name="algorithm">
@@ -71,7 +71,7 @@
                   </leafNode>
                 </children>
               </tagNode>
-              <tagNode name="forward-ddns-domain-name">
+              <tagNode name="forward-domain">
                 <properties>
                   <help>Forward DNS domain name</help>
                   <constraint>
@@ -86,13 +86,13 @@
                       <constraint>
                         #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                       </constraint>
-                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, numbers, hyphen and underscore</constraintErrorMessage>
                     </properties>
                   </leafNode>
                   #include <include/dhcp/ddns-dns-server.xml.i>
                 </children>
               </tagNode>
-              <tagNode name="reverse-ddns-domain-name">
+              <tagNode name="reverse-domain">
                 <properties>
                   <help>Reverse DNS domain name</help>
                   <constraint>
@@ -107,7 +107,7 @@
                       <constraint>
                         #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                       </constraint>
-                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers and -_</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, numbers, hyphen and underscore</constraintErrorMessage>
                     </properties>
                   </leafNode>
                   #include <include/dhcp/ddns-dns-server.xml.i>
