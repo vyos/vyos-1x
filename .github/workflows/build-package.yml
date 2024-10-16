@@ -1,21 +1,34 @@
+# name: Debian Package Build
+# on:
+#   pull_request:
+#     branches:
+#       - circinus
+#     paths:
+#       - '**'
+#       - '!.github/**'
+#       - '!**/*.md'
+
+# jobs:
+#   package-build:
+#     runs-on: ubuntu-latest
+#     container:
+#       image: vyos/vyos-build:current
+#       options: --sysctl net.ipv6.conf.lo.disable_ipv6=0
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#       - name: Build Debian package
+#         run: dpkg-buildpackage -uc -us -tc -b
+
 name: Debian Package Build
 on:
-  pull_request:
-    branches:
-      - circinus
-    paths:
-      - '**'
-      - '!.github/**'
-      - '!**/*.md'
+  pull_request
 
 jobs:
-  package-build:
-    runs-on: ubuntu-latest
-    container:
-      image: vyos/vyos-build:current
-      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Build Debian package
-        run: dpkg-buildpackage -uc -us -tc -b
+  build-package:
+    uses: vyos/.github/.github/workflows/build-image.yml@feature/T6732-image-build-workflow
+    secrets: inherit
+    with:
+      release_version: "1.5.1"
+      release_flavor: "generic"
+      release_arch: "amd64"
