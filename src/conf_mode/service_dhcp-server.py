@@ -354,19 +354,19 @@ def verify(dhcp):
 
     if 'dynamic_dns_update' in dhcp:
         ddns = dhcp['dynamic_dns_update']
-        if 'tsig_key_name' in ddns:
+        if 'tsig_key' in ddns:
             invalid_keys = []
-            for tsig_key_name, tsig_key_config in ddns['tsig_key_name'].items():
+            for tsig_key_name, tsig_key_config in ddns['tsig_key'].items():
                 if not ('algorithm' in tsig_key_config and 'secret' in tsig_key_config):
                     invalid_keys.append(tsig_key_name)
             if len(invalid_keys) > 0:
                 raise ConfigError(f'Both algorithm and secret need to be set for TSIG keys: {", ".join(invalid_keys)}')
 
-        if 'forward_ddns_domain_name' in ddns:
-            verify_ddns_domain_servers('Forward', ddns['forward_ddns_domain_name'])
+        if 'forward_domain' in ddns:
+            verify_ddns_domain_servers('Forward', ddns['forward_domain'])
 
-        if 'reverse_ddns_domain_name' in ddns:
-            verify_ddns_domain_servers('Reverse', ddns['reverse_ddns_domain_name'])
+        if 'reverse_domain' in ddns:
+            verify_ddns_domain_servers('Reverse', ddns['reverse_domain'])
 
     return None
 

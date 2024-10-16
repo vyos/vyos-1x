@@ -886,10 +886,10 @@ def kea_dynamic_dns_update_tsig_key_json(config):
     from json import dumps
     out = []
 
-    if 'tsig_key_name' not in config:
+    if 'tsig_key' not in config:
         return dumps(out)
 
-    tsig_keys = config['tsig_key_name']
+    tsig_keys = config['tsig_key']
 
     for tsig_key_name, tsig_key_config in tsig_keys.items():
         tsig_key = {

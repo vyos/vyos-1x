@@ -311,9 +311,9 @@ def kea_parse_tsig_algo(algo_spec):
 
 def kea_parse_ddns_settings(config):
     data = {
-        "ddns-send-updates": 'send_updates' in config,
-        "ddns-override-no-update": 'override_no_update' in config,
-        "ddns-override-client-update": 'override_client_update' in config,
+        "ddns-send-updates": 'force_updates' in config,
+        "ddns-override-no-update": 'force_no_update' in config,
+        "ddns-override-client-update": 'force_client_update' in config,
         "ddns-update-on-renew": 'update_on_renew' in config,
         "ddns-use-conflict-resolution": 'use_conflict_resolution' in config,
     }
