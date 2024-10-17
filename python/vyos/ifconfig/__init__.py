@@ -32,6 +32,7 @@ from vyos.ifconfig.wireguard import WireGuardIf
 from vyos.ifconfig.vtun import VTunIf
 from vyos.ifconfig.vti import VTIIf
 from vyos.ifconfig.pppoe import PPPoEIf
+from vyos.ifconfig.thunderbolt import ThunderboltIf
 from vyos.ifconfig.tunnel import TunnelIf
 from vyos.ifconfig.wireless import WiFiIf
 from vyos.ifconfig.l2tpv3 import L2TPv3If

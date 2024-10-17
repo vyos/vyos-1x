@@ -54,6 +54,7 @@
         "openvpn": ["interfaces_openvpn"],
         "pppoe": ["interfaces_pppoe"],
         "pseudo-ethernet": ["interfaces_pseudo-ethernet"],
+        "thunderbolt": ["interfaces_thunderbolt"],
         "tunnel": ["interfaces_tunnel"],
         "vti": ["interfaces_vti"],
         "vxlan": ["interfaces_vxlan"],
