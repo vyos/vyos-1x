@@ -26,34 +26,37 @@ from vyos.utils.file import read_file
 from vyos.utils.file import wait_for_file_write_complete
 from vyos.utils.process import process_running
 
+
 class VRRPError(Exception):
     pass
+
 
 class VRRPNoData(VRRPError):
     pass
 
+
 class VRRP(object):
     _vrrp_prefix = '00:00:5E:00:01:'
     location = {
-        'pid':      '/run/keepalived/keepalived.pid',
-        'fifo':     '/run/keepalived/keepalived_notify_fifo',
-        'state':    '/tmp/keepalived.data',
-        'stats':    '/tmp/keepalived.stats',
-        'json':     '/tmp/keepalived.json',
-        'daemon':   '/etc/default/keepalived',
-        'config':   '/run/keepalived/keepalived.conf',
+        'pid': '/run/keepalived/keepalived.pid',
+        'fifo': '/run/keepalived/keepalived_notify_fifo',
+        'state': '/tmp/keepalived.data',
+        'stats': '/tmp/keepalived.stats',
+        'json': '/tmp/keepalived.json',
+        'daemon': '/etc/default/keepalived',
+        'config': '/run/keepalived/keepalived.conf',
     }
 
     _signal = {
-        'state':  signal.SIGUSR1,
-        'stats':  signal.SIGUSR2,
-        'json':   signal.SIGRTMIN + 2,
+        'state': signal.SIGUSR1,
+        'stats': signal.SIGUSR2,
+        'json': signal.SIGRTMIN + 2,
     }
 
     _name = {
         'state': 'information',
         'stats': 'statistics',
-        'json':  'data',
+        'json': 'data',
     }
 
     state = {
@@ -64,7 +67,7 @@ class VRRP(object):
         # UNKNOWN
     }
 
-    def __init__(self,ifname):
+    def __init__(self, ifname):
         self.ifname = ifname
 
     def enabled(self):
@@ -79,7 +82,7 @@ class VRRP(object):
 
     @classmethod
     def decode_state(cls, code):
-        return cls.state.get(code,'UNKNOWN')
+        return cls.state.get(code, 'UNKNOWN')
 
     # used in conf mode
     @classmethod
@@ -94,16 +97,20 @@ class VRRP(object):
         try:
             # send signal to generate the configuration file
             pid = read_file(cls.location['pid'])
-            wait_for_file_write_complete(fname,
-              pre_hook=(lambda: os.kill(int(pid), cls._signal[what])),
-              timeout=30)
+            wait_for_file_write_complete(
+                fname,
+                pre_hook=(lambda: os.kill(int(pid), cls._signal[what])),
+                timeout=30,
+            )
 
             return read_file(fname)
         except FileNotFoundError:
-            raise VRRPNoData("VRRP data is not available (process not running or no active groups)")
+            raise VRRPNoData(
+                'VRRP data is not available (process not running or no active groups)'
+            )
         except OSError:
             # raised by vyos.utils.file.read_file
-            raise VRRPNoData("VRRP data is not available (wait time exceeded)")
+            raise VRRPNoData('VRRP data is not available (wait time exceeded)')
         except Exception:
             name = cls._name[what]
             raise VRRPError(f'VRRP {name} is not available')
@@ -118,22 +125,31 @@ class VRRP(object):
         conf = ConfigTreeQuery()
         if conf.exists(base):
             # Read VRRP configuration directly from CLI
-            vrrp_config_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                                    get_first_key=True)
+            vrrp_config_dict = conf.get_config_dict(
+                base, key_mangling=('-', '_'), get_first_key=True
+            )
 
             # add disabled groups to the list
             if 'group' in vrrp_config_dict:
                 for group, group_config in vrrp_config_dict['group'].items():
                     if 'disable' not in group_config:
                         continue
-                    disabled.append([group, group_config['interface'], group_config['vrid'], 'DISABLED', ''])
+                    disabled.append(
+                        [
+                            group,
+                            group_config['interface'],
+                            group_config['vrid'],
+                            'DISABLED',
+                            '',
+                        ]
+                    )
 
         # return list with disabled instances
         return disabled
 
     @classmethod
     def format(cls, data):
-        headers = ["Name", "Interface", "VRID", "State", "Priority", "Last Transition"]
+        headers = ['Name', 'Interface', 'VRID', 'State', 'Priority', 'Last Transition']
         groups = []
 
         data = json.loads(data) if isinstance(data, str) else data
@@ -143,7 +159,7 @@ class VRRP(object):
             name = data['iname']
             intf = data['ifp_ifname']
             vrid = data['vrid']
-            state = cls.decode_state(data["state"])
+            state = cls.decode_state(data['state'])
             priority = data['effective_priority']
 
             since = int(time() - float(data['last_transition']))
@@ -153,4 +169,4 @@ class VRRP(object):
 
         # add to the active list disabled instances
         groups.extend(cls.disabled())
-        return(tabulate(groups, headers))
+        return tabulate(groups, headers)
