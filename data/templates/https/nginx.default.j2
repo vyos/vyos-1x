@@ -48,7 +48,7 @@ server {
     ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK';
 
     # proxy settings for HTTP API, if enabled; 503, if not
-    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|docs|openapi.json|redoc|graphql) {
+    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|traceroute|docs|openapi.json|redoc|graphql) {
 {% if api is vyos_defined %}
         proxy_pass http://unix:/run/api.sock;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
