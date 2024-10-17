@@ -871,10 +871,74 @@ def kea_high_availability_json(config):
 
     return dumps(data)
 
+@register_filter('kea_dynamic_dns_update_main_json')
+def kea_dynamic_dns_update_main_json(config):
+    from vyos.kea import kea_parse_ddns_settings
+    from json import dumps
+
+    data = kea_parse_ddns_settings(config)
+
+    return dumps(data, indent=8)[1:-1] + ','
+
+@register_filter('kea_dynamic_dns_update_tsig_key_json')
+def kea_dynamic_dns_update_tsig_key_json(config):
+    from vyos.kea import kea_parse_tsig_algo
+    from json import dumps
+    out = []
+
+    if 'tsig_key' not in config:
+        return dumps(out)
+
+    tsig_keys = config['tsig_key']
+
+    for tsig_key_name, tsig_key_config in tsig_keys.items():
+        tsig_key = {
+            'name': tsig_key_name,
+            'algorithm': kea_parse_tsig_algo(tsig_key_config['algorithm']),
+            'secret': tsig_key_config['secret']
+        }
+        out.append(tsig_key)
+
+    return dumps(out, indent=12)
+
+@register_filter('kea_dynamic_dns_update_domains')
+def kea_dynamic_dns_update_domains(config, type_key):
+    from json import dumps
+    out = []
+
+    if type_key not in config:
+        return dumps(out)
+
+    domains = config[type_key]
+
+    for domain_name, domain_config in domains.items():
+        domain = {
+            'name': domain_name,
+
+        }
+        if 'key_name' in domain_config:
+            domain['key-name'] = domain_config['key_name']
+
+        if 'dns_server' in domain_config:
+            dns_servers = []
+            for dns_server_config in domain_config['dns_server'].values():
+                dns_server = {
+                    'ip-address': dns_server_config['address']
+                }
+                if 'port' in dns_server_config:
+                    dns_server['port'] = int(dns_server_config['port'])
+                dns_servers.append(dns_server)
+            domain['dns-servers'] = dns_servers
+
+        out.append(domain)
+
+    return dumps(out, indent=12)
+
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):
     from vyos.kea import kea_parse_options
     from vyos.kea import kea_parse_subnet
+    from vyos.kea import kea_parse_ddns_settings
     from json import dumps
     out = []
 
@@ -887,6 +951,9 @@ def kea_shared_network_json(shared_networks):
             'authoritative': ('authoritative' in config),
             'subnet4': []
         }
+
+        if 'dynamic_dns_update' in config:
+            network.update(kea_parse_ddns_settings(config['dynamic_dns_update']))
 
         if 'option' in config:
             network['option-data'] = kea_parse_options(config['option'])

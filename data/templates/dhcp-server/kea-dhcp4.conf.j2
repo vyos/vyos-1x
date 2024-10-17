@@ -50,6 +50,19 @@
                 "space": "ubnt"
             }
         ],
+{% if dynamic_dns_update is vyos_defined %}
+        "dhcp-ddns": {
+            "enable-updates": true,
+            "server-ip": "127.0.0.1",
+            "server-port": 53001,
+            "sender-ip": "",
+            "sender-port": 0,
+            "max-queue-size": 1024,
+            "ncr-protocol": "UDP",
+            "ncr-format": "JSON"
+        },
+        {{ dynamic_dns_update | kea_dynamic_dns_update_main_json }}
+{% endif %}
         "hooks-libraries": [
 {% if high_availability is vyos_defined %}
             {

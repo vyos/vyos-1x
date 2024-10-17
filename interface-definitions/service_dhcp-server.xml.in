@@ -10,12 +10,111 @@
         </properties>
         <children>
           #include <include/generic-disable-node.xml.i>
-          <leafNode name="dynamic-dns-update">
+          <node name="dynamic-dns-update">
             <properties>
               <help>Dynamically update Domain Name System (RFC4702)</help>
-              <valueless/>
             </properties>
-          </leafNode>
+            <children>
+              #include <include/dhcp/ddns-settings.xml.i>
+              <tagNode name="tsig-key">
+                <properties>
+                  <help>TSIG key definition for DNS updates</help>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, hyphen and underscore</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="algorithm">
+                    <properties>
+                      <help>TSIG key algorithm</help>
+                      <completionHelp>
+                        <list>hmac-md5 hmac-sha1 hmac-sha224 hmac-sha256 hmac-sha384 hmac-sha512</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>hmac-md5</format>
+                        <description>MD5 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha1</format>
+                        <description>SHA1 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha224</format>
+                        <description>SHA224 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha256</format>
+                        <description>SHA256 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha384</format>
+                        <description>SHA384 HMAC algorithm</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hmac-sha512</format>
+                        <description>SHA512 HMAC algorithm</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(hmac-md5|hmac-sha1|hmac-sha224|hmac-sha256|hmac-sha384|hmac-sha512)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid TSIG key algorithm</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="secret">
+                    <properties>
+                      <help>TSIG key secret (base64-encoded)</help>
+                      <constraint>
+                        <validator name="base64"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <tagNode name="forward-domain">
+                <properties>
+                  <help>Forward DNS domain name</help>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid forward DNS domain name</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="key-name">
+                    <properties>
+                      <help>TSIG key name for forward DNS updates</help>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, numbers, hyphen and underscore</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  #include <include/dhcp/ddns-dns-server.xml.i>
+                </children>
+              </tagNode>
+              <tagNode name="reverse-domain">
+                <properties>
+                  <help>Reverse DNS domain name</help>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <constraintErrorMessage>Invalid reverse DNS domain name</constraintErrorMessage>
+                </properties>
+                <children>
+                  <leafNode name="key-name">
+                    <properties>
+                      <help>TSIG key name for reverse DNS updates</help>
+                      <constraint>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                      </constraint>
+                      <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, numbers, hyphen and underscore</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  #include <include/dhcp/ddns-dns-server.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           <node name="high-availability">
             <properties>
               <help>DHCP high availability configuration</help>
@@ -105,6 +204,14 @@
               <constraintErrorMessage>Invalid shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
             </properties>
             <children>
+              <node name="dynamic-dns-update">
+                <properties>
+                  <help>Dynamically update Domain Name System (RFC4702)</help>
+                </properties>
+                <children>
+                  #include <include/dhcp/ddns-settings.xml.i>
+                </children>
+              </node>
               <leafNode name="authoritative">
                 <properties>
                   <help>Option to make DHCP server authoritative for this physical network</help>
@@ -130,6 +237,14 @@
                   #include <include/dhcp/option-v4.xml.i>
                   #include <include/generic-description.xml.i>
                   #include <include/generic-disable-node.xml.i>
+                  <node name="dynamic-dns-update">
+                    <properties>
+                      <help>Dynamically update Domain Name System (RFC4702)</help>
+                    </properties>
+                    <children>
+                      #include <include/dhcp/ddns-settings.xml.i>
+                    </children>
+                  </node>
                   <leafNode name="exclude">
                     <properties>
                       <help>IP address to exclude from DHCP lease range</help>
