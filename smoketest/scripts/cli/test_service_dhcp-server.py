@@ -170,6 +170,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         wpad                = 'http://wpad.vyos.io/foo/bar'
         server_identifier   = bootfile_server
         ipv6_only_preferred = '300'
+        shoretel_space      = 'ShoreTel IP Phone'
+        shoretel_server     = 'ftpservers=10.0.0.1,country=1,language=1,layer2tagging=1,vlanid=123'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
@@ -193,6 +195,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['option', 'static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1'])
         self.cli_set(pool + ['option', 'ipv6-only-preferred', ipv6_only_preferred])
         self.cli_set(pool + ['option', 'time-zone', 'Europe/London'])
+        self.cli_set(pool + ['option', 'vendor-option', 'shoretel', 'shoretel-server', shoretel_server])
 
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
@@ -277,6 +280,12 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 obj,
                 ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
                 {'name': 'tcode', 'data': 'Europe/London'})
+
+        # Vendor options
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'shoretel-server', 'data': shoretel_server, 'space': shoretel_space})
 
         # Verify pools
         self.verify_config_object(

@@ -48,9 +48,9 @@ def _get_environment(location=None):
         loc_loader=FileSystemLoader(location)
     env = Environment(
         # Don't check if template files were modified upon re-rendering
-        auto_reload=False,
+        auto_reload=True,
         # Cache up to this number of templates for quick re-rendering
-        cache_size=100,
+        cache_size=0,
         loader=loc_loader,
         trim_blocks=True,
         undefined=ChainableUndefined,
@@ -871,6 +871,32 @@ def kea_high_availability_json(config):
 
     return dumps(data)
 
+@register_filter('kea_client_classes')
+def kea_client_classes(shared_networks, client_class=None):
+    """ Check shared_networks/subnets/ranges (pools)/static_mappings
+    for instances of client_class in vendor_option. If client_class
+    is falsey, return True if any vendor_options are present
+    """
+    result = False
+    path = ['option','vendor_option']
+    if client_class:
+      path.append(client_class)
+
+    for name, config in shared_networks.items():
+        if 'disable' in config:
+            continue
+        if result := dict_search_args(config, path):
+          break
+
+        if 'subnet' in config:
+            for subnet, subnet_config in config['subnet'].items():
+                if 'disable' in config:
+                    continue
+                if result := dict_search_args(config, *path):
+                    break
+
+    return result
+
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):
     from vyos.kea import kea_parse_options
@@ -897,11 +923,19 @@ def kea_shared_network_json(shared_networks):
             if 'bootfile_server' in config['option']:
                 network['next-server'] = config['option']['bootfile_server']
 
+            if kea_client_classes(config):
+                if kea_client_classes(config, 'shoretel'):
+                    network['require-client-classes'] = ['shoretel']
+
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
                 if 'disable' in subnet_config:
                     continue
                 network['subnet4'].append(kea_parse_subnet(subnet, subnet_config))
+
+                if kea_client_classes(subnet_config):
+                    if kea_client_classes(subnet_config, 'shoretel'):
+                        network['subnet4'][-1]['require-client-classes'] = ['shoretel']
 
         out.append(network)
 

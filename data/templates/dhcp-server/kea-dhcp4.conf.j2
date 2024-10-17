@@ -1,5 +1,17 @@
 {
     "Dhcp4": {
+        "client-classes": [
+            {
+                "name": "shoretel",
+                "test": "option[60].hex == 'ShoreTel IP Phone'",
+                "only-if-required": true
+            },
+            {
+                "name": "ubnt",
+                "test": "option[60].hex == 'ubnt'",
+                "only-if-required": true
+            }
+        ],
         "interfaces-config": {
 {% if listen_address is vyos_defined %}
             "interfaces": {{ listen_address | kea_address_json }},
@@ -48,7 +60,7 @@
                 "code": 1,
                 "type": "ipv4-address",
                 "space": "ubnt"
-            }
+            },
         ],
         "hooks-libraries": [
 {% if high_availability is vyos_defined %}

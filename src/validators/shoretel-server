@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+### how far to get into vendor option validation?
+### ftpservers=10.0.0.1,country=1,language=1,layer2tagging=1,vlanid=123
+
+${vyos_libexec_dir}/validate-value --regex "[A-Za-z0-9,=\.]+" --value "$1"
