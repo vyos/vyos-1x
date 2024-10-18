@@ -42,8 +42,7 @@ INSTALL_IMAGE = [
 IMPORT_PKI = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'import']
 IMPORT_PKI_NO_PROMPT = [
     '/usr/libexec/vyos/op_mode/pki.py',
-    '--action',
-    'import',
+    'import_pki',
     '--no-prompt',
 ]
 REMOVE_IMAGE = [
