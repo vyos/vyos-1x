@@ -172,6 +172,9 @@ def kea_parse_subnet(subnet, config):
             reservations.append(reservation)
         out['reservations'] = reservations
 
+    if 'dynamic_dns_update' in config:
+        out.update(kea_parse_ddns_settings(config['dynamic_dns_update']))
+
     return out
 
 def kea6_parse_options(config):
@@ -294,6 +297,41 @@ def kea6_parse_subnet(subnet, config):
         out['reservations'] = reservations
 
     return out
+
+def kea_parse_tsig_algo(algo_spec):
+    translate = {
+        'hmac-md5': 'HMAC-MD5',
+        'hmac-sha1': 'HMAC-SHA1',
+        'hmac-sha224': 'HMAC-SHA224',
+        'hmac-sha256': 'HMAC-SHA256',
+        'hmac-sha384': 'HMAC-SHA384',
+        'hmac-sha512': 'HMAC-SHA512'
+    }
+    return translate[algo_spec]
+
+def kea_parse_ddns_settings(config):
+    data = {
+        "ddns-send-updates": 'force_updates' in config,
+        "ddns-override-no-update": 'force_no_update' in config,
+        "ddns-override-client-update": 'force_client_update' in config,
+        "ddns-update-on-renew": 'update_on_renew' in config,
+        "ddns-use-conflict-resolution": 'use_conflict_resolution' in config,
+    }
+
+    if 'replace_client_name' in config:
+        data['ddns-replace-client-name'] = config['replace_client_name']
+    if 'generated_prefix' in config:
+        data['ddns-generated-prefix'] = config['generated_prefix']
+    if 'qualifying_suffix' in config:
+        data['ddns-qualifying-suffix'] = config['qualifying_suffix']
+    if 'ttl_percent' in config:
+        data['ddns-ttl-percent'] = int(config['ttl_percent']) / 100
+    if 'hostname_char_set' in config:
+        data['hostname-char-set'] = config['hostname_char_set']
+    if 'hostname_char_replacement' in config:
+        data['hostname-char-replacement'] = config['hostname_char_replacement']
+
+    return data
 
 def _ctrl_socket_command(inet, command, args=None):
     path = kea_ctrl_socket.format(inet=inet)
