@@ -20,6 +20,7 @@ import socket
 from vyos.template import is_ipv6
 from vyos.template import isc_static_route
 from vyos.template import netmask_from_cidr
+from vyos.template import kea_client_classes
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import file_permissions
 from vyos.utils.process import run
@@ -114,6 +115,13 @@ def kea_parse_subnet(subnet, config):
         if 'bootfile_server' in config['option']:
             out['next-server'] = config['option']['bootfile_server']
 
+        if kea_client_classes(config):
+            if kea_client_classes(config,'shoretel'):
+                if not('required-client-classes' in config):
+                    config['require-client-classes'] = ['shoretel']
+                else:
+                    config['required-client-classes'].append('shoretel')
+
     if 'ignore_client_id' in config:
         out['match-client-id'] = False
 
@@ -137,6 +145,13 @@ def kea_parse_subnet(subnet, config):
 
                 if 'bootfile_server' in range_config['option']:
                     pool['next-server'] = range_config['option']['bootfile_server']
+
+                if kea_client_classes(config):
+                    if kea_client_classes(config,'shoretel'):
+                        if not('required-client-classes' in config):
+                            pool['require-client-classes'] = ['shoretel']
+                        else:
+                            pool['require-client-classes'].append('shoretel')
 
             pools.append(pool)
         out['pools'] = pools
@@ -168,6 +183,13 @@ def kea_parse_subnet(subnet, config):
 
                 if 'bootfile_server' in host_config['option']:
                     reservation['next-server'] = host_config['option']['bootfile_server']
+
+                if kea_client_classes(config):
+                    if kea_client_classes(config,'shoretel'):
+                        if not('required-client-classes' in config):
+                            reservation['require-client-classes'] = ['shoretel']
+                        else:
+                            reservation['require-client-classes'].append('shoretel')
 
             reservations.append(reservation)
         out['reservations'] = reservations

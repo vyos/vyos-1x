@@ -232,6 +232,25 @@
             </leafNode>
           </children>
         </node>
+        <node name="shoretel">
+          <properties>
+            <help>ShoreTel-specfic parameters</help>
+          </properties>
+          <children>
+            <leafNode name="shoretel-server">
+              <properties>
+                <help>ShoreTel phone configuration</help>
+                <valueHelp>
+                  <format>text</format>
+                  <description>Comma-separated parameters for ShoreTel phone configuration</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="shoretel-server"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+      </node>
       </children>
     </node>
     <leafNode name="wins-server">
