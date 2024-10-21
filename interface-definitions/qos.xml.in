@@ -201,13 +201,13 @@
                     <description>No perturbation</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>u32:1-127</format>
+                    <format>u32:1-2147483647</format>
                     <description>Interval in seconds for queue algorithm perturbation (advised: 10)</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="numeric" argument="--range 0-127"/>
+                    <validator name="numeric" argument="--range 0-2147483647"/>
                   </constraint>
-                  <constraintErrorMessage>Interval must be in range 0 to 127</constraintErrorMessage>
+                  <constraintErrorMessage>Interval must be in range 0 to 2147483647</constraintErrorMessage>
                 </properties>
                 <defaultValue>0</defaultValue>
               </leafNode>
