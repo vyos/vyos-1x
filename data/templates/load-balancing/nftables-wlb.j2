@@ -1,0 +1,60 @@
+#!/usr/sbin/nft -f
+
+{% if first_install is not vyos_defined %}
+delete table ip vyos_wanloadbalance
+{% endif %}
+table ip vyos_wanloadbalance {
+    chain wlb_nat_postrouting {
+        type nat hook postrouting priority srcnat - 1; policy accept;
+{% for ifname, health_conf in interface_health.items() if health_state[ifname].if_addr %}
+{%     if disable_source_nat is not vyos_defined %}
+{%         set state = health_state[ifname] %}
+        ct mark {{ state.mark }} counter snat to {{ state.if_addr }}
+{%     endif %}
+{% endfor %}
+    }
+
+    chain wlb_mangle_prerouting {
+        type filter hook prerouting priority mangle; policy accept;
+{% for ifname, health_conf in interface_health.items() %}
+{%     set state = health_state[ifname] %}
+{%     if sticky_connections is vyos_defined %}
+        iifname "{{ ifname }}" ct state new ct mark set {{ state.mark }}
+{%     endif %}
+{% endfor %}
+{% for rule_id, rule_conf in rule.items() %}
+{%     if rule_conf.exclude is vyos_defined %}
+        {{ rule_conf | wlb_nft_rule(rule_id, exclude=True, action='accept') }}
+{%     else %}
+{%         set limit = rule_conf.limit is vyos_defined %}
+        {{ rule_conf | wlb_nft_rule(rule_id, limit=limit, weight=True, health_state=health_state) }}
+        {{ rule_conf | wlb_nft_rule(rule_id, restore_mark=True) }}
+{%     endif %}
+{% endfor %}
+    }
+
+    chain wlb_mangle_output {
+        type filter hook output priority -150; policy accept;
+{% if enable_local_traffic is vyos_defined %}
+        meta mark != 0x0 counter accept
+        meta l4proto icmp counter accept
+        ip saddr 127.0.0.0/8 ip daddr 127.0.0.0/8 counter accept
+{%     for rule_id, rule_conf in rule.items() %}
+{%         if rule_conf.exclude is vyos_defined  %}
+        {{ rule_conf | wlb_nft_rule(rule_id, local=True, exclude=True, action='accept') }}
+{%         else %}
+{%             set limit = rule_conf.limit is vyos_defined %}
+        {{ rule_conf | wlb_nft_rule(rule_id, local=True, limit=limit, weight=True, health_state=health_state) }}
+        {{ rule_conf | wlb_nft_rule(rule_id, local=True, restore_mark=True) }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+    }
+
+{% for ifname, health_conf in interface_health.items() %}
+{%     set state = health_state[ifname] %}
+    chain wlb_mangle_isp_{{ ifname }} {
+        meta mark set {{ state.mark }} ct mark set {{ state.mark }} counter accept
+    }
+{% endfor %}
+}
