@@ -6,6 +6,7 @@ on:
         - closed
       branches:
         - current
+        - equuleus
     workflow_dispatch:
 
 jobs:

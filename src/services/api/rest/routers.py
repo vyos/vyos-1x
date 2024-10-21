@@ -425,9 +425,9 @@ def create_path_import_pki_no_prompt(path):
     correct_paths = ['ca', 'certificate', 'key-pair']
     if path[1] not in correct_paths:
         return False
-    path[1] = '--' + path[1].replace('-', '')
     path[3] = '--key-filename'
-    return path[1:]
+    path.insert(2, '--name')
+    return ['--pki-type'] + path[1:]
 
 
 @router.post('/configure')

@@ -109,7 +109,7 @@ class InternalError(Error):
 
 def _is_op_mode_function_name(name):
     if re.match(
-        r'^(show|clear|reset|restart|add|update|delete|generate|set|renew|release|execute|mtr)',
+        r'^(show|clear|reset|restart|add|update|delete|generate|set|renew|release|execute|import|mtr)',
         name,
     ):
         return True

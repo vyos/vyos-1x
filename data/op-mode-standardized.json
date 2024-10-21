@@ -25,7 +25,7 @@
 "otp.py",
 "qos.py",
 "reset_vpn.py",
-"reverseproxy.py",
+"load-balancing_haproxy.py",
 "route.py",
 "storage.py",
 "system.py",

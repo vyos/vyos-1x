@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="monitoring">
+        <children>
+          <node name="frr-exporter" owner="${vyos_conf_scripts_dir}/service_monitoring_frr-exporter.py">
+            <properties>
+              <help>Prometheus exporter for FRR metrics</help>
+              <priority>1280</priority>
+            </properties>
+            <children>
+              #include <include/listen-address.xml.i>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>9342</defaultValue>
+              </leafNode>
+              #include <include/interface/vrf.xml.i>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
