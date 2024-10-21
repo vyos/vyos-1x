@@ -279,6 +279,20 @@ class PoweroffModel(ApiModel):
         }
 
 
+class TracerouteModel(ApiModel):
+    op: StrictStr
+    host: StrictStr
+
+    class Config:
+        schema_extra = {
+            'example': {
+                'key': 'id_key',
+                'op': 'traceroute',
+                'host': 'host',
+            }
+        }
+
+
 class Success(BaseModel):
     success: bool
     data: Union[str, bool, Dict]

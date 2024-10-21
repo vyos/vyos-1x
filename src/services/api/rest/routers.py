@@ -68,6 +68,7 @@ from .models import RebootModel
 from .models import ResetModel
 from .models import ImportPkiModel
 from .models import PoweroffModel
+from .models import TracerouteModel
 
 
 if TYPE_CHECKING:
@@ -209,6 +210,7 @@ class MultipartRequest(Request):
                         '/container-image',
                         '/image',
                         '/configure-section',
+                        '/traceroute',
                     ):
                         if 'path' not in c:
                             self.form_err = (
@@ -738,6 +740,28 @@ def poweroff_op(data: PoweroffModel):
     except Exception:
         LOG.critical(traceback.format_exc())
         return error(500, 'An internal error occured. Check the logs for details.')
+
+    return success(res)
+
+
+@router.post('/traceroute')
+def traceroute_op(data: TracerouteModel):
+    state = SessionState()
+    session = state.session
+
+    op = data.op
+    host = data.host
+
+    try:
+        if op == 'traceroute':
+            res = session.traceroute(host)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception:
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 

@@ -23,155 +23,155 @@ from vyos.utils.network import vrf_list
 from vyos.utils.process import call
 
 options = {
-    'report': {
+    'report-mode': {
         'mtr': '{command} --report',
         'type': 'noarg',
-        'help': 'This option puts mtr into report mode. When in this mode, mtr will run for the number of cycles specified by the -c option, and then print statistics and exit.'
+        'help': 'This option puts mtr into report mode. When in this mode, mtr will run for the number of cycles specified by the -c option, and then print statistics and exit.',
     },
     'report-wide': {
         'mtr': '{command} --report-wide',
         'type': 'noarg',
-        'help': 'This option puts mtr into wide report mode. When in this mode, mtr will not cut hostnames in the report.'
+        'help': 'This option puts mtr into wide report mode. When in this mode, mtr will not cut hostnames in the report.',
     },
     'raw': {
         'mtr': '{command} --raw',
         'type': 'noarg',
-        'help': 'Use the raw output format. This format is better suited for archival of the measurement results.'
+        'help': 'Use the raw output format. This format is better suited for archival of the measurement results.',
     },
     'json': {
         'mtr': '{command} --json',
         'type': 'noarg',
-        'help': 'Use this option to tell mtr to use the JSON output format.'
+        'help': 'Use this option to tell mtr to use the JSON output format.',
     },
     'split': {
         'mtr': '{command} --split',
         'type': 'noarg',
-        'help': 'Use this option to set mtr to spit out a format that is suitable for a split-user interface.'
+        'help': 'Use this option to set mtr to spit out a format that is suitable for a split-user interface.',
     },
     'no-dns': {
         'mtr': '{command} --no-dns',
         'type': 'noarg',
-        'help': 'Use this option to force mtr to display numeric IP numbers and not try to resolve the host names.'
+        'help': 'Use this option to force mtr to display numeric IP numbers and not try to resolve the host names.',
     },
     'show-ips': {
         'mtr': '{command} --show-ips {value}',
         'type': '<num>',
-        'help': 'Use this option to tell mtr to display both the host names and numeric IP numbers.'
+        'help': 'Use this option to tell mtr to display both the host names and numeric IP numbers.',
     },
     'ipinfo': {
         'mtr': '{command} --ipinfo {value}',
         'type': '<num>',
-        'help': 'Displays information about each IP hop.'
+        'help': 'Displays information about each IP hop.',
     },
     'aslookup': {
         'mtr': '{command} --aslookup',
         'type': 'noarg',
-        'help': 'Displays the Autonomous System (AS) number alongside each hop. Equivalent to --ipinfo 0.'
+        'help': 'Displays the Autonomous System (AS) number alongside each hop. Equivalent to --ipinfo 0.',
     },
     'interval': {
         'mtr': '{command} --interval {value}',
         'type': '<num>',
-        'help': 'Use this option to specify the positive number of seconds between ICMP ECHO requests. The default value for this parameter is one second. The root user may choose values between zero and one.'
+        'help': 'Use this option to specify the positive number of seconds between ICMP ECHO requests. The default value for this parameter is one second. The root user may choose values between zero and one.',
     },
     'report-cycles': {
         'mtr': '{command} --report-cycles {value}',
         'type': '<num>',
-        'help': 'Use this option to set the number of pings sent to determine both the machines on the network and the reliability of those machines.  Each cycle lasts one second.'
+        'help': 'Use this option to set the number of pings sent to determine both the machines on the network and the reliability of those machines.  Each cycle lasts one second.',
     },
     'psize': {
         'mtr': '{command} --psize {value}',
         'type': '<num>',
-        'help': 'This option sets the packet size used for probing. It is in bytes, inclusive IP and ICMP headers. If set to a negative number, every iteration will use a different, random packet size up to that number.'
+        'help': 'This option sets the packet size used for probing. It is in bytes, inclusive IP and ICMP headers. If set to a negative number, every iteration will use a different, random packet size up to that number.',
     },
     'bitpattern': {
         'mtr': '{command} --bitpattern {value}',
         'type': '<num>',
-        'help': 'Specifies bit pattern to use in payload. Should be within range 0 - 255. If NUM is greater than 255, a random pattern is used.'
+        'help': 'Specifies bit pattern to use in payload. Should be within range 0 - 255. If NUM is greater than 255, a random pattern is used.',
     },
     'gracetime': {
         'mtr': '{command} --gracetime {value}',
         'type': '<num>',
-        'help': 'Use this option to specify the positive number of seconds to wait for responses after the final request. The default value is five seconds.'
+        'help': 'Use this option to specify the positive number of seconds to wait for responses after the final request. The default value is five seconds.',
     },
     'tos': {
         'mtr': '{command} --tos {value}',
         'type': '<tos>',
-        'help': 'Specifies value for type of service field in IP header. Should be within range 0 - 255.'
+        'help': 'Specifies value for type of service field in IP header. Should be within range 0 - 255.',
     },
     'mpls': {
         'mtr': '{command} --mpls {value}',
         'type': 'noarg',
-        'help': 'Use this option to tell mtr to display information from ICMP extensions for MPLS (RFC 4950) that are encoded in the response packets.'
+        'help': 'Use this option to tell mtr to display information from ICMP extensions for MPLS (RFC 4950) that are encoded in the response packets.',
     },
     'interface': {
         'mtr': '{command} --interface {value}',
         'type': '<interface>',
         'helpfunction': interface_list,
-        'help': 'Use the network interface with a specific name for sending network probes. This can be useful when you have multiple network interfaces with routes to your destination, for example both wired Ethernet and WiFi, and wish to test a particular interface.'
+        'help': 'Use the network interface with a specific name for sending network probes. This can be useful when you have multiple network interfaces with routes to your destination, for example both wired Ethernet and WiFi, and wish to test a particular interface.',
     },
     'address': {
         'mtr': '{command} --address {value}',
         'type': '<x.x.x.x> <h:h:h:h:h:h:h:h>',
-        'help': 'Use this option to bind the outgoing socket to ADDRESS, so that all packets will be sent with ADDRESS as source address.'
+        'help': 'Use this option to bind the outgoing socket to ADDRESS, so that all packets will be sent with ADDRESS as source address.',
     },
     'first-ttl': {
         'mtr': '{command} --first-ttl {value}',
         'type': '<num>',
-        'help': 'Specifies with what TTL to start. Defaults to 1.'
+        'help': 'Specifies with what TTL to start. Defaults to 1.',
     },
     'max-ttl': {
         'mtr': '{command} --max-ttl {value}',
         'type': '<num>',
-        'help': 'Specifies the maximum number of hops or max time-to-live value mtr will probe. Default is 30.'
+        'help': 'Specifies the maximum number of hops or max time-to-live value mtr will probe. Default is 30.',
     },
     'max-unknown': {
         'mtr': '{command} --max-unknown {value}',
         'type': '<num>',
-        'help': 'Specifies the maximum unknown host. Default is 5.'
+        'help': 'Specifies the maximum unknown host. Default is 5.',
     },
     'udp': {
         'mtr': '{command} --udp',
         'type': 'noarg',
-        'help': 'Use UDP datagrams instead of ICMP ECHO.'
+        'help': 'Use UDP datagrams instead of ICMP ECHO.',
     },
     'tcp': {
         'mtr': '{command} --tcp',
         'type': 'noarg',
-        'help': ' Use TCP SYN packets instead of ICMP ECHO. PACKETSIZE is ignored, since SYN packets can not contain data.'
+        'help': ' Use TCP SYN packets instead of ICMP ECHO. PACKETSIZE is ignored, since SYN packets can not contain data.',
     },
     'sctp': {
         'mtr': '{command} --sctp',
         'type': 'noarg',
-        'help': 'Use Stream Control Transmission Protocol packets instead of ICMP ECHO.'
+        'help': 'Use Stream Control Transmission Protocol packets instead of ICMP ECHO.',
     },
     'port': {
         'mtr': '{command} --port {value}',
         'type': '<port>',
-        'help': 'The target port number for TCP/SCTP/UDP traces.'
+        'help': 'The target port number for TCP/SCTP/UDP traces.',
     },
     'localport': {
         'mtr': '{command} --localport {value}',
         'type': '<port>',
-        'help': 'The source port number for UDP traces.'
+        'help': 'The source port number for UDP traces.',
     },
     'timeout': {
         'mtr': '{command} --timeout {value}',
         'type': '<num>',
-        'help': ' The number of seconds to keep probe sockets open before giving up on the connection.'
+        'help': ' The number of seconds to keep probe sockets open before giving up on the connection.',
     },
     'mark': {
         'mtr': '{command} --mark {value}',
         'type': '<num>',
-        'help': ' Set the mark for each packet sent through this socket similar to the netfilter MARK target but socket-based. MARK is 32 unsigned integer.'
+        'help': ' Set the mark for each packet sent through this socket similar to the netfilter MARK target but socket-based. MARK is 32 unsigned integer.',
     },
     'vrf': {
         'mtr': 'sudo ip vrf exec {value} {command}',
         'type': '<vrf>',
         'help': 'Use specified VRF table',
         'helpfunction': vrf_list,
-        'dflt': 'default'
-        }
-    }
+        'dflt': 'default',
+    },
+}
 
 mtr = {
     4: '/bin/mtr -4',
@@ -204,8 +204,8 @@ def completion_failure(option: str) -> None:
 def expension_failure(option, completions):
     reason = 'Ambiguous' if completions else 'Invalid'
     sys.stderr.write(
-        '\n\n  {} command: {} [{}]\n\n'.format(reason, ' '.join(sys.argv),
-                                               option))
+        '\n\n  {} command: {} [{}]\n\n'.format(reason, ' '.join(sys.argv), option)
+    )
     if completions:
         sys.stderr.write('  Possible completions:\n   ')
         sys.stderr.write('\n   '.join(completions))
@@ -229,13 +229,13 @@ def convert(command, args):
         if longname == 'json':
             to_json = True
         if options[longname]['type'] == 'noarg':
-            command = options[longname]['mtr'].format(
-                command=command, value='')
+            command = options[longname]['mtr'].format(command=command, value='')
         elif not args:
             sys.exit(f'mtr: missing argument for {longname} option')
         else:
             command = options[longname]['mtr'].format(
-                command=command, value=args.first())
+                command=command, value=args.first()
+            )
     return command, to_json
 
 
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     host = args.first()
 
     if not host:
-        sys.exit("mtr: Missing host")
+        sys.exit('mtr: Missing host')
 
     if host == '--get-options' or host == '--get-options-nested':
         if host == '--get-options-nested':
