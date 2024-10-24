@@ -22,6 +22,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.qos import CAKE
 from vyos.utils.process import cmd
 
 base_path = ['qos']
@@ -870,6 +871,68 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         # inherit from non exist group, should commit success with warning
         self.cli_set(['qos', 'traffic-match-group', '3', 'match-group', 'unexpected'])
         self.cli_commit()
+
+    def test_17_cake_updates(self):
+        bandwidth = 1000000
+        rtt = 200
+        interface = self._interfaces[0]
+        policy_name = f'qos-policy-{interface}'
+
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(
+            base_path + ['policy', 'cake', policy_name, 'bandwidth', str(bandwidth)]
+        )
+        self.cli_set(base_path + ['policy', 'cake', policy_name, 'rtt', str(rtt)])
+
+        # commit changes
+        self.cli_commit()
+
+        tmp = get_tc_qdisc_json(interface)
+
+        self.assertEqual('cake', tmp['kind'])
+        # TC store rates as a 32-bit unsigned integer in bps (Bytes per second)
+        self.assertEqual(int(bandwidth * 125), tmp['options']['bandwidth'])
+        # RTT internally is in us
+        self.assertEqual(int(rtt * 1000), tmp['options']['rtt'])
+        self.assertEqual('triple-isolate', tmp['options']['flowmode'])
+        self.assertFalse(tmp['options']['ingress'])
+        self.assertFalse(tmp['options']['nat'])
+        self.assertTrue(tmp['options']['raw'])
+
+        nat = True
+        for flow_isolation in [
+            'blind',
+            'src-host',
+            'dst-host',
+            'dual-dst-host',
+            'dual-src-host',
+            'triple-isolate',
+            'flow',
+            'host',
+        ]:
+            self.cli_set(
+                base_path
+                + ['policy', 'cake', policy_name, 'flow-isolation', flow_isolation]
+            )
+
+            if nat:
+                self.cli_set(
+                    base_path + ['policy', 'cake', policy_name, 'flow-isolation-nat']
+                )
+            else:
+                self.cli_delete(
+                    base_path + ['policy', 'cake', policy_name, 'flow-isolation-nat']
+                )
+
+            self.cli_commit()
+
+            tmp = get_tc_qdisc_json(interface)
+            self.assertEqual(
+                CAKE.flow_isolation_map.get(flow_isolation), tmp['options']['flowmode']
+            )
+
+            self.assertEqual(nat, tmp['options']['nat'])
+            nat = not nat
 
     def test_20_round_robin_policy_default(self):
         interface = self._interfaces[0]

@@ -85,78 +85,67 @@
             <children>
               #include <include/generic-description.xml.i>
               #include <include/qos/bandwidth.xml.i>
-              <node name="flow-isolation">
+              <leafNode name="flow-isolation">
                 <properties>
                   <help>Flow isolation settings</help>
+                  <completionHelp>
+                    <list>blind src-host dst-host host flow dual-src-host dual-dst-host triple-isolate</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>blind</format>
+                    <description>Disables flow isolation, all traffic passes through a single queue</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>src-host</format>
+                    <description>Flows are defined only by source address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dst-host</format>
+                    <description>Flows are defined only by destination address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>host</format>
+                    <description>Flows are defined by source-destination host pairs</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>flow</format>
+                    <description>Flows are defined by the entire 5-tuple</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dual-src-host</format>
+                    <description>Flows are defined by the 5-tuple, fairness is applied first over source addresses, then over individual flows</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dual-dst-host</format>
+                    <description>Flows are defined by the 5-tuple, fairness is applied first over destination addresses, then over individual flows</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>triple-isolate</format>
+                    <description>Flows are defined by the 5-tuple, fairness is applied over source and destination addresses and also over individual flows (default)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(blind|src-host|dst-host|host|flow|dual-src-host|dual-dst-host|triple-isolate)</regex>
+                  </constraint>
                 </properties>
-                <children>
-                  <leafNode name="blind">
-                    <properties>
-                      <help>Disables flow isolation, all traffic passes through a single queue</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="src-host">
-                    <properties>
-                      <help>Flows are defined only by source address</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="dst-host">
-                    <properties>
-                      <help>Flows are defined only by destination address</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="host">
-                    <properties>
-                      <help>Flows are defined by source-destination host pairs</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="flow">
-                    <properties>
-                      <help>Flows are defined by the entire 5-tuple</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="dual-src-host">
-                    <properties>
-                      <help>Flows are defined by the 5-tuple, fairness is applied first over source addresses, then over individual flows</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="dual-dst-host">
-                    <properties>
-                      <help>Flows are defined by the 5-tuple, fairness is applied first over destination addresses, then over individual flows</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="triple-isolate">
-                    <properties>
-                      <help>Flows are defined by the 5-tuple, fairness is applied over source and destination addresses and also over individual flows (default)</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nat">
-                    <properties>
-                      <help>Perform NAT lookup before applying flow-isolation rules</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+                <defaultValue>triple-isolate</defaultValue>
+              </leafNode>
+              <leafNode name="flow-isolation-nat">
+                <properties>
+                  <help>Perform NAT lookup before applying flow-isolation rules</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="rtt">
                 <properties>
                   <help>Round-Trip-Time for Active Queue Management (AQM)</help>
                   <valueHelp>
-                    <format>u32:1-3600000</format>
+                    <format>u32:1-1000000000</format>
                     <description>RTT in ms</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="numeric" argument="--range 1-3600000"/>
+                    <validator name="numeric" argument="--range 1-1000000000"/>
                   </constraint>
-                  <constraintErrorMessage>RTT must be in range 1 to 3600000 milli-seconds</constraintErrorMessage>
+                  <constraintErrorMessage>RTT must be in range 1 to 1000000000 milli-seconds</constraintErrorMessage>
                 </properties>
                 <defaultValue>100</defaultValue>
               </leafNode>

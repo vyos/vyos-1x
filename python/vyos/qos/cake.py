@@ -15,10 +15,25 @@
 
 from vyos.qos.base import QoSBase
 
+
 class CAKE(QoSBase):
+    """
+    https://man7.org/linux/man-pages/man8/tc-cake.8.html
+    """
+
     _direction = ['egress']
 
-    # https://man7.org/linux/man-pages/man8/tc-cake.8.html
+    flow_isolation_map = {
+        'blind': 'flowblind',
+        'src-host': 'srchost',
+        'dst-host': 'dsthost',
+        'dual-dst-host': 'dual-dsthost',
+        'dual-src-host': 'dual-srchost',
+        'triple-isolate': 'triple-isolate',
+        'flow': 'flows',
+        'host': 'hosts',
+    }
+
     def update(self, config, direction):
         tmp = f'tc qdisc add dev {self._interface} root handle 1: cake {direction}'
         if 'bandwidth' in config:
@@ -30,26 +45,16 @@ class CAKE(QoSBase):
             tmp += f' rtt {rtt}ms'
 
         if 'flow_isolation' in config:
-            if 'blind' in config['flow_isolation']:
-                tmp += f' flowblind'
-            if 'dst_host' in config['flow_isolation']:
-                tmp += f' dsthost'
-            if 'dual_dst_host' in config['flow_isolation']:
-                tmp += f' dual-dsthost'
-            if 'dual_src_host' in config['flow_isolation']:
-                tmp += f' dual-srchost'
-            if 'triple_isolate' in config['flow_isolation']:
-                tmp += f' triple-isolate'
-            if 'flow' in config['flow_isolation']:
-                tmp += f' flows'
-            if 'host' in config['flow_isolation']:
-                tmp += f' hosts'
-            if 'nat' in config['flow_isolation']:
-                tmp += f' nat'
-            if 'src_host' in config['flow_isolation']:
-                tmp += f' srchost '
-        else:
-            tmp += f' nonat'
+            isolation_value = self.flow_isolation_map.get(config['flow_isolation'])
+
+            if isolation_value is not None:
+                tmp += f' {isolation_value}'
+            else:
+                raise ValueError(
+                    f'Invalid flow isolation parameter: {config["flow_isolation"]}'
+                )
+
+        tmp += ' nat' if 'flow_isolation_nat' in config else ' nonat'
 
         self._cmd(tmp)
 
