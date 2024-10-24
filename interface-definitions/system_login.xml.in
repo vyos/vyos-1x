@@ -190,7 +190,7 @@
                     <description>Path to home directory</description>
                   </valueHelp>
                   <constraint>
-                    <regex>\/$|(\/[a-zA-Z_0-9-.]+)+</regex>
+                    <regex>(\/[a-zA-Z_0-9-.]+)+\/?$</regex>
                   </constraint>
                 </properties>
               </leafNode>
