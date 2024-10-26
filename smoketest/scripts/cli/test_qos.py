@@ -26,24 +26,41 @@ from vyos.utils.process import cmd
 
 base_path = ['qos']
 
-def get_tc_qdisc_json(interface) -> dict:
+def get_tc_qdisc_json(interface, all=False) -> dict:
     tmp = cmd(f'tc -detail -json qdisc show dev {interface}')
     tmp = loads(tmp)
+
+    if all:
+        return tmp
+
     return next(iter(tmp))
 
-def get_tc_filter_json(interface, direction) -> list:
-    if direction not in ['ingress', 'egress']:
+
+def get_tc_filter_json(interface, direction=None) -> list:
+    if direction not in ['ingress', 'egress', None]:
         raise ValueError()
-    tmp = cmd(f'tc -detail -json filter show dev {interface} {direction}')
+
+    cmd_stmt = f'tc -detail -json filter show dev {interface}'
+    if direction:
+        cmd_stmt += f' {direction}'
+
+    tmp = cmd(cmd_stmt)
     tmp = loads(tmp)
     return tmp
 
-def get_tc_filter_details(interface, direction) -> list:
+
+def get_tc_filter_details(interface, direction=None) -> list:
     # json doesn't contain all params, such as mtu
-    if direction not in ['ingress', 'egress']:
+    if direction not in ['ingress', 'egress', None]:
         raise ValueError()
-    tmp = cmd(f'tc -details filter show dev {interface} {direction}')
+
+    cmd_stmt = f'tc -details filter show dev {interface}'
+    if direction:
+        cmd_stmt += f' {direction}'
+
+    tmp = cmd(cmd_stmt)
     return tmp
+
 
 class TestQoS(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -853,6 +870,57 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         # inherit from non exist group, should commit success with warning
         self.cli_set(['qos', 'traffic-match-group', '3', 'match-group', 'unexpected'])
         self.cli_commit()
+
+    def test_20_round_robin_policy_default(self):
+        interface = self._interfaces[0]
+        policy_name = f'qos-policy-{interface}'
+
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(
+            base_path
+            + ['policy', 'round-robin', policy_name, 'description', 'default policy']
+        )
+
+        # commit changes
+        self.cli_commit()
+
+        tmp = get_tc_qdisc_json(interface, all=True)
+
+        self.assertEqual(2, len(tmp))
+        self.assertEqual('drr', tmp[0]['kind'])
+        self.assertDictEqual({}, tmp[0]['options'])
+        self.assertEqual('sfq', tmp[1]['kind'])
+        self.assertDictEqual(
+            {
+                'limit': 127,
+                'quantum': 1514,
+                'depth': 127,
+                'flows': 128,
+                'divisor': 1024,
+            },
+            tmp[1]['options'],
+        )
+
+        tmp = get_tc_filter_json(interface)
+        self.assertEqual(3, len(tmp))
+
+        for rec in tmp:
+            self.assertEqual('u32', rec['kind'])
+            self.assertEqual(1, rec['pref'])
+            self.assertEqual('all', rec['protocol'])
+
+        self.assertDictEqual(
+            {
+                'fh': '800::800',
+                'order': 2048,
+                'key_ht': '800',
+                'bkt': '0',
+                'flowid': '1:1',
+                'not_in_hw': True,
+                'match': {'value': '0', 'mask': '0', 'offmask': '', 'off': 0},
+            },
+            tmp[2]['options'],
+        )
 
 
 if __name__ == '__main__':
