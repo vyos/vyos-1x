@@ -985,6 +985,137 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             tmp[2]['options'],
         )
 
+    def test_21_shaper_hfsc(self):
+        interface = self._interfaces[0]
+        policy_name = f'qos-policy-{interface}'
+        ul = {
+            'm1': '100kbit',
+            'm2': '150kbit',
+            'd': '100',
+        }
+        ls = {'m2': '120kbit'}
+        rt = {
+            'm1': '110kbit',
+            'm2': '130kbit',
+            'd': '75',
+        }
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(base_path + ['policy', 'shaper-hfsc', policy_name])
+
+        # Policy {policy_name} misses "default" class!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'default', 'upperlimit']
+        )
+
+        # At least one m2 value needs to be set for class: {class_name}
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'default', 'upperlimit', 'm1', ul['m1']]
+        )
+        # {class_name} upperlimit m1 value is set, but no m2 was found!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'default', 'upperlimit', 'm2', ul['m2']]
+        )
+        # {class_name} upperlimit m1 value is set, but no d was found!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'default', 'upperlimit', 'd', ul['d']]
+        )
+        # Linkshare m2 needs to be defined to use upperlimit m2 for class: {class_name}
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'default', 'linkshare', 'm2', ls['m2']]
+        )
+        self.cli_commit()
+
+        # use raw because tc json is incorrect here
+        tmp = cmd(f'tc -details qdisc show dev {interface}')
+        for rec in tmp.split('\n'):
+            rec = rec.strip()
+            if 'root' in rec:
+                self.assertEqual(rec, 'qdisc hfsc 1: root refcnt 2 default 2')
+            else:
+                self.assertRegex(
+                    rec,
+                    r'qdisc sfq \S+: parent 1:2 limit 127p quantum 1514b depth 127 flows 128 divisor 1024 perturb 10sec',
+                )
+        # use raw because tc json is incorrect here
+        tmp = cmd(f'tc -details class show dev {interface}')
+        for rec in tmp.split('\n'):
+            rec = rec.strip().lower()
+            if 'root' in rec:
+                self.assertEqual(rec, 'class hfsc 1: root')
+            elif 'hfsc 1:1' in rec:
+                # m2 \S+bit is auto bandwidth
+                self.assertRegex(
+                    rec,
+                    r'class hfsc 1:1 parent 1: sc m1 0bit d 0us m2 \S+bit ul m1 0bit d 0us m2 \S+bit',
+                )
+            else:
+                self.assertRegex(
+                    rec,
+                    rf'class hfsc 1:2 parent 1:1 leaf \S+: ls m1 0bit d 0us m2 {ls["m2"]} ul m1 {ul["m1"]} d {ul["d"]}ms m2 {ul["m2"]}',
+                )
+
+        for key, val in rt.items():
+            self.cli_set(
+                base_path + ['policy', 'shaper-hfsc', policy_name, 'default', 'realtime', key, val]
+            )
+        self.cli_commit()
+
+        tmp = cmd(f'tc -details class show dev {interface}')
+        for rec in tmp.split('\n'):
+            rec = rec.strip().lower()
+            if 'hfsc 1:2' in rec:
+                self.assertTrue(
+                    f'rt m1 {rt["m1"]} d {rt["d"]}ms m2 {rt["m2"]} ls m1 0bit d 0us m2 {ls["m2"]} ul m1 {ul["m1"]} d {ul["d"]}ms m2 {ul["m2"]}'
+                    in rec
+                )
+
+        # add some class
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'class', '10', 'linkshare', 'm2', '300kbit']
+        )
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'class', '10', 'match', 'tst', 'ip', 'dscp', 'internet']
+        )
+
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'class', '30', 'realtime', 'm2', '250kbit']
+        )
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'class', '30', 'realtime', 'd', '77']
+        )
+        self.cli_set(
+            base_path + ['policy', 'shaper-hfsc', policy_name, 'class', '30', 'match', 'tst30', 'ip', 'dscp', 'critical']
+        )
+        self.cli_commit()
+
+        tmp = cmd(f'tc -details qdisc show dev {interface}')
+        self.assertEqual(4, len(tmp.split('\n')))
+
+        tmp = cmd(f'tc -details class show dev {interface}')
+        tmp = tmp.lower()
+
+        self.assertTrue(
+            f'rt m1 {rt["m1"]} d {rt["d"]}ms m2 {rt["m2"]} ls m1 0bit d 0us m2 {ls["m2"]} ul m1 {ul["m1"]} d {ul["d"]}ms m2 {ul["m2"]}'
+            in tmp
+        )
+        self.assertTrue(': ls m1 0bit d 0us m2 300kbit' in tmp)
+        self.assertTrue(': rt m1 0bit d 77ms m2 250kbit' in tmp)
+
     def test_22_rate_control_default(self):
         interface = self._interfaces[0]
         policy_name = f'qos-policy-{interface}'

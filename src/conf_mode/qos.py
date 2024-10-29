@@ -210,6 +210,46 @@ def _verify_match_group_exist(cls_config, qos):
                 Warning(f'Match group "{group}" does not exist!')
 
 
+def _verify_default_policy_exist(policy, policy_config):
+    if 'default' not in policy_config:
+        raise ConfigError(f'Policy {policy} misses "default" class!')
+
+
+def _check_shaper_hfsc_rate(cls, cls_conf):
+    is_m2_exist = False
+    for crit in TrafficShaperHFSC.criteria:
+        if cls_conf.get(crit, {}).get('m2') is not None:
+            is_m2_exist = True
+
+        if cls_conf.get(crit, {}).get('m1') is not None:
+            for crit_val in ['m2', 'd']:
+                if cls_conf.get(crit, {}).get(crit_val) is None:
+                    raise ConfigError(
+                        f'{cls} {crit} m1 value is set, but no {crit_val} was found!'
+                    )
+
+    if not is_m2_exist:
+        raise ConfigError(f'At least one m2 value needs to be set for class: {cls}')
+
+    if (
+        cls_conf.get('upperlimit', {}).get('m2') is not None
+        and cls_conf.get('linkshare', {}).get('m2') is None
+    ):
+        raise ConfigError(
+            f'Linkshare m2 needs to be defined to use upperlimit m2 for class: {cls}'
+        )
+
+
+def _verify_shaper_hfsc(policy, policy_config):
+    _verify_default_policy_exist(policy, policy_config)
+
+    _check_shaper_hfsc_rate('default', policy_config.get('default'))
+
+    if 'class' in policy_config:
+        for cls, cls_conf in policy_config['class'].items():
+            _check_shaper_hfsc_rate(cls, cls_conf)
+
+
 def verify(qos):
     if not qos or 'interface' not in qos:
         return None
@@ -253,11 +293,13 @@ def verify(qos):
                                 if queue_lim < max_tr:
                                     raise ConfigError(f'Policy "{policy}" uses queue-limit "{queue_lim}" < max-threshold "{max_tr}"!')
                 if policy_type in ['priority_queue']:
-                    if 'default' not in policy_config:
-                        raise ConfigError(f'Policy {policy} misses "default" class!')
+                    _verify_default_policy_exist(policy, policy_config)
                 if policy_type in ['rate_control']:
                     if 'bandwidth' not in policy_config:
                         raise ConfigError('Bandwidth not defined')
+                if policy_type in ['shaper_hfsc']:
+                    _verify_shaper_hfsc(policy, policy_config)
+
                 if 'default' in policy_config:
                     if 'bandwidth' not in policy_config['default'] and policy_type not in ['priority_queue', 'round_robin', 'shaper_hfsc']:
                         raise ConfigError('Bandwidth not defined for default traffic!')
@@ -292,6 +334,7 @@ def generate(qos):
         return None
 
     return None
+
 
 def apply(qos):
     # Always delete "old" shapers first

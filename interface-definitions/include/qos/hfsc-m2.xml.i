@@ -27,6 +27,5 @@
       <description>bps(8),kbps(8*10^3),mbps(8*10^6), gbps, tbps - Byte/sec</description>
     </valueHelp>
   </properties>
-  <defaultValue>100%</defaultValue>
 </leafNode>
 <!-- include end -->

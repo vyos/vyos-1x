@@ -258,7 +258,7 @@ class QoSBase:
                                     has_filter = True
                                     break
 
-                        if self.qostype == 'shaper' and 'prio ' not in filter_cmd:
+                        if self.qostype in ['shaper', 'shaper_hfsc'] and 'prio ' not in filter_cmd:
                             filter_cmd += f' prio {index}'
                         if 'mark' in match_config:
                             mark = match_config['mark']
