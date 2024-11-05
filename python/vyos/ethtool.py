@@ -23,7 +23,7 @@ from vyos.utils.process import popen
 # flow control settings
 _drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront',
                                       'iavf', 'ice', 'i40e', 'hv_netvsc', 'veth', 'ixgbevf',
-                                      'tun']
+                                      'tun', 'vif']
 
 class Ethtool:
     """
@@ -101,8 +101,9 @@ class Ethtool:
         self._features = loads(out)[0]
 
         # Get information about NIC ring buffers
-        out, _ = popen(f'ethtool --json --show-ring {ifname}')
-        self._ring_buffer = loads(out)[0]
+        out, err = popen(f'ethtool --json --show-ring {ifname}')
+        if not bool(err):
+            self._ring_buffer = loads(out)[0]
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
