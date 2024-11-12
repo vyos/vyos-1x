@@ -145,5 +145,5 @@ def get_secure_boot_state() -> bool:
     from vyos.utils.boot import is_uefi_system
     if not is_uefi_system():
         return False
-    tmp = cmd('mokutil --sb-state', expect=[255])
+    tmp = cmd('mokutil --sb-state', expect=[0, 255])
     return bool('enabled' in tmp)
