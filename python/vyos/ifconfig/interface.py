@@ -98,6 +98,10 @@ class Interface(Control):
             'shellcmd': 'ip -json -detail link list dev {ifname}',
             'format': lambda j: jmespath.search('[*].ifalias | [0]', json.loads(j)) or '',
         },
+        'ifindex': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].ifindex | [0]', json.loads(j)) or '',
+        },
         'mac': {
             'shellcmd': 'ip -json -detail link list dev {ifname}',
             'format': lambda j: jmespath.search('[*].address | [0]', json.loads(j)),
@@ -427,6 +431,17 @@ class Interface(Control):
     def _add_interface_to_ct_iface_map(self, vrf_table_id: int):
         nft_command = f'add element inet vrf_zones ct_iface_map {{ "{self.ifname}" : {vrf_table_id} }}'
         self._nft_check_and_run(nft_command)
+
+    def get_ifindex(self):
+        """
+        Get interface index by name
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_ifindex()
+        '2'
+        """
+        return int(self.get_interface('ifindex'))
 
     def get_min_mtu(self):
         """

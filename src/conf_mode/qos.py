@@ -198,9 +198,15 @@ def get_config(config=None):
 def _verify_match(cls_config: dict) -> None:
     if 'match' in cls_config:
         for match, match_config in cls_config['match'].items():
-            if {'ip', 'ipv6'} <= set(match_config):
+            filters = set(match_config)
+            if {'ip', 'ipv6'} <= filters:
                 raise ConfigError(
                     f'Can not use both IPv6 and IPv4 in one match ({match})!')
+
+            if {'interface', 'vif'} & filters:
+                if {'ip', 'ipv6', 'ether'} & filters:
+                    raise ConfigError(
+                        f'Can not combine protocol and interface or vlan tag match ({match})!')
 
 
 def _verify_match_group_exist(cls_config, qos):

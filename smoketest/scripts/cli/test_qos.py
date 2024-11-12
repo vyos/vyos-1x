@@ -21,7 +21,7 @@ from json import loads
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.ifconfig import Section
+from vyos.ifconfig import Section, Interface
 from vyos.qos import CAKE
 from vyos.utils.process import cmd
 
@@ -1005,6 +1005,30 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.assertEqual('tbf', tmp['kind'])
         # TC store rates as a 32-bit unsigned integer in bps (Bytes per second)
         self.assertEqual(int(bandwidth * 125), tmp['options']['rate'])
+
+    def test_23_policy_limiter_iif_filter(self):
+        policy_name = 'smoke_test'
+        base_policy_path = ['qos', 'policy', 'limiter', policy_name]
+
+        self.cli_set(['qos', 'interface', self._interfaces[0], 'ingress', policy_name])
+        self.cli_set(base_policy_path + ['class', '100', 'bandwidth', '20gbit'])
+        self.cli_set(base_policy_path + ['class', '100', 'burst', '3760k'])
+        self.cli_set(base_policy_path + ['class', '100', 'match', 'test', 'interface', self._interfaces[0]])
+        self.cli_set(base_policy_path + ['class', '100', 'priority', '20'])
+        self.cli_set(base_policy_path + ['default', 'bandwidth', '1gbit'])
+        self.cli_set(base_policy_path + ['default', 'burst', '125000000b'])
+        self.cli_commit()
+
+        iif = Interface(self._interfaces[0]).get_ifindex()
+        tc_filters = cmd(f'tc filter show dev {self._interfaces[0]} ingress')
+
+        # class 100
+        self.assertIn('filter parent ffff: protocol all pref 20 basic chain 0', tc_filters)
+        self.assertIn(f'meta(rt_iif eq {iif})', tc_filters)
+        self.assertIn('action order 1:  police 0x1 rate 20Gbit burst 3847500b mtu 2Kb action drop overhead 0b', tc_filters)
+        # default
+        self.assertIn('filter parent ffff: protocol all pref 255 basic chain 0', tc_filters)
+        self.assertIn('action order 1:  police 0x2 rate 1Gbit burst 125000000b mtu 2Kb action drop overhead 0b', tc_filters)
 
 
 if __name__ == '__main__':

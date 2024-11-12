@@ -17,6 +17,7 @@ import os
 import jmespath
 
 from vyos.base import Warning
+from vyos.ifconfig import Interface
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
@@ -253,7 +254,7 @@ class QoSBase:
                     for index, (match, match_config) in enumerate(cls_config['match'].items(), start=1):
                         filter_cmd = filter_cmd_base
                         if not has_filter:
-                            for key in ['mark', 'vif', 'ip', 'ipv6']:
+                            for key in ['mark', 'vif', 'ip', 'ipv6', 'interface']:
                                 if key in match_config:
                                     has_filter = True
                                     break
@@ -263,9 +264,14 @@ class QoSBase:
                         if 'mark' in match_config:
                             mark = match_config['mark']
                             filter_cmd += f' handle {mark} fw'
+
                         if 'vif' in match_config:
                             vif = match_config['vif']
                             filter_cmd += f' basic match "meta(vlan mask 0xfff eq {vif})"'
+                        elif 'interface' in match_config:
+                            iif_name = match_config['interface']
+                            iif = Interface(iif_name).get_ifindex()
+                            filter_cmd += f' basic match "meta(rt_iif eq {iif})"'
 
                         for af in ['ip', 'ipv6']:
                             tc_af = af
