@@ -6,6 +6,9 @@ allow-interfaces={{ interface | join(', ') }}
 {% if browse_domain is vyos_defined and browse_domain | length %}
 browse-domains={{ browse_domain | join(', ') }}
 {% endif %}
+{% if cache_entries is vyos_defined %}
+cache-entries-max={{ cache_entries }}
+{% endif %}
 disallow-other-stacks=no
 
 [wide-area]

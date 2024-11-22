@@ -67,6 +67,23 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="cache-entries">
+                <properties>
+                  <help>Number of resource records cached per interface</help>
+                  <valueHelp>
+                    <format>u32:0</format>
+                    <description>Disable caching</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Resource records to cache per interface</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>4096</defaultValue>
+              </leafNode>
               <leafNode name="vrrp-disable">
                 <properties>
                   <help>Disables mDNS repeater on VRRP interfaces not in MASTER state</help>

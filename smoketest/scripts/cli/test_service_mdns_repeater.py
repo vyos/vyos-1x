@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 base_path = ['service', 'mdns', 'repeater']
 intf_base = ['interfaces', 'dummy']
@@ -137,6 +138,39 @@ class TestServiceMDNSrepeater(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(conf['server']['use-ipv6'], 'yes')
         self.assertEqual(conf['server']['allow-interfaces'], 'dum30, dum40')
         self.assertEqual(conf['reflector']['enable-reflector'], 'yes')
+
+    def test_service_max_cache_entries(self):
+        cli_default_max_cache = default_value(base_path + ['cache-entries'])
+        self.cli_set(base_path)
+
+        # Need at least two interfaces
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['interface', 'dum20'])
+
+        # Need at least two interfaces
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['interface', 'dum30'])
+
+        self.cli_commit()
+
+        # Validate configuration values
+        conf = ConfigParser(delimiters='=')
+        conf.read(config_file)
+        self.assertEqual(conf['server']['cache-entries-max'], cli_default_max_cache)
+
+        # Set max cache entries
+        cache_entries = '1234'
+        self.cli_set(base_path + ['cache-entries', cache_entries])
+
+        self.cli_commit()
+
+        # Validate configuration values
+        conf = ConfigParser(delimiters='=')
+        conf.read(config_file)
+
+        self.assertEqual(conf['server']['cache-entries-max'], cache_entries)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
