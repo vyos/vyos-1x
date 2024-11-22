@@ -131,6 +131,30 @@
                 </properties>
                 <defaultValue>shared</defaultValue>
               </leafNode>
+              <leafNode name="start-session">
+                <properties>
+                  <help>Start session options</help>
+                  <completionHelp>
+                    <list>auto dhcp unclassified-packet</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>auto</format>
+                    <description>Start session with username as the interface name</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcp</format>
+                    <description>Start session on DHCPv4 Discover</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>unclassified-packet</format>
+                    <description>Start session on unclassified-packet</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(auto|dhcp|unclassified-packet)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>dhcp</defaultValue>
+              </leafNode>
               <leafNode name="client-subnet">
                 <properties>
                   <help>Client address pool</help>

@@ -59,7 +59,9 @@ lua-file={{ lua_file }}
 {%         set relay = ',' ~ 'relay=' ~ iface_config.external_dhcp.dhcp_relay  if iface_config.external_dhcp.dhcp_relay is vyos_defined else '' %}
 {%         set giaddr = ',' ~ 'giaddr=' ~ iface_config.external_dhcp.giaddr if iface_config.external_dhcp.giaddr is vyos_defined else '' %}
 {%         set username = ',' ~ 'username=lua:' ~ iface_config.lua_username if iface_config.lua_username is vyos_defined else '' %}
-{{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,{{ range }}start=dhcpv4,ipv6=1{{ relay }}{{ giaddr }}{{ username }}
+{%         set start_map = {'dhcp': 'dhcpv4', 'unclassified-packet': 'up', 'auto': 'auto'} %}
+{%         set start = start_map[iface_config.start_session] %}
+{{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,{{ range }}start={{ start }},ipv6=1{{ relay }}{{ giaddr }}{{ username }}
 {%         if iface_config.vlan_mon is vyos_defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {%         endif %}
