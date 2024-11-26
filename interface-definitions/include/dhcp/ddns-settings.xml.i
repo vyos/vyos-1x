@@ -43,12 +43,12 @@
             <description>Use the name the client sent. If the client sent no name, generate one for
                 the client</description>
         </valueHelp>
-        <defaultValue>never</defaultValue>
         <constraint>
             <regex>(never|always|when-present|when-not-present)</regex>
         </constraint>
         <constraintErrorMessage>Invalid replace client name mode</constraintErrorMessage>
     </properties>
+    <defaultValue>never</defaultValue>
 </leafNode>
 <leafNode name="generated-prefix">
     <properties>
