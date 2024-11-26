@@ -100,7 +100,8 @@ protocols {
 service {
     dhcp-server {
         dynamic-dns-update {
-            forward-ddns-domain-name domain.lan {
+            force-updates
+            forward-domain domain.lan {
                 dns-server 1 {
                     address 192.168.0.1
                 }
@@ -109,7 +110,7 @@ service {
                 }
                 key-name domain-lan-updates
             }
-            reverse-ddns-domain-name 0.168.192.in-addr.arpa {
+            reverse-domain 0.168.192.in-addr.arpa {
                 dns-server 1 {
                     address 192.168.0.1
                 }
@@ -118,12 +119,11 @@ service {
                 }
                 key-name reverse-0-168-192
             }
-            force-updates
-            tsig-key-name domain-lan-updates {
+            tsig-key domain-lan-updates {
                 algorithm hmac-sha256
                 secret SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==
             }
-            tsig-key-name reverse-0-168-192 {
+            tsig-key reverse-0-168-192 {
                 algorithm hmac-sha256
                 secret VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==
             }
@@ -137,9 +137,9 @@ service {
             }
             subnet 192.168.0.0/24 {
                 dynamic-dns-update {
+                    force-updates
                     generated-prefix myhost
                     qualifying-suffix lan1.domain.lan
-                    force-updates
                 }
                 option {
                     default-router 192.168.0.1
