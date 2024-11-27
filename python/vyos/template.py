@@ -866,6 +866,9 @@ def kea_dynamic_dns_update_main_json(config):
 
     data = kea_parse_ddns_settings(config)
 
+    if len(data) == 0:
+        return ''
+
     return dumps(data, indent=8)[1:-1] + ','
 
 @register_filter('kea_dynamic_dns_update_tsig_key_json')

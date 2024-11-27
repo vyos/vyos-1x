@@ -1129,12 +1129,12 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         ddns = base_path + ['dynamic-dns-update']
 
-        self.cli_set(ddns + ['force-updates'])
-        self.cli_set(ddns + ['use-conflict-resolution'])
-        self.cli_set(ddns + ['force-no-update'])
-        self.cli_set(ddns + ['force-client-update'])
+        self.cli_set(ddns + ['send-updates', 'enable'])
+        self.cli_set(ddns + ['conflict-resolution', 'enable'])
+        self.cli_set(ddns + ['force-update', 'enable'])
+        self.cli_set(ddns + ['force-update-both', 'enable'])
         self.cli_set(ddns + ['replace-client-name', 'always'])
-        self.cli_set(ddns + ['update-on-renew'])
+        self.cli_set(ddns + ['update-on-renew', 'enable'])
 
         self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'algorithm', 'hmac-sha256'])
         self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'secret', 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='])
@@ -1151,8 +1151,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         shared = base_path + ['shared-network-name', shared_net_name]
 
-        self.cli_set(shared + ['dynamic-dns-update', 'force-updates'])
-        self.cli_set(shared + ['dynamic-dns-update', 'use-conflict-resolution'])
+        self.cli_set(shared + ['dynamic-dns-update', 'send-updates', 'enable'])
+        self.cli_set(shared + ['dynamic-dns-update', 'conflict-resolution', 'enable'])
         self.cli_set(shared + ['dynamic-dns-update', 'ttl-percent', '75'])
 
         pool = shared + [ 'subnet', subnet]
@@ -1162,7 +1162,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
-        self.cli_set(pool + ['dynamic-dns-update', 'force-updates'])
+        self.cli_set(pool + ['dynamic-dns-update', 'send-updates'])
         self.cli_set(pool + ['dynamic-dns-update', 'generated-prefix', 'myfunnyprefix'])
         self.cli_set(pool + ['dynamic-dns-update', 'qualifying-suffix', 'suffix.lan'])
         self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-set', 'xXyYzZ'])

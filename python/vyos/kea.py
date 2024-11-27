@@ -364,14 +364,26 @@ def kea_parse_tsig_algo(algo_spec):
     }
     return translate[algo_spec]
 
+def kea_parse_enable_disable(value):
+    return True if value == 'enable' else False
+
 def kea_parse_ddns_settings(config):
-    data = {
-        "ddns-send-updates": 'force_updates' in config,
-        "ddns-override-no-update": 'force_no_update' in config,
-        "ddns-override-client-update": 'force_client_update' in config,
-        "ddns-update-on-renew": 'update_on_renew' in config,
-        "ddns-use-conflict-resolution": 'use_conflict_resolution' in config,
-    }
+    data = {}
+
+    if send_updates := config.get('send_updates'):
+        data['ddns-send-updates'] = kea_parse_enable_disable(send_updates)
+
+    if update_both := config.get('force_update_both'):
+        data['ddns-override-client-update'] = kea_parse_enable_disable(force_update)
+
+    if force_update := config.get('force_update'):
+        data['ddns-override-no-update'] = kea_parse_enable_disable(update_both)
+
+    if update_on_renew := config.get('update_on_renew'):
+        data['ddns-update-on-renew'] = kea_parse_enable_disable(update_on_renew)
+
+    if conflict_resolution := config.get('conflict_resolution'):
+        data['ddns-use-conflict-resolution'] = kea_parse_enable_disable(conflict_resolution)
 
     if 'replace_client_name' in config:
         data['ddns-replace-client-name'] = config['replace_client_name']

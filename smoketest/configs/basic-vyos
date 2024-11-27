@@ -100,7 +100,7 @@ protocols {
 service {
     dhcp-server {
         dynamic-dns-update {
-            force-updates
+            send-updates enable
             forward-domain domain.lan {
                 dns-server 1 {
                     address 192.168.0.1
@@ -127,17 +127,17 @@ service {
                 algorithm hmac-sha256
                 secret VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==
             }
-            use-conflict-resolution
+            conflict-resolution enable
         }
         shared-network-name LAN {
             authoritative
             dynamic-dns-update {
-                force-updates
+                send-updates enable
                 ttl-percent 75
             }
             subnet 192.168.0.0/24 {
                 dynamic-dns-update {
-                    force-updates
+                    send-updates enable
                     generated-prefix myhost
                     qualifying-suffix lan1.domain.lan
                 }

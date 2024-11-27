@@ -1,20 +1,62 @@
 <!-- include start from dhcp/ddns-settings.xml.i -->
-<leafNode name="force-updates">
+<leafNode name="send-updates">
     <properties>
-        <help>Send updates for this scope</help>
-        <valueless />
+        <help>Enable or disable updates for this scope</help>
+        <completionHelp>
+            <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+            <format>enable</format>
+            <description>Enable updates for this scope</description>
+        </valueHelp>
+        <valueHelp>
+            <format>disable</format>
+            <description>Disable updates for this scope</description>
+        </valueHelp>
+        <constraint>
+            <regex>(enable|disable)</regex>
+        </constraint>
+        <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
-<leafNode name="force-client-update">
+<leafNode name="force-update-both">
     <properties>
         <help>Always update both forward and reverse DNS data, regardless of the client's request</help>
-        <valueless />
+        <completionHelp>
+            <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+            <format>enable</format>
+            <description>Force update both forward and reverse DNS records</description>
+        </valueHelp>
+        <valueHelp>
+            <format>disable</format>
+            <description>Respect client request settings</description>
+        </valueHelp>
+        <constraint>
+            <regex>(enable|disable)</regex>
+        </constraint>
+        <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
-<leafNode name="force-no-update">
+<leafNode name="force-update">
     <properties>
         <help>Perform a DDNS update, even if the client instructs the server not to</help>
-        <valueless />
+        <completionHelp>
+            <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+            <format>enable</format>
+            <description>Force DDNS updates regardless of client request</description>
+        </valueHelp>
+        <valueHelp>
+            <format>disable</format>
+            <description>Respect client request settings</description>
+        </valueHelp>
+        <constraint>
+            <regex>(enable|disable)</regex>
+        </constraint>
+        <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
 <leafNode name="replace-client-name">
@@ -48,7 +90,6 @@
         </constraint>
         <constraintErrorMessage>Invalid replace client name mode</constraintErrorMessage>
     </properties>
-    <defaultValue>never</defaultValue>
 </leafNode>
 <leafNode name="generated-prefix">
     <properties>
@@ -71,13 +112,41 @@
 <leafNode name="update-on-renew">
     <properties>
         <help>Update DNS record on lease renew</help>
-        <valueless />
+        <completionHelp>
+            <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+            <format>enable</format>
+            <description>Update DNS record on lease renew</description>
+        </valueHelp>
+        <valueHelp>
+            <format>disable</format>
+            <description>Do not update DNS record on lease renew</description>
+        </valueHelp>
+        <constraint>
+            <regex>(enable|disable)</regex>
+        </constraint>
+        <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
-<leafNode name="use-conflict-resolution">
+<leafNode name="conflict-resolution">
     <properties>
-        <help>Defines DNS conflict resolution behavior</help>
-        <valueless />
+        <help>DNS conflict resolution behavior</help>
+        <completionHelp>
+            <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+            <format>enable</format>
+            <description>Enable DNS conflict resolution</description>
+        </valueHelp>
+        <valueHelp>
+            <format>disable</format>
+            <description>Disable DNS conflict resolution</description>
+        </valueHelp>
+        <constraint>
+            <regex>(enable|disable)</regex>
+        </constraint>
+        <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
 <leafNode name="ttl-percent">
