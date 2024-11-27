@@ -1162,7 +1162,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
-        self.cli_set(pool + ['dynamic-dns-update', 'send-updates'])
+        self.cli_set(pool + ['dynamic-dns-update', 'send-updates', 'enable'])
         self.cli_set(pool + ['dynamic-dns-update', 'generated-prefix', 'myfunnyprefix'])
         self.cli_set(pool + ['dynamic-dns-update', 'qualifying-suffix', 'suffix.lan'])
         self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-set', 'xXyYzZ'])
