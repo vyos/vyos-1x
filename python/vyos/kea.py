@@ -374,10 +374,10 @@ def kea_parse_ddns_settings(config):
         data['ddns-send-updates'] = kea_parse_enable_disable(send_updates)
 
     if update_both := config.get('force_update_both'):
-        data['ddns-override-client-update'] = kea_parse_enable_disable(force_update)
+        data['ddns-override-client-update'] = kea_parse_enable_disable(update_both)
 
     if force_update := config.get('force_update'):
-        data['ddns-override-no-update'] = kea_parse_enable_disable(update_both)
+        data['ddns-override-no-update'] = kea_parse_enable_disable(force_update)
 
     if update_on_renew := config.get('update_on_renew'):
         data['ddns-update-on-renew'] = kea_parse_enable_disable(update_on_renew)
