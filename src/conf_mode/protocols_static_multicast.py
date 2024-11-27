@@ -86,10 +86,10 @@ def verify(mroute):
     if mroute is None:
         return None
 
-    for route in mroute['mroute']:
-        route = route.split('/')
+    for mcast_route in mroute['mroute']:
+        route = mcast_route.split('/')
         if IPv4Address(route[0]) < IPv4Address('224.0.0.0'):
-            raise ConfigError(route + " not a multicast network")
+            raise ConfigError(f'{mcast_route} not a multicast network')
 
 
 def generate(mroute):
