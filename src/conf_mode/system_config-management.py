@@ -39,6 +39,9 @@ def get_config(config=None):
 
 
 def verify(mgmt):
+    if mgmt is None:
+        return
+
     d = mgmt.config_dict
     confirm = d.get('commit_confirm', {})
     if confirm.get('action', '') == 'reload' and 'commit_revisions' not in d:
