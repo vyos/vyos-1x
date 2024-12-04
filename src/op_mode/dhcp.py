@@ -110,23 +110,19 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         data_lease['pool'] = kea_get_pool_from_subnet_id(active_config, inet_suffix, lease['subnet-id']) if active_config else '-'
         data_lease['end'] = lease['expire_timestamp'].timestamp() if lease['expire_timestamp'] else None
         data_lease['origin'] = 'local' # TODO: Determine remote in HA
+        data_lease['hostname'] = lease.get('hostname', '-')
+        # remove trailing dot to ensure consistency for `vyos-hostsd-client`
+        if data_lease['hostname'][-1] == '.':
+            data_lease['hostname'] = data_lease['hostname'][:-1]
 
         if family == 'inet':
             data_lease['mac'] = lease['hw-address']
             data_lease['start'] = lease['start_timestamp'].timestamp()
-            data_lease['hostname'] = lease.get('hostname', "-")
-            # remove trailing dot to ensure consistency for `vyos-hostsd-client`
-            if data_lease['hostname'][-1] == '.':
-                data_lease['hostname'] = data_lease['hostname'][:-1]
 
         if family == 'inet6':
             data_lease['last_communication'] = lease['start_timestamp'].timestamp()
             data_lease['duid'] = _format_hex_string(lease['duid'])
             data_lease['type'] = lease['type']
-            data_lease['hostname'] = lease.get('hostname', "-")
-            # remove trailing dot to ensure consistency for `vyos-hostsd-client`
-            if data_lease['hostname'][-1] == '.':
-                data_lease['hostname'] = data_lease['hostname'][:-1]
 
             if lease['type'] == 'IA_PD':
                 prefix_len = lease['prefix-len']
