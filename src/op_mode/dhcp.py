@@ -83,7 +83,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
     inet_suffix = '6' if family == 'inet6' else '4'
     try:
         leases = kea_get_leases(inet_suffix)
-    except Exception as e:
+    except Exception:
         raise vyos.opmode.DataUnavailable('Cannot fetch DHCP server lease information')
 
     if pool is None:
@@ -93,7 +93,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
 
     try:
         active_config = kea_get_active_config(inet_suffix)
-    except Exception as e:
+    except Exception:
         raise vyos.opmode.DataUnavailable('Cannot fetch DHCP server configuration')
 
     data = []
