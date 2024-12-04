@@ -114,13 +114,19 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         if family == 'inet':
             data_lease['mac'] = lease['hw-address']
             data_lease['start'] = lease['start_timestamp'].timestamp()
-            data_lease['hostname'] = lease.get('hostname', "-").rstrip('.') # remove trailing dot to ensure consistency for `vyos-hostsd-client`
+            data_lease['hostname'] = lease.get('hostname', "-")
+            # remove trailing dot to ensure consistency for `vyos-hostsd-client`
+            if data_lease['hostname'][-1] == '.':
+                data_lease['hostname'] = data_lease['hostname'][:-1]
 
         if family == 'inet6':
             data_lease['last_communication'] = lease['start_timestamp'].timestamp()
             data_lease['duid'] = _format_hex_string(lease['duid'])
             data_lease['type'] = lease['type']
-            data_lease['hostname'] = lease.get('hostname', "-").rstrip('.') # remove trailing dot to ensure consistency for `vyos-hostsd-client`
+            data_lease['hostname'] = lease.get('hostname', "-")
+            # remove trailing dot to ensure consistency for `vyos-hostsd-client`
+            if data_lease['hostname'][-1] == '.':
+                data_lease['hostname'] = data_lease['hostname'][:-1]
 
             if lease['type'] == 'IA_PD':
                 prefix_len = lease['prefix-len']
