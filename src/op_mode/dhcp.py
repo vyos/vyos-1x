@@ -19,6 +19,7 @@ import sys
 import typing
 
 from datetime import datetime
+from datetime import timezone
 from glob import glob
 from ipaddress import ip_address
 from tabulate import tabulate
@@ -62,7 +63,7 @@ def _format_hex_string(in_str):
     return out_str
 
 
-def _find_list_of_dict_index(lst, key='ip', value='') -> int:
+def _find_list_of_dict_index(lst, key='ip', value=''):
     """
     Find the index entry of list of dict matching the dict value
     Exampe:
@@ -131,12 +132,12 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         data_lease['remaining'] = '-'
 
         if lease['valid-lft'] > 0:
-            data_lease['remaining'] = lease['expire_timestamp'] - datetime.utcnow()
+            data_lease['remaining'] = lease['expire_timestamp'] - datetime.now(timezone.utc)
 
             if data_lease['remaining'].days >= 0:
                 # substraction gives us a timedelta object which can't be formatted with strftime
                 # so we use str(), split gets rid of the microseconds
-                data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
+                data_lease['remaining'] = str(data_lease['remaining']).split('.')[0]
 
         # Do not add old leases
         if data_lease['remaining'] != '' and data_lease['pool'] in pool and data_lease['state'] != 'free':
@@ -151,7 +152,8 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
                 checked.append(addr)
             else:
                 idx = _find_list_of_dict_index(data, key='ip', value=addr)
-                data.pop(idx)
+                if idx is not None:
+                    data.pop(idx)
 
     if sorted:
         if sorted == 'ip':
@@ -283,11 +285,11 @@ def _get_raw_server_static_mappings(family='inet', pool=None, sorted=None):
     if sorted:
         if sorted == 'ip':
             if family == 'inet6':
-                data.sort(key = lambda x:ip_address(x['ipv6-address']))
+                mappings.sort(key = lambda x:ip_address(x['ipv6-address']))
             else:
-                data.sort(key = lambda x:ip_address(x['ip-address']))
+                mappings.sort(key = lambda x:ip_address(x['ip-address']))
         else:
-            data.sort(key = lambda x:x[sorted])
+            mappings.sort(key = lambda x:x[sorted])
     return mappings
 
 def _get_formatted_server_static_mappings(raw_data, family='inet'):
