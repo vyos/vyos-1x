@@ -279,22 +279,36 @@ def _get_raw_server_static_mappings(family='inet', pool=None, sorted=None):
 
     if sorted:
         if sorted == 'ip':
-            data.sort(key = lambda x:ip_address(x['ip-address']))
+            if family == 'inet6':
+                data.sort(key = lambda x:ip_address(x['ipv6-address']))
+            else:
+                data.sort(key = lambda x:ip_address(x['ip-address']))
         else:
             data.sort(key = lambda x:x[sorted])
     return mappings
 
 def _get_formatted_server_static_mappings(raw_data, family='inet'):
     data_entries = []
-    for entry in raw_data:
-        pool = entry.get('pool')
-        subnet = entry.get('subnet')
-        name = entry.get('name')
-        ip_addr = entry.get('ip-address', 'N/A')
-        mac_addr = entry.get('mac', 'N/A')
-        duid = entry.get('duid', 'N/A')
-        description = entry.get('description', 'N/A')
-        data_entries.append([pool, subnet, name, ip_addr, mac_addr, duid, description])
+    if family == 'inet':
+        for entry in raw_data:
+            pool = entry.get('pool')
+            subnet = entry.get('subnet')
+            name = entry.get('name')
+            ip_addr = entry.get('ip-address', 'N/A')
+            mac_addr = entry.get('mac', 'N/A')
+            duid = entry.get('duid', 'N/A')
+            description = entry.get('description', 'N/A')
+            data_entries.append([pool, subnet, name, ip_addr, mac_addr, duid, description])
+    elif family == 'inet6':
+        for entry in raw_data:
+            pool = entry.get('pool')
+            subnet = entry.get('subnet')
+            name = entry.get('name')
+            ip_addr = entry.get('ipv6-address', 'N/A')
+            mac_addr = entry.get('mac', 'N/A')
+            duid = entry.get('duid', 'N/A')
+            description = entry.get('description', 'N/A')
+            data_entries.append([pool, subnet, name, ip_addr, mac_addr, duid, description])
 
     headers = ['Pool', 'Subnet', 'Name', 'IP Address', 'MAC Address', 'DUID', 'Description']
     output = tabulate(data_entries, headers, numalign='left')
