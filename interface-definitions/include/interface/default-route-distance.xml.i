@@ -4,7 +4,7 @@
     <help>Distance for installed default route</help>
     <valueHelp>
       <format>u32:1-255</format>
-      <description>Distance for the default route from DHCP server</description>
+      <description>Distance for the default route received from the server</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-255"/>
