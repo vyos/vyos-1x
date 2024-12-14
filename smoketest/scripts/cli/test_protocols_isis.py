@@ -420,10 +420,15 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
     def test_isis_11_srv6(self):
         locator = "TEST"
         interface = 'lo'
+        srv6_iface = 'dum6'
+
+        # The dummy interface used to install SRv6 SIDs in the Linux data plane
+        self.cli_set(['interfaces', 'dummy', srv6_iface])
 
         self.cli_set(base_path + ['net', net])
         self.cli_set(base_path + ['interface', interface])
         self.cli_set(base_path + ['segment-routing', 'srv6', 'locator', locator])
+        self.cli_set(base_path + ['segment-routing', 'srv6', 'interface', srv6_iface])
 
         # Commit main ISIS changes
         self.cli_commit()
@@ -475,6 +480,47 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # Verify interface ISIS changes
         tmp = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
         self.assertIn(f' isis fast-reroute ti-lfa level-1 node-protection link-fallback', tmp)
+
+    def test_isis_14_segment_routing_srv6_advanced(self):
+        # Configure system SRv6 locator and interface
+        locator = 'TEST'
+        sr_base = ['protocols', 'segment-routing']
+        self.cli_set(sr_base + ['srv6', 'locator', 'TEST', 'prefix', '2001:db8::/64'])
+        self.cli_set(sr_base + ['interface', 'lo'])
+
+        # The dummy interface used to install SRv6 SIDs in the Linux data plane
+        dum_iface = 'dum6'
+        self.cli_set(['interfaces', 'dummy', dum_iface])
+
+        # Set a basic IS-IS config
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', 'lo'])
+
+        # Configure IS-IS SRv6
+        srv6_base_path = base_path + ['segment-routing', 'srv6']
+        self.cli_set(srv6_base_path + ['locator', locator])
+        self.cli_set(srv6_base_path + ['interface', dum_iface])
+        self.cli_commit()
+
+        tmp = self.getFRRconfig(f'router isis {domain}', stop_section='^exit')
+        self.assertIn(' segment-routing srv6', tmp)
+        self.assertIn(f'  locator {locator}', tmp)
+        self.assertIn(f'  interface {dum_iface}', tmp)
+
+        # Test node-msd configuration
+        self.cli_set(srv6_base_path + ['node-msd', 'max-end-d', '40'])
+        self.cli_set(srv6_base_path + ['node-msd', 'max-end-pop', '50'])
+        self.cli_set(srv6_base_path + ['node-msd', 'max-h-encaps', '60'])
+        self.cli_set(srv6_base_path + ['node-msd', 'max-segs-left', '70'])
+        self.cli_commit()
+
+        tmp = self.getFRRconfig(f'router isis {domain}', stop_section='^exit')
+        self.assertIn('  node-msd', tmp)
+        self.assertIn('   max-end-d 40', tmp)
+        self.assertIn('   max-end-pop 50', tmp)
+        self.assertIn('   max-h-encaps 60', tmp)
+        self.assertIn('   max-segs-left 70', tmp)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
