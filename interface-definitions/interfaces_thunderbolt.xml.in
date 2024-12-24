@@ -39,14 +39,14 @@
             <properties>
               <help>PCI device address of the Thunderbolt controller port</help>
               <completionHelp>
-                <list>00:0d.2 00:0d.3</list>
+                <script>${vyos_completion_dir}/list_thunderbolt_pci_addresses.sh --no-running</script>
               </completionHelp>
               <valueHelp>
                 <format>&lt;hh:hh.h&gt;</format>
                 <description>PCI device address of the Thunderbolt controller port</description>
               </valueHelp>
               <constraint>
-                <regex>[0-9a-fA-F]{2}:[0-9a-fA-F]{2}.[0-9]+</regex>
+                <validator name="thunderbolt-pci-address" />
               </constraint>
             </properties>
           </leafNode>
