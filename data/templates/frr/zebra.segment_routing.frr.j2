@@ -1,23 +1,32 @@
 !
-{% if srv6.locator is vyos_defined %}
+{% if srv6 is vyos_defined %}
 segment-routing
  srv6
+{%     if srv6.encapsulation is vyos_defined %}
+  encapsulation
+{%         if srv6.encapsulation.source_address is vyos_defined %}
+   source-address {{ srv6.encapsulation.source_address }}
+{%         endif %}
+  exit
+{%     endif %}
+{%     if srv6.locator is vyos_defined %}
   locators
-{%     for locator, locator_config in srv6.locator.items() %}
+{%         for locator, locator_config in srv6.locator.items() %}
    locator {{ locator }}
-{%         if locator_config.prefix is vyos_defined %}
+{%             if locator_config.prefix is vyos_defined %}
     prefix {{ locator_config.prefix }} block-len {{ locator_config.block_len }} node-len {{ locator_config.node_len }} func-bits {{ locator_config.func_bits }}
-{%         endif %}
-{%         if locator_config.behavior_usid is vyos_defined %}
+{%             endif %}
+{%             if locator_config.behavior_usid is vyos_defined %}
     behavior usid
-{%         endif %}
-{%         if locator_config.format is vyos_defined %}
+{%             endif %}
+{%             if locator_config.format is vyos_defined %}
     format {{ locator_config.format }}
-{%         endif %}
+{%             endif %}
     exit
     !
-{%     endfor %}
+{%         endfor %}
   exit
+{%     endif %}
   !
 exit
 !

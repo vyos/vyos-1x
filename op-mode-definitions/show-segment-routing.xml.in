@@ -18,6 +18,12 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </node>
+              <node name="manager">
+                <properties>
+                  <help>Verify SRv6 manager</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
             </children>
           </node>
         </children>
