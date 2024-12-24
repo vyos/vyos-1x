@@ -16,10 +16,6 @@ ExecStart={{ vrf_command }}/usr/sbin/blackbox_exporter \
 {% else %}
         --web.listen-address=:{{ port }} \
 {% endif %}
-{% if config_file is vyos_defined %}
-        --config.file={{ config_file }}
-{% else %}
         --config.file=/etc/blackbox_exporter/config.yml
-{% endif %}
 [Install]
 WantedBy=multi-user.target

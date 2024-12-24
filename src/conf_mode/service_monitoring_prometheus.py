@@ -127,6 +127,12 @@ def generate(monitoring):
             'prometheus/blackbox_exporter.service.j2',
             monitoring['blackbox_exporter'],
         )
+        # Render blackbox_exporter config file
+        render(
+            '/etc/blackbox_exporter/config.yml',
+            'prometheus/blackbox_exporter.yml.j2',
+            monitoring['blackbox_exporter'],
+        )
 
     return None
 

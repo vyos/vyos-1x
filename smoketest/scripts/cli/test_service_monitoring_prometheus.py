@@ -89,6 +89,54 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
 
+    def test_04_blackbox_exporter_with_config(self):
+        self.cli_set(base_path + ['blackbox-exporter', 'listen-address', listen_ip])
+        self.cli_set(
+            base_path
+            + [
+                'blackbox-exporter',
+                'modules',
+                'dns',
+                'name',
+                'dns_ip4',
+                'preferred-ip-protocol',
+                'ip4',
+            ]
+        )
+        self.cli_set(
+            base_path
+            + [
+                'blackbox-exporter',
+                'modules',
+                'dns',
+                'name',
+                'dns_ip4',
+                'query-type',
+                'A',
+            ]
+        )
+        self.cli_set(
+            base_path
+            + [
+                'blackbox-exporter',
+                'modules',
+                'icmp',
+                'name',
+                'icmp_ip6',
+                'preferred-ip-protocol',
+                'ip6',
+            ]
+        )
+
+        # commit changes
+        self.cli_commit()
+
+        file_content = read_file(blackbox_exporter_service_file)
+        self.assertIn(f'{listen_ip}:9115', file_content)
+
+        # Check for running process
+        self.assertTrue(process_named_running(BLACKBOX_EXPORTER_PROCESS_NAME))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
