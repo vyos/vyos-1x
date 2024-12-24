@@ -36,6 +36,31 @@
                   #include <include/interface/vrf.xml.i>
                 </children>
               </node>
+              <node name="blackbox-exporter">
+                <properties>
+                  <help>Prometheus exporter for probing endpoints</help>
+                </properties>
+                <children>
+                  #include <include/listen-address.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>9115</defaultValue>
+                  </leafNode>
+                  #include <include/interface/vrf.xml.i>
+                  <leafNode name="config-file">
+                    <properties>
+                      <help>Configuration to be used for blackbox exporter instead of default config</help>
+                      <valueHelp>
+                        <format>filename</format>
+                        <description>Configuration filename, must be under /config/prometheus_exporter</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="file-path" argument="--file --parent-dir /config/prometheus_exporter --strict"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
         </children>
