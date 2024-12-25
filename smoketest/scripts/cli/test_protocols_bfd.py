@@ -22,7 +22,6 @@ from vyos.frrender import bfd_daemon
 from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'bfd']
-frr_endsection = '^ exit'
 
 dum_if = 'dum1001'
 vrf_name = 'red'
@@ -131,7 +130,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('bfd', endsection='^exit', daemon=bfd_daemon)
+        frrconfig = self.getFRRconfig('bfd', endsection='^exit')
         for peer, peer_config in peers.items():
             tmp = f'peer {peer}'
             if 'multihop' in peer_config:
@@ -144,8 +143,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='', endsection=frr_endsection,
-                                           daemon=bfd_daemon)
+            peerconfig = self.getFRRconfig('bfd', endsection='^exit', substring=f' peer {peer}',
+                                           endsubsection='^ exit')
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
             if 'intv_echo' in peer_config:
@@ -207,7 +206,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         for profile, profile_config in profiles.items():
-            config = self.getFRRconfig(f' profile {profile}', endsection=frr_endsection)
+            config = self.getFRRconfig('bfd', endsection='^exit',
+                                       substring=f' profile {profile}', endsubsection='^ exit',)
             if 'echo_mode' in profile_config:
                 self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
@@ -229,8 +229,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertNotIn(f'shutdown', config)
 
         for peer, peer_config in peers.items():
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='',
-                                           endsection=frr_endsection, daemon=bfd_daemon)
+            peerconfig = self.getFRRconfig('bfd', endsection='^exit',
+                                           substring=f' peer {peer}', endsubsection='^ exit')
             if 'profile' in peer_config:
                 self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 

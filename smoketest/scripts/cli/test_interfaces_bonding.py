@@ -24,7 +24,6 @@ from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
 from vyos.utils.network import get_interface_config
 from vyos.utils.file import read_file
-from vyos.frrender import mgmt_daemon
 
 class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -287,7 +286,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
         id = '5'
         for interface in self._interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=mgmt_daemon)
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
 
             self.assertIn(f' evpn mh es-id {id}', frrconfig)
             self.assertIn(f' evpn mh es-df-pref {id}', frrconfig)
@@ -304,7 +303,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
         id = '5'
         for interface in self._interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=mgmt_daemon)
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f' evpn mh es-sys-mac 00:12:34:56:78:0{id}', frrconfig)
             self.assertIn(f' evpn mh uplink', frrconfig)
 
