@@ -68,7 +68,7 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(sysctl_read(f'net.ipv6.conf.{interface}.seg6_enabled'), '1')
             self.assertEqual(sysctl_read(f'net.ipv6.conf.{interface}.seg6_require_hmac'), '0') # default
 
-        frrconfig = self.getFRRconfig(f'segment-routing', daemon=zebra_daemon)
+        frrconfig = self.getFRRconfig(f'segment-routing', endsection='^exit')
         self.assertIn(f'segment-routing', frrconfig)
         self.assertIn(f' srv6', frrconfig)
         self.assertIn(f'  locators', frrconfig)

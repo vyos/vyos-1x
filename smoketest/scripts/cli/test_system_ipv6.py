@@ -21,8 +21,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.system import sysctl_read
 from vyos.xml_ref import default_value
-from vyos.frrender import mgmt_daemon
-from vyos.frrender import zebra_daemon
 
 base_path = ['system', 'ipv6']
 
@@ -46,13 +44,13 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['disable-forwarding'])
         self.cli_commit()
         self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '0')
-        frrconfig = self.getFRRconfig('', end='', daemon=zebra_daemon)
+        frrconfig = self.getFRRconfig('', end='')
         self.assertIn('no ipv6 forwarding', frrconfig)
 
         self.cli_delete(base_path + ['disable-forwarding'])
         self.cli_commit()
         self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '1')
-        frrconfig = self.getFRRconfig('', end='', daemon=zebra_daemon)
+        frrconfig = self.getFRRconfig('', end='')
         self.assertNotIn('no ipv6 forwarding', frrconfig)
 
     def test_system_ipv6_strict_dad(self):
@@ -109,7 +107,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify route-map properly applied to FRR
-        frrconfig = self.getFRRconfig('ipv6 protocol', end='', daemon=mgmt_daemon)
+        frrconfig = self.getFRRconfig('ipv6 protocol', end='')
         for protocol in protocols:
             # VyOS and FRR use a different name for OSPFv3 (IPv6)
             if protocol == 'ospfv3':
@@ -123,7 +121,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify route-map properly applied to FRR
-        frrconfig = self.getFRRconfig('ipv6 protocol', end='', daemon=mgmt_daemon)
+        frrconfig = self.getFRRconfig('ipv6 protocol', end='')
         self.assertNotIn(f'ipv6 protocol', frrconfig)
 
     def test_system_ipv6_protocol_non_existing_route_map(self):
@@ -142,13 +140,13 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['nht', 'no-resolve-via-default'])
         self.cli_commit()
         # Verify CLI config applied to FRR
-        frrconfig = self.getFRRconfig('', end='', daemon=mgmt_daemon)
+        frrconfig = self.getFRRconfig('', end='')
         self.assertIn(f'no ipv6 nht resolve-via-default', frrconfig)
 
         self.cli_delete(base_path + ['nht', 'no-resolve-via-default'])
         self.cli_commit()
         # Verify CLI config removed to FRR
-        frrconfig = self.getFRRconfig('', end='', daemon=mgmt_daemon)
+        frrconfig = self.getFRRconfig('', end='')
         self.assertNotIn(f'no ipv6 nht resolve-via-default', frrconfig)
 
 if __name__ == '__main__':

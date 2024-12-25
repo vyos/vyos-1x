@@ -52,7 +52,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
+            config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld', config)
             self.assertNotIn(f' ipv6 mld version 1', config)
@@ -65,7 +65,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
+            config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld', config)
             self.assertIn(f' ipv6 mld version 1', config)
@@ -88,7 +88,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
+            config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld join-group ff18::1234', config)
 
@@ -100,7 +100,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR pim6d configuration
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
+            config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ipv6 mld join-group ff38::5678 2001:db8::5678', config)
 
@@ -128,14 +128,14 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pim6d configuration
-        config = self.getFRRconfig('router pim6', endsection='^exit', daemon=pim6_daemon)
+        config = self.getFRRconfig('router pim6', endsection='^exit')
         self.assertIn(f' join-prune-interval {join_prune_interval}', config)
         self.assertIn(f' keep-alive-timer {keep_alive_timer}', config)
         self.assertIn(f' packets {packets}', config)
         self.assertIn(f' register-suppress-time {register_suppress_time}', config)
 
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}', daemon=pim6_daemon)
+            config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f' ipv6 pim drpriority {dr_priority}', config)
             self.assertIn(f' ipv6 pim hello {hello}', config)
             self.assertIn(f' no ipv6 pim bsm', config)

@@ -66,7 +66,7 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router rip')
+        frrconfig = self.getFRRconfig('router rip', endsection='^exit')
         self.assertNotIn(f'router rip', frrconfig)
 
         # check process health and continuity
@@ -116,7 +116,7 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ripd configuration
-        frrconfig = self.getFRRconfig('router rip')
+        frrconfig = self.getFRRconfig('router rip', endsection='^exit')
         self.assertIn(f'router rip', frrconfig)
         self.assertIn(f' distance {distance}', frrconfig)
         self.assertIn(f' default-information originate', frrconfig)
@@ -175,10 +175,10 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = self.getFRRconfig('router rip')
+        frrconfig = self.getFRRconfig('router rip', endsection='^exit')
         self.assertIn(f'version {tx_version}', frrconfig)
 
-        frrconfig = self.getFRRconfig(f'interface {interface}')
+        frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
         self.assertIn(f' ip rip receive version {rx_version}', frrconfig)
         self.assertIn(f' ip rip send version {tx_version}', frrconfig)
 

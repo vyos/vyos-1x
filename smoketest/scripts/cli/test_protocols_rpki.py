@@ -116,7 +116,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('rpki')
+        frrconfig = self.getFRRconfig('rpki', endsection='^exit')
         self.assertNotIn(f'rpki', frrconfig)
 
         # check process health and continuity
@@ -153,7 +153,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = self.getFRRconfig('rpki')
+        frrconfig = self.getFRRconfig('rpki', endsection='^exit')
         self.assertIn(f'rpki expire_interval {expire_interval}', frrconfig)
         self.assertIn(f'rpki polling_period {polling_period}', frrconfig)
         self.assertIn(f'rpki retry_interval {retry_interval}', frrconfig)
@@ -192,7 +192,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = self.getFRRconfig('rpki')
+        frrconfig = self.getFRRconfig('rpki', endsection='^exit')
         for cache_name, cache_config in cache.items():
             port = cache_config['port']
             preference = cache_config['preference']

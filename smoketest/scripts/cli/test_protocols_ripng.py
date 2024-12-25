@@ -66,7 +66,7 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router ripng')
+        frrconfig = self.getFRRconfig('router ripng', endsection='^exit')
         self.assertNotIn(f'router ripng', frrconfig)
 
         # check process health and continuity
@@ -113,7 +113,7 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ripng')
+        frrconfig = self.getFRRconfig('router ripng', endsection='^exit')
         self.assertIn(f'router ripng', frrconfig)
         self.assertIn(f' default-information originate', frrconfig)
         self.assertIn(f' default-metric {metric}', frrconfig)

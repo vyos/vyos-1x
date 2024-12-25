@@ -27,7 +27,6 @@ from vyos import ConfigError
 from vyos.defaults import commit_lock
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.utils.process import process_named_running
 
 save_config = '/tmp/vyos-smoketest-save'
 
@@ -89,9 +88,6 @@ class VyOSUnitTestSHIM:
             # during a commit there is a process opening commit_lock, and run() returns 0
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
-            # wait for FRR reload to be complete
-            while process_named_running('frr-reload.py'):
-                sleep(0.250)
             # reset getFRRconfig() guard timer
             self.commit_guard = time()
 
@@ -108,20 +104,32 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
-        def getFRRconfig(self, string=None, end='$', endsection='^!', daemon='', guard_time=10, empty_retry=0):
-            """ Retrieve current "running configuration" from FRR """
+        def getFRRconfig(self, string=None, end='$', endsection='^!',
+                         substring=None, endsubsection=None, guard_time=10, empty_retry=0):
+            """
+            Retrieve current "running configuration" from FRR
+
+            string:        search for a specific start string in the configuration
+            end:           end of the section to search for (line ending)
+            endsection:    end of the configuration
+            substring:     search section under the result found by string
+            endsubsection: end of the subsection (usually something with "exit")
+            """
             # Sometimes FRR needs some time after reloading the configuration to
             # appear in vtysh. This is a workaround addiung a 10 second guard timer
             # between the last cli_commit() and the first read of FRR config via vtysh
             while (time() - self.commit_guard) < guard_time:
                 sleep(0.250) # wait 250 milliseconds
-            command = f'vtysh -c "show run {daemon} no-header"'
-            if string: command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
+            command = f'vtysh -c "show run no-header"'
+            if string:
+                command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
+                if substring and endsubsection:
+                    command += f' | sed -n "/^{substring}/,/{endsubsection}/p"'
             out = cmd(command)
             if self.debug:
                 print(f'\n\ncommand "{command}" returned:\n')
                 pprint.pprint(out)
-            if empty_retry:
+            if empty_retry > 0:
                 retry_count = 0
                 while not out and retry_count < empty_retry:
                     if self.debug and retry_count % 10 == 0:

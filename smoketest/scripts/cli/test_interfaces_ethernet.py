@@ -27,13 +27,11 @@ from netifaces import ifaddresses
 from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.frrender import mgmt_daemon
 from vyos.utils.file import read_file
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
-
 
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -222,14 +220,14 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 out = loads(out)
                 self.assertFalse(out[0]['autonegotiate'])
 
-    def test_ethtool_evpn_uplink_tarcking(self):
+    def test_ethtool_evpn_uplink_tracking(self):
         for interface in self._interfaces:
             self.cli_set(self._base_path + [interface, 'evpn', 'uplink'])
 
         self.cli_commit()
 
         for interface in self._interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=mgmt_daemon)
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(' evpn mh uplink', frrconfig)
 
     def test_switchdev(self):
@@ -240,7 +238,6 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         # should print out warning that enabling failed
 
         self.cli_delete(self._base_path + [interface, 'switchdev'])
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
