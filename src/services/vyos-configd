@@ -335,7 +335,7 @@ if __name__ == '__main__':
                 if hasattr(config, 'frrender_cls') and res == R_SUCCESS:
                     frrender_cls = getattr(config, 'frrender_cls')
                     tmp = get_frrender_dict(config)
-                    frrender_cls.generate(tmp)
-                    frrender_cls.apply()
+                    if frrender_cls.generate(tmp):
+                        frrender_cls.apply()
         else:
             logger.critical(f'Unexpected message: {message}')

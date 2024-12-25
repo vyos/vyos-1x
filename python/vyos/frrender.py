@@ -537,13 +537,24 @@ def get_frrender_dict(conf, argv=None) -> dict:
     return dict
 
 class FRRender:
+    cached_config_dict = {}
     def __init__(self):
         self._frr_conf = '/run/frr/config/vyos.frr.conf'
 
     def generate(self, config_dict) -> None:
+        """
+        Generate FRR configuration file
+        Returns False if no changes to configuration were made, otherwise True
+        """
         if not isinstance(config_dict, dict):
             tmp = type(config_dict)
             raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
+
+
+        if self.cached_config_dict == config_dict:
+            debug('FRR:        NO CHANGES DETECTED')
+            return False
+        self.cached_config_dict = config_dict
 
         def inline_helper(config_dict) -> str:
             output = '!\n'
@@ -639,7 +650,7 @@ class FRRender:
         debug(output)
         write_file(self._frr_conf, output)
         debug('FRR:        RENDERING CONFIG COMPLETE')
-        return None
+        return True
 
     def apply(self, count_max=5):
         count = 0
