@@ -218,11 +218,11 @@ def get_frrender_dict(conf, argv=None) -> dict:
     # values present on the CLI - that's why we have if conf.exists()
     eigrp_cli_path = ['protocols', 'eigrp']
     if conf.exists(eigrp_cli_path):
-        isis = conf.get_config_dict(eigrp_cli_path, key_mangling=('-', '_'),
-                                    get_first_key=True,
-                                    no_tag_node_value_mangle=True,
-                                    with_recursive_defaults=True)
-        dict.update({'eigrp' : isis})
+        eigrp = conf.get_config_dict(eigrp_cli_path, key_mangling=('-', '_'),
+                                     get_first_key=True,
+                                     no_tag_node_value_mangle=True,
+                                     with_recursive_defaults=True)
+        dict.update({'eigrp' : eigrp})
     elif conf.exists_effective(eigrp_cli_path):
         dict.update({'eigrp' : {'deleted' : ''}})
 
