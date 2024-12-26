@@ -16,6 +16,6 @@ ExecStart={{ vrf_command }}/usr/sbin/blackbox_exporter \
 {% else %}
         --web.listen-address=:{{ port }} \
 {% endif %}
-        --config.file=/etc/blackbox_exporter/config.yml
+        --config.file=/run/blackbox_exporter/config.yml
 [Install]
 WantedBy=multi-user.target
