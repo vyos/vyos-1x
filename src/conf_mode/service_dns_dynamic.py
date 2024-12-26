@@ -111,12 +111,6 @@ def verify(dyndns):
             if 'skip' in config['address']['web'] and 'url' not in config['address']['web']:
                 raise ConfigError(f'"url" along with "skip" {error_msg_req} '
                                   f'with protocol "{config["protocol"]}"')
-            if 'url' in config['address']['web']:
-                # Warn if using checkip.dyndns.org, as it does not support HTTPS
-                # See: https://github.com/ddclient/ddclient/issues/597
-                if re.search("^(https?://)?checkip\.dyndns\.org", config['address']['web']['url']):
-                    Warning(f'"checkip.dyndns.org" does not support HTTPS requests for IP address '
-                            f'lookup. Please use a different IP address lookup service.')
 
         # RFC2136 uses 'key' instead of 'password'
         if config['protocol'] != 'nsupdate' and 'password' not in config:
