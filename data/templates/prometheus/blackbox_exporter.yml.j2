@@ -7,7 +7,7 @@ modules:
     dns:
       query_name: "{{ module_name }}"
       query_type: "{{ module_config.query_type }}"
-      preferred_ip_protocol: "{{ module_config.preferred_ip_protocol }}"
+      preferred_ip_protocol: "{{ module_config.preferred_ip_protocol | replace('v', '') }}"
       ip_protocol_fallback: {{ 'true' if module_config.ip_protocol_fallback is vyos_defined else 'false' }}
 {%     endfor %}
 {% endif %}
@@ -17,7 +17,7 @@ modules:
     prober: icmp
     timeout: {{ module_config.timeout }}s
     icmp:
-      preferred_ip_protocol: "{{ module_config.preferred_ip_protocol }}"
+      preferred_ip_protocol: "{{ module_config.preferred_ip_protocol | replace('v', '')  }}"
       ip_protocol_fallback: {{ 'true' if module_config.ip_protocol_fallback is vyos_defined else 'false' }}
 {%     endfor %}
 {% endif %}

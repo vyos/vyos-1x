@@ -100,7 +100,7 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
                 'name',
                 'dns_ip4',
                 'preferred-ip-protocol',
-                'ip4',
+                'ipv4',
             ]
         )
         self.cli_set(
@@ -124,7 +124,7 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
                 'name',
                 'icmp_ip6',
                 'preferred-ip-protocol',
-                'ip6',
+                'ipv6',
             ]
         )
 

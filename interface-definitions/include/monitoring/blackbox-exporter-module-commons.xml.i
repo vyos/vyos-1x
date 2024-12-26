@@ -17,15 +17,15 @@
   <properties>
     <help>Preferred IP protocol for this module</help>
     <valueHelp>
-      <format>ip4</format>
+      <format>ipv4</format>
       <description>Prefer IPv4</description>
     </valueHelp>
     <valueHelp>
-      <format>ip6</format>
+      <format>ipv6</format>
       <description>Prefer IPv6</description>
     </valueHelp>
     <constraint>
-      <regex>(ip4|ip6)</regex>
+      <regex>(ipv4|ipv6)</regex>
     </constraint>
   </properties>
   <defaultValue>ip6</defaultValue>
