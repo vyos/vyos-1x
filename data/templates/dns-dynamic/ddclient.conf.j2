@@ -29,11 +29,9 @@ if{{ ipv }}={{ address }}, \
 # {{ config.description }}
 {%         endif %}
 {%         for host in config.host_name if config.host_name is vyos_defined %}
-{#             ip_suffixes can be either of ['v4'], ['v6'], ['v4', 'v6'] for all protocols except 'nsupdate'
-               ip_suffixes must be [''] for nsupdate since it doesn't support usevX/wantipvX yet #}
+{#             ip_suffixes can be either of ['v4'], ['v6'], ['v4', 'v6'] for all protocols #}
 {%             set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
-                                 else ([config.ip_version[2:]] if config.protocol != 'nsupdate'
-                                       else ['']) %}
+                                 else [config.ip_version[2:]] %}
 {%             set password = config.key if config.protocol == 'nsupdate'
                               else config.password %}
 {%             set address = 'web' if config.address.web is vyos_defined
