@@ -62,6 +62,14 @@
                               <help>Name of the dns module</help>
                             </properties>
                             <children>
+                              <leafNode name="query-name">
+                                <properties>
+                                  <help>Name to be queried</help>
+                                  <constraint>
+                                    <validator name="fqdn"/>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
                               <leafNode name="query-type">
                                 <properties>
                                   <help>DNS query type</help>

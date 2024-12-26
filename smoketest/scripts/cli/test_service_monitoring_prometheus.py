@@ -111,6 +111,18 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
                 'dns',
                 'name',
                 'dns_ip4',
+                'query-name',
+                'vyos.io',
+            ]
+        )
+        self.cli_set(
+            base_path
+            + [
+                'blackbox-exporter',
+                'modules',
+                'dns',
+                'name',
+                'dns_ip4',
                 'query-type',
                 'A',
             ]

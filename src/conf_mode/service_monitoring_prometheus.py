@@ -82,6 +82,19 @@ def verify(monitoring):
     if 'blackbox_exporter' in monitoring:
         verify_vrf(monitoring['blackbox_exporter'])
 
+        if (
+            'modules' in monitoring['blackbox_exporter']
+            and 'dns' in monitoring['blackbox_exporter']['modules']
+            and 'name' in monitoring['blackbox_exporter']['modules']['dns']
+        ):
+            for mod_name, mod_config in monitoring['blackbox_exporter']['modules'][
+                'dns'
+            ]['name'].items():
+                if 'query_name' not in mod_config:
+                    raise ConfigError(
+                        f'query name not specified in dns module {mod_name}'
+                    )
+
     return None
 
 
