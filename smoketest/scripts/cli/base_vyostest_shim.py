@@ -18,7 +18,6 @@ import paramiko
 import pprint
 
 from time import sleep
-from time import time
 from typing import Type
 
 from vyos.configsession import ConfigSession
@@ -29,6 +28,14 @@ from vyos.utils.process import cmd
 from vyos.utils.process import run
 
 save_config = '/tmp/vyos-smoketest-save'
+
+# The commit process is not finished until all pending files from
+# VYATTA_CHANGES_ONLY_DIR are copied to VYATTA_ACTIVE_CONFIGURATION_DIR. This
+# is done inside libvyatta-cfg1 and the FUSE UnionFS part. On large non-
+# interactive commits FUSE UnionFS might not replicate the real state in time,
+# leading to errors when querying the working and effective configuration.
+# TO BE DELETED AFTER SWITCH TO IN MEMORY CONFIG
+CSTORE_GUARD_TIME = 4
 
 # This class acts as shim between individual Smoketests developed for VyOS and
 # the Python UnitTest framework. Before every test is loaded, we dump the current
@@ -44,7 +51,6 @@ class VyOSUnitTestSHIM:
         # trigger the certain failure condition.
         # Use "self.debug = True" in derived classes setUp() method
         debug = False
-        commit_guard = time()
         @classmethod
         def setUpClass(cls):
             cls._session = ConfigSession(os.getpid())
@@ -85,11 +91,12 @@ class VyOSUnitTestSHIM:
             if self.debug:
                 print('commit')
             self._session.commit()
-            # during a commit there is a process opening commit_lock, and run() returns 0
+            # During a commit there is a process opening commit_lock, and run()
+            # returns 0
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
-            # reset getFRRconfig() guard timer
-            self.commit_guard = time()
+            # Wait for CStore completion for fast non-interactive commits
+            sleep(CSTORE_GUARD_TIME)
 
         def op_mode(self, path : list) -> None:
             """
@@ -105,7 +112,7 @@ class VyOSUnitTestSHIM:
             return out
 
         def getFRRconfig(self, string=None, end='$', endsection='^!',
-                         substring=None, endsubsection=None, guard_time=10, empty_retry=0):
+                         substring=None, endsubsection=None, empty_retry=0):
             """
             Retrieve current "running configuration" from FRR
 
@@ -115,11 +122,6 @@ class VyOSUnitTestSHIM:
             substring:     search section under the result found by string
             endsubsection: end of the subsection (usually something with "exit")
             """
-            # Sometimes FRR needs some time after reloading the configuration to
-            # appear in vtysh. This is a workaround addiung a 10 second guard timer
-            # between the last cli_commit() and the first read of FRR config via vtysh
-            while (time() - self.commit_guard) < guard_time:
-                sleep(0.250) # wait 250 milliseconds
             command = f'vtysh -c "show run no-header"'
             if string:
                 command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
