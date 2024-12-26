@@ -660,7 +660,7 @@ class FRRender:
             debug(f'FRR: reloading configuration - tries: {count} | Python class ID: {id(self)}')
             cmdline = '/usr/lib/frr/frr-reload.py --reload'
             if os.path.exists(frr_debug_enable):
-                cmdline += ' --debug'
+                cmdline += ' --debug --stdout'
             rc, emsg = rc_cmd(f'{cmdline} {self._frr_conf}')
             if rc != 0:
                 sleep(2)
