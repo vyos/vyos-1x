@@ -73,9 +73,18 @@
                               <leafNode name="query-type">
                                 <properties>
                                   <help>DNS query type</help>
-                                  <constraint>
-                                    <regex>(A|AAAA|ANY)</regex>
-                                  </constraint>
+                                  <valueHelp>
+                                    <format>ANY</format>
+                                    <description>Query any DNS record</description>
+                                  </valueHelp>
+                                  <valueHelp>
+                                    <format>A</format>
+                                    <description>Query IPv4 address record</description>
+                                  </valueHelp>
+                                  <valueHelp>
+                                    <format>AAAA</format>
+                                    <description>Query IPv6 address record</description>
+                                  </valueHelp>
                                 </properties>
                                 <defaultValue>ANY</defaultValue>
                               </leafNode>
