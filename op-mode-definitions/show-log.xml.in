@@ -905,6 +905,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit vyos-configd.service</command>
           </leafNode>
+          <leafNode name="vyos-domain-resolver">
+            <properties>
+              <help>Show log for VyOS domain resolver daemon</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit vyos-domain-resolver.service</command>
+          </leafNode>
           <node name="wireless">
             <properties>
               <help>Show log for Wireless interface</help>
