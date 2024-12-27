@@ -377,6 +377,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit vyos-configd.service</command>
           </leafNode>
+          <leafNode name="vyos-domain-resolver">
+            <properties>
+              <help>Monitor last lines of VyOS domain resolver daemon log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit vyos-domain-resolver.service</command>
+          </leafNode>
           <node name="wireless">
             <properties>
               <help>Monitor last lines of Wireless interface log</help>
