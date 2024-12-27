@@ -43,7 +43,6 @@ airbag.enable()
 
 nftables_conf = '/run/nftables.conf'
 domain_resolver_usage = '/run/use-vyos-domain-resolver-firewall'
-domain_resolver_usage_nat = '/run/use-vyos-domain-resolver-nat'
 
 sysctl_file = r'/run/sysctl/10-vyos-firewall.conf'
 
