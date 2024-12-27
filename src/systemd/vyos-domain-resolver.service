@@ -6,7 +6,9 @@ ConditionPathExistsGlob=/run/use-vyos-domain-resolver*
 [Service]
 Type=simple
 Restart=always
-ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/vyos-domain-resolver.py
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-domain-resolver
+SyslogIdentifier=vyos-domain-resolver
+SyslogFacility=daemon
 StandardError=journal
 StandardOutput=journal
 
