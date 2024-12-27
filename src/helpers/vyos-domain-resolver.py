@@ -16,6 +16,7 @@
 
 import json
 import time
+import logging
 
 from vyos.configdict import dict_merge
 from vyos.configquery import ConfigTreeQuery
@@ -47,6 +48,11 @@ ipv6_tables = {
     'ip6 vyos_filter',
     'ip6 raw'
 }
+
+logger = logging.getLogger(__name__)
+logs_handler = logging.StreamHandler()
+logger.addHandler(logs_handler)
+logger.setLevel(logging.INFO)
 
 def get_config(conf, node):
     node_config = conf.get_config_dict(node, key_mangling=('-', '_'), get_first_key=True,
@@ -163,15 +169,15 @@ def update_fqdn(config, node):
     nft_conf_str = "\n".join(conf_lines) + "\n"
     code = run(f'nft --file -', input=nft_conf_str)
 
-    print(f'Updated {count} sets in {node} - result: {code}')
+    logger.info(f'Updated {count} sets in {node} - result: {code}')
 
 if __name__ == '__main__':
-    print(f'VyOS domain resolver')
+    logger.info(f'VyOS domain resolver')
 
     count = 1
     while commit_in_progress():
         if ( count % 60 == 0 ):
-            print(f'Commit still in progress after {count}s - waiting')
+            logger.info(f'Commit still in progress after {count}s - waiting')
         count += 1
         time.sleep(1)
 
@@ -179,7 +185,7 @@ if __name__ == '__main__':
     firewall = get_config(conf, base_firewall)
     nat = get_config(conf, base_nat)
 
-    print(f'interval: {timeout}s - cache: {cache}')
+    logger.info(f'interval: {timeout}s - cache: {cache}')
 
     while True:
         update_fqdn(firewall, 'firewall')
