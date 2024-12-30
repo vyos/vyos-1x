@@ -55,7 +55,8 @@ dualstack_supported = ['cloudflare', 'ddns.fm', 'digitalocean', 'dnsexit2',
 
 # dyndns2 protocol in ddclient honors dual stack for selective servers
 # because of the way it is implemented in ddclient
-dyndns_dualstack_servers = ['members.dyndns.org', 'dynv6.com']
+dyndns_dualstack_servers = ['members.dyndns.org', 'dynv6.com', 'app.luadns.com',
+                            'update.dedyn.io']
 
 def get_config(config=None):
     if config:
