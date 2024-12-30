@@ -241,6 +241,9 @@ Depends:
 # For "service monitoring prometheus frr-exporter"
   frr-exporter,
 # End "service monitoring prometheus frr-exporter"
+# For "service monitoring prometheus blackbox-exporter"
+  blackbox-exporter,
+# End "service monitoring prometheus blackbox-exporter"
 # For "service monitoring telegraf"
   telegraf (>= 1.20),
 # End "service monitoring telegraf"
