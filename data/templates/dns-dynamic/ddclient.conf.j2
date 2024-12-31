@@ -29,19 +29,17 @@ if{{ ipv }}={{ address }}, \
 # {{ config.description }}
 {%         endif %}
 {%         for host in config.host_name if config.host_name is vyos_defined %}
-{#             ip_suffixes can be either of ['v4'], ['v6'], ['v4', 'v6'] for all protocols #}
-{%             set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
-                                 else [config.ip_version[2:]] %}
-{%             set password = config.key if config.protocol == 'nsupdate'
-                              else config.password %}
 {%             set address = 'web' if config.address.web is vyos_defined
                               else config.address.interface %}
 {%             set web_options = config.address.web | default({}) %}
+{#             ip_suffixes can be either of ['v4'], ['v6'], ['v4', 'v6'] for all protocols #}
+{%             set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
+                                 else [config.ip_version[2:]] %}
 
 # Web service dynamic DNS configuration for {{ service }}: [{{ config.protocol }}, {{ host }}]
 {{ render_config(host, address, web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
-                 login=config.username, password=password, ttl=config.ttl,
+                 login=config.username, password=config.password, ttl=config.ttl,
                  min_interval=config.wait_time, max_interval=config.expiry_time) }}
 {%         endfor %}
 {%     endfor %}

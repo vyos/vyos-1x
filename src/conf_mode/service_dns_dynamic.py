@@ -156,6 +156,13 @@ def generate(dyndns):
     if not dyndns or 'name' not in dyndns:
         return None
 
+    # Adjust protocol specific keys
+    for name in dyndns['name']:
+        # nsupdate (RFC2136) uses:
+        # - 'password' in ddclient.conf instead of 'key' in vyos conf
+        if dyndns['name'][name]['protocol'] == 'nsupdate':
+            dyndns['name'][name]['password'] = dyndns['name'][name].pop('key')
+
     render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns, permission=0o600)
     render(systemd_override, 'dns-dynamic/override.conf.j2', dyndns)
     return None
