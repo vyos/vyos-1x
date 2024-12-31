@@ -42,6 +42,7 @@ if{{ ipv }}={{ address }}, \
                  zone=config.zone, root_domain=config.root_domain,
                  login=config.username, apikey=config.apikey,
                  password=config.password, secretapikey=config.secretapikey,
+                 use_personal_access_token=config.use_personal_access_token,
                  ttl=config.ttl, min_interval=config.wait_time,
                  max_interval=config.expiry_time) }}
 {%         endfor %}

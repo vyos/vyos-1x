@@ -176,6 +176,10 @@ def generate(dyndns):
             if 'zone' in dyndns['name'][name]:
                 dyndns['name'][name]['root_domain'] = dyndns['name'][name].pop('zone')
 
+        # Gandi API key is deprecated, enforce using personal access token
+        if dyndns['name'][name]['protocol'] == 'gandi':
+            dyndns['name'][name]['use_personal_access_token'] = 'yes'
+
     render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns, permission=0o600)
     render(systemd_override, 'dns-dynamic/override.conf.j2', dyndns)
     return None
