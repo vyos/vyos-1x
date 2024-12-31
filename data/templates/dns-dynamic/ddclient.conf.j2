@@ -15,7 +15,7 @@ if{{ ipv }}={{ address }}, \
 {% endfor %}
 {# Other service options with special treatment for password #}
 {% for k,v in kwargs.items() if v is vyos_defined %}
-{{ k | replace('_', '-') }}={{ "'%s'" % (v) if k == 'password' else v }}{{ ',' if not loop.last }} \
+{{ k | replace('_', '-') }}={{ "'%s'" % (v) if k in ['password', 'secretapikey'] else v }}{{ ',' if not loop.last }} \
 {% endfor %}
 {# Actual hostname for the service #}
 {{ host }}
@@ -38,9 +38,12 @@ if{{ ipv }}={{ address }}, \
 
 # Web service dynamic DNS configuration for {{ service }}: [{{ config.protocol }}, {{ host }}]
 {{ render_config(host, address, web_options, ip_suffixes,
-                 protocol=config.protocol, server=config.server, zone=config.zone,
-                 login=config.username, password=config.password, ttl=config.ttl,
-                 min_interval=config.wait_time, max_interval=config.expiry_time) }}
+                 protocol=config.protocol, server=config.server,
+                 zone=config.zone, root_domain=config.root_domain,
+                 login=config.username, apikey=config.apikey,
+                 password=config.password, secretapikey=config.secretapikey,
+                 ttl=config.ttl, min_interval=config.wait_time,
+                 max_interval=config.expiry_time) }}
 {%         endfor %}
 {%     endfor %}
 {% endif %}

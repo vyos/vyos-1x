@@ -35,7 +35,7 @@ systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
 # Protocols that require zone
 zone_necessary = ['cloudflare', 'digitalocean', 'godaddy', 'hetzner', 'gandi',
                   'nfsn', 'nsupdate']
-zone_supported = zone_necessary + ['dnsexit2', 'zoneedit1']
+zone_supported = zone_necessary + ['dnsexit2', 'porkbun', 'zoneedit1']
 
 # Protocols that do not require username
 username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'ddns.fm', 'digitalocean',
@@ -44,14 +44,14 @@ username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'ddns.fm', 'digitalocea
 
 # Protocols that support TTL
 ttl_supported = ['cloudflare', 'dnsexit2', 'gandi', 'hetzner', 'godaddy', 'nfsn',
-                 'nsupdate']
+                 'nsupdate', 'porkbun']
 
 # Protocols that support both IPv4 and IPv6
 dualstack_supported = ['cloudflare', 'ddns.fm', 'digitalocean', 'dnsexit2',
                        'domeneshop', 'duckdns', 'dyndns2', 'easydns', 'freedns',
                        'gandi', 'godaddy', 'he.net', 'hetzner', 'infomaniak',
                        'inwx', 'mythicdyn', 'njalla', 'noip', 'nsupdate',
-                       'regfishde']
+                       'porkbun', 'regfishde']
 
 # dyndns2 protocol in ddclient honors dual stack for selective servers
 # because of the way it is implemented in ddclient
@@ -165,6 +165,16 @@ def generate(dyndns):
         # - 'password' in ddclient.conf instead of 'key' in vyos conf
         if dyndns['name'][name]['protocol'] == 'nsupdate':
             dyndns['name'][name]['password'] = dyndns['name'][name].pop('key')
+
+        # porkbun uses:
+        # - 'root-domain' in ddclient.conf instead of 'zone' in vyos conf
+        # - 'apikey' in ddclient.conf instead of 'username' in vyos conf
+        # - 'secretapikey' in ddclient.conf instead of 'password' in vyos conf
+        if dyndns['name'][name]['protocol'] == 'porkbun':
+            dyndns['name'][name]['apikey'] = dyndns['name'][name].pop('username')
+            dyndns['name'][name]['secretapikey'] = dyndns['name'][name].pop('password')
+            if 'zone' in dyndns['name'][name]:
+                dyndns['name'][name]['root_domain'] = dyndns['name'][name].pop('zone')
 
     render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns, permission=0o600)
     render(systemd_override, 'dns-dynamic/override.conf.j2', dyndns)
