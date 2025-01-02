@@ -190,6 +190,12 @@
             <defaultValue>1.2 1.3</defaultValue>
           </leafNode>
           #include <include/interface/vrf.xml.i>
+          <leafNode name="no-server-version">
+            <properties>
+              <help>Do not display server version on error pages or "Server" response header</help>
+              <valueless/>
+            </properties>
+          </leafNode>
         </children>
       </node>
     </children>
