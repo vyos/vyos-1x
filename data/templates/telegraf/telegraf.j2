@@ -52,7 +52,7 @@
   password = "{{ loki.authentication.password }}"
 {%     endif %}
 {%     if loki.metric_name_label is vyos_defined %}
-metric_name_label = "{{ loki.metric_name_label }}"
+  metric_name_label = "{{ loki.metric_name_label }}"
 {%     endif %}
 ### End Loki ###
 {% endif %}
