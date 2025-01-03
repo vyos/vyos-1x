@@ -192,7 +192,7 @@
           #include <include/interface/vrf.xml.i>
           <leafNode name="no-server-version">
             <properties>
-              <help>Do not display server version on error pages or "Server" response header</help>
+              <help>Disable version on error pages and in the server response header field.</help>
               <valueless/>
             </properties>
           </leafNode>
