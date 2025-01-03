@@ -18,11 +18,7 @@ server {
     listen [::]:{{ port }} ssl;
 {% endif %}
 
-{% if no_server_version is vyos_defined %}
-    server_tokens off;
-{% else %}
-    server_tokens on;
-{% endif %}
+server_tokens {{ 'off' if no_server_version is vyos_defined else 'on' }};
 
     server_name {{ hostname }};
     root /srv/localui;
