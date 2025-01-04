@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright (C) 2020-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,9 +18,11 @@ import re
 import os
 import unittest
 
-from base_vyostest_shim import VyOSUnitTestSHIM
 from json import loads
 from jmespath import search
+
+from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
@@ -51,6 +53,10 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         else:
             for tmp in Section.interfaces('ethernet', vlan=False):
                 cls._interfaces.append(tmp)
+
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
+
         # call base-classes classmethod
         super(VRFTest, cls).setUpClass()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,8 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
+
 from vyos.configsession import ConfigSessionError
 from vyos.frrender import bfd_daemon
 from vyos.utils.process import process_named_running
@@ -85,6 +87,9 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
         cls.daemon_pid = process_named_running(bfd_daemon)
+
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)

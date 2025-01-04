@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 mark = '100'
 conn_mark = '555'
@@ -36,6 +37,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # Clear out current configuration to allow running this test on a live system
         cls.cli_delete(cls, ['policy', 'route'])
         cls.cli_delete(cls, ['policy', 'route6'])
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
         cls.cli_set(cls, ['protocols', 'static', 'table', table_id, 'route', '0.0.0.0/0', 'interface', interface])

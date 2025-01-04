@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,8 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
+
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.utils.process import process_named_running
@@ -38,6 +40,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         # cleanup any possible VRF mess

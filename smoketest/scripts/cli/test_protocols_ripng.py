@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.ifconfig import Section
 from vyos.frrender import ripng_daemon
@@ -40,6 +41,8 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         cls.cli_set(cls, ['policy', 'access-list6', acl_in, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'access-list6', acl_in, 'rule', '10', 'source', 'any'])

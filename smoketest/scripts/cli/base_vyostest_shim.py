@@ -51,6 +51,9 @@ class VyOSUnitTestSHIM:
         # trigger the certain failure condition.
         # Use "self.debug = True" in derived classes setUp() method
         debug = False
+        # Time to wait after a commit to ensure the CStore is up to date
+        # only required for testcases using FRR
+        _commit_guard_time = 0
         @classmethod
         def setUpClass(cls):
             cls._session = ConfigSession(os.getpid())
@@ -96,7 +99,7 @@ class VyOSUnitTestSHIM:
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
             # Wait for CStore completion for fast non-interactive commits
-            sleep(CSTORE_GUARD_TIME)
+            sleep(self._commit_guard_time)
 
         def op_mode(self, path : list) -> None:
             """

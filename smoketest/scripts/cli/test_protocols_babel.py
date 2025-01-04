@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.ifconfig import Section
 from vyos.frrender import babel_daemon
@@ -38,6 +39,8 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['policy', 'prefix-list'])
         cls.cli_delete(cls, ['policy', 'prefix-list6'])
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         # always destroy the entire babel configuration to make the processes

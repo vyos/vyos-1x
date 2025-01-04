@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.frrender import pim_daemon
@@ -26,6 +27,16 @@ from vyos.utils.process import process_named_running
 base_path = ['protocols', 'pim']
 
 class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # call base-classes classmethod
+        super(TestProtocolsPIM, cls).setUpClass()
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
+
     def tearDown(self):
         # pimd process must be running
         self.assertTrue(process_named_running(pim_daemon))
