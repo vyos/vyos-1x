@@ -211,9 +211,6 @@ def initialization(socket):
     scripts_called = []
     setattr(config, 'scripts_called', scripts_called)
 
-    if not hasattr(config, 'frrender_cls'):
-        setattr(config, 'frrender_cls', FRRender())
-
     return config
 
 
@@ -312,8 +309,10 @@ if __name__ == '__main__':
     remove_if_file(configd_env_file)
     os.symlink(configd_env_set_file, configd_env_file)
 
-    config = None
+    # We only need one long-lived instance of FRRender
+    frr = FRRender()
 
+    config = None
     while True:
         #  Wait for next request from client
         msg = socket.recv().decode()
@@ -332,10 +331,11 @@ if __name__ == '__main__':
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
 
-                if hasattr(config, 'frrender_cls') and res == R_SUCCESS:
-                    frrender_cls = getattr(config, 'frrender_cls')
+                if res == R_SUCCESS:
                     tmp = get_frrender_dict(config)
-                    if frrender_cls.generate(tmp):
-                        frrender_cls.apply()
+                    if frr.generate(tmp):
+                        # only apply a new FRR configuration if anything changed
+                        # in comparison to the previous applied configuration
+                        frr.apply()
         else:
             logger.critical(f'Unexpected message: {message}')
