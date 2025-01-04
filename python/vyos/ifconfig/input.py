@@ -25,8 +25,6 @@ class InputIf(Interface):
     a single stack of qdiscs, classes and filters can be shared between
     multiple interfaces.
     """
-
-    iftype = 'ifb'
     definition = {
         **Interface.definition,
         **{
@@ -34,3 +32,6 @@ class InputIf(Interface):
             'prefixes': ['ifb', ],
         },
     }
+
+    def _create(self):
+        super()._create('ifb')

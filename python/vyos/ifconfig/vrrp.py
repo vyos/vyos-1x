@@ -26,14 +26,11 @@ from vyos.utils.file import read_file
 from vyos.utils.file import wait_for_file_write_complete
 from vyos.utils.process import process_running
 
-
 class VRRPError(Exception):
     pass
 
-
 class VRRPNoData(VRRPError):
     pass
-
 
 class VRRP(object):
     _vrrp_prefix = '00:00:5E:00:01:'

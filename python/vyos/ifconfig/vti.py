@@ -19,7 +19,6 @@ from vyos.utils.vti_updown_db import vti_updown_db_exists, open_vti_updown_db_re
 
 @Interface.register
 class VTIIf(Interface):
-    iftype = 'vti'
     definition = {
         **Interface.definition,
         **{

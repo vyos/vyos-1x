@@ -17,7 +17,6 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class VTunIf(Interface):
-    iftype = 'vtun'
     definition = {
         **Interface.definition,
         **{

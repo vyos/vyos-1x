@@ -20,7 +20,6 @@ class MACVLANIf(Interface):
     """
     Abstraction of a Linux MACvlan interface
     """
-    iftype = 'macvlan'
     definition = {
         **Interface.definition,
         **{
@@ -35,12 +34,12 @@ class MACVLANIf(Interface):
         down by default.
         """
         # please do not change the order when assembling the command
-        cmd = 'ip link add {ifname} link {source_interface} type {type} mode {mode}'
+        cmd = 'ip link add {ifname} link {source_interface} type macvlan mode {mode}'
         self._cmd(cmd.format(**self.config))
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
 
     def set_mode(self, mode):
-        cmd = f'ip link set dev {self.ifname} type {self.iftype} mode {mode}'
+        cmd = f'ip link set dev {self.ifname} type macvlan mode {mode}'
         return self._cmd(cmd)

@@ -42,8 +42,6 @@ class VXLANIf(Interface):
     For more information please refer to:
     https://www.kernel.org/doc/Documentation/networking/vxlan.txt
     """
-
-    iftype = 'vxlan'
     definition = {
         **Interface.definition,
         **{
@@ -94,7 +92,7 @@ class VXLANIf(Interface):
             remote_list = self.config['remote'][1:]
             self.config['remote'] = self.config['remote'][0]
 
-        cmd = 'ip link add {ifname} type {type} dstport {port}'
+        cmd = 'ip link add {ifname} type vxlan dstport {port}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence

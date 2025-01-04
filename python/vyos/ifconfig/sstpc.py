@@ -17,7 +17,6 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class SSTPCIf(Interface):
-    iftype = 'sstpc'
     definition = {
         **Interface.definition,
         **{

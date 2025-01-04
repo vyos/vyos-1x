@@ -19,7 +19,6 @@ from vyos.utils.network import get_interface_config
 
 @Interface.register
 class PPPoEIf(Interface):
-    iftype = 'pppoe'
     definition = {
         **Interface.definition,
         **{

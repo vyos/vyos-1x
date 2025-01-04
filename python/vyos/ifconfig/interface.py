@@ -29,7 +29,6 @@ from netifaces import AF_INET6
 from netaddr import EUI
 from netaddr import mac_unix_expanded
 
-from vyos.base import ConfigError
 from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
@@ -74,7 +73,6 @@ class Interface(Control):
     OperationalClass = Operational
 
     options = ['debug', 'create']
-    required = []
     default = {
         'debug': True,
         'create': True,
@@ -336,22 +334,10 @@ class Interface(Control):
         super().__init__(**kargs)
 
         if not self.exists(ifname):
-            # Any instance of Interface, such as Interface('eth0') can be used
-            # safely to access the generic function in this class as 'type' is
-            # unset, the class can not be created
-            if not hasattr(self, 'iftype'):
-                raise ConfigError(f'Interface "{ifname}" has no "iftype" attribute defined!')
-            self.config['type'] = self.iftype
-
             # Should an Instance of a child class (EthernetIf, DummyIf, ..)
             # be required, then create should be set to False to not accidentally create it.
             # In case a subclass does not define it, we use get to set the default to True
-            if self.config.get('create',True):
-                for k in self.required:
-                    if k not in kargs:
-                        name = self.default['type']
-                        raise ConfigError(f'missing required option {k} for {name} {ifname} creation')
-
+            if self.config.get('create', True):
                 self._create()
             # If we can not connect to the interface then let the caller know
             # as the class could not be correctly initialised
@@ -364,13 +350,14 @@ class Interface(Control):
         self.operational = self.OperationalClass(ifname)
         self.vrrp = VRRP(ifname)
 
-    def _create(self):
+    def _create(self, type: str=''):
         # Do not create interface that already exist or exists in netns
         netns = self.config.get('netns', None)
         if self.exists(f'{self.ifname}', netns=netns):
             return
 
-        cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
+        cmd = f'ip link add dev {self.ifname}'
+        if type: cmd += f' type {type}'
         if 'netns' in self.config: cmd = f'ip netns exec {netns} {cmd}'
         self._cmd(cmd)
 
@@ -1952,8 +1939,6 @@ class Interface(Control):
 
 class VLANIf(Interface):
     """ Specific class which abstracts 802.1q and 802.1ad (Q-in-Q) VLAN interfaces """
-    iftype = 'vlan'
-
     def _create(self):
         # bail out early if interface already exists
         if self.exists(f'{self.ifname}'):

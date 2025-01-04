@@ -26,7 +26,6 @@ from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
 
-
 class WireGuardOperational(Operational):
     def _dump(self):
         """Dump wireguard data in a python friendly way."""
@@ -160,17 +159,17 @@ class WireGuardOperational(Operational):
 @Interface.register
 class WireGuardIf(Interface):
     OperationalClass = WireGuardOperational
-    iftype = 'wireguard'
     definition = {
         **Interface.definition,
         **{
             'section': 'wireguard',
-            'prefixes': [
-                'wg',
-            ],
+            'prefixes': ['wg', ],
             'bridgeable': False,
         },
     }
+
+    def _create(self):
+        super()._create('wireguard')
 
     def get_mac(self):
         """Get a synthetic MAC address."""

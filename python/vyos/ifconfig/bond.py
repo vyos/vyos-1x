@@ -31,7 +31,6 @@ class BondIf(Interface):
     monitoring may be performed.
     """
 
-    iftype = 'bond'
     definition = {
         **Interface.definition,
         ** {
@@ -108,6 +107,9 @@ class BondIf(Interface):
             'mtu'
         ]
         return options
+
+    def _create(self):
+        super()._create('bond')
 
     def remove(self):
         """

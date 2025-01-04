@@ -22,15 +22,19 @@ class LoopbackIf(Interface):
     uses to communicate with itself.
     """
     _persistent_addresses = ['127.0.0.1/8', '::1/128']
-    iftype = 'loopback'
     definition = {
         **Interface.definition,
         **{
             'section': 'loopback',
             'prefixes': ['lo', ],
             'bridgeable': True,
+            'eternal': 'lo$',
         }
     }
+
+    def _create(self):
+        # we can not create this interface as it is managed by the Kernel
+        pass
 
     def remove(self):
         """

@@ -32,7 +32,6 @@ class BridgeIf(Interface):
 
     The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
     """
-    iftype = 'bridge'
     definition = {
         **Interface.definition,
         **{
@@ -106,6 +105,9 @@ class BridgeIf(Interface):
             'shellcmd': 'ip link set dev {value} nomaster',
         },
     }}
+
+    def _create(self):
+        super()._create('bridge')
 
     def get_vlan_filter(self):
         """

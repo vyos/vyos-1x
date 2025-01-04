@@ -45,7 +45,6 @@ class L2TPv3If(Interface):
     either hot standby or load balancing services. Additionally, link integrity
     monitoring may be performed.
     """
-    iftype = 'l2tp'
     definition = {
         **Interface.definition,
         **{

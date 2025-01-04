@@ -21,7 +21,6 @@ class VethIf(Interface):
     """
     Abstraction of a Linux veth interface
     """
-    iftype = 'veth'
     definition = {
         **Interface.definition,
         **{
@@ -46,7 +45,7 @@ class VethIf(Interface):
             return
 
         # create virtual-ethernet interface
-        cmd = 'ip link add {ifname} type {type}'.format(**self.config)
+        cmd = f'ip link add {self.ifname} type veth'
         cmd += f' peer name {self.config["peer_name"]}'
         self._cmd(cmd)
 
