@@ -2,7 +2,7 @@
 
 $ModLoad omuxsock
 $OMUxSockSocket /run/telegraf/telegraf_syslog.sock
-{% if telegraf.loki or telegraf.splunk %}
+{% if telegraf.loki is vyos_defined or telegraf.splunk is vyos_defined %}
 *.info;*.notice :omuxsock:
 {% else %}
 *.notice :omuxsock:
