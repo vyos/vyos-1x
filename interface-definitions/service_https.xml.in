@@ -207,8 +207,8 @@
               <constraint>
                 <regex>(enable|disable)</regex>
               </constraint>
-              <defaultValue>disable</defaultValue>
             </properties>
+            <defaultValue>disable</defaultValue>
           </leafNode>
         </children>
       </node>
