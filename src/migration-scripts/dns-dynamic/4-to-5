@@ -15,6 +15,7 @@
 
 # T6981:
 # - remove "service dns dynamic name <service> protocol googledomains"
+# - remove "service dns dynamic name <service> protocol woima"
 # - remove "service dns dynamic name <service> address web url ..."
 #     when url is https://domains.google.com/*
 
@@ -33,11 +34,11 @@ def migrate(config: ConfigTree) -> None:
 
         service_path = base_path + [service]
 
-        # Remove configurations using protocol 'googledomains'
+        # Remove configurations using protocol 'googledomains' and 'woima'
         if config.exists(service_path + ['protocol']):
             protocol = config.return_value(service_path + ['protocol'])
-            if protocol == 'googledomains':
-                Warning(f'Removing {service} using protocol "googledomains" because the service has been shutdown')
+            if protocol in ['googledomains', 'woima']:
+                Warning(f'Removing {service} using protocol "{protocol}" because the service has been shutdown')
                 config.delete(service_path)
 
         # Look for 'address web' with 'url' set to 'googledomains' or 'https://domains.google.com'
