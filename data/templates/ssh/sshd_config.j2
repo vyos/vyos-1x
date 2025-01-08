@@ -110,3 +110,7 @@ ClientAliveInterval {{ client_keepalive_interval }}
 {% if rekey.data is vyos_defined  %}
 RekeyLimit {{ rekey.data }}M {{ rekey.time + 'M' if rekey.time is vyos_defined }}
 {% endif %}
+
+{% if trusted_user_ca_key is vyos_defined %}
+TrustedUserCAKeys /etc/ssh/trusted_user_ca_key
+{% endif %}

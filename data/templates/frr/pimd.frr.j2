@@ -39,10 +39,10 @@ interface {{ iface }}
 {%                 for join, join_config in iface_config.igmp.join.items() %}
 {%                     if join_config.source_address is vyos_defined %}
 {%                         for source_address in join_config.source_address %}
- ip igmp join {{ join }} {{ source_address }}
+ ip igmp join-group {{ join }} {{ source_address }}
 {%                         endfor %}
 {%                     else %}
- ip igmp join {{ join }}
+ ip igmp join-group {{ join }}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
@@ -51,45 +51,47 @@ exit
 {%     endfor %}
 {% endif %}
 !
+{% if igmp.watermark_warning is vyos_defined %}
+ip igmp watermark-warn {{ igmp.watermark_warning }}
+{% endif %}
+!
+router pim
 {% if ecmp is vyos_defined %}
-ip pim ecmp {{ 'rebalance' if ecmp.rebalance is vyos_defined }}
+ ecmp {{ 'rebalance' if ecmp.rebalance is vyos_defined }}
 {% endif %}
 {% if join_prune_interval is vyos_defined %}
-ip pim join-prune-interval {{ join_prune_interval }}
+ join-prune-interval {{ join_prune_interval }}
 {% endif %}
 {% if keep_alive_timer is vyos_defined %}
-ip pim keep-alive-timer {{ keep_alive_timer }}
+ keep-alive-timer {{ keep_alive_timer }}
 {% endif %}
 {% if packets is vyos_defined %}
-ip pim packets {{ packets }}
+ packets {{ packets }}
 {% endif %}
 {% if register_accept_list.prefix_list is vyos_defined %}
-ip pim register-accept-list {{ register_accept_list.prefix_list }}
+ register-accept-list {{ register_accept_list.prefix_list }}
 {% endif %}
 {% if register_suppress_time is vyos_defined %}
-ip pim register-suppress-time {{ register_suppress_time }}
+ register-suppress-time {{ register_suppress_time }}
 {% endif %}
 {% if rp.address is vyos_defined %}
 {%     for address, address_config in rp.address.items() %}
 {%         for group in address_config.group %}
-ip pim rp {{ address }} {{ group }}
+ rp {{ address }} {{ group }}
 {%         endfor %}
 {%     endfor %}
 {% endif %}
 {% if rp.keep_alive_timer is vyos_defined %}
-ip pim rp keep-alive-timer {{ rp.keep_alive_timer }}
+ rp keep-alive-timer {{ rp.keep_alive_timer }}
 {% endif %}
 {% if no_v6_secondary is vyos_defined %}
-no ip pim send-v6-secondary
+ no send-v6-secondary
 {% endif %}
 {% if spt_switchover.infinity_and_beyond is vyos_defined %}
-ip pim spt-switchover infinity-and-beyond {{ 'prefix-list ' ~ spt_switchover.infinity_and_beyond.prefix_list if spt_switchover.infinity_and_beyond.prefix_list is defined }}
+ spt-switchover infinity-and-beyond {{ 'prefix-list ' ~ spt_switchover.infinity_and_beyond.prefix_list if spt_switchover.infinity_and_beyond.prefix_list is defined }}
 {% endif %}
 {% if ssm.prefix_list is vyos_defined %}
-ip pim ssm prefix-list {{ ssm.prefix_list }}
+ ssm prefix-list {{ ssm.prefix_list }}
 {% endif %}
-!
-{% if igmp.watermark_warning is vyos_defined %}
-ip igmp watermark-warn {{ igmp.watermark_warning }}
-{% endif %}
+exit
 !

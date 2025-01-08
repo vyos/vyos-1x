@@ -1,0 +1,50 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6953: merge node and frr exporter under prometheus section
+
+from vyos.configtree import ConfigTree
+
+old_base = ['service', 'monitoring']
+new_base = ['service', 'monitoring', 'prometheus']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(old_base):
+        # Nothing to do
+        return
+
+    if config.exists(old_base + ['node-exporter']):
+        if config.exists(old_base + ['node-exporter', 'listen-address']):
+          tmp = config.return_value(old_base + ['node-exporter', 'listen-address'])
+          config.set(new_base + ['node-exporter', 'listen-address'], value=tmp)
+        if config.exists(old_base + ['node-exporter', 'port']):
+          tmp = config.return_value(old_base + ['node-exporter', 'port'])
+          config.set(new_base + ['node-exporter', 'port'], value=tmp)
+        if config.exists(old_base + ['node-exporter', 'vrf']):
+          tmp = config.return_value(old_base + ['node-exporter', 'vrf'])
+          config.set(new_base + ['node-exporter', 'vrf'], value=tmp)
+        config.delete(old_base + ['node-exporter'])
+
+    if config.exists(old_base + ['frr-exporter']):
+        if config.exists(old_base + ['frr-exporter', 'listen-address']):
+          tmp = config.return_value(old_base + ['frr-exporter', 'listen-address'])
+          config.set(new_base + ['frr-exporter', 'listen-address'], value=tmp)
+        if config.exists(old_base + ['frr-exporter', 'port']):
+          tmp = config.return_value(old_base + ['frr-exporter', 'port'])
+          config.set(new_base + ['frr-exporter', 'port'], value=tmp)
+        if config.exists(old_base + ['frr-exporter', 'vrf']):
+          tmp = config.return_value(old_base + ['frr-exporter', 'vrf'])
+          config.set(new_base + ['frr-exporter', 'vrf'], value=tmp)
+        config.delete(old_base + ['frr-exporter'])

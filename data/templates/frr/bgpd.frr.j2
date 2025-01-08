@@ -1,13 +1,19 @@
 {### MACRO definition for recurring peer patter, this can be either fed by a ###}
 {### peer-group or an individual BGP neighbor ###}
 {% macro bgp_neighbor(neighbor, config, peer_group=false) %}
+{# BGP order of peer-group and remote-as placement must be honored #}
 {% if peer_group == true %}
  neighbor {{ neighbor }} peer-group
-{% elif config.peer_group is vyos_defined %}
- neighbor {{ neighbor }} peer-group {{ config.peer_group }}
-{% endif %}
-{% if config.remote_as is vyos_defined %}
+{%     if config.remote_as is vyos_defined %}
  neighbor {{ neighbor }} remote-as {{ config.remote_as }}
+{%     endif %}
+{% else %}
+{%     if config.remote_as is vyos_defined %}
+ neighbor {{ neighbor }} remote-as {{ config.remote_as }}
+{%     endif %}
+{%     if config.peer_group is vyos_defined %}
+ neighbor {{ neighbor }} peer-group {{ config.peer_group }}
+{%     endif %}
 {% endif %}
 {% if config.local_role is vyos_defined %}
 {%     for role, strict in config.local_role.items() %}
@@ -245,9 +251,11 @@
   neighbor {{ neighbor }} activate
  exit-address-family
  !
+{# j2lint: disable=jinja-statements-delimeter #}
 {%     endfor %}
 {% endif %}
-{% endmacro %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%- endmacro -%}
 !
 router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.ebgp_requires_policy is vyos_defined %}
@@ -512,13 +520,15 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if peer_group is vyos_defined %}
 {%     for peer, config in peer_group.items() %}
 {{ bgp_neighbor(peer, config, true) }}
-{%     endfor %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
  !
 {% if neighbor is vyos_defined %}
 {%     for peer, config in neighbor.items() %}
 {{ bgp_neighbor(peer, config) }}
-{%     endfor %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
  !
 {% if listen.limit is vyos_defined %}

@@ -1,0 +1,148 @@
+interfaces {
+    ethernet eth0 {
+        duplex "auto"
+        speed "auto"
+        vif 203 {
+            address "172.18.203.10/24"
+        }
+    }
+    ethernet eth1 {
+        duplex "auto"
+        speed "auto"
+    }
+}
+protocols {
+    static {
+        multicast {
+            interface-route 224.1.0.0/24 {
+                next-hop-interface eth0.203 {
+                    distance "10"
+                }
+            }
+            route 224.2.0.0/24 {
+                next-hop 172.18.203.254 {
+                    distance "20"
+                }
+            }
+        }
+        route 10.0.0.0/8 {
+            blackhole {
+                distance "200"
+                tag "333"
+            }
+            next-hop 192.0.2.140 {
+                bfd {
+                    multi-hop {
+                        source 192.0.2.10 {
+                            profile "vyos-test"
+                        }
+                    }
+                }
+                distance "123"
+                interface "eth0"
+            }
+        }
+        route 172.16.0.0/16 {
+            next-hop 172.18.203.254 {
+                bfd {
+                    multi-hop {
+                        source 172.18.203.254 {
+                            profile "foo"
+                        }
+                    }
+                }
+            }
+        }
+        route6 2001:db8:1::/48 {
+            next-hop fe80::1 {
+                bfd {
+                    multi-hop {
+                        source fe80::1 {
+                            profile "bar"
+                        }
+                    }
+                }
+                interface eth0.203
+            }
+        }
+        route6 2001:db8:2::/48 {
+            next-hop fe80::1 {
+                bfd {
+                    multi-hop {
+                        source fe80::1 {
+                            profile "bar"
+                        }
+                    }
+                }
+                interface eth0.203
+            }
+        }
+        route6 2001:db8:3::/48 {
+            next-hop fe80::1 {
+                bfd {
+                }
+                interface eth0.203
+            }
+        }
+    }
+}
+service {
+    lldp {
+        interface all {
+        }
+    }
+    ntp {
+        allow-client {
+            address "0.0.0.0/0"
+            address "::/0"
+        }
+        server 172.16.100.10 {
+        }
+        server 172.16.100.20 {
+        }
+        server 172.16.110.30 {
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility local7 {
+                level debug
+            }
+        }
+    }
+    time-zone "Asia/Macau"
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@5:broadcast-relay@1:cluster@2:config-management@1:conntrack@5:conntrack-sync@2:container@2:dhcp-relay@2:dhcp-server@8:dhcpv6-server@1:dns-dynamic@4:dns-forwarding@4:firewall@15:flow-accounting@1:https@6:ids@1:interfaces@32:ipoe-server@3:ipsec@13:isis@3:l2tp@9:lldp@2:mdns@1:monitoring@1:nat@8:nat66@3:ntp@3:openconnect@3:ospf@2:pim@1:policy@8:pppoe-server@10:pptp@5:qos@2:quagga@11:reverse-proxy@1:rip@1:rpki@2:salt@1:snmp@3:ssh@2:sstp@6:system@27:vrf@3:vrrp@4:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2"
+// Release version: 1.4.0

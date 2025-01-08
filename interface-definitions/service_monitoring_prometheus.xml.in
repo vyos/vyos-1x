@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="monitoring">
+        <children>
+          <node name="prometheus" owner="${vyos_conf_scripts_dir}/service_monitoring_prometheus.py">
+            <properties>
+              <help>Prometheus metric exporter</help>
+              <priority>1280</priority>
+            </properties>
+            <children>
+              <node name="node-exporter">
+                <properties>
+                  <help>Prometheus exporter for hardware and operating system metrics</help>
+                </properties>
+                <children>
+                  #include <include/listen-address.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>9100</defaultValue>
+                  </leafNode>
+                  #include <include/interface/vrf.xml.i>
+                  <node name="collectors">
+                    <properties>
+                      <help>Collectors specific configuration</help>
+                    </properties>
+                    <children>
+                      <leafNode name="textfile">
+                        <properties>
+                          <help>Enables textfile collector to read from /run/node_exporter/collector</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <node name="frr-exporter">
+                <properties>
+                  <help>Prometheus exporter for FRR metrics</help>
+                </properties>
+                <children>
+                  #include <include/listen-address.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>9342</defaultValue>
+                  </leafNode>
+                  #include <include/interface/vrf.xml.i>
+                </children>
+              </node>
+              <node name="blackbox-exporter">
+                <properties>
+                  <help>Prometheus exporter for probing endpoints</help>
+                </properties>
+                <children>
+                  #include <include/listen-address.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>9115</defaultValue>
+                  </leafNode>
+                  #include <include/interface/vrf.xml.i>
+                  <node name="modules">
+                    <properties>
+                      <help>Configure blackbox exporter modules</help>
+                    </properties>
+                    <children>
+                      <node name="dns">
+                        <properties>
+                          <help>Configure dns module</help>
+                        </properties>
+                        <children>
+                          <tagNode name="name">
+                            <properties>
+                              <help>Name of the dns module</help>
+                            </properties>
+                            <children>
+                              <leafNode name="query-name">
+                                <properties>
+                                  <help>Name to be queried</help>
+                                  <constraint>
+                                    <validator name="fqdn"/>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="query-type">
+                                <properties>
+                                  <help>DNS query type</help>
+                                  <valueHelp>
+                                    <format>ANY</format>
+                                    <description>Query any DNS record</description>
+                                  </valueHelp>
+                                  <valueHelp>
+                                    <format>A</format>
+                                    <description>Query IPv4 address record</description>
+                                  </valueHelp>
+                                  <valueHelp>
+                                    <format>AAAA</format>
+                                    <description>Query IPv6 address record</description>
+                                  </valueHelp>
+                                </properties>
+                                <defaultValue>ANY</defaultValue>
+                              </leafNode>
+                              #include <include/monitoring/blackbox-exporter-module-commons.xml.i>
+                            </children>
+                          </tagNode>
+                        </children>
+                      </node>
+                      <node name="icmp">
+                        <properties>
+                          <help>Configure icmp module</help>
+                        </properties>
+                        <children>
+                          <tagNode name="name">
+                            <properties>
+                              <help>Name of the icmp module</help>
+                            </properties>
+                            <children>
+                              #include <include/monitoring/blackbox-exporter-module-commons.xml.i>
+                            </children>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

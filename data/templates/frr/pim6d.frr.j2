@@ -40,10 +40,10 @@ interface {{ iface }}
 {%                 for group, group_config in iface_config.mld.join.items() %}
 {%                     if group_config.source is vyos_defined %}
 {%                         for source in group_config.source %}
- ipv6 mld join {{ group }} {{ source }}
+ ipv6 mld join-group {{ group }} {{ source }}
 {%                         endfor %}
 {%                     else %}
- ipv6 mld join {{ group }}
+ ipv6 mld join-group {{ group }}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
@@ -52,30 +52,33 @@ exit
 {%     endfor %}
 {% endif %}
 !
+router pim6
 {% if join_prune_interval is vyos_defined %}
-ipv6 pim join-prune-interval {{ join_prune_interval }}
+ join-prune-interval {{ join_prune_interval }}
 {% endif %}
 {% if keep_alive_timer is vyos_defined %}
-ipv6 pim keep-alive-timer {{ keep_alive_timer }}
+ keep-alive-timer {{ keep_alive_timer }}
 {% endif %}
 {% if packets is vyos_defined %}
-ipv6 pim packets {{ packets }}
+ packets {{ packets }}
 {% endif %}
 {% if register_suppress_time is vyos_defined %}
-ipv6 pim register-suppress-time {{ register_suppress_time }}
+ register-suppress-time {{ register_suppress_time }}
 {% endif %}
 {% if rp.address is vyos_defined %}
 {%     for address, address_config in rp.address.items() %}
 {%         if address_config.group is vyos_defined %}
 {%             for group in address_config.group %}
-ipv6 pim rp {{ address }} {{ group }}
+ rp {{ address }} {{ group }}
 {%             endfor %}
 {%         endif %}
 {%         if address_config.prefix_list6 is vyos_defined %}
-ipv6 pim rp {{ address }} prefix-list {{ address_config.prefix_list6 }}
+ rp {{ address }} prefix-list {{ address_config.prefix_list6 }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
 {% if rp.keep_alive_timer is vyos_defined %}
-ipv6 pim rp keep-alive-timer {{ rp.keep_alive_timer }}
+ rp keep-alive-timer {{ rp.keep_alive_timer }}
 {% endif %}
+exit
+!

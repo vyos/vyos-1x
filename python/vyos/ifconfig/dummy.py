@@ -22,8 +22,6 @@ class DummyIf(Interface):
     interface. The purpose of a dummy interface is to provide a device to route
     packets through without actually transmitting them.
     """
-
-    iftype = 'dummy'
     definition = {
         **Interface.definition,
         **{
@@ -31,3 +29,6 @@ class DummyIf(Interface):
             'prefixes': ['dum', ],
         },
     }
+
+    def _create(self):
+        super()._create('dummy')

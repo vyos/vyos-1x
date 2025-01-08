@@ -17,17 +17,17 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.configverify import verify_route_map
-from vyos.template import render_to_string
-from vyos.utils.dict import dict_search
-from vyos.utils.file import write_file
-from vyos.utils.process import is_systemd_service_active
-from vyos.utils.system import sysctl_write
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.configverify import verify_route_map
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
+from vyos.utils.dict import dict_search
+from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import is_systemd_service_running
+from vyos.utils.system import sysctl_write
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -36,42 +36,36 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['system', 'ip']
-
-    opt = conf.get_config_dict(base, key_mangling=('-', '_'),
-                               get_first_key=True,
-                               with_recursive_defaults=True)
-
-    # When working with FRR we need to know the corresponding address-family
-    opt['afi'] = 'ip'
-
-    # We also need the route-map information from the config
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = {'policy' : {'route-map' : conf.get_config_dict(['policy', 'route-map'],
-                                                          get_first_key=True)}}
-    # Merge policy dict into "regular" config dict
-    opt = dict_merge(tmp, opt)
 
     # If IPv4 ARP table size is set here and also manually in sysctl, the more
     # fine grained value from sysctl must win
     set_dependents('sysctl', conf)
+    return get_frrender_dict(conf)
 
-    return opt
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'ip'):
+        return None
 
-def verify(opt):
+    opt = config_dict['ip']
+    opt['policy'] = config_dict['policy']
+
     if 'protocol' in opt:
         for protocol, protocol_options in opt['protocol'].items():
             if 'route_map' in protocol_options:
                 verify_route_map(protocol_options['route_map'], opt)
     return
 
-def generate(opt):
-    opt['frr_zebra_config'] = render_to_string('frr/zebra.route-map.frr.j2', opt)
-    return
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
+    return None
 
-def apply(opt):
+def apply(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'ip'):
+
+        return None
+    opt = config_dict['ip']
+
     # Apply ARP threshold values
     # table_size has a default value - thus the key always exists
     size = int(dict_search('arp.table_size', opt))
@@ -81,11 +75,6 @@ def apply(opt):
     sysctl_write('net.ipv4.neigh.default.gc_thresh2', size // 2)
     # Minimum number of stored records is indicated which is not cleared
     sysctl_write('net.ipv4.neigh.default.gc_thresh1', size // 8)
-
-    # enable/disable IPv4 forwarding
-    tmp = dict_search('disable_forwarding', opt)
-    value = '0' if (tmp != None) else '1'
-    write_file('/proc/sys/net/ipv4/conf/all/forwarding', value)
 
     # configure multipath
     tmp = dict_search('multipath.ignore_unreachable_nexthops', opt)
@@ -121,19 +110,11 @@ def apply(opt):
     # running when this script is called first. Skip this part and wait for initial
     # commit of the configuration to trigger this statement
     if is_systemd_service_active('frr.service'):
-        zebra_daemon = 'zebra'
-        # Save original configuration prior to starting any commit actions
-        frr_cfg = frr.FRRConfig()
-
-        # The route-map used for the FIB (zebra) is part of the zebra daemon
-        frr_cfg.load_configuration(zebra_daemon)
-        frr_cfg.modify_section(r'no ip nht resolve-via-default')
-        frr_cfg.modify_section(r'ip protocol \w+ route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
-        if 'frr_zebra_config' in opt:
-            frr_cfg.add_before(frr.default_add_before, opt['frr_zebra_config'])
-        frr_cfg.commit_configuration(zebra_daemon)
+        if config_dict and not is_systemd_service_running('vyos-configd.service'):
+            FRRender().apply()
 
     call_dependents()
+    return None
 
 if __name__ == '__main__':
     try:

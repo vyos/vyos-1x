@@ -1,5 +1,6 @@
 etc/bash_completion.d
 etc/commit
+etc/cron.d
 etc/default
 etc/dhcp
 etc/ipsec.d
@@ -40,6 +41,7 @@ usr/libexec/vyos/op_mode
 usr/libexec/vyos/services
 usr/libexec/vyos/system
 usr/libexec/vyos/validators
+usr/libexec/vyos/vyconf
 usr/libexec/vyos/*.py
 usr/libexec/vyos/*.sh
 usr/share

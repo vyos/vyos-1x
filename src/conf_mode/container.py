@@ -148,6 +148,9 @@ def verify(container):
                 if network_name not in container.get('network', {}):
                     raise ConfigError(f'Container network "{network_name}" does not exist!')
 
+                if 'name_server' in container_config and 'no_name_server' not in container['network'][network_name]:
+                    raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
+
                 if 'address' in container_config['network'][network_name]:
                     cnt_ipv4 = 0
                     cnt_ipv6 = 0
@@ -363,9 +366,14 @@ def generate_run_arguments(name, container_config):
     if 'allow_host_pid' in container_config:
       host_pid = '--pid host'
 
+    name_server = ''
+    if 'name_server' in container_config:
+        for ns in container_config['name_server']:
+            name_server += f'--dns {ns}'
+
     container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpu_quota} {sysctl_opt} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label} {uid} {host_pid}'
+                         f'--name {name} {hostname} {device} {port} {name_server} {volume} {env_opt} {label} {uid} {host_pid}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:

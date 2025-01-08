@@ -1,7 +1,7 @@
 <!-- include start from generic-interface-multi-broadcast.xml.i -->
 <leafNode name="interface">
   <properties>
-    <help>Interface to use</help>
+    <help>Interface</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
     </completionHelp>

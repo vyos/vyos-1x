@@ -37,6 +37,8 @@ from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
 from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
 
 CFG_GROUP = 'vyattacfg'
@@ -307,8 +309,10 @@ if __name__ == '__main__':
     remove_if_file(configd_env_file)
     os.symlink(configd_env_set_file, configd_env_file)
 
-    config = None
+    # We only need one long-lived instance of FRRender
+    frr = FRRender()
 
+    config = None
     while True:
         #  Wait for next request from client
         msg = socket.recv().decode()
@@ -326,5 +330,12 @@ if __name__ == '__main__':
             if message['last'] and config:
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
+
+                if res == R_SUCCESS:
+                    tmp = get_frrender_dict(config)
+                    if frr.generate(tmp):
+                        # only apply a new FRR configuration if anything changed
+                        # in comparison to the previous applied configuration
+                        frr.apply()
         else:
             logger.critical(f'Unexpected message: {message}')

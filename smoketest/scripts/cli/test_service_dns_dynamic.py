@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright (C) 2019-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 import tempfile
 
@@ -22,11 +21,10 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
-from vyos.utils.process import process_running
+from vyos.utils.process import process_named_running
 
 DDCLIENT_SYSTEMD_UNIT = '/run/systemd/system/ddclient.service.d/override.conf'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
-DDCLIENT_PID = '/run/ddclient/ddclient.pid'
 DDCLIENT_PNAME = 'ddclient'
 
 base_path = ['service', 'dns', 'dynamic']
@@ -40,20 +38,24 @@ ttl = '300'
 interface = 'eth0'
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        # Always start with a clean CLI instance
-        self.cli_delete(base_path)
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceDDNS, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_running(DDCLIENT_PID))
+        self.assertTrue(process_named_running(DDCLIENT_PNAME, timeout=10))
 
         # Delete DDNS configuration
         self.cli_delete(base_path)
         self.cli_commit()
 
-        # PID file must no londer exist after process exited
-        self.assertFalse(os.path.exists(DDCLIENT_PID))
+        # Check for process not running anymore
+        self.assertFalse(process_named_running(DDCLIENT_PNAME))
 
     # IPv4 standard DDNS service configuration
     def test_01_dyndns_service_standard(self):
@@ -338,8 +340,8 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for process in VRF
         systemd_override = cmd(f'cat {DDCLIENT_SYSTEMD_UNIT}')
-        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient -file {DDCLIENT_CONF}',
-                      systemd_override)
+        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient ' \
+                      f'--file {DDCLIENT_CONF} --foreground', systemd_override)
 
         # Check for process in VRF
         proc = cmd(f'ip vrf pids {vrf_name}')

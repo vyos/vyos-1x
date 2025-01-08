@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="psk">
+        <properties>
+          <help>Generate PSK key</help>
+        </properties>
+        <children>
+          <node name="random">
+            <properties>
+              <help>Generate random hex PSK key</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/generate_psk.py</command>
+            <children>
+              <tagNode name="size">
+                <properties>
+                  <help>Key size in bytes</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/generate_psk.py --hex_size "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

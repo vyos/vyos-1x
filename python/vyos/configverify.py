@@ -420,7 +420,7 @@ def verify_common_route_maps(config):
             continue
         tmp = config[route_map]
         # Check if the specified route-map exists, if not error out
-        if dict_search(f'policy.route-map.{tmp}', config) == None:
+        if dict_search(f'policy.route_map.{tmp}', config) == None:
             raise ConfigError(f'Specified route-map "{tmp}" does not exist!')
 
     if 'redistribute' in config:
@@ -434,7 +434,7 @@ def verify_route_map(route_map_name, config):
     recurring validation if a specified route-map exists!
     """
     # Check if the specified route-map exists, if not error out
-    if dict_search(f'policy.route-map.{route_map_name}', config) == None:
+    if dict_search(f'policy.route_map.{route_map_name}', config) == None:
         raise ConfigError(f'Specified route-map "{route_map_name}" does not exist!')
 
 def verify_prefix_list(prefix_list, config, version=''):
@@ -443,7 +443,7 @@ def verify_prefix_list(prefix_list, config, version=''):
     recurring validation if a specified prefix-list exists!
     """
     # Check if the specified prefix-list exists, if not error out
-    if dict_search(f'policy.prefix-list{version}.{prefix_list}', config) == None:
+    if dict_search(f'policy.prefix_list{version}.{prefix_list}', config) == None:
         raise ConfigError(f'Specified prefix-list{version} "{prefix_list}" does not exist!')
 
 def verify_access_list(access_list, config, version=''):
@@ -452,7 +452,7 @@ def verify_access_list(access_list, config, version=''):
     recurring validation if a specified prefix-list exists!
     """
     # Check if the specified ACL exists, if not error out
-    if dict_search(f'policy.access-list{version}.{access_list}', config) == None:
+    if dict_search(f'policy.access_list{version}.{access_list}', config) == None:
         raise ConfigError(f'Specified access-list{version} "{access_list}" does not exist!')
 
 def verify_pki_certificate(config: dict, cert_name: str, no_password_protected: bool=False):
@@ -537,3 +537,13 @@ def verify_eapol(config: dict):
     if 'ca_certificate' in config['eapol']:
         for ca_cert in config['eapol']['ca_certificate']:
             verify_pki_ca_certificate(config, ca_cert)
+
+def has_frr_protocol_in_dict(config_dict: dict, protocol: str) -> bool:
+    vrf = None
+    if config_dict and 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
+    if vrf and protocol in (dict_search(f'vrf.name.{vrf}.protocols', config_dict) or []):
+        return True
+    if config_dict and protocol in config_dict:
+        return True
+    return False

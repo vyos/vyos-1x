@@ -1,0 +1,23 @@
+modules:
+{% if modules is defined and modules.dns is defined and modules.dns.name is defined %}
+{%     for module_name, module_config in modules.dns.name.items() %}
+  {{ module_name }}:
+    prober: dns
+    timeout: {{ module_config.timeout }}s
+    dns:
+      query_name: "{{ module_config.query_name }}"
+      query_type: "{{ module_config.query_type }}"
+      preferred_ip_protocol: "{{ module_config.preferred_ip_protocol | replace('v', '') }}"
+      ip_protocol_fallback: {{ 'true' if module_config.ip_protocol_fallback is vyos_defined else 'false' }}
+{%     endfor %}
+{% endif %}
+{% if modules is defined and modules.icmp is vyos_defined and modules.icmp.name is vyos_defined %}
+{%     for module_name, module_config in modules.icmp.name.items() %}
+  {{ module_name }}:
+    prober: icmp
+    timeout: {{ module_config.timeout }}s
+    icmp:
+      preferred_ip_protocol: "{{ module_config.preferred_ip_protocol | replace('v', '') }}"
+      ip_protocol_fallback: {{ 'true' if module_config.ip_protocol_fallback is vyos_defined else 'false' }}
+{%     endfor %}
+{% endif %}

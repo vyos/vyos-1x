@@ -17,10 +17,12 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
+
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
+from vyos.frrender import openfabric_daemon
 
-PROCESS_NAME = 'fabricd'
 base_path = ['protocols', 'openfabric']
 
 domain = 'VyOS'
@@ -36,17 +38,19 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsOpenFabric, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(openfabric_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
 
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(openfabric_daemon))
 
     def openfabric_base_config(self):
         self.cli_set(['interfaces', 'dummy', dummy_if])
@@ -75,14 +79,14 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
-        tmp = self.getFRRconfig(f'router openfabric {domain}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'router openfabric {domain}', endsection='^exit')
         self.assertIn(f' net {net}', tmp)
         self.assertIn(f' log-adjacency-changes', tmp)
         self.assertIn(f' set-overload-bit', tmp)
         self.assertIn(f' fabric-tier {fabric_tier}', tmp)
         self.assertIn(f' lsp-gen-interval {lsp_gen_interval}', tmp)
 
-        tmp = self.getFRRconfig(f'interface {dummy_if}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'interface {dummy_if}', endsection='^exit')
         self.assertIn(f' ip router openfabric {domain}', tmp)
         self.assertIn(f' ipv6 router openfabric {domain}', tmp)
 
@@ -101,12 +105,12 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR openfabric configuration
-        tmp = self.getFRRconfig(f'router openfabric {domain}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'router openfabric {domain}', endsection='^exit')
         self.assertIn(f'router openfabric {domain}', tmp)
         self.assertIn(f' net {net}', tmp)
 
         # Verify interface configuration
-        tmp = self.getFRRconfig(f'interface {interface}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'interface {interface}', endsection='^exit')
         self.assertIn(f' ip router openfabric {domain}', tmp)
         # for lo interface 'openfabric passive' is implied
         self.assertIn(f' openfabric passive', tmp)
@@ -137,11 +141,11 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
-        tmp = self.getFRRconfig(f'router openfabric {domain}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'router openfabric {domain}', endsection='^exit')
         self.assertIn(f' net {net}', tmp)
         self.assertIn(f' domain-password clear {password}', tmp)
 
-        tmp = self.getFRRconfig(f'interface {dummy_if}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'interface {dummy_if}', endsection='^exit')
         self.assertIn(f' openfabric password clear {password}-{dummy_if}', tmp)
 
     def test_openfabric_multiple_domains(self):
@@ -165,22 +169,21 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR openfabric configuration
-        tmp = self.getFRRconfig(f'router openfabric {domain}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'router openfabric {domain}', endsection='^exit')
         self.assertIn(f'router openfabric {domain}', tmp)
         self.assertIn(f' net {net}', tmp)
 
-        tmp = self.getFRRconfig(f'router openfabric {domain_2}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'router openfabric {domain_2}', endsection='^exit')
         self.assertIn(f'router openfabric {domain_2}', tmp)
         self.assertIn(f' net {net}', tmp)
 
         # Verify interface configuration
-        tmp = self.getFRRconfig(f'interface {dummy_if}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'interface {dummy_if}', endsection='^exit')
         self.assertIn(f' ip router openfabric {domain}', tmp)
         self.assertIn(f' ipv6 router openfabric {domain}', tmp)
 
-        tmp = self.getFRRconfig(f'interface {interface}', daemon='fabricd')
+        tmp = self.getFRRconfig(f'interface {interface}', endsection='^exit')
         self.assertIn(f' ip router openfabric {domain_2}', tmp)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -20,13 +20,15 @@ from glob import glob
 from sys import exit
 
 from vyos.config import Config
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.pki import wrap_openssh_public_key
 from vyos.pki import wrap_openssh_private_key
-from vyos.template import render_to_string
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import write_file
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -37,24 +39,13 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'rpki']
+    return get_frrender_dict(conf)
 
-    rpki = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True, with_pki=True)
-    # Bail out early if configuration tree does not exist
-    if not conf.exists(base):
-        rpki.update({'deleted' : ''})
-        return rpki
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    rpki = conf.merge_defaults(rpki, recursive=True)
-
-    return rpki
-
-def verify(rpki):
-    if not rpki:
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'rpki'):
         return None
+
+    rpki = config_dict['rpki']
 
     if 'cache' in rpki:
         preferences = []
@@ -81,12 +72,14 @@ def verify(rpki):
 
     return None
 
-def generate(rpki):
+def generate(config_dict):
     for key in glob(f'{rpki_ssh_key_base}*'):
         os.unlink(key)
 
-    if not rpki:
-        return
+    if not has_frr_protocol_in_dict(config_dict, 'rpki'):
+        return None
+
+    rpki = config_dict['rpki']
 
     if 'cache' in rpki:
         for cache, cache_config in rpki['cache'].items():
@@ -102,21 +95,13 @@ def generate(rpki):
                 write_file(cache_config['ssh']['public_key_file'], wrap_openssh_public_key(public_key_data, public_key_type))
                 write_file(cache_config['ssh']['private_key_file'], wrap_openssh_private_key(private_key_data))
 
-    rpki['new_frr_config'] = render_to_string('frr/rpki.frr.j2', rpki)
-
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-def apply(rpki):
-    bgp_daemon = 'bgpd'
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(bgp_daemon)
-    frr_cfg.modify_section('^rpki', stop_pattern='^exit', remove_stop_mark=True)
-    if 'new_frr_config' in rpki:
-        frr_cfg.add_before(frr.default_add_before, rpki['new_frr_config'])
-
-    frr_cfg.commit_configuration(bgp_daemon)
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,11 +17,12 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.ifconfig import Section
+from vyos.frrender import ripng_daemon
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = 'ripngd'
 acl_in = '198'
 acl_out = '199'
 prefix_list_in = 'foo-prefix'
@@ -36,10 +37,12 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         # call base-classes classmethod
         super(TestProtocolsRIPng, cls).setUpClass()
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(ripng_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         cls.cli_set(cls, ['policy', 'access-list6', acl_in, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'access-list6', acl_in, 'rule', '10', 'source', 'any'])
@@ -66,8 +69,11 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+        frrconfig = self.getFRRconfig('router ripng', endsection='^exit')
+        self.assertNotIn(f'router ripng', frrconfig)
+
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(ripng_daemon))
 
     def test_ripng_01_parameters(self):
         metric = '8'
@@ -110,7 +116,7 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ripng')
+        frrconfig = self.getFRRconfig('router ripng', endsection='^exit')
         self.assertIn(f'router ripng', frrconfig)
         self.assertIn(f' default-information originate', frrconfig)
         self.assertIn(f' default-metric {metric}', frrconfig)

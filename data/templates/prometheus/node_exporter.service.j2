@@ -16,5 +16,10 @@ ExecStart={{ vrf_command }}/usr/sbin/node_exporter \
 {% else %}
         --web.listen-address=:{{ port }}
 {% endif %}
+{% if collectors is vyos_defined %}
+{%     if collectors.textfile is vyos_defined %}
+        --collector.textfile.directory=/run/node_exporter/collector
+{%     endif %}
+{% endif %}
 [Install]
 WantedBy=multi-user.target

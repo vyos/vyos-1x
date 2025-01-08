@@ -29,12 +29,12 @@
         <leafNode name="protocol">
           <properties>
             <help>Ethernet protocol for this match</help>
-            <!-- this refers to /etc/protocols -->
+            <!-- this refers to /etc/ethertypes  -->
             <completionHelp>
               <list>all 802.1Q 802_2 802_3 aarp aoe arp atalk dec ip ipv6 ipx lat localtalk rarp snap x25</list>
             </completionHelp>
             <valueHelp>
-              <format>u32:0-65535</format>
+              <format>u32:1-65535</format>
               <description>Ethernet protocol number</description>
             </valueHelp>
             <valueHelp>
@@ -50,7 +50,7 @@
               <description>Internet IP (IPv4)</description>
             </valueHelp>
             <valueHelp>
-              <format>ipv6</format>
+              <format>_ipv6</format>
               <description>Internet IP (IPv6)</description>
             </valueHelp>
             <valueHelp>
@@ -59,7 +59,7 @@
             </valueHelp>
             <valueHelp>
               <format>atalk</format>
-              <description>Appletalk</description>
+              <description>AppleTalk</description>
             </valueHelp>
             <valueHelp>
               <format>ipx</format>
@@ -69,8 +69,48 @@
               <format>802.1Q</format>
               <description>802.1Q VLAN tag</description>
             </valueHelp>
+            <valueHelp>
+              <format>802_2</format>
+              <description>IEEE 802.2</description>
+            </valueHelp>
+            <valueHelp>
+              <format>802_3</format>
+              <description>IEEE 802.3</description>
+            </valueHelp>
+            <valueHelp>
+              <format>aarp</format>
+              <description>AppleTalk Address Resolution Protocol</description>
+            </valueHelp>
+            <valueHelp>
+              <format>aoe</format>
+              <description>ATA over Ethernet</description>
+            </valueHelp>
+            <valueHelp>
+              <format>dec</format>
+              <description>DECnet Protocol</description>
+            </valueHelp>
+            <valueHelp>
+              <format>lat</format>
+              <description>Local Area Transport</description>
+            </valueHelp>
+            <valueHelp>
+              <format>localtalk</format>
+              <description>Apple LocalTalk</description>
+            </valueHelp>
+            <valueHelp>
+              <format>rarp</format>
+              <description>Reverse Address Resolution Protocol</description>
+            </valueHelp>
+            <valueHelp>
+              <format>snap</format>
+              <description>Subnetwork Access Protocol</description>
+            </valueHelp>
+            <valueHelp>
+              <format>x25</format>
+              <description>X.25 Packet-Switching Protocol</description>
+            </valueHelp>
             <constraint>
-              <validator name="ip-protocol"/>
+              <validator name="ether-type"/>
             </constraint>
           </properties>
         </leafNode>

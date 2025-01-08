@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -765,6 +765,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['type filter hook output priority filter; policy accept;'],
             ['ct state invalid', 'udp sport 67', 'udp dport 68', 'accept'],
             ['ct state invalid', 'ether type arp', 'accept'],
+            ['ct state invalid', 'ether type 0x8864', 'accept'],
             ['chain VYOS_PREROUTING_filter'],
             ['type filter hook prerouting priority filter; policy accept;'],
             ['ip6 daddr @A6_AGV6', 'notrack'],
@@ -905,7 +906,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
     def test_zone_basic(self):
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'name', 'smoketestv6', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'member', 'interface', 'eth0'])
         self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-local', 'firewall', 'name', 'smoketest'])
         self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'intra-zone-filtering', 'firewall', 'ipv6-name', 'smoketestv6'])
         self.cli_set(['firewall', 'zone', 'smoketest-local', 'local-zone'])
@@ -958,6 +959,98 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state established', 'log prefix "[STATE-POLICY-EST-A]"', 'accept'],
             ['ct state invalid', 'drop'],
             ['ct state related', 'accept']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
+
+    def test_zone_with_vrf(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'ZONE1-to-LOCAL', 'default-action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'ZONE2_to_ZONE1', 'default-action', 'continue'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'LOCAL_to_ZONE2_v6', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'zone', 'LOCAL', 'from', 'ZONE1', 'firewall', 'name', 'ZONE1-to-LOCAL'])
+        self.cli_set(['firewall', 'zone', 'LOCAL', 'local-zone'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'from', 'ZONE2', 'firewall', 'name', 'ZONE2_to_ZONE1'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'member', 'interface', 'eth1'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'member', 'interface', 'eth2'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'member', 'vrf', 'VRF-1'])
+        self.cli_set(['firewall', 'zone', 'ZONE2', 'from', 'LOCAL', 'firewall', 'ipv6-name', 'LOCAL_to_ZONE2_v6'])
+        self.cli_set(['firewall', 'zone', 'ZONE2', 'member', 'interface', 'vtun66'])
+        self.cli_set(['firewall', 'zone', 'ZONE2', 'member', 'vrf', 'VRF-2'])
+
+        self.cli_set(['vrf', 'name', 'VRF-1', 'table', '101'])
+        self.cli_set(['vrf', 'name', 'VRF-2', 'table', '102'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vrf', 'VRF-1'])
+        self.cli_set(['interfaces', 'vti', 'vti1', 'vrf', 'VRF-2'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain NAME_ZONE1-to-LOCAL'],
+            ['counter', 'accept', 'comment "NAM-ZONE1-to-LOCAL default-action accept"'],
+            ['chain NAME_ZONE2_to_ZONE1'],
+            ['counter', 'continue', 'comment "NAM-ZONE2_to_ZONE1 default-action continue"'],
+            ['chain VYOS_ZONE_FORWARD'],
+            ['type filter hook forward priority filter + 1'],
+            ['oifname { "eth1", "eth2" }', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname "eth0"', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname "vtun66"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['oifname "vti1"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['chain VYOS_ZONE_LOCAL'],
+            ['type filter hook input priority filter + 1'],
+            ['counter packets', 'jump VZONE_LOCAL_IN'],
+            ['chain VYOS_ZONE_OUTPUT'],
+            ['type filter hook output priority filter + 1'],
+            ['counter packets', 'jump VZONE_LOCAL_OUT'],
+            ['chain VZONE_LOCAL_IN'],
+            ['iifname { "eth1", "eth2" }', 'counter packets', 'jump NAME_ZONE1-to-LOCAL'],
+            ['iifname "VRF-1"', 'counter packets', 'jump NAME_ZONE1-to-LOCAL'],
+            ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
+            ['chain VZONE_LOCAL_OUT'],
+            ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
+            ['chain VZONE_ZONE1'],
+            ['iifname { "eth1", "eth2" }', 'counter packets', 'return'],
+            ['iifname "VRF-1"', 'counter packets', 'return'],
+            ['iifname "vtun66"', 'counter packets', 'jump NAME_ZONE2_to_ZONE1'],
+            ['iifname "vtun66"', 'counter packets', 'return'],
+            ['iifname "VRF-2"', 'counter packets', 'jump NAME_ZONE2_to_ZONE1'],
+            ['iifname "VRF-2"', 'counter packets', 'return'],
+            ['counter packets', 'drop', 'comment "zone_ZONE1 default-action drop"'],
+            ['chain VZONE_ZONE2'],
+            ['iifname "vtun66"', 'counter packets', 'return'],
+            ['iifname "VRF-2"', 'counter packets', 'return'],
+            ['counter packets', 'drop', 'comment "zone_ZONE2 default-action drop"']
+        ]
+
+        nftables_search_v6 = [
+            ['chain NAME6_LOCAL_to_ZONE2_v6'],
+            ['counter', 'drop', 'comment "NAM-LOCAL_to_ZONE2_v6 default-action drop"'],
+            ['chain VYOS_ZONE_FORWARD'],
+            ['type filter hook forward priority filter + 1'],
+            ['oifname { "eth1", "eth2" }', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname "eth0"', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname "vtun66"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['oifname "vti1"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['chain VYOS_ZONE_LOCAL'],
+            ['type filter hook input priority filter + 1'],
+            ['counter packets', 'jump VZONE_LOCAL_IN'],
+            ['chain VYOS_ZONE_OUTPUT'],
+            ['type filter hook output priority filter + 1'],
+            ['counter packets', 'jump VZONE_LOCAL_OUT'],
+            ['chain VZONE_LOCAL_IN'],
+            ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
+            ['chain VZONE_LOCAL_OUT'],
+            ['oifname "vtun66"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
+            ['oifname "vti1"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
+            ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
+            ['chain VZONE_ZONE1'],
+            ['iifname { "eth1", "eth2" }', 'counter packets', 'return'],
+            ['iifname "VRF-1"', 'counter packets', 'return'],
+            ['counter packets', 'drop', 'comment "zone_ZONE1 default-action drop"'],
+            ['chain VZONE_ZONE2'],
+            ['iifname "vtun66"', 'counter packets', 'return'],
+            ['iifname "VRF-2"', 'counter packets', 'return'],
+            ['counter packets', 'drop', 'comment "zone_ZONE2 default-action drop"']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')

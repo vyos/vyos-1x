@@ -27,6 +27,7 @@ from vyos.utils.process import cmd
 
 base_path = ['qos']
 
+
 def get_tc_qdisc_json(interface, all=False) -> dict:
     tmp = cmd(f'tc -detail -json qdisc show dev {interface}')
     tmp = loads(tmp)
@@ -934,6 +935,81 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(nat, tmp['options']['nat'])
             nat = not nat
 
+    def test_18_priority_queue_default(self):
+        interface = self._interfaces[0]
+        policy_name = f'qos-policy-{interface}'
+
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(
+            base_path
+            + ['policy', 'priority-queue', policy_name, 'description', 'default policy']
+        )
+
+        self.cli_commit()
+
+        tmp = get_tc_qdisc_json(interface, all=True)
+
+        self.assertEqual(2, len(tmp))
+        self.assertEqual('prio', tmp[0]['kind'])
+        self.assertDictEqual(
+            {
+                'bands': 2,
+                'priomap': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                'multiqueue': False,
+            },
+            tmp[0]['options'],
+        )
+        self.assertEqual('pfifo', tmp[1]['kind'])
+        self.assertDictEqual({'limit': 1000}, tmp[1]['options'])
+
+    def test_19_priority_queue_default_random_detect(self):
+        interface = self._interfaces[0]
+        policy_name = f'qos-policy-{interface}'
+
+        self.cli_set(base_path + ['interface', interface, 'egress', policy_name])
+        self.cli_set(
+            base_path
+            + [
+                'policy',
+                'priority-queue',
+                policy_name,
+                'default',
+                'queue-type',
+                'random-detect',
+            ]
+        )
+
+        self.cli_commit()
+
+        tmp = get_tc_qdisc_json(interface, all=True)
+
+        self.assertEqual(2, len(tmp))
+        self.assertEqual('prio', tmp[0]['kind'])
+        self.assertDictEqual(
+            {
+                'bands': 2,
+                'priomap': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                'multiqueue': False,
+            },
+            tmp[0]['options'],
+        )
+        self.assertEqual('red', tmp[1]['kind'])
+        self.assertDictEqual(
+            {
+                'limit': 73728,
+                'min': 9216,
+                'max': 18432,
+                'ecn': False,
+                'harddrop': False,
+                'adaptive': False,
+                'nodrop': False,
+                'ewma': 3,
+                'probability': 0.1,
+                'Scell_log': 13,
+            },
+            tmp[1]['options'],
+        )
+
     def test_20_round_robin_policy_default(self):
         interface = self._interfaces[0]
         policy_name = f'qos-policy-{interface}'
@@ -1160,6 +1236,72 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         # default
         self.assertIn('filter parent ffff: protocol all pref 255 basic chain 0', tc_filters)
         self.assertIn('action order 1:  police 0x2 rate 1Gbit burst 125000000b mtu 2Kb action drop overhead 0b', tc_filters)
+
+    def test_24_policy_shaper_match_ether(self):
+        interface = self._interfaces[0]
+        bandwidth = 250
+        default_bandwidth = 20
+        default_ceil = 30
+        class_bandwidth = 50
+        class_ceil = 80
+
+        shaper_name = f'qos-shaper-{interface}'
+
+        self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'bandwidth', f'{bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'bandwidth', f'{default_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'ceiling', f'{default_ceil}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'queue-type', 'fair-queue'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'bandwidth', f'{class_bandwidth}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'ceiling', f'{class_ceil}mbit'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ether', 'protocol', 'all'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ether', 'destination', '0c:89:0a:2e:00:00'])
+        self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ether', 'source', '0c:89:0a:2e:00:01'])
+
+        # commit changes
+        self.cli_commit()
+
+        config_entries = (
+            f'root rate {bandwidth}Mbit ceil {bandwidth}Mbit',
+            f'prio 0 rate {class_bandwidth}Mbit ceil {class_ceil}Mbit',
+            f'prio 7 rate {default_bandwidth}Mbit ceil {default_ceil}Mbit'
+        )
+
+        output = cmd(f'tc class show dev {interface}')
+
+        for config_entry in config_entries:
+            self.assertIn(config_entry, output)
+
+        filter = get_tc_filter_details(interface)
+        self.assertIn('match 0c890a2e/ffffffff at -8', filter)
+        self.assertIn('match 00010000/ffff0000 at -4', filter)
+        self.assertIn('match 00000c89/0000ffff at -16', filter)
+        self.assertIn('match 0a2e0000/ffffffff at -12', filter)
+
+        for proto in ['802.1Q', '802_2', '802_3', 'aarp', 'aoe', 'arp', 'atalk',
+                      'dec', 'ip', 'ipv6', 'ipx', 'lat', 'localtalk', 'rarp',
+                      'snap', 'x25', 1, 255, 65535]:
+            self.cli_set(
+                base_path + ['policy', 'shaper', shaper_name, 'class', '23',
+                             'match', '10', 'ether', 'protocol', str(proto)])
+            self.cli_commit()
+
+            if isinstance(proto, int):
+                if proto == 1:
+                    self.assertIn(f'filter parent 1: protocol 802_3 pref',
+                                  get_tc_filter_details(interface))
+                else:
+                    self.assertIn(f'filter parent 1: protocol [{proto}] pref',
+                                  get_tc_filter_details(interface))
+
+            elif proto == '0x000C':
+                # see other codes in the iproute2 eg https://github.com/iproute2/iproute2/blob/413cf4f03a9b6a219c94b86f41d67992b0a14b82/include/uapi/linux/if_ether.h#L130
+                self.assertIn(f'filter parent 1: protocol can pref',
+                              get_tc_filter_details(interface))
+
+            else:
+                self.assertIn(f'filter parent 1: protocol {proto} pref',
+                              get_tc_filter_details(interface))
 
 
 if __name__ == '__main__':

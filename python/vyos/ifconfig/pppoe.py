@@ -19,7 +19,6 @@ from vyos.utils.network import get_interface_config
 
 @Interface.register
 class PPPoEIf(Interface):
-    iftype = 'pppoe'
     definition = {
         **Interface.definition,
         **{
@@ -114,14 +113,6 @@ class PPPoEIf(Interface):
         # We need to copy this from super().update() as we utilize self.set_dhcpv6()
         # before this is done by the base class.
         self._config = config
-
-        # remove old routes from an e.g. old VRF assignment
-        if 'shutdown_required':
-            vrf = None
-            tmp = get_interface_config(self.ifname)
-            if 'master' in tmp:
-                vrf = tmp['master']
-            self._remove_routes(vrf)
 
         # DHCPv6 PD handling is a bit different on PPPoE interfaces, as we do
         # not require an 'address dhcpv6' CLI option as with other interfaces

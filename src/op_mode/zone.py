@@ -56,10 +56,15 @@ def _convert_one_zone_data(zone: str, zone_config: dict) -> dict:
                 from_zone_dict['firewall_v6'] = dict_search(
                     'firewall.ipv6_name', from_zone_config)
             list_of_rules.append(from_zone_dict)
+    zone_members =[]
+    interface_members = dict_search('member.interface', zone_config)
+    vrf_members = dict_search('member.vrf', zone_config)
+    zone_members += interface_members if interface_members is not None else []
+    zone_members += vrf_members if vrf_members is not None else []
 
     zone_dict = {
         'name': zone,
-        'interface': dict_search('interface', zone_config),
+        'members': zone_members,
         'type': 'LOCAL' if dict_search('local_zone',
                                        zone_config) is not None else None,
     }
@@ -126,7 +131,7 @@ def output_zone_list(zone_conf: dict) -> list:
     if zone_conf['type'] == 'LOCAL':
         zone_info.append('LOCAL')
     else:
-        zone_info.append("\n".join(zone_conf['interface']))
+        zone_info.append("\n".join(zone_conf['members']))
 
     from_zone = []
     firewall = []
@@ -175,7 +180,7 @@ def get_formatted_output(zone_policy: list) -> str:
     :rtype: str
     """
     headers = ["Zone",
-               "Interfaces",
+               "Members",
                "From Zone",
                "Firewall IPv4",
                "Firewall IPv6"

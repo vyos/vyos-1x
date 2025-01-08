@@ -26,12 +26,13 @@ from vyos.utils.file import read_file
 from vyos.utils.process import run
 from vyos.utils.assertion import assert_list
 
+
 @Interface.register
 class EthernetIf(Interface):
     """
     Abstraction of a Linux Ethernet Interface
     """
-    iftype = 'ethernet'
+
     definition = {
         **Interface.definition,
         **{
@@ -41,7 +42,7 @@ class EthernetIf(Interface):
             'broadcast': True,
             'bridgeable': True,
             'eternal': '(lan|eth|eno|ens|enp|enx)[0-9]+$',
-        }
+        },
     }
 
     @staticmethod
@@ -49,32 +50,35 @@ class EthernetIf(Interface):
         run(f'ethtool --features {ifname} {option} {value}')
         return False
 
-    _command_set = {**Interface._command_set, **{
-        'gro': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
+    _command_set = {
+        **Interface._command_set,
+        **{
+            'gro': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
+            },
+            'gso': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
+            },
+            'hw-tc-offload': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'hw-tc-offload', v),
+            },
+            'lro': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'lro', v),
+            },
+            'sg': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
+            },
+            'tso': {
+                'validate': lambda v: assert_list(v, ['on', 'off']),
+                'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
+            },
         },
-        'gso': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
-        },
-        'hw-tc-offload': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'hw-tc-offload', v),
-        },
-        'lro': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'lro', v),
-        },
-        'sg': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
-        },
-        'tso': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
-        },
-    }}
+    }
 
     @staticmethod
     def get_bond_member_allowed_options() -> list:
@@ -106,13 +110,16 @@ class EthernetIf(Interface):
             'ring_buffer.rx',
             'ring_buffer.tx',
             'speed',
-            'hw_id'
+            'hw_id',
         ]
         return bond_allowed_sections
 
     def __init__(self, ifname, **kargs):
         super().__init__(ifname, **kargs)
         self.ethtool = Ethtool(ifname)
+
+    def _create(self):
+        pass
 
     def remove(self):
         """
@@ -130,7 +137,11 @@ class EthernetIf(Interface):
             self.set_admin_state('down')
 
         # Remove all VLAN subinterfaces - filter with the VLAN dot
-        for vlan in [x for x in Section.interfaces(self.iftype) if x.startswith(f'{self.ifname}.')]:
+        for vlan in [
+            x
+            for x in Section.interfaces('ethernet')
+            if x.startswith(f'{self.ifname}.')
+        ]:
             Interface(vlan).remove()
 
         super().remove()
@@ -149,10 +160,12 @@ class EthernetIf(Interface):
         ifname = self.config['ifname']
 
         if enable not in ['on', 'off']:
-            raise ValueError("Value out of range")
+            raise ValueError('Value out of range')
 
         if not self.ethtool.check_flow_control():
-            self._debug_msg(f'NIC driver does not support changing flow control settings!')
+            self._debug_msg(
+                'NIC driver does not support changing flow control settings!'
+            )
             return False
 
         current = self.ethtool.get_flow_control()
@@ -180,12 +193,24 @@ class EthernetIf(Interface):
         """
         ifname = self.config['ifname']
 
-        if speed not in ['auto', '10', '100', '1000', '2500', '5000', '10000',
-                         '25000', '40000', '50000', '100000', '400000']:
-            raise ValueError("Value out of range (speed)")
+        if speed not in [
+            'auto',
+            '10',
+            '100',
+            '1000',
+            '2500',
+            '5000',
+            '10000',
+            '25000',
+            '40000',
+            '50000',
+            '100000',
+            '400000',
+        ]:
+            raise ValueError('Value out of range (speed)')
 
         if duplex not in ['auto', 'full', 'half']:
-            raise ValueError("Value out of range (duplex)")
+            raise ValueError('Value out of range (duplex)')
 
         if not self.ethtool.check_speed_duplex(speed, duplex):
             Warning(f'changing speed/duplex setting on "{ifname}" is unsupported!')
@@ -224,7 +249,9 @@ class EthernetIf(Interface):
             # but they do not actually support it either.
             # In that case it's probably better to ignore the error
             # than end up with a broken config.
-            print('Warning: could not set speed/duplex settings: operation not permitted!')
+            print(
+                'Warning: could not set speed/duplex settings: operation not permitted!'
+            )
 
     def set_gro(self, state):
         """
@@ -243,7 +270,9 @@ class EthernetIf(Interface):
             if not fixed:
                 return self.set_interface('gro', 'on' if state else 'off')
             else:
-                print('Adapter does not support changing generic-receive-offload settings!')
+                print(
+                    'Adapter does not support changing generic-receive-offload settings!'
+                )
         return False
 
     def set_gso(self, state):
@@ -262,7 +291,9 @@ class EthernetIf(Interface):
             if not fixed:
                 return self.set_interface('gso', 'on' if state else 'off')
             else:
-                print('Adapter does not support changing generic-segmentation-offload settings!')
+                print(
+                    'Adapter does not support changing generic-segmentation-offload settings!'
+                )
         return False
 
     def set_hw_tc_offload(self, state):
@@ -300,7 +331,9 @@ class EthernetIf(Interface):
             if not fixed:
                 return self.set_interface('lro', 'on' if state else 'off')
             else:
-                print('Adapter does not support changing large-receive-offload settings!')
+                print(
+                    'Adapter does not support changing large-receive-offload settings!'
+                )
         return False
 
     def set_rps(self, state):
@@ -332,13 +365,15 @@ class EthernetIf(Interface):
             for i in range(0, cpu_count, 32):
                 # Extract the next 32-bit chunk
                 chunk = (rps_cpus >> i) & 0xFFFFFFFF
-                hex_chunks.append(f"{chunk:08x}")
+                hex_chunks.append(f'{chunk:08x}')
 
             # Join the chunks with commas
-            rps_cpus = ",".join(hex_chunks)
+            rps_cpus = ','.join(hex_chunks)
 
         for i in range(queues):
-            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', rps_cpus)
+            self._write_sysfs(
+                f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', rps_cpus
+            )
 
         # send bitmask representation as hex string without leading '0x'
         return True
@@ -348,10 +383,13 @@ class EthernetIf(Interface):
         queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
         if state:
             global_rfs_flow = 32768
-            rfs_flow = int(global_rfs_flow/queues)
+            rfs_flow = int(global_rfs_flow / queues)
 
         for i in range(0, queues):
-            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_flow_cnt', rfs_flow)
+            self._write_sysfs(
+                f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_flow_cnt',
+                rfs_flow,
+            )
 
         return True
 
@@ -392,7 +430,9 @@ class EthernetIf(Interface):
             if not fixed:
                 return self.set_interface('tso', 'on' if state else 'off')
             else:
-                print('Adapter does not support changing tcp-segmentation-offload settings!')
+                print(
+                    'Adapter does not support changing tcp-segmentation-offload settings!'
+                )
         return False
 
     def set_ring_buffer(self, rx_tx, size):
@@ -417,39 +457,64 @@ class EthernetIf(Interface):
             print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
 
+    def set_switchdev(self, enable):
+        ifname = self.config['ifname']
+        addr, code = self._popen(
+            f"ethtool -i {ifname} | grep bus-info | awk '{{print $2}}'"
+        )
+        if code != 0:
+            print(f'could not resolve PCIe address of {ifname}')
+            return
+
+        enabled = False
+        state, code = self._popen(
+            f"/sbin/devlink dev eswitch show pci/{addr}  | awk '{{print $3}}'"
+        )
+        if code == 0 and state == 'switchdev':
+            enabled = True
+
+        if enable and not enabled:
+            output, code = self._popen(
+                f'/sbin/devlink dev eswitch set pci/{addr} mode switchdev'
+            )
+            if code != 0:
+                print(f'{ifname} does not support switchdev mode')
+        elif not enable and enabled:
+            self._cmd(f'/sbin/devlink dev eswitch set pci/{addr} mode legacy')
+
     def update(self, config):
-        """ General helper function which works on a dictionary retrived by
+        """General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
-        on any interface. """
+        on any interface."""
 
         # disable ethernet flow control (pause frames)
         value = 'off' if 'disable_flow_control' in config else 'on'
         self.set_flow_control(value)
 
         # GRO (generic receive offload)
-        self.set_gro(dict_search('offload.gro', config) != None)
+        self.set_gro(dict_search('offload.gro', config) is not None)
 
         # GSO (generic segmentation offload)
-        self.set_gso(dict_search('offload.gso', config) != None)
+        self.set_gso(dict_search('offload.gso', config) is not None)
 
         # GSO (generic segmentation offload)
-        self.set_hw_tc_offload(dict_search('offload.hw_tc_offload', config) != None)
+        self.set_hw_tc_offload(dict_search('offload.hw_tc_offload', config) is not None)
 
         # LRO (large receive offload)
-        self.set_lro(dict_search('offload.lro', config) != None)
+        self.set_lro(dict_search('offload.lro', config) is not None)
 
         # RPS - Receive Packet Steering
-        self.set_rps(dict_search('offload.rps', config) != None)
+        self.set_rps(dict_search('offload.rps', config) is not None)
 
         # RFS - Receive Flow Steering
-        self.set_rfs(dict_search('offload.rfs', config) != None)
+        self.set_rfs(dict_search('offload.rfs', config) is not None)
 
         # scatter-gather option
-        self.set_sg(dict_search('offload.sg', config) != None)
+        self.set_sg(dict_search('offload.sg', config) is not None)
 
         # TSO (TCP segmentation offloading)
-        self.set_tso(dict_search('offload.tso', config) != None)
+        self.set_tso(dict_search('offload.tso', config) is not None)
 
         # Set physical interface speed and duplex
         if 'speed_duplex_changed' in config:
@@ -462,6 +527,8 @@ class EthernetIf(Interface):
         if 'ring_buffer' in config:
             for rx_tx, size in config['ring_buffer'].items():
                 self.set_ring_buffer(rx_tx, size)
+
+        self.set_switchdev('switchdev' in config)
 
         # call base class last
         super().update(config)

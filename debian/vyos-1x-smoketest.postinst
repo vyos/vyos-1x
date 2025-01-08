@@ -1,10 +1,15 @@
 #!/bin/sh -e
 
 BUSYBOX_TAG="docker.io/library/busybox:stable"
-OUTPUT_PATH="/usr/share/vyos/busybox-stable.tar"
-
-if [[ -f $OUTPUT_PATH ]]; then
-    rm -f $OUTPUT_PATH
+BUSYBOX_PATH="/usr/share/vyos/busybox-stable.tar"
+if [[ -f $BUSYBOX_PATH ]]; then
+    rm -f $BUSYBOX_PATH
 fi
+skopeo copy --additional-tag "$BUSYBOX_TAG" "docker://$BUSYBOX_TAG" "docker-archive:/$BUSYBOX_PATH"
 
-skopeo copy --additional-tag "$BUSYBOX_TAG" "docker://$BUSYBOX_TAG" "docker-archive:/$OUTPUT_PATH"
+TACPLUS_TAG="docker.io/lfkeitel/tacacs_plus:alpine"
+TACPLUS_PATH="/usr/share/vyos/tacplus-alpine.tar"
+if [[ -f $TACPLUS_PATH ]]; then
+    rm -f $TACPLUS_PATH
+fi
+skopeo copy --additional-tag "$TACPLUS_TAG" "docker://$TACPLUS_TAG" "docker-archive:/$TACPLUS_PATH"

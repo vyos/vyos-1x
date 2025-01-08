@@ -75,3 +75,16 @@ Include={{ directory }}/*.conf
 Timeout={{ timeout }}
 {% endif %}
 
+{% if authentication is vyos_defined and authentication.mode is vyos_defined %}
+{%     if authentication.mode == "pre-shared-secret" %}
+TLSConnect=psk
+TLSAccept=psk
+{%     endif %}
+{%     if authentication.psk.secret is vyos_defined %}
+TLSPSKFile={{ service_psk_file }}
+{%     endif %}
+{%     if authentication.psk.id is vyos_defined %}
+TLSPSKIdentity={{ authentication.psk.id }}
+{%     endif %}
+{% endif %}
+

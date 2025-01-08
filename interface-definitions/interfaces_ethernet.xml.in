@@ -56,6 +56,12 @@
             </properties>
             <defaultValue>auto</defaultValue>
           </leafNode>
+          <leafNode name="switchdev">
+            <properties>
+              <help>Enables switchdev mode on interface</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/interface/eapol.xml.i>
           <node name="evpn">
             <properties>

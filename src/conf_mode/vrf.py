@@ -19,23 +19,23 @@ from jmespath import search
 from json import loads
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_map
 from vyos.firewall import conntrack_required
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import Interface
 from vyos.template import render
-from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import popen
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -132,15 +132,9 @@ def get_config(config=None):
     if 'name' in vrf:
         vrf['conntrack'] = conntrack_required(conf)
 
-    # We also need the route-map information from the config
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = {'policy' : {'route-map' : conf.get_config_dict(['policy', 'route-map'],
-                                                          get_first_key=True)}}
-
-    # Merge policy dict into "regular" config dict
-    vrf = dict_merge(tmp, vrf)
+    # We need to merge the FRR rendering dict into the VRF dict
+    # this is required to get the route-map information to FRR
+    vrf.update({'frr_dict' : get_frrender_dict(conf)})
     return vrf
 
 def verify(vrf):
@@ -158,6 +152,7 @@ def verify(vrf):
         reserved_names = ["add", "all", "broadcast", "default", "delete", "dev",
                           "get", "inet", "mtu", "link", "type", "vrf"]
         table_ids = []
+        vnis = []
         for name, vrf_config in vrf['name'].items():
             # Reserved VRF names
             if name in reserved_names:
@@ -178,17 +173,24 @@ def verify(vrf):
                 raise ConfigError(f'VRF "{name}" table id is not unique!')
             table_ids.append(vrf_config['table'])
 
+            # VRF VNIs must be unique on the system
+            if 'vni' in vrf_config:
+                vni = vrf_config['vni']
+                if vni in vnis:
+                    raise ConfigError(f'VRF "{name}" VNI "{vni}" is not unique!')
+                vnis.append(vni)
+
             tmp = dict_search('ip.protocol', vrf_config)
             if tmp != None:
                 for protocol, protocol_options in tmp.items():
                     if 'route_map' in protocol_options:
-                        verify_route_map(protocol_options['route_map'], vrf)
+                        verify_route_map(protocol_options['route_map'], vrf['frr_dict'])
 
             tmp = dict_search('ipv6.protocol', vrf_config)
             if tmp != None:
                 for protocol, protocol_options in tmp.items():
                     if 'route_map' in protocol_options:
-                        verify_route_map(protocol_options['route_map'], vrf)
+                        verify_route_map(protocol_options['route_map'], vrf['frr_dict'])
 
     return None
 
@@ -196,8 +198,9 @@ def verify(vrf):
 def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
-    # Render VRF Kernel/Zebra route-map filters
-    vrf['frr_zebra_config'] = render_to_string('frr/zebra.vrf.route-map.frr.j2', vrf)
+
+    if 'frr_dict' in vrf and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(vrf['frr_dict'])
 
     return None
 
@@ -339,17 +342,8 @@ def apply(vrf):
             if has_rule(afi, 2000, 'l3mdev'):
                 call(f'ip {afi} rule del pref 2000 l3mdev unreachable')
 
-    # Apply FRR filters
-    zebra_daemon = 'zebra'
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(f'^vrf .+', stop_pattern='^exit-vrf', remove_stop_mark=True)
-    if 'frr_zebra_config' in vrf:
-        frr_cfg.add_before(frr.default_add_before, vrf['frr_zebra_config'])
-    frr_cfg.commit_configuration(zebra_daemon)
+    if 'frr_dict' in vrf and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
 
     return None
 

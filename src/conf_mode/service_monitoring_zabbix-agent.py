@@ -18,6 +18,8 @@ import os
 
 from vyos.config import Config
 from vyos.template import render
+from vyos.utils.dict import dict_search
+from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
@@ -26,6 +28,7 @@ airbag.enable()
 
 service_name = 'zabbix-agent2'
 service_conf = f'/run/zabbix/{service_name}.conf'
+service_psk_file = f'/run/zabbix/{service_name}.psk'
 systemd_override = r'/run/systemd/system/zabbix-agent2.service.d/10-override.conf'
 
 
@@ -49,6 +52,8 @@ def get_config(config=None):
     if 'directory' in config and config['directory'].endswith('/'):
         config['directory'] = config['directory'][:-1]
 
+    config['service_psk_file'] = service_psk_file
+
     return config
 
 
@@ -60,17 +65,33 @@ def verify(config):
     if 'server' not in config:
         raise ConfigError('Server is required!')
 
+    if 'authentication' in config and dict_search("authentication.mode",
+                                                  config) == 'pre_shared_secret':
+        if 'id' not in config['authentication']['psk']:
+            raise ConfigError(
+                'PSK identity is required for pre-shared-secret authentication mode')
+
+        if 'secret' not in config['authentication']['psk']:
+            raise ConfigError(
+                'PSK secret is required for pre-shared-secret authentication mode')
+
 
 def generate(config):
     # bail out early - looks like removal from running config
     if config is None:
         # Remove old config and return
-        config_files = [service_conf, systemd_override]
+        config_files = [service_conf, systemd_override, service_psk_file]
         for file in config_files:
             if os.path.isfile(file):
                 os.unlink(file)
 
         return None
+
+    if not dict_search("authentication.psk.secret", config):
+        if os.path.isfile(service_psk_file):
+            os.unlink(service_psk_file)
+    else:
+        write_file(service_psk_file, config["authentication"]["psk"]["secret"])
 
     # Write configuration file
     render(service_conf, 'zabbix-agent/zabbix-agent.conf.j2', config)

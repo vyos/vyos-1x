@@ -55,6 +55,8 @@ def main():
     parser = ArgumentParser(description='generate and save dict from xml defintions')
     parser.add_argument('--xml-dir', type=str, required=True,
                         help='transcluded xml interface-definition directory')
+    parser.add_argument('--internal-cache', type=str, required=True,
+                        help='cache as unrendered json data for loading by vyconfd')
     parser.add_argument('--package-name', type=non_trivial, default='vyos-1x',
                         help='name of current package')
     parser.add_argument('--output-path', help='path to generated cache')
@@ -66,9 +68,11 @@ def main():
     out_path = args['output_path']
     path = out_path if out_path is not None else pkg_cache
     xml_cache = abspath(join(path, cache_name))
+    internal_cache = args['internal_cache']
 
     try:
-        reference_tree_to_json(xml_dir, xml_tmp)
+        reference_tree_to_json(xml_dir, xml_tmp,
+                               internal_cache=internal_cache)
     except ConfigTreeError as e:
         print(e)
         sys.exit(1)

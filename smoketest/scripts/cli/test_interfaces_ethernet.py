@@ -27,10 +27,11 @@ from netifaces import ifaddresses
 from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.utils.file import read_file
+from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
-from vyos.utils.file import read_file
-from vyos.utils.network import is_ipv6_link_local
 
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -77,14 +78,18 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                     continue
                 self.assertFalse(is_intf_addr_assigned(interface, addr['addr']))
             # Ensure no VLAN interfaces are left behind
-            tmp = [x for x in Section.interfaces('ethernet') if x.startswith(f'{interface}.')]
+            tmp = [
+                x
+                for x in Section.interfaces('ethernet')
+                if x.startswith(f'{interface}.')
+            ]
             self.assertListEqual(tmp, [])
 
     def test_offloading_rps(self):
         # enable RPS on all available CPUs, RPS works with a CPU bitmask,
         # where each bit represents a CPU (core/thread). The formula below
         # expands to rps_cpus = 255 for a 8 core system
-        rps_cpus = (1 << os.cpu_count()) -1
+        rps_cpus = (1 << os.cpu_count()) - 1
 
         # XXX: we should probably reserve one core when the system is under
         # high preasure so we can still have a core left for housekeeping.
@@ -100,7 +105,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         for interface in self._interfaces:
             cpus = read_file(f'/sys/class/net/{interface}/queues/rx-0/rps_cpus')
             # remove the nasty ',' separation on larger strings
-            cpus = cpus.replace(',','')
+            cpus = cpus.replace(',', '')
             cpus = int(cpus, 16)
 
             self.assertEqual(f'{cpus:x}', f'{rps_cpus:x}')
@@ -116,12 +121,14 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
         for interface in self._interfaces:
             queues = len(glob(f'/sys/class/net/{interface}/queues/rx-*'))
-            rfs_flow = int(global_rfs_flow/queues)
+            rfs_flow = int(global_rfs_flow / queues)
             for i in range(0, queues):
-                tmp = read_file(f'/sys/class/net/{interface}/queues/rx-{i}/rps_flow_cnt')
+                tmp = read_file(
+                    f'/sys/class/net/{interface}/queues/rx-{i}/rps_flow_cnt'
+                )
                 self.assertEqual(int(tmp), rfs_flow)
 
-        tmp = read_file(f'/proc/sys/net/core/rps_sock_flow_entries')
+        tmp = read_file('/proc/sys/net/core/rps_sock_flow_entries')
         self.assertEqual(int(tmp), global_rfs_flow)
 
         # delete configuration of RFS and check all values returned to default "0"
@@ -132,11 +139,12 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
         for interface in self._interfaces:
             queues = len(glob(f'/sys/class/net/{interface}/queues/rx-*'))
-            rfs_flow = int(global_rfs_flow/queues)
+            rfs_flow = int(global_rfs_flow / queues)
             for i in range(0, queues):
-                tmp = read_file(f'/sys/class/net/{interface}/queues/rx-{i}/rps_flow_cnt')
+                tmp = read_file(
+                    f'/sys/class/net/{interface}/queues/rx-{i}/rps_flow_cnt'
+                )
                 self.assertEqual(int(tmp), 0)
-
 
     def test_non_existing_interface(self):
         unknonw_interface = self._base_path + ['eth667']
@@ -212,15 +220,24 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 out = loads(out)
                 self.assertFalse(out[0]['autonegotiate'])
 
-    def test_ethtool_evpn_uplink_tarcking(self):
+    def test_ethtool_evpn_uplink_tracking(self):
         for interface in self._interfaces:
             self.cli_set(self._base_path + [interface, 'evpn', 'uplink'])
 
         self.cli_commit()
 
         for interface in self._interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', daemon='zebra')
-            self.assertIn(f' evpn mh uplink', frrconfig)
+            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+            self.assertIn(' evpn mh uplink', frrconfig)
+
+    def test_switchdev(self):
+        interface = self._interfaces[0]
+        self.cli_set(self._base_path + [interface, 'switchdev'])
+
+        # check validate() - virtual interfaces do not support switchdev
+        # should print out warning that enabling failed
+
+        self.cli_delete(self._base_path + [interface, 'switchdev'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -321,6 +321,7 @@
       <children>
         #include <include/ospf/authentication.xml.i>
         #include <include/ospf/intervals.xml.i>
+        #include <include/ospf/retransmit-window.xml.i>
       </children>
     </tagNode>
   </children>
@@ -433,6 +434,7 @@
     </leafNode>
     #include <include/ospf/authentication.xml.i>
     #include <include/ospf/intervals.xml.i>
+    #include <include/ospf/retransmit-window.xml.i>
     #include <include/ospf/interface-common.xml.i>
     #include <include/isis/ldp-sync-interface.xml.i>
     <leafNode name="bandwidth">

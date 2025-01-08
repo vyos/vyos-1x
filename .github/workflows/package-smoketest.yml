@@ -17,6 +17,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed for PR comments
   BUILD_BY: autobuild@vyos.net
   DEBIAN_MIRROR: http://deb.debian.org/debian/
+  DEBIAN_SECURITY_MIRROR: http://deb.debian.org/debian-security
   VYOS_MIRROR: https://packages.vyos.net/repositories/current/
 
 jobs:
@@ -56,13 +57,16 @@ jobs:
           --build-type release \
           --custom-package vyos-1x-smoketest \
           --debian-mirror $DEBIAN_MIRROR \
+          --debian-security-mirror $DEBIAN_SECURITY_MIRROR \
           --version ${{ steps.version.outputs.build_version }} \
           --vyos-mirror $VYOS_MIRROR \
           generic
       - uses: actions/upload-artifact@v4
         with:
           name: vyos-${{ steps.version.outputs.build_version }}
-          path: build/live-image-amd64.hybrid.iso
+          path: |
+            build/live-image-amd64.hybrid.iso
+            build/manifest.json
 
   test_smoketest_cli:
     needs: build_iso

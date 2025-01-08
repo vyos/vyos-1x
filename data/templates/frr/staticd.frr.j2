@@ -1,19 +1,85 @@
-{% from 'frr/static_routes_macro.j2' import static_routes %}
+{# Common macro for recurroiing options for a static route #}
+{% macro route_options(route, interface_or_next_hop, config, table) %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{% set ip_route = route ~ ' ' ~ interface_or_next_hop %}
+{% if config.interface is vyos_defined %}
+{%     set ip_route = ip_route ~ ' ' ~ config.interface %}
+{% endif %}
+{% if config.tag is vyos_defined %}
+{%     set ip_route = ip_route ~ ' tag ' ~ config.tag %}
+{% endif %}
+{% if config.distance is vyos_defined %}
+{%     set ip_route = ip_route ~ ' ' ~ config.distance %}
+{% endif %}
+{% if config.bfd is vyos_defined %}
+{%     set ip_route = ip_route ~ ' bfd' %}
+{%     if config.bfd.multi_hop is vyos_defined %}
+{%         set ip_route = ip_route ~ ' multi-hop' %}
+{%         if config.bfd.multi_hop.source_address is vyos_defined %}
+{%             set ip_route = ip_route ~ ' source ' ~ config.bfd.multi_hop.source_address %}
+{%         endif %}
+{%     endif %}
+{%     if config.bfd.profile is vyos_defined %}
+{%         set ip_route = ip_route ~ ' profile ' ~ config.bfd.profile %}
+{%     endif %}
+{% endif %}
+{% if config.vrf is vyos_defined %}
+{%     set ip_route = ip_route ~ ' nexthop-vrf ' ~ config.vrf %}
+{% endif %}
+{% if config.segments is vyos_defined %}
+{# Segments used in/for SRv6 #}
+{%     set ip_route = ip_route ~ ' segments ' ~ config.segments %}
+{% endif %}
+{# Routing table to configure #}
+{% if table is vyos_defined %}
+{%     set ip_route = ip_route ~ ' table ' ~ table %}
+{% endif %}
+{{ ip_route }}
+{%- endmacro -%}
+{# Build static IPv4/IPv6 route #}
+{% macro static_routes(ip_ipv6, prefix, prefix_config, table=None) %}
+{% set route = ip_ipv6 ~ 'route ' ~ prefix %}
+{% if prefix_config.interface is vyos_defined %}
+{%     for interface, interface_config in prefix_config.interface.items() if interface_config.disable is not defined %}
+{{ route_options(route, interface, interface_config, table) }}
+{%     endfor %}
+{% endif %}
+{% if prefix_config.next_hop is vyos_defined and prefix_config.next_hop is not none %}
+{%     for next_hop, next_hop_config in prefix_config.next_hop.items() if next_hop_config.disable is not defined %}
+{{ route_options(route, next_hop, next_hop_config, table) }}
+{%     endfor %}
+{% endif %}
+{% if prefix_config.dhcp_interface is vyos_defined %}
+{%     for dhcp_interface in prefix_config.dhcp_interface %}
+{%         set next_hop = dhcp_interface | get_dhcp_router %}
+{%         if next_hop is vyos_defined %}
+{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ dhcp_interface }} {{ 'table ' ~ table if table is vyos_defined }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if prefix_config.blackhole is vyos_defined %}
+{{ route_options(route, 'blackhole', prefix_config.blackhole, table) }}
+{% elif prefix_config.reject is vyos_defined %}
+{{ route_options(route, 'reject', prefix_config.reject, table) }}
+{% endif %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%- endmacro -%}
 !
-{% set ip_prefix = 'ip' %}
-{% set ipv6_prefix = 'ipv6' %}
+{% set ip_prefix = 'ip ' %}
+{% set ipv6_prefix = 'ipv6 ' %}
 {% if vrf is vyos_defined %}
 {#     We need to add an additional whitespace in front of the prefix #}
 {#     when VRFs are in use, thus we use a variable for prefix handling #}
-{%     set ip_prefix = ' ip' %}
-{%     set ipv6_prefix = ' ipv6' %}
+{%     set ip_prefix = ' ip ' %}
+{%     set ipv6_prefix = ' ipv6 ' %}
 vrf {{ vrf }}
 {% endif %}
 {# IPv4 routing #}
 {% if route is vyos_defined %}
 {%     for prefix, prefix_config in route.items() %}
 {{ static_routes(ip_prefix, prefix, prefix_config) }}
-{%     endfor %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
 {# IPv4 default routes from DHCP interfaces #}
 {% if dhcp is vyos_defined %}
@@ -28,13 +94,14 @@ vrf {{ vrf }}
 {% if pppoe is vyos_defined %}
 {%     for interface, interface_config in pppoe.items() if interface_config.no_default_route is not vyos_defined %}
 {{ ip_prefix }} route 0.0.0.0/0 {{ interface }} tag 210 {{ interface_config.default_route_distance if interface_config.default_route_distance is vyos_defined }}
-{%     endfor %}
+{%-    endfor %}
 {% endif %}
 {# IPv6 routing #}
 {% if route6 is vyos_defined %}
 {%     for prefix, prefix_config in route6.items() %}
 {{ static_routes(ipv6_prefix, prefix, prefix_config) }}
-{%     endfor %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
 {% if vrf is vyos_defined %}
 exit-vrf
@@ -45,17 +112,29 @@ exit-vrf
 {%     for table_id, table_config in table.items() %}
 {%         if table_config.route is vyos_defined %}
 {%             for prefix, prefix_config in table_config.route.items() %}
-{{ static_routes('ip', prefix, prefix_config, table_id) }}
-{%             endfor %}
+{{ static_routes('ip ', prefix, prefix_config, table_id) }}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-            endfor %}
 {%         endif %}
 !
 {%         if table_config.route6 is vyos_defined %}
 {%             for prefix, prefix_config in table_config.route6.items() %}
-{{ static_routes('ipv6', prefix, prefix_config, table_id) }}
-{%             endfor %}
+{{ static_routes('ipv6 ', prefix, prefix_config, table_id) }}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-            endfor %}
 {%         endif %}
 !
 {%     endfor %}
+{% endif %}
+!
+{# Multicast route #}
+{% if mroute is vyos_defined %}
+{%     set ip_prefix = 'ip m' %}
+{# IPv4 multicast routing #}
+{%     for prefix, prefix_config in mroute.items() %}
+{{ static_routes(ip_prefix, prefix, prefix_config) }}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%-    endfor %}
 {% endif %}
 !
 {% if route_map is vyos_defined %}

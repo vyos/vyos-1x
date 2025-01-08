@@ -17,12 +17,15 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import node_changed
-from vyos.template import render_to_string
+from vyos.configdict import list_diff
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
+from vyos.ifconfig import Section
 from vyos.utils.dict import dict_search
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -32,25 +35,14 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['protocols', 'segment-routing']
-    sr = conf.get_config_dict(base, key_mangling=('-', '_'),
-                              get_first_key=True,
-                              no_tag_node_value_mangle=True,
-                              with_recursive_defaults=True)
+    return get_frrender_dict(conf)
 
-    # FRR has VRF support for different routing daemons. As interfaces belong
-    # to VRFs - or the global VRF, we need to check for changed interfaces so
-    # that they will be properly rendered for the FRR config. Also this eases
-    # removal of interfaces from the running configuration.
-    interfaces_removed = node_changed(conf, base + ['interface'])
-    if interfaces_removed:
-        sr['interface_removed'] = list(interfaces_removed)
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'segment_routing'):
+        return None
 
-    import pprint
-    pprint.pprint(sr)
-    return sr
+    sr = config_dict['segment_routing']
 
-def verify(sr):
     if 'srv6' in sr:
         srv6_enable = False
         if 'interface' in sr:
@@ -62,47 +54,43 @@ def verify(sr):
             raise ConfigError('SRv6 should be enabled on at least one interface!')
     return None
 
-def generate(sr):
-    if not sr:
-        return None
-
-    sr['new_frr_config'] = render_to_string('frr/zebra.segment_routing.frr.j2', sr)
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-def apply(sr):
-    zebra_daemon = 'zebra'
+def apply(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'segment_routing'):
+        return None
 
-    if 'interface_removed' in sr:
-        for interface in sr['interface_removed']:
-            # Disable processing of IPv6-SR packets
+    sr = config_dict['segment_routing']
+
+    current_interfaces = Section.interfaces()
+    sr_interfaces = list(sr.get('interface', {}).keys())
+
+    for interface in list_diff(current_interfaces, sr_interfaces):
+        # Disable processing of IPv6-SR packets
+        sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
+
+    for interface, interface_config in sr.get('interface', {}).items():
+        # Accept or drop SR-enabled IPv6 packets on this interface
+        if 'srv6' in interface_config:
+            sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '1')
+            # Define HMAC policy for ingress SR-enabled packets on this interface
+            # It's a redundant check as HMAC has a default value - but better safe
+            # then sorry
+            tmp = dict_search('srv6.hmac', interface_config)
+            if tmp == 'accept':
+                sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '0')
+            elif tmp == 'drop':
+                sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '1')
+            elif tmp == 'ignore':
+                sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '-1')
+        else:
             sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
 
-    if 'interface' in sr:
-        for interface, interface_config in sr['interface'].items():
-            # Accept or drop SR-enabled IPv6 packets on this interface
-            if 'srv6' in interface_config:
-                sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '1')
-                # Define HMAC policy for ingress SR-enabled packets on this interface
-                # It's a redundant check as HMAC has a default value - but better safe
-                # then sorry
-                tmp = dict_search('srv6.hmac', interface_config)
-                if tmp == 'accept':
-                    sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '0')
-                elif tmp == 'drop':
-                    sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '1')
-                elif tmp == 'ignore':
-                    sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '-1')
-            else:
-                sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'^segment-routing')
-    if 'new_frr_config' in sr:
-        frr_cfg.add_before(frr.default_add_before, sr['new_frr_config'])
-    frr_cfg.commit_configuration(zebra_daemon)
-
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

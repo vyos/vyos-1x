@@ -23,6 +23,7 @@ from vyos.utils.file import read_file
 
 PROCESS_NAME = 'zabbix_agent2'
 ZABBIX_AGENT_CONF = '/run/zabbix/zabbix-agent2.conf'
+ZABBIX_PSK_FILE = f'/run/zabbix/zabbix-agent2.psk'
 base_path = ['service', 'monitoring', 'zabbix-agent']
 
 
@@ -81,6 +82,26 @@ class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'Include={directory}/*.conf', config)
         self.assertIn(f'Timeout={timeout}', config)
         self.assertIn(f'Hostname={hostname}', config)
+
+    def test_02_zabbix_agent_psk_auth(self):
+        secret = '8703ce4cb3f51279acba895e1421d69d8a7e2a18546d013d564ad87ac3957f29'
+        self.cli_set(base_path + ['server', '127.0.0.1'])
+        self.cli_set(base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(base_path + ['authentication', 'psk', 'id', 'smoke_test'])
+        self.cli_set(base_path + ['authentication', 'psk', 'secret', secret])
+        self.cli_commit()
+
+        config = read_file(ZABBIX_AGENT_CONF)
+        self.assertIn('TLSConnect=psk', config)
+        self.assertIn('TLSAccept=psk', config)
+        self.assertIn('TLSPSKIdentity=smoke_test', config)
+        self.assertIn(f'TLSPSKFile={ZABBIX_PSK_FILE}', config)
+        self.assertEqual(secret, read_file(ZABBIX_PSK_FILE))
+
+        secret = '8703ce4cb3f51279acba895e1421d69d8a7e2a18546d013d564ad87ac3957f88'
+        self.cli_set(base_path + ['authentication', 'psk', 'secret', secret])
+        self.cli_commit()
+        self.assertEqual(secret, read_file(ZABBIX_PSK_FILE))
 
 
 if __name__ == '__main__':

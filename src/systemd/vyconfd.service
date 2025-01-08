@@ -1,0 +1,21 @@
+[Unit]
+Description=VyOS vyconf daemon
+
+# Without this option, lots of default dependencies are added,
+# among them network.target, which creates a dependency cycle
+DefaultDependencies=no
+
+After=systemd-remount-fs.service
+
+[Service]
+ExecStart=/usr/libexec/vyos/vyconf/vyconfd --log-file /var/run/log/vyconfd.log
+Type=exec
+SyslogIdentifier=vyconfd
+SyslogFacility=daemon
+Restart=on-failure
+
+User=root
+Group=vyattacfg
+
+[Install]
+WantedBy=vyos.target

@@ -17,12 +17,13 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
+from vyos.frrender import ospf6_daemon
 from vyos.utils.process import process_named_running
 
-PROCESS_NAME = 'ospf6d'
 base_path = ['protocols', 'ospfv3']
 
 route_map = 'foo-bar-baz-0815'
@@ -36,7 +37,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         super(TestProtocolsOSPFv3, cls).setUpClass()
 
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        cls.daemon_pid = process_named_running(ospf6_daemon)
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
@@ -44,6 +45,8 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     @classmethod
     def tearDownClass(cls):
@@ -54,8 +57,11 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
+        self.assertNotIn(f'router ospf6', frrconfig)
+
         # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
+        self.assertEqual(self.daemon_pid, process_named_running(ospf6_daemon))
 
     def test_ospfv3_01_basic(self):
         seq = '10'
@@ -78,7 +84,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' area {default_area} range {prefix}', frrconfig)
         self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
@@ -86,7 +92,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {default_area} export-list {acl_name}', frrconfig)
 
         for interface in interfaces:
-            if_config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            if_config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'ipv6 ospf6 area {default_area}', if_config)
 
         self.cli_delete(['policy', 'access-list6', acl_name])
@@ -107,7 +113,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' distance {dist_global}', frrconfig)
         self.assertIn(f' distance ospf6 intra-area {dist_intra_area} inter-area {dist_inter_area} external {dist_external}', frrconfig)
@@ -131,7 +137,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         for protocol in redistribute:
             self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
@@ -162,13 +168,13 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
 
         cost = '100'
         priority = '10'
         for interface in interfaces:
-            if_config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            if_config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             self.assertIn(f'interface {interface}', if_config)
             self.assertIn(f' ipv6 ospf6 bfd', if_config)
             self.assertIn(f' ipv6 ospf6 bfd profile {bfd_profile}', if_config)
@@ -185,7 +191,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for interface in interfaces:
-            if_config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            if_config = self.getFRRconfig(f'interface {interface}', endsection='^exit')
             # There should be no OSPF6 configuration at all after interface removal
             self.assertNotIn(f' ipv6 ospf6', if_config)
 
@@ -201,7 +207,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' area {area_stub} stub', frrconfig)
         self.assertIn(f' area {area_stub_nosum} stub no-summary', frrconfig)
@@ -227,7 +233,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' area {area_nssa} nssa', frrconfig)
         self.assertIn(f' area {area_nssa_nosum} nssa default-information-originate no-summary', frrconfig)
@@ -247,7 +253,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' default-information originate metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
@@ -256,7 +262,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f' default-information originate always metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
 
@@ -282,15 +288,15 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
 
-        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', endsection='^exit')
         self.assertIn(f'interface {vrf_iface}', frrconfig)
         self.assertIn(f' ipv6 ospf6 bfd', frrconfig)
 
-        frrconfig = self.getFRRconfig(f'router ospf6 vrf {vrf}', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig(f'router ospf6 vrf {vrf}', endsection='^exit')
         self.assertIn(f'router ospf6 vrf {vrf}', frrconfig)
         self.assertIn(f' ospf6 router-id {router_id_vrf}', frrconfig)
 
@@ -300,7 +306,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # T5467: It must also be removed from FRR config
-        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', endsection='^exit')
         self.assertNotIn(f'interface {vrf_iface}', frrconfig)
         # There should be no OSPF related command at all under the interface
         self.assertNotIn(f' ipv6 ospf6', frrconfig)
@@ -326,7 +332,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf6', daemon=PROCESS_NAME)
+        frrconfig = self.getFRRconfig('router ospf6', endsection='^exit')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' graceful-restart grace-period {period}', frrconfig)
         self.assertIn(f' graceful-restart helper planned-only', frrconfig)

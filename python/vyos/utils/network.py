@@ -69,7 +69,9 @@ def get_vrf_members(vrf: str) -> list:
         answer = json.loads(output)
         for data in answer:
             if 'ifname' in data:
-                interfaces.append(data.get('ifname'))
+                # Skip PIM interfaces which appears in VRF
+                if 'pim' not in data.get('ifname'):
+                    interfaces.append(data.get('ifname'))
     except:
         pass
     return interfaces

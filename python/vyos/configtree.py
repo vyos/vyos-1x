@@ -469,15 +469,15 @@ def mask_inclusive(left, right, libpath=LIBPATH):
 
     return tree
 
-def reference_tree_to_json(from_dir, to_file, libpath=LIBPATH):
+def reference_tree_to_json(from_dir, to_file, internal_cache="", libpath=LIBPATH):
     try:
         __lib = cdll.LoadLibrary(libpath)
         __reference_tree_to_json = __lib.reference_tree_to_json
-        __reference_tree_to_json.argtypes = [c_char_p, c_char_p]
+        __reference_tree_to_json.argtypes = [c_char_p, c_char_p, c_char_p]
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
-        res = __reference_tree_to_json(from_dir.encode(), to_file.encode())
+        res = __reference_tree_to_json(internal_cache.encode(), from_dir.encode(), to_file.encode())
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:

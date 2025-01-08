@@ -17,14 +17,15 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
+from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_access_list
 from vyos.configverify import verify_prefix_list
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
-from vyos.template import render_to_string
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -33,31 +34,15 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['protocols', 'ripng']
-    ripng = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    # Bail out early if configuration tree does not exist
-    if not conf.exists(base):
-        return ripng
+    return get_frrender_dict(conf)
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    ripng = conf.merge_defaults(ripng, recursive=True)
-
-    # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify().
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = conf.get_config_dict(['policy'])
-    # Merge policy dict into "regular" config dict
-    ripng = dict_merge(tmp, ripng)
-
-    return ripng
-
-def verify(ripng):
-    if not ripng:
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'ripng'):
         return None
+
+    ripng = config_dict['ripng']
+    ripng['policy'] = config_dict['policy']
 
     verify_common_route_maps(ripng)
 
@@ -83,34 +68,14 @@ def verify(ripng):
                     raise ConfigError(f'You can not have "split-horizon poison-reverse" enabled ' \
                                       f'with "split-horizon disable" for "{interface}"!')
 
-def generate(ripng):
-    if not ripng:
-        ripng['new_frr_config'] = ''
-        return None
-
-    ripng['new_frr_config'] = render_to_string('frr/ripngd.frr.j2', ripng)
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-def apply(ripng):
-    ripng_daemon = 'ripngd'
-    zebra_daemon = 'zebra'
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section('^ipv6 protocol ripng route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
-    frr_cfg.commit_configuration(zebra_daemon)
-
-    frr_cfg.load_configuration(ripng_daemon)
-    frr_cfg.modify_section('key chain \S+', stop_pattern='^exit', remove_stop_mark=True)
-    frr_cfg.modify_section('interface \S+', stop_pattern='^exit', remove_stop_mark=True)
-    frr_cfg.modify_section('^router ripng', stop_pattern='^exit', remove_stop_mark=True)
-    if 'new_frr_config' in ripng:
-        frr_cfg.add_before(frr.default_add_before, ripng['new_frr_config'])
-    frr_cfg.commit_configuration(ripng_daemon)
-
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

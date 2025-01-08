@@ -6,7 +6,7 @@
         <properties>
           <help>Show VyOS license information</help>
         </properties>
-        <command>less $_vyatta_less_options --prompt=".license, page %dt of %D" -- ${vyatta_sysconfdir}/LICENSE</command>
+        <command>less $_vyatta_less_options --prompt=".license, page %dt of %D" -- ${vyos_data_dir}/EULA</command>
       </leafNode>
     </children>
   </node>

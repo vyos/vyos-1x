@@ -80,7 +80,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              #include <include/listen-address-ipv4-single.xml.i>
+              #include <include/listen-address-single.xml.i>
               <leafNode name="rsa-key-size">
                 <properties>
                   <help>Size of the RSA key</help>
@@ -189,30 +189,6 @@
                   </constraint>
                 </properties>
               </leafNode>
-            </children>
-          </node>
-          <node name="private">
-            <properties>
-              <help>Private key</help>
-            </properties>
-            <children>
-              #include <include/pki/cli-private-key-base64.xml.i>
-              #include <include/pki/password-protected.xml.i>
-            </children>
-          </node>
-        </children>
-      </tagNode>
-      <tagNode name="openssh">
-        <properties>
-          <help>OpenSSH public and private keys</help>
-        </properties>
-        <children>
-          <node name="public">
-            <properties>
-              <help>Public key</help>
-            </properties>
-            <children>
-              #include <include/pki/cli-public-key-base64.xml.i>
             </children>
           </node>
           <node name="private">

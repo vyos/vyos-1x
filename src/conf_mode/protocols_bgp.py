@@ -19,21 +19,20 @@ from sys import argv
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.configdict import node_changed
+from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_prefix_list
 from vyos.configverify import verify_route_map
 from vyos.configverify import verify_vrf
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.template import is_ip
 from vyos.template import is_interface
-from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import is_addr_assigned
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
-from vyos.utils.process import call
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -43,68 +42,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    vrf = None
-    if len(argv) > 1:
-        vrf = argv[1]
-
-    base_path = ['protocols', 'bgp']
-
-    # eqivalent of the C foo ? 'a' : 'b' statement
-    base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
-    bgp = conf.get_config_dict(base, key_mangling=('-', '_'),
-                               get_first_key=True, no_tag_node_value_mangle=True)
-
-    bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
-                                                 key_mangling=('-', '_'),
-                                                 get_first_key=True,
-                                                 no_tag_node_value_mangle=True)
-
-    # Remove per interface MPLS configuration - get a list if changed
-    # nodes under the interface tagNode
-    interfaces_removed = node_changed(conf, base + ['interface'])
-    if interfaces_removed:
-        bgp['interface_removed'] = list(interfaces_removed)
-
-    # Assign the name of our VRF context. This MUST be done before the return
-    # statement below, else on deletion we will delete the default instance
-    # instead of the VRF instance.
-    if vrf:
-        bgp.update({'vrf' : vrf})
-        # We can not delete the BGP VRF instance if there is a L3VNI configured
-        # FRR L3VNI must be deleted first otherwise we will see error:
-        # "FRR error: Please unconfigure l3vni 3000"
-        tmp = ['vrf', 'name', vrf, 'vni']
-        if conf.exists_effective(tmp):
-            bgp.update({'vni' : conf.return_effective_value(tmp)})
-        # We can safely delete ourself from the dependent vrf list
-        if vrf in bgp['dependent_vrfs']:
-            del bgp['dependent_vrfs'][vrf]
-
-        bgp['dependent_vrfs'].update({'default': {'protocols': {
-            'bgp': conf.get_config_dict(base_path, key_mangling=('-', '_'),
-                                        get_first_key=True,
-                                        no_tag_node_value_mangle=True)}}})
-
-    if not conf.exists(base):
-        # If bgp instance is deleted then mark it
-        bgp.update({'deleted' : ''})
-        return bgp
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    bgp = conf.merge_defaults(bgp, recursive=True)
-
-    # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify().
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = conf.get_config_dict(['policy'])
-    # Merge policy dict into "regular" config dict
-    bgp = dict_merge(tmp, bgp)
-
-    return bgp
-
+    return get_frrender_dict(conf, argv)
 
 def verify_vrf_as_import(search_vrf_name: str, afi_name: str, vrfs_config: dict) -> bool:
     """
@@ -237,13 +175,24 @@ def verify_afi(peer_config, bgp_config):
         if tmp: return True
     return False
 
-def verify(bgp):
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'bgp'):
+        return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    bgp = vrf and config_dict['vrf']['name'][vrf]['protocols']['bgp'] or config_dict['bgp']
+    bgp['policy'] = config_dict['policy']
+
     if 'deleted' in bgp:
-        if 'vrf' in bgp:
+        if vrf:
             # Cannot delete vrf if it exists in import vrf list in other vrfs
             for tmp_afi in ['ipv4_unicast', 'ipv6_unicast']:
-                if verify_vrf_as_import(bgp['vrf'], tmp_afi, bgp['dependent_vrfs']):
-                    raise ConfigError(f'Cannot delete VRF instance "{bgp["vrf"]}", ' \
+                if verify_vrf_as_import(vrf, tmp_afi, bgp['dependent_vrfs']):
+                    raise ConfigError(f'Cannot delete VRF instance "{vrf}", ' \
                                       'unconfigure "import vrf" commands!')
         else:
             # We are running in the default VRF context, thus we can not delete
@@ -252,8 +201,9 @@ def verify(bgp):
                 for vrf, vrf_options in bgp['dependent_vrfs'].items():
                     if vrf != 'default':
                         if dict_search('protocols.bgp', vrf_options):
-                            raise ConfigError('Cannot delete default BGP instance, ' \
-                                              'dependent VRF instance(s) exist(s)!')
+                            dependent_vrfs = ', '.join(bgp['dependent_vrfs'].keys())
+                            raise ConfigError(f'Cannot delete default BGP instance, ' \
+                                              f'dependent VRF instance(s): {dependent_vrfs}')
                         if 'vni' in vrf_options:
                             raise ConfigError('Cannot delete default BGP instance, ' \
                                               'dependent L3VNI exists!')
@@ -281,9 +231,8 @@ def verify(bgp):
         for interface in bgp['interface']:
             error_msg = f'Interface "{interface}" belongs to different VRF instance'
             tmp = get_interface_vrf(interface)
-            if 'vrf' in bgp:
-                if bgp['vrf'] != tmp:
-                    vrf = bgp['vrf']
+            if vrf:
+                if vrf != tmp:
                     raise ConfigError(f'{error_msg} "{vrf}"!')
             elif tmp != 'default':
                 raise ConfigError(f'{error_msg} "{tmp}"!')
@@ -384,10 +333,8 @@ def verify(bgp):
 
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
-                vrf = None
                 vrf_error_msg = f' in default VRF!'
-                if 'vrf' in bgp:
-                    vrf = bgp['vrf']
+                if vrf:
                     vrf_error_msg = f' in VRF "{vrf}"!'
 
                 if is_ip(peer) and is_addr_assigned(peer, vrf):
@@ -529,7 +476,7 @@ def verify(bgp):
                                          f'{afi} administrative distance {key}!')
 
             if afi in ['ipv4_unicast', 'ipv6_unicast']:
-                vrf_name = bgp['vrf'] if dict_search('vrf', bgp) else 'default'
+                vrf_name = vrf if vrf else 'default'
                 # Verify if currant VRF contains rd and route-target options
                 # and does not exist in import list in other VRFs
                 if dict_search(f'rd.vpn.export', afi_config):
@@ -602,46 +549,14 @@ def verify(bgp):
 
     return None
 
-def generate(bgp):
-    if not bgp or 'deleted' in bgp:
-        return None
-
-    bgp['frr_bgpd_config']  = render_to_string('frr/bgpd.frr.j2', bgp)
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-def apply(bgp):
-    if 'deleted' in bgp:
-        # We need to ensure that the L3VNI is deleted first.
-        # This is not possible with old config backend
-        # priority bug
-        if {'vrf', 'vni'} <= set(bgp):
-            call('vtysh -c "conf t" -c "vrf {vrf}" -c "no vni {vni}"'.format(**bgp))
-
-    bgp_daemon = 'bgpd'
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # Generate empty helper string which can be ammended to FRR commands, it
-    # will be either empty (default VRF) or contain the "vrf <name" statement
-    vrf = ''
-    if 'vrf' in bgp:
-        vrf = ' vrf ' + bgp['vrf']
-
-    frr_cfg.load_configuration(bgp_daemon)
-
-    # Remove interface specific config
-    for key in ['interface', 'interface_removed']:
-        if key not in bgp:
-            continue
-        for interface in bgp[key]:
-            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
-
-    frr_cfg.modify_section(f'^router bgp \d+{vrf}', stop_pattern='^exit', remove_stop_mark=True)
-    if 'frr_bgpd_config' in bgp:
-        frr_cfg.add_before(frr.default_add_before, bgp['frr_bgpd_config'])
-    frr_cfg.commit_configuration(bgp_daemon)
-
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

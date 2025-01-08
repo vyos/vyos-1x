@@ -29,6 +29,14 @@ from vyos.utils.process import run
 
 save_config = '/tmp/vyos-smoketest-save'
 
+# The commit process is not finished until all pending files from
+# VYATTA_CHANGES_ONLY_DIR are copied to VYATTA_ACTIVE_CONFIGURATION_DIR. This
+# is done inside libvyatta-cfg1 and the FUSE UnionFS part. On large non-
+# interactive commits FUSE UnionFS might not replicate the real state in time,
+# leading to errors when querying the working and effective configuration.
+# TO BE DELETED AFTER SWITCH TO IN MEMORY CONFIG
+CSTORE_GUARD_TIME = 4
+
 # This class acts as shim between individual Smoketests developed for VyOS and
 # the Python UnitTest framework. Before every test is loaded, we dump the current
 # system configuration and reload it after the test - despite the test results.
@@ -43,7 +51,9 @@ class VyOSUnitTestSHIM:
         # trigger the certain failure condition.
         # Use "self.debug = True" in derived classes setUp() method
         debug = False
-
+        # Time to wait after a commit to ensure the CStore is up to date
+        # only required for testcases using FRR
+        _commit_guard_time = 0
         @classmethod
         def setUpClass(cls):
             cls._session = ConfigSession(os.getpid())
@@ -84,9 +94,12 @@ class VyOSUnitTestSHIM:
             if self.debug:
                 print('commit')
             self._session.commit()
-            # during a commit there is a process opening commit_lock, and run() returns 0
+            # During a commit there is a process opening commit_lock, and run()
+            # returns 0
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
+            # Wait for CStore completion for fast non-interactive commits
+            sleep(self._commit_guard_time)
 
         def op_mode(self, path : list) -> None:
             """
@@ -101,14 +114,36 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
-        def getFRRconfig(self, string=None, end='$', endsection='^!', daemon=''):
-            """ Retrieve current "running configuration" from FRR """
-            command = f'vtysh -c "show run {daemon} no-header"'
-            if string: command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
+        def getFRRconfig(self, string=None, end='$', endsection='^!',
+                         substring=None, endsubsection=None, empty_retry=0):
+            """
+            Retrieve current "running configuration" from FRR
+
+            string:        search for a specific start string in the configuration
+            end:           end of the section to search for (line ending)
+            endsection:    end of the configuration
+            substring:     search section under the result found by string
+            endsubsection: end of the subsection (usually something with "exit")
+            """
+            command = f'vtysh -c "show run no-header"'
+            if string:
+                command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
+                if substring and endsubsection:
+                    command += f' | sed -n "/^{substring}/,/{endsubsection}/p"'
             out = cmd(command)
             if self.debug:
                 print(f'\n\ncommand "{command}" returned:\n')
                 pprint.pprint(out)
+            if empty_retry > 0:
+                retry_count = 0
+                while not out and retry_count < empty_retry:
+                    if self.debug and retry_count % 10 == 0:
+                        print(f"Attempt {retry_count}: FRR config is still empty. Retrying...")
+                    retry_count += 1
+                    sleep(1)
+                    out = cmd(command)
+                if not out:
+                    print(f'FRR configuration still empty after {empty_retry} retires!')
             return out
 
         @staticmethod

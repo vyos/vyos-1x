@@ -18,13 +18,13 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import node_changed
 from vyos.configverify import verify_interface_exists
-from vyos.template import render_to_string
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.utils.process import is_systemd_service_running
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
-
 airbag.enable()
 
 def get_config(config=None):
@@ -33,32 +33,14 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base_path = ['protocols', 'openfabric']
+    return get_frrender_dict(conf)
 
-    openfabric = conf.get_config_dict(base_path, key_mangling=('-', '_'),
-                                get_first_key=True,
-                                no_tag_node_value_mangle=True)
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'openfabric'):
+        return None
 
-    # Remove per domain MPLS configuration - get a list of all changed Openfabric domains
-    # (removed and added) so that they will be properly rendered for the FRR config.
-    openfabric['domains_all'] = list(conf.list_nodes(' '.join(base_path) + f' domain') +
-                                         node_changed(conf, base_path + ['domain']))
-
-    # Get a list of all interfaces
-    openfabric['interfaces_all'] = []
-    for domain in openfabric['domains_all']:
-        interfaces_modified = list(node_changed(conf, base_path + ['domain', domain, 'interface']) +
-                                  conf.list_nodes(' '.join(base_path) + f' domain {domain} interface'))
-        openfabric['interfaces_all'].extend(interfaces_modified)
-
-    if not conf.exists(base_path):
-        openfabric.update({'deleted': ''})
-
-    return openfabric
-
-def verify(openfabric):
-    # bail out early - looks like removal from running config
-    if not openfabric or 'deleted' in openfabric:
+    openfabric = config_dict['openfabric']
+    if 'deleted' in openfabric:
         return None
 
     if 'net' not in openfabric:
@@ -107,31 +89,14 @@ def verify(openfabric):
 
     return None
 
-def generate(openfabric):
-    if not openfabric or 'deleted' in openfabric:
-        return None
-
-    openfabric['frr_fabricd_config'] = render_to_string('frr/fabricd.frr.j2', openfabric)
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-def apply(openfabric):
-    openfabric_daemon = 'fabricd'
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    frr_cfg.load_configuration(openfabric_daemon)
-    for domain in openfabric['domains_all']:
-        frr_cfg.modify_section(f'^router openfabric {domain}', stop_pattern='^exit', remove_stop_mark=True)
-
-    for interface in openfabric['interfaces_all']:
-        frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
-
-    if 'frr_fabricd_config' in openfabric:
-        frr_cfg.add_before(frr.default_add_before, openfabric['frr_fabricd_config'])
-
-    frr_cfg.commit_configuration(openfabric_daemon)
-
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

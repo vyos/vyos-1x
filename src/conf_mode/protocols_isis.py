@@ -18,16 +18,16 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.configdict import node_changed
+from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_interface_exists
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
-from vyos.template import render_to_string
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -37,54 +37,21 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    vrf = None
-    if len(argv) > 1:
-        vrf = argv[1]
+    return get_frrender_dict(conf, argv)
 
-    base_path = ['protocols', 'isis']
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'isis'):
+        return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    base = vrf and ['vrf', 'name', vrf, 'protocols', 'isis'] or base_path
-    isis = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True,
-                                no_tag_node_value_mangle=True)
+    isis = vrf and config_dict['vrf']['name'][vrf]['protocols']['isis'] or config_dict['isis']
+    isis['policy'] = config_dict['policy']
 
-    # Assign the name of our VRF context. This MUST be done before the return
-    # statement below, else on deletion we will delete the default instance
-    # instead of the VRF instance.
-    if vrf: isis['vrf'] = vrf
-
-    # FRR has VRF support for different routing daemons. As interfaces belong
-    # to VRFs - or the global VRF, we need to check for changed interfaces so
-    # that they will be properly rendered for the FRR config. Also this eases
-    # removal of interfaces from the running configuration.
-    interfaces_removed = node_changed(conf, base + ['interface'])
-    if interfaces_removed:
-        isis['interface_removed'] = list(interfaces_removed)
-
-    # Bail out early if configuration tree does no longer exist. this must
-    # be done after retrieving the list of interfaces to be removed.
-    if not conf.exists(base):
-        isis.update({'deleted' : ''})
-        return isis
-
-    # merge in default values
-    isis = conf.merge_defaults(isis, recursive=True)
-
-    # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify().
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = conf.get_config_dict(['policy'])
-    # Merge policy dict into "regular" config dict
-    isis = dict_merge(tmp, isis)
-
-    return isis
-
-def verify(isis):
-    # bail out early - looks like removal from running config
-    if not isis or 'deleted' in isis:
+    if 'deleted' in isis:
         return None
 
     if 'net' not in isis:
@@ -114,12 +81,11 @@ def verify(isis):
                               f'Recommended area lsp-mtu {recom_area_mtu} or less ' \
                               '(calculated on MTU size).')
 
-        if 'vrf' in isis:
+        if vrf:
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS
             # priorities the interface is bound to the VRF after creation of
             # the VRF itself, and before any routing protocol is configured.
-            vrf = isis['vrf']
             tmp = get_interface_config(interface)
             if 'master' not in tmp or tmp['master'] != vrf:
                 raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
@@ -266,39 +232,14 @@ def verify(isis):
 
     return None
 
-def generate(isis):
-    if not isis or 'deleted' in isis:
-        return None
-
-    isis['frr_isisd_config'] = render_to_string('frr/isisd.frr.j2', isis)
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-def apply(isis):
-    isis_daemon = 'isisd'
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # Generate empty helper string which can be ammended to FRR commands, it
-    # will be either empty (default VRF) or contain the "vrf <name" statement
-    vrf = ''
-    if 'vrf' in isis:
-        vrf = ' vrf ' + isis['vrf']
-
-    frr_cfg.load_configuration(isis_daemon)
-    frr_cfg.modify_section(f'^router isis VyOS{vrf}', stop_pattern='^exit', remove_stop_mark=True)
-
-    for key in ['interface', 'interface_removed']:
-        if key not in isis:
-            continue
-        for interface in isis[key]:
-            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
-
-    if 'frr_isisd_config' in isis:
-        frr_cfg.add_before(frr.default_add_before, isis['frr_isisd_config'])
-
-    frr_cfg.commit_configuration(isis_daemon)
-
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
 
 if __name__ == '__main__':

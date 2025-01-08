@@ -20,10 +20,23 @@ from subprocess import PIPE
 from subprocess import STDOUT
 from subprocess import DEVNULL
 
+
+def get_wrapper(vrf, netns, auth):
+    wrapper = ''
+    if vrf:
+        wrapper = f'ip vrf exec {vrf} '
+    elif netns:
+        wrapper = f'ip netns exec {netns} '
+    if auth:
+        wrapper = f'{auth} {wrapper}'
+    return wrapper
+
+
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=PIPE, decode='utf-8'):
+          stdout=PIPE, stderr=PIPE, decode='utf-8', auth='', vrf=None,
+          netns=None):
     """
-    popen is a wrapper helper aound subprocess.Popen
+    popen is a wrapper helper around subprocess.Popen
     with it default setting it will return a tuple (out, err)
     out: the output of the program run
     err: the error code returned by the program
@@ -45,6 +58,8 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
               - DEVNULL, discard the output
     decode:  specify the expected text encoding (utf-8, ascii, ...)
              the default is explicitely utf-8 which is python's own default
+    vrf:     run command in a VRF context
+    netns:   run command in the named network namespace
 
     usage:
     get both stdout and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
@@ -59,6 +74,16 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     # log if the flag is set, otherwise log if command is set
     if not debug.enabled(flag):
         flag = 'command'
+
+    # Must be run as root to execute command in VRF or network namespace
+    if vrf or netns:
+        if os.getuid() != 0:
+            raise OSError(
+                'Permission denied: cannot execute commands in VRF and netns contexts as an unprivileged user'
+            )
+
+    wrapper = get_wrapper(vrf, netns, auth)
+    command = f'{wrapper} {command}'
 
     cmd_msg = f"cmd '{command}'"
     debug.message(cmd_msg, flag)
@@ -111,7 +136,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def run(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=DEVNULL, stderr=PIPE, decode='utf-8'):
+        stdout=DEVNULL, stderr=PIPE, decode='utf-8', vrf=None, netns=None):
     """
     A wrapper around popen, which discard the stdout and
     will return the error code of a command
@@ -122,13 +147,15 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
         input=input, timeout=timeout,
         env=env, shell=shell,
         decode=decode,
+        vrf=vrf,
+        netns=netns,
     )
     return code
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdout=PIPE, stderr=PIPE, decode='utf-8', raising=None, message='',
-        expect=[0]):
+        expect=[0], auth='', vrf=None, netns=None):
     """
     A wrapper around popen, which returns the stdout and
     will raise the error code of a command
@@ -144,8 +171,13 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         input=input, timeout=timeout,
         env=env, shell=shell,
         decode=decode,
+        auth=auth,
+        vrf=vrf,
+        netns=netns,
     )
     if code not in expect:
+        wrapper = get_wrapper(vrf, netns, auth='')
+        command = f'{wrapper} {command}'
         feedback = message + '\n' if message else ''
         feedback += f'failed to run command: {command}\n'
         feedback += f'returned: {decoded}\n'
@@ -159,7 +191,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-           stdout=PIPE, stderr=STDOUT, decode='utf-8'):
+           stdout=PIPE, stderr=STDOUT, decode='utf-8', vrf=None, netns=None):
     """
     A wrapper around popen, which returns the return code
     of a command and stdout
@@ -175,11 +207,14 @@ def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         input=input, timeout=timeout,
         env=env, shell=shell,
         decode=decode,
+        vrf=vrf,
+        netns=netns,
     )
     return code, out
 
+
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=None, stderr=None, decode='utf-8'):
+         stdout=None, stderr=None, decode='utf-8', vrf=None, netns=None):
     """
     A wrapper around popen, which print the stdout and
     will return the error code of a command
@@ -190,10 +225,13 @@ def call(command, flag='', shell=None, input=None, timeout=None, env=None,
         input=input, timeout=timeout,
         env=env, shell=shell,
         decode=decode,
+        vrf=vrf,
+        netns=netns,
     )
     if out:
         print(out)
     return code
+
 
 def process_running(pid_file):
     """ Checks if a process with PID in pid_file is running """

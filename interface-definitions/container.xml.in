@@ -275,6 +275,7 @@
             </properties>
             <defaultValue>64</defaultValue>
           </leafNode>
+          #include <include/name-server-ipv4-ipv6.xml.i>
           <tagNode name="network">
             <properties>
               <help>Attach user defined network to container</help>

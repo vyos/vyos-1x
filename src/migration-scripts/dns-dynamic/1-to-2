@@ -20,6 +20,10 @@
 # - migrate "service dns dynamic address <interface> service <service> protocol dnsexit"
 #        to "service dns dynamic address <interface> service <service> protocol dnsexit2"
 
+# T6950:
+# - add if statement to prevent processing of "service dns dynamic address" options if they don't exist
+#        due to the fact they are no longer valid syntax
+
 from vyos.configtree import ConfigTree
 
 base_path = ['service', 'dns', 'dynamic']
@@ -36,16 +40,19 @@ def migrate(config: ConfigTree) -> None:
     if config.exists(timeout_path):
         config.rename(timeout_path, 'interval')
 
-    # Remove "service dns dynamic address <interface> web-options ..." when <interface> != "web"
-    for address in config.list_nodes(address_path):
-        if config.exists(address_path + [address, 'web-options']) and address != 'web':
-            config.delete(address_path + [address, 'web-options'])
+    # T6950: Can't migrate address if it doesn't exist
+    if config.exists(address_path):
 
-    # Migrate "service dns dynamic address <interface> service <service> protocol dnsexit"
-    #      to "service dns dynamic address <interface> service <service> protocol dnsexit2"
-    for address in config.list_nodes(address_path):
-        for svc_cfg in config.list_nodes(address_path + [address, 'service']):
-            if config.exists(address_path + [address, 'service', svc_cfg, 'protocol']):
-                protocol = config.return_value(address_path + [address, 'service', svc_cfg, 'protocol'])
-                if protocol == 'dnsexit':
-                    config.set(address_path + [address, 'service', svc_cfg, 'protocol'], 'dnsexit2')
+        # Remove "service dns dynamic address <interface> web-options ..." when <interface> != "web"
+        for address in config.list_nodes(address_path):
+            if config.exists(address_path + [address, 'web-options']) and address != 'web':
+                config.delete(address_path + [address, 'web-options'])
+
+        # Migrate "service dns dynamic address <interface> service <service> protocol dnsexit"
+        #      to "service dns dynamic address <interface> service <service> protocol dnsexit2"
+        for address in config.list_nodes(address_path):
+            for svc_cfg in config.list_nodes(address_path + [address, 'service']):
+                if config.exists(address_path + [address, 'service', svc_cfg, 'protocol']):
+                    protocol = config.return_value(address_path + [address, 'service', svc_cfg, 'protocol'])
+                    if protocol == 'dnsexit':
+                        config.set(address_path + [address, 'service', svc_cfg, 'protocol'], 'dnsexit2')

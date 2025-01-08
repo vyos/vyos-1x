@@ -27,4 +27,5 @@
 {% if distribute_list.prefix_list.out is vyos_defined %}
  distribute-list prefix {{ distribute_list.prefix_list.out }} out
 {% endif %}
-{% endmacro %}
+{# j2lint: disable=jinja-statements-delimeter #}
+{%- endmacro -%}

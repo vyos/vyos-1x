@@ -1,0 +1,75 @@
+# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6747:
+#   - Migrate static BFD configuration to match FRR possibillities
+#   - Consolidate static multicast routing configuration under a new node
+
+from vyos.configtree import ConfigTree
+
+static_base = ['protocols', 'static']
+
+def migrate(config: ConfigTree) -> None:
+    # Check for static route/route6 configuration
+    # Migrate static BFD configuration to match FRR possibillities
+    for route_route6 in ['route', 'route6']:
+        route_route6_base = static_base + [route_route6]
+        if not config.exists(route_route6_base):
+            continue
+
+        for prefix in config.list_nodes(route_route6_base):
+            next_hop_base = route_route6_base + [prefix, 'next-hop']
+            if not config.exists(next_hop_base):
+                continue
+
+            for next_hop in config.list_nodes(next_hop_base):
+                multi_hop_base = next_hop_base + [next_hop, 'bfd', 'multi-hop']
+
+                if not config.exists(multi_hop_base):
+                    continue
+
+                mh_source_base = multi_hop_base + ['source']
+                source = None
+                profile = None
+                for src_ip in config.list_nodes(mh_source_base):
+                    source = src_ip
+                    if config.exists(mh_source_base + [source, 'profile']):
+                        profile = config.return_value(mh_source_base + [source, 'profile'])
+                    # FRR only supports one source, we will use the first one
+                    break
+
+                config.delete(multi_hop_base)
+                config.set(multi_hop_base + ['source-address'], value=source)
+                config.set(next_hop_base + [next_hop, 'bfd', 'profile'], value=profile)
+
+    # Consolidate static multicast routing configuration under a new node
+    if config.exists(static_base + ['multicast']):
+        for mroute in ['interface-route', 'route']:
+            mroute_base = static_base + ['multicast', mroute]
+            if not config.exists(mroute_base):
+                continue
+            config.set(static_base + ['mroute'])
+            config.set_tag(static_base + ['mroute'])
+            for route in config.list_nodes(mroute_base):
+                config.copy(mroute_base + [route], static_base + ['mroute', route])
+
+        mroute_base = static_base + ['mroute']
+        if config.exists(mroute_base):
+            for mroute in config.list_nodes(mroute_base):
+                interface_path = mroute_base + [mroute, 'next-hop-interface']
+                if config.exists(interface_path):
+                    config.rename(interface_path, 'interface')
+
+        config.delete(static_base + ['multicast'])

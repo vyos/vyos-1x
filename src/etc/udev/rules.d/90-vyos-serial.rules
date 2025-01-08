@@ -8,7 +8,7 @@ SUBSYSTEMS=="pci", IMPORT{builtin}="hwdb --subsystem=pci"
 SUBSYSTEMS=="usb", IMPORT{builtin}="usb_id", IMPORT{builtin}="hwdb --subsystem=usb"
 
 # /dev/serial/by-path/, /dev/serial/by-id/ for USB devices
-KERNEL!="ttyUSB[0-9]*", GOTO="serial_end"
+KERNEL!="ttyUSB[0-9]*|ttyACM[0-9]*", GOTO="serial_end"
 
 SUBSYSTEMS=="usb-serial", ENV{.ID_PORT}="$attr{port_number}"
 

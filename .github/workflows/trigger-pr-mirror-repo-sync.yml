@@ -1,0 +1,12 @@
+name: Trigger Mirror PR and Repo Sync
+on:
+  pull_request_target:
+      types:
+        - closed
+      branches:
+        - current
+
+jobs:
+  call-trigger-mirror-pr-repo-sync:
+    uses: vyos/.github/.github/workflows/trigger-pr-mirror-repo-sync.yml@current
+    secrets: inherit

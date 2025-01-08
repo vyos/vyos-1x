@@ -10,6 +10,23 @@
               <priority>1280</priority>
             </properties>
             <children>
+              <node name="authentication">
+                <properties>
+                  <help>Authentication</help>
+                </properties>
+                <children>
+                  #include <include/auth-mode-pre-shared-secret.xml.i>
+                  <node name="psk">
+                    <properties>
+                      <help>Pre-shared key</help>
+                    </properties>
+                    <children>
+                      #include <include/auth-psk-id.xml.i>
+                      #include <include/auth-psk-secret.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
               <leafNode name="directory">
                 <properties>
                   <help>Folder containing individual Zabbix-agent configuration files</help>

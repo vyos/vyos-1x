@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,14 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
+from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
+from vyos.template import get_dhcp_router
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']
@@ -33,7 +39,11 @@ routes = {
             '192.0.2.110' : { 'distance' : '110', 'interface' : 'eth0' },
             '192.0.2.120' : { 'distance' : '120', 'disable' : '' },
             '192.0.2.130' : { 'bfd' : '' },
-            '192.0.2.140' : { 'bfd_source' : '192.0.2.10' },
+            '192.0.2.131' : { 'bfd' : '',
+                              'bfd_profile' : 'vyos1' },
+            '192.0.2.140' : { 'bfd' : '',
+                              'bfd_source' : '192.0.2.10',
+                              'bfd_profile' : 'vyos2' },
         },
         'interface' : {
             'eth0'  : { 'distance' : '130' },
@@ -114,22 +124,65 @@ routes = {
     },
 }
 
+multicast_routes = {
+    '224.0.0.0/24' : {
+        'next_hop' : {
+            '224.203.0.1' : { },
+            '224.203.0.2' : { 'distance' : '110'},
+        },
+    },
+    '224.1.0.0/24' : {
+        'next_hop' : {
+            '224.205.0.1' : { 'disable' : {} },
+            '224.205.0.2' : { 'distance' : '110'},
+        },
+    },
+    '224.2.0.0/24' : {
+        'next_hop' : {
+            '1.2.3.0' : { },
+            '1.2.3.1' : { 'distance' : '110'},
+        },
+    },
+    '224.10.0.0/24' : {
+        'interface' : {
+            'eth1' : { 'disable' : {} },
+            'eth2' : { 'distance' : '110'},
+        },
+    },
+    '224.11.0.0/24' : {
+        'interface' : {
+            'eth0' : { },
+            'eth1' : { 'distance' : '10'},
+        },
+    },
+    '224.12.0.0/24' : {
+        'interface' : {
+            'eth0' : { },
+            'eth1' : { 'distance' : '200'},
+        },
+    },
+}
+
 tables = ['80', '81', '82']
 
 class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestProtocolsStatic, cls).setUpClass()
+        cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
-        cls.cli_set(cls, ['vrf', 'name', 'black', 'table', '43210'])
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     @classmethod
     def tearDownClass(cls):
+        cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
         super(TestProtocolsStatic, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)
+        self.cli_delete(['vrf'])
         self.cli_commit()
 
         v4route = self.getFRRconfig('ip route', end='')
@@ -138,7 +191,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(v6route)
 
     def test_01_static(self):
-        bfd_profile = 'vyos-test'
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
@@ -156,9 +209,11 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     if 'vrf' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
                     if 'bfd' in next_hop_config:
-                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', bfd_profile ])
-                    if 'bfd_source' in next_hop_config:
-                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source', next_hop_config['bfd_source'], 'profile', bfd_profile])
+                        self.cli_set(base + ['next-hop', next_hop, 'bfd'])
+                        if 'bfd_profile' in next_hop_config:
+                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', next_hop_config['bfd_profile']])
+                        if 'bfd_source' in next_hop_config:
+                            self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source-address', next_hop_config['bfd_source']])
                     if 'segments' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'segments', next_hop_config['segments']])
 
@@ -217,9 +272,11 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     if 'vrf' in next_hop_config:
                         tmp += ' nexthop-vrf ' + next_hop_config['vrf']
                     if 'bfd' in next_hop_config:
-                        tmp += ' bfd profile ' + bfd_profile
-                    if 'bfd_source' in next_hop_config:
-                        tmp += ' bfd multi-hop source ' + next_hop_config['bfd_source'] + ' profile ' + bfd_profile
+                        tmp += ' bfd'
+                        if 'bfd_source' in next_hop_config:
+                            tmp += ' multi-hop source ' + next_hop_config['bfd_source']
+                        if 'bfd_profile' in next_hop_config:
+                            tmp += ' profile ' + next_hop_config['bfd_profile']
                     if 'segments' in next_hop_config:
                         tmp += ' segments ' + next_hop_config['segments']
 
@@ -269,6 +326,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(tmp, frrconfig)
 
     def test_02_static_table(self):
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         for table in tables:
             for route, route_config in routes.items():
                 route_type = 'route'
@@ -363,6 +421,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
 
     def test_03_static_vrf(self):
+        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
         # Create VRF instances and apply the static routes from above to FRR.
         # Re-read the configured routes and match them if they are programmed
         # properly. This also includes VRF leaking
@@ -426,7 +485,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp['linkinfo']['info_kind'],          'vrf')
 
             # Verify FRR bgpd configuration
-            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
             self.assertIn(f'vrf {vrf}', frrconfig)
 
             # Verify routes
@@ -478,5 +537,87 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
                     self.assertIn(tmp, frrconfig)
 
+    def test_04_static_multicast(self):
+        for route, route_config in multicast_routes.items():
+            if 'next_hop' in route_config:
+                base = base_path + ['mroute', route]
+                for next_hop, next_hop_config in route_config['next_hop'].items():
+                    self.cli_set(base + ['next-hop', next_hop])
+                    if 'distance' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'distance', next_hop_config['distance']])
+                    if 'disable' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'disable'])
+
+            if 'interface' in route_config:
+                base = base_path + ['mroute', route]
+                for next_hop, next_hop_config in route_config['interface'].items():
+                    self.cli_set(base + ['interface', next_hop])
+                    if 'distance' in next_hop_config:
+                        self.cli_set(base + ['interface', next_hop, 'distance', next_hop_config['distance']])
+
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig('ip mroute', end='')
+        for route, route_config in multicast_routes.items():
+            if 'next_hop' in route_config:
+                for next_hop, next_hop_config in route_config['next_hop'].items():
+                    tmp = f'ip mroute {route} {next_hop}'
+                    if 'distance' in next_hop_config:
+                        tmp += ' ' + next_hop_config['distance']
+                    if 'disable' in next_hop_config:
+                        self.assertNotIn(tmp, frrconfig)
+                    else:
+                        self.assertIn(tmp, frrconfig)
+
+            if 'next_hop_interface' in route_config:
+                for next_hop, next_hop_config in route_config['next_hop_interface'].items():
+                    tmp = f'ip mroute {route} {next_hop}'
+                    if 'distance' in next_hop_config:
+                        tmp += ' ' + next_hop_config['distance']
+                    if 'disable' in next_hop_config:
+                        self.assertNotIn(tmp, frrconfig)
+                    else:
+                        self.assertIn(tmp, frrconfig)
+
+    def test_05_dhcp_default_route(self):
+        # When running via vyos-build under the QEmu environment a local DHCP
+        # server is available. This test verifies that the default route is set.
+        # When not running under the VyOS QEMU environment, this test is skipped.
+        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', interface]
+        default_distance = default_value(interface_path + ['dhcp-options', 'default-route-distance'])
+        self.cli_set(interface_path + ['address', 'dhcp'])
+        self.cli_commit()
+
+        # Wait for dhclient to receive IP address and default gateway
+        sleep(5)
+
+        router = get_dhcp_router(interface)
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+
+        # T6991: Default route is missing when there is no "protocols static"
+        # CLI node entry
+        self.cli_delete(base_path)
+        # We can trigger a FRR reconfiguration and config re-rendering when
+        # we simply disable IPv6 forwarding
+        self.cli_set(['system', 'ipv6', 'disable-forwarding'])
+        self.cli_commit()
+
+        # Re-check FRR configuration that default route is still present
+        frrconfig = self.getFRRconfig('')
+        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+
+        # Wait for dhclient to stop
+        while process_named_running('dhclient', cmdline=interface, timeout=10):
+            sleep(0.250)
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

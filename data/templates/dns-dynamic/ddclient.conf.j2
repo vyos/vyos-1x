@@ -24,7 +24,6 @@ if{{ ipv }}={{ address }}, \
 daemon={{ interval }}
 syslog=yes
 ssl=yes
-pid={{ config_file | replace('.conf', '.pid') }}
 cache={{ config_file | replace('.conf', '.cache') }}
 {# ddclient default (web=dyndns) doesn't support ssl and results in process lockup #}
 web=googledomains

@@ -92,8 +92,8 @@ class TestInitialSetup(TestCase):
         vis.set_default_gateway(self.config, '192.0.2.1')
 
         self.assertTrue(self.config.exists(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '192.0.2.1']))
-        self.assertTrue(self.xml.is_tag(['protocols', 'static', 'multicast', 'route', '0.0.0.0/0', 'next-hop']))
-        self.assertTrue(self.xml.is_tag(['protocols', 'static', 'multicast', 'route']))
+        self.assertTrue(self.xml.is_tag(['protocols', 'static', 'mroute', '0.0.0.0/0', 'next-hop']))
+        self.assertTrue(self.xml.is_tag(['protocols', 'static', 'mroute']))
 
 if __name__ == "__main__":
     unittest.main()

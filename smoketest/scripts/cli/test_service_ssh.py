@@ -33,15 +33,31 @@ from vyos.xml_ref import default_value
 PROCESS_NAME = 'sshd'
 SSHD_CONF = '/run/sshd/sshd_config'
 base_path = ['service', 'ssh']
+pki_path = ['pki']
 
 key_rsa = '/etc/ssh/ssh_host_rsa_key'
 key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
+trusted_user_ca_key = '/etc/ssh/trusted_user_ca_key'
+
 
 def get_config_value(key):
     tmp = read_file(SSHD_CONF)
     tmp = re.findall(f'\n?{key}\s+(.*)', tmp)
     return tmp
+
+
+ca_root_cert_data = """
+MIIBcTCCARagAwIBAgIUDcAf1oIQV+6WRaW7NPcSnECQ/lUwCgYIKoZIzj0EAwIw
+HjEcMBoGA1UEAwwTVnlPUyBzZXJ2ZXIgcm9vdCBDQTAeFw0yMjAyMTcxOTQxMjBa
+Fw0zMjAyMTUxOTQxMjBaMB4xHDAaBgNVBAMME1Z5T1Mgc2VydmVyIHJvb3QgQ0Ew
+WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQ0y24GzKQf4aM2Ir12tI9yITOIzAUj
+ZXyJeCmYI6uAnyAMqc4Q4NKyfq3nBi4XP87cs1jlC1P2BZ8MsjL5MdGWozIwMDAP
+BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRwC/YaieMEnjhYa7K3Flw/o0SFuzAK
+BggqhkjOPQQDAgNJADBGAiEAh3qEj8vScsjAdBy5shXzXDVVOKWCPTdGrPKnu8UW
+a2cCIQDlDgkzWmn5ujc5ATKz1fj+Se/aeqwh4QyoWCVTFLIxhQ==
+"""
+
 
 class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -98,27 +114,27 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
 
         # Check configured port
         port = get_config_value('Port')[0]
-        self.assertTrue("1234" in port)
+        self.assertTrue('1234' in port)
 
         # Check DNS usage
         dns = get_config_value('UseDNS')[0]
-        self.assertTrue("no" in dns)
+        self.assertTrue('no' in dns)
 
         # Check PasswordAuthentication
         pwd = get_config_value('PasswordAuthentication')[0]
-        self.assertTrue("no" in pwd)
+        self.assertTrue('no' in pwd)
 
         # Check loglevel
         loglevel = get_config_value('LogLevel')[0]
-        self.assertTrue("VERBOSE" in loglevel)
+        self.assertTrue('VERBOSE' in loglevel)
 
         # Check listen address
         address = get_config_value('ListenAddress')[0]
-        self.assertTrue("127.0.0.1" in address)
+        self.assertTrue('127.0.0.1' in address)
 
         # Check keepalive
         keepalive = get_config_value('ClientAliveInterval')[0]
-        self.assertTrue("100" in keepalive)
+        self.assertTrue('100' in keepalive)
 
     def test_ssh_multiple_listen_addresses(self):
         # Check if SSH service can be configured and runs with multiple
@@ -197,7 +213,17 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         test_command = 'uname -a'
 
         self.cli_set(base_path)
-        self.cli_set(['system', 'login', 'user', test_user, 'authentication', 'plaintext-password', test_pass])
+        self.cli_set(
+            [
+                'system',
+                'login',
+                'user',
+                test_user,
+                'authentication',
+                'plaintext-password',
+                test_pass,
+            ]
+        )
 
         # commit changes
         self.cli_commit()
@@ -210,7 +236,9 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
 
         # Login with invalid credentials
         with self.assertRaises(paramiko.ssh_exception.AuthenticationException):
-            output, error = self.ssh_send_cmd(test_command, 'invalid_user', 'invalid_password')
+            output, error = self.ssh_send_cmd(
+                test_command, 'invalid_user', 'invalid_password'
+            )
 
         self.cli_delete(['system', 'login', 'user', test_user])
         self.cli_commit()
@@ -250,7 +278,7 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         sshguard_lines = [
             f'THRESHOLD={threshold}',
             f'BLOCK_TIME={block_time}',
-            f'DETECTION_TIME={detect_time}'
+            f'DETECTION_TIME={detect_time}',
         ]
 
         tmp_sshguard_conf = read_file(SSHGUARD_CONFIG)
@@ -268,12 +296,16 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
 
         self.assertFalse(process_named_running(SSHGUARD_PROCESS))
 
-
     # Network Device Collaborative Protection Profile
     def test_ssh_ndcpp(self):
         ciphers = ['aes128-cbc', 'aes128-ctr', 'aes256-cbc', 'aes256-ctr']
         host_key_algs = ['sk-ssh-ed25519@openssh.com', 'ssh-rsa', 'ssh-ed25519']
-        kexes = ['diffie-hellman-group14-sha1', 'ecdh-sha2-nistp256', 'ecdh-sha2-nistp384', 'ecdh-sha2-nistp521']
+        kexes = [
+            'diffie-hellman-group14-sha1',
+            'ecdh-sha2-nistp256',
+            'ecdh-sha2-nistp384',
+            'ecdh-sha2-nistp521',
+        ]
         macs = ['hmac-sha1', 'hmac-sha2-256', 'hmac-sha2-512']
         rekey_time = '60'
         rekey_data = '1024'
@@ -293,22 +325,29 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        ssh_lines = ['Ciphers aes128-cbc,aes128-ctr,aes256-cbc,aes256-ctr',
-                     'HostKeyAlgorithms sk-ssh-ed25519@openssh.com,ssh-rsa,ssh-ed25519',
-                     'MACs hmac-sha1,hmac-sha2-256,hmac-sha2-512',
-                     'KexAlgorithms diffie-hellman-group14-sha1,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521',
-                     'RekeyLimit 1024M 60M'
-                     ]
+        ssh_lines = [
+            'Ciphers aes128-cbc,aes128-ctr,aes256-cbc,aes256-ctr',
+            'HostKeyAlgorithms sk-ssh-ed25519@openssh.com,ssh-rsa,ssh-ed25519',
+            'MACs hmac-sha1,hmac-sha2-256,hmac-sha2-512',
+            'KexAlgorithms diffie-hellman-group14-sha1,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521',
+            'RekeyLimit 1024M 60M',
+        ]
         tmp_sshd_conf = read_file(SSHD_CONF)
 
         for line in ssh_lines:
             self.assertIn(line, tmp_sshd_conf)
 
     def test_ssh_pubkey_accepted_algorithm(self):
-        algs = ['ssh-ed25519', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384',
-                'ecdsa-sha2-nistp521', 'ssh-dss', 'ssh-rsa', 'rsa-sha2-256',
-                'rsa-sha2-512'
-                ]
+        algs = [
+            'ssh-ed25519',
+            'ecdsa-sha2-nistp256',
+            'ecdsa-sha2-nistp384',
+            'ecdsa-sha2-nistp521',
+            'ssh-dss',
+            'ssh-rsa',
+            'rsa-sha2-256',
+            'rsa-sha2-512',
+        ]
 
         expected = 'PubkeyAcceptedAlgorithms '
         for alg in algs:
@@ -319,6 +358,40 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         tmp_sshd_conf = read_file(SSHD_CONF)
         self.assertIn(expected, tmp_sshd_conf)
+
+    def test_ssh_trusted_user_ca_key(self):
+        ca_cert_name = 'test_ca'
+
+        # set pki ca <ca_cert_name> certificate <ca_key_data>
+        # set service ssh trusted-user-ca-key ca-certificate <ca_cert_name>
+        self.cli_set(
+            pki_path
+            + [
+                'ca',
+                ca_cert_name,
+                'certificate',
+                ca_root_cert_data.replace('\n', ''),
+            ]
+        )
+        self.cli_set(
+            base_path + ['trusted-user-ca-key', 'ca-certificate', ca_cert_name]
+        )
+        self.cli_commit()
+
+        trusted_user_ca_key_config = get_config_value('TrustedUserCAKeys')
+        self.assertIn(trusted_user_ca_key, trusted_user_ca_key_config)
+
+        with open(trusted_user_ca_key, 'r') as file:
+            ca_key_contents = file.read()
+        self.assertIn(ca_root_cert_data, ca_key_contents)
+
+        self.cli_delete(base_path + ['trusted-user-ca-key'])
+        self.cli_delete(['pki', 'ca', ca_cert_name])
+        self.cli_commit()
+
+        # Verify the CA key is removed
+        trusted_user_ca_key_config = get_config_value('TrustedUserCAKeys')
+        self.assertNotIn(trusted_user_ca_key, trusted_user_ca_key_config)
 
 
 if __name__ == '__main__':

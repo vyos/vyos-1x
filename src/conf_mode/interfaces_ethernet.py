@@ -33,15 +33,16 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_eapol
 from vyos.ethtool import Ethtool
+from vyos.frrender import FRRender
+from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import BondIf
-from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -163,6 +164,9 @@ def get_config(config=None):
 
     tmp = is_node_changed(conf, base + [ifname, 'duplex'])
     if tmp: ethernet.update({'speed_duplex_changed': {}})
+
+    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
+    if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
 
     return ethernet
 
@@ -318,42 +322,25 @@ def verify_ethernet(ethernet):
     return None
 
 def generate(ethernet):
-    if 'deleted' in ethernet:
-        return None
-
-    ethernet['frr_zebra_config'] = ''
-    if 'deleted' not in ethernet:
-        ethernet['frr_zebra_config'] = render_to_string('frr/evpn.mh.frr.j2', ethernet)
-
+    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(ethernet['frr_dict'])
     return None
 
 def apply(ethernet):
-    ifname = ethernet['ifname']
-
-    e = EthernetIf(ifname)
+    if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
+    e = EthernetIf(ethernet['ifname'])
     if 'deleted' in ethernet:
-        # delete interface
         e.remove()
     else:
         e.update(ethernet)
-
-    zebra_daemon = 'zebra'
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(f'^interface {ifname}', stop_pattern='^exit', remove_stop_mark=True)
-    if 'frr_zebra_config' in ethernet:
-        frr_cfg.add_before(frr.default_add_before, ethernet['frr_zebra_config'])
-    frr_cfg.commit_configuration(zebra_daemon)
+    return None
 
 if __name__ == '__main__':
     try:
         c = get_config()
         verify(c)
         generate(c)
-
         apply(c)
     except ConfigError as e:
         print(e)

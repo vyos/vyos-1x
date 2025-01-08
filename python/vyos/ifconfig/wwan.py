@@ -17,7 +17,6 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class WWANIf(Interface):
-    iftype = 'wwan'
     definition = {
         **Interface.definition,
         **{

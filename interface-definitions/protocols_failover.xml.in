@@ -110,7 +110,7 @@
                       </leafNode>
                     </children>
                   </node>
-                  #include <include/static/static-route-interface.xml.i>
+                  #include <include/generic-interface.xml.i>
                   <leafNode name="metric">
                     <properties>
                       <help>Route metric for this gateway</help>

@@ -267,3 +267,8 @@ fi
 
 # T4287 - as we have a non-signed kernel use the upstream wireless reulatory database
 update-alternatives --set regulatory.db /lib/firmware/regulatory.db-upstream
+
+# Restart vyos-configd to apply changes in Python scripts/templates
+if systemctl is-active --quiet vyos-configd; then
+    systemctl restart vyos-configd
+fi

@@ -247,22 +247,7 @@
                       <help>Disable track state of main interface</help>
                     </properties>
                   </leafNode>
-                  <leafNode name="interface">
-                    <properties>
-                      <help>Interface name state check</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Interface name</description>
-                      </valueHelp>
-                      <constraint>
-                        #include <include/constraint/interface-name.xml.i>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-interface-multi-broadcast.xml.i>
                 </children>
               </node>
               #include <include/vrrp-transition-script.xml.i>

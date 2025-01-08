@@ -126,6 +126,25 @@
                     </properties>
                     <defaultValue>24</defaultValue>
                   </leafNode>
+                  <leafNode name="format">
+                    <properties>
+                      <help>SRv6 SID format</help>
+                      <completionHelp>
+                        <list>uncompressed-f4024 usid-f3216</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>uncompressed-f4024</format>
+                        <description>Uncompressed f4024 format</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>usid-f3216</format>
+                        <description>usid-f3216 format</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(uncompressed-f4024|usid-f3216)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>

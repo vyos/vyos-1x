@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
@@ -24,6 +25,17 @@ from vyos.utils.process import cmd
 base_path = ['policy']
 
 class TestPolicy(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestPolicy, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, ['vrf'])
+        # Enable CSTORE guard time required by FRR related tests
+        cls._commit_guard_time = CSTORE_GUARD_TIME
+
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
@@ -1945,7 +1957,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         local_preference = base_local_preference
         table = base_table
         for route_map in route_maps:
-            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='', endsection='^exit')
             self.assertIn(f' set local-preference {local_preference}', config)
             self.assertIn(f' set table {table}', config)
             local_preference += 20
@@ -1958,7 +1970,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         local_preference = base_local_preference
         for route_map in route_maps:
-            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='', endsection='^exit')
             self.assertIn(f' set local-preference {local_preference}', config)
             local_preference += 20
 
@@ -1972,7 +1984,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for route_map in route_maps:
-            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='', endsection='^exit')
             self.assertIn(f' set as-path prepend {prepend}', config)
 
         for route_map in route_maps:
@@ -1981,7 +1993,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
         for route_map in route_maps:
-            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='')
+            config = self.getFRRconfig(f'route-map {route_map} permit {seq}', end='', endsection='^exit')
             self.assertNotIn(f' set', config)
 
 def sort_ip(output):

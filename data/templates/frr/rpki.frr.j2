@@ -5,9 +5,9 @@ rpki
 {%     for peer, peer_config in cache.items() %}
 {#         port is mandatory and preference uses a default value #}
 {%         if peer_config.ssh.username is vyos_defined %}
- rpki cache {{ peer | replace('_', '-') }} {{ peer_config.port }} {{ peer_config.ssh.username }} {{ peer_config.ssh.private_key_file }} {{ peer_config.ssh.public_key_file }} preference {{ peer_config.preference }}
+ rpki cache ssh {{ peer | replace('_', '-') }} {{ peer_config.port }} {{ peer_config.ssh.username }} {{ peer_config.ssh.private_key_file }} {{ peer_config.ssh.public_key_file }} preference {{ peer_config.preference }}
 {%         else %}
- rpki cache {{ peer | replace('_', '-') }} {{ peer_config.port }} preference {{ peer_config.preference }}
+ rpki cache tcp {{ peer | replace('_', '-') }} {{ peer_config.port }} preference {{ peer_config.preference }}
 {%         endif %}
 {%     endfor %}
 {% endif %}

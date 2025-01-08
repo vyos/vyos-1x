@@ -48,11 +48,26 @@
       </properties>
       <children>
         #include <include/generic-disable-node.xml.i>
-        #include <include/static/static-route-bfd.xml.i>
         #include <include/static/static-route-distance.xml.i>
-        #include <include/static/static-route-interface.xml.i>
+        #include <include/generic-interface.xml.i>
         #include <include/static/static-route-segments.xml.i>
         #include <include/static/static-route-vrf.xml.i>
+        <node name="bfd">
+          <properties>
+            <help>BFD monitoring</help>
+          </properties>
+          <children>
+            #include <include/bfd/profile.xml.i>
+            <node name="multi-hop">
+              <properties>
+                <help>Configure BFD multi-hop session</help>
+              </properties>
+              <children>
+                #include <include/source-address-ipv6.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
       </children>
     </tagNode>
   </children>

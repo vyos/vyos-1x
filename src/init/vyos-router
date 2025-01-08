@@ -24,6 +24,8 @@ declare action=$1; shift
 declare -x BOOTFILE=$vyatta_sysconfdir/config/config.boot
 declare -x DEFAULT_BOOTFILE=$vyatta_sysconfdir/config.boot.default
 
+declare -x VYCONF_CONFIG_DIR=/usr/libexec/vyos/vyconf/config
+
 # If vyos-config= boot option is present, use that file instead
 for x in $(cat /proc/cmdline); do
     [[ $x = vyos-config=* ]] || continue
@@ -146,6 +148,10 @@ init_bootfile () {
         chgrp ${GROUP} $BOOTFILE
         chmod 660 $BOOTFILE
     fi
+    if [ -d $VYCONF_CONFIG_DIR ] ; then
+        cp -f $BOOTFILE $VYCONF_CONFIG_DIR/config.boot
+        cp -f $DEFAULT_BOOTFILE $VYCONF_CONFIG_DIR/config.failsafe
+    fi
 }
 
 # if necessary, migrate initial config
@@ -154,6 +160,10 @@ migrate_bootfile ()
     if [ -x $vyos_libexec_dir/run-config-migration.py ]; then
         log_progress_msg migrate
         sg ${GROUP} -c "$vyos_libexec_dir/run-config-migration.py $BOOTFILE"
+        # update vyconf copy after migration
+        if [ -d $VYCONF_CONFIG_DIR ] ; then
+            cp -f $BOOTFILE $VYCONF_CONFIG_DIR/config.boot
+        fi
     fi
 }
 
@@ -464,9 +474,10 @@ start ()
     # enable some debugging before loading the configuration
     if grep -q vyos-debug /proc/cmdline; then
         log_action_begin_msg "Enable runtime debugging options"
+        FRR_DEBUG=$(python3 -c "from vyos.defaults import frr_debug_enable; print(frr_debug_enable)")
+        touch $FRR_DEBUG
         touch /tmp/vyos.container.debug
         touch /tmp/vyos.ifconfig.debug
-        touch /tmp/vyos.frr.debug
         touch /tmp/vyos.container.debug
         touch /tmp/vyos.smoketest.debug
     fi
@@ -518,6 +529,8 @@ start ()
 
     disabled system_config || system_config
 
+    systemctl start vyconfd.service
+
     for s in ${subinit[@]} ; do
     if ! disabled $s; then
         log_progress_msg $s
@@ -559,6 +572,8 @@ stop()
     log_action_begin_msg "Un-mounting VyOS Config"
     umount ${vyatta_configdir}
     log_action_end_msg $?
+
+    systemctl stop vyconfd.service
 
     systemctl stop frr.service
 

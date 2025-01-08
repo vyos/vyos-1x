@@ -42,6 +42,7 @@ directories = {
 
 config_status = '/tmp/vyos-config-status'
 api_config_state = '/run/http-api-state'
+frr_debug_enable = '/tmp/vyos.frr.debug'
 
 cfg_group = 'vyattacfg'
 

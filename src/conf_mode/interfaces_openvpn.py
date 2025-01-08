@@ -32,6 +32,7 @@ from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdiff import get_config_diff
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
@@ -93,6 +94,23 @@ def get_config(config=None):
 
     if 'deleted' in openvpn:
         return openvpn
+
+    if not is_node_changed(conf, base) and dict_search_args(openvpn, 'tls'):
+        diff = get_config_diff(conf)
+        if diff.get_child_nodes_diff(['pki'], recursive=True).get('add') == ['ca', 'certificate']:
+            crl_path = os.path.join(cfg_dir, f'{ifname}_crl.pem')
+            if os.path.exists(crl_path):
+                # do not restart service when changed only CRL and crl file already exist
+                openvpn.update({'no_restart_crl': True})
+            for rec in diff.get_child_nodes_diff(['pki', 'ca'], recursive=True).get('add'):
+                if diff.get_child_nodes_diff(['pki', 'ca', rec], recursive=True).get('add') != ['crl']:
+                    openvpn.update({'no_restart_crl': False})
+                    break
+            if openvpn.get('no_restart_crl'):
+                for rec in diff.get_child_nodes_diff(['pki', 'certificate'], recursive=True).get('add'):
+                    if diff.get_child_nodes_diff(['pki', 'certificate', rec], recursive=True).get('add') != ['revoke']:
+                        openvpn.update({'no_restart_crl': False})
+                        break
 
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
@@ -786,10 +804,12 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    action = 'reload-or-restart'
-    if 'restart_required' in openvpn:
-        action = 'restart'
-    call(f'systemctl {action} openvpn@{interface}.service')
+
+    if not openvpn.get('no_restart_crl'):
+        action = 'reload-or-restart'
+        if 'restart_required' in openvpn:
+            action = 'restart'
+        call(f'systemctl {action} openvpn@{interface}.service')
 
     o = VTunIf(**openvpn)
     o.update(openvpn)

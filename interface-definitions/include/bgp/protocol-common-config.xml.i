@@ -721,15 +721,7 @@
             <help>Apply local policy routing to interface</help>
           </properties>
           <children>
-            <leafNode name="interface">
-              <properties>
-                <help>Interface</help>
-                <completionHelp>
-                  <script>${vyos_completion_dir}/list_interfaces</script>
-                </completionHelp>
-                <multi/>
-              </properties>
-            </leafNode>
+            #include <include/generic-interface-multi.xml.i>
           </children>
         </node>
       </children>

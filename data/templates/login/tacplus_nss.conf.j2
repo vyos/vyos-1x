@@ -21,7 +21,7 @@
 # Cumulus Linux ships with it set to 1001, so we never lookup our standard
 # local users, including the cumulus uid of 1000.  Should not be greater
 # than the local tacacs{0..15} uids
-min_uid=900
+min_uid={{ tacacs_min_uid }}
 
 # This is a comma separated list of usernames that are never sent to
 # a tacacs server, they cause an early not found return.
@@ -30,7 +30,7 @@ min_uid=900
 # that during pathname completion, bash can do an NSS lookup on "*"
 # To avoid server round trip delays, or worse, unreachable server delays
 # on filename completion, we include "*" in the exclusion list.
-exclude_users=root,telegraf,radvd,strongswan,tftp,conservr,frr,ocserv,pdns,_chrony,_lldpd,sshd,openvpn,radius_user,radius_priv_user,*{{ ',' + user | join(',') if user is vyos_defined }}
+exclude_users=*{{ ',' + exclude_users | join(',') if exclude_users is vyos_defined }}
 
 # The include keyword allows centralizing the tacacs+ server information
 # including the IP address and shared secret
@@ -71,4 +71,3 @@ source_ip={{ tacacs.source_address }}
 # as in tacplus_servers, since tacplus_servers should not be readable
 # by users other than root.
 timeout={{ tacacs.timeout }}
-

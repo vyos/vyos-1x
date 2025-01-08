@@ -13,7 +13,7 @@
   <children>
     #include <include/static/static-route-blackhole.xml.i>
     #include <include/static/static-route-reject.xml.i>
-    #include <include/dhcp-interface.xml.i>
+    #include <include/dhcp-interface-multi.xml.i>
     #include <include/generic-description.xml.i>
     <tagNode name="interface">
       <properties>
@@ -49,12 +49,26 @@
       <children>
         #include <include/generic-disable-node.xml.i>
         #include <include/static/static-route-distance.xml.i>
-        #include <include/static/static-route-interface.xml.i>
+        #include <include/generic-interface.xml.i>
         #include <include/static/static-route-vrf.xml.i>
-        #include <include/static/static-route-bfd.xml.i>
+        <node name="bfd">
+          <properties>
+            <help>BFD monitoring</help>
+          </properties>
+          <children>
+            #include <include/bfd/profile.xml.i>
+            <node name="multi-hop">
+              <properties>
+                <help>Configure BFD multi-hop session</help>
+              </properties>
+              <children>
+                #include <include/source-address-ipv4.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
       </children>
     </tagNode>
   </children>
 </tagNode>
 <!-- include end -->
-

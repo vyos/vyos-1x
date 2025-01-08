@@ -58,20 +58,21 @@ MAX_RADIUS_TIMEOUT: int = 50
 MAX_RADIUS_COUNT: int = 8
 # Maximum number of supported TACACS servers
 MAX_TACACS_COUNT: int = 8
-
+# Minimum USER id for TACACS users
+MIN_TACACS_UID = 900
 # List of local user accounts that must be preserved
 SYSTEM_USER_SKIP_LIST: list = ['radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
                               'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
                               'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10',' tacacs11',
                               'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
 
-def get_local_users():
+def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
     for s_user in getpwall():
-        if getpwnam(s_user.pw_name).pw_uid < MIN_USER_UID:
+        if getpwnam(s_user.pw_name).pw_uid < min_uid:
             continue
-        if getpwnam(s_user.pw_name).pw_uid > MAX_USER_UID:
+        if getpwnam(s_user.pw_name).pw_uid > max_uid:
             continue
         if s_user.pw_name in SYSTEM_USER_SKIP_LIST:
             continue
@@ -118,6 +119,12 @@ def get_config(config=None):
     # saved and system is rebooted.
     rm_users = [tmp for tmp in all_users if tmp not in cli_users]
     if rm_users: login.update({'rm_users' : rm_users})
+
+    # Build TACACS user mapping
+    if 'tacacs' in login:
+        login['exclude_users'] = get_local_users(min_uid=0,
+                                                 max_uid=MIN_TACACS_UID) + cli_users
+        login['tacacs_min_uid'] = MIN_TACACS_UID
 
     return login
 

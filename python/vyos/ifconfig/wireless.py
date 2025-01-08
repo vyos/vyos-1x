@@ -20,7 +20,6 @@ class WiFiIf(Interface):
     """
     Handle WIFI/WLAN interfaces.
     """
-    iftype = 'wifi'
     definition = {
         **Interface.definition,
         **{

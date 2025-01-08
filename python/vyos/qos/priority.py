@@ -20,17 +20,18 @@ class Priority(QoSBase):
 
     # https://man7.org/linux/man-pages/man8/tc-prio.8.html
     def update(self, config, direction):
+        class_id_max = self._get_class_max_id(config)
+        class_id_max = class_id_max if class_id_max else 1
+        bands = int(class_id_max) + 1
+
+        tmp = f'tc qdisc add dev {self._interface} root handle {self._parent:x}: prio bands {bands} priomap ' \
+              f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
+              f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
+              f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
+              f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} '
+        self._cmd(tmp)
+
         if 'class' in config:
-            class_id_max = self._get_class_max_id(config)
-            bands = int(class_id_max) +1
-
-            tmp = f'tc qdisc add dev {self._interface} root handle {self._parent:x}: prio bands {bands} priomap ' \
-                  f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
-                  f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
-                  f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} ' \
-                  f'{class_id_max} {class_id_max} {class_id_max} {class_id_max} '
-            self._cmd(tmp)
-
             for cls in config['class']:
                 cls = int(cls)
                 tmp = f'tc qdisc add dev {self._interface} parent {self._parent:x}:{cls:x} pfifo'

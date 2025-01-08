@@ -92,6 +92,9 @@ fi
 #alias la='ls -A'
 #alias l='ls -CF'
 
+# Disable iproute2 auto color
+alias ip="ip --color=never"
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.

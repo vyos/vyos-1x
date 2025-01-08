@@ -97,21 +97,22 @@ def _get_boot_config():
     return strip_config_source(config)
 
 def _get_config_scripts():
-    from os import listdir
+    from os import walk
     from os.path import join
     from vyos.utils.file import read_file
 
     scripts = []
 
     dir = '/config/scripts'
-    for f in listdir(dir):
-        script = {}
-        path = join(dir, f)
-        data = read_file(path)
-        script["path"] = path
-        script["data"] = data
+    for dirpath, _, filenames in walk(dir):
+        for filename in filenames:
+            script = {}
+            path = join(dirpath, filename)
+            data = read_file(path)
+            script["path"] = path
+            script["data"] = data
 
-        scripts.append(script)
+            scripts.append(script)
 
     return scripts
 

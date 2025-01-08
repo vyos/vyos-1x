@@ -1,4 +1,6 @@
 !
+{{ 'no ' if disable_forwarding is vyos_defined }}{{ afi }} forwarding
+!
 {% if nht.no_resolve_via_default is vyos_defined %}
 no {{ afi }} nht resolve-via-default
 {% endif %}

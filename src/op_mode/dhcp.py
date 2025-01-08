@@ -101,8 +101,8 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         lifetime = lease['valid-lft']
         expiry = (lease['cltt'] + lifetime)
 
-        lease['start_timestamp'] = datetime.utcfromtimestamp(expiry - lifetime)
-        lease['expire_timestamp'] = datetime.utcfromtimestamp(expiry) if expiry else None
+        lease['start_timestamp'] = datetime.fromtimestamp(expiry - lifetime, timezone.utc)
+        lease['expire_timestamp'] = datetime.fromtimestamp(expiry, timezone.utc) if expiry else None
 
         data_lease = {}
         data_lease['ip'] = lease['ip-address']

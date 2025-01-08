@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright (C) 2019-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,23 +14,34 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import unittest
+import jinja2
+import secrets
+import string
+import paramiko
+import shutil
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from gzip import GzipFile
-from subprocess import Popen, PIPE
+from subprocess import Popen
+from subprocess import PIPE
 from pwd import getpwall
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.auth import get_current_user
 from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.template import inc_ip
 
 base_path = ['system', 'login']
 users = ['vyos1', 'vyos-roxx123', 'VyOS-123_super.Nice']
+
+SSH_PROCESS_NAME = 'sshd'
 
 ssh_pubkey = """
 AAAAB3NzaC1yc2EAAAADAQABAAABgQD0NuhUOEtMIKnUVFIHoFatqX/c4mjerXyF
@@ -44,6 +55,53 @@ pHJz8umqkxy3hfw0K7BRFtjWd63sbOP8Q/SDV7LPaIfIxenA9zv2rY7y+AIqTmSr
 TTSb0X1zPGxPIRFy5GoGtO9Mm5h4OZk=
 """
 
+tac_image = 'docker.io/lfkeitel/tacacs_plus:alpine'
+tac_image_path = '/usr/share/vyos/tacplus-alpine.tar'
+
+TAC_PLUS_TMPL_SRC = """
+id = spawnd {
+    debug redirect = /dev/stdout
+    listen = { port = 49 }
+    spawn = {
+        instances min = 1
+        instances max = 10
+    }
+    background = no
+}
+
+id = tac_plus {
+    debug = ALL
+    log = stdout {
+        destination = /dev/stdout
+    }
+    authorization log group = yes
+    authentication log = stdout
+    authorization log = stdout
+    accounting log = stdout
+
+    host = smoketest {
+        address = {{ source_address }}/32
+        enable = clear enable
+        key = {{ tacacs_secret }}
+    }
+
+    group = admin {
+        default service = permit
+        enable = permit
+        service = shell {
+            default command = permit
+            default attribute = permit
+            set priv-lvl = 15
+        }
+    }
+
+    user = {{ username }} {
+        password = clear {{ password }}
+        member = admin
+    }
+}
+"""
+
 class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -53,6 +111,17 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         # out the current configuration which will break this test
         cls.cli_delete(cls, base_path + ['radius'])
         cls.cli_delete(cls, base_path + ['tacacs'])
+
+        # Load image for smoketest provided in vyos-1x-smoketest
+        if not os.path.exists(tac_image_path):
+            cls.fail(cls, f'{tac_image} image not available')
+        cmd(f'sudo podman load -i {tac_image_path}')
+
+    @classmethod
+    def tearDownClass(cls):
+        super(TestSystemLogin, cls).tearDownClass()
+        # Cleanup podman image
+        cmd(f'sudo podman image rm -f {tac_image}')
 
     def tearDown(self):
         # Delete individual users from configuration
@@ -87,11 +156,11 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['service', 'ssh', 'port', '22'])
 
         for user in users:
-            name = "VyOS Roxx " + user
-            home_dir = "/tmp/" + user
+            name = f'VyOS Roxx {user}'
+            home_dir = f'/tmp/smoketest/{user}'
 
             self.cli_set(base_path + ['user', user, 'authentication', 'plaintext-password', user])
-            self.cli_set(base_path + ['user', user, 'full-name', 'VyOS Roxx'])
+            self.cli_set(base_path + ['user', user, 'full-name', name])
             self.cli_set(base_path + ['user', user, 'home-directory', home_dir])
 
         self.cli_commit()
@@ -99,13 +168,13 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         for user in users:
             tmp = ['su','-', user]
             proc = Popen(tmp, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            tmp = "{}\nuname -a".format(user)
+            tmp = f'{user}\nuname -a'
             proc.stdin.write(tmp.encode())
             proc.stdin.flush()
             (stdout, stderr) = proc.communicate()
 
             # stdout is something like this:
-            # b'Linux LR1.wue3 5.10.61-amd64-vyos #1 SMP Fri Aug 27 08:55:46 UTC 2021 x86_64 GNU/Linux\n'
+            # b'Linux vyos 6.6.66-vyos 6.6.66-vyos #1 SMP Mon Dec 30 19:05:15 UTC 2024 x86_64 GNU/Linux\n'
             self.assertTrue(len(stdout) > 40)
 
         locked_user = users[0]
@@ -122,7 +191,6 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         # check if account is unlocked
         tmp = cmd(f'sudo passwd -S {locked_user}')
         self.assertIn(f'{locked_user} P ', tmp)
-
 
     def test_system_login_otp(self):
         otp_user = 'otp-test_user'
@@ -300,11 +368,52 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['max-login-session'])
 
     def test_system_login_tacacs(self):
-        tacacs_secret = 'tac_plus_key'
+        tacacs_secret = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
         tacacs_servers = ['100.64.0.11', '100.64.0.12']
+        source_address = '100.64.0.1'
+        dummy_if = 'dum12759'
 
-        # Enable TACACS
+        # Load container image for lac_plus daemon
+        tac_plus_config = '/tmp/smoketest-tacacs-server'
+        tac_container_path = ['container', 'name', 'tacacs-1']
+
+        # Generate random string with 10 digits
+        username = 'tactest'
+        password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(10))
+        tac_test_user = {
+            'username' : username,
+            'password' : password,
+            'tacacs_secret' : tacacs_secret,
+            'source_address' : source_address,
+        }
+
+        tmpl = jinja2.Template(TAC_PLUS_TMPL_SRC)
+        write_file(f'{tac_plus_config}/tac_plus.cfg', tmpl.render(tac_test_user))
+
+        # Check if SSH service is running
+        ssh_running = process_named_running(SSH_PROCESS_NAME)
+        if not ssh_running:
+            # Start SSH service
+            self.cli_set(['service', 'ssh'])
+
+        # Start tac_plus container
+        self.cli_set(tac_container_path + ['allow-host-networks'])
+        self.cli_set(tac_container_path + ['image', tac_image])
+        self.cli_set(tac_container_path + ['volume', 'config', 'destination', '/etc/tac_plus'])
+        self.cli_set(tac_container_path + ['volume', 'config', 'mode', 'ro'])
+        self.cli_set(tac_container_path + ['volume', 'config', 'source', tac_plus_config])
+
+        # Start container
+        self.cli_commit()
+
+        # Define TACACS traffic source address
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', f'{source_address}/32'])
+        self.cli_set(base_path + ['tacacs', 'source-address', source_address])
+
+        # Define TACACS servers
         for server in tacacs_servers:
+            # Use this system as "remote" TACACS server
+            self.cli_set(['interfaces', 'dummy', dummy_if, 'address', f'{server}/32'])
             self.cli_set(base_path + ['tacacs', 'server', server, 'key', tacacs_secret])
 
         self.cli_commit()
@@ -328,12 +437,43 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.assertIn('service=shell', pam_tacacs_conf)
         self.assertIn('protocol=ssh', pam_tacacs_conf)
 
+        # Verify configured TACACS source address
+        self.assertIn(f'source_ip={source_address}', pam_tacacs_conf)
+        self.assertIn(f'source_ip={source_address}', nss_tacacs_conf)
+
+        # Verify configured TACACS servers
         for server in tacacs_servers:
             self.assertIn(f'secret={tacacs_secret}', pam_tacacs_conf)
             self.assertIn(f'server={server}', pam_tacacs_conf)
 
             self.assertIn(f'secret={tacacs_secret}', nss_tacacs_conf)
             self.assertIn(f'server={server}', nss_tacacs_conf)
+
+        # Login with proper credentials
+        test_command = 'uname -a'
+        out, err = self.ssh_send_cmd(test_command, username, password)
+        # verify login
+        self.assertFalse(err)
+        self.assertEqual(out, cmd(test_command))
+
+        # Login with invalid credentials
+        with self.assertRaises(paramiko.ssh_exception.AuthenticationException):
+            _, _ = self.ssh_send_cmd(test_command, username, f'{password}1')
+
+        # Remove TACACS configuration
+        self.cli_delete(base_path + ['tacacs'])
+        # Remove tac_plus container
+        self.cli_delete(tac_container_path)
+        # Remove dummy interface
+        self.cli_delete(['interfaces', 'dummy', dummy_if])
+        self.cli_commit()
+
+        # Remove rendered tac_plus daemon configuration
+        shutil.rmtree(tac_plus_config)
+
+        # Stop SSH service if it was not running before
+        if not ssh_running:
+            self.cli_delete(['service', 'ssh'])
 
     def test_delete_current_user(self):
         current_user = get_current_user()

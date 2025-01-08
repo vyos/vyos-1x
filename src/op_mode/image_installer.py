@@ -33,14 +33,13 @@ from errno import ENOSPC
 from psutil import disk_partitions
 
 from vyos.configtree import ConfigTree
-from vyos.configquery import ConfigTreeQuery
 from vyos.remote import download
 from vyos.system import disk, grub, image, compat, raid, SYSTEM_CFG_VER
 from vyos.template import render
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
-from vyos.utils.process import cmd, run
-from vyos.version import get_remote_version, get_version_data
+from vyos.utils.process import cmd, run, rc_cmd
+from vyos.version import get_version_data
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -99,6 +98,7 @@ FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
 ISO_DOWNLOAD_PATH: str = '/tmp/vyos_installation.iso'
 
 external_download_script = '/usr/libexec/vyos/simple-download.py'
+external_latest_image_url_script = '/usr/libexec/vyos/latest-image-url.py'
 
 # default boot variables
 DEFAULT_BOOT_VARS: dict[str, str] = {
@@ -532,10 +532,10 @@ def download_file(local_file: str, remote_path: str, vrf: str,
         download(local_file, remote_path, progressbar=progressbar,
                  check_space=check_space, raise_error=True)
     else:
-        vrf_cmd = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password} \
-                ip vrf exec {vrf} {external_download_script} \
-                --local-file {local_file} --remote-path {remote_path}'
-        cmd(vrf_cmd)
+        remote_auth = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password}'
+        vrf_cmd = f'ip vrf exec {vrf} {external_download_script} \
+                    --local-file {local_file} --remote-path {remote_path}'
+        cmd(vrf_cmd, auth=remote_auth)
 
 def image_fetch(image_path: str, vrf: str = None,
                 username: str = '', password: str = '',
@@ -550,11 +550,15 @@ def image_fetch(image_path: str, vrf: str = None,
     """
     # Latest version gets url from configured "system update-check url"
     if image_path == 'latest':
-        config = ConfigTreeQuery()
-        if config.exists('system update-check url'):
-            configured_url_version = config.value('system update-check url')
-            remote_url_list = get_remote_version(configured_url_version)
-            image_path = remote_url_list[0].get('url')
+        command = external_latest_image_url_script
+        if vrf:
+            command = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password} \
+                        ip vrf exec {vrf} ' + command
+        code, output = rc_cmd(command)
+        if code:
+            print(output)
+            exit(MSG_INFO_INSTALL_EXIT)
+        image_path = output if output else image_path
 
     try:
         # check a type of path

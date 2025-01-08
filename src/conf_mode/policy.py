@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2024 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,15 +17,15 @@
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.template import render_to_string
+from vyos.configverify import has_frr_protocol_in_dict
+from vyos.frrender import FRRender
+from vyos.frrender import frr_protocols
+from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
-from vyos import frr
 from vyos import airbag
-
 airbag.enable()
-
 
 def community_action_compatibility(actions: dict) -> bool:
     """
@@ -87,31 +87,27 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['policy']
-    policy = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                  get_first_key=True,
-                                  no_tag_node_value_mangle=True)
-
-    # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify().
-    #
-    # XXX: one MUST always call this without the key_mangling() option! See
-    # vyos.configverify.verify_common_route_maps() for more information.
-    tmp = conf.get_config_dict(['protocols'], key_mangling=('-', '_'),
-                               no_tag_node_value_mangle=True)
-    # Merge policy dict into "regular" config dict
-    policy = dict_merge(tmp, policy)
-    return policy
+    return get_frrender_dict(conf)
 
 
-def verify(policy):
-    if not policy:
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'policy'):
         return None
 
-    for policy_type in ['access_list', 'access_list6', 'as_path_list',
-                        'community_list', 'extcommunity_list',
-                        'large_community_list',
-                        'prefix_list', 'prefix_list6', 'route_map']:
+    policy_types = ['access_list', 'access_list6', 'as_path_list',
+                    'community_list', 'extcommunity_list',
+                    'large_community_list', 'prefix_list',
+                    'prefix_list6', 'route_map']
+
+    policy = config_dict['policy']
+    for protocol in frr_protocols:
+        if protocol not in config_dict:
+            continue
+        if 'protocol' not in policy:
+            policy.update({'protocol': {}})
+        policy['protocol'].update({protocol : config_dict[protocol]})
+
+    for policy_type in policy_types:
         # Bail out early and continue with next policy type
         if policy_type not in policy:
             continue
@@ -246,71 +242,35 @@ def verify(policy):
     # When the "routing policy" changes and policies, route-maps etc. are deleted,
     # it is our responsibility to verify that the policy can not be deleted if it
     # is used by any routing protocol
-    if 'protocols' in policy:
-        for policy_type in ['access_list', 'access_list6', 'as_path_list',
-                            'community_list',
-                            'extcommunity_list', 'large_community_list',
-                            'prefix_list', 'route_map']:
-            if policy_type in policy:
-                for policy_name in list(set(routing_policy_find(policy_type,
-                                                                policy[
-                                                                    'protocols']))):
-                    found = False
-                    if policy_name in policy[policy_type]:
-                        found = True
-                    # BGP uses prefix-list for selecting both an IPv4 or IPv6 AFI related
-                    # list - we need to go the extra mile here and check both prefix-lists
-                    if policy_type == 'prefix_list' and 'prefix_list6' in policy and policy_name in \
-                            policy['prefix_list6']:
-                        found = True
-                    if not found:
-                        tmp = policy_type.replace('_', '-')
-                        raise ConfigError(
-                            f'Can not delete {tmp} "{policy_name}", still in use!')
+    # Check if any routing protocol is activated
+    if 'protocol' in policy:
+        for policy_type in policy_types:
+            for policy_name in list(set(routing_policy_find(policy_type, policy['protocol']))):
+                found = False
+                if policy_type in policy and policy_name in policy[policy_type]:
+                    found = True
+                # BGP uses prefix-list for selecting both an IPv4 or IPv6 AFI related
+                # list - we need to go the extra mile here and check both prefix-lists
+                if policy_type == 'prefix_list' and 'prefix_list6' in policy and policy_name in \
+                        policy['prefix_list6']:
+                    found = True
+                if not found:
+                    tmp = policy_type.replace('_', '-')
+                    raise ConfigError(
+                        f'Can not delete {tmp} "{policy_name}", still in use!')
 
     return None
 
 
-def generate(policy):
-    if not policy:
-        return None
-    policy['new_frr_config'] = render_to_string('frr/policy.frr.j2', policy)
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().generate(config_dict)
     return None
 
-
-def apply(policy):
-    bgp_daemon = 'bgpd'
-    zebra_daemon = 'zebra'
-
-    # Save original configuration prior to starting any commit actions
-    frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(bgp_daemon)
-    frr_cfg.modify_section(r'^bgp as-path access-list .*')
-    frr_cfg.modify_section(r'^bgp community-list .*')
-    frr_cfg.modify_section(r'^bgp extcommunity-list .*')
-    frr_cfg.modify_section(r'^bgp large-community-list .*')
-    frr_cfg.modify_section(r'^route-map .*', stop_pattern='^exit',
-                           remove_stop_mark=True)
-    if 'new_frr_config' in policy:
-        frr_cfg.add_before(frr.default_add_before, policy['new_frr_config'])
-    frr_cfg.commit_configuration(bgp_daemon)
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'^access-list .*')
-    frr_cfg.modify_section(r'^ipv6 access-list .*')
-    frr_cfg.modify_section(r'^ip prefix-list .*')
-    frr_cfg.modify_section(r'^ipv6 prefix-list .*')
-    frr_cfg.modify_section(r'^route-map .*', stop_pattern='^exit',
-                           remove_stop_mark=True)
-    if 'new_frr_config' in policy:
-        frr_cfg.add_before(frr.default_add_before, policy['new_frr_config'])
-    frr_cfg.commit_configuration(zebra_daemon)
-
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('vyos-configd.service'):
+        FRRender().apply()
     return None
-
 
 if __name__ == '__main__':
     try:

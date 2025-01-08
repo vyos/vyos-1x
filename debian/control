@@ -40,7 +40,8 @@ Pre-Depends:
   libpam-runtime [amd64],
   libnss-tacplus [amd64],
   libpam-tacplus [amd64],
-  libpam-radius-auth [amd64]
+  libpam-radius-auth (= 1.5.0-cl3u7) [amd64],
+  libnss-mapuser (= 1.1.0-cl3u3) [amd64]
 Depends:
 ## Fundamentals
   ${python3:Depends} (>= 3.10),
@@ -166,7 +167,7 @@ Depends:
   sstp-client,
 # End "interfaces sstpc"
 # For "protocols *"
-  frr (>= 9.1),
+  frr (>= 10.2),
   frr-pythontools,
   frr-rpki-rtrlib,
   frr-snmp,
@@ -235,12 +236,15 @@ Depends:
   squidclient,
   squidguard,
 # End "service webproxy"
-# For "service monitoring node-exporter"
+# For "service monitoring prometheus node-exporter"
   node-exporter,
-# End "service monitoring node-exporter"
-# For "service monitoring frr-exporter"
+# End "service monitoring prometheus node-exporter"
+# For "service monitoring prometheus frr-exporter"
   frr-exporter,
-# End "service monitoring frr-exporter"
+# End "service monitoring prometheus frr-exporter"
+# For "service monitoring prometheus blackbox-exporter"
+  blackbox-exporter,
+# End "service monitoring prometheus blackbox-exporter"
 # For "service monitoring telegraf"
   telegraf (>= 1.20),
 # End "service monitoring telegraf"

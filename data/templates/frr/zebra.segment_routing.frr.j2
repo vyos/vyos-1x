@@ -11,6 +11,9 @@ segment-routing
 {%         if locator_config.behavior_usid is vyos_defined %}
     behavior usid
 {%         endif %}
+{%         if locator_config.format is vyos_defined %}
+    format {{ locator_config.format }}
+{%         endif %}
     exit
     !
 {%     endfor %}
