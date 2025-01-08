@@ -101,8 +101,8 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         lifetime = lease['valid-lft']
         expiry = (lease['cltt'] + lifetime)
 
-        lease['start_timestamp'] = datetime.fromtimestamp(expiry - lifetime, timezone.utc)
-        lease['expire_timestamp'] = datetime.fromtimestamp(expiry, timezone.utc) if expiry else None
+        lease['start_timestamp'] = datetime.fromtimestamp(expiry - lifetime, tz=timezone.utc)
+        lease['expire_timestamp'] = datetime.fromtimestamp(expiry, tz=timezone.utc) if expiry else None
 
         data_lease = {}
         data_lease['ip'] = lease['ip-address']
@@ -132,7 +132,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         data_lease['remaining'] = '-'
 
         if lease['valid-lft'] > 0:
-            data_lease['remaining'] = lease['expire_timestamp'] - datetime.now(timezone.utc)
+            data_lease['remaining'] = lease['expire_timestamp'] - datetime.now(tz=timezone.utc)
 
             if data_lease['remaining'].days >= 0:
                 # substraction gives us a timedelta object which can't be formatted with strftime
