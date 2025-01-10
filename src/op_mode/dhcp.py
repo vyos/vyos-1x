@@ -18,7 +18,7 @@ import os
 import sys
 import typing
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import timezone
 from glob import glob
 from ipaddress import ip_address
@@ -132,12 +132,10 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], orig
         data_lease['remaining'] = '-'
 
         if lease['valid-lft'] > 0:
-            data_lease['remaining'] = lease['expire_timestamp'] - datetime.now(timezone.utc)
-
-            if data_lease['remaining'].days >= 0:
+            if lease['expire_timestamp'] > datetime.now(timezone.utc):
                 # substraction gives us a timedelta object which can't be formatted with strftime
                 # so we use str(), split gets rid of the microseconds
-                data_lease['remaining'] = str(data_lease['remaining']).split('.')[0]
+                data_lease['remaining'] = str(lease['expire_timestamp'] - datetime.now(timezone.utc)).split('.')[0]
 
         # Do not add old leases
         if data_lease['remaining'] != '' and data_lease['pool'] in pool and data_lease['state'] != 'free':
