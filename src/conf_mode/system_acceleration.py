@@ -74,7 +74,7 @@ def verify(qat):
         # 6f54 -> D15xx
         # 18ee -> QAT_200XX
         data = re.findall(
-            '(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)|(8086:18ee)', output)
+            '(8086:19e2)|(8086:37c8)|(8086:37c9)|(8086:0435)|(8086:6f54)|(8086:18ee)', output)
         # If QAT devices found
         if not data:
             raise ConfigError('No QAT acceleration device found')
