@@ -41,19 +41,19 @@
             <children>
               <leafNode name="cache">
                 <properties>
-                  <help>Show NHRP interface connection information</help>
+                  <help>Forwarding cache information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
               <leafNode name="nhs">
                 <properties>
-                  <help>Show NHRP tunnel connection information</help>
+                  <help>Next hop server information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
               <leafNode name="shortcut">
                 <properties>
-                  <help>Show NHRP tunnel connection information</help>
+                  <help>Shortcut information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
