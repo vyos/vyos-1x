@@ -33,8 +33,8 @@ _here = dirname(__file__)
 sys.path.append(join(_here, '..'))
 from defaults import directories
 
-from op_definition import NodeData
 from op_definition import PathData
+
 
 xml_op_cache_json = 'xml_op_cache.json'
 xml_op_tmp = join('/tmp', xml_op_cache_json)
@@ -74,7 +74,7 @@ def translate_op_script(s: str) -> str:
     return s
 
 
-def insert_node(n: Element, l: list[PathData], path = None) -> None:
+def insert_node(n: Element, l: list[PathData], path=None) -> None:
     # pylint: disable=too-many-locals,too-many-branches
     prop: OptElement = n.find('properties')
     children: OptElement = n.find('children')
@@ -97,12 +97,12 @@ def insert_node(n: Element, l: list[PathData], path = None) -> None:
 
     comp_help = {}
     if prop is not None:
-        che = prop.findall("completionHelp")
+        che = prop.findall('completionHelp')
 
         for c in che:
-            comp_list_els = c.findall("list")
-            comp_path_els = c.findall("path")
-            comp_script_els = c.findall("script")
+            comp_list_els = c.findall('list')
+            comp_path_els = c.findall('path')
+            comp_script_els = c.findall('script')
 
             comp_lists = []
             for i in comp_list_els:
@@ -128,13 +128,14 @@ def insert_node(n: Element, l: list[PathData], path = None) -> None:
     cur_node_dict['name'] = name
     cur_node_dict['type'] = node_type
     cur_node_dict['comp_help'] = comp_help
+    cur_node_dict['help'] = help_text
     cur_node_dict['command'] = command_text
     cur_node_dict['path'] = path
     cur_node_dict['children'] = []
     l.append(cur_node_dict)
 
     if children is not None:
-        inner_nodes = children.iterfind("*")
+        inner_nodes = children.iterfind('*')
         for inner_n in inner_nodes:
             inner_path = path[:]
             insert_node(inner_n, cur_node_dict['children'], inner_path)
@@ -143,14 +144,18 @@ def insert_node(n: Element, l: list[PathData], path = None) -> None:
 def parse_file(file_path, l):
     tree = ET.parse(file_path)
     root = tree.getroot()
-    for n in root.iterfind("*"):
+    for n in root.iterfind('*'):
         insert_node(n, l)
 
 
 def main():
     parser = ArgumentParser(description='generate dict from xml defintions')
-    parser.add_argument('--xml-dir', type=str, required=True,
-                        help='transcluded xml op-mode-definition file')
+    parser.add_argument(
+        '--xml-dir',
+        type=str,
+        required=True,
+        help='transcluded xml op-mode-definition file',
+    )
 
     args = vars(parser.parse_args())
 
@@ -166,6 +171,7 @@ def main():
 
     with open(op_ref_cache, 'w') as f:
         f.write(f'op_reference = {str(l)}')
+
 
 if __name__ == '__main__':
     main()
