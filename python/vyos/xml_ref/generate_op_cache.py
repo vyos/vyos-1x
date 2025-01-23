@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# Copyright (C) 2024-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -95,52 +95,49 @@ def insert_node(n: Element, l: list[PathData], path = None) -> None:
     if command_text is not None:
         command_text = translate_command(command_text, path)
 
-    comp_help = None
+    comp_help = {}
     if prop is not None:
         che = prop.findall("completionHelp")
+
         for c in che:
-            lists = c.findall("list")
-            paths = c.findall("path")
-            scripts = c.findall("script")
+            comp_list_els = c.findall("list")
+            comp_path_els = c.findall("path")
+            comp_script_els = c.findall("script")
 
-            comp_help = {}
-            list_l = []
-            for i in lists:
-                list_l.append(i.text)
-            path_l = []
-            for i in paths:
-                path_str = re.sub(r'\s+', '/', i.text)
-                path_l.append(path_str)
-            script_l = []
-            for i in scripts:
-                script_str = translate_op_script(i.text)
-                script_l.append(script_str)
+            comp_lists = []
+            for i in comp_list_els:
+                comp_lists.append(i.text)
 
-            comp_help['list'] = list_l
-            comp_help['fs_path'] = path_l
-            comp_help['script'] = script_l
+            comp_paths = []
+            for i in comp_path_els:
+                comp_paths.append(i.text)
 
-    for d in l:
-        if name in list(d):
-            break
-    else:
-        d = {}
-        l.append(d)
+            comp_scripts = []
+            for i in comp_script_els:
+                comp_script_str = translate_op_script(i.text)
+                comp_scripts.append(comp_script_str)
 
-    inner_l = d.setdefault(name, [])
+            if comp_lists:
+                comp_help['list'] = comp_lists
+            if comp_paths:
+                comp_help['path'] = comp_paths
+            if comp_scripts:
+                comp_help['script'] = comp_scripts
 
-    inner_d: PathData = {'node_data': NodeData(node_type=node_type,
-                                               help_text=help_text,
-                                               comp_help=comp_help,
-                                               command=command_text,
-                                               path=path)}
-    inner_l.append(inner_d)
+    cur_node_dict = {}
+    cur_node_dict['name'] = name
+    cur_node_dict['type'] = node_type
+    cur_node_dict['comp_help'] = comp_help
+    cur_node_dict['command'] = command_text
+    cur_node_dict['path'] = path
+    cur_node_dict['children'] = []
+    l.append(cur_node_dict)
 
     if children is not None:
         inner_nodes = children.iterfind("*")
         for inner_n in inner_nodes:
             inner_path = path[:]
-            insert_node(inner_n, inner_l, inner_path)
+            insert_node(inner_n, cur_node_dict['children'], inner_path)
 
 
 def parse_file(file_path, l):
