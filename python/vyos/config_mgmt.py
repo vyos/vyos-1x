@@ -287,7 +287,7 @@ Proceed ?"""
 
         # commits under commit-confirm are not added to revision list unless
         # confirmed, hence a soft revert is to revision 0
-        revert_ct = self._get_config_tree_revision(0)
+        revert_ct = self.get_config_tree_revision(0)
 
         message = '[commit-confirm] Reverting to previous config now'
         os.system('wall -n ' + message)
@@ -351,7 +351,7 @@ Proceed ?"""
             )
             return msg, 1
 
-        rollback_ct = self._get_config_tree_revision(rev)
+        rollback_ct = self.get_config_tree_revision(rev)
         try:
             load(rollback_ct, switch='explicit')
             print('Rollback diff has been applied.')
@@ -382,7 +382,7 @@ Proceed ?"""
         if rev1 is not None:
             if not self._check_revision_number(rev1):
                 return f'Invalid revision number {rev1}', 1
-            ct1 = self._get_config_tree_revision(rev1)
+            ct1 = self.get_config_tree_revision(rev1)
             ct2 = self.working_config
             msg = f'No changes between working and revision {rev1} configurations.\n'
         if rev2 is not None:
@@ -390,7 +390,7 @@ Proceed ?"""
                 return f'Invalid revision number {rev2}', 1
             # compare older to newer
             ct2 = ct1
-            ct1 = self._get_config_tree_revision(rev2)
+            ct1 = self.get_config_tree_revision(rev2)
             msg = f'No changes between revisions {rev2} and {rev1} configurations.\n'
 
         out = ''
@@ -575,7 +575,7 @@ Proceed ?"""
             r = f.read().decode()
         return r
 
-    def _get_config_tree_revision(self, rev: int):
+    def get_config_tree_revision(self, rev: int):
         c = self._get_file_revision(rev)
         return ConfigTree(c)
 
