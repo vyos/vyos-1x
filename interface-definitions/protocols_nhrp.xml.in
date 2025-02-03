@@ -20,12 +20,122 @@
               </valueHelp>
             </properties>
             <children>
-              <leafNode name="cisco-authentication">
+              <node name="map">
                 <properties>
-                  <help>Pass phrase for cisco authentication</help>
+                  <help>Map tunnel IP to NBMA </help>
+                </properties>
+                <children>
+                  <tagNode name ="tunnel-ip">
+                    <properties>
+                      <help>Set a NHRP tunnel address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Set the IP address to map</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="nbma">
+                        <properties>
+                          <help>Set NHRP NBMA address to map</help>
+                          <completionHelp>
+                            <list>local</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Set the IP address to map</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>local</format>
+                            <description>Set the local address</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                            <regex>(local)</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="nhs">
+                <properties>
+                  <help>Map tunnel IP to NBMA of Next Hop Server</help>
+                </properties>
+                <children>
+                  <tagNode name ="tunnel-ip">
+                    <properties>
+                      <help>Set a NHRP NHS tunnel address</help>
+                      <completionHelp>
+                        <list>dynamic</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Set the IP address to map</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dynamic</format>
+                        <description> Set Next Hop Server to have a dynamic address </description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                        <regex>(dynamic)</regex>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="nbma">
+                        <properties>
+                          <help>Set NHRP NBMA address of NHS</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Set the IP address to map</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ip-address"/>
+                          </constraint>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <leafNode name="multicast">
+                <properties>
+                  <help>Map multicast to NBMA</help>
+                  <completionHelp>
+                    <list>dynamic</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Set the IP address to map(IP|FQDN)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dynamic</format>
+                    <description>NBMA address is learnt dynamically</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                    <regex>(dynamic)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="registration-no-unique">
+                <properties>
+                  <help>Don't set unique flag</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="authentication">
+                <properties>
+                  <help>NHRP authentication</help>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Pass phrase for cisco authentication</description>
+                    <description>Pass phrase for NHRP authentication</description>
                   </valueHelp>
                   <constraint>
                     <regex>[^[:space:]]{1,8}</regex>
@@ -33,70 +143,16 @@
                 <constraintErrorMessage>Password should contain up to eight non-whitespace characters</constraintErrorMessage>
                 </properties>
               </leafNode>
-              <tagNode name="dynamic-map">
-                <properties>
-                  <help>Set an HUB tunnel address</help>
-                  <valueHelp>
-                    <format>ipv4net</format>
-                    <description>Set the IP address and prefix length</description>
-                  </valueHelp>
-                </properties>
-                <children>
-                  <leafNode name="nbma-domain-name">
-                    <properties>
-                      <help>Set HUB fqdn (nbma-address - fqdn)</help>
-                      <valueHelp>
-                        <format>&lt;fqdn&gt;</format>
-                        <description>Set the external HUB fqdn</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
-              <leafNode name="holding-time">
+              <leafNode name="holdtime">
                 <properties>
                   <help>Holding time in seconds</help>
-                </properties>
-              </leafNode>
-              <tagNode name="map">
-                <properties>
-                  <help>Set an HUB tunnel address</help>
-                </properties>
-                <children>
-                  <leafNode name="cisco">
-                    <properties>
-                      <help>If the statically mapped peer is running Cisco IOS, specify this</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="nbma-address">
-                    <properties>
-                      <help>Set HUB address (nbma-address - external hub address or fqdn)</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="register">
-                    <properties>
-                      <help>Specifies that Registration Request should be sent to this peer on startup</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
-              <leafNode name="multicast">
-                <properties>
-                  <help>Set multicast for NHRP</help>
-                  <completionHelp>
-                    <list>dynamic nhs</list>
-                  </completionHelp>
+                  <valueHelp>
+                    <format>u32:1-65000</format>
+                    <description>ring buffer size</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(dynamic|nhs)</regex>
+                    <validator name="numeric" argument="--range 1-65000"/>
                   </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="non-caching">
-                <properties>
-                  <help>This can be used to reduce memory consumption on big NBMA subnets</help>
-                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="redirect">
@@ -105,28 +161,20 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="shortcut-destination">
-                <properties>
-                  <help>This instructs opennhrp to reply with authorative answers on NHRP Resolution Requests destined to addresses in this interface</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <tagNode name="shortcut-target">
-                <properties>
-                  <help>Defines an off-NBMA network prefix for which the GRE interface will act as a gateway</help>
-                </properties>
-                <children>
-                  <leafNode name="holding-time">
-                    <properties>
-                      <help>Holding time in seconds</help>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
               <leafNode name="shortcut">
                 <properties>
                   <help>Enable creation of shortcut routes. A received NHRP Traffic Indication will trigger the resolution and establishment of a shortcut route</help>
                   <valueless/>
+                </properties>
+              </leafNode>
+              #include <include/interface/mtu-68-16000.xml.i>
+              <leafNode name="network-id">
+                <properties>
+                  <help>NHRP network id</help>
+                  <valueHelp>
+                    <format>&lt;1-4294967295&gt;</format>
+                    <description>NHRP network id</description>
+                  </valueHelp>
                 </properties>
               </leafNode>
             </children>

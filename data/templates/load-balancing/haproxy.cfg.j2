@@ -93,6 +93,11 @@ frontend {{ front }}
     http-response set-header {{ header }} '{{ header_config['value'] }}'
 {%             endfor %}
 {%         endif %}
+{%         if front_config.http_compression is vyos_defined %}
+    filter compression
+    compression algo {{ front_config.http_compression.algorithm }}
+    compression type {{ front_config.http_compression.mime_type | join(' ') }}
+{%         endif %}
 {%         if front_config.rule is vyos_defined %}
 {%             for rule, rule_config in front_config.rule.items() %}
     # rule {{ rule }}

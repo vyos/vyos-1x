@@ -28,6 +28,7 @@
                 </properties>
                 <command>if [ -d "/sys/class/net/$4" ]; then /usr/sbin/pppstats "$4"; fi</command>
               </leafNode>
+              #include <include/show-interface-type-event-log.xml.i>
             </children>
           </tagNode>
           <node name="pppoe">

@@ -128,5 +128,11 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
+    def test_psample_enabled(self):
+        # Psample must be enabled in the OS Kernel to enable egress flow for hsflowd
+        for option in ['CONFIG_PSAMPLE']:
+            tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -958,6 +958,68 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit squid.service</command>
           </leafNode>
+          <node name="network-event">
+            <properties>
+              <help>Show log for network events</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show log for specific interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service --grep $5</command>
+              </tagNode>
+              <node name="route">
+                <properties>
+                  <help>Show log for route events</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service --grep "\[$4\]"</command>
+                <children>
+                  #include <include/log/network-event-type-interface.xml.i>
+                </children>
+              </node>
+              <node name="link">
+                <properties>
+                  <help>Show log for network link events</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service --grep "\[$4\]"</command>
+                <children>
+                  #include <include/log/network-event-type-interface.xml.i>
+                </children>
+              </node>
+              <node name="addr">
+                <properties>
+                  <help>Show log for network address events</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service --grep "\[$4\]"</command>
+                <children>
+                  #include <include/log/network-event-type-interface.xml.i>
+                </children>
+              </node>
+              <node name="neigh">
+                <properties>
+                  <help>Show log for neighbor table events</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service --grep "\[$4\]"</command>
+                <children>
+                  #include <include/log/network-event-type-interface.xml.i>
+                </children>
+              </node>
+              <node name="rule">
+                <properties>
+                  <help>Show log for PBR rule change events</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit vyos-network-event-logger.service --grep "\[$4\]"</command>
+                <children>
+                  #include <include/log/network-event-type-interface.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
         </children>
       </node>
     </children>

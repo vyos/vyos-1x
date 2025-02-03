@@ -1,4 +1,4 @@
-# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,11 @@ new_base_path = ['service', 'ntp']
 def migrate(config: ConfigTree) -> None:
     if not config.exists(base_path):
         # Nothing to do
+        return
+
+    # T6911: do not migrate NTP configuration if mandatory server is missing
+    if not config.exists(base_path + ['server']):
+        config.delete(base_path)
         return
 
     # config.copy does not recursively create a path, so create ['service'] if

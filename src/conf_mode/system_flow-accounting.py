@@ -18,7 +18,6 @@ import os
 import re
 
 from sys import exit
-from ipaddress import ip_address
 
 from vyos.config import Config
 from vyos.config import config_dict_merge
@@ -159,9 +158,9 @@ def get_config(config=None):
 
     # delete individual flow type defaults - should only be added if user
     # sets this feature
-    for flow_type in ['sflow', 'netflow']:
-        if flow_type not in flow_accounting and flow_type in default_values:
-            del default_values[flow_type]
+    flow_type = 'netflow'
+    if flow_type not in flow_accounting and flow_type in default_values:
+        del default_values[flow_type]
 
     flow_accounting = config_dict_merge(default_values, flow_accounting)
 
@@ -171,9 +170,9 @@ def verify(flow_config):
     if not flow_config:
         return None
 
-    # check if at least one collector is enabled
-    if 'sflow' not in flow_config and 'netflow' not in flow_config and 'disable_imt' in flow_config:
-        raise ConfigError('You need to configure at least sFlow or NetFlow, ' \
+    # check if collector is enabled
+    if 'netflow' not in flow_config and 'disable_imt' in flow_config:
+        raise ConfigError('You need to configure NetFlow, ' \
                           'or not set "disable-imt" for flow-accounting!')
 
     # Check if at least one interface is configured
@@ -185,45 +184,7 @@ def verify(flow_config):
     for interface in flow_config['interface']:
         verify_interface_exists(flow_config, interface, warning_only=True)
 
-    # check sFlow configuration
-    if 'sflow' in flow_config:
-        # check if at least one sFlow collector is configured
-        if 'server' not in flow_config['sflow']:
-            raise ConfigError('You need to configure at least one sFlow server!')
-
-        # check that all sFlow collectors use the same IP protocol version
-        sflow_collector_ipver = None
-        for server in flow_config['sflow']['server']:
-            if sflow_collector_ipver:
-                if sflow_collector_ipver != ip_address(server).version:
-                    raise ConfigError("All sFlow servers must use the same IP protocol")
-            else:
-                sflow_collector_ipver = ip_address(server).version
-
-        # check if vrf is defined for Sflow
-        verify_vrf(flow_config)
-        sflow_vrf = None
-        if 'vrf' in flow_config:
-            sflow_vrf = flow_config['vrf']
-
-        # check agent-id for sFlow: we should avoid mixing IPv4 agent-id with IPv6 collectors and vice-versa
-        for server in flow_config['sflow']['server']:
-            if 'agent_address' in flow_config['sflow']:
-                if ip_address(server).version != ip_address(flow_config['sflow']['agent_address']).version:
-                    raise ConfigError('IPv4 and IPv6 addresses can not be mixed in "sflow agent-address" and "sflow '\
-                                      'server". You need to set the same IP version for both "agent-address" and '\
-                                      'all sFlow servers')
-
-        if 'agent_address' in flow_config['sflow']:
-            tmp = flow_config['sflow']['agent_address']
-            if not is_addr_assigned(tmp, sflow_vrf):
-                raise ConfigError(f'Configured "sflow agent-address {tmp}" does not exist in the system!')
-
-        # Check if configured sflow source-address exist in the system
-        if 'source_address' in flow_config['sflow']:
-            if not is_addr_assigned(flow_config['sflow']['source_address'], sflow_vrf):
-                tmp = flow_config['sflow']['source_address']
-                raise ConfigError(f'Configured "sflow source-address {tmp}" does not exist on the system!')
+    verify_vrf(flow_config)
 
     # check NetFlow configuration
     if 'netflow' in flow_config:

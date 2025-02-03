@@ -4,7 +4,7 @@ set interfaces ethernet eth0 duplex 'auto'
 set interfaces ethernet eth1 speed 'auto'
 set interfaces ethernet eth1 duplex 'auto'
 set interfaces loopback lo
-set interfaces tunnel tun0 address '192.168.254.62/26'
+set interfaces tunnel tun0 address '192.168.254.62/32'
 set interfaces tunnel tun0 enable-multicast
 set interfaces tunnel tun0 encapsulation 'gre'
 set interfaces tunnel tun0 parameters ip key '1'
@@ -21,10 +21,12 @@ set protocols bgp peer-group DMVPN address-family ipv4-unicast
 set protocols bgp system-as '65000'
 set protocols bgp timers holdtime '30'
 set protocols bgp timers keepalive '10'
-set protocols nhrp tunnel tun0 cisco-authentication 'secret'
-set protocols nhrp tunnel tun0 holding-time '300'
+set protocols nhrp tunnel tun0 authentication 'secret'
+set protocols nhrp tunnel tun0 holdtime '300'
 set protocols nhrp tunnel tun0 multicast 'dynamic'
+set protocols nhrp tunnel tun0 network-id '1'
 set protocols nhrp tunnel tun0 redirect
+set protocols nhrp tunnel tun0 registration-no-unique
 set protocols nhrp tunnel tun0 shortcut
 set protocols static route 0.0.0.0/0 next-hop 100.64.10.0
 set protocols static route 172.20.0.0/16 blackhole distance '200'

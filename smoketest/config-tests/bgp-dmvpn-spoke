@@ -5,7 +5,7 @@ set interfaces pppoe pppoe1 authentication password 'cpe-1'
 set interfaces pppoe pppoe1 authentication username 'cpe-1'
 set interfaces pppoe pppoe1 no-peer-dns
 set interfaces pppoe pppoe1 source-interface 'eth0.7'
-set interfaces tunnel tun0 address '192.168.254.1/26'
+set interfaces tunnel tun0 address '192.168.254.1/32'
 set interfaces tunnel tun0 enable-multicast
 set interfaces tunnel tun0 encapsulation 'gre'
 set interfaces tunnel tun0 parameters ip key '1'
@@ -21,14 +21,16 @@ set protocols bgp parameters log-neighbor-changes
 set protocols bgp system-as '65001'
 set protocols bgp timers holdtime '30'
 set protocols bgp timers keepalive '10'
-set protocols nhrp tunnel tun0 cisco-authentication 'secret'
-set protocols nhrp tunnel tun0 holding-time '300'
-set protocols nhrp tunnel tun0 map 192.168.254.62/26 nbma-address '100.64.10.1'
-set protocols nhrp tunnel tun0 map 192.168.254.62/26 register
-set protocols nhrp tunnel tun0 multicast 'nhs'
+set protocols nhrp tunnel tun0 authentication 'secret'
+set protocols nhrp tunnel tun0 holdtime '300'
+set protocols nhrp tunnel tun0 multicast '100.64.10.1'
+set protocols nhrp tunnel tun0 network-id '1'
+set protocols nhrp tunnel tun0 nhs tunnel-ip 192.168.254.62 nbma '100.64.10.1'
 set protocols nhrp tunnel tun0 redirect
+set protocols nhrp tunnel tun0 registration-no-unique
 set protocols nhrp tunnel tun0 shortcut
 set protocols static route 172.17.0.0/16 blackhole distance '200'
+set protocols static route 192.168.254.0/26 next-hop 192.168.254.62 distance '250'
 set service dhcp-server shared-network-name LAN-3 subnet 172.17.1.0/24 option default-router '172.17.1.1'
 set service dhcp-server shared-network-name LAN-3 subnet 172.17.1.0/24 option name-server '172.17.1.1'
 set service dhcp-server shared-network-name LAN-3 subnet 172.17.1.0/24 range 0 start '172.17.1.100'

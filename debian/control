@@ -172,9 +172,6 @@ Depends:
   frr-rpki-rtrlib,
   frr-snmp,
 # End "protocols *"
-# For "protocols nhrp" (part of DMVPN)
-  opennhrp,
-# End "protocols nhrp"
 # For "protocols igmp-proxy"
   igmpproxy,
 # End "protocols igmp-proxy"

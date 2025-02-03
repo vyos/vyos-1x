@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -353,24 +353,40 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
 
     def test_dmvpn(self):
-        tunnel_if = 'tun100'
-        nhrp_secret = 'secret'
         ike_lifetime = '3600'
         esp_lifetime = '1800'
 
+        tunnel_if = "tun100"
+        tunnel_ip = '172.16.253.134/32'
+        tunnel_source = "192.0.2.134"
+        tunnel_encapsulation = "gre"
+        esp_group = "ESP-HUB"
+        ike_group = "IKE-HUB"
+        nhrp_secret = "vyos123"
+        nhrp_holdtime = '300'
+        nhs_tunnelip = '172.16.253.1'
+        nhs_nbmaip = '192.0.2.1'
+        map_tunnelip = '172.16.253.135'
+        map_nbmaip = "192.0.2.135"
+        nhrp_networkid = '1'
+
         # Tunnel
-        self.cli_set(tunnel_path + [tunnel_if, 'address', '172.16.253.134/29'])
-        self.cli_set(tunnel_path + [tunnel_if, 'encapsulation', 'gre'])
-        self.cli_set(tunnel_path + [tunnel_if, 'source-address', '192.0.2.1'])
-        self.cli_set(tunnel_path + [tunnel_if, 'enable-multicast'])
-        self.cli_set(tunnel_path + [tunnel_if, 'parameters', 'ip', 'key', '1'])
+        self.cli_set(tunnel_path + [tunnel_if, "address", tunnel_ip])
+        self.cli_set(tunnel_path + [tunnel_if, "encapsulation", tunnel_encapsulation])
+        self.cli_set(tunnel_path + [tunnel_if, "source-address", tunnel_source])
+        self.cli_set(tunnel_path + [tunnel_if, "enable-multicast"])
+        self.cli_set(tunnel_path + [tunnel_if, "parameters", "ip", "key", "1"])
 
         # NHRP
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'cisco-authentication', nhrp_secret])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'holding-time', '300'])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'multicast', 'dynamic'])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'redirect'])
-        self.cli_set(nhrp_path + ['tunnel', tunnel_if, 'shortcut'])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "authentication", nhrp_secret])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "holdtime", nhrp_holdtime])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "multicast", nhs_tunnelip])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "redirect"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "shortcut"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "registration-no-unique"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "network-id", nhrp_networkid])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "nhs", "tunnel-ip", nhs_tunnelip, "nbma", nhs_nbmaip])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "map", "tunnel-ip", map_tunnelip, "nbma", map_nbmaip])
 
         # IKE/ESP Groups
         self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', esp_lifetime])
@@ -399,11 +415,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         swanctl_conf = read_file(swanctl_file)
         swanctl_lines = [
-            f'proposals = aes128-sha1-modp1024,aes256-sha1-prfsha1-modp1024',
+            f'proposals = aes256-sha1-prfsha1-modp1024',
             f'version = 1',
             f'rekey_time = {ike_lifetime}s',
             f'rekey_time = {esp_lifetime}s',
-            f'esp_proposals = aes128-sha1-modp1024,aes256-sha1-modp1024,3des-md5-modp1024',
+            f'esp_proposals = aes256-sha1-modp1024,3des-md5-modp1024',
             f'local_ts = dynamic[gre]',
             f'remote_ts = dynamic[gre]',
             f'mode = transport',

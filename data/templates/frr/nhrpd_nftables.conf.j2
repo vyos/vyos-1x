@@ -1,0 +1,46 @@
+#!/usr/sbin/nft -f
+
+table ip vyos_nhrp_multicast
+table ip vyos_nhrp_redirect
+delete table ip vyos_nhrp_multicast
+delete table ip vyos_nhrp_redirect
+{% if multicast is vyos_defined %}
+table ip vyos_nhrp_multicast {
+    chain VYOS_NHRP_MULTICAST_OUTPUT {
+        type filter hook output priority filter+10; policy accept;
+{%     if tunnel is vyos_defined %}
+{%         for tun, tunnel_conf in tunnel.items() %}
+{%             if tunnel_conf.multicast is vyos_defined %}
+                oifname "{{ tun }}" ip daddr 224.0.0.0/24 counter log group {{ multicast }}
+                oifname "{{ tun }}" ip daddr 224.0.0.0/24 counter drop
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+    }
+    chain VYOS_NHRP_MULTICAST_FORWARD {
+        type filter hook forward priority filter+10; policy accept;
+{%     if tunnel is vyos_defined %}
+{%         for tun, tunnel_conf in tunnel.items() %}
+{%             if tunnel_conf.multicast is vyos_defined %}
+                oifname "{{ tun }}" ip daddr 224.0.0.0/4 counter log group {{ multicast }}
+                oifname "{{ tun }}" ip daddr 224.0.0.0/4 counter drop
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+    }
+}
+{% endif %}
+{% if redirect is vyos_defined %}
+table ip vyos_nhrp_redirect {
+    chain VYOS_NHRP_REDIRECT_FORWARD {
+        type filter hook forward priority filter+10; policy accept;
+{%     if tunnel is vyos_defined %}
+{%         for tun, tunnel_conf in tunnel.items() %}
+{%             if tunnel_conf.redirect is vyos_defined %}
+                iifname "{{ tun }}" oifname "{{ tun }}" meter loglimit-0 size 65535 { ip daddr & 255.255.255.0 . ip saddr & 255.255.255.0 timeout 1m limit rate 4/minute burst 1 packets } counter log group {{ redirect }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+    }
+}
+{% endif %}

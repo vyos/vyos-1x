@@ -9,7 +9,7 @@
 {%             if address | is_ipv4 %}
 {%                 set source_address.ipv4 = address %}
 {%             elif address | is_ipv6 %}
-{%                 set source_address.ipv6 = "[" + address + "]" %}
+{%                 set source_address.ipv6 = address %}
 {%             endif %}
 {%         endfor %}
 {%     endif %}
@@ -21,7 +21,7 @@
 {%             if server | is_ipv4 %}
 {{ server }}:{{ options.port }} {{ "%-25s" | format(options.key) }} {{ "%-10s" | format(options.timeout) }} {{ source_address.ipv4 if source_address.ipv4 is vyos_defined }}
 {%             else %}
-[{{ server }}]:{{ options.port }} {{ "%-25s" | format(options.key) }} {{ "%-10s" | format(options.timeout) }} {{ source_address.ipv6 if source_address.ipv6 is vyos_defined }}
+{{ server | bracketize_ipv6 }}:{{ options.port }} {{ "%-25s" | format(options.key) }} {{ "%-10s" | format(options.timeout) }} {{ source_address.ipv6 if source_address.ipv6 is vyos_defined }}
 {%             endif %}
 {%         endfor %}
 {%     endif %}

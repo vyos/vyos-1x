@@ -498,5 +498,28 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn('log /dev/log local5 notice', config)
         self.assertIn('log /dev/log local6 crit', config)
 
+    def test_10_lb_reverse_proxy_http_compression(self):
+        # Setup base
+        self.configure_pki()
+        self.base_config()
+
+        # Configure compression in frontend
+        self.cli_set(base_path + ['service', 'https_front', 'http-compression', 'algorithm', 'gzip'])
+        self.cli_set(base_path + ['service', 'https_front', 'http-compression', 'mime-type', 'text/html'])
+        self.cli_set(base_path + ['service', 'https_front', 'http-compression', 'mime-type', 'text/javascript'])
+        self.cli_set(base_path + ['service', 'https_front', 'http-compression', 'mime-type', 'text/plain'])
+        self.cli_commit()
+
+        # Test compression is present in generated configuration file
+        config = read_file(HAPROXY_CONF)
+        self.assertIn('filter compression', config)
+        self.assertIn('compression algo gzip', config)
+        self.assertIn('compression type text/html text/javascript text/plain', config)
+
+        # Test setting compression without specifying any mime-types fails verification
+        self.cli_delete(base_path + ['service', 'https_front', 'http-compression', 'mime-type'])
+        with self.assertRaises(ConfigSessionError) as e:
+            self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

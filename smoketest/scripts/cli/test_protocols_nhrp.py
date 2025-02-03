@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,6 +25,7 @@ from vyos.utils.file import read_file
 tunnel_path = ['interfaces', 'tunnel']
 nhrp_path = ['protocols', 'nhrp']
 vpn_path = ['vpn', 'ipsec']
+PROCESS_NAME = 'nhrpd'
 
 class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -41,29 +42,41 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(tunnel_path)
         self.cli_commit()
 
-    def test_config(self):
+    def test_01_nhrp_config(self):
         tunnel_if = "tun100"
-        tunnel_source = "192.0.2.1"
+        tunnel_ip = '172.16.253.134/32'
+        tunnel_source = "192.0.2.134"
         tunnel_encapsulation = "gre"
         esp_group = "ESP-HUB"
         ike_group = "IKE-HUB"
         nhrp_secret = "vyos123"
         nhrp_profile = "NHRPVPN"
+        nhrp_holdtime = '300'
+        nhs_tunnelip = '172.16.253.1'
+        nhs_nbmaip = '192.0.2.1'
+        map_tunnelip = '172.16.253.135'
+        map_nbmaip = "192.0.2.135"
+        nhrp_networkid = '1'
         ipsec_secret = "secret"
-
+        multicat_log_group = '2'
+        redirect_log_group = '1'
         # Tunnel
-        self.cli_set(tunnel_path + [tunnel_if, "address", "172.16.253.134/29"])
+        self.cli_set(tunnel_path + [tunnel_if, "address", tunnel_ip])
         self.cli_set(tunnel_path + [tunnel_if, "encapsulation", tunnel_encapsulation])
         self.cli_set(tunnel_path + [tunnel_if, "source-address", tunnel_source])
         self.cli_set(tunnel_path + [tunnel_if, "enable-multicast"])
         self.cli_set(tunnel_path + [tunnel_if, "parameters", "ip", "key", "1"])
 
         # NHRP
-        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "cisco-authentication", nhrp_secret])
-        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "holding-time", "300"])
-        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "multicast", "dynamic"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "authentication", nhrp_secret])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "holdtime", nhrp_holdtime])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "multicast", nhs_tunnelip])
         self.cli_set(nhrp_path + ["tunnel", tunnel_if, "redirect"])
         self.cli_set(nhrp_path + ["tunnel", tunnel_if, "shortcut"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "registration-no-unique"])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "network-id", nhrp_networkid])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "nhs", "tunnel-ip", nhs_tunnelip, "nbma", nhs_nbmaip])
+        self.cli_set(nhrp_path + ["tunnel", tunnel_if, "map", "tunnel-ip", map_tunnelip, "nbma", map_nbmaip])
 
         # IKE/ESP Groups
         self.cli_set(vpn_path + ["esp-group", esp_group, "lifetime", "1800"])
@@ -93,29 +106,40 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        opennhrp_lines = [
-            f'interface {tunnel_if} #hub {nhrp_profile}',
-            f'cisco-authentication {nhrp_secret}',
-            f'holding-time 300',
-            f'shortcut',
-            f'multicast dynamic',
-            f'redirect'
+        frrconfig = self.getFRRconfig(f'interface {tunnel_if}', endsection='^exit')
+        self.assertIn(f'interface {tunnel_if}', frrconfig)
+        self.assertIn(f' ip nhrp authentication {nhrp_secret}', frrconfig)
+        self.assertIn(f' ip nhrp holdtime {nhrp_holdtime}', frrconfig)
+        self.assertIn(f' ip nhrp map multicast {nhs_tunnelip}', frrconfig)
+        self.assertIn(f' ip nhrp redirect', frrconfig)
+        self.assertIn(f' ip nhrp registration no-unique', frrconfig)
+        self.assertIn(f' ip nhrp shortcut', frrconfig)
+        self.assertIn(f' ip nhrp network-id {nhrp_networkid}', frrconfig)
+        self.assertIn(f' ip nhrp nhs {nhs_tunnelip} nbma {nhs_nbmaip}', frrconfig)
+        self.assertIn(f' ip nhrp map {map_tunnelip} {map_nbmaip}', frrconfig)
+        self.assertIn(f' tunnel protection vici profile dmvpn-{nhrp_profile}-{tunnel_if}-child',
+                      frrconfig)
+
+        nftables_search_multicast = [
+            ['chain VYOS_NHRP_MULTICAST_OUTPUT'],
+            ['type filter hook output priority filter + 10; policy accept;'],
+            [f'oifname "{tunnel_if}"', 'ip daddr 224.0.0.0/24', 'counter', f'log group {multicat_log_group}'],
+            [f'oifname "{tunnel_if}"', 'ip daddr 224.0.0.0/24', 'counter', 'drop'],
+            ['chain VYOS_NHRP_MULTICAST_FORWARD'],
+            ['type filter hook output priority filter + 10; policy accept;'],
+            [f'oifname "{tunnel_if}"', 'ip daddr 224.0.0.0/4', 'counter', f'log group {multicat_log_group}'],
+            [f'oifname "{tunnel_if}"', 'ip daddr 224.0.0.0/4', 'counter', 'drop']
         ]
 
-        tmp_opennhrp_conf = read_file('/run/opennhrp/opennhrp.conf')
-
-        for line in opennhrp_lines:
-            self.assertIn(line, tmp_opennhrp_conf)
-
-        firewall_matches = [
-            f'ip protocol {tunnel_encapsulation}',
-            f'ip saddr {tunnel_source}',
-            f'ip daddr 224.0.0.0/4',
-            f'comment "VYOS_NHRP_{tunnel_if}"'
+        nftables_search_redirect = [
+            ['chain VYOS_NHRP_REDIRECT_FORWARD'],
+            ['type filter hook forward priority filter + 10; policy accept;'],
+            [f'iifname "{tunnel_if}" oifname "{tunnel_if}"', 'meter loglimit-0 size 65535 { ip daddr & 255.255.255.0 . ip saddr & 255.255.255.0 timeout 1m limit rate 4/minute burst 1 packets }', 'counter', f'log group {redirect_log_group}']
         ]
+        self.verify_nftables(nftables_search_multicast, 'ip vyos_nhrp_multicast')
+        self.verify_nftables(nftables_search_redirect, 'ip vyos_nhrp_redirect')
 
-        self.assertTrue(find_nftables_rule('ip vyos_nhrp_filter', 'VYOS_NHRP_OUTPUT', firewall_matches) is not None)
-        self.assertTrue(process_named_running('opennhrp'))
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

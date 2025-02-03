@@ -40,6 +40,19 @@
             </properties>
             <defaultValue>0</defaultValue>
           </leafNode>
+          <leafNode name="max-dns-retry">
+            <properties>
+              <help>DNS retries when resolve fails</help>
+              <valueHelp>
+                <format>u32:1-15</format>
+                <description>Maximum number of retries</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-15"/>
+              </constraint>
+            </properties>
+            <defaultValue>3</defaultValue>
+          </leafNode>
           <leafNode name="private-key">
             <properties>
               <help>Base64 encoded private key</help>
@@ -101,6 +114,18 @@
                   <constraint>
                     <validator name="ip-address"/>
                     <validator name="ipv6-link-local"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="host-name">
+                <properties>
+                  <help>Hostname of tunnel endpoint</help>
+                  <valueHelp>
+                    <format>hostname</format>
+                    <description>FQDN of WireGuard endpoint</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
                   </constraint>
                 </properties>
               </leafNode>

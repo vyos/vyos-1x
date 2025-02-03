@@ -1,0 +1,21 @@
+[Unit]
+Description=VyOS network-event logger daemon
+
+# Seemingly sensible way to say "as early as the system is ready"
+# All vyos-configd needs is read/write mounted root
+After=vyos.target
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/libexec/vyos/services/vyos-network-event-logger -c /run/vyos-network-event-logger.conf
+Type=idle
+
+SyslogIdentifier=vyos-network-event-logger
+SyslogFacility=daemon
+
+Restart=on-failure
+
+User=root
+Group=vyattacfg
+
+[Install]
+WantedBy=multi-user.target

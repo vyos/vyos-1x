@@ -48,6 +48,38 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="http-compression">
+                <properties>
+                  <help>Compress HTTP responses</help>
+                </properties>
+                <children>
+                  <leafNode name="algorithm">
+                    <properties>
+                      <help>Compression algorithm</help>
+                      <completionHelp>
+                        <list>gzip deflate identity raw-deflate</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(gzip|deflate|identity|raw-deflate)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mime-type">
+                    <properties>
+                      <help>MIME types to compress</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>MIME type to compress</description>
+                      </valueHelp>
+                      <multi/>
+                      <constraint>
+                        <regex>\w+\/[-+.\w]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid MIME type specified</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="ssl">
                 <properties>
                   <help>SSL Certificate, SSL Key and CA</help>
