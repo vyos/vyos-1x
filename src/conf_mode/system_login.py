@@ -61,9 +61,9 @@ MAX_TACACS_COUNT: int = 8
 # Minimum USER id for TACACS users
 MIN_TACACS_UID = 900
 # List of local user accounts that must be preserved
-SYSTEM_USER_SKIP_LIST: list = ['radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
+SYSTEM_USER_SKIP_LIST: list = ['nobody', 'radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
                               'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
-                              'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10',' tacacs11',
+                              'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10','tacacs11',
                               'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
 
 def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
@@ -123,7 +123,7 @@ def get_config(config=None):
     # Build TACACS user mapping
     if 'tacacs' in login:
         login['exclude_users'] = get_local_users(min_uid=0,
-                                                 max_uid=MIN_TACACS_UID) + cli_users
+                                                 max_uid=MIN_USER_UID) + SYSTEM_USER_SKIP_LIST + cli_users
         login['tacacs_min_uid'] = MIN_TACACS_UID
 
     return login
