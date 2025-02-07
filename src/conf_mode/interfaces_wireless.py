@@ -153,6 +153,27 @@ def verify(wifi):
     if 'ssid' not in wifi and wifi['type'] != 'monitor':
         raise ConfigError('SSID must be configured unless type is set to "monitor"!')
 
+    if os.access('/sys/module/moal', os.F_OK):
+        # PSL: NXP 88W9098 wifi restrictions
+        ifname = wifi.get('ifname', '')
+        mode = wifi.get('mode', '')
+        type_ = wifi.get('type', '')
+
+        if type_ == 'station' and ifname in ('wlan0', 'wlan1'):
+            # access-point only
+            raise ConfigError(f'{ifname} does not support type {type_}.\n'
+                              'Use wlan2 or wlan3 instead.')
+
+        if type_ == 'access-point' and ifname in ('wlan2', 'wlan3'):
+            # station only
+            raise ConfigError(f'{ifname} does not support type {type_}.\n'
+                              'Use wlan0 or wlan1 instead.')
+
+        if mode == 'ax' and ifname in ('wlan1', 'wlan3'):
+            # No ax support
+            raise ConfigError(f'{ifname} does not support mode {mode}.\n'
+                              'Use wlan0 or wlan2 instead.')
+
     if wifi['type'] == 'access-point':
         if 'country_code' not in wifi:
             raise ConfigError(f'Wireless country-code is mandatory, use: '\
