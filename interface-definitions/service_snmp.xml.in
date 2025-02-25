@@ -304,7 +304,6 @@
                   </constraint>
                   <constraintErrorMessage>ID must contain an even number (from 2 to 36) of hex digits</constraintErrorMessage>
                 </properties>
-                <defaultValue></defaultValue>
               </leafNode>
               <tagNode name="group">
                 <properties>
