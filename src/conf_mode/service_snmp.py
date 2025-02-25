@@ -148,7 +148,7 @@ def verify(snmp):
 
     if 'user' in snmp['v3']:
         if 'engineid' not in snmp['v3']:
-            raise ConfigError(f'EngineID must be configured for snmpv3!')
+            raise ConfigError(f'EngineID must be configured for SNMPv3!')
 
         for user, user_config in snmp['v3']['user'].items():
             if 'group' not in user_config:
