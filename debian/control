@@ -323,9 +323,11 @@ Depends:
   iptables,
 # End container
 # For "vpp"
+  gdb,
   libvppinfra,
   python3-vpp-api,
   vpp,
+  vpp-dbg,
   vpp-dev,
   vpp-plugin-core,
   vpp-plugin-dpdk,
