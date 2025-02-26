@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# Copyright (C) 2023-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -71,8 +71,8 @@ def verify(lb):
 
     if 'rule' in lb:
         for rule_id, rule_conf in lb['rule'].items():
-            if 'interface' not in rule_conf:
-                raise ConfigError(f'Interface not specified on load-balancing wan rule {rule_id}')
+            if 'interface' not in rule_conf and 'exclude' not in rule_conf:
+                raise ConfigError(f'Interface or exclude not specified on load-balancing wan rule {rule_id}')
 
             if 'failover' in rule_conf and 'exclude' in rule_conf:
                 raise ConfigError(f'Failover cannot be configured with exclude on load-balancing wan rule {rule_id}')

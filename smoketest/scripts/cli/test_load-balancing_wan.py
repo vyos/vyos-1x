@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2024 VyOS maintainers and contributors
+# Copyright (C) 2022-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -272,6 +272,9 @@ echo "$ifname - $state" > {hook_output_path}
         self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'failure-count', '1'])
         self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'nexthop', '192.0.2.2'])
         self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'success-count', '1'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'exclude'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'inbound-interface', 'eth*'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'destination', 'address', '10.0.0.0/8'])
         self.cli_set(base_path + ['wan', 'rule', '10', 'failover'])
         self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', lan_iface])
         self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', 'udp'])
@@ -291,6 +294,7 @@ echo "$ifname - $state" > {hook_output_path}
         # Verify isp1 + criteria
 
         nftables_search = [
+            [f'iifname "eth*"', 'ip daddr 10.0.0.0/8', 'return'],
             [f'iifname "{lan_iface}"', 'ip saddr 198.51.100.0/24', 'udp sport 53', 'ip daddr 192.0.2.0/24', 'udp dport 53', f'jump wlb_mangle_isp_{isp1_iface}']
         ]
 
