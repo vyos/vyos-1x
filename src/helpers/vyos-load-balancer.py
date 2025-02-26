@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2024-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -95,7 +95,7 @@ def on_state_change(lb, ifname, state):
 def get_ipv4_address(ifname):
     # Get primary ipv4 address on interface (for source nat)
     addr_json = get_interface_address(ifname)
-    if 'addr_info' in addr_json and len(addr_json['addr_info']) > 0:
+    if addr_json and 'addr_info' in addr_json and len(addr_json['addr_info']) > 0:
         for addr_info in addr_json['addr_info']:
             if addr_info['family'] == 'inet':
                 if 'local' in addr_info:
