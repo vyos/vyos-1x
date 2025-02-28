@@ -130,6 +130,45 @@ unmount_encrypted_config() {
     fi
 }
 
+
+# if necessary, provide initial config
+init_prod_model_bootfile () {
+
+    # Scan /proc/cmdline for the token 'prod_id=IOLAN|IRG|IT' and extract the model-string
+    prod_string=$(grep -oP '(?<=prod_id=)[^\s]+' /proc/cmdline)
+
+    # Scan /proc/cmdline for the token 'model=model-string' and extract the model-string
+    model_string=$(grep -oP '(?<=model=)[^\s]+' /proc/cmdline)
+
+    # Check if the model-string is found
+    if [[ -z $prod_string || -z $model_string ]]; then
+        echo "No 'prod_id' and/or 'model' token found in /proc/cmdline, checking /etc/product.env"
+        prod_string=$(grep -oP '(?<=prod_id=)[^\s]+' /etc/product.env)
+        model_string=$(grep -oP '(?<=model=)[^\s]+' /etc/product.env)
+
+        if [[ -z $prod_string || -z $model_string ]]; then
+            echo "No 'prod_id' and/or 'model' token found, use generic igos default config"
+            return
+        fi
+    fi
+
+    echo "Prod-Model string found: $prod_string-$model_string"
+
+    # Find the file with the model-string extension in /usr/libexec/vyos/init/model-info/
+    model_file="/usr/share/vyos/model-info/default-config/config-${prod_string}-${model_string}"
+
+    # Check if the file exists
+    if [ -f $model_file ]; then
+        # Copy the file to /opt/vyatta/etc/config.boot.default
+        cp $model_file $DEFAULT_BOOTFILE
+        echo "File $model_file successfully copied to /opt/vyatta/etc/config.boot.default"
+        $vyos_libexec_dir/add-system-version.py >> $DEFAULT_BOOTFILE
+        echo "System version string added to /opt/vyatta/etc/config.boot.default"
+    else
+        echo "File $model_file not found."
+    fi
+}
+
 # if necessary, provide initial config
 init_bootfile () {
     # define and version default boot config if not present
@@ -514,6 +553,8 @@ start ()
     # If for any reason FRR was not started by system_frr.py - start it anyways.
     # This is a safety net!
     systemctl start frr.service
+
+    disabled bootfile || init_prod_model_bootfile
 
     disabled bootfile || init_bootfile
 
