@@ -9,7 +9,6 @@ etc/netplug
 etc/opennhrp
 etc/modprobe.d
 etc/ppp
-etc/rsyslog.conf
 etc/securetty
 etc/security
 etc/skel

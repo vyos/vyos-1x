@@ -39,6 +39,6 @@ set system login user vyos authentication plaintext-password ''
 set service ntp server time1.vyos.net
 set service ntp server time2.vyos.net
 set service ntp server time3.vyos.net
-set system syslog global facility all level 'info'
-set system syslog global facility local7 level 'debug'
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'
 set system time-zone 'Europe/Berlin'

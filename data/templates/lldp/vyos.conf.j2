@@ -4,7 +4,7 @@ configure system platform VyOS
 configure system description "VyOS {{ version }}"
 {% if interface is vyos_defined %}
 {%     set tmp = [] %}
-{%     for iface, iface_options in interface.items() if iface_options.disable is not vyos_defined %}
+{%     for iface, iface_options in interface.items() %}
 {%         if iface == 'all' %}
 {%             set iface = '*' %}
 {%         endif %}
@@ -17,6 +17,15 @@ configure ports {{ iface }} med location elin "{{ iface_options.location.elin }}
 configure ports {{ iface }} med location coordinate latitude "{{ iface_options.location.coordinate_based.latitude }}" longitude "{{ iface_options.location.coordinate_based.longitude }}" altitude "{{ iface_options.location.coordinate_based.altitude }}m" datum "{{ iface_options.location.coordinate_based.datum }}"
 {%             endif %}
 {%         endif %}
+{%         set mode = iface_options.mode %}
+{%         if mode == 'tx' %}
+{%             set mode = 'tx-only' %}
+{%         elif mode == 'rx' %}
+{%             set mode = 'rx-only' %}
+{%         elif mode == 'rx-tx' %}
+{%             set mode = 'rx-and-tx' %}
+{%         endif %}
+configure ports {{ iface }} lldp status {{ mode }}
 {%     endfor %}
 configure system interface pattern "{{ tmp | join(",") }}"
 {% endif %}

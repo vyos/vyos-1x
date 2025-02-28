@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2024 VyOS maintainers and contributors
+# Copyright (C) 2022-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,10 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import time
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.utils.file import chmod_755
+from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 
@@ -53,6 +56,16 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+
+        removed_chains = [
+            'wlb_mangle_isp_veth1',
+            'wlb_mangle_isp_veth2',
+            'wlb_mangle_isp_eth201',
+            'wlb_mangle_isp_eth202'
+        ]
+
+        for chain in removed_chains:
+            self.verify_nftables_chain_exists('ip vyos_wanloadbalance', chain, inverse=True)
 
     def test_table_routes(self):
         ns1 = 'ns201'
@@ -93,6 +106,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         cmd_in_netns(ns3, 'ip link set dev eth0 up')
 
         # Set load-balancing configuration
+        self.cli_set(base_path + ['wan', 'hook', '/bin/true'])
         self.cli_set(base_path + ['wan', 'interface-health', iface1, 'failure-count', '2'])
         self.cli_set(base_path + ['wan', 'interface-health', iface1, 'nexthop', '203.0.113.1'])
         self.cli_set(base_path + ['wan', 'interface-health', iface1, 'success-count', '1'])
@@ -102,7 +116,8 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', iface3])
         self.cli_set(base_path + ['wan', 'rule', '10', 'source', 'address', '198.51.100.0/24'])
-
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', iface1])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', iface2])
 
         # commit changes
         self.cli_commit()
@@ -127,7 +142,6 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         delete_netns(ns3)
 
     def test_check_chains(self):
-
         ns1 = 'nsA'
         ns2 = 'nsB'
         ns3 = 'nsC'
@@ -137,43 +151,28 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         container_iface1 = 'ceth0'
         container_iface2 = 'ceth1'
         container_iface3 = 'ceth2'
-        mangle_isp1 = """table ip mangle {
-	chain ISP_veth1 {
-		counter ct mark set 0xc9
-		counter meta mark set 0xc9
-		counter accept
+        mangle_isp1 = """table ip vyos_wanloadbalance {
+	chain wlb_mangle_isp_veth1 {
+		meta mark set 0x000000c9 ct mark set 0x000000c9 counter accept
 	}
 }"""
-        mangle_isp2 = """table ip mangle {
-	chain ISP_veth2 {
-		counter ct mark set 0xca
-		counter meta mark set 0xca
-		counter accept
+        mangle_isp2 = """table ip vyos_wanloadbalance {
+	chain wlb_mangle_isp_veth2 {
+		meta mark set 0x000000ca ct mark set 0x000000ca counter accept
 	}
 }"""
-        mangle_prerouting = """table ip mangle {
-	chain PREROUTING {
+        mangle_prerouting = """table ip vyos_wanloadbalance {
+	chain wlb_mangle_prerouting {
 		type filter hook prerouting priority mangle; policy accept;
-		counter jump WANLOADBALANCE_PRE
-	}
-}"""
-        mangle_wanloadbalance_pre = """table ip mangle {
-	chain WANLOADBALANCE_PRE {
-		iifname "veth3" ip saddr 198.51.100.0/24 ct state new meta random & 2147483647 < 1073741824 counter jump ISP_veth1
-		iifname "veth3" ip saddr 198.51.100.0/24 ct state new counter jump ISP_veth2
+		iifname "veth3" ip saddr 198.51.100.0/24 ct state new limit rate 5/second burst 5 packets counter numgen random mod 11 vmap { 0 : jump wlb_mangle_isp_veth1, 1-10 : jump wlb_mangle_isp_veth2 }
 		iifname "veth3" ip saddr 198.51.100.0/24 counter meta mark set ct mark
 	}
 }"""
-        nat_wanloadbalance = """table ip nat {
-	chain WANLOADBALANCE {
-		ct mark 0xc9 counter snat to 203.0.113.10
-		ct mark 0xca counter snat to 192.0.2.10
-	}
-}"""
-        nat_vyos_pre_snat_hook = """table ip nat {
-	chain VYOS_PRE_SNAT_HOOK {
+        nat_wanloadbalance = """table ip vyos_wanloadbalance {
+	chain wlb_nat_postrouting {
 		type nat hook postrouting priority srcnat - 1; policy accept;
-		counter jump WANLOADBALANCE
+		ct mark 0x000000c9 counter snat to 203.0.113.10
+		ct mark 0x000000ca counter snat to 192.0.2.10
 	}
 }"""
 
@@ -214,7 +213,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', iface3])
         self.cli_set(base_path + ['wan', 'rule', '10', 'source', 'address', '198.51.100.0/24'])
         self.cli_set(base_path + ['wan', 'rule', '10', 'interface', iface1])
-        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', iface2])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', iface2, 'weight', '10'])
 
         # commit changes
         self.cli_commit()
@@ -222,24 +221,18 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         time.sleep(5)
 
         # Check mangle chains
-        tmp = cmd(f'sudo nft -s list chain mangle ISP_{iface1}')
+        tmp = cmd(f'sudo nft -s list chain ip vyos_wanloadbalance wlb_mangle_isp_{iface1}')
         self.assertEqual(tmp, mangle_isp1)
 
-        tmp = cmd(f'sudo nft -s list chain mangle ISP_{iface2}')
+        tmp = cmd(f'sudo nft -s list chain ip vyos_wanloadbalance wlb_mangle_isp_{iface2}')
         self.assertEqual(tmp, mangle_isp2)
 
-        tmp = cmd(f'sudo nft -s list chain mangle PREROUTING')
+        tmp = cmd('sudo nft -s list chain ip vyos_wanloadbalance wlb_mangle_prerouting')
         self.assertEqual(tmp, mangle_prerouting)
 
-        tmp = cmd(f'sudo nft -s list chain mangle WANLOADBALANCE_PRE')
-        self.assertEqual(tmp, mangle_wanloadbalance_pre)
-
         # Check nat chains
-        tmp = cmd(f'sudo nft -s list chain nat WANLOADBALANCE')
+        tmp = cmd('sudo nft -s list chain ip vyos_wanloadbalance wlb_nat_postrouting')
         self.assertEqual(tmp, nat_wanloadbalance)
-
-        tmp = cmd(f'sudo nft -s list chain nat VYOS_PRE_SNAT_HOOK')
-        self.assertEqual(tmp, nat_vyos_pre_snat_hook)
 
         # Delete veth interfaces and netns
         for iface in [iface1, iface2, iface3]:
@@ -249,6 +242,85 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         delete_netns(ns2)
         delete_netns(ns3)
 
+    def test_criteria_failover_hook(self):
+        isp1_iface = 'eth0'
+        isp2_iface = 'eth1'
+        lan_iface = 'eth2'
+
+        hook_path = '/tmp/wlb_hook.sh'
+        hook_output_path = '/tmp/wlb_hook_output'
+        hook_script = f"""
+#!/bin/sh
+
+ifname=$WLB_INTERFACE_NAME
+state=$WLB_INTERFACE_STATE
+
+echo "$ifname - $state" > {hook_output_path}
+"""
+
+        write_file(hook_path, hook_script)
+        chmod_755(hook_path)
+
+        self.cli_set(['interfaces', 'ethernet', isp1_iface, 'address', '203.0.113.2/30'])
+        self.cli_set(['interfaces', 'ethernet', isp2_iface, 'address', '192.0.2.2/30'])
+        self.cli_set(['interfaces', 'ethernet', lan_iface, 'address', '198.51.100.2/30'])
+
+        self.cli_set(base_path + ['wan', 'hook', hook_path])
+        self.cli_set(base_path + ['wan', 'interface-health', isp1_iface, 'failure-count', '1'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp1_iface, 'nexthop', '203.0.113.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp1_iface, 'success-count', '1'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'failure-count', '1'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'nexthop', '192.0.2.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'success-count', '1'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'exclude'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'inbound-interface', 'eth*'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'destination', 'address', '10.0.0.0/8'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'failover'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', lan_iface])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', 'udp'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'source', 'address', '198.51.100.0/24'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'source', 'port', '53'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'destination', 'address', '192.0.2.0/24'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'destination', 'port', '53'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp1_iface])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp1_iface, 'weight', '10'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp2_iface])
+
+        # commit changes
+        self.cli_commit()
+
+        time.sleep(5)
+
+        # Verify isp1 + criteria
+
+        nftables_search = [
+            [f'iifname "eth*"', 'ip daddr 10.0.0.0/8', 'return'],
+            [f'iifname "{lan_iface}"', 'ip saddr 198.51.100.0/24', 'udp sport 53', 'ip daddr 192.0.2.0/24', 'udp dport 53', f'jump wlb_mangle_isp_{isp1_iface}']
+        ]
+
+        self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
+
+        # Trigger failure on isp1 health check
+
+        self.cli_delete(['interfaces', 'ethernet', isp1_iface, 'address', '203.0.113.2/30'])
+        self.cli_commit()
+
+        time.sleep(10)
+
+        # Verify failover to isp2
+
+        nftables_search = [
+            [f'iifname "{lan_iface}"', f'jump wlb_mangle_isp_{isp2_iface}']
+        ]
+
+        self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
+
+        # Verify hook output
+
+        self.assertTrue(os.path.exists(hook_output_path))
+
+        with open(hook_output_path, 'r') as f:
+            self.assertIn('eth0 - FAILED', f.read())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

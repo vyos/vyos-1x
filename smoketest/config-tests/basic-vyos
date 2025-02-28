@@ -92,12 +92,14 @@ set system login user vyos authentication plaintext-password ''
 set system name-server '192.168.0.1'
 set system syslog console facility all level 'emerg'
 set system syslog console facility mail level 'info'
-set system syslog global facility all level 'info'
-set system syslog global facility auth level 'info'
-set system syslog global facility local7 level 'debug'
-set system syslog global preserve-fqdn
-set system syslog host syslog.vyos.net facility auth level 'warning'
-set system syslog host syslog.vyos.net facility local7 level 'notice'
-set system syslog host syslog.vyos.net format octet-counted
-set system syslog host syslog.vyos.net port '8000'
+set system syslog local facility all level 'info'
+set system syslog local facility auth level 'info'
+set system syslog local facility local7 level 'debug'
+set system syslog marker interval '1000'
+set system syslog preserve-fqdn
+set system syslog remote syslog.vyos.net facility auth level 'warning'
+set system syslog remote syslog.vyos.net facility local7 level 'notice'
+set system syslog remote syslog.vyos.net format octet-counted
+set system syslog remote syslog.vyos.net port '8000'
+set system syslog remote syslog.vyos.net protocol 'tcp'
 set system time-zone 'Europe/Berlin'

@@ -1,0 +1,39 @@
+# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7163: migrate "address-family ipv4|6-unicast redistribute table" from a multi
+# leafNode to a tagNode. This is needed to support per table definition of a
+# route-map and/or metric
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    bgp_base = ['protocols', 'bgp']
+    if not config.exists(bgp_base):
+        return
+
+    for address_family in ['ipv4-unicast', 'ipv6-unicast']:
+        # there is no non-main routing table beeing redistributed under this addres family
+        # bail out early and continue with next AFI
+        table_path = bgp_base + ['address-family', address_family, 'redistribute', 'table']
+        if not config.exists(table_path):
+            continue
+
+        tables = config.return_values(table_path)
+        config.delete(table_path)
+
+        for table in tables:
+            config.set(table_path + [table])
+            config.set_tag(table_path)

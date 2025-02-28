@@ -2,14 +2,18 @@
 
 BUSYBOX_TAG="docker.io/library/busybox:stable"
 BUSYBOX_PATH="/usr/share/vyos/busybox-stable.tar"
-if [[ -f $BUSYBOX_PATH ]]; then
-    rm -f $BUSYBOX_PATH
+if [[ ! -f $BUSYBOX_PATH ]]; then
+    skopeo copy --additional-tag "$BUSYBOX_TAG" "docker://$BUSYBOX_TAG" "docker-archive:/$BUSYBOX_PATH"
 fi
-skopeo copy --additional-tag "$BUSYBOX_TAG" "docker://$BUSYBOX_TAG" "docker-archive:/$BUSYBOX_PATH"
 
 TACPLUS_TAG="docker.io/lfkeitel/tacacs_plus:alpine"
 TACPLUS_PATH="/usr/share/vyos/tacplus-alpine.tar"
-if [[ -f $TACPLUS_PATH ]]; then
-    rm -f $TACPLUS_PATH
+if [[ ! -f $TACPLUS_PATH ]]; then
+    skopeo copy --additional-tag "$TACPLUS_TAG" "docker://$TACPLUS_TAG" "docker-archive:/$TACPLUS_PATH"
 fi
-skopeo copy --additional-tag "$TACPLUS_TAG" "docker://$TACPLUS_TAG" "docker-archive:/$TACPLUS_PATH"
+
+RADIUS_TAG="docker.io/dchidell/radius-web:latest"
+RADIUS_PATH="/usr/share/vyos/radius-latest.tar"
+if [[ ! -f $RADIUS_PATH ]]; then
+    skopeo copy --additional-tag "$RADIUS_TAG" "docker://$RADIUS_TAG" "docker-archive:/$RADIUS_PATH"
+fi

@@ -1,0 +1,71 @@
+# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T6989:
+#   - remove syslog arbitrary file logging
+#   - remove syslog user console logging
+#   - move "global preserve-fqdn" one CLI level up
+#   - rename "host" to "remote"
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'syslog']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+    # Drop support for custom file logging
+    if config.exists(base + ['file']):
+        config.delete(base + ['file'])
+
+    # Drop support for logging to a user tty
+    # This should be dynamically added via an op-mode command like "terminal monitor"
+    if config.exists(base + ['user']):
+        config.delete(base + ['user'])
+
+    # Move "global preserve-fqdn" one CLI level up, as it relates to all
+    # logging targets (console, global and remote)
+    preserve_fqdn_base = base + ['global', 'preserve-fqdn']
+    if config.exists(preserve_fqdn_base):
+        config.delete(preserve_fqdn_base)
+        config.set(base + ['preserve-fqdn'])
+
+    # Move "global marker" one CLI level up, as it relates to all
+    # logging targets (console, global and remote)
+    marker_base = base + ['global', 'marker']
+    if config.exists(marker_base):
+        config.copy(marker_base, base + ['marker'])
+        config.delete(marker_base)
+
+    # Rename "global" -> "local" as this describes what is logged locally
+    # on the router to a file on the filesystem
+    if config.exists(base + ['global']):
+        config.rename(base + ['global'], 'local')
+
+    vrf = ''
+    if config.exists(base + ['vrf']):
+        vrf = config.return_value(base + ['vrf'])
+        config.delete(base + ['vrf'])
+
+    # Rename host x.x.x.x -> remote x.x.x.x
+    if config.exists(base + ['host']):
+        config.set(base + ['remote'])
+        config.set_tag(base + ['remote'])
+        for remote in config.list_nodes(base + ['host']):
+            config.copy(base + ['host', remote], base + ['remote', remote])
+            config.set_tag(base + ['remote'])
+            if vrf:
+                config.set(base + ['remote', remote, 'vrf'], value=vrf)
+        config.delete(base + ['host'])

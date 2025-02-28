@@ -106,6 +106,12 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="enable-egress">
+            <properties>
+              <help>Enable egress sampling</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/interface/vrf.xml.i>
         </children>
       </node>

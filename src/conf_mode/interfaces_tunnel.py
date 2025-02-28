@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2024 yOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,9 +13,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from sys import exit
-
+import ipaddress
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
@@ -89,6 +88,13 @@ def verify(tunnel):
             raise ConfigError('Tunnel used for NHRP, it can not be deleted!')
 
         return None
+    if 'nhrp' in tunnel:
+        if 'address' in tunnel:
+            address_list = dict_search('address', tunnel)
+            for tunip in address_list:
+                if ipaddress.ip_network(tunip, strict=False).prefixlen != 32:
+                    raise ConfigError(
+                        'Tunnel is used for NHRP, Netmask should be /32!')
 
     verify_tunnel(tunnel)
 

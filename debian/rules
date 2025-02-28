@@ -9,7 +9,7 @@ VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := opt/vyatta/share/vyatta-op/templates
 VYOS_MIBS_DIR := usr/share/snmp/mibs
 VYOS_LOCALUI_DIR := srv/localui
-VYCONF_CONFIG_DIR := $(VYOS_LIBEXEC_DIR)/vyconf/config
+VYCONF_REFTREE_DIR := $(VYOS_LIBEXEC_DIR)/vyconf/reftree
 
 MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 ACTIVATION_SCRIPTS_DIR := usr/libexec/vyos/activate
@@ -90,8 +90,8 @@ override_dh_auto_install:
 	cp -r templates-op/* $(DIR)/$(VYOS_OP_TMPL_DIR)
 
 	# Install data files
-	mkdir -p $(DIR)/$(VYCONF_CONFIG_DIR)
-	cp -r data/reftree.cache $(DIR)/$(VYCONF_CONFIG_DIR)
+	mkdir -p $(DIR)/$(VYCONF_REFTREE_DIR)
+	cp -r data/reftree.cache $(DIR)/$(VYCONF_REFTREE_DIR)
 	mkdir -p $(DIR)/$(VYOS_DATA_DIR)
 	cp -r data/* $(DIR)/$(VYOS_DATA_DIR)
 	# Remove j2lint comments / linter configuration which would insert additional new-lines

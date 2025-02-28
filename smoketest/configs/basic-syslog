@@ -1,0 +1,70 @@
+interfaces {
+    ethernet eth0 {
+        duplex "auto"
+        speed "auto"
+    }
+    ethernet eth1 {
+        address 172.16.33.154/24
+        duplex auto
+        speed auto
+        vrf red
+    }
+}
+system {
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos-ci-test.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility local7 {
+                level debug
+            }
+            marker {
+                interval 999
+            }
+            preserve-fqdn
+        }
+        host syslog01.vyos.net {
+            facility local7 {
+                level notice
+            }
+            port 8000
+        }
+        host syslog02.vyos.net {
+            facility all {
+                level debug
+            }
+            format {
+                include-timezone
+                octet-counted
+            }
+            protocol tcp
+            port 8001
+        }
+        vrf red
+    }
+}
+vrf {
+    name red {
+        table 12321
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@5:broadcast-relay@1:cluster@2:config-management@1:conntrack@5:conntrack-sync@2:container@2:dhcp-relay@2:dhcp-server@8:dhcpv6-server@1:dns-dynamic@4:dns-forwarding@4:firewall@15:flow-accounting@1:https@6:ids@1:interfaces@32:ipoe-server@3:ipsec@13:isis@3:l2tp@9:lldp@2:mdns@1:monitoring@1:nat@8:nat66@3:ntp@3:openconnect@3:ospf@2:pim@1:policy@8:pppoe-server@10:pptp@5:qos@2:quagga@11:reverse-proxy@1:rip@1:rpki@2:salt@1:snmp@3:ssh@2:sstp@6:system@27:vrf@3:vrrp@4:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2"
+// Release version: 1.4.0

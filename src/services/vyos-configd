@@ -28,6 +28,7 @@ import traceback
 import importlib.util
 import io
 from contextlib import redirect_stdout
+from enum import Enum
 
 import zmq
 
@@ -60,11 +61,14 @@ SOCKET_PATH = 'ipc:///run/vyos-configd.sock'
 MAX_MSG_SIZE = 65535
 PAD_MSG_SIZE = 6
 
+
 # Response error codes
-R_SUCCESS = 1
-R_ERROR_COMMIT = 2
-R_ERROR_DAEMON = 4
-R_PASS = 8
+class Response(Enum):
+    SUCCESS = 1
+    ERROR_COMMIT = 2
+    ERROR_DAEMON = 4
+    PASS = 8
+
 
 vyos_conf_scripts_dir = directories['conf_mode']
 configd_include_file = os.path.join(directories['data'], 'configd-include.json')
@@ -73,11 +77,14 @@ configd_env_unset_file = os.path.join(directories['data'], 'vyos-configd-env-uns
 # sourced on entering config session
 configd_env_file = '/etc/default/vyos-configd-env'
 
+
 def key_name_from_file_name(f):
     return os.path.splitext(f)[0]
 
+
 def module_name_from_key(k):
     return k.replace('-', '_')
+
 
 def path_from_file_name(f):
     return os.path.join(vyos_conf_scripts_dir, f)
@@ -126,7 +133,7 @@ def write_stdout_log(file_name, msg):
         f.write(msg)
 
 
-def run_script(script_name, config, args) -> tuple[int, str]:
+def run_script(script_name, config, args) -> tuple[Response, str]:
     # pylint: disable=broad-exception-caught
 
     script = conf_mode_scripts[script_name]
@@ -139,13 +146,13 @@ def run_script(script_name, config, args) -> tuple[int, str]:
         script.apply(c)
     except ConfigError as e:
         logger.error(e)
-        return R_ERROR_COMMIT, str(e)
+        return Response.ERROR_COMMIT, str(e)
     except Exception:
         tb = traceback.format_exc()
         logger.error(tb)
-        return R_ERROR_COMMIT, tb
+        return Response.ERROR_COMMIT, tb
 
-    return R_SUCCESS, ''
+    return Response.SUCCESS, ''
 
 
 def initialization(socket):
@@ -195,8 +202,9 @@ def initialization(socket):
         os.environ['VYATTA_CHANGES_ONLY_DIR'] = changes_only_dir_string
 
     try:
-        configsource = ConfigSourceString(running_config_text=active_string,
-                                          session_config_text=session_string)
+        configsource = ConfigSourceString(
+            running_config_text=active_string, session_config_text=session_string
+        )
     except ConfigSourceError as e:
         logger.debug(e)
         return None
@@ -214,11 +222,11 @@ def initialization(socket):
     return config
 
 
-def process_node_data(config, data, _last: bool = False) -> tuple[int, str]:
+def process_node_data(config, data, _last: bool = False) -> tuple[Response, str]:
     if not config:
         out = 'Empty config'
         logger.critical(out)
-        return R_ERROR_DAEMON, out
+        return Response.ERROR_DAEMON, out
 
     script_name = None
     os.environ['VYOS_TAGNODE_VALUE'] = ''
@@ -234,7 +242,7 @@ def process_node_data(config, data, _last: bool = False) -> tuple[int, str]:
     if not script_name:
         out = 'Missing script_name'
         logger.critical(out)
-        return R_ERROR_DAEMON, out
+        return Response.ERROR_DAEMON, out
     if res.group(3):
         args = res.group(3).split()
     args.insert(0, f'{script_name}.py')
@@ -246,7 +254,7 @@ def process_node_data(config, data, _last: bool = False) -> tuple[int, str]:
     scripts_called.append(script_record)
 
     if script_name not in include_set:
-        return R_PASS, ''
+        return Response.PASS, ''
 
     with redirect_stdout(io.StringIO()) as o:
         result, err_out = run_script(script_name, config, args)
@@ -259,13 +267,15 @@ def process_node_data(config, data, _last: bool = False) -> tuple[int, str]:
 
 
 def send_result(sock, err, msg):
+    err_no = err.value
+    err_name = err.name
     msg = msg if msg else ''
     msg_size = min(MAX_MSG_SIZE, len(msg))
 
-    err_rep = err.to_bytes(1)
+    err_rep = err_no.to_bytes(1)
     msg_size_rep = f'{msg_size:#0{PAD_MSG_SIZE}x}'
 
-    logger.debug(f'Sending reply: error_code {err} with output')
+    logger.debug(f'Sending reply: {err_name} with output')
     sock.send_multipart([err_rep, msg_size_rep.encode(), msg.encode()])
 
     write_stdout_log(script_stdout_log, msg)
@@ -331,7 +341,7 @@ if __name__ == '__main__':
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
 
-                if res == R_SUCCESS:
+                if res == Response.SUCCESS:
                     tmp = get_frrender_dict(config)
                     if frr.generate(tmp):
                         # only apply a new FRR configuration if anything changed

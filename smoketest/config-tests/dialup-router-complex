@@ -695,6 +695,7 @@ set service dns forwarding ignore-hosts-file
 set service dns forwarding listen-address '172.16.254.30'
 set service dns forwarding listen-address '172.31.0.254'
 set service dns forwarding negative-ttl '60'
+set service lldp interface pppoe0 mode 'disable'
 set service lldp legacy-protocols cdp
 set service lldp snmp
 set service mdns repeater interface 'eth0.35'
@@ -734,7 +735,7 @@ set system name-server '172.16.254.30'
 set system option ctrl-alt-delete 'ignore'
 set system option reboot-on-panic
 set system option startup-beep
-set system syslog global facility all level 'debug'
-set system syslog global facility local7 level 'debug'
-set system syslog host 172.16.100.1 facility all level 'warning'
+set system syslog local facility all level 'debug'
+set system syslog local facility local7 level 'debug'
+set system syslog remote 172.16.100.1 facility all level 'warning'
 set system time-zone 'Europe/Berlin'

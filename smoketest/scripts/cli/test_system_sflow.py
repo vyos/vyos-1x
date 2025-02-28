@@ -96,6 +96,39 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         for interface in Section.interfaces('ethernet'):
             self.assertIn(f'pcap {{ dev={interface} }}', hsflowd)
 
+    def test_sflow_ipv6(self):
+        sampling_rate = '100'
+        default_polling = '30'
+        default_port = '6343'
+        sflow_server = {
+            '2001:db8::1': {},
+            '2001:db8::2': {'port': '8023'},
+        }
+
+        for interface in Section.interfaces('ethernet'):
+            self.cli_set(base_path + ['interface', interface])
+
+        self.cli_set(base_path + ['sampling-rate', sampling_rate])
+        for server, server_config in sflow_server.items():
+            self.cli_set(base_path + ['server', server])
+            if 'port' in server_config:
+                self.cli_set(base_path + ['server', server, 'port', server_config['port']])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        hsflowd = read_file(hsflowd_conf)
+
+        self.assertIn(f'sampling={sampling_rate}', hsflowd)
+        self.assertIn(f'polling={default_polling}', hsflowd)
+
+        for server, server_config in sflow_server.items():
+            if 'port' in server_config:
+                self.assertIn(f'collector {{ ip = {server} udpport = {server_config["port"]} }}', hsflowd)
+            else:
+                self.assertIn(f'collector {{ ip = {server} udpport = {default_port} }}', hsflowd)
+
     def test_vrf(self):
         interface = 'eth0'
         server = '192.0.2.1'

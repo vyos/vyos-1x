@@ -99,3 +99,18 @@ def get_core_count():
             core_count += 1
 
     return core_count
+
+
+def get_available_cpus():
+    """ List of cpus with ids that are available in the system
+        Uses 'lscpu' command
+
+        Returns: list[dict[str, str | int | bool]]: cpus details
+    """
+    import json
+
+    from vyos.utils.process import cmd
+
+    out = json.loads(cmd('lscpu --extended -b --json'))
+
+    return out['cpus']

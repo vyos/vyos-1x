@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if ! [[ "$1" =~ ^(lan|eth|eno|ens|enp|enx)[0-9]+$ ]]; then
+    echo "Error: $1 is not an ethernet interface"
+    exit 1
+fi
+
+if ! [ -d "/sys/class/net/$1" ]; then
+    echo "Error: $1 interface does not exist in the system"
+    exit 1
+fi
+
+exit 0

@@ -1,0 +1,63 @@
+# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# migrate 'system flow-accounting sflow' to 'system sflow'
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'flow-accounting']
+base_fa_sflow = base + ['sflow']
+base_sflow = ['system', 'sflow']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base_fa_sflow):
+        # Nothing to do
+        return
+
+    if not config.exists(base_sflow):
+
+        for iface in config.return_values(base + ['interface']):
+            config.set(base_sflow + ['interface'], value=iface, replace=False)
+
+        if config.exists(base + ['vrf']):
+            vrf = config.return_value(base + ['vrf'])
+            config.set(base_sflow + ['vrf'], value=vrf)
+
+        if config.exists(base + ['enable-egress']):
+            config.set(base_sflow + ['enable-egress'])
+
+        if config.exists(base_fa_sflow + ['agent-address']):
+            address = config.return_value(base_fa_sflow + ['agent-address'])
+            config.set(base_sflow + ['agent-address'], value=address)
+
+        if config.exists(base_fa_sflow + ['sampling-rate']):
+            sr = config.return_value(base_fa_sflow + ['sampling-rate'])
+            config.set(base_sflow + ['sampling-rate'], value=sr)
+
+        for server in config.list_nodes(base_fa_sflow + ['server']):
+            config.set(base_sflow + ['server'])
+            config.set_tag(base_sflow + ['server'])
+            config.set(base_sflow + ['server', server])
+            tmp = base_fa_sflow + ['server', server]
+            if config.exists(tmp + ['port']):
+                port = config.return_value(tmp + ['port'])
+                config.set(base_sflow + ['server', server, 'port'], value=port)
+
+    if config.exists(base + ['netflow']):
+        # delete only sflow from flow-accounting if netflow is set
+        config.delete(base_fa_sflow)
+    else:
+        # delete all flow-accounting config otherwise
+        config.delete(base)

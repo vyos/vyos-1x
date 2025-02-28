@@ -798,6 +798,16 @@
         #include <include/route-map.xml.i>
       </children>
     </node>
+    <node name="nhrp">
+      <properties>
+        <help>Redistribute NHRP routes</help>
+      </properties>
+      <children>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
+        #include <include/route-map.xml.i>
+      </children>
+    </node>
     <node name="rip">
       <properties>
         <help>Redistribute RIP routes</help>

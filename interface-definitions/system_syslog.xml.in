@@ -8,28 +8,17 @@
           <priority>400</priority>
         </properties>
         <children>
-          <tagNode name="user">
+          <node name="console">
             <properties>
-              <help>Logging to specific terminal of given user</help>
-              <completionHelp>
-                <path>system login user</path>
-              </completionHelp>
-              <valueHelp>
-                <format>txt</format>
-                <description>Local user account</description>
-              </valueHelp>
-              <constraint>
-                #include <include/constraint/login-username.xml.i>
-              </constraint>
-              <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
+              <help>Log to system console (/dev/console)</help>
             </properties>
             <children>
               #include <include/syslog-facility.xml.i>
             </children>
-          </tagNode>
-          <tagNode name="host">
+          </node>
+          <tagNode name="remote">
             <properties>
-              <help>Logging to remote host</help>
+              <help>Log to remote host</help>
               <constraint>
                 <validator name="ip-address"/>
                 <validator name="fqdn"/>
@@ -49,11 +38,6 @@
               </valueHelp>
             </properties>
             <children>
-              #include <include/port-number.xml.i>
-              <leafNode name="port">
-                <defaultValue>514</defaultValue>
-              </leafNode>
-              #include <include/protocol-tcp-udp.xml.i>
               #include <include/syslog-facility.xml.i>
               <node name="format">
                 <properties>
@@ -74,86 +58,50 @@
                   </leafNode>
                 </children>
               </node>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>514</defaultValue>
+              </leafNode>
+              #include <include/protocol-tcp-udp.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/vrf.xml.i>
             </children>
           </tagNode>
-          <node name="global">
+          <node name="local">
             <properties>
-              <help>Logging to system standard location</help>
+              <help>Log to standard system location /var/log/messages</help>
             </properties>
             <children>
               #include <include/syslog-facility.xml.i>
-              <node name="marker">
+            </children>
+          </node>
+          <node name="marker">
+            <properties>
+              <help>Mark messages sent to syslog</help>
+            </properties>
+            <children>
+              <leafNode name="interval">
                 <properties>
-                  <help>mark messages sent to syslog</help>
+                  <help>Mark message interval</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Time in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-86400"/>
+                  </constraint>
+                  <constraintErrorMessage>Port number must be in range 1 to 86400</constraintErrorMessage>
                 </properties>
-                <children>
-                  <leafNode name="interval">
-                    <properties>
-                      <help>time interval how often a mark message is being sent in seconds</help>
-                      <constraint>
-                        <validator name="numeric" argument="--positive"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>1200</defaultValue>
-                  </leafNode>
-                </children>
-              </node>
-              <leafNode name="preserve-fqdn">
-                <properties>
-                  <help>uses FQDN for logging</help>
-                  <valueless/>
-                </properties>
+                <defaultValue>1200</defaultValue>
               </leafNode>
             </children>
           </node>
-          <tagNode name="file">
+          <leafNode name="preserve-fqdn">
             <properties>
-              <help>Logging to a file</help>
-              <constraint>
-                <regex>[a-zA-Z0-9\-_.]{1,255}</regex>
-              </constraint>
-              <constraintErrorMessage>illegal characters in filename or filename longer than 255 characters</constraintErrorMessage>
+              <help>Always include domain portion in hostname</help>
+              <valueless/>
             </properties>
-            <children>
-              <node name="archive">
-                <properties>
-                  <help>Log file size and rotation characteristics</help>
-                </properties>
-                <children>
-                  <leafNode name="file">
-                    <properties>
-                      <help>Number of saved files</help>
-                      <constraint>
-                        <regex>[0-9]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
-                    </properties>
-                    <defaultValue>5</defaultValue>
-                  </leafNode>
-                  <leafNode name="size">
-                    <properties>
-                      <help>Size of log files in kbytes</help>
-                      <constraint>
-                        <regex>[0-9]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
-                    </properties>
-                    <defaultValue>256</defaultValue>
-                  </leafNode>
-                </children>
-              </node>
-              #include <include/syslog-facility.xml.i>
-            </children>
-          </tagNode>
-          <node name="console">
-            <properties>
-              <help>logging to serial console</help>
-            </properties>
-            <children>
-              #include <include/syslog-facility.xml.i>
-            </children>
-          </node>
-          #include <include/interface/vrf.xml.i>
+          </leafNode>
         </children>
       </node>
     </children>

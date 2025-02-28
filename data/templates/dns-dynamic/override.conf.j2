@@ -1,4 +1,5 @@
 {% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+{% set cache_file = config_file.replace('.conf', '.cache') %}
 [Unit]
 ConditionPathExists={{ config_file }}
 Wants=
@@ -7,5 +8,5 @@ After=vyos-router.service
 [Service]
 EnvironmentFile=
 ExecStart=
-ExecStart={{ vrf_command }}/usr/bin/ddclient --file {{ config_file }} --foreground
+ExecStart={{ vrf_command }}/usr/bin/ddclient --file {{ config_file }} --cache {{ cache_file }} --foreground --daemon {{ interval }}
 Restart=always

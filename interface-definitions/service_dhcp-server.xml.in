@@ -211,18 +211,7 @@
                       #include <include/dhcp/option-v4.xml.i>
                       #include <include/generic-description.xml.i>
                       #include <include/generic-disable-node.xml.i>
-                      <leafNode name="ip-address">
-                        <properties>
-                          <help>Fixed IP address of static mapping</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IPv4 address used in static mapping</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/ip-address.xml.i>
                       #include <include/interface/mac.xml.i>
                       #include <include/interface/duid.xml.i>
                     </children>

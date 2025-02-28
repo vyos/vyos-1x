@@ -29,6 +29,9 @@
               </completionHelp>
             </properties>
             <command>ip macsec show $4</command>
+            <children>
+              #include <include/show-interface-type-event-log.xml.i>
+            </children>
           </tagNode>
         </children>
       </node>

@@ -19,6 +19,7 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=dummy</command>
               </leafNode>
+              #include <include/show-interface-type-event-log.xml.i>
             </children>
           </tagNode>
           <node name="dummy">

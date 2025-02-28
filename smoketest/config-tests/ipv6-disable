@@ -27,5 +27,5 @@ set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX
 set system login user vyos authentication plaintext-password ''
 set system name-server '172.16.254.20'
 set system name-server '172.16.254.30'
-set system syslog global facility all level 'info'
-set system syslog global facility local7 level 'debug'
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'

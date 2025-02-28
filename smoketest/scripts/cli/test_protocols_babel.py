@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# Copyright (C) 2024-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -72,7 +72,7 @@ class TestProtocolsBABEL(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' babel smoothing-half-life {smoothing_half_life}', frrconfig)
 
     def test_02_redistribute(self):
-        ipv4_protos = ['bgp', 'connected', 'isis', 'kernel', 'ospf', 'rip', 'static']
+        ipv4_protos = ['bgp', 'connected', 'isis', 'kernel', 'nhrp', 'ospf', 'rip', 'static']
         ipv6_protos = ['bgp', 'connected', 'isis', 'kernel', 'ospfv3', 'ripng', 'static']
 
         self.cli_set(base_path + ['interface', self._interfaces[0], 'enable-timestamps'])

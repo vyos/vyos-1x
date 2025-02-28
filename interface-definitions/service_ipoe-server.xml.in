@@ -70,18 +70,7 @@
                           <constraintErrorMessage>VLAN IDs need to be in range 1-4094</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="static-ip">
-                        <properties>
-                          <help>Static client IP address</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IPv4 address</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/ip-address.xml.i>
                     </children>
                   </tagNode>
                 </children>

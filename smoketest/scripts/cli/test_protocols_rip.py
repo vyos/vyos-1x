@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -82,7 +82,7 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         interfaces = Section.interfaces('ethernet')
         neighbors = ['1.2.3.4', '1.2.3.5', '1.2.3.6']
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
-        redistribute = ['bgp', 'connected', 'isis', 'kernel', 'ospf', 'static']
+        redistribute = ['bgp', 'connected', 'isis', 'kernel', 'nhrp', 'ospf', 'static']
         timer_garbage = '888'
         timer_timeout = '1000'
         timer_update = '90'

@@ -691,7 +691,7 @@ set system option ctrl-alt-delete 'ignore'
 set system option performance 'network-latency'
 set system option reboot-on-panic
 set system option startup-beep
-set system syslog global facility all level 'debug'
-set system syslog global facility local7 level 'debug'
-set system syslog host 172.16.100.1 facility all level 'warning'
+set system syslog local facility all level 'debug'
+set system syslog local facility local7 level 'debug'
+set system syslog remote 172.16.100.1 facility all level 'warning'
 set system time-zone 'Europe/Berlin'

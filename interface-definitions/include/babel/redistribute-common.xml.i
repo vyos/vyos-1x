@@ -23,6 +23,12 @@
       <valueless/>
     </properties>
   </leafNode>
+  <leafNode name="nhrp">
+    <properties>
+      <help>Redistribute NHRP routes</help>
+      <valueless/>
+    </properties>
+  </leafNode>
   <leafNode name="openfabric">
     <properties>
       <help>OpenFabric Routing Protocol</help>

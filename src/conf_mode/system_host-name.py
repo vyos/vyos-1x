@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,6 +23,7 @@ import vyos.hostsd_client
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
+from vyos.defaults import systemd_services
 from vyos.ifconfig import Section
 from vyos.template import is_ip
 from vyos.utils.process import cmd
@@ -174,11 +175,13 @@ def apply(config):
 
     # Restart services that use the hostname
     if hostname_new != hostname_old:
-        call("systemctl restart rsyslog.service")
+        tmp = systemd_services['rsyslog']
+        call(f'systemctl restart {tmp}')
 
     # If SNMP is running, restart it too
     if process_named_running('snmpd') and config['snmpd_restart_reqired']:
-        call('systemctl restart snmpd.service')
+        tmp = systemd_services['snmpd']
+        call(f'systemctl restart {tmp}')
 
     return None
 

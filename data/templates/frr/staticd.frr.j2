@@ -94,14 +94,14 @@ vrf {{ vrf }}
 {% if pppoe is vyos_defined %}
 {%     for interface, interface_config in pppoe.items() if interface_config.no_default_route is not vyos_defined %}
 {{ ip_prefix }} route 0.0.0.0/0 {{ interface }} tag 210 {{ interface_config.default_route_distance if interface_config.default_route_distance is vyos_defined }}
-{%-    endfor %}
+{%     endfor %}
 {% endif %}
 {# IPv6 routing #}
 {% if route6 is vyos_defined %}
 {%     for prefix, prefix_config in route6.items() %}
 {{ static_routes(ipv6_prefix, prefix, prefix_config) }}
 {# j2lint: disable=jinja-statements-delimeter #}
-{%-    endfor %}
+{%     endfor %}
 {% endif %}
 {% if vrf is vyos_defined %}
 exit-vrf

@@ -248,5 +248,41 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
+    def test_rpki_source_address(self):
+        peer = '192.0.2.1'
+        port = '8080'
+        preference = '1'
+        username = 'foo'
+        source_address = '100.10.10.1'
+
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', f'{source_address}/24'])
+
+        # Configure a TCP cache server
+        self.cli_set(base_path + ['cache', peer, 'port', port])
+        self.cli_set(base_path + ['cache', peer, 'preference', preference])
+        self.cli_set(base_path + ['cache', peer, 'source-address', source_address])
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig('rpki')
+        self.assertIn(f'rpki cache tcp {peer} {port} source {source_address} preference {preference}', frrconfig)
+
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'private', 'key', rpki_ssh_key.replace('\n', '')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'key', rpki_ssh_pub.replace('\n', '')])
+        self.cli_set(['pki', 'openssh', rpki_key_name, 'public', 'type', rpki_key_type])
+
+        # Configure a SSH cache server
+        self.cli_set(base_path + ['cache', peer, 'ssh', 'username', username])
+        self.cli_set(base_path + ['cache', peer, 'ssh', 'key', rpki_key_name])
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig('rpki')
+        self.assertIn(
+            f'rpki cache ssh {peer} {port} {username} /run/frr/id_rpki_{peer} /run/frr/id_rpki_{peer}.pub source {source_address} preference {preference}',
+            frrconfig,
+        )
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

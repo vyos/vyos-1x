@@ -4,7 +4,6 @@
       local-as
       no-advertise
       no-export
-      internet
       graceful-shutdown
       accept-own
       route-filter-translated-v4
@@ -33,10 +32,6 @@
 <valueHelp>
     <format>no-export</format>
     <description>Well-known communities value NO_EXPORT 0xFFFFFF01</description>
-</valueHelp>
-<valueHelp>
-    <format>internet</format>
-    <description>Well-known communities value 0</description>
 </valueHelp>
 <valueHelp>
     <format>graceful-shutdown</format>
@@ -84,7 +79,7 @@
 </valueHelp>
 <multi/>
 <constraint>
-    <regex>local-as|no-advertise|no-export|internet|graceful-shutdown|accept-own|route-filter-translated-v4|route-filter-v4|route-filter-translated-v6|route-filter-v6|llgr-stale|no-llgr|accept-own-nexthop|blackhole|no-peer</regex>
+    <regex>local-as|no-advertise|no-export|graceful-shutdown|accept-own|route-filter-translated-v4|route-filter-v4|route-filter-translated-v6|route-filter-v6|llgr-stale|no-llgr|accept-own-nexthop|blackhole|no-peer</regex>
     <validator name="bgp-regular-community"/>
 </constraint>
         <!-- include end -->
