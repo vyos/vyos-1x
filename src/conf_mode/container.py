@@ -22,6 +22,7 @@ from ipaddress import ip_address
 from ipaddress import ip_network
 from json import dumps as json_write
 
+import psutil
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -223,6 +224,21 @@ def verify(container):
                     if not os.path.exists(source):
                         raise ConfigError(f'Volume "{volume}" source path "{source}" does not exist!')
 
+            if 'tmpfs' in container_config:
+                for tmpfs, tmpfs_config in container_config['tmpfs'].items():
+                    if 'destination' not in tmpfs_config:
+                        raise ConfigError(f'tmpfs "{tmpfs}" has no destination path configured!')
+                    if 'size' in tmpfs_config:
+                        free_mem_mb: int = psutil.virtual_memory().available / 1024 /  1024
+                        if int(tmpfs_config['size']) > free_mem_mb:
+                            Warning(f'tmpfs "{tmpfs}" size is greater than the current free memory!')
+
+                        total_mem_mb: int = (psutil.virtual_memory().total / 1024 /  1024) / 2
+                        if int(tmpfs_config['size']) > total_mem_mb:
+                            raise ConfigError(f'tmpfs "{tmpfs}" size should not be more than 50% of total system memory!')
+                    else:
+                        raise ConfigError(f'tmpfs "{tmpfs}" has no size configured!')
+
             if 'port' in container_config:
                 for tmp in container_config['port']:
                     if not {'source', 'destination'} <= set(container_config['port'][tmp]):
@@ -362,6 +378,14 @@ def generate_run_arguments(name, container_config):
             prop = vol_config['propagation']
             volume += f' --volume {svol}:{dvol}:{mode},{prop}'
 
+    # Mount tmpfs
+    tmpfs = ''
+    if 'tmpfs' in container_config:
+        for tmpfs_config in container_config['tmpfs'].values():
+            dest = tmpfs_config['destination']
+            size = tmpfs_config['size']
+            tmpfs += f' --mount=type=tmpfs,tmpfs-size={size}M,destination={dest}'
+
     host_pid = ''
     if 'allow_host_pid' in container_config:
       host_pid = '--pid host'
@@ -373,7 +397,7 @@ def generate_run_arguments(name, container_config):
 
     container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpu_quota} {sysctl_opt} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {hostname} {device} {port} {name_server} {volume} {env_opt} {label} {uid} {host_pid}'
+                         f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:

@@ -48,6 +48,14 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="timeout">
+                <properties>
+                  <help>Timeout options</help>
+                </properties>
+                <children>
+                  #include <include/haproxy/timeout-client.xml.i>
+                </children>
+              </node>
               <node name="http-compression">
                 <properties>
                   <help>Compress HTTP responses</help>
@@ -365,6 +373,29 @@
                   </constraint>
                 </properties>
                 <defaultValue>1.3</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="timeout">
+            <properties>
+              <help>Timeout options</help>
+            </properties>
+            <children>
+              #include <include/haproxy/timeout-check.xml.i>
+              <leafNode name="check">
+                <defaultValue>5</defaultValue>
+              </leafNode>
+              #include <include/haproxy/timeout-connect.xml.i>
+              <leafNode name="connect">
+                <defaultValue>10</defaultValue>
+              </leafNode>
+              #include <include/haproxy/timeout-client.xml.i>
+              <leafNode name="client">
+                <defaultValue>50</defaultValue>
+              </leafNode>
+              #include <include/haproxy/timeout-server.xml.i>
+              <leafNode name="server">
+                <defaultValue>50</defaultValue>
               </leafNode>
             </children>
           </node>

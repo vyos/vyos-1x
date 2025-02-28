@@ -209,6 +209,14 @@
                   #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
+              <node name="nhrp">
+                <properties>
+                  <help>Redistribute NHRP routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
               <node name="ospf">
                 <properties>
                   <help>Redistribute OSPF routes</help>

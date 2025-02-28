@@ -435,13 +435,13 @@ table bridge vyos_filter {
 {% if global_options.state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
 {%     if global_options.state_policy.established is vyos_defined %}
-        {{ global_options.state_policy.established | nft_state_policy('established') }}
+        {{ global_options.state_policy.established | nft_state_policy('established', bridge=True) }}
 {%     endif %}
 {%     if global_options.state_policy.invalid is vyos_defined %}
-        {{ global_options.state_policy.invalid | nft_state_policy('invalid') }}
+        {{ global_options.state_policy.invalid | nft_state_policy('invalid', bridge=True) }}
 {%     endif %}
 {%     if global_options.state_policy.related is vyos_defined %}
-        {{ global_options.state_policy.related | nft_state_policy('related') }}
+        {{ global_options.state_policy.related | nft_state_policy('related', bridge=True) }}
 {%     endif %}
         return
     }

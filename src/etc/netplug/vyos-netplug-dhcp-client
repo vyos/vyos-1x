@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,44 +19,39 @@ import sys
 
 from time import sleep
 
-from vyos.configquery import ConfigTreeQuery
+from vyos.config import Config
+from vyos.configdict import get_interface_dict
+from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.commit import commit_in_progress
-from vyos.utils.process import call
 from vyos import airbag
+
 airbag.enable()
 
 if len(sys.argv) < 3:
-    airbag.noteworthy("Must specify both interface and link status!")
+    airbag.noteworthy('Must specify both interface and link status!')
     sys.exit(1)
 
 if not boot_configuration_complete():
-    airbag.noteworthy("System bootup not yet finished...")
+    airbag.noteworthy('System bootup not yet finished...')
     sys.exit(1)
+
+interface = sys.argv[1]
+# helper scripts should only work on physical interfaces not on individual
+# sub-interfaces. Moving e.g. a VLAN interface in/out a VRF will also trigger
+# this script which should be prohibited - bail out early
+if '.' in interface:
+    sys.exit(0)
 
 while commit_in_progress():
     sleep(1)
 
-interface = sys.argv[1]
 in_out = sys.argv[2]
-config = ConfigTreeQuery()
+config = Config()
 
 interface_path = ['interfaces'] + Section.get_config_path(interface).split()
-
-for _, interface_config in config.get_config_dict(interface_path).items():
-    # Bail out early if we do not have an IP address configured
-    if 'address' not in interface_config:
-        continue
-    # Bail out early if interface ist administrative down
-    if 'disable' in interface_config:
-        continue
-    systemd_action = 'start'
-    if in_out == 'out':
-        systemd_action = 'stop'
-    # Start/Stop DHCP service
-    if 'dhcp' in interface_config['address']:
-        call(f'systemctl {systemd_action} dhclient@{interface}.service')
-    # Start/Stop DHCPv6 service
-    if 'dhcpv6' in interface_config['address']:
-        call(f'systemctl {systemd_action} dhcp6c@{interface}.service')
+_, interface_config = get_interface_dict(
+    config, interface_path[:-1], ifname=interface, with_pki=True
+)
+Interface(interface).update(interface_config)

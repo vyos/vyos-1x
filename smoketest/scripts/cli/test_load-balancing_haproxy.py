@@ -521,5 +521,53 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError) as e:
             self.cli_commit()
 
+    def test_11_lb_haproxy_timeout(self):
+        t_default_check = '5'
+        t_default_client = '50'
+        t_default_connect = '10'
+        t_default_server ='50'
+        t_check = '4'
+        t_client = '300'
+        t_connect = '12'
+        t_server ='120'
+        t_front_client = '600'
+
+        self.base_config()
+        self.cli_commit()
+        # Check default timeout options
+        config_entries = (
+            f'timeout check {t_default_check}s',
+            f'timeout connect {t_default_connect}s',
+            f'timeout client {t_default_client}s',
+            f'timeout server {t_default_server}s',
+        )
+        # Check default timeout options
+        config = read_file(HAPROXY_CONF)
+        for config_entry in config_entries:
+            self.assertIn(config_entry, config)
+
+        # Set custom timeout options
+        self.cli_set(base_path + ['timeout', 'check', t_check])
+        self.cli_set(base_path + ['timeout', 'client', t_client])
+        self.cli_set(base_path + ['timeout', 'connect', t_connect])
+        self.cli_set(base_path + ['timeout', 'server', t_server])
+        self.cli_set(base_path + ['service', 'https_front', 'timeout', 'client', t_front_client])
+
+        self.cli_commit()
+
+        # Check custom timeout options
+        config_entries = (
+            f'timeout check {t_check}s',
+            f'timeout connect {t_connect}s',
+            f'timeout client {t_client}s',
+            f'timeout server {t_server}s',
+            f'timeout client {t_front_client}s',
+        )
+
+        # Check configured options
+        config = read_file(HAPROXY_CONF)
+        for config_entry in config_entries:
+            self.assertIn(config_entry, config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

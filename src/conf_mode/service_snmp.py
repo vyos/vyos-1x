@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -147,6 +147,9 @@ def verify(snmp):
         return None
 
     if 'user' in snmp['v3']:
+        if 'engineid' not in snmp['v3']:
+            raise ConfigError(f'EngineID must be configured for SNMPv3!')
+
         for user, user_config in snmp['v3']['user'].items():
             if 'group' not in user_config:
                 raise ConfigError(f'Group membership required for user "{user}"!')

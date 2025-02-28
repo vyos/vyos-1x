@@ -16,7 +16,7 @@
         <properties>
           <help>Show load-balancing haproxy</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/load-balacing_haproxy.py show</command>
+        <command>sudo ${vyos_op_scripts_dir}/load-balancing_haproxy.py show</command>
       </node>
     </children>
   </node>

@@ -158,6 +158,21 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
                 # verify member is assigned to the bridge
                 self.assertEqual(interface, tmp['master'])
 
+    def test_bridge_multi_use_member(self):
+        # Define available bonding hash policies
+        bridges = ['br10', 'br20', 'br30']
+        for interface in bridges:
+            for member in self._members:
+                self.cli_set(self._base_path + [interface, 'member', 'interface', member])
+
+        # check validate() - can not use the same member interfaces multiple times
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        # only keep the first bond interface configuration
+        for interface in bridges[1:]:
+            self.cli_delete(self._base_path + [interface])
+
+        self.cli_commit()
 
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority

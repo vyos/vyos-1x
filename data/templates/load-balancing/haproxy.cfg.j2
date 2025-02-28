@@ -38,9 +38,10 @@ defaults
     log     global
     mode    http
     option  dontlognull
-    timeout connect 10s
-    timeout client  50s
-    timeout server  50s
+    timeout check {{ timeout.check }}s
+    timeout connect {{ timeout.connect }}s
+    timeout client {{ timeout.client }}s
+    timeout server {{ timeout.server }}s
     errorfile 400 /etc/haproxy/errors/400.http
     errorfile 403 /etc/haproxy/errors/403.http
     errorfile 408 /etc/haproxy/errors/408.http
@@ -133,6 +134,11 @@ frontend {{ front }}
 {%             for backend in front_config.backend %}
     default_backend {{ backend }}
 {%             endfor %}
+{%         endif %}
+{%         if front_config.timeout is vyos_defined %}
+{%             if front_config.timeout.client is vyos_defined %}
+    timeout client {{ front_config.timeout.client }}s
+{%             endif %}
 {%         endif %}
 
 {%     endfor %}

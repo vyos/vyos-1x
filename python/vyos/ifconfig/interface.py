@@ -615,8 +615,18 @@ class Interface(Control):
 
         # Get current VRF table ID
         old_vrf_tableid = get_vrf_tableid(self.ifname)
-        self.set_interface('vrf', vrf)
 
+        # Always stop the DHCP client process to clean up routes within the VRF
+        # where the process was originally started. There is no need to add a
+        # condition to only call the method if "address dhcp" was defined, as
+        # this is handled inside set_dhcp(v6) by only stopping if the daemon is
+        # running. DHCP client process restart will be handled later on once the
+        # interface is moved to the new VRF.
+        self.set_dhcp(False)
+        self.set_dhcpv6(False)
+
+        # Move interface in/out of VRF
+        self.set_interface('vrf', vrf)
         if vrf:
             # Get routing table ID number for VRF
             vrf_table_id = get_vrf_tableid(vrf)

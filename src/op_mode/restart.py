@@ -53,6 +53,10 @@ service_map = {
         'systemd_service': 'strongswan',
         'path': ['vpn', 'ipsec'],
     },
+    'load-balancing_wan': {
+        'systemd_service': 'vyos-wan-load-balance',
+        'path': ['load-balancing', 'wan'],
+    },
     'mdns_repeater': {
         'systemd_service': 'avahi-daemon',
         'path': ['service', 'mdns', 'repeater'],
@@ -86,6 +90,7 @@ services = typing.Literal[
     'haproxy',
     'igmp_proxy',
     'ipsec',
+    'load-balancing_wan',
     'mdns_repeater',
     'router_advert',
     'snmp',

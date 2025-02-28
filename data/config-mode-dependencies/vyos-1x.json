@@ -14,6 +14,9 @@
         "vxlan": ["interfaces_vxlan"],
         "wlan": ["interfaces_wireless"]
     },
+    "interfaces_wireguard": {
+        "vxlan": ["interfaces_vxlan"]
+    },
     "load_balancing_wan": {
         "conntrack": ["system_conntrack"]
     },

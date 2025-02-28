@@ -65,14 +65,8 @@
           #include <include/static/static-route6.xml.i>
           <tagNode name="table">
             <properties>
-              <help>Policy route table number</help>
-              <valueHelp>
-                <format>u32:1-200</format>
-                <description>Policy route table number</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-200"/>
-              </constraint>
+              <help>Non-main Kernel Routing Table</help>
+              #include <include/constraint/protocols-static-table.xml.i>
             </properties>
             <children>
               <!--

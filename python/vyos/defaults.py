@@ -37,7 +37,8 @@ directories = {
   'dhcp6_client_dir' : '/run/dhcp6c',
   'vyos_configdir' : '/opt/vyatta/config',
   'completion_dir' : f'{base_dir}/completion',
-  'ca_certificates' : '/usr/local/share/ca-certificates/vyos'
+  'ca_certificates' : '/usr/local/share/ca-certificates/vyos',
+  'ppp_nexthop_dir' : '/run/ppp_nexthop'
 }
 
 systemd_services = {

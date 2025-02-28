@@ -1,0 +1,49 @@
+# Copyright (C) 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7116: Remove unsupported "internet" community following FRR removal
+# From
+    # set policy route-map <name> rule <ord> set community [add | replace] internet
+    # set policy community-list <name> rule <ord> regex internet
+# To
+    # set policy route-map <name> rule <ord> set community [add | replace] 0:0
+    # set policy community-list <name> rule <ord> regex _0:0_
+
+# NOTE: In FRR expanded community-lists, without the '_' delimiters, a regex of 
+# "0:0" will match "65000:0" as well as "0:0". This doesn't line up with what
+# we want when replacing "internet". 
+
+from vyos.configtree import ConfigTree
+
+rm_base = ['policy', 'route-map']
+cl_base = ['policy', 'community-list']
+
+def migrate(config: ConfigTree) -> None:
+    if config.exists(rm_base):
+        for policy_name in config.list_nodes(rm_base):
+            for rule_ord in config.list_nodes(rm_base + [policy_name, 'rule'], path_must_exist=False):
+                tmp_path = rm_base + [policy_name, 'rule', rule_ord, 'set', 'community']
+                if config.exists(tmp_path + ['add']) and config.return_value(tmp_path + ['add']) == 'internet':
+                    config.set(tmp_path + ['add'], '0:0')
+                if config.exists(tmp_path + ['replace']) and config.return_value(tmp_path + ['replace']) == 'internet':
+                    config.set(tmp_path + ['replace'], '0:0')
+
+    if config.exists(cl_base):
+        for policy_name in config.list_nodes(cl_base):
+            for rule_ord in config.list_nodes(cl_base + [policy_name, 'rule'], path_must_exist=False):
+                tmp_path = cl_base + [policy_name, 'rule', rule_ord, 'regex']
+                if config.exists(tmp_path) and config.return_value(tmp_path) == 'internet':
+                    config.set(tmp_path, '_0:0_')
+

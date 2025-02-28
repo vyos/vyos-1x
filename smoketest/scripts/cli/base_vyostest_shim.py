@@ -183,6 +183,15 @@ class VyOSUnitTestSHIM:
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
 
+        def verify_nftables_chain_exists(self, table, chain, inverse=False):
+            try:
+                cmd(f'sudo nft list chain {table} {chain}')
+                if inverse:
+                    self.fail(f'Chain exists: {table} {chain}')
+            except OSError:
+                if not inverse:
+                    self.fail(f'Chain does not exist: {table} {chain}')
+
         # Verify ip rule output
         def verify_rules(self, rules_search, inverse=False, addr_family='inet'):
             rule_output = cmd(f'ip -family {addr_family} rule show')

@@ -384,6 +384,41 @@ def kea_get_leases(inet):
     return leases['arguments']['leases']
 
 
+def kea_add_lease(
+    inet,
+    ip_address,
+    host_name=None,
+    mac_address=None,
+    iaid=None,
+    duid=None,
+    subnet_id=None,
+):
+    args = {'ip-address': ip_address}
+
+    if host_name:
+        args['hostname'] = host_name
+
+    if subnet_id:
+        args['subnet-id'] = subnet_id
+
+    # IPv4 requires MAC address, IPv6 requires either MAC address or DUID
+    if mac_address:
+        args['hw-address'] = mac_address
+    if duid:
+        args['duid'] = duid
+
+    # IPv6 requires IAID
+    if inet == '6' and iaid:
+        args['iaid'] = iaid
+
+    result = _ctrl_socket_command(inet, f'lease{inet}-add', args)
+
+    if result and 'result' in result:
+        return result['result'] == 0
+
+    return False
+
+
 def kea_delete_lease(inet, ip_address):
     args = {'ip-address': ip_address}
 
@@ -426,6 +461,32 @@ def kea_get_pool_from_subnet_id(config, inet, subnet_id):
         for subnet in network[f'subnet{inet}']:
             if 'id' in subnet and int(subnet['id']) == int(subnet_id):
                 return network['name']
+
+    return None
+
+
+def kea_get_domain_from_subnet_id(config, inet, subnet_id):
+    shared_networks = dict_search_args(
+        config, 'arguments', f'Dhcp{inet}', 'shared-networks'
+    )
+
+    if not shared_networks:
+        return None
+
+    for network in shared_networks:
+        if f'subnet{inet}' not in network:
+            continue
+
+        for subnet in network[f'subnet{inet}']:
+            if 'id' in subnet and int(subnet['id']) == int(subnet_id):
+                for option in subnet['option-data']:
+                    if option['name'] == 'domain-name':
+                        return option['data']
+
+            # domain-name is not found in subnet, fallback to shared-network pool option
+            for option in network['option-data']:
+                if option['name'] == 'domain-name':
+                    return option['data']
 
     return None
 
@@ -490,6 +551,11 @@ def kea_get_server_leases(config, inet, pools=[], state=[], origin=None) -> list
             kea_get_pool_from_subnet_id(config, inet, lease['subnet-id'])
             if config
             else '-'
+        )
+        data_lease['domain'] = (
+            kea_get_domain_from_subnet_id(config, inet, lease['subnet-id'])
+            if config
+            else ''
         )
         data_lease['end'] = (
             lease['expire_time'].timestamp() if lease['expire_time'] else None

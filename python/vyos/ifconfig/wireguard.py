@@ -77,6 +77,84 @@ class WireGuardOperational(Operational):
                 }
         return output
 
+    def show_interface(self):
+        from vyos.config import Config
+
+        c = Config()
+
+        wgdump = self._dump().get(self.config['ifname'], None)
+
+        c.set_level(['interfaces', 'wireguard', self.config['ifname']])
+        description = c.return_effective_value(['description'])
+        ips = c.return_effective_values(['address'])
+        hostnames = c.return_effective_values(['host-name'])
+
+        answer = 'interface: {}\n'.format(self.config['ifname'])
+        if description:
+            answer += '  description: {}\n'.format(description)
+        if ips:
+            answer += '  address: {}\n'.format(', '.join(ips))
+        if hostnames:
+            answer += '  hostname: {}\n'.format(', '.join(hostnames))
+
+        answer += '  public key: {}\n'.format(wgdump['public_key'])
+        answer += '  private key: (hidden)\n'
+        answer += '  listening port: {}\n'.format(wgdump['listen_port'])
+        answer += '\n'
+
+        for peer in c.list_effective_nodes(['peer']):
+            if wgdump['peers']:
+                pubkey = c.return_effective_value(['peer', peer, 'public-key'])
+                if pubkey in wgdump['peers']:
+                    wgpeer = wgdump['peers'][pubkey]
+
+                    answer += '  peer: {}\n'.format(peer)
+                    answer += '    public key: {}\n'.format(pubkey)
+
+                    """ figure out if the tunnel is recently active or not """
+                    status = 'inactive'
+                    if wgpeer['latest_handshake'] is None:
+                        """ no handshake ever """
+                        status = 'inactive'
+                    else:
+                        if int(wgpeer['latest_handshake']) > 0:
+                            delta = timedelta(
+                                seconds=int(time.time() - wgpeer['latest_handshake'])
+                            )
+                            answer += '    latest handshake: {}\n'.format(delta)
+                            if time.time() - int(wgpeer['latest_handshake']) < (60 * 5):
+                                """ Five minutes and the tunnel is still active """
+                                status = 'active'
+                            else:
+                                """ it's been longer than 5 minutes """
+                                status = 'inactive'
+                        elif int(wgpeer['latest_handshake']) == 0:
+                            """ no handshake ever """
+                            status = 'inactive'
+                        answer += '    status: {}\n'.format(status)
+
+                    if wgpeer['endpoint'] is not None:
+                        answer += '    endpoint: {}\n'.format(wgpeer['endpoint'])
+
+                    if wgpeer['allowed_ips'] is not None:
+                        answer += '    allowed ips: {}\n'.format(
+                            ','.join(wgpeer['allowed_ips']).replace(',', ', ')
+                        )
+
+                    if wgpeer['transfer_rx'] > 0 or wgpeer['transfer_tx'] > 0:
+                        rx_size = size(wgpeer['transfer_rx'], system=alternative)
+                        tx_size = size(wgpeer['transfer_tx'], system=alternative)
+                        answer += '    transfer: {} received, {} sent\n'.format(
+                            rx_size, tx_size
+                        )
+
+                    if wgpeer['persistent_keepalive'] is not None:
+                        answer += '    persistent keepalive: every {} seconds\n'.format(
+                            wgpeer['persistent_keepalive']
+                        )
+                answer += '\n'
+        return answer
+
     def get_latest_handshakes(self):
         """Get latest handshake time for each peer"""
         output = {}

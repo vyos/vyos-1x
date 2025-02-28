@@ -65,13 +65,15 @@ def get_config(conf, node):
 
     node_config = dict_merge(default_values, node_config)
 
-    global timeout, cache
+    if node == base_firewall and 'global_options' in node_config:
+        global_config = node_config['global_options']
+        global timeout, cache
 
-    if 'resolver_interval' in node_config:
-        timeout = int(node_config['resolver_interval'])
+        if 'resolver_interval' in global_config:
+            timeout = int(global_config['resolver_interval'])
 
-    if 'resolver_cache' in node_config:
-        cache = True
+        if 'resolver_cache' in global_config:
+            cache = True
 
     fqdn_config_parse(node_config, node[0])
 

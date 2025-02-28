@@ -205,7 +205,7 @@ def _get_raw_server_pool_statistics(config, family='inet', pool=None):
     return stats
 
 
-def _get_formatted_server_pool_statistics(pool_data, family='inet'):
+def _get_formatted_server_pool_statistics(pool_data):
     data_entries = []
     for entry in pool_data:
         pool = entry.get('pool')
@@ -235,7 +235,7 @@ def _get_raw_server_static_mappings(config, family='inet', pool=None, sorted=Non
     return mappings
 
 
-def _get_formatted_server_static_mappings(raw_data, family='inet'):
+def _get_formatted_server_static_mappings(raw_data):
     data_entries = []
 
     for entry in raw_data:
@@ -245,10 +245,8 @@ def _get_formatted_server_static_mappings(raw_data, family='inet'):
         ip_addr = entry.get('ip', 'N/A')
         mac_addr = entry.get('mac', 'N/A')
         duid = entry.get('duid', 'N/A')
-        description = entry.get('description', 'N/A')
-        data_entries.append(
-            [pool, subnet, hostname, ip_addr, mac_addr, duid, description]
-        )
+        desc = entry.get('description', 'N/A')
+        data_entries.append([pool, subnet, hostname, ip_addr, mac_addr, duid, desc])
 
     headers = [
         'Pool',
@@ -327,7 +325,7 @@ def show_server_pool_statistics(
     if raw:
         return pool_data
     else:
-        return _get_formatted_server_pool_statistics(pool_data, family=family)
+        return _get_formatted_server_pool_statistics(pool_data)
 
 
 @_verify_server
@@ -408,7 +406,7 @@ def show_server_static_mappings(
     if raw:
         return static_mappings
     else:
-        return _get_formatted_server_static_mappings(static_mappings, family=family)
+        return _get_formatted_server_static_mappings(static_mappings)
 
 
 def _lease_valid(inet, address):
@@ -482,7 +480,7 @@ def _get_raw_client_leases(family='inet', interface=None):
     return lease_data
 
 
-def _get_formatted_client_leases(lease_data, family):
+def _get_formatted_client_leases(lease_data):
     from time import localtime
     from time import strftime
 
@@ -534,7 +532,7 @@ def show_client_leases(raw: bool, family: ArgFamily, interface: typing.Optional[
     if raw:
         return lease_data
     else:
-        return _get_formatted_client_leases(lease_data, family=family)
+        return _get_formatted_client_leases(lease_data)
 
 
 @_verify_client

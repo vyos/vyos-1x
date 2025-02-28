@@ -13,6 +13,7 @@ set policy route-map ebgp-transit-rpki rule 30 set local-preference '100'
 set policy route-map ebgp-transit-rpki rule 40 action 'permit'
 set policy route-map ebgp-transit-rpki rule 40 set extcommunity rt '192.0.2.100:100'
 set policy route-map ebgp-transit-rpki rule 40 set extcommunity soo '64500:100'
+set protocols bgp address-family ipv4-unicast redistribute table 100
 set protocols bgp neighbor 1.2.3.4 address-family ipv4-unicast nexthop-self
 set protocols bgp neighbor 1.2.3.4 address-family ipv4-unicast route-map import 'ebgp-transit-rpki'
 set protocols bgp neighbor 1.2.3.4 remote-as '10'

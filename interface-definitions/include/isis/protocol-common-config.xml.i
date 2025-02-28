@@ -418,6 +418,14 @@
             #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
+        <node name="nhrp">
+          <properties>
+            <help>Redistribute NHRP routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-level-1-2.xml.i>
+          </children>
+        </node>
         <node name="ospf">
           <properties>
             <help>Redistribute OSPF routes into IS-IS</help>

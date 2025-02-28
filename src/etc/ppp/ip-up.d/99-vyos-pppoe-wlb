@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2024 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This is a Python hook script which is invoked whenever a PPPoE session goes
+# "ip-up". It will call into our vyos.ifconfig library and will then execute
+# common tasks for the PPPoE interface. The reason we have to "hook" this is
+# that we can not create a pppoeX interface in advance in linux and then connect
+# pppd to this already existing interface.
+
+import os
+import signal
+
+from sys import argv
+from sys import exit
+
+from vyos.defaults import directories
+
+# When the ppp link comes up, this script is called with the following
+# parameters
+#       $1      the interface name used by pppd (e.g. ppp3)
+#       $2      the tty device name
+#       $3      the tty device speed
+#       $4      the local IP address for the interface
+#       $5      the remote IP address
+#       $6      the parameter specified by the 'ipparam' option to pppd
+
+if (len(argv) < 7):
+    exit(1)
+
+wlb_pid_file = '/run/wlb_daemon.pid'
+
+interface = argv[6]
+nexthop = argv[5]
+
+if not os.path.exists(directories['ppp_nexthop_dir']):
+    os.mkdir(directories['ppp_nexthop_dir'])
+
+nexthop_file = os.path.join(directories['ppp_nexthop_dir'], interface)
+
+with open(nexthop_file, 'w') as f:
+    f.write(nexthop)
+
+# Trigger WLB daemon update
+if os.path.exists(wlb_pid_file):
+    with open(wlb_pid_file, 'r') as f:
+        pid = int(f.read())
+
+        os.kill(pid, signal.SIGUSR2)

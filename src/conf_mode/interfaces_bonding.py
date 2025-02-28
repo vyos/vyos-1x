@@ -126,9 +126,8 @@ def get_config(config=None):
     # Restore existing config level
     conf.set_level(old_level)
 
-    if dict_search('member.interface', bond):
-        for interface, interface_config in bond['member']['interface'].items():
-
+    if dict_search('member.interface', bond) is not None:
+        for interface in bond['member']['interface']:
             interface_ethernet_config = conf.get_config_dict(
                 ['interfaces', 'ethernet', interface],
                 key_mangling=('-', '_'),
@@ -137,44 +136,45 @@ def get_config(config=None):
                 with_defaults=False,
                 with_recursive_defaults=False)
 
-            interface_config['config_paths'] = dict_to_paths_values(interface_ethernet_config)
+            bond['member']['interface'][interface].update({'config_paths' :
+                dict_to_paths_values(interface_ethernet_config)})
 
             # Check if member interface is a new member
             if not conf.exists_effective(base + [ifname, 'member', 'interface', interface]):
                 bond['shutdown_required'] = {}
-                interface_config['new_added'] = {}
+                bond['member']['interface'][interface].update({'new_added' : {}})
 
             # Check if member interface is disabled
             conf.set_level(['interfaces'])
 
             section = Section.section(interface) # this will be 'ethernet' for 'eth0'
             if conf.exists([section, interface, 'disable']):
-                interface_config['disable'] = ''
+                if tmp: bond['member']['interface'][interface].update({'disable': ''})
 
             conf.set_level(old_level)
 
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp: interface_config['is_bridge_member'] = tmp
+            if tmp: bond['member']['interface'][interface].update({'is_bridge_member' : tmp})
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
-            for tmp in is_member(conf, interface, 'bonding'):
-                if bond['ifname'] == tmp:
-                    continue
-                interface_config['is_bond_member'] = tmp
+            if ifname in tmp:
+                del tmp[ifname]
+            if tmp: bond['member']['interface'][interface].update({'is_bond_member' : tmp})
 
             # Check if member interface is used as source-interface on another interface
             tmp = is_source_interface(conf, interface)
-            if tmp: interface_config['is_source_interface'] = tmp
+            if tmp: bond['member']['interface'][interface].update({'is_source_interface' : tmp})
 
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp: interface_config['has_address'] = {}
+            if tmp: bond['member']['interface'][interface].update({'has_address' : ''})
 
             # bond members must not have a VRF attached
             tmp = has_vrf_configured(conf, interface)
-            if tmp: interface_config['has_vrf'] = {}
+            if tmp: bond['member']['interface'][interface].update({'has_vrf' : ''})
+
     return bond
 
 

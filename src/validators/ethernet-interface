@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [[ "$1" != ^(lan|eth|eno|ens|enp|enx)[0-9]+$ ]]; then
+if ! [[ "$1" =~ ^(lan|eth|eno|ens|enp|enx)[0-9]+$ ]]; then
     echo "Error: $1 is not an ethernet interface"
     exit 1
 fi

@@ -19,6 +19,9 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_source_interface
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -34,6 +37,7 @@ from vyos import ConfigError
 from vyos import airbag
 from pathlib import Path
 airbag.enable()
+
 
 def get_config(config=None):
     """
@@ -61,11 +65,25 @@ def get_config(config=None):
             if 'disable' not in peer_config and 'host_name' in peer_config:
                 wireguard['peers_need_resolve'].append(peer)
 
+    # Check if interface is used as source-interface on VXLAN interface
+    tmp = is_source_interface(conf, ifname, 'vxlan')
+    if tmp:
+        if 'deleted' not in wireguard:
+            set_dependents('vxlan', conf, tmp)
+        else:
+            wireguard['is_source_interface'] = tmp
+
     return wireguard
+
 
 def verify(wireguard):
     if 'deleted' in wireguard:
         verify_bridge_delete(wireguard)
+        if 'is_source_interface' in wireguard:
+            raise ConfigError(
+                f'Interface "{wireguard["ifname"]}" cannot be deleted as it is used '
+                f'as source interface for "{wireguard["is_source_interface"]}"!'
+            )
         return None
 
     verify_mtu_ipv6(wireguard)
@@ -119,8 +137,10 @@ def verify(wireguard):
 
             public_keys.append(peer['public_key'])
 
+
 def generate(wireguard):
     return None
+
 
 def apply(wireguard):
     check_kmod('wireguard')
@@ -157,7 +177,10 @@ def apply(wireguard):
             domain_action = 'stop'
     call(f'systemctl {domain_action} vyos-domain-resolver.service')
 
+    call_dependents()
+
     return None
+
 
 if __name__ == '__main__':
     try:

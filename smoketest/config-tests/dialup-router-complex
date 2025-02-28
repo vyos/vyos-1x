@@ -695,6 +695,7 @@ set service dns forwarding ignore-hosts-file
 set service dns forwarding listen-address '172.16.254.30'
 set service dns forwarding listen-address '172.31.0.254'
 set service dns forwarding negative-ttl '60'
+set service lldp interface pppoe0 mode 'disable'
 set service lldp legacy-protocols cdp
 set service lldp snmp
 set service mdns repeater interface 'eth0.35'
