@@ -89,8 +89,7 @@ class QoSBase:
         if value in self._dsfields:
             return self._dsfields[value]
         else:
-            # left shift operation aligns the DSCP/TOS value with its bit position in the IP header.
-            return int(value) << 2
+            return value
 
     def _calc_random_detect_queue_params(self, avg_pkt, max_thr, limit=None, min_thr=None,
                                          mark_probability=None, precedence=0):

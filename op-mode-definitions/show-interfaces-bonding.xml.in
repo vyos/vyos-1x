@@ -67,7 +67,6 @@
                   </leafNode>
                 </children>
               </tagNode>
-              #include <include/show-interface-type-event-log.xml.i>
             </children>
           </tagNode>
           <node name="bonding">

@@ -363,7 +363,6 @@ class GitC:
 
             # environment vars for our git commands
             env = {
-                **os.environ,
                 "GIT_TERMINAL_PROMPT": "0",
                 "GIT_AUTHOR_NAME": name,
                 "GIT_AUTHOR_EMAIL": email,

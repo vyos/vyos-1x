@@ -80,7 +80,6 @@
                 </properties>
                 <command>echo not implemented</command>
               </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
             </children>
           </tagNode>
           <node name="wwan">
