@@ -89,6 +89,15 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_OP_TMPL_DIR)
 	cp -r templates-op/* $(DIR)/$(VYOS_OP_TMPL_DIR)
 
+	# PSL HACK BEGIN
+	# Not these though; they are in vyatta-wanloadbalance
+	# causing an apt install conflict for these files:
+	# /opt/vyatta/share/vyatta-op/templates/restart/wan-load-balance/node.def
+	# /opt/vyatta/share/vyatta-op/templates/show/wan-load-balance/connection/node.def
+	rm -rf $(DIR)/$(VYOS_OP_TMPL_DIR)/restart/wan-load-balance
+	rm -rf $(DIR)/$(VYOS_OP_TMPL_DIR)/show/wan-load-balance
+	# PSL HACK END
+
 	# Install data files
 	mkdir -p $(DIR)/$(VYCONF_REFTREE_DIR)
 	cp -r data/reftree.cache $(DIR)/$(VYCONF_REFTREE_DIR)
