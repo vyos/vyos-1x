@@ -70,6 +70,7 @@ def verify(qat):
         # PCI id | Chipset
         # 19e2 -> C3xx
         # 37c8 -> C62x
+        # 37c9 -> C62xvf
         # 0435 -> DH895
         # 6f54 -> D15xx
         # 18ee -> QAT_200XX
