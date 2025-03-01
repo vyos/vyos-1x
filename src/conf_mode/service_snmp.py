@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
+from vyos.defaults import systemd_services
 from vyos.snmpv3_hashgen import plaintext_to_md5
 from vyos.snmpv3_hashgen import plaintext_to_sha1
 from vyos.snmpv3_hashgen import random
@@ -43,7 +44,7 @@ config_file_access  = r'/usr/share/snmp/snmpd.conf'
 config_file_user    = r'/var/lib/snmp/snmpd.conf'
 default_script_dir  = r'/config/user-data/'
 systemd_override    = r'/run/systemd/system/snmpd.service.d/override.conf'
-systemd_service     = 'snmpd.service'
+systemd_service     = systemd_services['snmpd']
 
 def get_config(config=None):
     if config:
@@ -146,6 +147,9 @@ def verify(snmp):
         return None
 
     if 'user' in snmp['v3']:
+        if 'engineid' not in snmp['v3']:
+            raise ConfigError(f'EngineID must be configured for SNMPv3!')
+
         for user, user_config in snmp['v3']['user'].items():
             if 'group' not in user_config:
                 raise ConfigError(f'Group membership required for user "{user}"!')

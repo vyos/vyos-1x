@@ -75,10 +75,11 @@ class VyOSUnitTestSHIM:
                 cls._session.discard()
                 cls.fail(cls)
 
-        def cli_set(self, config):
+        def cli_set(self, path, value=None):
             if self.debug:
-                print('set ' + ' '.join(config))
-            self._session.set(config)
+                str = f'set {" ".join(path)} {value}' if value else f'set {" ".join(path)}'
+                print(str)
+            self._session.set(path, value)
 
         def cli_delete(self, config):
             if self.debug:
@@ -181,6 +182,15 @@ class VyOSUnitTestSHIM:
                         matched = True
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
+
+        def verify_nftables_chain_exists(self, table, chain, inverse=False):
+            try:
+                cmd(f'sudo nft list chain {table} {chain}')
+                if inverse:
+                    self.fail(f'Chain exists: {table} {chain}')
+            except OSError:
+                if not inverse:
+                    self.fail(f'Chain does not exist: {table} {chain}')
 
         # Verify ip rule output
         def verify_rules(self, rules_search, inverse=False, addr_family='inet'):

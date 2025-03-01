@@ -491,10 +491,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
     # Check if any DHCP options changed which require a client restat
     dhcp = is_node_changed(config, base + [ifname, 'dhcp-options'])
     if dhcp: dict.update({'dhcp_options_changed' : {}})
-
-    # Changine interface VRF assignemnts require a DHCP restart, too
-    dhcp = is_node_changed(config, base + [ifname, 'vrf'])
-    if dhcp: dict.update({'dhcp_options_changed' : {}})
+    dhcpv6 = is_node_changed(config, base + [ifname, 'dhcpv6-options'])
+    if dhcpv6: dict.update({'dhcpv6_options_changed' : {}})
 
     # Some interfaces come with a source_interface which must also not be part
     # of any other bond or bridge interface as it is exclusivly assigned as the
@@ -543,6 +541,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         # Check if any DHCP options changed which require a client restat
         dhcp = is_node_changed(config, base + [ifname, 'vif', vif, 'dhcp-options'])
         if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : {}})
+        dhcpv6 = is_node_changed(config, base + [ifname, 'vif', vif, 'dhcpv6-options'])
+        if dhcpv6: dict['vif'][vif].update({'dhcpv6_options_changed' : {}})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         # Add subinterface name to dictionary
@@ -569,6 +569,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         # Check if any DHCP options changed which require a client restat
         dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'dhcp-options'])
         if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : {}})
+        dhcpv6 = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'dhcpv6-options'])
+        if dhcpv6: dict['vif_s'][vif_s].update({'dhcpv6_options_changed' : {}})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             # Add subinterface name to dictionary
@@ -597,6 +599,8 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
             # Check if any DHCP options changed which require a client restat
             dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'])
             if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : {}})
+            dhcpv6 = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'dhcpv6-options'])
+            if dhcpv6: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcpv6_options_changed' : {}})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, base + [ifname], dict)

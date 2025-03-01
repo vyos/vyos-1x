@@ -97,111 +97,6 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'syslog: {syslog}', uacctd)
         self.assertIn(f'plugins: memory', uacctd)
 
-    def test_sflow(self):
-        sampling_rate = '4000'
-        source_address = '192.0.2.1'
-        dummy_if = 'dum3841'
-        agent_address = '192.0.2.2'
-
-        sflow_server = {
-            '1.2.3.4' : { },
-            '5.6.7.8' : { 'port' : '6000' },
-        }
-
-        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', agent_address + '/32'])
-        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', source_address + '/32'])
-        self.cli_set(base_path + ['disable-imt'])
-
-        # You need to configure at least one interface for flow-accounting
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        for interface in Section.interfaces('ethernet'):
-            self.cli_set(base_path + ['interface', interface])
-
-
-        # You need to configure at least one sFlow or NetFlow protocol, or not
-        # set "disable-imt" for flow-accounting
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + ['sflow', 'agent-address', agent_address])
-        self.cli_set(base_path + ['sflow', 'sampling-rate', sampling_rate])
-        self.cli_set(base_path + ['sflow', 'source-address', source_address])
-        for server, server_config in sflow_server.items():
-            self.cli_set(base_path + ['sflow', 'server', server])
-            if 'port' in server_config:
-                self.cli_set(base_path + ['sflow', 'server', server, 'port', server_config['port']])
-
-        # commit changes
-        self.cli_commit()
-
-        uacctd = read_file(uacctd_conf)
-
-        # when 'disable-imt' is not configured on the CLI it must be present
-        self.assertNotIn(f'imt_path: /tmp/uacctd.pipe', uacctd)
-        self.assertNotIn(f'imt_mem_pools_number: 169', uacctd)
-        self.assertNotIn(f'plugins: memory', uacctd)
-
-        for server, server_config in sflow_server.items():
-            plugin_name = server.replace('.', '-')
-            if 'port' in server_config:
-                self.assertIn(f'sfprobe_receiver[sf_{plugin_name}]: {server}', uacctd)
-            else:
-                self.assertIn(f'sfprobe_receiver[sf_{plugin_name}]: {server}:6343', uacctd)
-
-            self.assertIn(f'sfprobe_agentip[sf_{plugin_name}]: {agent_address}', uacctd)
-            self.assertIn(f'sampling_rate[sf_{plugin_name}]: {sampling_rate}', uacctd)
-            self.assertIn(f'sfprobe_source_ip[sf_{plugin_name}]: {source_address}', uacctd)
-
-        self.cli_delete(['interfaces', 'dummy', dummy_if])
-
-    def test_sflow_ipv6(self):
-        sampling_rate = '100'
-        sflow_server = {
-            '2001:db8::1' : { },
-            '2001:db8::2' : { 'port' : '6000' },
-        }
-
-        self.cli_set(base_path + ['disable-imt'])
-
-        # You need to configure at least one interface for flow-accounting
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        for interface in Section.interfaces('ethernet'):
-            self.cli_set(base_path + ['interface', interface])
-
-
-        # You need to configure at least one sFlow or NetFlow protocol, or not
-        # set "disable-imt" for flow-accounting
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + ['sflow', 'sampling-rate', sampling_rate])
-        for server, server_config in sflow_server.items():
-            self.cli_set(base_path + ['sflow', 'server', server])
-            if 'port' in server_config:
-                self.cli_set(base_path + ['sflow', 'server', server, 'port', server_config['port']])
-
-        # commit changes
-        self.cli_commit()
-
-        uacctd = read_file(uacctd_conf)
-
-        # when 'disable-imt' is not configured on the CLI it must be present
-        self.assertNotIn(f'imt_path: /tmp/uacctd.pipe', uacctd)
-        self.assertNotIn(f'imt_mem_pools_number: 169', uacctd)
-        self.assertNotIn(f'plugins: memory', uacctd)
-
-        for server, server_config in sflow_server.items():
-            tmp_srv = server
-            tmp_srv = tmp_srv.replace(':', '-')
-
-            if 'port' in server_config:
-                self.assertIn(f'sfprobe_receiver[sf_{tmp_srv}]: {bracketize_ipv6(server)}', uacctd)
-            else:
-                self.assertIn(f'sfprobe_receiver[sf_{tmp_srv}]: {bracketize_ipv6(server)}:6343', uacctd)
-            self.assertIn(f'sampling_rate[sf_{tmp_srv}]: {sampling_rate}', uacctd)
-
     def test_netflow(self):
         engine_id = '33'
         max_flows = '667'
@@ -288,8 +183,8 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
             self.assertIn(f'nfprobe_timeouts[nf_{tmp_srv}]: expint={tmo_expiry}:general={tmo_flow}:icmp={tmo_icmp}:maxlife={tmo_max}:tcp.fin={tmo_tcp_fin}:tcp={tmo_tcp_generic}:tcp.rst={tmo_tcp_rst}:udp={tmo_udp}', uacctd)
 
-
         self.cli_delete(['interfaces', 'dummy', dummy_if])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

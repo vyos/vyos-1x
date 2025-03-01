@@ -5,6 +5,7 @@ dpkg-divert --package vyos-1x --add --no-rename /etc/logrotate.d/conntrackd
 dpkg-divert --package vyos-1x --add --no-rename /etc/rsyslog.conf
 dpkg-divert --package vyos-1x --add --no-rename /etc/skel/.bashrc
 dpkg-divert --package vyos-1x --add --no-rename /etc/skel/.profile
+dpkg-divert --package vyos-1x --add --no-rename /etc/sysctl.d/80-vpp.conf
 dpkg-divert --package vyos-1x --add --no-rename /etc/netplug/netplugd.conf
 dpkg-divert --package vyos-1x --add --no-rename /etc/netplug/netplug
 dpkg-divert --package vyos-1x --add --no-rename /etc/rsyslog.d/45-frr.conf

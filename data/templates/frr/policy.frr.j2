@@ -252,6 +252,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.match.rpki is vyos_defined %}
  match rpki {{ rule_config.match.rpki }}
 {%                     endif %}
+{%                     if rule_config.match.source_vrf is vyos_defined %}
+ match source-vrf {{ rule_config.match.source_vrf }}
+{%                     endif %}
 {%                     if rule_config.match.tag is vyos_defined %}
  match tag {{ rule_config.match.tag }}
 {%                     endif %}

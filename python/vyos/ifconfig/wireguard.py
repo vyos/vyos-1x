@@ -1,4 +1,4 @@
-# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,17 +14,14 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 
-from datetime import timedelta
 from tempfile import NamedTemporaryFile
 
-from hurry.filesize import size
-from hurry.filesize import alternative
-
+from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
+from vyos.template import is_ipv4
 
 class WireGuardOperational(Operational):
     def _dump(self):
@@ -90,12 +87,15 @@ class WireGuardOperational(Operational):
         c.set_level(['interfaces', 'wireguard', self.config['ifname']])
         description = c.return_effective_value(['description'])
         ips = c.return_effective_values(['address'])
+        hostnames = c.return_effective_values(['host-name'])
 
         answer = 'interface: {}\n'.format(self.config['ifname'])
         if description:
             answer += '  description: {}\n'.format(description)
         if ips:
             answer += '  address: {}\n'.format(', '.join(ips))
+        if hostnames:
+            answer += '  hostname: {}\n'.format(', '.join(hostnames))
 
         answer += '  public key: {}\n'.format(wgdump['public_key'])
         answer += '  private key: (hidden)\n'
@@ -155,6 +155,77 @@ class WireGuardOperational(Operational):
                 answer += '\n'
         return answer
 
+    def get_latest_handshakes(self):
+        """Get latest handshake time for each peer"""
+        output = {}
+
+        # Dump wireguard last handshake
+        tmp = self._cmd(f'wg show {self.ifname} latest-handshakes')
+        # Output:
+        # PUBLIC-KEY=    1732812147
+        for line in tmp.split('\n'):
+            if not line:
+                # Skip empty lines and last line
+                continue
+            items = line.split('\t')
+
+            if len(items) != 2:
+                continue
+
+            output[items[0]] = int(items[1])
+
+        return output
+
+    def reset_peer(self, peer_name=None, public_key=None):
+        c = ConfigTreeQuery()
+        tmp = c.get_config_dict(['interfaces', 'wireguard', self.ifname],
+                                effective=True, get_first_key=True,
+                                key_mangling=('-', '_'), with_defaults=True)
+
+        current_peers = self._dump().get(self.ifname, {}).get('peers', {})
+
+        for peer, peer_config in tmp['peer'].items():
+            peer_public_key = peer_config['public_key']
+            if peer_name is None or peer == peer_name or public_key == peer_public_key:
+                if ('address' not in peer_config and 'host_name' not in peer_config) or 'port' not in peer_config:
+                    if peer_name is not None:
+                        print(f'WireGuard interface "{self.ifname}" peer "{peer_name}" address/host-name unset!')
+                    continue
+
+                # As we work with an effective config, a port CLI node is always
+                # available when an address/host-name is defined on the CLI
+                port = peer_config['port']
+
+                # address has higher priority than host-name
+                if 'address' in peer_config:
+                    address = peer_config['address']
+                    new_endpoint = f'{address}:{port}'
+                else:
+                    host_name = peer_config['host_name']
+                    new_endpoint = f'{host_name}:{port}'
+
+                if 'disable' in peer_config:
+                    print(f'WireGuard interface "{self.ifname}" peer "{peer_name}" disabled!')
+                    continue
+
+                cmd = f'wg set {self.ifname} peer {peer_public_key} endpoint {new_endpoint}'
+                try:
+                    if (peer_public_key in current_peers
+                        and 'endpoint' in current_peers[peer_public_key]
+                        and current_peers[peer_public_key]['endpoint'] is not None
+                    ):
+                        current_endpoint = current_peers[peer_public_key]['endpoint']
+                        message = f'Resetting {self.ifname} peer {peer_public_key} from {current_endpoint} endpoint to {new_endpoint} ... '
+                    else:
+                        message = f'Resetting {self.ifname} peer {peer_public_key} endpoint to {new_endpoint} ... '
+                    print(message, end='')
+
+                    self._cmd(cmd, env={'WG_ENDPOINT_RESOLUTION_RETRIES':
+                                        tmp['max_dns_retry']})
+                    print('done')
+                except:
+                    print(f'Error\nPlease try to run command manually:\n{cmd}\n')
+
 
 @Interface.register
 class WireGuardIf(Interface):
@@ -180,22 +251,26 @@ class WireGuardIf(Interface):
         get_config_dict(). It's main intention is to consolidate the scattered
         interface setup code and provide a single point of entry when workin
         on any interface."""
-
         tmp_file = NamedTemporaryFile('w')
         tmp_file.write(config['private_key'])
         tmp_file.flush()
 
         # Wireguard base command is identical for every peer
-        base_cmd = 'wg set {ifname}'
+        base_cmd = f'wg set {self.ifname}'
+        interface_cmd = base_cmd
         if 'port' in config:
-            base_cmd += ' listen-port {port}'
+            interface_cmd += ' listen-port {port}'
         if 'fwmark' in config:
-            base_cmd += ' fwmark {fwmark}'
+            interface_cmd += ' fwmark {fwmark}'
 
-        base_cmd += f' private-key {tmp_file.name}'
-        base_cmd = base_cmd.format(**config)
+        interface_cmd += f' private-key {tmp_file.name}'
+        interface_cmd = interface_cmd.format(**config)
         # T6490: execute command to ensure interface configured
-        self._cmd(base_cmd)
+        self._cmd(interface_cmd)
+
+        # If no PSK is given remove it by using /dev/null - passing keys via
+        # the shell (usually bash) is considered insecure, thus we use a file
+        no_psk_file = '/dev/null'
 
         if 'peer' in config:
             for peer, peer_config in config['peer'].items():
@@ -203,43 +278,60 @@ class WireGuardIf(Interface):
                 # marked as disabled - also active sessions are terminated as
                 # the public key was already removed when entering this method!
                 if 'disable' in peer_config:
+                    # remove peer if disabled, no error report even if peer not exists
+                    cmd = base_cmd + ' peer {public_key} remove'
+                    self._cmd(cmd.format(**peer_config))
                     continue
 
-                # start of with a fresh 'wg' command
-                cmd = base_cmd + ' peer {public_key}'
-
-                # If no PSK is given remove it by using /dev/null - passing keys via
-                # the shell (usually bash) is considered insecure, thus we use a file
-                no_psk_file = '/dev/null'
                 psk_file = no_psk_file
-                if 'preshared_key' in peer_config:
-                    psk_file = '/tmp/tmp.wireguard.psk'
-                    with open(psk_file, 'w') as f:
-                        f.write(peer_config['preshared_key'])
-                cmd += f' preshared-key {psk_file}'
 
-                # Persistent keepalive is optional
-                if 'persistent_keepalive' in peer_config:
-                    cmd += ' persistent-keepalive {persistent_keepalive}'
+                # start of with a fresh 'wg' command
+                peer_cmd = base_cmd + ' peer {public_key}'
 
-                # Multiple allowed-ip ranges can be defined - ensure we are always
-                # dealing with a list
-                if isinstance(peer_config['allowed_ips'], str):
-                    peer_config['allowed_ips'] = [peer_config['allowed_ips']]
-                cmd += ' allowed-ips ' + ','.join(peer_config['allowed_ips'])
+                try:
+                    cmd = peer_cmd
 
-                # Endpoint configuration is optional
-                if {'address', 'port'} <= set(peer_config):
-                    if is_ipv6(peer_config['address']):
-                        cmd += ' endpoint [{address}]:{port}'
-                    else:
-                        cmd += ' endpoint {address}:{port}'
+                    if 'preshared_key' in peer_config:
+                        psk_file = '/tmp/tmp.wireguard.psk'
+                        with open(psk_file, 'w') as f:
+                            f.write(peer_config['preshared_key'])
+                    cmd += f' preshared-key {psk_file}'
 
-                self._cmd(cmd.format(**peer_config))
+                    # Persistent keepalive is optional
+                    if 'persistent_keepalive' in peer_config:
+                        cmd += ' persistent-keepalive {persistent_keepalive}'
 
-                # PSK key file is not required to be stored persistently as its backed by CLI
-                if psk_file != no_psk_file and os.path.exists(psk_file):
-                    os.remove(psk_file)
+                    # Multiple allowed-ip ranges can be defined - ensure we are always
+                    # dealing with a list
+                    if isinstance(peer_config['allowed_ips'], str):
+                        peer_config['allowed_ips'] = [peer_config['allowed_ips']]
+                    cmd += ' allowed-ips ' + ','.join(peer_config['allowed_ips'])
+
+                    self._cmd(cmd.format(**peer_config))
+
+                    cmd = peer_cmd
+
+                    # Ensure peer is created even if dns not working
+                    if {'address', 'port'} <= set(peer_config):
+                        if is_ipv6(peer_config['address']):
+                            cmd += ' endpoint [{address}]:{port}'
+                        elif is_ipv4(peer_config['address']):
+                            cmd += ' endpoint {address}:{port}'
+                        else:
+                            # don't set endpoint if address uses domain name
+                            continue
+                    elif {'host_name', 'port'} <= set(peer_config):
+                        cmd += ' endpoint {host_name}:{port}'
+
+                    self._cmd(cmd.format(**peer_config), env={
+                        'WG_ENDPOINT_RESOLUTION_RETRIES': config['max_dns_retry']})
+                except:
+                    # todo: logging
+                    pass
+                finally:
+                    # PSK key file is not required to be stored persistently as its backed by CLI
+                    if psk_file != no_psk_file and os.path.exists(psk_file):
+                        os.remove(psk_file)
 
         # call base class
         super().update(config)

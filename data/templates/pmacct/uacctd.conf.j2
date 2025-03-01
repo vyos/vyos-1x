@@ -25,12 +25,6 @@ imt_mem_pools_number: 169
 {%         set _ = plugin.append('nfprobe['~ nf_server_key ~ ']') %}
 {%     endfor %}
 {% endif %}
-{% if sflow.server is vyos_defined %}
-{%     for server in sflow.server %}
-{%         set sf_server_key = 'sf_' ~ server | dot_colon_to_dash %}
-{%         set _ = plugin.append('sfprobe[' ~ sf_server_key ~ ']') %}
-{%     endfor %}
-{% endif %}
 {% if disable_imt is not defined %}
 {%     set _ = plugin.append('memory') %}
 {% endif %}
@@ -57,23 +51,6 @@ nfprobe_source_ip[{{ nf_server_key }}]: {{ netflow.source_address | bracketize_i
 {%         endif %}
 {%         if netflow.timeout is vyos_defined %}
 nfprobe_timeouts[{{ nf_server_key }}]: expint={{ netflow.timeout.expiry_interval }}:general={{ netflow.timeout.flow_generic }}:icmp={{ netflow.timeout.icmp }}:maxlife={{ netflow.timeout.max_active_life }}:tcp.fin={{ netflow.timeout.tcp_fin }}:tcp={{ netflow.timeout.tcp_generic }}:tcp.rst={{ netflow.timeout.tcp_rst }}:udp={{ netflow.timeout.udp }}
-{%         endif %}
-
-{%     endfor %}
-{% endif %}
-
-{% if sflow.server is vyos_defined %}
-# sFlow servers
-{%     for server, server_config in sflow.server.items() %}
-{#         # prevent pmacct syntax error when using IPv6 flow collectors #}
-{%         set sf_server_key = 'sf_' ~ server | dot_colon_to_dash %}
-sfprobe_receiver[{{ sf_server_key }}]: {{ server | bracketize_ipv6 }}:{{ server_config.port }}
-sfprobe_agentip[{{ sf_server_key }}]: {{ sflow.agent_address }}
-{%         if sflow.sampling_rate is vyos_defined %}
-sampling_rate[{{ sf_server_key }}]: {{ sflow.sampling_rate }}
-{%         endif %}
-{%         if sflow.source_address is vyos_defined %}
-sfprobe_source_ip[{{ sf_server_key }}]: {{ sflow.source_address | bracketize_ipv6 }}
 {%         endif %}
 
 {%     endfor %}

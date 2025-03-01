@@ -78,6 +78,13 @@ def verify(lb):
                 not is_listen_port_bind_service(int(tmp_port), 'haproxy'):
             raise ConfigError(f'"TCP" port "{tmp_port}" is used by another service')
 
+        if 'http_compression' in front_config:
+            if front_config['mode'] != 'http':
+                raise ConfigError(f'service {front} must be set to http mode to use http-compression!')
+            if len(front_config['http_compression']['mime_type']) == 0:
+                raise ConfigError(f'service {front} must have at least one mime-type configured to use'
+                                  f'http_compression!')
+
     for back, back_config in lb['backend'].items():
         if 'http_check' in back_config:
             http_check = back_config['http_check']

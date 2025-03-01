@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2024 VyOS maintainers and contributors
+# Copyright (C) 2022-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -117,6 +117,8 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         config = read_file(LLDPD_CONF)
 
         self.assertIn(f'configure ports {interface} med location elin "{elin}"', config)
+        # This is the CLI default mode
+        self.assertIn(f'configure ports {interface} lldp status rx-and-tx', config)
         self.assertIn(f'configure system interface pattern "{interface}"', config)
 
     def test_06_lldp_snmp(self):
@@ -133,6 +135,51 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
         self.assertIn('-x', tmp)
 
         self.cli_delete(['service', 'snmp'])
+
+    def test_07_lldp_interface_mode(self):
+        interfaces = Section.interfaces('ethernet', vlan=False)
+
+        # set interface mode to 'tx'
+        self.cli_set(base_path + ['interface', 'all'])
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'mode', 'disable'])
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        config = read_file(LLDPD_CONF)
+        for interface in interfaces:
+            self.assertIn(f'configure ports {interface} lldp status disable', config)
+
+        # Change configuration to rx-only
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'mode', 'rx'])
+        # commit changes
+        self.cli_commit()
+        # verify configuration
+        config = read_file(LLDPD_CONF)
+        for interface in interfaces:
+            self.assertIn(f'configure ports {interface} lldp status rx-only', config)
+
+        # Change configuration to tx-only
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'mode', 'tx'])
+        # commit changes
+        self.cli_commit()
+        # verify configuration
+        config = read_file(LLDPD_CONF)
+        for interface in interfaces:
+            self.assertIn(f'configure ports {interface} lldp status tx-only', config)
+
+        # Change configuration to rx-only
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'mode', 'rx-tx'])
+        # commit changes
+        self.cli_commit()
+        # verify configuration
+        config = read_file(LLDPD_CONF)
+        for interface in interfaces:
+            self.assertIn(f'configure ports {interface} lldp status rx-and-tx', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

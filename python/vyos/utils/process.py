@@ -83,7 +83,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
             )
 
     wrapper = get_wrapper(vrf, netns, auth)
-    command = f'{wrapper} {command}'
+    command = f'{wrapper} {command}' if wrapper else command
 
     cmd_msg = f"cmd '{command}'"
     debug.message(cmd_msg, flag)

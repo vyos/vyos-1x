@@ -263,38 +263,8 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="queue-size">
-                <properties>
-                  <help>Internal message queue size</help>
-                  <valueHelp>
-                    <format>u32:100-999999</format>
-                    <description>Queue size</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-999999"/>
-                  </constraint>
-                  <constraintErrorMessage>Queue size must be between 100 and 999999</constraintErrorMessage>
-                </properties>
-              </leafNode>
-              <leafNode name="log-level">
-                <properties>
-                  <help>Set log-level. Log must be enable.</help>
-                  <completionHelp>
-                    <list>info debug</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>info</format>
-                    <description>Info log level</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>debug</format>
-                    <description>Debug log level</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(info|debug)</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/netlink/queue-size.xml.i>
+              #include <include/netlink/log-level.xml.i>
             </children>
           </node>
           <node name="modules">

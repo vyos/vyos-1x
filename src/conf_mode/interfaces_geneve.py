@@ -47,7 +47,7 @@ def get_config(config=None):
     # GENEVE interfaces are picky and require recreation if certain parameters
     # change. But a GENEVE interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
-    for cli_option in ['remote', 'vni', 'parameters']:
+    for cli_option in ['remote', 'vni', 'parameters', 'port']:
         if is_node_changed(conf, base + [ifname, cli_option]):
             geneve.update({'rebuild_required': {}})
 

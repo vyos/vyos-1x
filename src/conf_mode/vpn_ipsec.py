@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -86,14 +86,20 @@ def get_config(config=None):
         conf = Config()
     base = ['vpn', 'ipsec']
     l2tp_base = ['vpn', 'l2tp', 'remote-access', 'ipsec-settings']
-    if not conf.exists(base):
-        return None
 
     # retrieve common dictionary keys
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  no_tag_node_value_mangle=True,
                                  get_first_key=True,
                                  with_pki=True)
+
+    ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
+    if ipsec['nhrp_exists']:
+        set_dependents('nhrp', conf)
+
+    if not conf.exists(base):
+        ipsec.update({'deleted' : ''})
+        return ipsec
 
     # We have to cleanup the default dict, as default values could
     # enable features which are not explicitly enabled on the
@@ -115,7 +121,6 @@ def get_config(config=None):
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
-    ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
 
     if ipsec['nhrp_exists']:
         set_dependents('nhrp', conf)
@@ -196,8 +201,8 @@ def verify_pki_rsa(pki, rsa_conf):
     return True
 
 def verify(ipsec):
-    if not ipsec:
-        return None
+    if not ipsec or 'deleted' in ipsec:
+        return
 
     if 'authentication' in ipsec:
         if 'psk' in ipsec['authentication']:
@@ -624,7 +629,7 @@ def generate_pki_files_rsa(pki, rsa_conf):
 def generate(ipsec):
     cleanup_pki_files()
 
-    if not ipsec:
+    if not ipsec or 'deleted' in ipsec:
         for config_file in [charon_dhcp_conf, charon_radius_conf, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
@@ -721,15 +726,12 @@ def generate(ipsec):
 
 def apply(ipsec):
     systemd_service = 'strongswan.service'
-    if not ipsec:
+    if not ipsec or 'deleted' in ipsec:
         call(f'systemctl stop {systemd_service}')
-
         if vti_updown_db_exists():
             remove_vti_updown_db()
-
     else:
         call(f'systemctl reload-or-restart {systemd_service}')
-
         if ipsec['enabled_vti_interfaces']:
             with open_vti_updown_db_for_create_or_update() as db:
                 db.removeAllOtherInterfaces(ipsec['enabled_vti_interfaces'])
@@ -737,7 +739,7 @@ def apply(ipsec):
                 db.commit(lambda interface: ipsec['vti_interface_dicts'][interface])
         elif vti_updown_db_exists():
             remove_vti_updown_db()
-
+    if ipsec:
         if ipsec.get('nhrp_exists', False):
             try:
                 call_dependents()
@@ -745,7 +747,6 @@ def apply(ipsec):
                 # Ignore config errors on dependent due to being called too early. Example:
                 # ConfigError("ConfigError('Interface ethN requires an IP address!')")
                 pass
-
 
 if __name__ == '__main__':
     try:

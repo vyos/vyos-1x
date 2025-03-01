@@ -74,8 +74,9 @@ def get_config(config=None):
         for interface in list(bridge['member']['interface']):
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp and bridge['ifname'] not in tmp:
-                bridge['member']['interface'][interface].update({'is_bridge_member' : tmp})
+            if ifname in tmp:
+                del tmp[ifname]
+            if tmp: bridge['member']['interface'][interface].update({'is_bridge_member' : tmp})
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')

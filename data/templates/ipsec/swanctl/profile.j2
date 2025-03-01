@@ -22,16 +22,16 @@
         }
 {%         endif %}
         children {
-            dmvpn {
+            dmvpn-{{ name }}-{{ interface }}-child {
                 esp_proposals = {{ esp | get_esp_ike_cipher(ike) | join(',') }}
                 rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 local_ts = dynamic[gre]
                 remote_ts = dynamic[gre]
                 mode = {{ esp.mode }}
-{%         if ike.dead_peer_detection.action is vyos_defined %}
-                dpd_action = {{ ike.dead_peer_detection.action }}
-{%         endif %}
+                dpd_action = clear
+                close_action = none
+                start_action = none
 {%         if esp.compression is vyos_defined('enable') %}
                 ipcomp = yes
 {%         endif %}

@@ -48,7 +48,7 @@ class Control(Section):
     def _popen(self, command):
         return popen(command, self.debug)
 
-    def _cmd(self, command):
+    def _cmd(self, command, env=None):
         import re
         if 'netns' in self.config:
             # This command must be executed from default netns 'ip link set dev X netns X'
@@ -61,7 +61,7 @@ class Control(Section):
                 command = command
             else:
                 command = f'ip netns exec {self.config["netns"]} {command}'
-        return cmd(command, self.debug)
+        return cmd(command, self.debug, env=env)
 
     def _get_command(self, config, name):
         """

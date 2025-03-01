@@ -202,7 +202,7 @@
                 <properties>
                   <help>Regular expression to match against a community-list</help>
                   <completionHelp>
-                    <list>local-AS no-advertise no-export internet graceful-shutdown accept-own-nexthop accept-own route-filter-translated-v4 route-filter-v4 route-filter-translated-v6 route-filter-v6 llgr-stale no-llgr blackhole no-peer additive</list>
+                    <list>local-AS no-advertise no-export graceful-shutdown accept-own-nexthop accept-own route-filter-translated-v4 route-filter-v4 route-filter-translated-v6 route-filter-v6 llgr-stale no-llgr blackhole no-peer additive</list>
                   </completionHelp>
                   <valueHelp>
                     <format>&lt;aa:nn&gt;</format>
@@ -219,10 +219,6 @@
                   <valueHelp>
                     <format>no-export</format>
                     <description>Well-known communities value NO_EXPORT 0xFFFFFF01</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>internet</format>
-                    <description>Well-known communities value 0</description>
                   </valueHelp>
                   <valueHelp>
                     <format>graceful-shutdown</format>
@@ -1094,6 +1090,20 @@
                       <constraint>
                         <regex>(invalid|notfound|valid)</regex>
                       </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="source-vrf">
+                    <properties>
+                      <help>Source vrf</help>
+                      #include <include/constraint/vrf.xml.i>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>VRF instance name</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <path>vrf name</path>
+                        <list>default</list>
+                      </completionHelp>
                     </properties>
                   </leafNode>
                   #include <include/policy/tag.xml.i>

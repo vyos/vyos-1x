@@ -1,0 +1,129 @@
+# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Migration from Opennhrp to FRR NHRP
+import ipaddress
+
+from vyos.configtree import ConfigTree
+
+base = ['protocols', 'nhrp', 'tunnel']
+interface_base = ['interfaces', 'tunnel']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+    networkid = 1
+    for tunnel_name in config.list_nodes(base):
+        ## Cisco Authentication migration
+        if config.exists(base + [tunnel_name,'cisco-authentication']):
+            auth = config.return_value(base + [tunnel_name,'cisco-authentication'])
+            config.delete(base + [tunnel_name,'cisco-authentication'])
+            config.set(base + [tunnel_name,'authentication'], value=auth)
+        ## Delete Dynamic-map to fqdn
+        if config.exists(base + [tunnel_name,'dynamic-map']):
+            config.delete(base + [tunnel_name,'dynamic-map'])
+        ## Holdtime migration
+        if config.exists(base + [tunnel_name,'holding-time']):
+            holdtime = config.return_value(base + [tunnel_name,'holding-time'])
+            config.delete(base + [tunnel_name,'holding-time'])
+            config.set(base + [tunnel_name,'holdtime'], value=holdtime)
+        ## Add network-id
+        config.set(base + [tunnel_name, 'network-id'], value=networkid)
+        networkid+=1
+        ## Map and nhs migration
+        nhs_tunnelip_list = []
+        nhs_nbmaip_list = []
+        is_nhs = False
+        if config.exists(base + [tunnel_name,'map']):
+            is_map = False
+            for tunnel_ip in config.list_nodes(base + [tunnel_name, 'map']):
+                tunnel_ip_path = base + [tunnel_name, 'map', tunnel_ip]
+                tunnel_ip = tunnel_ip.split('/')[0]
+                if config.exists(tunnel_ip_path + ['cisco']):
+                    config.delete(tunnel_ip_path + ['cisco'])
+                if config.exists(tunnel_ip_path + ['nbma-address']):
+                    nbma = config.return_value(tunnel_ip_path + ['nbma-address'])
+                    if config.exists (tunnel_ip_path + ['register']):
+                        config.delete(tunnel_ip_path + ['register'])
+                        config.delete(tunnel_ip_path + ['nbma-address'])
+                        config.set(base + [tunnel_name, 'nhs', 'tunnel-ip', tunnel_ip, 'nbma'], value=nbma)
+                        is_nhs = True
+                        if tunnel_ip not in nhs_tunnelip_list:
+                            nhs_tunnelip_list.append(tunnel_ip)
+                        if nbma not in nhs_nbmaip_list:
+                            nhs_nbmaip_list.append(nbma)
+                    else:
+                        config.delete(tunnel_ip_path + ['nbma-address'])
+                        config.set(base + [tunnel_name, 'map_test', 'tunnel-ip', tunnel_ip, 'nbma'], value=nbma)
+                        is_map = True
+            config.delete(base + [tunnel_name,'map'])
+
+            if is_nhs:
+                config.set_tag(base + [tunnel_name, 'nhs', 'tunnel-ip'])
+
+            if is_map:
+                config.copy(base + [tunnel_name, 'map_test'], base + [tunnel_name, 'map'])
+                config.delete(base + [tunnel_name, 'map_test'])
+                config.set_tag(base + [tunnel_name, 'map', 'tunnel-ip'])
+
+        #
+        # Change netmask to /32 on tunnel interface
+        # If nhs is alone, add static route tunnel network to nhs
+        #
+        if config.exists(interface_base + [tunnel_name, 'address']):
+            tunnel_ip_list = []
+            for tunnel_ip in config.return_values(
+                    interface_base + [tunnel_name, 'address']):
+                tunnel_ip_ch = tunnel_ip.split('/')[0]+'/32'
+                if tunnel_ip_ch not in tunnel_ip_list:
+                    tunnel_ip_list.append(tunnel_ip_ch)
+                    for nhs in nhs_tunnelip_list:
+                        config.set(['protocols', 'static', 'route', str(ipaddress.ip_network(tunnel_ip, strict=False)), 'next-hop', nhs, 'distance'], value='250')
+                    if nhs_tunnelip_list:
+                        if not config.is_tag(['protocols', 'static', 'route']):
+                            config.set_tag(['protocols', 'static', 'route'])
+                        if not config.is_tag(['protocols', 'static', 'route', str(ipaddress.ip_network(tunnel_ip, strict=False)), 'next-hop']):
+                            config.set_tag(['protocols', 'static', 'route', str(ipaddress.ip_network(tunnel_ip, strict=False)), 'next-hop'])
+
+            config.delete(interface_base + [tunnel_name, 'address'])
+            for tunnel_ip in tunnel_ip_list:
+                config.set(
+                    interface_base + [tunnel_name, 'address'], value=tunnel_ip, replace=False)
+
+        ## Map multicast migration
+        if config.exists(base + [tunnel_name, 'multicast']):
+            multicast_map = config.return_value(
+                base + [tunnel_name, 'multicast'])
+            if multicast_map == 'nhs':
+                config.delete(base + [tunnel_name, 'multicast'])
+                for nbma in nhs_nbmaip_list:
+                    config.set(base + [tunnel_name, 'multicast'], value=nbma,
+                               replace=False)
+
+        ## Delete non-cahching
+        if config.exists(base + [tunnel_name, 'non-caching']):
+            config.delete(base + [tunnel_name, 'non-caching'])
+        ## Delete shortcut-destination
+        if config.exists(base + [tunnel_name, 'shortcut-destination']):
+            if not config.exists(base + [tunnel_name, 'shortcut']):
+                config.set(base + [tunnel_name, 'shortcut'])
+            config.delete(base + [tunnel_name, 'shortcut-destination'])
+        ## Delete shortcut-target
+        if config.exists(base + [tunnel_name, 'shortcut-target']):
+            if not config.exists(base + [tunnel_name, 'shortcut']):
+                config.set(base + [tunnel_name, 'shortcut'])
+            config.delete(base + [tunnel_name, 'shortcut-target'])
+        ## Set registration-no-unique
+        config.set(base + [tunnel_name, 'registration-no-unique'])

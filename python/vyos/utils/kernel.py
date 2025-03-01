@@ -15,6 +15,10 @@
 
 import os
 
+# A list of used Kernel constants
+# https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/wireguard/messages.h?h=linux-6.6.y#n45
+WIREGUARD_REKEY_AFTER_TIME = 120
+
 def check_kmod(k_mod):
     """ Common utility function to load required kernel modules on demand """
     from vyos import ConfigError

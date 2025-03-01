@@ -97,6 +97,18 @@ properties = element properties
     valueHelp* &
     (element constraintErrorMessage { text })? &
     completionHelp* &
+    
+    # "docs" is used to store documentation for a node in a structured format
+    # It is used to generate documentation for the CLI and Web docs
+    (element docs {
+        (element headline { text })? &
+        (element text { text })? &
+        (element usageExample { text })? &
+        (element hints {
+            attribute type { text },
+            text
+        })*
+    })? &
 
     # These are meaningful only for leaf nodes
     (element valueless { empty })? &

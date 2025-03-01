@@ -1,5 +1,5 @@
 # configtree -- a standalone VyOS config file manipulation library (Python bindings)
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -21,33 +21,40 @@ from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
 
 LIBPATH = '/usr/lib/libvyosconfig.so.0'
 
+
 def replace_backslash(s, search, replace):
     """Modify quoted strings containing backslashes not of escape sequences"""
+
     def replace_method(match):
         result = match.group().replace(search, replace)
         return result
+
     p = re.compile(r'("[^"]*[\\][^"]*"\n|\'[^\']*[\\][^\']*\'\n)')
     return p.sub(replace_method, s)
+
 
 def escape_backslash(string: str) -> str:
     """Escape single backslashes in quoted strings"""
     result = replace_backslash(string, '\\', '\\\\')
     return result
 
+
 def unescape_backslash(string: str) -> str:
     """Unescape backslashes in quoted strings"""
     result = replace_backslash(string, '\\\\', '\\')
     return result
 
+
 def extract_version(s):
-    """ Extract the version string from the config string """
+    """Extract the version string from the config string"""
     t = re.split('(^//)', s, maxsplit=1, flags=re.MULTILINE)
     return (s, ''.join(t[1:]))
+
 
 def check_path(path):
     # Necessary type checking
     if not isinstance(path, list):
-        raise TypeError("Expected a list, got a {}".format(type(path)))
+        raise TypeError('Expected a list, got a {}'.format(type(path)))
     else:
         pass
 
@@ -165,7 +172,7 @@ class ConfigTree(object):
             config = self.__from_string(config_section.encode())
             if config is None:
                 msg = self.__get_error().decode()
-                raise ValueError("Failed to parse config: {0}".format(msg))
+                raise ValueError('Failed to parse config: {0}'.format(msg))
             else:
                 self.__config = config
                 self.__version = version_section
@@ -195,10 +202,10 @@ class ConfigTree(object):
         config_string = unescape_backslash(config_string)
         if no_version:
             return config_string
-        config_string = "{0}\n{1}".format(config_string, self.__version)
+        config_string = '{0}\n{1}'.format(config_string, self.__version)
         return config_string
 
-    def to_commands(self, op="set"):
+    def to_commands(self, op='set'):
         commands = self.__to_commands(self.__config, op.encode()).decode()
         commands = unescape_backslash(commands)
         return commands
@@ -211,11 +218,11 @@ class ConfigTree(object):
 
     def create_node(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__create_node(self.__config, path_str)
-        if (res != 0):
-            raise ConfigTreeError(f"Path already exists: {path}")
+        if res != 0:
+            raise ConfigTreeError(f'Path already exists: {path}')
 
     def set(self, path, value=None, replace=True):
         """Set new entry in VyOS configuration.
@@ -227,7 +234,7 @@ class ConfigTree(object):
         """
 
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         if value is None:
             self.__set_valueless(self.__config, path_str)
@@ -238,25 +245,27 @@ class ConfigTree(object):
                 self.__set_add_value(self.__config, path_str, str(value).encode())
 
         if self.__migration:
-            self.migration_log.info(f"- op: set path: {path} value: {value} replace: {replace}")
+            self.migration_log.info(
+                f'- op: set path: {path} value: {value} replace: {replace}'
+            )
 
     def delete(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__delete(self.__config, path_str)
-        if (res != 0):
+        if res != 0:
             raise ConfigTreeError(f"Path doesn't exist: {path}")
 
         if self.__migration:
-            self.migration_log.info(f"- op: delete path: {path}")
+            self.migration_log.info(f'- op: delete path: {path}')
 
     def delete_value(self, path, value):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__delete_value(self.__config, path_str, value.encode())
-        if (res != 0):
+        if res != 0:
             if res == 1:
                 raise ConfigTreeError(f"Path doesn't exist: {path}")
             elif res == 2:
@@ -265,11 +274,11 @@ class ConfigTree(object):
                 raise ConfigTreeError()
 
         if self.__migration:
-            self.migration_log.info(f"- op: delete_value path: {path} value: {value}")
+            self.migration_log.info(f'- op: delete_value path: {path} value: {value}')
 
     def rename(self, path, new_name):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
         newname_str = new_name.encode()
 
         # Check if a node with intended new name already exists
@@ -277,42 +286,46 @@ class ConfigTree(object):
         if self.exists(new_path):
             raise ConfigTreeError()
         res = self.__rename(self.__config, path_str, newname_str)
-        if (res != 0):
+        if res != 0:
             raise ConfigTreeError("Path [{}] doesn't exist".format(path))
 
         if self.__migration:
-            self.migration_log.info(f"- op: rename old_path: {path} new_path: {new_path}")
+            self.migration_log.info(
+                f'- op: rename old_path: {path} new_path: {new_path}'
+            )
 
     def copy(self, old_path, new_path):
         check_path(old_path)
         check_path(new_path)
-        oldpath_str = " ".join(map(str, old_path)).encode()
-        newpath_str = " ".join(map(str, new_path)).encode()
+        oldpath_str = ' '.join(map(str, old_path)).encode()
+        newpath_str = ' '.join(map(str, new_path)).encode()
 
         # Check if a node with intended new name already exists
         if self.exists(new_path):
             raise ConfigTreeError()
         res = self.__copy(self.__config, oldpath_str, newpath_str)
-        if (res != 0):
+        if res != 0:
             msg = self.__get_error().decode()
             raise ConfigTreeError(msg)
 
         if self.__migration:
-            self.migration_log.info(f"- op: copy old_path: {old_path} new_path: {new_path}")
+            self.migration_log.info(
+                f'- op: copy old_path: {old_path} new_path: {new_path}'
+            )
 
     def exists(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__exists(self.__config, path_str)
-        if (res == 0):
+        if res == 0:
             return False
         else:
             return True
 
     def list_nodes(self, path, path_must_exist=True):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res_json = self.__list_nodes(self.__config, path_str).decode()
         res = json.loads(res_json)
@@ -327,7 +340,7 @@ class ConfigTree(object):
 
     def return_value(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res_json = self.__return_value(self.__config, path_str).decode()
         res = json.loads(res_json)
@@ -339,7 +352,7 @@ class ConfigTree(object):
 
     def return_values(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res_json = self.__return_values(self.__config, path_str).decode()
         res = json.loads(res_json)
@@ -351,47 +364,48 @@ class ConfigTree(object):
 
     def is_tag(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__is_tag(self.__config, path_str)
-        if (res >= 1):
+        if res >= 1:
             return True
         else:
             return False
 
     def set_tag(self, path, value=True):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__set_tag(self.__config, path_str, value)
-        if (res == 0):
+        if res == 0:
             return True
         else:
             raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
 
     def is_leaf(self, path):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         return self.__is_leaf(self.__config, path_str)
 
     def set_leaf(self, path, value):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__set_leaf(self.__config, path_str, value)
-        if (res == 0):
+        if res == 0:
             return True
         else:
             raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
 
     def get_subtree(self, path, with_node=False):
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__get_subtree(self.__config, path_str, with_node)
         subt = ConfigTree(address=res)
         return subt
+
 
 def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
     if left is None:
@@ -399,13 +413,13 @@ def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
     if right is None:
         right = ConfigTree(config_string='\n')
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
-        raise TypeError("Arguments must be instances of ConfigTree")
+        raise TypeError('Arguments must be instances of ConfigTree')
     if path:
         if (not left.exists(path)) and (not right.exists(path)):
             raise ConfigTreeError(f"Path {path} doesn't exist")
 
     check_path(path)
-    path_str = " ".join(map(str, path)).encode()
+    path_str = ' '.join(map(str, path)).encode()
 
     __lib = cdll.LoadLibrary(libpath)
     __show_diff = __lib.show_diff
@@ -417,12 +431,13 @@ def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
 
     res = __show_diff(commands, path_str, left._get_config(), right._get_config())
     res = res.decode()
-    if res == "#1@":
+    if res == '#1@':
         msg = __get_error().decode()
         raise ConfigTreeError(msg)
 
     res = unescape_backslash(res)
     return res
+
 
 def union(left, right, libpath=LIBPATH):
     if left is None:
@@ -430,7 +445,7 @@ def union(left, right, libpath=LIBPATH):
     if right is None:
         right = ConfigTree(config_string='\n')
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
-        raise TypeError("Arguments must be instances of ConfigTree")
+        raise TypeError('Arguments must be instances of ConfigTree')
 
     __lib = cdll.LoadLibrary(libpath)
     __tree_union = __lib.tree_union
@@ -440,14 +455,15 @@ def union(left, right, libpath=LIBPATH):
     __get_error.argtypes = []
     __get_error.restype = c_char_p
 
-    res = __tree_union( left._get_config(), right._get_config())
+    res = __tree_union(left._get_config(), right._get_config())
     tree = ConfigTree(address=res)
 
     return tree
 
+
 def mask_inclusive(left, right, libpath=LIBPATH):
     if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
-        raise TypeError("Arguments must be instances of ConfigTree")
+        raise TypeError('Arguments must be instances of ConfigTree')
 
     try:
         __lib = cdll.LoadLibrary(libpath)
@@ -469,7 +485,8 @@ def mask_inclusive(left, right, libpath=LIBPATH):
 
     return tree
 
-def reference_tree_to_json(from_dir, to_file, internal_cache="", libpath=LIBPATH):
+
+def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH):
     try:
         __lib = cdll.LoadLibrary(libpath)
         __reference_tree_to_json = __lib.reference_tree_to_json
@@ -477,12 +494,65 @@ def reference_tree_to_json(from_dir, to_file, internal_cache="", libpath=LIBPATH
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
-        res = __reference_tree_to_json(internal_cache.encode(), from_dir.encode(), to_file.encode())
+        res = __reference_tree_to_json(
+            internal_cache.encode(), from_dir.encode(), to_file.encode()
+        )
     except Exception as e:
         raise ConfigTreeError(e)
     if res == 1:
         msg = __get_error().decode()
         raise ConfigTreeError(msg)
+
+
+def merge_reference_tree_cache(cache_dir, primary_name, result_name, libpath=LIBPATH):
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __merge_reference_tree_cache = __lib.merge_reference_tree_cache
+        __merge_reference_tree_cache.argtypes = [c_char_p, c_char_p, c_char_p]
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+        res = __merge_reference_tree_cache(
+            cache_dir.encode(), primary_name.encode(), result_name.encode()
+        )
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if res == 1:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+
+def interface_definitions_to_cache(from_dir, cache_path, libpath=LIBPATH):
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __interface_definitions_to_cache = __lib.interface_definitions_to_cache
+        __interface_definitions_to_cache.argtypes = [c_char_p, c_char_p]
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+        res = __interface_definitions_to_cache(from_dir.encode(), cache_path.encode())
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if res == 1:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+
+def reference_tree_cache_to_json(cache_path, render_file, libpath=LIBPATH):
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __reference_tree_cache_to_json = __lib.reference_tree_cache_to_json
+        __reference_tree_cache_to_json.argtypes = [c_char_p, c_char_p]
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+        res = __reference_tree_cache_to_json(cache_path.encode(), render_file.encode())
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if res == 1:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
 
 class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
@@ -491,7 +561,7 @@ class DiffTree:
         if right is None:
             right = ConfigTree(config_string='\n')
         if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
-            raise TypeError("Arguments must be instances of ConfigTree")
+            raise TypeError('Arguments must be instances of ConfigTree')
         if path:
             if not left.exists(path):
                 raise ConfigTreeError(f"Path {path} doesn't exist in lhs tree")
@@ -508,7 +578,7 @@ class DiffTree:
         self.__diff_tree.restype = c_void_p
 
         check_path(path)
-        path_str = " ".join(map(str, path)).encode()
+        path_str = ' '.join(map(str, path)).encode()
 
         res = self.__diff_tree(path_str, left._get_config(), right._get_config())
 
@@ -524,11 +594,11 @@ class DiffTree:
 
     def to_commands(self):
         add = self.add.to_commands()
-        delete = self.delete.to_commands(op="delete")
-        return delete + "\n" + add
+        delete = self.delete.to_commands(op='delete')
+        return delete + '\n' + add
+
 
 def deep_copy(config_tree: ConfigTree) -> ConfigTree:
-    """An inelegant, but reasonably fast, copy; replace with backend copy
-    """
+    """An inelegant, but reasonably fast, copy; replace with backend copy"""
     D = DiffTree(None, config_tree)
     return D.add

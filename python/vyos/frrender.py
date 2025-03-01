@@ -1,4 +1,4 @@
-# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2024-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -52,6 +52,7 @@ pim6_daemon = 'pim6d'
 rip_daemon = 'ripd'
 ripng_daemon = 'ripngd'
 zebra_daemon = 'zebra'
+nhrp_daemon = 'nhrpd'
 
 def get_frrender_dict(conf, argv=None) -> dict:
     from copy import deepcopy
@@ -146,6 +147,50 @@ def get_frrender_dict(conf, argv=None) -> dict:
 
         pim = config_dict_merge(default_values, pim)
         return pim
+
+    def dict_helper_nhrp_defaults(nhrp):
+        # NFLOG group numbers which are used in netfilter firewall rules and
+        # in the global config in FRR.
+        # https://docs.frrouting.org/en/latest/nhrpd.html#hub-functionality
+        # https://docs.frrouting.org/en/latest/nhrpd.html#multicast-functionality
+        # Use nflog group number for NHRP redirects = 1
+        # Use nflog group number from MULTICAST traffic = 2
+        nflog_redirect = 1
+        nflog_multicast = 2
+
+        nhrp = conf.merge_defaults(nhrp, recursive=True)
+
+        nhrp_tunnel = conf.get_config_dict(['interfaces', 'tunnel'],
+                                           key_mangling=('-', '_'),
+                                           get_first_key=True,
+                                           no_tag_node_value_mangle=True)
+
+        if nhrp_tunnel: nhrp.update({'if_tunnel': nhrp_tunnel})
+
+        for intf, intf_config in nhrp['tunnel'].items():
+            if 'multicast' in intf_config:
+                nhrp['multicast'] = nflog_multicast
+            if 'redirect' in intf_config:
+                nhrp['redirect'] = nflog_redirect
+
+        ##Add ipsec profile config to nhrp configuration to apply encryption
+        profile = conf.get_config_dict(['vpn', 'ipsec', 'profile'],
+                                       key_mangling=('-', '_'),
+                                       get_first_key=True,
+                                       no_tag_node_value_mangle=True)
+
+        for name, profile_conf in profile.items():
+            if 'disable' in profile_conf:
+                continue
+            if 'bind' in profile_conf and 'tunnel' in profile_conf['bind']:
+                interfaces = profile_conf['bind']['tunnel']
+                if isinstance(interfaces, str):
+                    interfaces = [interfaces]
+                for interface in interfaces:
+                    if dict_search(f'tunnel.{interface}', nhrp):
+                        nhrp['tunnel'][interface][
+                            'security_profile'] = name
+        return nhrp
 
     # Ethernet and bonding interfaces can participate in EVPN which is configured via FRR
     tmp = {}
@@ -363,6 +408,18 @@ def get_frrender_dict(conf, argv=None) -> dict:
         dict.update({'static' : static})
     elif conf.exists_effective(static_cli_path):
         dict.update({'static' : {'deleted' : ''}})
+
+    # We need to check the CLI if the NHRP node is present and thus load in all the default
+    # values present on the CLI - that's why we have if conf.exists()
+    nhrp_cli_path = ['protocols', 'nhrp']
+    if conf.exists(nhrp_cli_path):
+        nhrp = conf.get_config_dict(nhrp_cli_path, key_mangling=('-', '_'),
+                                    get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+        nhrp = dict_helper_nhrp_defaults(nhrp)
+        dict.update({'nhrp' : nhrp})
+    elif conf.exists_effective(nhrp_cli_path):
+        dict.update({'nhrp' : {'deleted' : ''}})
 
     # T3680 - get a list of all interfaces currently configured to use DHCP
     tmp = get_dhcp_interfaces(conf)
@@ -625,6 +682,9 @@ class FRRender:
                 output += '\n'
             if 'ipv6' in config_dict and 'deleted' not in config_dict['ipv6']:
                 output += render_to_string('frr/zebra.route-map.frr.j2', config_dict['ipv6'])
+                output += '\n'
+            if 'nhrp' in config_dict and 'deleted' not in config_dict['nhrp']:
+                output += render_to_string('frr/nhrpd.frr.j2', config_dict['nhrp'])
                 output += '\n'
             return output
 

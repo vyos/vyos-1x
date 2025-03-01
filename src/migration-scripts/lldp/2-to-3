@@ -1,0 +1,31 @@
+# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7165: Migrate LLDP interface disable to 'mode disable'
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'lldp']
+
+def migrate(config: ConfigTree) -> None:
+    interface_base = base + ['interface']
+    if not config.exists(interface_base):
+        # Nothing to do
+        return
+
+    for interface in config.list_nodes(interface_base):
+        if config.exists(interface_base + [interface, 'disable']):
+            config.delete(interface_base + [interface, 'disable'])
+            config.set(interface_base + [interface, 'mode'], value='disable')

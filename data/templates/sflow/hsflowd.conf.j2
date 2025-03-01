@@ -25,6 +25,9 @@ sflow {
   pcap { dev={{ iface }} }
 {%     endfor %}
 {% endif %}
+{% if enable_egress is vyos_defined %}
+  psample { group=1 egress=on }
+{% endif %}
 {% if drop_monitor_limit is vyos_defined %}
   dropmon { limit={{ drop_monitor_limit }} start=on sw=on hw=off }
 {% endif %}

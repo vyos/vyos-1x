@@ -23,8 +23,8 @@ from vyos.utils.process import is_systemd_service_running
 from vyos.utils.dict import dict_to_paths
 
 CLI_SHELL_API = '/bin/cli-shell-api'
-SET = '/usr/libexec/vyos/vyconf/vy_set'
-DELETE = '/usr/libexec/vyos/vyconf/vy_delete'
+SET = '/opt/vyatta/sbin/my_set'
+DELETE = '/opt/vyatta/sbin/my_delete'
 COMMENT = '/opt/vyatta/sbin/my_comment'
 COMMIT = '/opt/vyatta/sbin/my_commit'
 DISCARD = '/opt/vyatta/sbin/my_discard'

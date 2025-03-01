@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="monitoring">
+        <properties>
+          <help>Monitoring services</help>
+        </properties>
+        <children>
+          <node name="network-event" owner="${vyos_conf_scripts_dir}/service_monitoring_network_event.py">
+            <properties>
+              <help>Network event logger</help>
+              <priority>1280</priority>
+            </properties>
+            <children>
+              <node name="event">
+                <properties>
+                  <help>Network event type</help>
+                </properties>
+                <children>
+                  <leafNode name="route">
+                    <properties>
+                      <help>Log routing table update events</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="link">
+                    <properties>
+                      <help>Log link status change events</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="addr">
+                    <properties>
+                      <help>Log address assignment and removal events</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="neigh">
+                    <properties>
+                      <help>Log neighbor (ARP/ND) table update events</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rule">
+                    <properties>
+                      <help>Log policy routing rule change events</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              #include <include/netlink/queue-size.xml.i>
+              #include <include/netlink/log-level.xml.i>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

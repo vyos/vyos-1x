@@ -612,12 +612,17 @@ def nft_default_rule(fw_conf, fw_name, family):
     return " ".join(output)
 
 @register_filter('nft_state_policy')
-def nft_state_policy(conf, state):
+def nft_state_policy(conf, state, bridge=False):
     out = [f'ct state {state}']
+
+    action = conf['action'] if 'action' in conf else None
+
+    if bridge and action == 'reject':
+        action = 'drop' # T7148 - Bridge cannot use reject
 
     if 'log' in conf:
         log_state = state[:3].upper()
-        log_action = (conf['action'] if 'action' in conf else 'accept')[:1].upper()
+        log_action = (action if action else 'accept')[:1].upper()
         out.append(f'log prefix "[STATE-POLICY-{log_state}-{log_action}]"')
 
         if 'log_level' in conf:
@@ -626,8 +631,8 @@ def nft_state_policy(conf, state):
 
     out.append('counter')
 
-    if 'action' in conf:
-        out.append(conf['action'])
+    if action:
+        out.append(action)
 
     return " ".join(out)
 
@@ -778,6 +783,11 @@ def conntrack_ct_policy(protocol_conf):
         output.append(f'{item}: {item_value}')
 
     return ", ".join(output)
+
+@register_filter('wlb_nft_rule')
+def wlb_nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight=None, health_state=None, action=None, restore_mark=False):
+    from vyos.wanloadbalance import nft_rule as wlb_nft_rule
+    return wlb_nft_rule(rule_conf, rule_id, local, exclude, limit, weight, health_state, action, restore_mark)
 
 @register_filter('range_to_regex')
 def range_to_regex(num_range):

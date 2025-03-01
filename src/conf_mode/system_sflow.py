@@ -54,7 +54,7 @@ def verify(sflow):
     # Check if configured sflow agent-address exist in the system
     if 'agent_address' in sflow:
         tmp = sflow['agent_address']
-        if not is_addr_assigned(tmp):
+        if not is_addr_assigned(tmp, include_vrf=True):
             raise ConfigError(
                 f'Configured "sflow agent-address {tmp}" does not exist in the system!'
             )

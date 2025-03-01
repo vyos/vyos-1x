@@ -140,7 +140,7 @@
                 <properties>
                   <help>Show DHCP server statistics</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/dhcp.py show_pool_statistics --family inet</command>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_server_pool_statistics --family inet</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
@@ -149,7 +149,7 @@
                         <path>service dhcp-server shared-network-name</path>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/dhcp.py show_pool_statistics --family inet --pool $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_pool_statistics --family inet --pool $6</command>
                   </tagNode>
                 </children>
               </node>
@@ -232,7 +232,7 @@
                 <properties>
                   <help>Show DHCPv6 server statistics</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/dhcp.py show_pool_statistics --family inet6</command>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_server_pool_statistics --family inet6</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
@@ -241,7 +241,7 @@
                         <path>service dhcpv6-server shared-network-name</path>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/dhcp.py show_pool_statistics --family inet6 --pool $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_pool_statistics --family inet6 --pool $6</command>
                   </tagNode>
                 </children>
               </node>

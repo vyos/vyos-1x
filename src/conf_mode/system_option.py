@@ -86,7 +86,7 @@ def verify(options):
 
         if 'source_address' in config:
             if not is_addr_assigned(config['source_address']):
-                raise ConfigError('No interface with give address specified!')
+                raise ConfigError('No interface with given address specified!')
 
     if 'ssh_client' in options:
         config = options['ssh_client']

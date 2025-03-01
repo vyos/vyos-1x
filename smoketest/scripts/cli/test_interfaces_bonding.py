@@ -167,17 +167,24 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_bonding_multi_use_member(self):
         # Define available bonding hash policies
-        for interface in ['bond10', 'bond20']:
+        bonds = ['bond10', 'bond20', 'bond30']
+        for interface in bonds:
             for member in self._members:
                 self.cli_set(self._base_path + [interface, 'member', 'interface', member])
 
         # check validate() - can not use the same member interfaces multiple times
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-
-        self.cli_delete(self._base_path + ['bond20'])
+        # only keep the first bond interface configuration
+        for interface in bonds[1:]:
+            self.cli_delete(self._base_path + [interface])
 
         self.cli_commit()
+
+        bond = bonds[0]
+        member_ifaces = read_file(f'/sys/class/net/{bond}/bonding/slaves').split()
+        for member in self._members:
+            self.assertIn(member, member_ifaces)
 
     def test_bonding_source_interface(self):
         # Re-use member interface that is already a source-interface

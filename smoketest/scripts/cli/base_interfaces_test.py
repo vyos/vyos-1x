@@ -38,6 +38,7 @@ from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.network import get_nft_vrf_zone_mapping
 from vyos.xml_ref import cli_defined
+from vyos.xml_ref import default_value
 
 dhclient_base_dir = directories['isc_dhclient_dir']
 dhclient_process_name = 'dhclient'
@@ -282,6 +283,9 @@ class BasicInterfaceTest:
             if not self._test_dhcp or not self._test_vrf:
                 self.skipTest('not supported')
 
+            cli_default_metric = default_value(self._base_path + [self._interfaces[0],
+                                               'dhcp-options', 'default-route-distance'])
+
             vrf_name = 'purple4'
             self.cli_set(['vrf', 'name', vrf_name, 'table', '65000'])
 
@@ -307,7 +311,28 @@ class BasicInterfaceTest:
                 self.assertIn(str(dhclient_pid), vrf_pids)
                 # and the commandline has the appropriate options
                 cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
-                self.assertIn('-e\x00IF_METRIC=210', cmdline) # 210 is the default value
+                self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
+
+            # T5103: remove interface from VRF instance and move DHCP client
+            # back to default VRF. This must restart the DHCP client process
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'vrf'])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, 'default')
+                # Check if dhclient process runs
+                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface, timeout=10)
+                self.assertTrue(dhclient_pid)
+                # .. inside the appropriate VRF instance
+                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                self.assertNotIn(str(dhclient_pid), vrf_pids)
+                # and the commandline has the appropriate options
+                cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
+                self.assertIn(f'-e\x00IF_METRIC={cli_default_metric}', cmdline)
 
             self.cli_delete(['vrf', 'name', vrf_name])
 
@@ -340,6 +365,26 @@ class BasicInterfaceTest:
                 # .. inside the appropriate VRF instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
                 self.assertIn(str(tmp), vrf_pids)
+
+            # T7135: remove interface from VRF instance and move DHCP client
+            # back to default VRF. This must restart the DHCP client process
+            for interface in self._interfaces:
+                self.cli_delete(self._base_path + [interface, 'vrf'])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, 'default')
+
+                # Check if dhclient process runs
+                tmp = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
+                self.assertTrue(tmp)
+                # .. inside the appropriate VRF instance
+                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                self.assertNotIn(str(tmp), vrf_pids)
+
 
             self.cli_delete(['vrf', 'name', vrf_name])
 

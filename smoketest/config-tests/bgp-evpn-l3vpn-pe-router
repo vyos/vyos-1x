@@ -101,8 +101,8 @@ set system login user vyos authentication plaintext-password ''
 set system name-server '192.0.2.251'
 set system name-server '192.0.2.252'
 set system name-server '2001:db8::1'
-set system syslog global facility all level 'info'
-set system syslog global facility local7 level 'debug'
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'
 set vrf name blue protocols bgp address-family ipv4-unicast redistribute connected
 set vrf name blue protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
 set vrf name blue protocols bgp system-as '100'

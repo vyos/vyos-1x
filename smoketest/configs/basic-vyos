@@ -236,6 +236,9 @@ system {
             facility security {
                 level info
             }
+            marker {
+                interval 1000
+            }
             preserve-fqdn
         }
         host syslog.vyos.net {
@@ -251,6 +254,7 @@ system {
             format {
                 octet-counted
             }
+            protocol tcp
             port 8000
         }
     }

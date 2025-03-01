@@ -29,7 +29,34 @@
               </constraint>
             </properties>
             <children>
-              #include <include/generic-disable-node.xml.i>
+              <leafNode name="mode">
+                <properties>
+                  <help>Set LLDP receive/transmit operation mode of this interface</help>
+                  <completionHelp>
+                    <list>disable rx-tx tx rx</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>Do not process or send LLDP messages</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rx-tx</format>
+                    <description>Send and process LLDP messages</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rx</format>
+                    <description>Process incoming LLDP messages</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tx</format>
+                    <description>Send LLDP messages</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(disable|rx-tx|tx|rx)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>rx-tx</defaultValue>
+              </leafNode>
               <node name="location">
                 <properties>
                   <help>LLDP-MED location data</help>

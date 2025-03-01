@@ -2,38 +2,26 @@
 <interfaceDefinition>
   <node name="reset">
     <children>
-      <node name="nhrp">
-        <properties>
-          <help>Clear/Purge NHRP entries</help>
-        </properties>
+      <node name="ip">
         <children>
-          <node name="flush">
+          <node name="nhrp">
             <properties>
-              <help>Clear all non-permanent entries</help>
+              <help>Clear/Purge NHRP entries</help>
             </properties>
             <children>
-              <tagNode name="tunnel">
+              <leafNode name="cache">
                 <properties>
-                  <help>Clear all non-permanent entries</help>
+                  <help>Clear Dynamic cache entries</help>
                 </properties>
-                <command>sudo opennhrpctl flush dev $5 || echo OpenNHRP is not running.</command>
-              </tagNode>
-            </children>
-            <command>sudo opennhrpctl flush || echo OpenNHRP is not running.</command>
-          </node>
-          <node name="purge">
-            <properties>
-              <help>Purge entries from NHRP cache</help>
-            </properties>
-            <children>
-              <tagNode name="tunnel">
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="shortcut">
                 <properties>
-                  <help>Purge all entries from NHRP cache</help>
+                  <help>Clear Shortcut entries</help>
                 </properties>
-                <command>sudo opennhrpctl purge dev $5 || echo OpenNHRP is not running.</command>
-              </tagNode>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
             </children>
-            <command>sudo opennhrpctl purge || echo OpenNHRP is not running.</command>
           </node>
         </children>
       </node>
@@ -41,25 +29,38 @@
   </node>
   <node name="show">
     <children>
-      <node name="nhrp">
+      <node name="ip">
         <properties>
-          <help>Show NHRP (Next Hop Resolution Protocol) information</help>
+          <help>Show IPv4 routing information</help>
         </properties>
         <children>
-          <leafNode name="interface">
+          <node name="nhrp">
             <properties>
-              <help>Show NHRP interface connection information</help>
+              <help>Show NHRP (Next Hop Resolution Protocol) information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/nhrp.py show_interface</command>
-          </leafNode>
-          <leafNode name="tunnel">
-            <properties>
-              <help>Show NHRP tunnel connection information</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/nhrp.py show_tunnel</command>
-          </leafNode>
+            <children>
+              <leafNode name="cache">
+                <properties>
+                  <help>Forwarding cache information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="nhs">
+                <properties>
+                  <help>Next hop server information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="shortcut">
+                <properties>
+                  <help>Shortcut information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
-    </children>
+   </children>
   </node>
 </interfaceDefinition>

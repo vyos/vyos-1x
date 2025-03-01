@@ -1,4 +1,4 @@
-# Copyright 2021-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -120,11 +120,14 @@ class ConfigTreeQuery(GenericConfigQuery):
 
     def get_config_dict(self, path=[], effective=False, key_mangling=None,
                         get_first_key=False, no_multi_convert=False,
-                        no_tag_node_value_mangle=False):
+                        no_tag_node_value_mangle=False, with_defaults=False,
+                        with_recursive_defaults=False):
         return self.config.get_config_dict(path, effective=effective,
                 key_mangling=key_mangling, get_first_key=get_first_key,
                 no_multi_convert=no_multi_convert,
-                no_tag_node_value_mangle=no_tag_node_value_mangle)
+                no_tag_node_value_mangle=no_tag_node_value_mangle,
+                with_defaults=with_defaults,
+                with_recursive_defaults=with_recursive_defaults)
 
 class VbashOpRun(GenericOpRun):
     def __init__(self):

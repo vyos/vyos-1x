@@ -43,6 +43,7 @@
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/interfaces_wireguard.py show_summary --intf-name="$4"</command>
               </leafNode>
+              #include <include/show-interface-type-event-log.xml.i>
             </children>
           </tagNode>
           <node name="wireguard">

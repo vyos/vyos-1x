@@ -30,6 +30,14 @@ acl BLOCKDOMAIN dstdomain {{ domain }}
 {%     endfor %}
 http_access deny BLOCKDOMAIN
 {% endif %}
+
+{% if domain_noncache is vyos_defined %}
+{%     for domain in domain_noncache %}
+acl NOCACHE dstdomain {{ domain }}
+{%     endfor %}
+no_cache deny NOCACHE
+{% endif %}
+
 {% if authentication is vyos_defined %}
 {%     if authentication.children is vyos_defined %}
 auth_param basic children {{ authentication.children }}

@@ -60,7 +60,7 @@ set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 range 0 
 set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 range 0 stop '192.168.189.254'
 set service dhcp-server shared-network-name LAN subnet 192.168.189.0/24 subnet-id '1'
 set service lldp interface all
-set service lldp interface eth1 disable
+set service lldp interface eth1 mode 'disable'
 set service ntp allow-client address '192.168.189.0/24'
 set service ntp listen-address '192.168.189.1'
 set service ntp server time1.vyos.net
@@ -84,5 +84,5 @@ set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX
 set system login user vyos authentication plaintext-password ''
 set system name-server '1.1.1.1'
 set system name-server '9.9.9.9'
-set system syslog global facility all level 'info'
-set system syslog global facility local7 level 'debug'
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'

@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="wireguard">
+        <properties>
+          <help>Reset WireGuard Peers</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>WireGuard interface name</help>
+              <completionHelp>
+                <path>interfaces wireguard</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/reset_wireguard.py reset_peer --interface="$4"</command>
+            <children>
+              <tagNode name="peer">
+                <properties>
+                  <help>WireGuard peer name</help>
+                  <completionHelp>
+                    <path>interfaces wireguard ${COMP_WORDS[3]} peer</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/reset_wireguard.py reset_peer --interface="$4" --peer="$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
