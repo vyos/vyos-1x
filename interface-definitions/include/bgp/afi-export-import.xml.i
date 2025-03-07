@@ -23,20 +23,28 @@
         <valueless/>
       </properties>
     </leafNode>
-    <leafNode name="vrf">
+    <node name="vrf">
       <properties>
         <help>VRF to import from</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>VRF instance name</description>
-        </valueHelp>
-        <completionHelp>
-          <path>vrf name</path>
-          <list>default</list>
-        </completionHelp>
-        <multi/>
       </properties>
-    </leafNode>
+      <children>
+        <leafNode name="name">
+          <properties>
+            <help>VRF to import from</help>
+            <valueHelp>
+              <format>txt</format>
+              <description>VRF instance name</description>
+            </valueHelp>
+            <completionHelp>
+              <path>vrf name</path>
+              <list>default</list>
+            </completionHelp>
+            <multi/>
+          </properties>
+        </leafNode>
+        #include <include/route-map.xml.i>
+      </children>
+    </node>
   </children>
 </node>
 <!-- include end -->

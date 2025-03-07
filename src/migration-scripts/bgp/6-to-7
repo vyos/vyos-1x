@@ -1,0 +1,47 @@
+# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7163: migrate "address-family ipv4|6-unicast redistribute table" from a multi
+# leafNode to a tagNode. This is needed to support per table definition of a
+# route-map and/or metric
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    bgp_base = ['protocols', 'bgp']
+    # Delete 'import/export' in default vrf if 'both' exists
+    if config.exists(bgp_base):
+        for address_family in ['ipv4-unicast', 'ipv6-unicast']:
+            full_path = bgp_base + ['address-family', address_family, 'import',
+                                  'vrf']
+            if config.exists(full_path):
+                vrflist = config.return_values(full_path)
+                config.delete(full_path)
+                for vrf_name in vrflist:
+                    config.set(full_path + ['name'], value=vrf_name, replace=False)
+
+
+    # Delete import/export in vrfs if both exists
+    if config.exists(['vrf', 'name']):
+        for vrf in config.list_nodes(['vrf', 'name']):
+            vrf_base = ['vrf', 'name', vrf]
+            for address_family in ['ipv4-unicast', 'ipv6-unicast']:
+                full_path = vrf_base + bgp_base + ['address-family', address_family, 'import',
+                                  'vrf']
+                if config.exists(full_path):
+                    vrflist = config.return_values(full_path)
+                    config.delete(full_path)
+                    for vrf_name in vrflist:
+                        config.set(full_path + ['name'], value=vrf_name, replace=False)

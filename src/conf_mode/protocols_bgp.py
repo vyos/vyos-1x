@@ -57,7 +57,7 @@ def verify_vrf_as_import(search_vrf_name: str, afi_name: str, vrfs_config: dict)
     """
     for vrf_name, vrf_config in vrfs_config.items():
         import_list = dict_search(
-            f'protocols.bgp.address_family.{afi_name}.import.vrf',
+            f'protocols.bgp.address_family.{afi_name}.import.vrf.name',
             vrf_config)
         if import_list:
             if search_vrf_name in import_list:
@@ -121,9 +121,10 @@ def verify_vrflist_import(afi_name: str, afi_config: dict, vrfs_config: dict) ->
     :return: if vrf contains rd and route-target options return true else false
     :rtype: bool
     """
-    for vrf_name in afi_config['import']['vrf']:
-        if verify_vrf_import(vrf_name, vrfs_config, afi_name):
-            return True
+    if dict_search('import.vrf.name', afi_config) is not None:
+        for vrf_name in afi_config['import']['vrf']['name']:
+            if verify_vrf_import(vrf_name, vrfs_config, afi_name):
+                return True
     return False
 
 def verify_remote_as(peer_config, bgp_config):
@@ -511,7 +512,7 @@ def verify(config_dict):
 
                 # Verify if VRFs in import do not contain rd
                 # and route-target options
-                if dict_search('import.vrf', afi_config) is not None:
+                if dict_search('import.vrf.name', afi_config) is not None:
                     # Verify if VRF with import does not contain rd
                     # and route-target options
                     if verify_vrf_import_options(afi_config):
@@ -529,9 +530,14 @@ def verify(config_dict):
                         raise ConfigError('Please unconfigure VPN to VRF commands before '\
                                           'using "import vrf" commands!')
 
-                # Verify that the export/import route-maps do exist
+                # Verify that the vpn export/import route-maps do exist
                 for export_import in ['export', 'import']:
                     tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
+                    if tmp: verify_route_map(tmp, bgp)
+
+                # Verify that the vrf import route-maps do exist
+                if dict_search('import.vrf.route_map', afi_config) is not None:
+                    tmp = dict_search(f'import.vrf.route_map', afi_config)
                     if tmp: verify_route_map(tmp, bgp)
 
                 # per-vrf sid and per-af sid are mutually exclusive

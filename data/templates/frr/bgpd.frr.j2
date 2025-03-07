@@ -352,8 +352,11 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         if afi_config.import.vpn is vyos_defined %}
   import vpn
 {%         endif %}
-{%         if afi_config.import.vrf is vyos_defined %}
-{%             for vrf in afi_config.import.vrf %}
+{%         if afi_config.import.vrf.route_map is vyos_defined %}
+  import vrf route-map {{ afi_config.import.vrf.route_map }}
+{%         endif %}
+{%         if afi_config.import.vrf.name is vyos_defined %}
+{%             for vrf in afi_config.import.vrf.name %}
   import vrf {{ vrf }}
 {%             endfor %}
 {%         endif %}
