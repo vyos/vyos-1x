@@ -194,6 +194,22 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="type">
+                <properties>
+                <help>User type: operator or administrator</help>
+                <completionHelp>
+                  <list>operator administrator</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>operator</format>
+                    <description>Operator level user tupe.</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>administrator</format>
+                    <description>Administrator level user type</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>              
             </children>
           </tagNode>
           #include <include/radius-server-ipv4-ipv6.xml.i>
