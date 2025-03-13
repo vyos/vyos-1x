@@ -1,17 +1,8 @@
-Welcome to VyOS!
+Welcome to iGOS.
 
-   ┌── ┐
-   . VyOS {{ version_data.version }}
-   └ ──┘  {{ version_data.release_train }}
+   ┌───┐
+   │ Perle iGOS {{ version_data.version }}
+   ├───┘        {{ version_data.release_train }}
+   │ 
 
-{% if version_data.lts_build %}
- * Support portal: {{ version_data.support_url }}
-{% endif %}
- * Documentation:  {{ version_data.documentation_url }}
- * Project news:   {{ version_data.project_news_url }}
- * Bug reports:    {{ version_data.bugtracker_url }}
-
-You can change this banner using "set system login banner post-login" command.
-
-VyOS is a free software distribution that includes multiple components,
-you can check individual component licenses under /usr/share/doc/*/copyright
+Modify the default banner using "set system login banner post-login" command.

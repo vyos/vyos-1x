@@ -31,7 +31,7 @@ POSTLOGIN_FILE = r'/etc/motd'
 POSTLOGIN_VYOS_FILE = r'/run/motd.d/01-vyos-nonproduction'
 
 default_config_data = {
-    'issue': 'Welcome to VyOS - \\n \\l\n\n',
+    'issue': 'Welcome to iGOS - \\n \\l\n\n',
     'issue_net': ''
 }
 
