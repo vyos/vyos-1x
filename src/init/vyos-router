@@ -131,8 +131,8 @@ unmount_encrypted_config() {
 }
 
 
-# if necessary, provide initial config
-init_prod_model_bootfile () {
+# if necessary, provide initial config and remove nodes by product and model
+init_prod_model_bootfile_and_nodes () {
 
     # Scan /proc/cmdline for the token 'prod_id=IOLAN|IRG|IT' and extract the model-string
     prod_string=$(grep -oP '(?<=prod_id=)[^\s]+' /proc/cmdline)
@@ -156,6 +156,7 @@ init_prod_model_bootfile () {
 
     # Find the file with the model-string extension in /usr/libexec/vyos/init/model-info/
     model_file="/usr/share/vyos/model-info/default-config/config-${prod_string}-${model_string}"
+    cli_remove_file="/usr/share/vyos/model-info/cli-remove/cli-remove-${prod_string}-${model_string}"
 
     # Check if the file exists
     if [ -f $model_file ]; then
@@ -165,7 +166,27 @@ init_prod_model_bootfile () {
         $vyos_libexec_dir/add-system-version.py >> $DEFAULT_BOOTFILE
         echo "System version string added to /opt/vyatta/etc/config.boot.default"
     else
-        echo "File $model_file not found."
+        echo "File $model_file not found...keeping generic default config"
+    fi
+
+    # Ensure the cli/node removal text file exists
+    if [ ! -f $cli_remove_file ]; then
+        echo "File $cli_remove_file not found...no cli nodes to remove"
+    else
+        echo "Cli node remove file found: $cli_remove_file ...removing all cli nodes:"
+        # Read each line from the file and remove the file specified in the line
+        while IFS= read -r line; do
+            # Store the filename in a variable
+            cli_node_to_remove="$line"
+    
+            # Check if the file exists and remove it
+            if [ -f "$cli_node_to_remove" ]; then
+                 echo "Removing cli node: $cli_node_to_remove"
+                 rm "$cli_node_to_remove"
+            else
+                 echo "Cli node not found: $cli_node_to_remove"
+            fi
+        done < $cli_remove_file
     fi
 }
 
@@ -554,7 +575,7 @@ start ()
     # This is a safety net!
     systemctl start frr.service
 
-    disabled bootfile || init_prod_model_bootfile
+    disabled bootfile || init_prod_model_bootfile_and_nodes
 
     disabled bootfile || init_bootfile
 
