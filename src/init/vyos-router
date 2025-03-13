@@ -179,14 +179,15 @@ init_prod_model_bootfile_and_nodes () {
             # Store the filename in a variable
             cli_node_to_remove="$line"
     
-            # Check if the file exists and remove it
-            if [ -f "/opt/vyatta/share/$cli_node_to_remove" ]; then
-                 echo "Removing cli node: $cli_node_to_remove"
-                 rm "/opt/vyatta/share/$cli_node_to_remove"
+            # Check if the node directory exists and remove it
+            if [ -d "/opt/vyatta/share/$cli_node_to_remove" ]; then
+                 echo "Removing cli directory node: $cli_node_to_remove"
+                 rm -rf "/opt/vyatta/share/$cli_node_to_remove"
             else
                  echo "Cli node not found: $cli_node_to_remove"
             fi
         done < $cli_remove_file
+        sync
     fi
 }
 
