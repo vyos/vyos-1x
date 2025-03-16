@@ -1,1 +1,1 @@
-rem curr test 1
+rem curr 2
