@@ -357,6 +357,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
   import vrf {{ vrf }}
 {%             endfor %}
 {%         endif %}
+{%         if afi_config.route_map.vrf.import is vyos_defined %}
+  import vrf route-map {{ afi_config.route_map.vrf.import }}
+{%         endif %}
 {%         if afi_config.label.vpn.export is vyos_defined %}
   label vpn export {{ afi_config.label.vpn.export }}
 {%         endif %}

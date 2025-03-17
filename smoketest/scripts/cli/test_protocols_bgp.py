@@ -1540,6 +1540,42 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'neighbor OVERLAY remote-as {int(ASN) + 1}', conf)
         self.assertIn(f'neighbor OVERLAY local-as {int(ASN) + 1}', conf)
 
+    def test_bgp_30_import_vrf_routemap(self):
+        router_id = '127.0.0.3'
+        table = '1000'
+        vrf = 'red'
+        vrf_base = ['vrf', 'name', vrf]
+        self.cli_set(vrf_base + ['table', table])
+        self.cli_set(vrf_base + ['protocols', 'bgp', 'system-as', ASN])
+        self.cli_set(
+            vrf_base + ['protocols', 'bgp', 'parameters', 'router-id',
+                        router_id])
+
+        self.cli_set(
+            base_path + ['address-family', 'ipv4-unicast', 'import',
+                         'vrf', vrf])
+        self.cli_set(
+            base_path + ['address-family', 'ipv4-unicast', 'route-map',
+                         'vrf', 'import',  route_map_in])
+
+        self.cli_commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}',
+                                      endsection='^exit')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' address-family ipv4 unicast', frrconfig)
+
+        self.assertIn(f'  import vrf {vrf}', frrconfig)
+        self.assertIn(f'  import vrf route-map {route_map_in}', frrconfig)
+
+        # Verify FRR bgpd configuration
+        frr_vrf_config = self.getFRRconfig(
+            f'router bgp {ASN} vrf {vrf}', endsection='^exit')
+        self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
+        self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
+
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'
