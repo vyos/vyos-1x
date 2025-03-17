@@ -134,6 +134,11 @@ unmount_encrypted_config() {
 # if necessary, provide initial config and remove nodes by product and model
 init_prod_model_bootfile_and_nodes () {
 
+    # check if config.boot.default exists 
+    if [ -e $DEFAULT_BOOTFILE ]; then
+        return
+    fi
+
     # Scan /proc/cmdline for the token 'prod_id=IOLAN|IRG|IT' and extract the model-string
     prod_string=$(grep -oP '(?<=prod_id=)[^\s]+' /proc/cmdline)
 
