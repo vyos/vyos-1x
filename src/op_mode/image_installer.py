@@ -26,7 +26,7 @@ from os import environ
 from os import readlink
 from os import getpid, getppid
 from typing import Union
-from urllib.parse import urlparse, uses_relative
+from urllib.parse import urlparse
 from passlib.hosts import linux_context
 from errno import ENOSPC
 
