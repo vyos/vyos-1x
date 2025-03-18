@@ -326,19 +326,25 @@ def copy_all_matching(src: str, dst: str, *, follow_symlinks=True) -> None:
     :param follow_symlinks: If False, symlinks won't be followed
     """
     og_files: list[str] = glob(src)
-    for og in og_files:
-        if not Path(og).is_file():
-            return
-        # Create directory if needed and ensure proper ownership
-        if Path(dst).is_dir():
-            st = Path(src).parent.stat()
-            Path(dst).mkdir(parents=True, exist_ok=True)
-            chmod(Path(dst), st.st_mode)
-            chown(Path(dst), user=st.st_uid, group=st.st_gid)
-            dst = Path(dst).joinpath(Path(og).name)
+    dst = Path(dst)
 
-        st = Path(og).stat()
+    for og in og_files:
+        og = Path(og)
+
+        if not og.is_file():
+            return
+
+        # Create directory if needed and ensure proper ownership
+        if dst.is_dir():
+            st = og.parent.stat()
+            dst.mkdir(parents=True, exist_ok=True)
+            chmod(dst, st.st_mode)
+            chown(dst, user=st.st_uid, group=st.st_gid)
+            dst = dst.joinpath(og.name)
+
+        st = og.stat()
         copy(og, dst, follow_symlinks=follow_symlinks)
+        chmod(dst, st.st_mode)
         chown(dst, user=st.st_uid, group=st.st_gid)
 
 
@@ -1040,10 +1046,6 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         if no_prompt or copy_ssh_host_keys():
             print('Copying SSH host keys')
             copy_all_matching('/etc/ssh/ssh_host*', target_ssh_etc)
-            # Path(target_ssh_etc).mkdir(parents=True)
-            # host_keys: list[str] = glob('/etc/ssh/ssh_host*')
-            # for host_key in host_keys:
-            #     copy(host_key, target_ssh_etc)
 
         if no_prompt or copy_ssh_hosts_fingerprints():
             if not any([
@@ -1064,28 +1066,6 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                         src=src_ssh_root,
                         dst=target_ssh_root
                     )
-            # print('Copying known SSH hosts (fingerprints)')
-            # # Copy global fingerprints
-            # copy_all_matching(
-            #     src='/etc/ssh/known_hosts*',
-            #     dst=target_ssh_etc,
-            #     follow_symlinks=False
-            # )
-            # # Copy saved fingerprints of each user
-            # homedirs: list[str] = glob('/home/*')
-            # for user_dir in homedirs:
-            #     # target = f'{root_dir}/boot/{image_name}/rw{user_dir}/.ssh/'
-            #     # copy_all_matching(
-            #     #     src=f'{user_dir}/.ssh/known_hosts*',
-            #     #     dst=target,
-            #     #     follow_symlinks=False
-            #     # )
-            # # Copy root fingerprints
-            # copy_all_matching(
-            #     src='/root/.ssh/known_hosts*',
-            #     dst=target_ssh_root,
-            #     follow_symlinks=False
-            # )
 
         # copy system image and kernel files
         print('Copying system image files')
