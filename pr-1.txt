@@ -1,1 +1,1 @@
-rem curr 2
+rem ga 1
