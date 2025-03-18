@@ -332,7 +332,7 @@ def copy_all_matching(src: str, dst: str, *, follow_symlinks=True) -> None:
         og = Path(og)
 
         if not og.is_file():
-            return
+            continue
 
         # Create directory if needed and ensure proper ownership
         if dst.is_dir():
