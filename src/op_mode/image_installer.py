@@ -26,7 +26,7 @@ from os import environ
 from os import readlink
 from os import getpid, getppid
 from typing import Union
-from urllib.parse import urlparse
+from urllib.parse import urlparse, uses_relative
 from passlib.hosts import linux_context
 from errno import ENOSPC
 
@@ -37,7 +37,7 @@ from vyos.remote import download
 from vyos.system import disk, grub, image, compat, raid, SYSTEM_CFG_VER
 from vyos.template import render
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
-from vyos.utils.file import chmod_2775
+from vyos.utils.file import chmod, chmod_2775
 from vyos.utils.process import cmd, run, rc_cmd
 from vyos.version import get_version_data
 
@@ -316,6 +316,30 @@ def copy_preserve_owner(src: str, dst: str, *, follow_symlinks=True):
     st = Path(src).stat()
     copy(src, dst, follow_symlinks=follow_symlinks)
     chown(dst, user=st.st_uid)
+
+
+def copy_all_matching(src: str, dst: str, *, follow_symlinks=True) -> None:
+    """Copies all that match the given pattern files from to the target
+
+    :param src: Path to the file or files to copy; can be a pattern
+    :param dst: destination path;
+    :param follow_symlinks: If False, symlinks won't be followed
+    """
+    og_files: list[str] = glob(src)
+    for og in og_files:
+        if not Path(og).is_file():
+            return
+        # Create directory if needed and ensure proper ownership
+        if Path(dst).is_dir():
+            st = Path(src).parent.stat()
+            Path(dst).mkdir(parents=True, exist_ok=True)
+            chmod(Path(dst), st.st_mode)
+            chown(Path(dst), user=st.st_uid, group=st.st_gid)
+            dst = Path(dst).joinpath(Path(og).name)
+
+        st = Path(og).stat()
+        copy(og, dst, follow_symlinks=follow_symlinks)
+        chown(dst, user=st.st_uid, group=st.st_gid)
 
 
 def copy_previous_installation_data(target_dir: str) -> None:
@@ -630,6 +654,19 @@ def copy_ssh_host_keys() -> bool:
         bool: user's decision
     """
     if ask_yes_no('Would you like to copy SSH host keys?', default=True):
+        return True
+    return False
+
+
+def copy_ssh_hosts_fingerprints() -> bool:
+    """Ask user to copy known SSH hosts (fingerprints)
+
+    Returns:
+        bool: user's decision
+    """
+    question = 'Would you like to save the SSH known hosts (fingerprints) '\
+               'from your current configuration?'
+    if ask_yes_no(question, default=True):
         return True
     return False
 
@@ -995,13 +1032,60 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             chmod_2775(target_config_dir)
             Path(f'{target_config_dir}/.vyatta_config').touch()
 
-        target_ssh_dir: str = f'{root_dir}/boot/{image_name}/rw/etc/ssh/'
+        src_ssh_etc: str = '/etc/ssh/known_hosts'
+        src_ssh_root: str = '/root/.ssh'
+        target_ssh_etc: str = f'{root_dir}/boot/{image_name}/rw/etc/ssh/'
+        target_ssh_root: str = f'{root_dir}/boot/{image_name}/rw/root/.ssh/'
+
         if no_prompt or copy_ssh_host_keys():
             print('Copying SSH host keys')
-            Path(target_ssh_dir).mkdir(parents=True)
-            host_keys: list[str] = glob('/etc/ssh/ssh_host*')
-            for host_key in host_keys:
-                copy(host_key, target_ssh_dir)
+            copy_all_matching('/etc/ssh/ssh_host*', target_ssh_etc)
+            # Path(target_ssh_etc).mkdir(parents=True)
+            # host_keys: list[str] = glob('/etc/ssh/ssh_host*')
+            # for host_key in host_keys:
+            #     copy(host_key, target_ssh_etc)
+
+        if no_prompt or copy_ssh_hosts_fingerprints():
+            if not any([
+                Path(src_ssh_etc).exists(),
+                Path(src_ssh_root).exists(),
+            ]):
+                print('No SSH host fingerprints are found')
+            else:
+                print('Copying known SSH hosts (fingerprints)')
+                if Path(src_ssh_etc).exists():
+                    copy_all_matching(
+                        src=src_ssh_etc,
+                        dst=target_ssh_etc
+                    )
+
+                if Path(src_ssh_root).exists():
+                    copy_all_matching(
+                        src=src_ssh_root,
+                        dst=target_ssh_root
+                    )
+            # print('Copying known SSH hosts (fingerprints)')
+            # # Copy global fingerprints
+            # copy_all_matching(
+            #     src='/etc/ssh/known_hosts*',
+            #     dst=target_ssh_etc,
+            #     follow_symlinks=False
+            # )
+            # # Copy saved fingerprints of each user
+            # homedirs: list[str] = glob('/home/*')
+            # for user_dir in homedirs:
+            #     # target = f'{root_dir}/boot/{image_name}/rw{user_dir}/.ssh/'
+            #     # copy_all_matching(
+            #     #     src=f'{user_dir}/.ssh/known_hosts*',
+            #     #     dst=target,
+            #     #     follow_symlinks=False
+            #     # )
+            # # Copy root fingerprints
+            # copy_all_matching(
+            #     src='/root/.ssh/known_hosts*',
+            #     dst=target_ssh_root,
+            #     follow_symlinks=False
+            # )
 
         # copy system image and kernel files
         print('Copying system image files')
