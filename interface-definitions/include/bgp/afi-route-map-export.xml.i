@@ -12,7 +12,7 @@
     <constraint>
       #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
     </constraint>
-    <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+    <constraintErrorMessage>Route map names can only contain alphanumeric characters, hyphens, and underscores</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
