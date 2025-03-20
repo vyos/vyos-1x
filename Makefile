@@ -9,6 +9,7 @@ BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
 PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts)
 LIBVYOSCONFIG_BUILD_PATH := /tmp/libvyosconfig/_build/libvyosconfig.so
+VALIDATORS_C_DIR := src/validators-c
 
 config_xml_src = $(wildcard interface-definitions/*.xml.in)
 config_xml_obj = $(config_xml_src:.xml.in=.xml)
@@ -82,12 +83,20 @@ op_mode_definitions: $(op_xml_obj)
 	# could mask help strings or mandatory priority statements
 	find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
+.PHONY: vycvalidators
+vycvalidators:
+	@for module in `ls $(VALIDATORS_C_DIR)`
+	do
+		# Assuming each module is a C file, adjust if necessary for directories
+		$(CC) -Wall -Wextra -O3 -o src/validators/$$module $(VALIDATORS_C_DIR)/$$module/$$module.c
+	done
+
 .PHONY: vyshim
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+all: clean libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json vycvalidators
 
 .PHONY: clean
 clean:
