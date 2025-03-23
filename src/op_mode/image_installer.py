@@ -32,16 +32,10 @@ from errno import ENOSPC
 
 from psutil import disk_partitions
 
-from vyos.base import Warning
 from vyos.configtree import ConfigTree
 from vyos.remote import download
 from vyos.system import disk, grub, image, compat, raid, SYSTEM_CFG_VER
 from vyos.template import render
-from vyos.utils.auth import (
-    DEFAULT_PASSWORD,
-    EPasswdStrength,
-    evaluate_strength
-)
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.process import cmd, run, rc_cmd
@@ -89,9 +83,6 @@ MSG_WARN_ROOT_SIZE_TOOBIG: str = 'The size is too big. Try again.'
 MSG_WARN_ROOT_SIZE_TOOSMALL: str = 'The size is too small. Try again'
 MSG_WARN_IMAGE_NAME_WRONG: str = 'The suggested name is unsupported!\n'\
 'It must be between 1 and 64 characters long and contains only the next characters: .+-_ a-z A-Z 0-9'
-
-MSG_WARN_CHANGE_PASSWORD: str = 'Default password used. Consider changing ' \
-    'it on next login.'
 MSG_WARN_PASSWORD_CONFIRM: str = 'The entered values did not match. Try again'
 'Installing a different image flavor may cause functionality degradation or break your system.\n' \
 'Do you want to continue with installation?'
@@ -787,20 +778,10 @@ def install_image() -> None:
     while True:
         user_password: str = ask_input(MSG_INPUT_PASSWORD, no_echo=True,
                                        non_empty=True)
-
-        if user_password == DEFAULT_PASSWORD:
-            Warning(MSG_WARN_CHANGE_PASSWORD)
-        else:
-            result = evaluate_strength(user_password)
-            if result['strength'] == EPasswdStrength.WEAK:
-                Warning(result['error'])
-
         confirm: str = ask_input(MSG_INPUT_PASSWORD_CONFIRM, no_echo=True,
                                  non_empty=True)
-
         if user_password == confirm:
             break
-
         print(MSG_WARN_PASSWORD_CONFIRM)
 
     # ask for default console

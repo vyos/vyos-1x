@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import warnings
 
 from passlib.hosts import linux_context
 from psutil import users
@@ -25,17 +24,11 @@ from pwd import getpwuid
 from sys import exit
 from time import sleep
 
-from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.template import is_ipv4
-from vyos.utils.auth import (
-    DEFAULT_PASSWORD,
-    EPasswdStrength,
-    evaluate_strength,
-    get_current_user
-)
+from vyos.utils.auth import get_current_user
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
@@ -152,18 +145,6 @@ def verify(login):
             for s_user in system_users:
                 if s_user.pw_name == user and s_user.pw_uid < MIN_USER_UID:
                     raise ConfigError(f'User "{user}" can not be created, conflict with local system account!')
-
-            # T6353: Check password for complexity using cracklib.
-            # A user password should be sufficiently complex
-            plaintext_password = dict_search(
-                path='authentication.plaintext_password',
-                dict_object=user_config
-            ) or None
-
-            if plaintext_password is not None:
-                result = evaluate_strength(plaintext_password)
-                if result['strength'] == EPasswdStrength.WEAK:
-                    Warning(result['error'])
 
             for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
                 if 'type' not in pubkey_options:

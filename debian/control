@@ -127,8 +127,6 @@ Depends:
 # Live filesystem tools
   squashfs-tools,
   fuse-overlayfs,
-# Tools for checking password strength
-  python3-cracklib,
 ## End installer
   auditd,
   iputils-arping,

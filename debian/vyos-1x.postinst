@@ -195,10 +195,6 @@ if [ ! -x $PRECONFIG_SCRIPT ]; then
 EOF
 fi
 
-# cracklib-runtime default database location
-CRACKLIB_DIR=/var/cache/cracklib
-CRACKLIB_DB=cracklib_dict
-
 # create /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
 POSTCONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
 if [ ! -x $POSTCONFIG_SCRIPT ]; then
@@ -210,15 +206,7 @@ if [ ! -x $POSTCONFIG_SCRIPT ]; then
 # This script is executed at boot time after VyOS configuration is fully applied.
 # Any modifications required to work around unfixed bugs
 # or use services not available through the VyOS CLI system can be placed here.
-#
-# T6353 - Just in case, check if cracklib was installed properly
-# If the database file is missing, re-install the runtime package
-#
-if [ ! -f "${CRACKLIB_DIR}/${CRACKLIB_DB}.pwd" ]; then
-    mkdir -p $CRACKLIB_DIR
-    /usr/sbin/create-cracklib-dict -o $CRACKLIB_DIR/$CRACKLIB_DB \
-        /usr/share/dict/cracklib-small
-fi
+
 EOF
 fi
 
