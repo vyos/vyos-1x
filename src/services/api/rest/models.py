@@ -293,6 +293,13 @@ class TracerouteModel(ApiModel):
         }
 
 
+class InfoQueryParams(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    version: bool = True
+    hostname: bool = True
+
+
 class Success(BaseModel):
     success: bool
     data: Union[str, bool, Dict]

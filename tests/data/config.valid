@@ -26,6 +26,7 @@ normal-node {
         }
     }
     option-with-quoted-value "some-value"
+    value-with-leading-slashes "//other-value"
 }
 
 trailing-leaf-node-option some-value
@@ -35,5 +36,5 @@ empty-node {
 
 trailing-leaf-node-without-value
 
-// Trailing comment
-// Another trailing comment
+// some version string info
+// continued

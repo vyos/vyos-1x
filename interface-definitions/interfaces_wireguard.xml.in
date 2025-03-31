@@ -56,10 +56,7 @@
           <leafNode name="private-key">
             <properties>
               <help>Base64 encoded private key</help>
-              <constraint>
-                <validator name="base64"/>
-              </constraint>
-              <constraintErrorMessage>Key is not base64-encoded</constraintErrorMessage>
+              #include <include/constraint/wireguard-keys.xml.i>
             </properties>
           </leafNode>
           <tagNode name="peer">
@@ -75,20 +72,14 @@
               #include <include/generic-description.xml.i>
               <leafNode name="public-key">
                 <properties>
-                  <help>base64 encoded public key</help>
-                  <constraint>
-                    <validator name="base64"/>
-                  </constraint>
-                  <constraintErrorMessage>Key is not base64-encoded</constraintErrorMessage>
+                  <help>Base64 encoded public key</help>
+                  #include <include/constraint/wireguard-keys.xml.i>
                 </properties>
               </leafNode>
               <leafNode name="preshared-key">
                 <properties>
-                  <help>base64 encoded preshared key</help>
-                  <constraint>
-                    <validator name="base64"/>
-                  </constraint>
-                  <constraintErrorMessage>Key is not base64-encoded</constraintErrorMessage>
+                  <help>Base64 encoded preshared key</help>
+                  #include <include/constraint/wireguard-keys.xml.i>
                 </properties>
               </leafNode>
               <leafNode name="allowed-ips">

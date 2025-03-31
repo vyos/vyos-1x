@@ -253,15 +253,17 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
                     if not source_addr:
                         source_addr = dict_search_args(rule_conf, 'source', 'group', 'domain_group')
                         if not source_addr:
-                            source_addr = dict_search_args(rule_conf, 'source', 'fqdn')
+                            source_addr = dict_search_args(rule_conf, 'source', 'group', 'remote_group')
                             if not source_addr:
-                                source_addr = dict_search_args(rule_conf, 'source', 'geoip', 'country_code')
-                                if source_addr:
-                                    source_addr = str(source_addr)[1:-1].replace('\'','')
-                                    if 'inverse_match' in dict_search_args(rule_conf, 'source', 'geoip'):
-                                        source_addr = 'NOT ' + str(source_addr)
+                                source_addr = dict_search_args(rule_conf, 'source', 'fqdn')
                                 if not source_addr:
-                                    source_addr = 'any'
+                                    source_addr = dict_search_args(rule_conf, 'source', 'geoip', 'country_code')
+                                    if source_addr:
+                                        source_addr = str(source_addr)[1:-1].replace('\'','')
+                                        if 'inverse_match' in dict_search_args(rule_conf, 'source', 'geoip'):
+                                            source_addr = 'NOT ' + str(source_addr)
+                                    if not source_addr:
+                                        source_addr = 'any'
 
             # Get destination
             dest_addr = dict_search_args(rule_conf, 'destination', 'address')
@@ -272,15 +274,17 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
                     if not dest_addr:
                         dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'domain_group')
                         if not dest_addr:
-                            dest_addr = dict_search_args(rule_conf, 'destination', 'fqdn')
+                            dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'remote_group')
                             if not dest_addr:
-                                dest_addr = dict_search_args(rule_conf, 'destination', 'geoip', 'country_code')
-                                if dest_addr:
-                                    dest_addr = str(dest_addr)[1:-1].replace('\'','')
-                                    if 'inverse_match' in dict_search_args(rule_conf, 'destination', 'geoip'):
-                                        dest_addr = 'NOT ' + str(dest_addr)
+                                dest_addr = dict_search_args(rule_conf, 'destination', 'fqdn')
                                 if not dest_addr:
-                                    dest_addr = 'any'
+                                    dest_addr = dict_search_args(rule_conf, 'destination', 'geoip', 'country_code')
+                                    if dest_addr:
+                                        dest_addr = str(dest_addr)[1:-1].replace('\'','')
+                                        if 'inverse_match' in dict_search_args(rule_conf, 'destination', 'geoip'):
+                                            dest_addr = 'NOT ' + str(dest_addr)
+                                    if not dest_addr:
+                                        dest_addr = 'any'
 
             # Get inbound interface
             iiface = dict_search_args(rule_conf, 'inbound_interface', 'name')
@@ -571,6 +575,8 @@ def show_firewall_group(name=None):
                     row.append("\n".join(sorted(group_conf['port'])))
                 elif 'interface' in group_conf:
                     row.append("\n".join(sorted(group_conf['interface'])))
+                elif 'url' in group_conf:
+                    row.append(group_conf['url'])
                 else:
                     row.append('N/D')
                 rows.append(row)

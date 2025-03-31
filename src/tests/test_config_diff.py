@@ -31,11 +31,11 @@ class TestConfigDiff(TestCase):
     def test_unit(self):
         diff = vyos.configtree.DiffTree(self.config_left, self.config_null)
         sub = diff.sub
-        self.assertEqual(sub.to_string(), self.config_left.to_string())
+        self.assertEqual(sub, self.config_left)
 
         diff = vyos.configtree.DiffTree(self.config_null, self.config_left)
         add = diff.add
-        self.assertEqual(add.to_string(), self.config_left.to_string())
+        self.assertEqual(add, self.config_left)
 
     def test_symmetry(self):
         lr_diff = vyos.configtree.DiffTree(self.config_left,
@@ -45,10 +45,10 @@ class TestConfigDiff(TestCase):
 
         sub = lr_diff.sub
         add = rl_diff.add
-        self.assertEqual(sub.to_string(), add.to_string())
+        self.assertEqual(sub, add)
         add = lr_diff.add
         sub = rl_diff.sub
-        self.assertEqual(add.to_string(), sub.to_string())
+        self.assertEqual(add, sub)
 
     def test_identity(self):
         lr_diff = vyos.configtree.DiffTree(self.config_left,
@@ -61,6 +61,9 @@ class TestConfigDiff(TestCase):
         r_union = vyos.configtree.union(add, inter)
         l_union = vyos.configtree.union(sub, inter)
 
+        # here we must compare string representations instead of using
+        # dunder equal, as we assert equivalence of the values list, which
+        # is optionally ordered at render
         self.assertEqual(r_union.to_string(),
                          self.config_right.to_string(ordered_values=True))
         self.assertEqual(l_union.to_string(),

@@ -1,4 +1,4 @@
 [Service]
 ExecStart=
-ExecStart=/usr/sbin/dropbear -w -j -k -r /etc/dropbear/dropbear_rsa_host_key -b /etc/issue.net -c "/usr/bin/console {{ device }}" -P /run/conserver/dropbear.%I.pid -p %I
+ExecStart=/usr/sbin/dropbear -w -j -k -r /etc/dropbear/dropbear_rsa_host_key -r /etc/dropbear/dropbear_ecdsa_host_key -b /etc/issue.net -c "/usr/bin/console {{ device }}" -P /run/conserver/dropbear.%I.pid -p %I
 PIDFile=/run/conserver/dropbear.%I.pid

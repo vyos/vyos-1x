@@ -55,11 +55,9 @@
                 <!-- The server is authenticated using a certificate -->
                 <key>AuthenticationMethod</key>
                 <string>Certificate</string>
-{% if authentication.client_mode.startswith("eap") %}
                 <!-- The client uses EAP to authenticate -->
                 <key>ExtendedAuthEnabled</key>
                 <integer>1</integer>
-{% endif %}
                 <!-- The next two dictionaries are optional (as are the keys in them), but it is recommended to specify them as the default is to use 3DES.
                      IMPORTANT: Because only one proposal is sent (even if nothing is configured here) it must match the server configuration -->
                 <key>IKESecurityAssociationParameters</key>
@@ -80,9 +78,9 @@
                     <string>{{ esp_encryption.encryption }}</string>
                     <key>IntegrityAlgorithm</key>
                     <string>{{ esp_encryption.hash }}</string>
-{% if esp_encryption.pfs is vyos_defined %}
+{% if ike_encryption.dh_group is vyos_defined %}
                     <key>DiffieHellmanGroup</key>
-                    <integer>{{ esp_encryption.pfs }}</integer>
+                    <integer>{{ ike_encryption.dh_group }}</integer>
 {% endif %}
                 </dict>
                 <!-- Controls whether the client offers Perfect Forward Secrecy (PFS). This should be set to match the server. -->

@@ -82,8 +82,11 @@ mpls ldp
 {%             endfor %}
 {%         endif %}
 {%         if ldp.interface is vyos_defined %}
-{%             for interface in ldp.interface %}
+{%             for interface, iface_config in ldp.interface.items() %}
   interface {{ interface }}
+{%                 if iface_config.disable_establish_hello is vyos_defined %}
+    disable-establish-hello
+{%                 endif %}
   exit
 {%             endfor %}
 {%         endif %}
@@ -135,8 +138,11 @@ mpls ldp
 {%             endfor %}
 {%         endif %}
 {%         if ldp.interface is vyos_defined %}
-{%             for interface in ldp.interface %}
+{%             for interface, iface_config in ldp.interface.items() %}
   interface {{ interface }}
+{%                 if iface_config.disable_establish_hello is vyos_defined %}
+    disable-establish-hello
+{%                 endif %}
 {%             endfor %}
 {%         endif %}
  exit-address-family

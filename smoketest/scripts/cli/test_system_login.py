@@ -25,7 +25,9 @@ import shutil
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from contextlib import redirect_stdout
 from gzip import GzipFile
+from io import StringIO, TextIOWrapper
 from subprocess import Popen
 from subprocess import PIPE
 from pwd import getpwall
@@ -42,6 +44,7 @@ from vyos.xml_ref import default_value
 
 base_path = ['system', 'login']
 users = ['vyos1', 'vyos-roxx123', 'VyOS-123_super.Nice']
+weak_passwd_user = ['test_user', 'passWord1']
 
 ssh_test_command = '/opt/vyatta/bin/vyatta-op-cmd-wrapper show version'
 
@@ -194,18 +197,20 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
     def test_system_login_user(self):
         for user in users:
             name = f'VyOS Roxx {user}'
+            passwd = f'{user}-pSWd-t3st'
             home_dir = f'/tmp/smoketest/{user}'
 
-            self.cli_set(base_path + ['user', user, 'authentication', 'plaintext-password', user])
+            self.cli_set(base_path + ['user', user, 'authentication', 'plaintext-password', passwd])
             self.cli_set(base_path + ['user', user, 'full-name', name])
             self.cli_set(base_path + ['user', user, 'home-directory', home_dir])
 
         self.cli_commit()
 
         for user in users:
+            passwd = f'{user}-pSWd-t3st'
             tmp = ['su','-', user]
             proc = Popen(tmp, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            tmp = f'{user}\nuname -a'
+            tmp = f'{passwd}\nuname -a'
             proc.stdin.write(tmp.encode())
             proc.stdin.flush()
             (stdout, stderr) = proc.communicate()
@@ -228,6 +233,17 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         # check if account is unlocked
         tmp = cmd(f'sudo passwd -S {locked_user}')
         self.assertIn(f'{locked_user} P ', tmp)
+
+    def test_system_login_weak_password_warning(self):
+        self.cli_set(base_path + [
+            'user', weak_passwd_user[0], 'authentication',
+            'plaintext-password', weak_passwd_user[1]
+        ])
+
+        out = self.cli_commit().strip()
+
+        self.assertIn('WARNING: The password complexity is too low', out)
+        self.cli_delete(base_path + ['user', weak_passwd_user[0]])
 
     def test_system_login_otp(self):
         otp_user = 'otp-test_user'

@@ -94,13 +94,17 @@ class VyOSUnitTestSHIM:
         def cli_commit(self):
             if self.debug:
                 print('commit')
-            self._session.commit()
             # During a commit there is a process opening commit_lock, and run()
             # returns 0
             while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
+            # Return the output of commit
+            # Necessary for testing Warning cases
+            out = self._session.commit()
             # Wait for CStore completion for fast non-interactive commits
             sleep(self._commit_guard_time)
+
+            return out
 
         def op_mode(self, path : list) -> None:
             """

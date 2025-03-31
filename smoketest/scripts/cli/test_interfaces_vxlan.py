@@ -25,6 +25,7 @@ from vyos.utils.network import interface_exists
 from vyos.utils.network import get_vxlan_vlan_tunnels
 from vyos.utils.network import get_vxlan_vni_filter
 from vyos.template import is_ipv6
+from vyos import ConfigError
 from base_interfaces_test import BasicInterfaceTest
 
 def convert_to_list(ranges_to_convert):
@@ -113,6 +114,32 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(ttl,        options['linkinfo']['info_data']['ttl'])
             self.assertEqual(Interface(interface).get_admin_state(), 'up')
             ttl += 10
+
+
+    def test_vxlan_group_remote_error(self):
+        intf = 'vxlan60'
+        options = [
+            'group 239.4.4.5',
+            'mtu 1420',
+            'remote 192.168.0.254',
+            'source-address 192.168.0.1',
+            'source-interface eth0',
+            'vni 60'
+        ]
+        params = []
+        for option in options:
+            opts = option.split()
+            params.append(opts[0])
+            self.cli_set(self._base_path + [ intf ] + opts)
+
+        with self.assertRaises(ConfigSessionError) as cm:
+            self.cli_commit()
+
+        exception = cm.exception
+        self.assertIn('Both group and remote cannot be specified', str(exception))
+        for param in params:
+            self.cli_delete(self._base_path + [intf, param])
+
 
     def test_vxlan_external(self):
         interface = 'vxlan0'
