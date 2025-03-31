@@ -38,7 +38,7 @@ def get_tc_info(interface_dict, interface_name, policy_type):
     if not policy_name:
         return None, None
     
-    class_dict = op_mode_config_dict(['qos', 'policy', policy_type, policy_name], key_mangling=('-', '_'),
+    class_dict = op_mode_config_dict(['qos', 'policy', policy_type, policy_name],
                             get_first_key=True)
     if not class_dict:
         return None, None

@@ -138,6 +138,19 @@
               </tagNode>
             </children>
           </node>
+          <tagNode name="remote-group">
+            <properties>
+              <help>Firewall remote-group</help>
+              <constraint>
+                #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+              </constraint>
+              <constraintErrorMessage>Name of firewall group can only contain alphanumeric letters, hyphen, underscores and dot</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/url-http-https.xml.i>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
           <tagNode name="interface-group">
             <properties>
               <help>Firewall interface-group</help>

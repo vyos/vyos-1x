@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -98,6 +98,12 @@ def generate(proxy):
     return None
 
 def apply(proxy):
+    if not os.path.exists('/etc/dropbear/dropbear_rsa_host_key'):
+        call('dropbearkey -t rsa -s 4096 -f /etc/dropbear/dropbear_rsa_host_key')
+
+    if not os.path.exists('/etc/dropbear/dropbear_ecdsa_host_key'):
+        call('dropbearkey -t ecdsa -f /etc/dropbear/dropbear_ecdsa_host_key')
+
     call('systemctl daemon-reload')
     call('systemctl stop dropbear@*.service conserver-server.service')
 

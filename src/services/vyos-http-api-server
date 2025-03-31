@@ -20,18 +20,22 @@ import grp
 import json
 import logging
 import signal
+import traceback
 from time import sleep
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.exceptions import RequestValidationError
 from uvicorn import Config as UvicornConfig
 from uvicorn import Server as UvicornServer
 
 from vyos.configsession import ConfigSession
 from vyos.defaults import api_config_state
+from vyos.utils.file import read_file
+from vyos.version import get_version
 
 from api.session import SessionState
-from api.rest.models import error
+from api.rest.models import error, InfoQueryParams, success
 
 CFG_GROUP = 'vyattacfg'
 
@@ -57,9 +61,47 @@ app = FastAPI(debug=True,
               title="VyOS API",
               version="0.1.0")
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_request, exc):
     return error(400, str(exc.errors()[0]))
+
+
+@app.get('/info')
+def info(q: Annotated[InfoQueryParams, Query()]):
+    show_version = q.version
+    show_hostname = q.hostname
+
+    prelogin_file = r'/etc/issue'
+    hostname_file = r'/etc/hostname'
+    default = 'Welcome to VyOS'
+
+    try:
+        res = {
+            'banner': '',
+            'hostname': '',
+            'version': ''
+        }
+        if show_version:
+            res.update(version=get_version())
+
+        if show_hostname:
+            try:
+                hostname = read_file(hostname_file)
+            except Exception:
+                hostname = 'vyos'
+            res.update(hostname=hostname)
+
+        banner = read_file(prelogin_file, defaultonfailure=default)
+        if banner == f'{default} - \\n \\l':
+            banner = banner.partition(default)[1]
+
+        res.update(banner=banner)
+    except Exception:
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occured. Check the logs for details.')
+
+    return success(res)
 
 
 ###

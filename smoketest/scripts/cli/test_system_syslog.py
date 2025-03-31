@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
@@ -27,6 +28,8 @@ PROCESS_NAME = 'rsyslogd'
 RSYSLOG_CONF = '/run/rsyslog/rsyslog.conf'
 
 base_path = ['system', 'syslog']
+
+dummy_interface = 'dum372874'
 
 def get_config(string=''):
     """
@@ -120,15 +123,28 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         self.assertIn( '        rotation.sizeLimit="524288"', config)
         self.assertIn( '        rotation.sizeLimitCommand="/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog"', config)
 
+        self.cli_set(base_path + ['marker', 'disable'])
+        self.cli_commit()
+
+        config = get_config('')
+        self.assertNotIn('module(load="immark"', config)
+
     def test_remote(self):
+        dummy_if_path = ['interfaces', 'dummy', dummy_interface]
         rhosts = {
             '169.254.0.1': {
                 'facility': {'auth' : {'level': 'info'}},
                 'protocol': 'udp',
             },
-            '169.254.0.2': {
+            '2001:db8::1': {
+                'facility': {'all' : {'level': 'debug'}},
                 'port': '1514',
                 'protocol': 'udp',
+            },
+            'syslog.vyos.net': {
+                'facility': {'all' : {'level': 'debug'}},
+                'port': '1515',
+                'protocol': 'tcp',
             },
             '169.254.0.3': {
                 'facility': {'auth' : {'level': 'info'},
@@ -162,6 +178,15 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             if 'protocol' in remote_options:
                 protocol = remote_options['protocol']
                 self.cli_set(remote_base + ['protocol'], value=protocol)
+
+            if 'source_address' in remote_options:
+                source_address = remote_options['source_address']
+                self.cli_set(remote_base + ['source-address', source_address])
+
+                # check validate() - source address does not exist
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+                self.cli_set(dummy_if_path + ['address', f'{source_address}/32'])
 
         self.cli_commit()
 
@@ -198,12 +223,15 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
 
             if 'format' in remote_options:
                 if 'include-timezone' in remote_options['format']:
-                    self.assertIn( '        template="SyslogProtocol23Format"', config)
+                    self.assertIn( '        template="RSYSLOG_SyslogProtocol23Format"', config)
 
                 if 'octet-counted' in remote_options['format']:
-                    self.assertIn( '        TCP_Framing="octed-counted"', config)
+                    self.assertIn( '        TCP_Framing="octet-counted"', config)
                 else:
                     self.assertIn( '        TCP_Framing="traditional"', config)
+
+        # cleanup dummy interface
+        self.cli_delete(dummy_if_path)
 
     def test_vrf_source_address(self):
         rhosts = {
@@ -246,7 +274,6 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                                  value=vrf)
 
         self.cli_commit()
-        config = read_file(RSYSLOG_CONF)
 
         for remote, remote_options in rhosts.items():
             config = get_config(f'# Remote syslog to {remote}')

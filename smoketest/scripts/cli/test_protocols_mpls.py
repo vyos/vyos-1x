@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -120,6 +120,75 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  discovery transport-address {transport_ipv4_addr}', afiv4_config)
         for interface in interfaces:
             self.assertIn(f'  interface {interface}', afiv4_config)
+
+    def test_02_mpls_disable_establish_hello(self):
+        router_id = '1.2.3.4'
+        transport_ipv4_addr = '5.6.7.8'
+        transport_ipv6_addr = '2001:db8:1111::1111'
+        interfaces = Section.interfaces('ethernet')
+
+        self.cli_set(base_path + ['router-id', router_id])
+
+        # At least one LDP interface must be configured
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'disable-establish-hello'])
+
+        # LDP transport address missing
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['discovery', 'transport-ipv4-address', transport_ipv4_addr])
+        self.cli_set(base_path + ['discovery', 'transport-ipv6-address', transport_ipv6_addr])
+
+        # Commit changes
+        self.cli_commit()
+
+        # Validate configuration
+        frrconfig = self.getFRRconfig('mpls ldp', endsection='^exit')
+        self.assertIn(f'mpls ldp', frrconfig)
+        self.assertIn(f' router-id {router_id}', frrconfig)
+
+        # Validate AFI IPv4
+        afiv4_config = self.getFRRconfig('mpls ldp', endsection='^exit',
+                                         substring=' address-family ipv4',
+                                         endsubsection='^ exit-address-family')
+        self.assertIn(f'  discovery transport-address {transport_ipv4_addr}', afiv4_config)
+        for interface in interfaces:
+            self.assertIn(f'  interface {interface}', afiv4_config)
+            self.assertIn(f'   disable-establish-hello', afiv4_config)
+
+        # Validate AFI IPv6
+        afiv6_config = self.getFRRconfig('mpls ldp', endsection='^exit',
+                                         substring=' address-family ipv6',
+                                         endsubsection='^ exit-address-family')
+        self.assertIn(f'  discovery transport-address {transport_ipv6_addr}', afiv6_config)
+        for interface in interfaces:
+            self.assertIn(f'  interface {interface}', afiv6_config)
+            self.assertIn(f'   disable-establish-hello', afiv6_config)
+
+        # Delete disable-establish-hello
+        for interface in interfaces:
+            self.cli_delete(base_path + ['interface', interface, 'disable-establish-hello'])
+
+        # Commit changes
+        self.cli_commit()
+
+        # Validate AFI IPv4
+        afiv4_config = self.getFRRconfig('mpls ldp', endsection='^exit',
+                                         substring=' address-family ipv4',
+                                         endsubsection='^ exit-address-family')
+        # Validate AFI IPv6
+        afiv6_config = self.getFRRconfig('mpls ldp', endsection='^exit',
+                                         substring=' address-family ipv6',
+                                         endsubsection='^ exit-address-family')
+        # Check deleted 'disable-establish-hello' option per interface
+        for interface in interfaces:
+            self.assertIn(f'  interface {interface}', afiv4_config)
+            self.assertNotIn(f'   disable-establish-hello', afiv4_config)
+            self.assertIn(f'  interface {interface}', afiv6_config)
+            self.assertNotIn(f'   disable-establish-hello', afiv6_config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

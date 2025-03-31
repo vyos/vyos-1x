@@ -599,3 +599,19 @@ def get_nft_vrf_zone_mapping() -> dict:
     for (vrf_name, vrf_id) in vrf_list:
         output.append({'interface' : vrf_name, 'vrf_tableid' : vrf_id})
     return output
+
+def is_valid_ipv4_address_or_range(addr: str) -> bool:
+    """
+    Validates if the provided address is a valid IPv4, CIDR or IPv4 range
+    :param addr: address to test
+    :return: bool: True if provided address is valid
+    """
+    from ipaddress import ip_network
+    try:
+        if '-' in addr: # If we are checking a range, validate both address's individually
+            split = addr.split('-')
+            return is_valid_ipv4_address_or_range(split[0]) and is_valid_ipv4_address_or_range(split[1])
+        else:
+            return ip_network(addr).version == 4
+    except:
+        return False

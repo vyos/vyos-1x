@@ -95,6 +95,8 @@ def verify(vxlan):
     if 'group' in vxlan:
         if 'source_interface' not in vxlan:
             raise ConfigError('Multicast VXLAN requires an underlaying interface')
+        if 'remote' in vxlan:
+            raise ConfigError('Both group and remote cannot be specified')
         verify_source_interface(vxlan)
 
     if not any(tmp in ['group', 'remote', 'source_address', 'source_interface'] for tmp in vxlan):

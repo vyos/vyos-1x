@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,13 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import base64
-from sys import argv
+import argparse
 
-if __name__ == '__main__':
-    if len(argv) != 2:
+parser = argparse.ArgumentParser(description="Validate base64 input.")
+parser.add_argument("base64", help="Base64 encoded string to validate")
+parser.add_argument("--decoded-len", type=int, help="Optional list of valid lengths for the decoded input")
+args = parser.parse_args()
+
+try:
+    decoded = base64.b64decode(args.base64)
+    if args.decoded_len and len(decoded) != args.decoded_len:
         exit(1)
-    try:
-        base64.b64decode(argv[1])
-    except:
-        exit(1)
-    exit(0)
+except:
+    exit(1)
+exit(0)

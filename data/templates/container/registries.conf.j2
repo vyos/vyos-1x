@@ -28,4 +28,14 @@
 {%         set _ = registry_list.append(r) %}
 {%     endfor %}
 unqualified-search-registries = {{ registry_list }}
+{%     for r, r_options in registry.items() if r_options.disable is not vyos_defined %}
+[[registry]]
+{%         if r_options.mirror is vyos_defined %}
+location = "{{ r_options.mirror.host_name if r_options.mirror.host_name is vyos_defined else r_options.mirror.address }}{{ ":" + r_options.mirror.port if r_options.mirror.port is vyos_defined }}{{ r_options.mirror.path if r_options.mirror.path is vyos_defined }}"
+{%         else %}
+location = "{{ r }}"
+{%         endif %}
+insecure = {{ 'true' if r_options.insecure is vyos_defined else 'false' }}
+prefix = "{{ r }}"
+{%     endfor %}
 {% endif %}

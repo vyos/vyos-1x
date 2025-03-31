@@ -8,7 +8,6 @@ Build-Depends:
   fakeroot,
   gcc,
   iproute2,
-  libvyosconfig0 (>= 0.0.7),
   libzmq3-dev,
   python3 (>= 3.10),
 # For QA
@@ -16,6 +15,8 @@ Build-Depends:
 # For generating command definitions
   python3-lxml,
   python3-xmltodict,
+# For generating serialization functions
+  protobuf-compiler,
 # For running tests
   python3-coverage,
   python3-hurry.filesize,
@@ -41,7 +42,8 @@ Pre-Depends:
   libnss-tacplus [amd64],
   libpam-tacplus [amd64],
   libpam-radius-auth (= 1.5.0-cl3u7) [amd64],
-  libnss-mapuser (= 1.1.0-cl3u3) [amd64]
+  libnss-mapuser (= 1.1.0-cl3u3) [amd64],
+  tzdata (>= 2025b)
 Depends:
 ## Fundamentals
   ${python3:Depends} (>= 3.10),
@@ -71,6 +73,7 @@ Depends:
   python3-netifaces,
   python3-paramiko,
   python3-passlib,
+  python3-protobuf,
   python3-pyroute2,
   python3-psutil,
   python3-pyhumps,
@@ -78,6 +81,7 @@ Depends:
   python3-pyudev,
   python3-six,
   python3-tabulate,
+  python3-tomli,
   python3-voluptuous,
   python3-xmltodict,
   python3-zmq,
@@ -124,6 +128,8 @@ Depends:
 # Live filesystem tools
   squashfs-tools,
   fuse-overlayfs,
+# Tools for checking password strength
+  python3-cracklib,
 ## End installer
   auditd,
   iputils-arping,

@@ -35,6 +35,15 @@
     }
 {%         endfor %}
 {%     endif %}
+{%     if group.remote_group is vyos_defined and is_l3 and not is_ipv6 %}
+{%         for name, name_config in group.remote_group.items() %}
+    set R_{{ name }} {
+        type {{ ip_type }}
+        flags interval
+        auto-merge
+    }
+{%         endfor %}
+{%     endif %}
 {%     if group.mac_group is vyos_defined %}
 {%         for group_name, group_conf in group.mac_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
