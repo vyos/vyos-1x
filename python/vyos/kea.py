@@ -104,6 +104,14 @@ def kea_parse_options(config):
             }
         )
 
+    if 'capwap-access-controller' in config:
+        options.append(
+            {
+                'name': 'capwap-access-controller',
+                'data': config['capwap-access-controller'],
+            }
+        )
+
     if 'ip_forwarding' in config:
         options.append({'name': 'ip-forwarding', 'data': 'true'})
 
