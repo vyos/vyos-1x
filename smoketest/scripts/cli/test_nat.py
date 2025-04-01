@@ -24,6 +24,7 @@ base_path = ['nat']
 src_path = base_path + ['source']
 dst_path = base_path + ['destination']
 static_path = base_path + ['static']
+output_path = base_path + ['output']
 
 nftables_nat_config = '/run/nftables_nat.conf'
 nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
@@ -330,5 +331,29 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
+
+    def test_nat_output(self):
+
+        self.cli_set(output_path + ['rule', '1', 'destination', 'address', '198.51.100.254'])
+        self.cli_set(output_path + ['rule', '1', 'destination', 'port', '22'])
+        self.cli_set(output_path + ['rule', '1', 'protocol', 'tcp'])
+        self.cli_set(output_path + ['rule', '1', 'translation', 'address', '198.51.100.1'])
+        self.cli_set(output_path + ['rule', '1', 'translation', 'port', '22'])
+
+        self.cli_set(output_path + ['rule', '2', 'destination', 'address', '127.0.0.1'])
+        self.cli_set(output_path + ['rule', '2', 'destination', 'port', '53'])
+        self.cli_set(output_path + ['rule', '2', 'protocol', 'udp'])
+        self.cli_set(output_path + ['rule', '2', 'translation', 'address', '127.0.0.1'])
+        self.cli_set(output_path + ['rule', '2', 'translation', 'port', '7874'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['tcp dport 22', 'ip daddr 198.51.100.254', 'dnat to 198.51.100.1:22', 'comment "OUT-NAT-1"'],
+            ['udp dport 53', 'ip daddr 127.0.0.1', 'dnat to 127.0.0.1:7874', 'comment "OUT-NAT-2"'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

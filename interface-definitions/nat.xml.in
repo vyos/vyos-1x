@@ -154,6 +154,58 @@
           </tagNode>
         </children>
       </node>
+      <node name="output">
+        <properties>
+          <help>Output NAT settings</help>
+        </properties>
+        <children>
+          #include <include/nat-rule.xml.i>
+          <tagNode name="rule">
+            <children>
+              #include <include/firewall/inbound-interface.xml.i>
+              <node name="translation">
+                <properties>
+                  <help>Inside NAT IP (destination NAT only)</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IP address, subnet, or range</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 prefix to match</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv4range</format>
+                        <description>IPv4 address range to match</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv4-range"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
+                  <node name="redirect">
+                    <properties>
+                      <help>Redirect to local host</help>
+                    </properties>
+                    <children>
+                      #include <include/nat-translation-port.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>

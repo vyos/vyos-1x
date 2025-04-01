@@ -41,6 +41,24 @@ table ip6 vyos_nat {
         return
     }
 
+{%     if output is vyos_defined %}
+    chain OUTPUT {
+        type nat hook output priority -100; policy accept;
+        counter jump VYOS_PRE_OUTPUT_HOOK
+{%         if output.rule is vyos_defined %}
+{%             for rule, config in output.rule.items() if config.disable is not vyos_defined %}
+        {{ config | nat_rule(rule, 'output', ipv6=True) }}
+{%             endfor %}
+{%         endif %}
+
+    }
+
+    chain VYOS_PRE_OUTPUT_HOOK {
+        return
+    }
+
+{%     endif %}
+
 {{ group_tmpl.groups(firewall_group, True, True) }}
 }
 {% endif %}

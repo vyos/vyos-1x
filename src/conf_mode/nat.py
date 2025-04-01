@@ -92,7 +92,7 @@ def verify_rule(config, err_msg, groups_dict):
             raise ConfigError(f'{err_msg} ports can only be specified when '\
                               'protocol is either tcp, udp or tcp_udp!')
 
-    for side in ['destination', 'source']:
+    for side in ['destination', 'source', 'output']:
         if side in config:
             side_conf = config[side]
 

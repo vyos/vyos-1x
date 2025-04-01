@@ -23,6 +23,7 @@ from vyos.configsession import ConfigSessionError
 base_path = ['nat66']
 src_path = base_path + ['source']
 dst_path = base_path + ['destination']
+output_path = base_path + ['output']
 
 class TestNAT66(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -236,6 +237,21 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_set(src_path)
         self.cli_set(dst_path)
         self.cli_commit()
+
+    def test_nat_output(self):
+        destination_address = 'fc00::1'
+        translation_address = 'fc01::1'
+
+        self.cli_set(output_path + ['rule', '1', 'destination', 'address', destination_address])
+        self.cli_set(output_path + ['rule', '1', 'translation', 'address', translation_address])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip6 daddr fc00::1', 'dnat to fc01::1', 'comment "OUT-NAT66-1"'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -112,6 +112,14 @@ def verify(nat):
                 if len({'address_group', 'network_group', 'domain_group'} & set(config['destination']['group'])) > 1:
                     raise ConfigError('Only one address-group, network-group or domain-group can be specified')
 
+    if dict_search('output.rule', nat):
+        for rule, config in dict_search('output.rule', nat).items():
+            err_msg = f'Output NAT66 configuration error in rule {rule}:'
+
+            if 'destination' in config and 'group' in config['destination']:
+                if len({'address_group', 'network_group', 'domain_group'} & set(config['destination']['group'])) > 1:
+                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+
     return None
 
 def generate(nat):
