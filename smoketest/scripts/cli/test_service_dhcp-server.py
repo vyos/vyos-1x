@@ -197,6 +197,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         wpad = 'http://wpad.vyos.io/foo/bar'
         server_identifier = bootfile_server
         ipv6_only_preferred = '300'
+        capwap_access_controller = '192.168.2.125'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
@@ -216,6 +217,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['option', 'bootfile-server', bootfile_server])
         self.cli_set(pool + ['option', 'wpad-url', wpad])
         self.cli_set(pool + ['option', 'server-identifier', server_identifier])
+        self.cli_set(
+            pool + ['option', 'capwap-access-controller', capwap_access_controller]
+        )
 
         self.cli_set(
             pool + ['option', 'static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1']
@@ -297,6 +301,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
             {'name': 'dhcp-server-identifier', 'data': server_identifier},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'capwap-ac-v4', 'data': capwap_access_controller},
         )
         self.verify_config_object(
             obj,
