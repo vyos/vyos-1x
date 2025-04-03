@@ -104,11 +104,11 @@ def kea_parse_options(config):
             }
         )
 
-    if 'capwap-access-controller' in config:
+    if 'capwap_access_controller' in config:
         options.append(
             {
                 'name': 'capwap-ac-v4',
-                'data': config['capwap-access-controller'],
+                'data': config['capwap_access_controller'],
             }
         )
 
