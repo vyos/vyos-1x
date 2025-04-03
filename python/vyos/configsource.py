@@ -319,3 +319,13 @@ class ConfigSourceString(ConfigSource):
             self._session_config = ConfigTree(session_config_text) if session_config_text else None
         except ValueError:
             raise ConfigSourceError(f"Init error in {type(self)}")
+
+class ConfigSourceCache(ConfigSource):
+    def __init__(self, running_config_cache=None, session_config_cache=None):
+        super().__init__()
+
+        try:
+            self._running_config = ConfigTree(internal=running_config_cache) if running_config_cache else None
+            self._session_config = ConfigTree(internal=session_config_cache) if session_config_cache else None
+        except ValueError:
+            raise ConfigSourceError(f"Init error in {type(self)}")

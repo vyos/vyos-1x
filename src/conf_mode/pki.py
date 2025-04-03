@@ -440,13 +440,21 @@ def generate(pki):
         for name, cert_conf in pki['certificate'].items():
             if 'acme' in cert_conf:
                 certbot_list.append(name)
-                # generate certificate if not found on disk
+                # There is no ACME/certbot managed certificate presend on the
+                # system, generate it
                 if name not in certbot_list_on_disk:
                     certbot_request(name, cert_conf['acme'], dry_run=False)
+                    # Now that the certificate was properly generated we have
+                    # the PEM files on disk. We need to add the certificate to
+                    # certbot_list_on_disk to automatically import the CA chain
+                    certbot_list_on_disk.append(name)
+                # We alredy had an ACME managed certificate on the system, but
+                # something changed in the configuration
                 elif changed_certificates != None and name in changed_certificates:
-                    # when something for the certificate changed, we should delete it
+                    # Delete old ACME certificate first
                     if name in certbot_list_on_disk:
                         certbot_delete(name)
+                    # Request new certificate via certbot
                     certbot_request(name, cert_conf['acme'], dry_run=False)
 
     # Cleanup certbot configuration and certificates if no longer in use by CLI

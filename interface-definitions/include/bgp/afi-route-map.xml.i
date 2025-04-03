@@ -4,7 +4,8 @@
     <help>Route-map to filter route updates to/from this peer</help>
   </properties>
   <children>
-    #include <include/bgp/afi-route-map-export-import.xml.i>
+    #include <include/bgp/afi-route-map-export.xml.i>
+    #include <include/bgp/afi-route-map-import.xml.i>
   </children>
 </node>
 <!-- include end -->

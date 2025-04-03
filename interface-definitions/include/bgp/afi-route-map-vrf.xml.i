@@ -1,15 +1,14 @@
-<!-- include start from bgp/afi-route-map-vpn.xml.i -->
+<!-- include start from bgp/afi-route-map-vrf.xml.i -->
 <node name="route-map">
   <properties>
     <help>Route-map to filter route updates to/from this peer</help>
   </properties>
   <children>
-    <node name="vpn">
+    <node name="vrf">
       <properties>
-        <help>Between current address-family and VPN</help>
+        <help>Between current address-family and VRF</help>
       </properties>
       <children>
-        #include <include/bgp/afi-route-map-export.xml.i>
         #include <include/bgp/afi-route-map-import.xml.i>
       </children>
     </node>

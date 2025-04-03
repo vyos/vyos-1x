@@ -51,3 +51,7 @@ class TestConfigParser(TestCase):
     def test_rename_duplicate(self):
         with self.assertRaises(vyos.configtree.ConfigTreeError):
             self.config.rename(["top-level-tag-node", "foo"], "bar")
+
+    def test_leading_slashes(self):
+        self.assertTrue(self.config.exists(["normal-node", "value-with-leading-slashes"]))
+        self.assertEqual(self.config.return_value(["normal-node", "value-with-leading-slashes"]), "//other-value")

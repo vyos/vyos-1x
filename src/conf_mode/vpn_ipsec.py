@@ -64,6 +64,7 @@ swanctl_dir        = '/etc/swanctl'
 charon_conf        = '/etc/strongswan.d/charon.conf'
 charon_dhcp_conf   = '/etc/strongswan.d/charon/dhcp.conf'
 charon_radius_conf = '/etc/strongswan.d/charon/eap-radius.conf'
+charon_systemd_conf = '/etc/strongswan.d/charon-systemd.conf'
 interface_conf     = '/etc/strongswan.d/interfaces_use.conf'
 swanctl_conf       = f'{swanctl_dir}/swanctl.conf'
 
@@ -155,6 +156,8 @@ def get_config(config=None):
                     if vti_interface not in ipsec['vti_interface_dicts']:
                         _, vti = get_interface_dict(conf, ['interfaces', 'vti'], vti_interface)
                         ipsec['vti_interface_dicts'][vti_interface] = vti
+
+    ipsec['vpp_ipsec_exists'] = conf.exists(['vpp', 'settings', 'ipsec'])
 
     return ipsec
 
@@ -484,6 +487,17 @@ def verify(ipsec):
             else:
                 raise ConfigError(f"Missing ike-group on site-to-site peer {peer}")
 
+            # verify encryption algorithm compatibility for IKE with VPP
+            if ipsec['vpp_ipsec_exists']:
+                ike_group = ipsec['ike_group'][peer_conf['ike_group']]
+                for proposal, proposal_config in ike_group.get('proposal', {}).items():
+                    algs = ['gmac', 'serpent', 'twofish']
+                    if any(alg in proposal_config['encryption'] for alg in algs):
+                        raise ConfigError(
+                            f'Encryption algorithm {proposal_config["encryption"]} cannot be used '
+                            f'for IKE proposal {proposal} for site-to-site peer {peer} with VPP'
+                        )
+
             if 'authentication' not in peer_conf or 'mode' not in peer_conf['authentication']:
                 raise ConfigError(f"Missing authentication on site-to-site peer {peer}")
 
@@ -562,7 +576,7 @@ def verify(ipsec):
 
                     esp_group_name = tunnel_conf['esp_group'] if 'esp_group' in tunnel_conf else peer_conf['default_esp_group']
 
-                    if esp_group_name not in ipsec['esp_group']:
+                    if esp_group_name not in ipsec.get('esp_group'):
                         raise ConfigError(f"Invalid esp-group on tunnel {tunnel} for site-to-site peer {peer}")
 
                     esp_group = ipsec['esp_group'][esp_group_name]
@@ -573,6 +587,18 @@ def verify(ipsec):
 
                         if ('local' in tunnel_conf and 'prefix' in tunnel_conf['local']) or ('remote' in tunnel_conf and 'prefix' in tunnel_conf['remote']):
                             raise ConfigError(f"Local/remote prefix cannot be used with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
+
+                    # verify ESP encryption algorithm compatibility with VPP
+                    # because Marvel plugin for VPP doesn't support all algorithms that Strongswan does
+                    if ipsec['vpp_ipsec_exists']:
+                        for proposal, proposal_config in esp_group.get('proposal', {}).items():
+                            algs = ['aes128', 'aes192', 'aes256', 'aes128gcm128', 'aes192gcm128', 'aes256gcm128']
+                            if proposal_config['encryption'] not in algs:
+                                raise ConfigError(
+                                    f'Encryption algorithm {proposal_config["encryption"]} cannot be used '
+                                    f'for ESP proposal {proposal} on tunnel {tunnel} for site-to-site peer {peer} with VPP'
+                                )
+
 
 def cleanup_pki_files():
     for path in [CERT_PATH, CA_PATH, CRL_PATH, KEY_PATH, PUBKEY_PATH]:
@@ -720,6 +746,7 @@ def generate(ipsec):
     render(charon_conf, 'ipsec/charon.j2', ipsec)
     render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.j2', ipsec)
     render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.j2', ipsec)
+    render(charon_systemd_conf, 'ipsec/charon_systemd.conf.j2', ipsec)
     render(interface_conf, 'ipsec/interfaces_use.conf.j2', ipsec)
     render(swanctl_conf, 'ipsec/swanctl.conf.j2', ipsec)
 

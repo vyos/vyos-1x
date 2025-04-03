@@ -289,6 +289,13 @@ def verify(container):
 
     if 'registry' in container:
         for registry, registry_config in container['registry'].items():
+            if 'mirror' in registry_config:
+                if 'host_name' in registry_config['mirror'] and 'address' in registry_config['mirror']:
+                    raise ConfigError(f'Container registry mirror address/host-name are mutually exclusive!')
+
+                if 'path' in registry_config['mirror'] and not registry_config['mirror']['path'].startswith('/'):
+                    raise ConfigError('Container registry mirror path must start with "/"!')
+
             if 'authentication' not in registry_config:
                 continue
             if not {'username', 'password'} <= set(registry_config['authentication']):

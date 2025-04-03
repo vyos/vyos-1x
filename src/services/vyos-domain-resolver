@@ -13,19 +13,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 import json
 import time
 import logging
+import os
 
 from vyos.configdict import dict_merge
 from vyos.configquery import ConfigTreeQuery
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import fqdn_resolve
 from vyos.ifconfig import WireGuardIf
+from vyos.remote import download
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.dict import dict_search_args
 from vyos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
+from vyos.utils.file import makedir, chmod_775, write_file, read_file
+from vyos.utils.network import is_valid_ipv4_address_or_range
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.xml_ref import get_defaults
@@ -36,6 +39,8 @@ cache = False
 base_firewall = ['firewall']
 base_nat = ['nat']
 base_interfaces = ['interfaces']
+
+firewall_config_dir = "/config/firewall"
 
 domain_state = {}
 
@@ -120,6 +125,56 @@ def nft_valid_sets():
         return valid_sets
     except:
         return []
+
+def update_remote_group(config):
+    conf_lines = []
+    count = 0
+    valid_sets = nft_valid_sets()
+
+    remote_groups = dict_search_args(config, 'group', 'remote_group')
+    if remote_groups:
+        # Create directory for list files if necessary
+        if not os.path.isdir(firewall_config_dir):
+            makedir(firewall_config_dir, group='vyattacfg')
+            chmod_775(firewall_config_dir)
+
+        for set_name, remote_config in remote_groups.items():
+            if 'url' not in remote_config:
+                continue
+            nft_set_name = f'R_{set_name}'
+
+            # Create list file if necessary
+            list_file = os.path.join(firewall_config_dir, f"{nft_set_name}.txt")
+            if not os.path.exists(list_file):
+                write_file(list_file, '', user="root", group="vyattacfg", mode=0o644)
+
+            # Attempt to download file, use cached version if download fails
+            try:
+                download(list_file, remote_config['url'], raise_error=True)
+            except:
+                logger.error(f'Failed to download list-file for {set_name} remote group')
+                logger.info(f'Using cached list-file for {set_name} remote group')
+
+            # Read list file
+            ip_list = []
+            for line in read_file(list_file).splitlines():
+                line_first_word = line.strip().partition(' ')[0]
+
+                if is_valid_ipv4_address_or_range(line_first_word):
+                    ip_list.append(line_first_word)
+
+            # Load tables
+            for table in ipv4_tables:
+                if (table, nft_set_name) in valid_sets:
+                    conf_lines += nft_output(table, nft_set_name, ip_list)
+
+            count += 1
+
+    nft_conf_str = "\n".join(conf_lines) + "\n"
+    code = run(f'nft --file -', input=nft_conf_str)
+
+    logger.info(f'Updated {count} remote-groups in firewall - result: {code}')
+
 
 def update_fqdn(config, node):
     conf_lines = []
@@ -234,5 +289,6 @@ if __name__ == '__main__':
     while True:
         update_fqdn(firewall, 'firewall')
         update_fqdn(nat, 'nat')
+        update_remote_group(firewall)
         update_interfaces(interfaces, 'interfaces')
         time.sleep(timeout)

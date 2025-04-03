@@ -38,7 +38,8 @@ directories = {
   'vyos_configdir' : '/opt/vyatta/config',
   'completion_dir' : f'{base_dir}/completion',
   'ca_certificates' : '/usr/local/share/ca-certificates/vyos',
-  'ppp_nexthop_dir' : '/run/ppp_nexthop'
+  'ppp_nexthop_dir' : '/run/ppp_nexthop',
+  'proto_path' : '/usr/share/vyos/vyconf'
 }
 
 systemd_services = {
@@ -69,3 +70,5 @@ rt_symbolic_names = {
 
 rt_global_vrf = rt_symbolic_names['main']
 rt_global_table = rt_symbolic_names['main']
+
+vyconfd_conf = '/etc/vyos/vyconfd.conf'
