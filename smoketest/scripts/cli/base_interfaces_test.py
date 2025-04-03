@@ -613,7 +613,7 @@ class BasicInterfaceTest:
         def test_mtu_1200_no_ipv6_interface(self):
             # Testcase if MTU can be changed to 1200 on non IPv6
             # enabled interfaces
-            if not self._test_mtu:
+            if not self._test_mtu or not self._test_ipv6:
                 self.skipTest('not supported')
 
             old_mtu = self._mtu

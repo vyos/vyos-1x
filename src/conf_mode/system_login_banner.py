@@ -95,8 +95,12 @@ def apply(banner):
         render(POSTLOGIN_FILE, 'login/default_motd.j2', banner,
             permission=0o644, user='root', group='root')
 
-    render(POSTLOGIN_VYOS_FILE, 'login/motd_vyos_nonproduction.j2', banner,
-        permission=0o644, user='root', group='root')
+    if banner['version_data']['build_type'] != 'release':
+        render(POSTLOGIN_VYOS_FILE, 'login/motd_vyos_nonproduction.j2',
+            banner,
+            permission=0o644,
+            user='root',
+            group='root')
 
     return None
 

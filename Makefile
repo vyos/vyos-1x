@@ -25,7 +25,7 @@ op_xml_obj = $(op_xml_src:.xml.in=.xml)
 .ONESHELL:
 libvyosconfig:
 	if test ! -f $(LIBVYOSCONFIG_BUILD_PATH); then
-		if ! echo $(firstword $(LIBVYOSCONFIG_STATUS))|grep -Eq '^[0-9]'; then
+		if ! echo $(firstword $(LIBVYOSCONFIG_STATUS))|grep -Eq '^[a-z0-9]'; then
 			git submodule sync; git submodule update --init --remote
 		fi
 		rm -rf /tmp/libvyosconfig && mkdir /tmp/libvyosconfig

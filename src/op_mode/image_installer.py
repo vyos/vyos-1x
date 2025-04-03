@@ -58,6 +58,7 @@ MSG_ERR_FLAVOR_MISMATCH: str = 'The current image flavor is "{0}", the new image
 MSG_ERR_MISSING_ARCHITECTURE: str = 'The new image version data does not specify architecture, cannot check compatibility (is it a legacy release image?)'
 MSG_ERR_MISSING_FLAVOR: str = 'The new image version data does not specify flavor, cannot check compatibility (is it a legacy release image?)'
 MSG_ERR_CORRUPT_CURRENT_IMAGE: str = 'Version data in the current image is malformed: missing flavor and/or architecture fields. Upgrade compatibility cannot be checked.'
+MSG_ERR_UNSUPPORTED_SIGNATURE_TYPE: str = 'Unsupported signature type, signature cannot be verified.'
 MSG_INFO_INSTALL_WELCOME: str = 'Welcome to iGOS installation!\nThis command will install iGOS to your permanent storage.'
 MSG_INFO_INSTALL_EXIT: str = 'Exiting from iGOS installation'
 MSG_INFO_INSTALL_SUCCESS: str = 'The image installed successfully; please reboot now.'
@@ -514,7 +515,6 @@ def validate_signature(file_path: str, sign_type: str) -> None:
     """
     print('Validating signature')
     signature_valid: bool = False
-    # validate with minisig
     if sign_type == 'minisig':
         pub_key_list = glob('/usr/share/vyos/keys/*.minisign.pub')
         for pubkey in pub_key_list:
@@ -523,11 +523,8 @@ def validate_signature(file_path: str, sign_type: str) -> None:
                 signature_valid = True
                 break
         Path(f'{file_path}.minisig').unlink()
-    # validate with GPG
-    if sign_type == 'asc':
-        if run(f'gpg --verify ${file_path}.asc ${file_path}') == 0:
-            signature_valid = True
-        Path(f'{file_path}.asc').unlink()
+    else:
+        exit(MSG_ERR_UNSUPPORTED_SIGNATURE_TYPE)
 
     # warn or pass
     if not signature_valid:
@@ -581,15 +578,18 @@ def image_fetch(image_path: str, vrf: str = None,
     try:
         # check a type of path
         if urlparse(image_path).scheme:
-            # download an image
+            # Download the image file
             ISO_DOWNLOAD_PATH = os.path.join(os.path.expanduser("~"), '{0}.iso'.format(uuid4()))
             download_file(ISO_DOWNLOAD_PATH, image_path, vrf,
                           username, password,
                           progressbar=True, check_space=True)
 
-            # download a signature
+            # Download the image signature
+            # VyOS only supports minisign signatures at the moment,
+            # but we keep the logic for multiple signatures
+            # in case we add something new in the future
             sign_file = (False, '')
-            for sign_type in ['minisig', 'asc']:
+            for sign_type in ['minisig']:
                 try:
                     download_file(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
                                   f'{image_path}.{sign_type}', vrf,
@@ -597,8 +597,8 @@ def image_fetch(image_path: str, vrf: str = None,
                     sign_file = (True, sign_type)
                     break
                 except Exception:
-                    print(f'{sign_type} signature is not available')
-            # validate a signature if it is available
+                    print(f'Could not download {sign_type} signature')
+            # Validate the signature if it is available
             if sign_file[0]:
                 validate_signature(ISO_DOWNLOAD_PATH, sign_file[1])
             else:

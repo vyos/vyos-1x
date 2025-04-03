@@ -64,6 +64,7 @@ swanctl_dir        = '/etc/swanctl'
 charon_conf        = '/etc/strongswan.d/charon.conf'
 charon_dhcp_conf   = '/etc/strongswan.d/charon/dhcp.conf'
 charon_radius_conf = '/etc/strongswan.d/charon/eap-radius.conf'
+charon_systemd_conf = '/etc/strongswan.d/charon-systemd.conf'
 interface_conf     = '/etc/strongswan.d/interfaces_use.conf'
 swanctl_conf       = f'{swanctl_dir}/swanctl.conf'
 
@@ -745,6 +746,7 @@ def generate(ipsec):
     render(charon_conf, 'ipsec/charon.j2', ipsec)
     render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.j2', ipsec)
     render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.j2', ipsec)
+    render(charon_systemd_conf, 'ipsec/charon_systemd.conf.j2', ipsec)
     render(interface_conf, 'ipsec/interfaces_use.conf.j2', ipsec)
     render(swanctl_conf, 'ipsec/swanctl.conf.j2', ipsec)
 
