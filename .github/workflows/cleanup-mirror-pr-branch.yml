@@ -1,0 +1,16 @@
+name: Cleanup pr mirror branch
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+        - current
+
+permissions:
+  contents: write
+
+jobs:
+  call-delete-branch:
+    if: github.repository_owner != 'vyos'
+    uses: vyos/.github/.github/workflows/cleanup-mirror-pr-branch.yml@current
+    secrets: inherit
