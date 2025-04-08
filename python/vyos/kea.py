@@ -20,6 +20,7 @@ import socket
 from datetime import datetime
 from datetime import timezone
 
+from vyos import ConfigError
 from vyos.template import is_ipv6
 from vyos.template import netmask_from_cidr
 from vyos.utils.dict import dict_search_args
@@ -362,6 +363,8 @@ def kea_parse_tsig_algo(algo_spec):
         'hmac-sha384': 'HMAC-SHA384',
         'hmac-sha512': 'HMAC-SHA512'
     }
+    if algo_spec not in translate:
+        raise ConfigError(f'Unsupported TSIG algorithm: {algo_spec}')
     return translate[algo_spec]
 
 def kea_parse_enable_disable(value):
