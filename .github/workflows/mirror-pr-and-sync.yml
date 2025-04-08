@@ -14,7 +14,7 @@ permissions:
 jobs:
   call-mirror-pr-and-sync:
     if: github.repository_owner != 'vyos'
-    uses: VyOS-Networks/vyos-reusable-workflows/.github/workflows/mirror-pr-and-sync.yml@(T7326-skip-prev-mirror-check-for-first-mirror
+    uses: VyOS-Networks/vyos-reusable-workflows/.github/workflows/mirror-pr-and-sync.yml@T7326-skip-prev-mirror-check-for-first-mirror
     with:
       sync_branch: ${{ inputs.sync_branch }}
     secrets:
