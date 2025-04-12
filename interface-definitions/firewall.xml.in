@@ -173,6 +173,106 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+          <tagNode name="ipv4-map">
+            <properties>
+              <help>Firewall ipv4-map</help>
+            </properties>
+            <children>
+              <node name="parameters">
+                <properties>
+                  <help>Firewall source</help>
+                </properties>
+                <children>
+                  <node name="source">
+                    <properties>
+                      <help>Firewall source</help>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>Firewall source address</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="port">
+                        <properties>
+                          <help>Firewall source port</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                   <node name="destination">
+                    <properties>
+                      <help>Firewall destination</help>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>Firewall destination address</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="port">
+                        <properties>
+                          <help>Firewall destination port</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <node name="protocol">
+                    <properties>
+                      <help>Firewall protocol</help>
+                    </properties>
+                    <children>
+                      <leafNode name="tcp">
+                        <properties>
+                          <help>Firewall TCP protocol</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="udp">
+                        <properties>
+                          <help>Firewall UDP protocol</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="rule">
+                <properties>
+                  <help>Firewall rule</help>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                  #include <include/firewall/action-accept-drop-reject.xml.i>
+                  <leafNode name="source">
+                    <properties>
+                      <help>Firewall source</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/address.xml.i>
+                      #include <include/firewall/port.xml.i>
+                    </children>
+                  </leafNode>
+                  <leafNode name="destination">
+                    <properties>
+                      <help>Firewall destination</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/address.xml.i>
+                      #include <include/firewall/port.xml.i>
+                    </children>
+                  </leafNode>
+                  <leafNode name="protocol">
+                    <properties>
+                      <help>Firewall protocol</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/protocol.xml.i>
+                    </children>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           <tagNode name="ipv6-address-group">
             <properties>
               <help>Firewall ipv6-address-group</help>
