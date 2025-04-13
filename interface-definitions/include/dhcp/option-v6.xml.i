@@ -7,6 +7,18 @@
     #include <include/dhcp/captive-portal.xml.i>
     #include <include/dhcp/domain-search.xml.i>
     #include <include/name-server-ipv6.xml.i>
+    <leafNode name="capwap-controller">
+      <properties>
+        <help>IP address of CAPWAP access controller (Option 52)</help>
+        <valueHelp>
+          <format>ipv6</format>
+          <description>CAPWAP AC controller</description>
+        </valueHelp>
+        <constraint>
+          <validator name="ipv6-address"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <leafNode name="nis-domain">
       <properties>
         <help>NIS domain name for client to use</help>
