@@ -218,7 +218,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['option', 'wpad-url', wpad])
         self.cli_set(pool + ['option', 'server-identifier', server_identifier])
         self.cli_set(
-            pool + ['option', 'capwap-access-controller', capwap_access_controller]
+            pool + ['option', 'capwap-controller', capwap_access_controller]
         )
 
         self.cli_set(

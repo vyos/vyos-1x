@@ -44,6 +44,7 @@ kea4_options = {
     'wpad_url': 'wpad-url',
     'ipv6_only_preferred': 'v6-only-preferred',
     'captive_portal': 'v4-captive-portal',
+    'capwap_controller': 'capwap-ac-v4',
 }
 
 kea6_options = {
@@ -101,14 +102,6 @@ def kea_parse_options(config):
             {
                 'name': 'subnet-mask',
                 'data': netmask_from_cidr('0.0.0.0/' + config['client_prefix_length']),
-            }
-        )
-
-    if 'capwap_access_controller' in config:
-        options.append(
-            {
-                'name': 'capwap-ac-v4',
-                'data': config['capwap_access_controller'],
             }
         )
 

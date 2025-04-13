@@ -59,9 +59,9 @@
         <constraintErrorMessage>DHCP client prefix length must be 0 to 32</constraintErrorMessage>
       </properties>
     </leafNode>
-    <leafNode name="capwap-access-controller">
+    <leafNode name="capwap-controller">
       <properties>
-        <help>IP address of CAPWAP access controller</help>
+        <help>IP address of CAPWAP access controller (Option 138)</help>
         <valueHelp>
           <format>ipv4</format>
           <description>CAPWAP AC controller</description>
