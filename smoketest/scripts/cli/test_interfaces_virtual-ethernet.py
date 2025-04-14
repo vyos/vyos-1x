@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# Copyright (C) 2023-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -33,9 +33,6 @@ class VEthInterfaceTest(BasicInterfaceTest.TestCase):
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
         super(VEthInterfaceTest, cls).setUpClass()
-
-    def test_vif_8021q_mtu_limits(self):
-        self.skipTest('not supported')
 
     # As we always need a pair of veth interfaces, we can not rely on the base
     # class check to determine if there is a dhcp6c or dhclient instance running.

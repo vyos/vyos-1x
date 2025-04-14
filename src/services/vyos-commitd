@@ -72,8 +72,6 @@ class Session:
     # pylint: disable=too-many-instance-attributes
 
     session_id: str = ''
-    named_active: str = None
-    named_proposed: str = None
     dry_run: bool = False
     atomic: bool = False
     background: bool = False
@@ -235,8 +233,9 @@ def initialization(session: Session) -> Session:
     scripts_called = []
     setattr(config, 'scripts_called', scripts_called)
 
-    dry_run = False
-    setattr(config, 'dry_run', dry_run)
+    dry_run = session.dry_run
+    config.set_bool_attr('dry_run', dry_run)
+    logger.debug(f'commit dry_run is {dry_run}')
 
     session.config = config
 
@@ -249,11 +248,16 @@ def run_script(script_name: str, config: Config, args: list) -> tuple[bool, str]
     script = conf_mode_scripts[script_name]
     script.argv = args
     config.set_level([])
+    dry_run = config.get_bool_attr('dry_run')
     try:
         c = script.get_config(config)
         script.verify(c)
-        script.generate(c)
-        script.apply(c)
+        if not dry_run:
+            script.generate(c)
+            script.apply(c)
+        else:
+            if hasattr(script, 'call_dependents'):
+                script.call_dependents()
     except ConfigError as e:
         logger.error(e)
         return False, str(e)

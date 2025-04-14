@@ -366,6 +366,13 @@ def apply(dns):
                     hc.add_name_server_tags_recursor(['dhcp-' + interface,
                                                       'dhcpv6-' + interface ])
 
+        # add dhcp interfaces
+        if 'dhcp' in dns:
+            for interface in dns['dhcp']:
+                if interface_exists(interface):
+                    hc.add_name_server_tags_recursor(['dhcp-' + interface,
+                                                      'dhcpv6-' + interface ])
+
         # hostsd will generate the forward-zones file
         # the list and keys() are required as get returns a dict, not list
         hc.delete_forward_zones(list(hc.get_forward_zones().keys()))

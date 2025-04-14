@@ -7,6 +7,9 @@ from setuptools.command.build_py import build_py
 sys.path.append('./vyos')
 from defaults import directories
 
+def desc_out(f):
+    return os.path.splitext(f)[0] + '.desc'
+
 def packages(directory):
     return [
         _[0].replace('/','.')
@@ -37,9 +40,17 @@ class GenerateProto(build_py):
                     'protoc',
                     '--python_out=vyos/proto',
                     f'--proto_path={self.proto_path}/',
+                    f'--descriptor_set_out=vyos/proto/{desc_out(proto_file)}',
                     proto_file,
                 ]
             )
+        subprocess.check_call(
+            [
+                'vyos/proto/generate_dataclass.py',
+                'vyos/proto/vyconf.desc',
+                '--out-dir=vyos/proto',
+            ]
+        )
 
         build_py.run(self)
 

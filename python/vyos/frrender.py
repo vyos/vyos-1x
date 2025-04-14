@@ -60,6 +60,10 @@ def get_frrender_dict(conf, argv=None) -> dict:
     from vyos.configdict import get_dhcp_interfaces
     from vyos.configdict import get_pppoe_interfaces
 
+    # We need to re-set the CLI path to the root level, as this function uses
+    # conf.exists() with an absolute path form the CLI root
+    conf.set_level([])
+
     # Create an empty dictionary which will be filled down the code path and
     # returned to the caller
     dict = {}
@@ -599,8 +603,10 @@ def get_frrender_dict(conf, argv=None) -> dict:
         dict.update({'vrf' : vrf})
 
     if os.path.exists(frr_debug_enable):
+        print(f'---- get_frrender_dict({conf}) ----')
         import pprint
         pprint.pprint(dict)
+        print('-----------------------------------')
 
     return dict
 

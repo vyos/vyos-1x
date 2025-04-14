@@ -7,6 +7,20 @@
           <help>Show bridging information</help>
         </properties>
         <children>
+          <node name="spanning-tree">
+            <properties>
+              <help>View Spanning Tree info for all bridges</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/stp.py show_stp</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed Spanning Tree info for all bridges</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/stp.py show_stp --detail</command>
+              </leafNode>
+            </children>
+          </node>
           <node name="vlan">
             <properties>
               <help>View the VLAN filter settings of the bridge</help>
@@ -44,6 +58,20 @@
         </properties>
         <command>bridge -c link show | grep "master $3"</command>
         <children>
+          <node name="spanning-tree">
+            <properties>
+              <help>View Spanning Tree info for specified bridges</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/stp.py show_stp --ifname=$3</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed Spanning Tree info for specified bridge</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/stp.py show_stp --ifname=$3 --detail</command>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="mdb">
             <properties>
               <help>Displays the multicast group database for the bridge</help>
