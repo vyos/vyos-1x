@@ -1,9 +1,0 @@
-
-name: Lint Doc
-on:
-  pull_request:
-
-jobs:
-  lint-doc:
-    uses: vyos/.github/.github/workflows/lint-doc.yml@T7362-doc-lint-branch-ref-fix
-    secrets: inherit
