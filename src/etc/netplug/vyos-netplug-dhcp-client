@@ -54,4 +54,5 @@ interface_path = ['interfaces'] + Section.get_config_path(interface).split()
 _, interface_config = get_interface_dict(
     config, interface_path[:-1], ifname=interface, with_pki=True
 )
-Interface(interface).update(interface_config)
+if 'deleted' not in interface_config:
+    Interface(interface).update(interface_config)

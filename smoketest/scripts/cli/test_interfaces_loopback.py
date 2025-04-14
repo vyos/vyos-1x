@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_interfaces_test import MSG_TESTCASE_UNSUPPORTED
 from netifaces import interfaces
 
 from vyos.utils.network import is_intf_addr_assigned
@@ -53,7 +54,7 @@ class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertTrue(is_intf_addr_assigned('lo', addr))
 
     def test_interface_disable(self):
-        self.skipTest('not supported')
+        self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

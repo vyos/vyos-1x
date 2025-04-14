@@ -149,6 +149,18 @@ class Config(object):
             return self._running_config
         return self._session_config
 
+    def get_bool_attr(self, attr) -> bool:
+        if not hasattr(self, attr):
+            return False
+        else:
+            tmp = getattr(self, attr)
+            if not isinstance(tmp, bool):
+                return False
+        return tmp
+
+    def set_bool_attr(self, attr, val):
+        setattr(self, attr, val)
+
     def _make_path(self, path):
         # Backwards-compatibility stuff: original implementation used string paths
         # libvyosconfig paths are lists, but since node names cannot contain whitespace,

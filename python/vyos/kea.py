@@ -483,10 +483,10 @@ def kea_get_domain_from_subnet_id(config, inet, subnet_id):
                     if option['name'] == 'domain-name':
                         return option['data']
 
-            # domain-name is not found in subnet, fallback to shared-network pool option
-            for option in network['option-data']:
-                if option['name'] == 'domain-name':
-                    return option['data']
+                # domain-name is not found in subnet, fallback to shared-network pool option
+                for option in network['option-data']:
+                    if option['name'] == 'domain-name':
+                        return option['data']
 
     return None
 
