@@ -356,12 +356,12 @@ def kea6_parse_subnet(subnet, config):
 
 def kea_parse_tsig_algo(algo_spec):
     translate = {
-        'hmac-md5': 'HMAC-MD5',
-        'hmac-sha1': 'HMAC-SHA1',
-        'hmac-sha224': 'HMAC-SHA224',
-        'hmac-sha256': 'HMAC-SHA256',
-        'hmac-sha384': 'HMAC-SHA384',
-        'hmac-sha512': 'HMAC-SHA512'
+        'md5': 'HMAC-MD5',
+        'sha1': 'HMAC-SHA1',
+        'sha224': 'HMAC-SHA224',
+        'sha256': 'HMAC-SHA256',
+        'sha384': 'HMAC-SHA384',
+        'sha512': 'HMAC-SHA512'
     }
     if algo_spec not in translate:
         raise ConfigError(f'Unsupported TSIG algorithm: {algo_spec}')
@@ -376,11 +376,11 @@ def kea_parse_ddns_settings(config):
     if send_updates := config.get('send_updates'):
         data['ddns-send-updates'] = kea_parse_enable_disable(send_updates)
 
-    if update_both := config.get('force_update_both'):
-        data['ddns-override-client-update'] = kea_parse_enable_disable(update_both)
+    if override_client_update := config.get('override_client_update'):
+        data['ddns-override-client-update'] = kea_parse_enable_disable(override_client_update)
 
-    if force_update := config.get('force_update'):
-        data['ddns-override-no-update'] = kea_parse_enable_disable(force_update)
+    if override_no_update := config.get('override_no_update'):
+        data['ddns-override-no-update'] = kea_parse_enable_disable(override_no_update)
 
     if update_on_renew := config.get('update_on_renew'):
         data['ddns-update-on-renew'] = kea_parse_enable_disable(update_on_renew)

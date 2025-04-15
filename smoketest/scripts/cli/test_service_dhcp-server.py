@@ -1131,14 +1131,14 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(ddns + ['send-updates', 'enable'])
         self.cli_set(ddns + ['conflict-resolution', 'enable'])
-        self.cli_set(ddns + ['force-update', 'enable'])
-        self.cli_set(ddns + ['force-update-both', 'enable'])
+        self.cli_set(ddns + ['override-no-update', 'enable'])
+        self.cli_set(ddns + ['override-client-update', 'enable'])
         self.cli_set(ddns + ['replace-client-name', 'always'])
         self.cli_set(ddns + ['update-on-renew', 'enable'])
 
-        self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'algorithm', 'hmac-sha256'])
+        self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'algorithm', 'sha256'])
         self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'secret', 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='])
-        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'algorithm', 'hmac-sha256'])
+        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'algorithm', 'sha256'])
         self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'secret', 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='])
         self.cli_set(ddns + ['forward-domain', 'domain.lan', 'dns-server', '1', 'address', '192.168.0.1'])
         self.cli_set(ddns + ['forward-domain', 'domain.lan', 'dns-server', '2', 'address', '100.100.0.1'])

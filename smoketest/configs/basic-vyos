@@ -120,11 +120,11 @@ service {
                 key-name reverse-0-168-192
             }
             tsig-key domain-lan-updates {
-                algorithm hmac-sha256
+                algorithm sha256
                 secret SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==
             }
             tsig-key reverse-0-168-192 {
-                algorithm hmac-sha256
+                algorithm sha256
                 secret VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==
             }
             conflict-resolution enable

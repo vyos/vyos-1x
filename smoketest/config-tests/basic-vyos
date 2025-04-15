@@ -30,9 +30,9 @@ set protocols static arp interface eth2.200.202 address 100.64.202.40 mac '00:50
 set protocols static route 0.0.0.0/0 next-hop 100.64.0.1
 set service dhcp-server dynamic-dns-update send-updates 'enable'
 set service dhcp-server dynamic-dns-update conflict-resolution 'enable'
-set service dhcp-server dynamic-dns-update tsig-key domain-lan-updates algorithm 'hmac-sha256'
+set service dhcp-server dynamic-dns-update tsig-key domain-lan-updates algorithm 'sha256'
 set service dhcp-server dynamic-dns-update tsig-key domain-lan-updates secret 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='
-set service dhcp-server dynamic-dns-update tsig-key reverse-0-168-192 algorithm 'hmac-sha256'
+set service dhcp-server dynamic-dns-update tsig-key reverse-0-168-192 algorithm 'sha256'
 set service dhcp-server dynamic-dns-update tsig-key reverse-0-168-192 secret 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='
 set service dhcp-server dynamic-dns-update forward-domain domain.lan dns-server 1 address '192.168.0.1'
 set service dhcp-server dynamic-dns-update forward-domain domain.lan dns-server 2 address '100.100.0.1'

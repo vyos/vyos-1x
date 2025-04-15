@@ -19,7 +19,7 @@
         <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
-<leafNode name="force-update-both">
+<leafNode name="override-client-update">
     <properties>
         <help>Always update both forward and reverse DNS data, regardless of the client's request</help>
         <completionHelp>
@@ -39,7 +39,7 @@
         <constraintErrorMessage>Set it to either enable or disable</constraintErrorMessage>
     </properties>
 </leafNode>
-<leafNode name="force-update">
+<leafNode name="override-no-update">
     <properties>
         <help>Perform a DDNS update, even if the client instructs the server not to</help>
         <completionHelp>

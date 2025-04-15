@@ -29,34 +29,34 @@
                     <properties>
                       <help>TSIG key algorithm</help>
                       <completionHelp>
-                        <list>hmac-md5 hmac-sha1 hmac-sha224 hmac-sha256 hmac-sha384 hmac-sha512</list>
+                        <list>md5 sha1 sha224 sha256 sha384 sha512</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>hmac-md5</format>
+                        <format>md5</format>
                         <description>MD5 HMAC algorithm</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>hmac-sha1</format>
+                        <format>sha1</format>
                         <description>SHA1 HMAC algorithm</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>hmac-sha224</format>
+                        <format>sha224</format>
                         <description>SHA224 HMAC algorithm</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>hmac-sha256</format>
+                        <format>sha256</format>
                         <description>SHA256 HMAC algorithm</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>hmac-sha384</format>
+                        <format>sha384</format>
                         <description>SHA384 HMAC algorithm</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>hmac-sha512</format>
+                        <format>sha512</format>
                         <description>SHA512 HMAC algorithm</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(hmac-md5|hmac-sha1|hmac-sha224|hmac-sha256|hmac-sha384|hmac-sha512)</regex>
+                        <regex>(md5|sha1|sha224|sha256|sha384|sha512)</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid TSIG key algorithm</constraintErrorMessage>
                     </properties>
