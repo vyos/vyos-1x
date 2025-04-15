@@ -376,6 +376,251 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_ipv4_map(self):
+        # Test parameters not configured
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        #  Test failure of both tcp and udp
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-udp'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test protocol not in parameters
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test action not in rule
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test action jump but no jump-target; works for goto as well
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test jump-target in rule but action is not jump; works for goto as well
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'jump-target', 'test-filter'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'test-filter'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test parameter configured but not set in rules
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test field configured in rules but not in parameters
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'destination', 'address', '1.1.1.1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test success
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '2', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '2', 'destination', 'port', '3'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '3', 'action', 'return'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '3', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '3', 'destination', 'port', '4'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '4', 'action', 'continue'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '4', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '4', 'destination', 'port', '5'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '5', 'action', 'goto'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '5', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '5', 'destination', 'port', '6'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '5', 'jump-target', 'test-filter1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '6', 'action', 'jump'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '6', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '6', 'destination', 'port', '7'])
+        self.cli_set(['firewall', 'group', 'ipv4-map', 'test-map', 'rule', '6', 'jump-target', 'test-filter2'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'test-filter1'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'test-filter2'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '10', 'action', 'apply-map'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '10', 'map', 'test-map'])
+        self.cli_commit()
+
+        nftables_search = [
+            [f'type inet_service . inet_service . inet_proto : verdict'],
+            ['1 . 2 . tcp counter packets 0 bytes 0 : accept'],
+            ['1 . 3 . tcp counter packets 0 bytes 0 : drop'],
+            ['1 . 4 . tcp counter packets 0 bytes 0 : return'],
+            ['1 . 5 . tcp counter packets 0 bytes 0 : continue'],
+            ['1 . 6 . tcp counter packets 0 bytes 0 : goto NAME_test-filter1'],
+            ['1 . 7 . tcp counter packets 0 bytes 0 : jump NAME_test-filter2'],
+            [f'tcp sport . tcp dport . meta l4proto vmap @MAP_test-map comment "ipv4-OUT-filter-10"']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+
+    def test_ipv6_map(self):
+        # Test parameters not configured
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        #  Test failure of both tcp and udp
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-udp'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test protocol not in parameters
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test action not in rule
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test action jump but no jump-target; works for goto as well
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test jump-target in rule but action is not jump; works for goto as well
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'jump-target', 'test-filter'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'test-filter'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test parameter configured but not set in rules
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test field configured in rules but not in parameters
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'destination', 'address', '2001::1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test success
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'source-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'destination-port'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'parameters', 'protocol-tcp'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '1', 'destination', 'port', '2'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '2', 'action', 'drop'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '2', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '2', 'destination', 'port', '3'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '3', 'action', 'return'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '3', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '3', 'destination', 'port', '4'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '4', 'action', 'continue'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '4', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '4', 'destination', 'port', '5'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '5', 'action', 'goto'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '5', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '5', 'destination', 'port', '6'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '5', 'jump-target', 'test-filter1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '6', 'action', 'jump'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '6', 'source', 'port', '1'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '6', 'destination', 'port', '7'])
+        self.cli_set(['firewall', 'group', 'ipv6-map', 'test-map', 'rule', '6', 'jump-target', 'test-filter2'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'test-filter1'])
+        self.cli_set(['firewall', 'ipv6', 'name', 'test-filter2'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '10', 'action', 'apply-map'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '10', 'map', 'test-map'])
+        self.cli_commit()
+
+        nftables_search = [
+            [f'type inet_service . inet_service . inet_proto : verdict'],
+            ['1 . 2 . tcp counter packets 0 bytes 0 : accept'],
+            ['1 . 3 . tcp counter packets 0 bytes 0 : drop'],
+            ['1 . 4 . tcp counter packets 0 bytes 0 : return'],
+            ['1 . 5 . tcp counter packets 0 bytes 0 : continue'],
+            ['1 . 6 . tcp counter packets 0 bytes 0 : goto NAME6_test-filter1'],
+            ['1 . 7 . tcp counter packets 0 bytes 0 : jump NAME6_test-filter2'],
+            [f'tcp sport . tcp dport . meta l4proto vmap @MAP6_test-map comment "ipv6-OUT-filter-10"']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
 
     def test_ipv4_mask(self):
         name = 'smoketest-mask'

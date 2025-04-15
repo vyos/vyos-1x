@@ -33,6 +33,7 @@
             #include <include/firewall/set-packet-modifications-mark.xml.i>
             #include <include/firewall/set-packet-modifications-tcp-mss.xml.i>
             #include <include/firewall/set-packet-modifications-hop-limit.xml.i>
+            #include <include/firewall/ipv6-map.xml.i>
           </children>
         </tagNode>
       </children>

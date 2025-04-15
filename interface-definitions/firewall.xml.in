@@ -173,6 +173,247 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+          <tagNode name="ipv4-map">
+            <properties>
+              <help>Firewall ipv4-map</help>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <node name="parameters">
+                <properties>
+                  <help>Define allowed parameters in map</help>
+                </properties>
+                <children>
+                  <leafNode name="source-address">
+                    <properties>
+                      <help>Allow source address as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="destination-address">
+                    <properties>
+                      <help>Allow destination address as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="source-port">
+                    <properties>
+                      <help>Allow source port as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="destination-port">
+                    <properties>
+                      <help>Allow destination port as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="inbound-interface">
+                    <properties>
+                      <help>Allow inbound interface as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="outbound-interface">
+                    <properties>
+                      <help>Allow outbound interface as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="icmp-type">
+                    <properties>
+                      <help>Allow ICMP type as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="icmp-code">
+                    <properties>
+                      <help>Allow ICMP code as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="protocol-icmp">
+                    <properties>
+                      <help>Define protocol parameter as ICMP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="protocol-tcp">
+                    <properties>
+                      <help>Define protocol parameter as TCP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="protocol-udp">
+                    <properties>
+                      <help>Define protocol parameter as UDP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+
+                </children>
+              </node>
+              <tagNode name="rule">
+                <properties>
+                  <help>IPv4 Map rule number</help>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                  #include <include/firewall/action-map.xml.i>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/firewall/inbound-interface-no-group.xml.i>
+                  #include <include/firewall/outbound-interface-no-group.xml.i>
+                  #include <include/firewall/icmp.xml.i>
+                  <leafNode name="jump-target">
+                    <properties>
+                      <help>Set jump target. Action jump must be defined to use this setting</help>
+                      <completionHelp>
+                        <path>firewall ipv4 name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <node name="source">
+                    <properties>
+                      <help>Source parameters</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/address-or-mask.xml.i>
+                      #include <include/firewall/port-range.xml.i>
+                    </children>
+                  </node>
+                  <node name="destination">
+                    <properties>
+                      <help>Destination parameters</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/address-or-mask.xml.i>
+                      #include <include/firewall/port-range.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="ipv6-map">
+            <properties>
+              <help>Firewall ipv6-map</help>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <node name="parameters">
+                <properties>
+                  <help>Define allowed parameters in map</help>
+                </properties>
+                <children>
+                  <leafNode name="source-address">
+                    <properties>
+                      <help>Allow source address as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="destination-address">
+                    <properties>
+                      <help>Allow destination address as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="source-port">
+                    <properties>
+                      <help>Allow source port as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="destination-port">
+                    <properties>
+                      <help>Allow destination port as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="inbound-interface">
+                    <properties>
+                      <help>Allow inbound interface as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="outbound-interface">
+                    <properties>
+                      <help>Allow outbound interface as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="icmp-type">
+                    <properties>
+                      <help>Allow ICMP type as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="icmp-code">
+                    <properties>
+                      <help>Allow ICMP code as parameter</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="protocol-icmp">
+                    <properties>
+                      <help>Define protocol parameter as ICMP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="protocol-tcp">
+                    <properties>
+                      <help>Define protocol parameter as TCP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="protocol-udp">
+                    <properties>
+                      <help>Define protocol parameter as UDP</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <tagNode name="rule">
+                <properties>
+                  <help>IPv6 Map rule number</help>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                  #include <include/firewall/action-map.xml.i>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/firewall/inbound-interface-no-group.xml.i>
+                  #include <include/firewall/outbound-interface-no-group.xml.i>
+                  #include <include/firewall/icmpv6.xml.i>
+                  <leafNode name="jump-target">
+                    <properties>
+                      <help>Set jump target. Action jump must be defined to use this setting</help>
+                      <completionHelp>
+                        <path>firewall ipv4 name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <node name="source">
+                    <properties>
+                      <help>Source parameters</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/address-or-mask-ipv6.xml.i>
+                      #include <include/firewall/port-range.xml.i>
+                    </children>
+                  </node>
+                  <node name="destination">
+                    <properties>
+                      <help>Destination parameters</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/address-or-mask-ipv6.xml.i>
+                      #include <include/firewall/port-range.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
           <tagNode name="ipv6-address-group">
             <properties>
               <help>Firewall ipv6-address-group</help>

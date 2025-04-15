@@ -157,6 +157,48 @@ def get_config(config=None):
                 if local_zone in zone_conf['from']:
                     local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
 
+    # When applying a map to a rule, the values within parameters need to be preserved
+    # for execution of the rule in a chain. These values are lost once the rule enters
+    # /python/vyos/firewall.py. This stores those values in the rule under the param_ prefix
+    if firewall.get('group', {}).get('ipv4_map', {}) or firewall.get('group', {}).get('ipv6_map', {}):
+        for family in ['ipv4', 'ipv6']:
+            if family in firewall:
+                for chain in ['name','forward','input','output']:
+                    if chain in firewall[family]:
+                        for priority, priority_conf in firewall[family][chain].items():
+                            if 'rule' in priority_conf:
+                                for rule_id, rule_conf in priority_conf['rule'].items():
+                                    if 'map' in rule_conf:
+                                        map_name = rule_conf['map']
+                                        map_family = f'{family}_map'
+
+                                        if firewall.get('group', {}).get(map_family, {}).get(map_name, {}).get('parameters'):
+                                            param_path = firewall['group'][map_family][map_name]['parameters']
+                                            rule_path = firewall[family][chain][priority]['rule'][rule_id]
+
+                                            if 'protocol_tcp' in param_path:
+                                                rule_path['param_protocol'] = 'tcp'
+                                            if 'protocol_udp' in param_path:
+                                              rule_path['param_protocol'] = 'udp'
+                                            if 'protocol_icmp' in param_path:
+                                                rule_path['param_protocol'] = 'icmp'
+                                                if 'icmp_type' in param_path:
+                                                    rule_path['param_icmp_type'] = {}
+                                                if 'icmp_code' in param_path:
+                                                    rule_path['param_icmp_code'] = {}
+                                            if 'source_address' in param_path:
+                                                rule_path['param_source_address'] = {}
+                                            if 'destination_address' in param_path:
+                                                rule_path['param_destination_address'] = {}
+                                            if 'source_port' in param_path:
+                                                rule_path['param_source_port'] = {}
+                                            if 'destination_port' in param_path:
+                                                rule_path['param_destination_port'] = {}
+                                            if 'inbound_interface' in param_path:
+                                                rule_path['param_inbound_interface'] = {}
+                                            if 'outbound_interface' in param_path:
+                                                rule_path['param_outbound_interface'] = {}
+
     set_dependents('conntrack', conf)
 
     return firewall
@@ -198,6 +240,51 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
     if 'action' not in rule_conf:
         raise ConfigError('Rule action must be defined')
 
+    if 'apply-map' in rule_conf['action']:
+        # check if map is configured
+        if 'map' not in rule_conf:
+            raise ConfigError('map is a required field when using apply-map')
+
+        # check if map exists
+        if not firewall.get('group', {}).get(f'{family}_map', {}).get(rule_conf['map']):
+            raise ConfigError(f'{family}-map "{rule_conf["map"]}" does not exist')
+        else:
+            map_conf = firewall.get('group', {}).get(f'{family}_map', {}).get(rule_conf['map'])
+
+        # Check if icmp is configured in both chain rule and map rule
+        if 'icmp' in rule_conf:
+            if 'protocol_icmp' in map_conf.get('parameters'):
+                raise ConfigError(f'ICMP cannot be configured in both chain rule and map rule')
+
+        # Check if inbound/outbound_interface is configured in both chain rule and map rule
+        if 'inbound_interface' in rule_conf:
+            if 'inbound_interface' in map_conf.get('parameters'):
+                raise ConfigError(f'Inbound interface cannot be configured in both chain rule and map rule')
+        if 'outbound_interface' in rule_conf:
+            if 'outbound_interface' in map_conf.get('parameters'):
+                raise ConfigError(f'Outbound interface cannot be configured in both chain rule and map rule')
+
+        # Check if source values are configured in rule; not allowed in apply-map
+        if 'source' in rule_conf:
+            raise ConfigError('Source value is not supported for apply-map; configure in map parameters')
+
+        # Check if destination values are configured in rule; not allowed in apply-map
+        if 'destination' in rule_conf:
+            raise ConfigError('Destination value is not supported for apply-map; configure in map parameters')
+
+        # Check if protocol values are configured in rule; not allowed in apply-map
+        if 'protocol' in rule_conf:
+            raise ConfigError('Protocol value is not supported for apply-map; configure in map parameters')
+
+        # Check if jump-target is defined; must be defined in map if using apply-map
+        if 'jump_target' in rule_conf:
+            raise ConfigError('jump-target cannot be defined in this rule; apply in map instead')
+
+    if 'map' in rule_conf:
+        # Check if map is defined with action apply-map
+        if 'apply-map' not in rule_conf['action']:
+            raise ConfigError('Action apply-map is required when using map')
+
     if 'jump' in rule_conf['action'] and 'jump_target' not in rule_conf:
         raise ConfigError('Action set to jump, but no jump-target specified')
 
@@ -205,7 +292,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         if 'jump' not in rule_conf['action']:
             raise ConfigError('jump-target defined, but action jump needed and it is not defined')
         target = rule_conf['jump_target']
-        if hook != 'name': # This is a bit clumsy, but consolidates a chunk of code. 
+        if hook != 'name': # This is a bit clumsy, but consolidates a chunk of code.
             verify_jump_target(firewall, hook, target, family, recursive=True)
         else:
             verify_jump_target(firewall, hook, target, family, recursive=False)
@@ -268,12 +355,12 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
             if dict_search_args(rule_conf, 'gre', 'flags', 'checksum') is None:
                 # There is no builtin match in nftables for the GRE key, so we need to do a raw lookup.
-                # The offset of the key within the packet shifts depending on the C-flag. 
-                # 99% of the time, nobody will have checksums enabled - it's usually a manual config option. 
-                # We can either assume it is unset unless otherwise directed 
+                # The offset of the key within the packet shifts depending on the C-flag.
+                # 99% of the time, nobody will have checksums enabled - it's usually a manual config option.
+                # We can either assume it is unset unless otherwise directed
                 # (confusing, requires doco to explain why it doesn't work sometimes)
-                # or, demand an explicit selection to be made for this specific match rule. 
-                # This check enforces the latter. The user is free to create rules for both cases. 
+                # or, demand an explicit selection to be made for this specific match rule.
+                # This check enforces the latter. The user is free to create rules for both cases.
                 raise ConfigError('Matching GRE tunnel key requires an explicit checksum flag match. For most cases, use "gre flags checksum unset"')
 
             if dict_search_args(rule_conf, 'gre', 'flags', 'key', 'unset') is not None:
@@ -286,7 +373,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                 if gre_inner_value < 0 or gre_inner_value > 65535:
                     raise ConfigError('inner-proto outside valid ethertype range 0-65535')
             except ValueError:
-                pass # Symbolic constant, pre-validated before reaching here. 
+                pass # Symbolic constant, pre-validated before reaching here.
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
@@ -423,6 +510,106 @@ def verify_hardware_offload(ifname):
         raise ConfigError(f'Interface "{ifname}" requires "offload hw-tc-offload"')
 
 def verify(firewall):
+    if 'ipv4_map' in firewall.get('group', {}) or 'ipv6_map' in firewall.get('group', {}):
+        for map_family in ['ipv4_map', 'ipv6_map']:
+            for map_name, map_conf in firewall['group'].get(map_family, {}).items():
+                # Check if the map has parameters
+                if not map_conf.get('parameters'):
+                    raise ConfigError(f'{map_family} "{map_name}" must have parameters defined')
+
+                # If either source port or destination port is defined, then protocol must be defined
+                if ('source_port' in map_conf.get('parameters', {}) or 'destination_port' in map_conf.get('parameters', {})) and not ('protocol_tcp' in map_conf['parameters'] or 'protocol_udp' in map_conf['parameters']):
+                    raise ConfigError(f'{map_family} \"{map_name}\" must have a protocol defined if source port or destination port is defined')
+
+                # If protocol is defined, then source port or destination port must be defined
+                if ('protocol_tcp' in map_conf.get('parameters', {}) or 'protocol_udp' in map_conf.get('parameters', {})) and not ('source_port' in map_conf['parameters'] or 'destination_port' in map_conf['parameters']):
+                    raise ConfigError(f'{map_family} \"{map_name}\" must have a source port or destination port defined if protocol is defined')
+
+                # Check if more than one protocol is defined
+                if len({k: v for k, v in map_conf.get('parameters', {}).items() if 'protocol_' in k}) > 1:
+                    raise ConfigError(f'{map_family} "{map_name}" cannot have more than one protocol defined')
+
+                if ('icmp_type' in map_conf.get('parameters') or 'icmp_code' in map_conf.get('parameters')) and not 'protocol_icmp' in map_conf.get('parameters'):
+                    raise ConfigError(f'{map_family} "{map_name}" must have a protocol icmp defined if icmp type or code is defined')
+
+                rule_list = []
+
+                # Bug in nft versions < 1.1.0; no error handling for concatenating more than 512-bytes
+                if len(map_conf['parameters']) > 5:
+                    raise ConfigError(f'{map_family} "{map_name}" cannot have more than 5 parameters defined')
+
+                param_list = [k for k in map_conf['parameters'] if "protocol" not in k]
+
+                # Create list of parameters that are configured in the rules
+                for rule_id, rule_conf in map_conf.get('rule', {}).items():
+                    # Check if the rule has an action defined
+                    if 'action' not in rule_conf:
+                        raise ConfigError(f'{map_name} - Rule {rule_id}: must have an action defined')
+
+                    # Check if inbound/outbound_interface is not empty
+                    if 'inbound_interface' in rule_conf:
+                        if 'name' not in rule_conf['inbound_interface']:
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: must have an interface name defined for inbound_interface')
+                    if 'outbound_interface' in rule_conf:
+                        if 'name' not in rule_conf['outbound_interface']:
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: must have an interface name defined for outbound_interface')
+
+                    # Check if icmp is configured in the rules
+                    icmp_family = "icmpv6" if map_family == "ipv6_map" else "icmp"
+                    if icmp_family in rule_conf:
+                        # Check if icmp is an empty dictionary
+                        if 'type' not in rule_conf[icmp_family] and 'type_name' not in rule_conf[icmp_family]:
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: must have an icmp type defined; protocol icmp is inherited from the parameters')
+                        if 'protocol_icmp' not in map_conf.get('parameters', {}):
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: protocol icmp must be a parameter if rule matches icmp')
+
+                    # Check if the rule has a jump-target defined if action is jump/goto
+                    if rule_conf['action'] == 'jump' or rule_conf['action'] == 'goto':
+                        if 'jump_target' not in rule_conf:
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: must have a jump-target defined if action is jump/goto')
+
+                    # Check if the rule has a jump-target defined if action is not jump/goto
+                    if 'jump_target' in rule_conf and rule_conf['action'] not in ['jump', 'goto']:
+                        raise ConfigError(f'{map_name} - Rule {rule_id}: cannot have a jump-target defined if action is not jump/goto')
+
+                    # Check if the jump-target exists
+                    if rule_conf.get('jump_target'):
+                        if rule_conf['jump_target'] not in firewall.get(map_family[:4], {}).get('name', []):
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: jump-target "{rule_conf["jump_target"]}" does not exist')
+
+                    # Get list of fields that are configured in the rules
+                    if rule_conf.get('source', {}).get('address'):
+                        rule_list.append('source_address')
+                    if rule_conf.get('destination', {}).get('address'):
+                        rule_list.append('destination_address')
+                    if rule_conf.get('source', {}).get('port'):
+                        rule_list.append('source_port')
+                    if rule_conf.get('destination', {}).get('port'):
+                            rule_list.append('destination_port')
+                    if rule_conf.get(icmp_family):
+                        if rule_conf.get(icmp_family).get('type') or rule_conf.get(icmp_family).get('type_name'):
+                            rule_list.append('icmp_type')
+                        if rule_conf.get(icmp_family).get('code'):
+                            rule_list.append('icmp_code')
+                    if rule_conf.get('inbound_interface', {}).get('name'):
+                        rule_list.append('inbound_interface')
+                    if rule_conf.get('outbound_interface', {}).get('name'):
+                        rule_list.append('outbound_interface')
+
+                    # Cannot have a rule with only action defined
+                    if not rule_list and rule_conf.get('action'):
+                        raise ConfigError(f'{map_name} - Rule {rule_id}: Must have fields configured')
+
+                    # Check for items that are configured in the rules but not defined in the parameters
+                    for item in rule_list:
+                        if item not in param_list:
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: {item.replace("_", " ")} not a defined parameter')
+
+                    # Check for items that are defined in the parameters but not configured in the rules
+                    for item in param_list:
+                        if item not in rule_list:
+                            raise ConfigError(f'{map_name} - Rule {rule_id}: {item.replace("_", " ")} is a required parameter')
+
     if 'flowtable' in firewall:
         for flowtable, flowtable_conf in firewall['flowtable'].items():
             if 'interface' not in flowtable_conf:

@@ -28,6 +28,7 @@
             #include <include/firewall/common-rule-ipv6.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
             #include <include/firewall/match-ipsec-in.xml.i>
+            #include <include/firewall/ipv6-map.xml.i>
           </children>
         </tagNode>
       </children>

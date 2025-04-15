@@ -468,14 +468,14 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             output.append('gre version 1')
 
         if gre_key:
-            # The offset of the key within the packet shifts depending on the C-flag. 
-            # nftables cannot handle complex enough expressions to match multiple 
+            # The offset of the key within the packet shifts depending on the C-flag.
+            # nftables cannot handle complex enough expressions to match multiple
             # offsets based on bitfields elsewhere.
-            # We enforce a specific match for the checksum flag in validation, so the 
-            # gre_flags dict will always have a 'checksum' key when gre_key is populated. 
-            if not gre_flags['checksum']: 
+            # We enforce a specific match for the checksum flag in validation, so the
+            # gre_flags dict will always have a 'checksum' key when gre_key is populated.
+            if not gre_flags['checksum']:
                 # No "unset" child node means C is set, we offset key lookup +32 bits
-                output.append(f'@th,64,32 == {gre_key}')                
+                output.append(f'@th,64,32 == {gre_key}')
             else:
                 output.append(f'@th,32,32 == {gre_key}')
 
@@ -522,6 +522,49 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             ether_type = ether_type_mapping.get(ether_type, ether_type)
             output.append(f'vlan type {operator} {ether_type}')
 
+    if 'map' in rule_conf:
+        ip_version = '6' if ip_name == 'ip6' else ''
+        icmp_version = 'icmpv6' if ip_name == 'ip6' else 'icmp'
+        map_name = rule_conf['map']
+        map_expr = []
+        proto = ""
+
+        if 'param_protocol' in rule_conf:
+            proto = rule_conf['param_protocol']
+
+        # Add inbound interface if specified
+        if 'param_inbound_interface' in rule_conf:
+            map_expr.append(f'iifname')
+        # Add outbound interface if specified
+        if 'param_outbound_interface' in rule_conf:
+            map_expr.append(f'oifname')
+        # Add source address if specified
+        if 'param_source_address' in rule_conf:
+            map_expr.append(f'{ip_name} saddr')
+        # Add destination address if specified
+        if 'param_destination_address' in rule_conf:
+            map_expr.append(f'{ip_name} daddr')
+        # Add source port if specified
+        if 'param_source_port' in rule_conf:
+            map_expr.append(f'{proto} sport')
+        # Add destination port if specified
+        if 'param_destination_port' in rule_conf:
+            map_expr.append(f'{proto} dport')
+        # Add protocol if specified
+        if proto:
+            map_expr.append('meta l4proto')
+        # Add icmp type if specified
+        if 'param_icmp_type' in rule_conf:
+            map_expr.append(f'{icmp_version} type')
+        # Add icmp code if specified
+        if 'param_icmp_code' in rule_conf:
+            map_expr.append(f'{icmp_version} code')
+
+        # Create rule expression
+        if map_expr:
+            output.append(f'{" . ".join(map_expr)} vmap @MAP{ip_version}_{map_name}')
+
+
     if 'log' in rule_conf:
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
         #output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
@@ -545,7 +588,8 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     log_snaplen = rule_conf['log_options']['snapshot_length']
                     output.append(f'snaplen {log_snaplen}')
 
-    output.append('counter')
+    if rule_conf['action'] != 'apply-map':
+        output.append('counter')
 
     if 'add_address_to_group' in rule_conf:
         for side in ['destination_address', 'source_address']:
@@ -601,6 +645,9 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if rule_conf['action'] == 'offload':
             offload_target = rule_conf['offload_target']
             output.append(f'flow add @VYOS_FLOWTABLE_{offload_target}')
+        elif rule_conf['action'] == 'apply-map':
+            # Action is applied directly in the map
+            pass
         else:
             output.append(f'{rule_conf["action"]}')
 
@@ -634,7 +681,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     return " ".join(output)
 
 def parse_gre_flags(flags, force_keyed=False):
-    flag_map = { # nft does not have symbolic names for these. 
+    flag_map = { # nft does not have symbolic names for these.
         'checksum': 1<<0,
         'routing':  1<<1,
         'key':      1<<2,
@@ -645,7 +692,7 @@ def parse_gre_flags(flags, force_keyed=False):
     include = 0
     exclude = 0
     for fl_name, fl_state in flags.items():
-        if not fl_state: 
+        if not fl_state:
             include |= flag_map[fl_name]
         else: # 'unset' child tag
             exclude |= flag_map[fl_name]

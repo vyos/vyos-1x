@@ -34,6 +34,93 @@ table ip6 raw {
 delete table ip vyos_filter
 {% endif %}
 table ip vyos_filter {
+
+{% if group.ipv4_map is vyos_defined %}
+{%     for map_name, map_conf in group.ipv4_map.items() %}
+{%         set ns = namespace(type_components=[], element_components=[]) %}
+{%         if map_conf.parameters.inbound_interface is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ifname'] %}
+{%         endif %}
+{%         if map_conf.parameters.outbound_interface is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ifname'] %}
+{%         endif %}
+{%         if map_conf.parameters.source_address is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ipv4_addr'] %}
+{%         endif %}
+{%         if map_conf.parameters.destination_address is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ipv4_addr'] %}
+{%         endif %}
+{%         if map_conf.parameters.source_port is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['inet_service'] %}
+{%         endif %}
+{%         if map_conf.parameters.destination_port is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['inet_service'] %}
+{%         endif %}
+{%         if map_conf.parameters.protocol_udp is vyos_defined or map_conf.parameters.protocol_tcp is vyos_defined or map_conf.parameters.protocol_icmp is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['inet_proto'] %}
+{%         endif %}
+{%         if map_conf.parameters.icmp_type is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['icmp_type'] %}
+{%         endif %}
+{%         if map_conf.parameters.icmp_code is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['icmp_code'] %}
+{%         endif %}
+    map MAP_{{ map_name }} {
+        type {{ ns.type_components | join(' . ') }} : verdict
+        flags interval
+        counter
+{%         if map_conf.rule is vyos_defined %}
+        elements = {
+{%             for rule_id, rule_conf in map_conf.rule.items() if rule_conf.disable is not vyos_defined %}
+{%                 set ns.element_components = [] %}
+{%                 if map_conf.parameters.inbound_interface is vyos_defined and rule_conf.inbound_interface.name is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.inbound_interface.name] %}
+{%                 endif %}
+{%                 if map_conf.parameters.outbound_interface is vyos_defined and rule_conf.outbound_interface.name is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.outbound_interface.name] %}
+{%                 endif %}
+{%                 if map_conf.parameters.source_address is vyos_defined and rule_conf.source.address is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.source.address] %}
+{%                 endif %}
+{%                 if map_conf.parameters.destination_address is vyos_defined and rule_conf.destination.address is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.destination.address] %}
+{%                 endif %}
+{%                 if map_conf.parameters.source_port is vyos_defined and rule_conf.source.port is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.source.port] %}
+{%                 endif %}
+{%                 if map_conf.parameters.destination_port is vyos_defined and rule_conf.destination.port is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.destination.port] %}
+{%                 endif %}
+{%                 if map_conf.parameters.protocol_udp is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + ['udp'] %}
+{%                 elif map_conf.parameters.protocol_tcp is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + ['tcp'] %}
+{%                 elif map_conf.parameters.protocol_icmp is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + ['icmp'] %}
+{%                 endif %}
+{%                 if map_conf.parameters.icmp_type is vyos_defined and rule_conf.icmp.type is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.icmp.type] %}
+{%                 endif %}
+{%                 if map_conf.parameters.icmp_code is vyos_defined and rule_conf.icmp.code is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.icmp.code] %}
+{%                 endif %}
+{%                 if rule_conf.action == 'jump' %}
+            {{ ns.element_components | join(' . ') }} : jump NAME_{{ rule_conf.jump_target }}
+{%                 elif rule_conf.action == 'goto' %}
+            {{ ns.element_components | join(' . ') }} : goto NAME_{{ rule_conf.jump_target }}
+{%                 else %}
+            {{ ns.element_components | join(' . ') }} : {{ rule_conf.action }}
+{%                 endif %}
+{%                 if not loop.last %}
+            ,
+{%                 endif %}
+{%             endfor %}
+        }
+{%         endif %}
+    }
+{%     endfor %}
+{% endif %}
+
 {% if ipv4 is vyos_defined %}
 {%     if flowtable is vyos_defined %}
 {%         for name, flowtable_conf in flowtable.items() %}
@@ -187,6 +274,93 @@ table ip vyos_filter {
 delete table ip6 vyos_filter
 {% endif %}
 table ip6 vyos_filter {
+
+{% if group.ipv6_map is vyos_defined %}
+{%     for map_name, map_conf in group.ipv6_map.items() %}
+{%         set ns = namespace(type_components=[], element_components=[]) %}
+{%         if map_conf.parameters.inbound_interface is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ifname'] %}
+{%         endif %}
+{%         if map_conf.parameters.outbound_interface is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ifname'] %}
+{%         endif %}
+{%         if map_conf.parameters.source_address is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ipv6_addr'] %}
+{%         endif %}
+{%         if map_conf.parameters.destination_address is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['ipv6_addr'] %}
+{%         endif %}
+{%         if map_conf.parameters.source_port is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['inet_service'] %}
+{%         endif %}
+{%         if map_conf.parameters.destination_port is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['inet_service'] %}
+{%         endif %}
+{%         if map_conf.parameters.protocol_udp is vyos_defined or map_conf.parameters.protocol_tcp is vyos_defined or map_conf.parameters.protocol_icmp is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['inet_proto'] %}
+{%         endif %}
+{%         if map_conf.parameters.icmp_type is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['icmpv6_type'] %}
+{%         endif %}
+{%         if map_conf.parameters.icmp_code is vyos_defined %}
+{%             set ns.type_components = ns.type_components + ['icmpv6_code'] %}
+{%         endif %}
+    map MAP6_{{ map_name }} {
+        type {{ ns.type_components | join(' . ') }} : verdict
+        flags interval
+        counter
+{%         if map_conf.rule is vyos_defined %}
+        elements = {
+{%             for rule_id, rule_conf in map_conf.rule.items() if rule_conf.disable is not vyos_defined %}
+{%                 set ns.element_components = [] %}
+{%                 if map_conf.parameters.inbound_interface is vyos_defined and rule_conf.inbound_interface.name is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.inbound_interface.name] %}
+{%                 endif %}
+{%                 if map_conf.parameters.outbound_interface is vyos_defined and rule_conf.outbound_interface.name is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.outbound_interface.name] %}
+{%                 endif %}
+{%                 if map_conf.parameters.source_address is vyos_defined and rule_conf.source.address is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.source.address] %}
+{%                 endif %}
+{%                 if map_conf.parameters.destination_address is vyos_defined and rule_conf.destination.address is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.destination.address] %}
+{%                 endif %}
+{%                 if map_conf.parameters.source_port is vyos_defined and rule_conf.source.port is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.source.port] %}
+{%                 endif %}
+{%                 if map_conf.parameters.destination_port is vyos_defined and rule_conf.destination.port is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.destination.port] %}
+{%                 endif %}
+{%                 if map_conf.parameters.protocol_udp is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + ['udp'] %}
+{%                 elif map_conf.parameters.protocol_tcp is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + ['tcp'] %}
+{%                 elif map_conf.parameters.protocol_icmp is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + ['icmpv6'] %}
+{%                 endif %}
+{%                 if map_conf.parameters.icmp_type is vyos_defined and rule_conf.icmpv6.type is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.icmpv6.type] %}
+{%                 endif %}
+{%                 if map_conf.parameters.icmp_code is vyos_defined and rule_conf.icmpv6.code is vyos_defined %}
+{%                     set ns.element_components = ns.element_components + [rule_conf.icmpv6.code] %}
+{%                 endif %}
+{%                 if rule_conf.action == 'jump' %}
+            {{ ns.element_components | join(' . ') }} : jump NAME6_{{ rule_conf.jump_target }}
+{%                 elif rule_conf.action == 'goto' %}
+            {{ ns.element_components | join(' . ') }} : goto NAME6_{{ rule_conf.jump_target }}
+{%                 else %}
+            {{ ns.element_components | join(' . ') }} : {{ rule_conf.action }}
+{%                 endif %}
+{%                 if not loop.last %}
+            ,
+{%                 endif %}
+{%             endfor %}
+        }
+{%         endif %}
+    }
+{%     endfor %}
+{% endif %}
+
 {% if ipv6 is vyos_defined %}
 {%     if flowtable is vyos_defined %}
 {%         for name, flowtable_conf in flowtable.items() %}
