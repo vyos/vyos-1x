@@ -3,11 +3,15 @@
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept continue jump reject return drop queue offload synproxy</list>
+      <list>accept apply-map continue jump reject return drop queue offload synproxy</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
       <description>Accept matching entries</description>
+    </valueHelp>
+    <valueHelp>
+      <format>apply-map</format>
+      <description>Apply map to rule</description>
     </valueHelp>
     <valueHelp>
       <format>continue</format>
@@ -42,7 +46,7 @@
       <description>Synproxy connections</description>
     </valueHelp>
     <constraint>
-      <regex>(accept|continue|jump|reject|return|drop|queue|offload|synproxy)</regex>
+      <regex>(accept|apply-map|continue|jump|reject|return|drop|queue|offload|synproxy)</regex>
     </constraint>
   </properties>
 </leafNode>
