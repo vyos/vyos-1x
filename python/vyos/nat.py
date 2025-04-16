@@ -16,15 +16,11 @@ from vyos.template import is_ip_network
 from vyos.utils.dict import dict_search_args
 from vyos.template import bracketize_ipv6
 
-
-def log_nat_type_str(nat_type):
-    nat_types = {
-        'destination': 'DST',
-        'source': 'SRC',
-        'output': 'OUT',
-    }
-
-    return nat_types.get(nat_type, 'SRC')
+nat_types = {
+    'destination': 'DST',
+    'source': 'SRC',
+    'output': 'OUT',
+}
 
 
 def log_translation_prefix(nat_type):
@@ -40,7 +36,7 @@ def log_translation_prefix(nat_type):
 def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     output = []
     ip_prefix = 'ip6' if ipv6 else 'ip'
-    log_prefix = log_nat_type_str(nat_type) + f'-NAT-{rule_id}'
+    log_prefix = f'{nat_types[nat_type]}-NAT-{rule_id}'
     log_suffix = ''
 
     if ipv6:
@@ -282,7 +278,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
 
 def parse_nat_static_rule(rule_conf, rule_id, nat_type):
     output = []
-    log_prefix = 'STATIC-' + log_nat_type_str(nat_type) + f'-NAT-{rule_id}'
+    log_prefix = f'STATIC-{nat_types[nat_type]}-NAT-{rule_id}'
     log_suffix = ''
 
     ignore_type_addr = False
