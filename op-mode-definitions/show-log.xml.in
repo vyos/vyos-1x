@@ -50,7 +50,7 @@
             </properties>
             <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e heartbeat -e cl_status -e mach_down -e ha_log</command>
           </leafNode>
-          <leafNode name="conntrack">
+          <node name="conntrack">
             <properties>
               <help>Show log for Conntrack Events</help>
             </properties>
@@ -82,7 +82,7 @@
                 </children>
               </node>
             </children>
-          </leafNode>
+          </node>
           <leafNode name="conntrack-sync">
             <properties>
               <help>Show log for Conntrack-sync</help>
