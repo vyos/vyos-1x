@@ -50,6 +50,39 @@
             </properties>
             <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e heartbeat -e cl_status -e mach_down -e ha_log</command>
           </leafNode>
+          <leafNode name="conntrack">
+            <properties>
+              <help>Show log for Conntrack Events</help>
+            </properties>
+            <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(NEW|UPDATE|DESTROY)\]"</command>
+            <children>
+              <node name="event">
+                <properties>
+                  <help>Show log for Conntrack Events</help>
+                </properties>
+                <children>
+                  <leafNode name="new">
+                    <properties>
+                      <help>Show log for Conntrack Events</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(NEW)\]"</command>
+                  </leafNode>
+                  <leafNode name="update">
+                    <properties>
+                      <help>Show log for Conntrack Events</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(UPDATE)\]"</command>
+                  </leafNode>
+                  <leafNode name="destroy">
+                    <properties>
+                      <help>Show log for Conntrack Events</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(DESTROY)\]"</command>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </leafNode>
           <leafNode name="conntrack-sync">
             <properties>
               <help>Show log for Conntrack-sync</help>
