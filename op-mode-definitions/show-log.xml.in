@@ -54,7 +54,7 @@
             <properties>
               <help>Show log for Conntrack Events</help>
             </properties>
-            <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(NEW|UPDATE|DESTROY)\]"</command>
+            <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(NEW|UPDATE|DESTROY)\]'</command>
             <children>
               <node name="event">
                 <properties>
@@ -65,19 +65,19 @@
                     <properties>
                       <help>Show log for Conntrack Events</help>
                     </properties>
-                    <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(NEW)\]"</command>
+                    <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(NEW)\]'</command>
                   </leafNode>
                   <leafNode name="update">
                     <properties>
                       <help>Show log for Conntrack Events</help>
                     </properties>
-                    <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(UPDATE)\]"</command>
+                    <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(UPDATE)\]'</command>
                   </leafNode>
                   <leafNode name="destroy">
                     <properties>
                       <help>Show log for Conntrack Events</help>
                     </properties>
-                    <command>journalctl --no-hostname --boot | egrep "vyos-conntrack-logger\[.*\]: \[(DESTROY)\]"</command>
+                    <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(DESTROY)\]'</command>
                   </leafNode>
                 </children>
               </node>
