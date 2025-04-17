@@ -588,7 +588,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     log_snaplen = rule_conf['log_options']['snapshot_length']
                     output.append(f'snaplen {log_snaplen}')
 
-    if rule_conf['action'] != 'apply-map':
+    if rule_conf.get('action') != 'apply-map':
         output.append('counter')
 
     if 'add_address_to_group' in rule_conf:

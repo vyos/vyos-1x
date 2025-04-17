@@ -240,7 +240,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
     if 'action' not in rule_conf:
         raise ConfigError('Rule action must be defined')
 
-    if 'apply-map' in rule_conf['action']:
+    if 'apply-map' in rule_conf.get('action'):
         # check if map is configured
         if 'map' not in rule_conf:
             raise ConfigError('map is a required field when using apply-map')
@@ -282,7 +282,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
     if 'map' in rule_conf:
         # Check if map is defined with action apply-map
-        if 'apply-map' not in rule_conf['action']:
+        if 'apply-map' not in rule_conf.get('action'):
             raise ConfigError('Action apply-map is required when using map')
 
     if 'jump' in rule_conf['action'] and 'jump_target' not in rule_conf:
