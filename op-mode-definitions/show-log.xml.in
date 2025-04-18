@@ -52,7 +52,7 @@
           </leafNode>
           <node name="conntrack">
             <properties>
-              <help>Show log for Conntrack Events</help>
+              <help>Show log for conntrack events</help>
             </properties>
             <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(NEW|UPDATE|DESTROY)\]'</command>
             <children>
