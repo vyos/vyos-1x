@@ -24,7 +24,6 @@ Depends:
   iotop,
   ipcalc,
   ipmitool,
-  irqtop,
   jq,
   libnss-myhostname,
   localepurge,
@@ -42,4 +41,4 @@ Depends:
   ssl-cert,
   whois
 Description: VyOS user utilities metapackage
- Installs utilities that are provided for the users but no used by VyOS scripts.
+ Installs utilities that are provided for the users but not used by VyOS scripts.
