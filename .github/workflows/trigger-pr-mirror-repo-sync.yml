@@ -12,5 +12,5 @@ permissions:
 jobs:
   call-trigger-mirror-pr-repo-sync:
     if: github.repository_owner == 'vyos'
-    uses: vyos/.github/.github/workflows/trigger-pr-mirror-repo-sync.yml@T7334-add-lebel-create-permission
+    uses: vyos/.github/.github/workflows/trigger-pr-mirror-repo-sync.yml@current
     secrets: inherit
