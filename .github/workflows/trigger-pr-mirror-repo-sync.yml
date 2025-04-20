@@ -5,6 +5,11 @@ on:
         - closed
       branches:
         - current
+        
+permissions:
+  pull-requests: write
+  contents: write
+  issues: write
 
 jobs:
   call-trigger-mirror-pr-repo-sync:
