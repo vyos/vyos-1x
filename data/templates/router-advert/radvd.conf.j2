@@ -21,9 +21,9 @@ interface {{ iface }} {
 {%         endif %}
     AdvIntervalOpt {{ 'off' if iface_config.no_send_interval is vyos_defined else 'on' }};
     AdvSendAdvert {{ 'off' if iface_config.no_send_advert is vyos_defined else 'on' }};
-{%         if iface_config.auto-ignore-prefix is vyos_defined %}
+{%         if iface_config.auto_ignore_prefix is vyos_defined %}
     autoignoreprefixes {
-{%             for prefix in iface_config.auto-ignore-prefix.items() %}
+{%             for prefix in iface_config.auto_ignore_prefix.items() %}
     {{ prefix }}
 {%             endfor %}
     }
