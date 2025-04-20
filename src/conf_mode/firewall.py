@@ -160,44 +160,38 @@ def get_config(config=None):
     # When applying a map to a rule, the values within parameters need to be preserved
     # for execution of the rule in a chain. These values are lost once the rule enters
     # /python/vyos/firewall.py. This stores those values in the rule under the param_ prefix
-    if firewall.get('group', {}).get('ipv4_map', {}) or firewall.get('group', {}).get('ipv6_map', {}):
-        for family in ['ipv4', 'ipv6']:
-            if family in firewall:
-                for chain in ['name','forward','input','output']:
-                    if chain in firewall[family]:
-                        for priority, priority_conf in firewall[family][chain].items():
-                            if 'rule' in priority_conf:
-                                for rule_id, rule_conf in priority_conf['rule'].items():
-                                    if 'map' in rule_conf:
-                                        map_name = rule_conf['map']
-                                        map_family = f'{family}_map'
+    if firewall.get("group", {}).keys() & {"ipv4_map", "ipv6_map"}:
+        _PARAM_MAP = {
+            "protocol_tcp": ("param_protocol", "tcp"),
+            "protocol_udp": ("param_protocol", "udp"),
+            "protocol_icmp": ("param_protocol", "icmp"),
+            "icmp_type": ("param_icmp_type", {}),
+            "icmp_code": ("param_icmp_code", {}),
+            "source_address": ("param_source_address", {}),
+            "destination_address": ("param_destination_address", {}),
+            "source_port": ("param_source_port", {}),
+            "destination_port": ("param_destination_port", {}),
+            "inbound_interface": ("param_inbound_interface", {}),
+            "outbound_interface": ("param_outbound_interface", {}),
+        }
+        for family in ("ipv4", "ipv6"):
+            family_conf = firewall.get(family, {})
+            group_map = firewall.get("group", {}).get(f"{family}_map", {})
 
-                                        if firewall.get('group', {}).get(map_family, {}).get(map_name, {}).get('parameters'):
-                                            param_path = firewall['group'][map_family][map_name]['parameters']
-                                            rule_path = firewall[family][chain][priority]['rule'][rule_id]
+            for chain_conf in (
+                family_conf.get(c, {}) for c in ("name", "forward", "input", "output")
+            ):
+                for priority_conf in chain_conf.values():
+                    rule_dict = priority_conf.get("rule", {})
+                    for rule_conf in rule_dict.values():
+                        params = group_map.get(rule_conf.get("map"), {}).get("parameters", ())
+                        if not params:
+                            continue
 
-                                            if 'protocol_tcp' in param_path:
-                                                rule_path['param_protocol'] = 'tcp'
-                                            if 'protocol_udp' in param_path:
-                                              rule_path['param_protocol'] = 'udp'
-                                            if 'protocol_icmp' in param_path:
-                                                rule_path['param_protocol'] = 'icmp'
-                                                if 'icmp_type' in param_path:
-                                                    rule_path['param_icmp_type'] = {}
-                                                if 'icmp_code' in param_path:
-                                                    rule_path['param_icmp_code'] = {}
-                                            if 'source_address' in param_path:
-                                                rule_path['param_source_address'] = {}
-                                            if 'destination_address' in param_path:
-                                                rule_path['param_destination_address'] = {}
-                                            if 'source_port' in param_path:
-                                                rule_path['param_source_port'] = {}
-                                            if 'destination_port' in param_path:
-                                                rule_path['param_destination_port'] = {}
-                                            if 'inbound_interface' in param_path:
-                                                rule_path['param_inbound_interface'] = {}
-                                            if 'outbound_interface' in param_path:
-                                                rule_path['param_outbound_interface'] = {}
+                        # only loop over params that actually appear in both param‐map and the config
+                        for key in set(params) & _PARAM_MAP.keys():
+                            dest_field, value = _PARAM_MAP[key]
+                            rule_conf[dest_field] = value
 
     set_dependents('conntrack', conf)
 
@@ -246,10 +240,9 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
             raise ConfigError('map is a required field when using apply-map')
 
         # check if map exists
-        if not firewall.get('group', {}).get(f'{family}_map', {}).get(rule_conf['map']):
+        map_conf = firewall.get("group", {}).get(f"{family}_map", {}).get(rule_conf["map"])
+        if not map_conf:
             raise ConfigError(f'{family}-map "{rule_conf["map"]}" does not exist')
-        else:
-            map_conf = firewall.get('group', {}).get(f'{family}_map', {}).get(rule_conf['map'])
 
         # Check if icmp is configured in both chain rule and map rule
         if 'icmp' in rule_conf:
@@ -514,31 +507,32 @@ def verify(firewall):
         for map_family in ['ipv4_map', 'ipv6_map']:
             for map_name, map_conf in firewall['group'].get(map_family, {}).items():
                 # Check if the map has parameters
-                if not map_conf.get('parameters'):
+                map_conf_parameters = map_conf.get('parameters', {})
+                if not map_conf_parameters:
                     raise ConfigError(f'{map_family} "{map_name}" must have parameters defined')
 
                 # If either source port or destination port is defined, then protocol must be defined
-                if ('source_port' in map_conf.get('parameters', {}) or 'destination_port' in map_conf.get('parameters', {})) and not ('protocol_tcp' in map_conf['parameters'] or 'protocol_udp' in map_conf['parameters']):
+                if ('source_port' in map_conf_parameters or 'destination_port' in map_conf_parameters) and not ('protocol_tcp' in map_conf_parameters or 'protocol_udp' in map_conf_parameters):
                     raise ConfigError(f'{map_family} \"{map_name}\" must have a protocol defined if source port or destination port is defined')
 
                 # If protocol is defined, then source port or destination port must be defined
-                if ('protocol_tcp' in map_conf.get('parameters', {}) or 'protocol_udp' in map_conf.get('parameters', {})) and not ('source_port' in map_conf['parameters'] or 'destination_port' in map_conf['parameters']):
+                if ('protocol_tcp' in map_conf_parameters or 'protocol_udp' in map_conf_parameters) and not ('source_port' in map_conf_parameters or 'destination_port' in map_conf_parameters):
                     raise ConfigError(f'{map_family} \"{map_name}\" must have a source port or destination port defined if protocol is defined')
 
                 # Check if more than one protocol is defined
-                if len({k: v for k, v in map_conf.get('parameters', {}).items() if 'protocol_' in k}) > 1:
+                if len({k: v for k, v in map_conf_parameters.items() if 'protocol_' in k}) > 1:
                     raise ConfigError(f'{map_family} "{map_name}" cannot have more than one protocol defined')
 
-                if ('icmp_type' in map_conf.get('parameters') or 'icmp_code' in map_conf.get('parameters')) and not 'protocol_icmp' in map_conf.get('parameters'):
+                if ('icmp_type' in map_conf_parameters or 'icmp_code' in map_conf_parameters) and not 'protocol_icmp' in map_conf_parameters:
                     raise ConfigError(f'{map_family} "{map_name}" must have a protocol icmp defined if icmp type or code is defined')
 
                 rule_list = []
 
                 # Bug in nft versions < 1.1.0; no error handling for concatenating more than 512-bytes
-                if len(map_conf['parameters']) > 5:
+                if len(map_conf_parameters) > 5:
                     raise ConfigError(f'{map_family} "{map_name}" cannot have more than 5 parameters defined')
 
-                param_list = [k for k in map_conf['parameters'] if "protocol" not in k]
+                param_list = [k for k in map_conf_parameters if "protocol" not in k]
 
                 # Create list of parameters that are configured in the rules
                 for rule_id, rule_conf in map_conf.get('rule', {}).items():

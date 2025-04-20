@@ -534,10 +534,10 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
         # Add inbound interface if specified
         if 'param_inbound_interface' in rule_conf:
-            map_expr.append(f'iifname')
+            map_expr.append('iifname')
         # Add outbound interface if specified
         if 'param_outbound_interface' in rule_conf:
-            map_expr.append(f'oifname')
+            map_expr.append('oifname')
         # Add source address if specified
         if 'param_source_address' in rule_conf:
             map_expr.append(f'{ip_name} saddr')
