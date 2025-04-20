@@ -6,6 +6,11 @@ on:
       branches:
         - current
 
+permissions:
+  pull-requests: write
+  contents: write
+  issues: write
+
 jobs:
   call-trigger-mirror-pr-repo-sync:
     if: github.repository_owner == 'vyos' && github.event.pull_request.merged == true
