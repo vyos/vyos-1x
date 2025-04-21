@@ -24,7 +24,7 @@ interface {{ iface }} {
 {%         if iface_config.auto_ignore_prefix is vyos_defined %}
     autoignoreprefixes {
 {%             for auto_ignore_prefix in iface_config.auto_ignore_prefix %}
-    {{ auto_ignore_prefix }};
+        {{ auto_ignore_prefix }};
 {%             endfor %}
     }
 {%         endif %}
