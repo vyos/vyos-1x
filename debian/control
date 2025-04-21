@@ -203,7 +203,7 @@ Depends:
   ndppd,
 # End "service ndp-proxy"
 # For "service router-advert"
-  radvd,
+  radvd (>= 2.20),
 # End "service route-advert"
 # For "load-balancing haproxy"
   haproxy,
