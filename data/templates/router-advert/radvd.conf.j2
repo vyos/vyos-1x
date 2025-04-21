@@ -26,7 +26,7 @@ interface {{ iface }} {
 {%             for auto_ignore_prefix in iface_config.auto_ignore_prefix %}
         {{ auto_ignore_prefix }};
 {%             endfor %}
-    }
+    };
 {%         endif %}
 {%         if iface_config.default_lifetime is vyos_defined %}
     AdvDefaultLifetime {{ iface_config.default_lifetime }};
