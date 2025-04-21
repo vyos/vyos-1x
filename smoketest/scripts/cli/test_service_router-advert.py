@@ -282,6 +282,10 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
 
         self.assertNotIn(f'        {ula_prefixes[1]};', config)
 
+        # ensure remaining two prefixes are still present
+        self.assertIn(f'        {ula_prefixes[0]};', config)
+        self.assertIn(f'        {isp_prefix};', config)
+
         # remove the remaining two prefixes and verify the config block is gone
         self.cli_delete(base_path + ['auto-ignore', ula_prefixes[0]])
         self.cli_delete(base_path + ['auto-ignore', isp_prefix])
