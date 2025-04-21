@@ -265,6 +265,7 @@
                   <constraint>
                     <validator name="ipv6-prefix"/>
                   </constraint>
+                  <multi/>
                 </properties>
               </leafNode>
               <tagNode name="prefix">
