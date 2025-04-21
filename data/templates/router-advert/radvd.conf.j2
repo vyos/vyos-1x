@@ -23,8 +23,8 @@ interface {{ iface }} {
     AdvSendAdvert {{ 'off' if iface_config.no_send_advert is vyos_defined else 'on' }};
 {%         if iface_config.auto_ignore_prefix is vyos_defined %}
     autoignoreprefixes {
-{%             for prefix in iface_config.auto_ignore_prefix.items() %}
-    {{ prefix }}
+{%             for auto_ignore_prefix in iface_config.auto_ignore_prefix %}
+    {{ auto_ignore_prefix }}
 {%             endfor %}
     }
 {%         endif %}
