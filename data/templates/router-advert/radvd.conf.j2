@@ -21,13 +21,6 @@ interface {{ iface }} {
 {%         endif %}
     AdvIntervalOpt {{ 'off' if iface_config.no_send_interval is vyos_defined else 'on' }};
     AdvSendAdvert {{ 'off' if iface_config.no_send_advert is vyos_defined else 'on' }};
-{%         if iface_config.auto_ignore_prefix is vyos_defined %}
-    autoignoreprefixes {
-{%             for auto_ignore_prefix in iface_config.auto_ignore_prefix %}
-        {{ auto_ignore_prefix }};
-{%             endfor %}
-    };
-{%         endif %}
 {%         if iface_config.default_lifetime is vyos_defined %}
     AdvDefaultLifetime {{ iface_config.default_lifetime }};
 {%         endif %}
@@ -63,6 +56,13 @@ interface {{ iface }} {
         AdvValidLifetime {{ nat64prefix_options.valid_lifetime }};
     };
 {%             endfor %}
+{%         endif %}
+{%         if iface_config.auto_ignore_prefix is vyos_defined %}
+    autoignoreprefixes {
+{%             for auto_ignore_prefix in iface_config.auto_ignore_prefix %}
+        {{ auto_ignore_prefix }};
+{%             endfor %}
+    };
 {%         endif %}
 {%         if iface_config.prefix is vyos_defined %}
 {%             for prefix, prefix_options in iface_config.prefix.items() %}
