@@ -14,7 +14,7 @@ permissions:
 jobs:
   call-mirror-pr-and-sync:
     if: github.repository_owner != 'vyos'
-    uses: VyOS-Networks/vyos-reusable-workflows/.github/workflows/mirror-pr-and-sync.yml@(T7404-pr-mirror-wiorkflow-optimize-bot-usage
+    uses: VyOS-Networks/vyos-reusable-workflows/.github/workflows/mirror-pr-and-sync.yml@T7404-pr-mirror-wiorkflow-optimize-bot-usage
     with:
       sync_branch: ${{ inputs.sync_branch }}
     secrets:
