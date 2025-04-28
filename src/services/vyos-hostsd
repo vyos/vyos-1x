@@ -233,10 +233,7 @@
 # }
 
 import os
-import sys
-import time
 import json
-import signal
 import traceback
 import re
 import logging
@@ -245,7 +242,6 @@ import zmq
 from voluptuous import Schema, MultipleInvalid, Required, Any
 from collections import OrderedDict
 from vyos.utils.file import makedir
-from vyos.utils.permission import chown
 from vyos.utils.permission import chmod_755
 from vyos.utils.process import popen
 from vyos.utils.process import process_named_running

@@ -233,6 +233,9 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     hook_name = 'prerouting'
                 if hook == 'NAM':
                     hook_name = f'name'
+                # for policy
+                if hook == 'route' or hook == 'route6':
+                    hook_name = hook
                 output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_CC{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
 
             if 'mac_address' in side_conf:
@@ -738,14 +741,14 @@ class GeoIPLock(object):
     def __exit__(self, exc_type, exc_value, tb):
         os.unlink(self.file)
 
-def geoip_update(firewall, force=False):
+def geoip_update(firewall=None, policy=None, force=False):
     with GeoIPLock(geoip_lock_file) as lock:
         if not lock:
             print("Script is already running")
             return False
 
-        if not firewall:
-            print("Firewall is not configured")
+        if not firewall and not policy:
+            print("Firewall and policy are not configured")
             return True
 
         if not os.path.exists(geoip_database):
@@ -760,23 +763,41 @@ def geoip_update(firewall, force=False):
         ipv4_sets = {}
         ipv6_sets = {}
 
-        # Map country codes to set names
-        for codes, path in dict_search_recursive(firewall, 'country_code'):
-            set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
-            if ( path[0] == 'ipv4'):
-                for code in codes:
-                    ipv4_codes.setdefault(code, []).append(set_name)
-            elif ( path[0] == 'ipv6' ):
-                set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
-                for code in codes:
-                    ipv6_codes.setdefault(code, []).append(set_name)
+        ipv4_codes_policy = {}
+        ipv6_codes_policy = {}
 
-        if not ipv4_codes and not ipv6_codes:
+        ipv4_sets_policy = {}
+        ipv6_sets_policy = {}
+
+        # Map country codes to set names
+        if firewall:
+            for codes, path in dict_search_recursive(firewall, 'country_code'):
+                set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
+                if ( path[0] == 'ipv4'):
+                    for code in codes:
+                        ipv4_codes.setdefault(code, []).append(set_name)
+                elif ( path[0] == 'ipv6' ):
+                    set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
+                    for code in codes:
+                        ipv6_codes.setdefault(code, []).append(set_name)
+
+        if policy:
+            for codes, path in dict_search_recursive(policy, 'country_code'):
+                set_name = f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}'
+                if ( path[0] == 'route'):
+                    for code in codes:
+                        ipv4_codes_policy.setdefault(code, []).append(set_name)
+                elif ( path[0] == 'route6' ):
+                    set_name = f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}'
+                    for code in codes:
+                        ipv6_codes_policy.setdefault(code, []).append(set_name)
+
+        if not ipv4_codes and not ipv6_codes and not ipv4_codes_policy and not ipv6_codes_policy:
             if force:
-                print("GeoIP not in use by firewall")
+                print("GeoIP not in use by firewall and policy")
             return True
 
-        geoip_data = geoip_load_data([*ipv4_codes, *ipv6_codes])
+        geoip_data = geoip_load_data([*ipv4_codes, *ipv6_codes, *ipv4_codes_policy, *ipv6_codes_policy])
 
         # Iterate IP blocks to assign to sets
         for start, end, code in geoip_data:
@@ -785,19 +806,29 @@ def geoip_update(firewall, force=False):
                 ip_range = f'{start}-{end}' if start != end else start
                 for setname in ipv4_codes[code]:
                     ipv4_sets.setdefault(setname, []).append(ip_range)
+            if code in ipv4_codes_policy and ipv4:
+                ip_range = f'{start}-{end}' if start != end else start
+                for setname in ipv4_codes_policy[code]:
+                    ipv4_sets_policy.setdefault(setname, []).append(ip_range)
             if code in ipv6_codes and not ipv4:
                 ip_range = f'{start}-{end}' if start != end else start
                 for setname in ipv6_codes[code]:
                     ipv6_sets.setdefault(setname, []).append(ip_range)
+            if code in ipv6_codes_policy and not ipv4:
+                ip_range = f'{start}-{end}' if start != end else start
+                for setname in ipv6_codes_policy[code]:
+                    ipv6_sets_policy.setdefault(setname, []).append(ip_range)
 
         render(nftables_geoip_conf, 'firewall/nftables-geoip-update.j2', {
             'ipv4_sets': ipv4_sets,
-            'ipv6_sets': ipv6_sets
+            'ipv6_sets': ipv6_sets,
+            'ipv4_sets_policy': ipv4_sets_policy,
+            'ipv6_sets_policy': ipv6_sets_policy,
         })
 
         result = run(f'nft --file {nftables_geoip_conf}')
         if result != 0:
-            print('Error: GeoIP failed to update firewall')
+            print('Error: GeoIP failed to update firewall/policy')
             return False
 
         return True

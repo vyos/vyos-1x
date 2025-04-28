@@ -390,28 +390,6 @@ def compare_netmask(netmask1, netmask2):
     except:
         return False
 
-@register_filter('isc_static_route')
-def isc_static_route(subnet, router):
-    # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
-    # Option format is:
-    # <netmask>, <network-byte1>, <network-byte2>, <network-byte3>, <router-byte1>, <router-byte2>, <router-byte3>
-    # where bytes with the value 0 are omitted.
-    from ipaddress import ip_network
-    net = ip_network(subnet)
-    # add netmask
-    string = str(net.prefixlen) + ','
-    # add network bytes
-    if net.prefixlen:
-        width = net.prefixlen // 8
-        if net.prefixlen % 8:
-            width += 1
-        string += ','.join(map(str,tuple(net.network_address.packed)[:width])) + ','
-
-    # add router bytes
-    string += ','.join(router.split('.'))
-
-    return string
-
 @register_filter('is_file')
 def is_file(filename):
     if os.path.exists(filename):
@@ -881,10 +859,77 @@ def kea_high_availability_json(config):
 
     return dumps(data)
 
+@register_filter('kea_dynamic_dns_update_main_json')
+def kea_dynamic_dns_update_main_json(config):
+    from vyos.kea import kea_parse_ddns_settings
+    from json import dumps
+
+    data = kea_parse_ddns_settings(config)
+
+    if len(data) == 0:
+        return ''
+
+    return dumps(data, indent=8)[1:-1] + ','
+
+@register_filter('kea_dynamic_dns_update_tsig_key_json')
+def kea_dynamic_dns_update_tsig_key_json(config):
+    from vyos.kea import kea_parse_tsig_algo
+    from json import dumps
+    out = []
+
+    if 'tsig_key' not in config:
+        return dumps(out)
+
+    tsig_keys = config['tsig_key']
+
+    for tsig_key_name, tsig_key_config in tsig_keys.items():
+        tsig_key = {
+            'name': tsig_key_name,
+            'algorithm': kea_parse_tsig_algo(tsig_key_config['algorithm']),
+            'secret': tsig_key_config['secret']
+        }
+        out.append(tsig_key)
+
+    return dumps(out, indent=12)
+
+@register_filter('kea_dynamic_dns_update_domains')
+def kea_dynamic_dns_update_domains(config, type_key):
+    from json import dumps
+    out = []
+
+    if type_key not in config:
+        return dumps(out)
+
+    domains = config[type_key]
+
+    for domain_name, domain_config in domains.items():
+        domain = {
+            'name': domain_name,
+
+        }
+        if 'key_name' in domain_config:
+            domain['key-name'] = domain_config['key_name']
+
+        if 'dns_server' in domain_config:
+            dns_servers = []
+            for dns_server_config in domain_config['dns_server'].values():
+                dns_server = {
+                    'ip-address': dns_server_config['address']
+                }
+                if 'port' in dns_server_config:
+                    dns_server['port'] = int(dns_server_config['port'])
+                dns_servers.append(dns_server)
+            domain['dns-servers'] = dns_servers
+
+        out.append(domain)
+
+    return dumps(out, indent=12)
+
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):
     from vyos.kea import kea_parse_options
     from vyos.kea import kea_parse_subnet
+    from vyos.kea import kea_parse_ddns_settings
     from json import dumps
     out = []
 
@@ -895,8 +940,12 @@ def kea_shared_network_json(shared_networks):
         network = {
             'name': name,
             'authoritative': ('authoritative' in config),
-            'subnet4': []
+            'subnet4': [],
+            'user-context': {}
         }
+
+        if 'dynamic_dns_update' in config:
+            network.update(kea_parse_ddns_settings(config['dynamic_dns_update']))
 
         if 'option' in config:
             network['option-data'] = kea_parse_options(config['option'])
@@ -906,6 +955,9 @@ def kea_shared_network_json(shared_networks):
 
             if 'bootfile_server' in config['option']:
                 network['next-server'] = config['option']['bootfile_server']
+
+        if 'ping_check' in config:
+            network['user-context']['enable-ping-check'] = True
 
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():

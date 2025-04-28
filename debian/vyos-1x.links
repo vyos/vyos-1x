@@ -1,3 +1,2 @@
 /etc/netplug/linkup.d/vyos-python-helper /etc/netplug/linkdown.d/vyos-python-helper
 /usr/libexec/vyos/system/standalone_root_pw_reset /opt/vyatta/sbin/standalone_root_pw_reset
-/lib/systemd/system/rsyslog.service /etc/systemd/system/syslog.service

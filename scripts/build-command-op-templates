@@ -116,7 +116,7 @@ def get_properties(p):
             if comptype is not None:
                 props["comp_type"] = "imagefiles"
                 comp_exprs.append("echo -n \"<imagefiles>\"")
-            comp_help = " && ".join(comp_exprs)
+            comp_help = " ; ".join(comp_exprs)
             props["comp_help"] = comp_help
 
     except:

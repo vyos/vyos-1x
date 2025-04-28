@@ -52,7 +52,9 @@ def request_to_msg(req: vyconf_proto.RequestEnvelope) -> vyconf_pb2.RequestEnvel
 def msg_to_response(msg: vyconf_pb2.Response) -> vyconf_proto.Response:
     # pylint: disable=no-member
 
-    d = MessageToDict(msg, preserving_proto_field_name=True)
+    d = MessageToDict(
+        msg, preserving_proto_field_name=True, use_integers_for_enums=True
+    )
 
     response = vyconf_proto.Response(**d)
     return response

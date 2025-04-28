@@ -22,6 +22,7 @@ from copy import deepcopy
 from glob import glob
 
 from ipaddress import IPv4Network
+from ipaddress import IPv6Interface
 from netifaces import ifaddresses
 # this is not the same as socket.AF_INET/INET6
 from netifaces import AF_INET
@@ -909,7 +910,11 @@ class Interface(Control):
         tmp = self.get_interface('ipv6_autoconf')
         if tmp == autoconf:
             return None
-        return self.set_interface('ipv6_autoconf', autoconf)
+        rc = self.set_interface('ipv6_autoconf', autoconf)
+        if autoconf == '0':
+            flushed = self.flush_ipv6_slaac_addrs()
+            self.flush_ipv6_slaac_routes(ra_addrs=flushed)
+        return rc
 
     def add_ipv6_eui64_address(self, prefix):
         """
@@ -936,6 +941,20 @@ class Interface(Control):
             eui64 = mac2eui64(self.get_mac(), prefix)
             prefixlen = prefix.split('/')[1]
             self.del_addr(f'{eui64}/{prefixlen}')
+
+    def set_ipv6_interface_identifier(self, identifier):
+        """
+        Set the interface identifier for IPv6 autoconf.
+        """
+        cmd = f'ip token set {identifier} dev {self.ifname}'
+        self._cmd(cmd)
+
+    def del_ipv6_interface_identifier(self):
+        """
+        Delete the interface identifier for IPv6 autoconf.
+        """
+        cmd = f'ip token delete dev {self.ifname}'
+        self._cmd(cmd)
 
     def set_ipv6_forwarding(self, forwarding):
         """
@@ -1310,6 +1329,71 @@ class Interface(Control):
         # flush all addresses
         self._cmd(cmd)
 
+    def flush_ipv6_slaac_addrs(self) -> list:
+        """
+        Flush all IPv6 addresses installed in response to router advertisement
+        messages from this interface.
+
+        Will raise an exception on error.
+        Will return a list of flushed IPv6 addresses.
+        """
+        netns = get_interface_namespace(self.ifname)
+        netns_cmd = f'ip netns exec {netns}' if netns else ''
+        tmp = get_interface_address(self.ifname)
+        if not tmp or 'addr_info' not in tmp:
+            return
+
+        # Parse interface IP addresses. Example data:
+        # {'family': 'inet6', 'local': '2001:db8:1111:0:250:56ff:feb3:38c5',
+        # 'prefixlen': 64, 'scope': 'global', 'dynamic': True,
+        # 'mngtmpaddr': True, 'protocol': 'kernel_ra',
+        # 'valid_life_time': 2591987, 'preferred_life_time': 14387}
+        flushed = []
+        for addr_info in tmp['addr_info']:
+            if 'protocol' not in addr_info:
+                continue
+            if (addr_info['protocol'] == 'kernel_ra' and
+                addr_info['scope'] == 'global'):
+                # Flush IPv6 addresses installed by router advertisement
+                ra_addr = f"{addr_info['local']}/{addr_info['prefixlen']}"
+                flushed.append(ra_addr)
+                cmd = f'{netns_cmd} ip -6 addr del dev {self.ifname} {ra_addr}'
+                self._cmd(cmd)
+        return flushed
+
+    def flush_ipv6_slaac_routes(self, ra_addrs: list=[]) -> None:
+        """
+        Flush IPv6 default routes installed in response to router advertisement
+        messages from this interface.
+
+        Will raise an exception on error.
+        """
+        # Find IPv6 connected prefixes for flushed SLAAC addresses
+        connected = []
+        for addr in ra_addrs if isinstance(ra_addrs, list) else []:
+            connected.append(str(IPv6Interface(addr).network))
+
+        netns = get_interface_namespace(self.ifname)
+        netns_cmd = f'ip netns exec {netns}' if netns else ''
+
+        tmp = self._cmd(f'{netns_cmd} ip -j -6 route show dev {self.ifname}')
+        tmp = json.loads(tmp)
+        # Parse interface routes. Example data:
+        # {'dst': 'default', 'gateway': 'fe80::250:56ff:feb3:cdba',
+        # 'protocol': 'ra', 'metric': 1024, 'flags': [], 'expires': 1398,
+        # 'metrics': [{'hoplimit': 64}], 'pref': 'medium'}
+        for route in tmp:
+            # If it's a default route received from RA, delete it
+            if (dict_search('dst', route) == 'default' and
+                dict_search('protocol', route) == 'ra'):
+                self._cmd(f'{netns_cmd} ip -6 route del default via {route["gateway"]} dev {self.ifname}')
+            # Remove connected prefixes received from RA
+            if dict_search('dst', route) in connected:
+                # If it's a connected prefix, delete it
+                self._cmd(f'{netns_cmd} ip -6 route del {route["dst"]} dev {self.ifname}')
+
+        return None
+
     def add_to_bridge(self, bridge_dict):
         """
         Adds the interface to the bridge with the passed port config.
@@ -1319,8 +1403,6 @@ class Interface(Control):
 
         # drop all interface addresses first
         self.flush_addrs()
-
-        ifname = self.ifname
 
         for bridge, bridge_config in bridge_dict.items():
             # add interface to bridge - use Section.klass to get BridgeIf class
@@ -1337,7 +1419,7 @@ class Interface(Control):
             bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
 
             if int(bridge_vlan_filter):
-                cur_vlan_ids = get_vlan_ids(ifname)
+                cur_vlan_ids = get_vlan_ids(self.ifname)
                 add_vlan = []
                 native_vlan_id = None
                 allowed_vlan_ids= []
@@ -1360,15 +1442,15 @@ class Interface(Control):
 
                 # Remove redundant VLANs from the system
                 for vlan in list_diff(cur_vlan_ids, add_vlan):
-                    cmd = f'bridge vlan del dev {ifname} vid {vlan} master'
+                    cmd = f'bridge vlan del dev {self.ifname} vid {vlan} master'
                     self._cmd(cmd)
 
                 for vlan in allowed_vlan_ids:
-                    cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
+                    cmd = f'bridge vlan add dev {self.ifname} vid {vlan} master'
                     self._cmd(cmd)
                 # Setting native VLAN to system
                 if native_vlan_id:
-                    cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
+                    cmd = f'bridge vlan add dev {self.ifname} vid {native_vlan_id} pvid untagged master'
                     self._cmd(cmd)
 
     def set_dhcp(self, enable: bool, vrf_changed: bool=False):
@@ -1447,12 +1529,11 @@ class Interface(Control):
         if enable not in [True, False]:
             raise ValueError()
 
-        ifname = self.ifname
         config_base = directories['dhcp6_client_dir']
-        config_file = f'{config_base}/dhcp6c.{ifname}.conf'
-        script_file = f'/etc/wide-dhcpv6/dhcp6c.{ifname}.script' # can not live under /run b/c of noexec mount option
-        systemd_override_file = f'/run/systemd/system/dhcp6c@{ifname}.service.d/10-override.conf'
-        systemd_service = f'dhcp6c@{ifname}.service'
+        config_file = f'{config_base}/dhcp6c.{self.ifname}.conf'
+        script_file = f'/etc/wide-dhcpv6/dhcp6c.{self.ifname}.script' # can not live under /run b/c of noexec mount option
+        systemd_override_file = f'/run/systemd/system/dhcp6c@{self.ifname}.service.d/10-override.conf'
+        systemd_service = f'dhcp6c@{self.ifname}.service'
 
         # Rendered client configuration files require additional settings
         config = deepcopy(self.config)
@@ -1792,11 +1873,26 @@ class Interface(Control):
         value = '0' if (tmp != None) else '1'
         self.set_ipv6_forwarding(value)
 
+        # Delete old interface identifier
+        # This should be before setting the accept_ra value
+        old = dict_search('ipv6.address.interface_identifier_old', config)
+        now = dict_search('ipv6.address.interface_identifier', config)
+        if old and not now:
+            # accept_ra of ra is required to delete the interface identifier
+            self.set_ipv6_accept_ra('2')
+            self.del_ipv6_interface_identifier()
+
+        # Set IPv6 Interface identifier
+        # This should be before setting the accept_ra value
+        tmp = dict_search('ipv6.address.interface_identifier', config)
+        if tmp:
+            # accept_ra is required to set the interface identifier
+            self.set_ipv6_accept_ra('2')
+            self.set_ipv6_interface_identifier(tmp)
+
         # IPv6 router advertisements
         tmp = dict_search('ipv6.address.autoconf', config)
-        value = '2' if (tmp != None) else '1'
-        if 'dhcpv6' in new_addr:
-            value = '2'
+        value = '2' if (tmp != None) else '0'
         self.set_ipv6_accept_ra(value)
 
         # IPv6 address autoconfiguration

@@ -47,7 +47,7 @@ table ip vyos_filter {
     chain VYOS_FORWARD_{{ prior }} {
         type filter hook forward priority {{ prior }}; policy accept;
 {%             if global_options.state_policy is vyos_defined %}
-        jump VYOS_STATE_POLICY
+        jump VYOS_STATE_POLICY_FORWARD
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
@@ -180,6 +180,22 @@ table ip vyos_filter {
 {%     endif %}
         return
     }
+
+    chain VYOS_STATE_POLICY_FORWARD {
+{%     if global_options.state_policy.offload is vyos_defined %}
+        counter flow add @VYOS_FLOWTABLE_{{ global_options.state_policy.offload.offload_target }}
+{%     endif %}
+{%     if global_options.state_policy.established is vyos_defined %}
+        {{ global_options.state_policy.established | nft_state_policy('established') }}
+{%     endif %}
+{%     if global_options.state_policy.invalid is vyos_defined %}
+        {{ global_options.state_policy.invalid | nft_state_policy('invalid') }}
+{%     endif %}
+{%     if global_options.state_policy.related is vyos_defined %}
+        {{ global_options.state_policy.related | nft_state_policy('related') }}
+{%     endif %}
+        return
+    }
 {% endif %}
 }
 
@@ -200,7 +216,7 @@ table ip6 vyos_filter {
     chain VYOS_IPV6_FORWARD_{{ prior }} {
         type filter hook forward priority {{ prior }}; policy accept;
 {%             if global_options.state_policy is vyos_defined %}
-        jump VYOS_STATE_POLICY6
+        jump VYOS_STATE_POLICY6_FORWARD
 {%             endif %}
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
@@ -320,6 +336,22 @@ table ip6 vyos_filter {
 {% endif %}
 {% if global_options.state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
+{%     if global_options.state_policy.established is vyos_defined %}
+        {{ global_options.state_policy.established | nft_state_policy('established') }}
+{%     endif %}
+{%     if global_options.state_policy.invalid is vyos_defined %}
+        {{ global_options.state_policy.invalid | nft_state_policy('invalid') }}
+{%     endif %}
+{%     if global_options.state_policy.related is vyos_defined %}
+        {{ global_options.state_policy.related | nft_state_policy('related') }}
+{%     endif %}
+        return
+    }
+
+    chain VYOS_STATE_POLICY6_FORWARD {
+{%     if global_options.state_policy.offload is vyos_defined %}
+        counter flow add @VYOS_FLOWTABLE_{{ global_options.state_policy.offload.offload_target }}
+{%     endif %}
 {%     if global_options.state_policy.established is vyos_defined %}
         {{ global_options.state_policy.established | nft_state_policy('established') }}
 {%     endif %}

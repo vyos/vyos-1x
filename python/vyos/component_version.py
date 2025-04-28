@@ -49,7 +49,9 @@ DEFAULT_CONFIG_PATH = os.path.join(directories['config'], 'config.boot')
 REGEX_WARN_VYOS = r'(// Warning: Do not remove the following line.)'
 REGEX_WARN_VYATTA = r'(/\* Warning: Do not remove the following line. \*/)'
 REGEX_COMPONENT_VERSION_VYOS = r'// vyos-config-version:\s+"([\w@:-]+)"\s*'
-REGEX_COMPONENT_VERSION_VYATTA = r'/\* === vyatta-config-version:\s+"([\w@:-]+)"\s+=== \*/'
+REGEX_COMPONENT_VERSION_VYATTA = (
+    r'/\* === vyatta-config-version:\s+"([\w@:-]+)"\s+=== \*/'
+)
 REGEX_RELEASE_VERSION_VYOS = r'// Release version:\s+(\S*)\s*'
 REGEX_RELEASE_VERSION_VYATTA = r'/\* Release version:\s+(\S*)\s*\*/'
 
@@ -62,16 +64,31 @@ CONFIG_FILE_VERSION = """\
 warn_filter_vyos = re.compile(REGEX_WARN_VYOS)
 warn_filter_vyatta = re.compile(REGEX_WARN_VYATTA)
 
-regex_filter = { 'vyos': dict(zip(['component', 'release'],
-                                  [re.compile(REGEX_COMPONENT_VERSION_VYOS),
-                                   re.compile(REGEX_RELEASE_VERSION_VYOS)])),
-                 'vyatta': dict(zip(['component', 'release'],
-                                    [re.compile(REGEX_COMPONENT_VERSION_VYATTA),
-                                     re.compile(REGEX_RELEASE_VERSION_VYATTA)])) }
+regex_filter = {
+    'vyos': dict(
+        zip(
+            ['component', 'release'],
+            [
+                re.compile(REGEX_COMPONENT_VERSION_VYOS),
+                re.compile(REGEX_RELEASE_VERSION_VYOS),
+            ],
+        )
+    ),
+    'vyatta': dict(
+        zip(
+            ['component', 'release'],
+            [
+                re.compile(REGEX_COMPONENT_VERSION_VYATTA),
+                re.compile(REGEX_RELEASE_VERSION_VYATTA),
+            ],
+        )
+    ),
+}
+
 
 @dataclass
 class VersionInfo:
-    component: Optional[dict[str,int]] = None
+    component: Optional[dict[str, int]] = None
     release: str = get_version()
     vintage: str = 'vyos'
     config_body: Optional[str] = None
@@ -84,8 +101,9 @@ class VersionInfo:
         return bool(self.config_body is None)
 
     def update_footer(self):
-        f = CONFIG_FILE_VERSION.format(component_to_string(self.component),
-                                       self.release)
+        f = CONFIG_FILE_VERSION.format(
+            component_to_string(self.component), self.release
+        )
         self.footer_lines = f.splitlines()
 
     def update_syntax(self):
@@ -121,12 +139,15 @@ class VersionInfo:
         except Exception as e:
             raise ValueError(e) from e
 
+
 def component_to_string(component: dict) -> str:
-    l = [f'{k}@{v}' for k, v in sorted(component.items(), key=lambda x: x[0])]
+    l = [f'{k}@{v}' for k, v in sorted(component.items(), key=lambda x: x[0])]  # noqa: E741
     return ':'.join(l)
+
 
 def component_from_string(string: str) -> dict:
     return {k: int(v) for k, v in re.findall(r'([\w,-]+)@(\d+)', string)}
+
 
 def version_info_from_file(config_file) -> VersionInfo:
     """Return config file component and release version info."""
@@ -166,27 +187,27 @@ def version_info_from_file(config_file) -> VersionInfo:
 
     return version_info
 
+
 def version_info_from_system() -> VersionInfo:
     """Return system component and release version info."""
     d = component_version()
     sort_d = dict(sorted(d.items(), key=lambda x: x[0]))
-    version_info = VersionInfo(
-        component = sort_d,
-        release =  get_version(),
-        vintage = 'vyos'
-    )
+    version_info = VersionInfo(component=sort_d, release=get_version(), vintage='vyos')
 
     return version_info
+
 
 def version_info_copy(v: VersionInfo) -> VersionInfo:
     """Make a copy of dataclass."""
     return replace(v)
 
+
 def version_info_prune_component(x: VersionInfo, y: VersionInfo) -> VersionInfo:
     """In place pruning of component keys of x not in y."""
     if x.component is None or y.component is None:
         return
-    x.component = { k: v for k,v in x.component.items() if k in y.component }
+    x.component = {k: v for k, v in x.component.items() if k in y.component}
+
 
 def add_system_version(config_str: str = None, out_file: str = None):
     """Wrap config string with system version and write to out_file.
@@ -202,3 +223,11 @@ def add_system_version(config_str: str = None, out_file: str = None):
         version_info.write(out_file)
     else:
         sys.stdout.write(version_info.write_string())
+
+
+def append_system_version(file: str):
+    """Append system version data to existing file"""
+    version_info = version_info_from_system()
+    version_info.update_footer()
+    with open(file, 'a') as f:
+        f.write(version_info.write_string())

@@ -193,7 +193,7 @@
             <properties>
               <help>Show installed VyOS images</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_info.py show_images_summary</command>
+            <command>${vyos_op_scripts_dir}/image_info.py show_images_summary</command>
             <children>
               <node name="details">
                 <properties>

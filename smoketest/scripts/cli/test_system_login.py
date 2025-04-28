@@ -25,9 +25,7 @@ import shutil
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from contextlib import redirect_stdout
 from gzip import GzipFile
-from io import StringIO, TextIOWrapper
 from subprocess import Popen
 from subprocess import PIPE
 from pwd import getpwall

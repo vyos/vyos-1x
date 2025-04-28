@@ -21,6 +21,7 @@
     #include <include/interface/vlan-protocol.xml.i>
     #include <include/interface/ipv4-options.xml.i>
     #include <include/interface/ipv6-options.xml.i>
+    #include <include/interface/ipv6-options-with-nd.xml.i>
     #include <include/interface/mac.xml.i>
     #include <include/interface/mirror.xml.i>
     #include <include/interface/mtu-68-16000.xml.i>
@@ -41,6 +42,7 @@
         #include <include/interface/disable.xml.i>
         #include <include/interface/ipv4-options.xml.i>
         #include <include/interface/ipv6-options.xml.i>
+        #include <include/interface/ipv6-options-with-nd.xml.i>
         #include <include/interface/mac.xml.i>
         #include <include/interface/mirror.xml.i>
         #include <include/interface/mtu-68-16000.xml.i>

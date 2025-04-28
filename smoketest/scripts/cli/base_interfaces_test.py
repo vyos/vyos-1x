@@ -14,6 +14,7 @@
 
 import re
 
+from json import loads
 from netifaces import AF_INET
 from netifaces import AF_INET6
 from netifaces import ifaddresses
@@ -1067,6 +1068,7 @@ class BasicInterfaceTest:
             dad_transmits = '10'
             accept_dad = '0'
             source_validation = 'strict'
+            interface_identifier = '::fffe'
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -1088,6 +1090,9 @@ class BasicInterfaceTest:
 
                 if cli_defined(self._base_path + ['ipv6'], 'source-validation'):
                     self.cli_set(path + ['ipv6', 'source-validation', source_validation])
+
+                if cli_defined(self._base_path + ['ipv6', 'address'], 'interface-identifier'):
+                    self.cli_set(path + ['ipv6', 'address', 'interface-identifier', interface_identifier])
 
             self.cli_commit()
 
@@ -1119,6 +1124,13 @@ class BasicInterfaceTest:
                         if line.startswith(base_options):
                             self.assertIn('fib saddr . iif oif 0', line)
                             self.assertIn('drop', line)
+
+                if cli_defined(self._base_path + ['ipv6', 'address'], 'interface-identifier'):
+                    tmp = cmd(f'ip -j token show dev {interface}')
+                    tmp = loads(tmp)[0]
+                    self.assertEqual(tmp['token'], interface_identifier)
+                    self.assertEqual(tmp['ifname'], interface)
+
 
         def test_dhcpv6_client_options(self):
             if not self._test_ipv6_dhcpc6:

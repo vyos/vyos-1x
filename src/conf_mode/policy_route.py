@@ -21,13 +21,16 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdiff import get_config_diff, Diff
 from vyos.template import render
 from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.utils.network import get_vrf_tableid
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
+from vyos.firewall import geoip_update
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -42,6 +45,43 @@ valid_groups = [
     'port_group',
     'interface_group'
 ]
+
+def geoip_updated(conf, policy):
+    diff = get_config_diff(conf)
+    node_diff = diff.get_child_nodes_diff(['policy'], expand_nodes=Diff.DELETE, recursive=True)
+
+    out = {
+        'name': [],
+        'ipv6_name': [],
+        'deleted_name': [],
+        'deleted_ipv6_name': []
+    }
+    updated = False
+
+    for key, path in dict_search_recursive(policy, 'geoip'):
+        set_name = f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}'
+        if (path[0] == 'route'):
+            out['name'].append(set_name)
+        elif (path[0] == 'route6'):
+            set_name = f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}'
+            out['ipv6_name'].append(set_name)
+
+        updated = True
+
+    if 'delete' in node_diff:
+        for key, path in dict_search_recursive(node_diff['delete'], 'geoip'):
+            set_name = f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}'
+            if (path[0] == 'route'):
+                out['deleted_name'].append(set_name)
+            elif (path[0] == 'route6'):
+                set_name = f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}'
+                out['deleted_ipv6_name'].append(set_name)
+            updated = True
+
+    if updated:
+        return out
+
+    return False
 
 def get_config(config=None):
     if config:
@@ -60,6 +100,7 @@ def get_config(config=None):
     if 'dynamic_group' in policy['firewall_group']:
         del policy['firewall_group']['dynamic_group']
 
+    policy['geoip_updated'] = geoip_updated(conf, policy)
     return policy
 
 def verify_rule(policy, name, rule_conf, ipv6, rule_id):
@@ -202,6 +243,12 @@ def apply(policy):
         cleanup_table_marks()
 
     apply_table_marks(policy)
+
+    if policy['geoip_updated']:
+        # Call helper script to Update set contents
+        if 'name' in policy['geoip_updated'] or 'ipv6_name' in policy['geoip_updated']:
+            print('Updating GeoIP. Please wait...')
+            geoip_update(policy=policy)
 
     return None
 

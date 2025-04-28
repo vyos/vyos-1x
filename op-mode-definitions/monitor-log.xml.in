@@ -17,19 +17,6 @@
             </properties>
             <command>SYSTEMD_COLORS=false grc journalctl --no-hostname --follow --boot</command>
           </node>
-          <node name="ids">
-            <properties>
-              <help>Monitor Intrusion Detection System log</help>
-            </properties>
-            <children>
-              <leafNode name="ddos-protection">
-                <properties>
-                  <help>Monitor last lines of DDOS protection</help>
-                </properties>
-                <command>journalctl --no-hostname --follow --boot --unit fastnetmon.service</command>
-              </leafNode>
-            </children>
-          </node>
           <leafNode name="certbot">
             <properties>
               <help>Monitor last lines of certbot log</help>

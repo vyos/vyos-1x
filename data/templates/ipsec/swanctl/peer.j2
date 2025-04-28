@@ -68,8 +68,19 @@
                 rekey_packets = 0
                 rekey_time = 0s
 {%     endif %}
-                local_ts = 0.0.0.0/0,::/0
-                remote_ts = 0.0.0.0/0,::/0
+{#     set default traffic-selectors #}
+{%     set local_ts = '0.0.0.0/0,::/0' %}
+{%     set remote_ts = '0.0.0.0/0,::/0' %}
+{%     if peer_conf.vti.traffic_selector is vyos_defined %}
+{%         if peer_conf.vti.traffic_selector.local is vyos_defined and peer_conf.vti.traffic_selector.local.prefix is vyos_defined %}
+{%             set local_ts = peer_conf.vti.traffic_selector.local.prefix | join(',') %}
+{%         endif %}
+{%         if peer_conf.vti.traffic_selector.remote is vyos_defined and peer_conf.vti.traffic_selector.remote.prefix is vyos_defined %}
+{%             set remote_ts = peer_conf.vti.traffic_selector.remote.prefix | join(',') %}
+{%         endif %}
+{%     endif %}
+                local_ts = {{ local_ts }}
+                remote_ts = {{ remote_ts }}
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
 {#              The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
 {#              Thus we simply shift the key by one to also support a vti0 interface #}

@@ -26,6 +26,7 @@ from vyos.configverify import verify_authentication
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
@@ -98,6 +99,7 @@ def verify(wwan):
     verify_interface_exists(wwan, ifname)
     verify_authentication(wwan)
     verify_vrf(wwan)
+    verify_mtu_ipv6(wwan)
     verify_mirror_redirect(wwan)
 
     return None

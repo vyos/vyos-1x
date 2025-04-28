@@ -1,0 +1,9 @@
+[Unit]
+Description=Network cable hotplug management daemon
+Documentation=man:netplugd(8)
+After=vyos-router.service
+
+[Service]
+Type=forking
+PIDFile=/run/netplugd.pid
+ExecStart=/sbin/netplugd -c /etc/netplug/netplugd.conf -p /run/netplugd.pid

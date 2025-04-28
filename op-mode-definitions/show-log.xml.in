@@ -50,6 +50,39 @@
             </properties>
             <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e heartbeat -e cl_status -e mach_down -e ha_log</command>
           </leafNode>
+          <node name="conntrack">
+            <properties>
+              <help>Show log for conntrack events</help>
+            </properties>
+            <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(NEW|UPDATE|DESTROY)\]'</command>
+            <children>
+              <node name="event">
+                <properties>
+                  <help>Show log for conntrack events</help>
+                </properties>
+                <children>
+                  <leafNode name="new">
+                    <properties>
+                      <help>Show log for conntrack events</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(NEW)\]'</command>
+                  </leafNode>
+                  <leafNode name="update">
+                    <properties>
+                      <help>Show log for conntrack events</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(UPDATE)\]'</command>
+                  </leafNode>
+                  <leafNode name="destroy">
+                    <properties>
+                      <help>Show log for Conntrack Events</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -t vyos-conntrack-logger --grep='\[(DESTROY)\]'</command>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <leafNode name="conntrack-sync">
             <properties>
               <help>Show log for Conntrack-sync</help>
@@ -62,19 +95,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit conserver-server.service</command>
           </leafNode>
-          <node name="ids">
-            <properties>
-              <help>Show log for for Intrusion Detection System</help>
-            </properties>
-            <children>
-              <leafNode name="ddos-protection">
-                <properties>
-                  <help>Show log for DDOS protection</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit fastnetmon.service</command>
-              </leafNode>
-            </children>
-          </node>
           <node name="dhcp">
             <properties>
               <help>Show log for Dynamic Host Control Protocol (DHCP)</help>
@@ -139,7 +159,7 @@
             <properties>
               <help>Show log for Firewall</help>
             </properties>
-            <command>journalctl --no-hostname --boot -k | egrep "(ipv[46]|bri)-(FWD|INP|OUT|NAM)"</command>
+            <command>journalctl --no-hostname --boot -k --grep='(ipv[46]|bri)-(FWD|INP|OUT|NAM)|STATE-POLICY'</command>
             <children>
               <node name="bridge">
                 <properties>

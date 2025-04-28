@@ -14,9 +14,16 @@
                 <path>firewall group address-group</path>
                 <path>firewall group network-group</path>
                 <path>firewall group port-group</path>
+                <path>firewall group domain-group</path>
+                <path>firewall group dynamic-group address-group</path>
+                <path>firewall group dynamic-group ipv6-address-group</path>
                 <path>firewall group interface-group</path>
                 <path>firewall group ipv6-address-group</path>
                 <path>firewall group ipv6-network-group</path>
+                <path>firewall group mac-group</path>
+                <path>firewall group network-group</path>
+                <path>firewall group port-group</path>
+                <path>firewall group remote-group</path>
               </completionHelp>
             </properties>
             <children>

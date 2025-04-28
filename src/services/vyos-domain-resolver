@@ -92,12 +92,14 @@ def resolve(domains, ipv6=False):
     for domain in domains:
         resolved = fqdn_resolve(domain, ipv6=ipv6)
 
+        cache_key = f'{domain}_ipv6' if ipv6 else domain
+
         if resolved and cache:
-            domain_state[domain] = resolved
+            domain_state[cache_key] = resolved
         elif not resolved:
-            if domain not in domain_state:
+            if cache_key not in domain_state:
                 continue
-            resolved = domain_state[domain]
+            resolved = domain_state[cache_key]
 
         ip_list = ip_list | resolved
     return ip_list

@@ -1,0 +1,20 @@
+# Don't add default route if no-default-route is configured for interface
+
+# As configuration is not available to cli-shell-api at the first boot, we must use vyos.config, which contains a workaround for this
+function get_no_default_route {
+python3 - <<PYEND
+from vyos.config import Config
+import os
+
+config = Config()
+if config.exists('interfaces'):
+    iface_types = config.list_nodes('interfaces')
+    for iface_type in iface_types:
+        if config.exists("interfaces {} {} dhcp-options no-default-route".format(iface_type, os.environ['interface'])):
+            print("True")
+PYEND
+}
+
+if [[ "$(get_no_default_route)" == 'True' ]]; then
+    new_routers=""
+fi

@@ -517,6 +517,14 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         else:
             dict['ipv6']['address'].update({'eui64_old': eui64})
 
+    interface_identifier = leaf_node_changed(config, base + [ifname, 'ipv6', 'address', 'interface-identifier'])
+    if interface_identifier:
+        tmp = dict_search('ipv6.address', dict)
+        if not tmp:
+            dict.update({'ipv6': {'address': {'interface_identifier_old': interface_identifier}}})
+        else:
+            dict['ipv6']['address'].update({'interface_identifier_old': interface_identifier})
+
     for vif, vif_config in dict.get('vif', {}).items():
         # Add subinterface name to dictionary
         dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
@@ -623,6 +631,23 @@ def get_vlan_ids(interface):
                 for vlan_status in vlans_status:
                     vlan_id = vlan_status['vlan']
                     vlan_ids.add(vlan_id)
+
+    return vlan_ids
+
+def get_vlans_ids_and_range(interface):
+    vlan_ids = set()
+
+    vlan_filter_status = json.loads(cmd(f'bridge -j -d vlan show dev {interface}'))
+
+    if vlan_filter_status is not None:
+        for interface_status in vlan_filter_status:
+            for vlan_entry in interface_status.get("vlans", []):
+                start = vlan_entry["vlan"]
+                end = vlan_entry.get("vlanEnd")
+                if end:
+                    vlan_ids.add(f"{start}-{end}")
+                else:
+                    vlan_ids.add(str(start))
 
     return vlan_ids
 
