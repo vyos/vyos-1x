@@ -35,7 +35,7 @@ rsyslog_conf = '/run/rsyslog/rsyslog.conf'
 logrotate_conf = '/etc/logrotate.d/vyos-rsyslog'
 
 systemd_socket = 'syslog.socket'
-systemd_service = systemd_services['rsyslog']
+systemd_service = systemd_services['syslog']
 
 def get_config(config=None):
     if config:

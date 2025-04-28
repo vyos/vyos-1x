@@ -598,6 +598,9 @@ def show_firewall_group(name=None):
                 prefix = 'DA_' if dynamic_type == 'address_group' else 'DA6_'
                 if dynamic_type in firewall['group']['dynamic_group']:
                     for dynamic_name, dynamic_conf in firewall['group']['dynamic_group'][dynamic_type].items():
+                        if name and name != dynamic_name:
+                            continue
+
                         references = find_references(dynamic_type, dynamic_name)
                         row = [dynamic_name, textwrap.fill(dynamic_conf.get('description') or '', 50), dynamic_type + '(dynamic)', '\n'.join(references) or 'N/D']
 

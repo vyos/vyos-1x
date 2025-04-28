@@ -25,20 +25,19 @@ def get_config(config=None):
         conf = config
     else:
         conf = ConfigTreeQuery()
-    base = ['firewall']
 
-    if not conf.exists(base):
-        return None
-
-    return conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
+    return (
+        conf.get_config_dict(['firewall'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True) if conf.exists(['firewall']) else None,
+        conf.get_config_dict(['policy'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True) if conf.exists(['policy']) else None,
+    )
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", help="Force update", action="store_true")
     args = parser.parse_args()
 
-    firewall = get_config()
-
-    if not geoip_update(firewall, force=args.force):
+    firewall, policy = get_config()
+    if not geoip_update(firewall=firewall, policy=policy, force=args.force):
         sys.exit(1)

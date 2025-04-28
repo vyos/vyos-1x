@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2023 VyOS maintainers and contributors
+# Copyright (C) 2020-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,7 +25,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.network import get_vxlan_vlan_tunnels
 from vyos.utils.network import get_vxlan_vni_filter
 from vyos.template import is_ipv6
-from vyos import ConfigError
 from base_interfaces_test import BasicInterfaceTest
 
 def convert_to_list(ranges_to_convert):
@@ -126,19 +125,17 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             'source-interface eth0',
             'vni 60'
         ]
-        params = []
         for option in options:
             opts = option.split()
-            params.append(opts[0])
-            self.cli_set(self._base_path + [ intf ] + opts)
+            self.cli_set(self._base_path + [intf] + opts)
 
-        with self.assertRaises(ConfigSessionError) as cm:
+        # verify() - Both group and remote cannot be specified
+        with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        exception = cm.exception
-        self.assertIn('Both group and remote cannot be specified', str(exception))
-        for param in params:
-            self.cli_delete(self._base_path + [intf, param])
+        # Remove blocking CLI option
+        self.cli_delete(self._base_path + [intf, 'group'])
+        self.cli_commit()
 
 
     def test_vxlan_external(self):

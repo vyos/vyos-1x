@@ -20,10 +20,10 @@ import sys
 from time import sleep
 
 from vyos.config import Config
-from vyos.configdict import get_interface_dict
-from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.commit import commit_in_progress
 from vyos import airbag
 
@@ -38,21 +38,34 @@ if not boot_configuration_complete():
     sys.exit(1)
 
 interface = sys.argv[1]
-# helper scripts should only work on physical interfaces not on individual
-# sub-interfaces. Moving e.g. a VLAN interface in/out a VRF will also trigger
-# this script which should be prohibited - bail out early
-if '.' in interface:
-    sys.exit(0)
 
 while commit_in_progress():
-    sleep(1)
+    sleep(0.250)
 
 in_out = sys.argv[2]
 config = Config()
 
 interface_path = ['interfaces'] + Section.get_config_path(interface).split()
-_, interface_config = get_interface_dict(
-    config, interface_path[:-1], ifname=interface, with_pki=True
-)
-if 'deleted' not in interface_config:
-    Interface(interface).update(interface_config)
+
+systemdV4_service = f'dhclient@{interface}.service'
+systemdV6_service = f'dhcp6c@{interface}.service'
+if in_out == 'out':
+    # Interface moved state to down
+    if is_systemd_service_active(systemdV4_service):
+        cmd(f'systemctl stop {systemdV4_service}')
+    if is_systemd_service_active(systemdV6_service):
+        cmd(f'systemctl stop {systemdV6_service}')
+elif in_out == 'in':
+    if config.exists_effective(interface_path + ['address']):
+        tmp = config.return_effective_values(interface_path + ['address'])
+        # Always (re-)start the DHCP(v6) client service. If the DHCP(v6) client
+        # is already running - which could happen if the interface is re-
+        # configured in operational down state, it will have a backoff
+        # time increasing while not receiving a DHCP(v6) reply.
+        #
+        # To make the interface instantly available, and as for a DHCP(v6) lease
+        # we will re-start the service and thus cancel the backoff time.
+        if 'dhcp' in tmp:
+            cmd(f'systemctl restart {systemdV4_service}')
+        if 'dhcpv6' in tmp:
+            cmd(f'systemctl restart {systemdV6_service}')

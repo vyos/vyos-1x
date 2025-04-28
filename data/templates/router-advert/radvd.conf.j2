@@ -57,6 +57,13 @@ interface {{ iface }} {
     };
 {%             endfor %}
 {%         endif %}
+{%         if iface_config.auto_ignore is vyos_defined %}
+    autoignoreprefixes {
+{%             for auto_ignore_prefix in iface_config.auto_ignore %}
+        {{ auto_ignore_prefix }};
+{%             endfor %}
+    };
+{%         endif %}
 {%         if iface_config.prefix is vyos_defined %}
 {%             for prefix, prefix_options in iface_config.prefix.items() %}
     prefix {{ prefix }} {

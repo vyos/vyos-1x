@@ -98,6 +98,8 @@
 {% endif %}
 {% if config.enforce_first_as is vyos_defined %}
  neighbor {{ neighbor }} enforce-first-as
+{% else %}
+ no neighbor {{ neighbor }} enforce-first-as
 {% endif %}
 {% if config.strict_capability_match is vyos_defined %}
  neighbor {{ neighbor }} strict-capability-match

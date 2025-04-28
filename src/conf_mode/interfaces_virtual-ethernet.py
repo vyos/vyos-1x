@@ -23,6 +23,7 @@ from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import VethIf
 from vyos.utils.network import interface_exists
 airbag.enable()
@@ -62,6 +63,7 @@ def verify(veth):
         return None
 
     verify_vrf(veth)
+    verify_mtu_ipv6(veth)
     verify_address(veth)
 
     if 'peer_name' not in veth:

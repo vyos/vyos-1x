@@ -196,7 +196,6 @@ Depends:
   ddclient (>= 3.11.1),
 # End "service dns dynamic"
 # # For "service ids"
-  fastnetmon [amd64],
   suricata,
   suricata-update,
 # End "service ids"
@@ -204,7 +203,7 @@ Depends:
   ndppd,
 # End "service ndp-proxy"
 # For "service router-advert"
-  radvd,
+  radvd (>= 2.20),
 # End "service route-advert"
 # For "load-balancing haproxy"
   haproxy,

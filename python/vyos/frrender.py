@@ -92,7 +92,7 @@ def get_frrender_dict(conf, argv=None) -> dict:
             if dict_search(f'area.{area_num}.area_type.nssa', ospf) is None:
                 del default_values['area'][area_num]['area_type']['nssa']
 
-        for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
+        for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'nhrp', 'rip', 'static']:
             if dict_search(f'redistribute.{protocol}', ospf) is None:
                 del default_values['redistribute'][protocol]
         if not bool(default_values['redistribute']):

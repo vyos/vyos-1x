@@ -21,6 +21,10 @@ import subprocess
 from vyos.defaults import directories
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.dict import dict_to_paths
+from vyos.utils.boot import boot_configuration_complete
+from vyos.vyconf_session import VyconfSession
+
+vyconf_backend = False
 
 CLI_SHELL_API = '/bin/cli-shell-api'
 SET = '/opt/vyatta/sbin/my_set'
@@ -165,6 +169,11 @@ class ConfigSession(object):
 
         self.__run_command([CLI_SHELL_API, 'setupSession'])
 
+        if vyconf_backend and boot_configuration_complete():
+            self._vyconf_session = VyconfSession(on_error=ConfigSessionError)
+        else:
+            self._vyconf_session = None
+
     def __del__(self):
         try:
             output = (
@@ -209,7 +218,10 @@ class ConfigSession(object):
             value = []
         else:
             value = [value]
-        self.__run_command([SET] + path + value)
+        if self._vyconf_session is None:
+            self.__run_command([SET] + path + value)
+        else:
+            self._vyconf_session.set(path + value)
 
     def set_section(self, path: list, d: dict):
         try:
@@ -223,7 +235,10 @@ class ConfigSession(object):
             value = []
         else:
             value = [value]
-        self.__run_command([DELETE] + path + value)
+        if self._vyconf_session is None:
+            self.__run_command([DELETE] + path + value)
+        else:
+            self._vyconf_session.delete(path + value)
 
     def load_section(self, path: list, d: dict):
         try:
@@ -261,20 +276,34 @@ class ConfigSession(object):
         self.__run_command([COMMENT] + path + value)
 
     def commit(self):
-        out = self.__run_command([COMMIT])
+        if self._vyconf_session is None:
+            out = self.__run_command([COMMIT])
+        else:
+            out, _ = self._vyconf_session.commit()
+
         return out
 
     def discard(self):
-        self.__run_command([DISCARD])
+        if self._vyconf_session is None:
+            self.__run_command([DISCARD])
+        else:
+            out, _ = self._vyconf_session.discard()
 
     def show_config(self, path, format='raw'):
-        config_data = self.__run_command(SHOW_CONFIG + path)
+        if self._vyconf_session is None:
+            config_data = self.__run_command(SHOW_CONFIG + path)
+        else:
+            config_data, _ = self._vyconf_session.show_config()
 
         if format == 'raw':
             return config_data
 
     def load_config(self, file_path):
-        out = self.__run_command(LOAD_CONFIG + [file_path])
+        if self._vyconf_session is None:
+            out = self.__run_command(LOAD_CONFIG + [file_path])
+        else:
+            out, _ = self._vyconf_session.load_config(file=file_path)
+
         return out
 
     def load_explicit(self, file_path):
@@ -287,11 +316,21 @@ class ConfigSession(object):
             raise ConfigSessionError(e) from e
 
     def migrate_and_load_config(self, file_path):
-        out = self.__run_command(MIGRATE_LOAD_CONFIG + [file_path])
+        if self._vyconf_session is None:
+            out = self.__run_command(MIGRATE_LOAD_CONFIG + [file_path])
+        else:
+            out, _ = self._vyconf_session.load_config(file=file_path, migrate=True)
+
         return out
 
     def save_config(self, file_path):
-        out = self.__run_command(SAVE_CONFIG + [file_path])
+        if self._vyconf_session is None:
+            out = self.__run_command(SAVE_CONFIG + [file_path])
+        else:
+            out, _ = self._vyconf_session.save_config(
+                file=file_path, append_version=True
+            )
+
         return out
 
     def install_image(self, url):

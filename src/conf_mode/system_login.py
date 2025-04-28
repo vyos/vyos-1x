@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import warnings
 
 from passlib.hosts import linux_context
 from psutil import users
@@ -30,12 +29,9 @@ from vyos.config import Config
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.template import is_ipv4
-from vyos.utils.auth import (
-    DEFAULT_PASSWORD,
-    EPasswdStrength,
-    evaluate_strength,
-    get_current_user
-)
+from vyos.utils.auth import EPasswdStrength
+from vyos.utils.auth import evaluate_strength
+from vyos.utils.auth import get_current_user
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search

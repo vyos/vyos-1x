@@ -252,6 +252,49 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('AdvIntervalOpt')
         self.assertEqual(tmp, 'off')
 
+    def test_auto_ignore(self):
+        isp_prefix = '2001:db8::/64'
+        ula_prefixes = ['fd00::/64', 'fd01::/64']
+
+        self.cli_set(base_path + ['auto-ignore', isp_prefix])
+
+        for ula_prefix in ula_prefixes:
+            self.cli_set(base_path + ['auto-ignore', ula_prefix])
+        
+        # commit changes
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # ensure autoignoreprefixes block is generated in config file
+        tmp = f'autoignoreprefixes' + ' {'
+        self.assertIn(tmp, config)
+
+        # ensure all three prefixes are contained in the block
+        self.assertIn(f'        {isp_prefix};', config)
+        for ula_prefix in ula_prefixes:
+            self.assertIn(f'        {ula_prefix};', config)
+        
+        # remove a prefix and verify it's gone
+        self.cli_delete(base_path + ['auto-ignore', ula_prefixes[1]])
+        
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        self.assertNotIn(f'        {ula_prefixes[1]};', config)
+
+        # ensure remaining two prefixes are still present
+        self.assertIn(f'        {ula_prefixes[0]};', config)
+        self.assertIn(f'        {isp_prefix};', config)
+
+        # remove the remaining two prefixes and verify the config block is gone
+        self.cli_delete(base_path + ['auto-ignore', ula_prefixes[0]])
+        self.cli_delete(base_path + ['auto-ignore', isp_prefix])
+
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        tmp = f'autoignoreprefixes' + ' {'
+        self.assertNotIn(tmp, config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -32,8 +32,10 @@ from vyos.template import inc_ip
 from vyos.template import dec_ip
 
 PROCESS_NAME = 'kea-dhcp4'
+D2_PROCESS_NAME = 'kea-dhcp-ddns'
 CTRL_PROCESS_NAME = 'kea-ctrl-agent'
 KEA4_CONF = '/run/kea/kea-dhcp4.conf'
+KEA4_D2_CONF = '/run/kea/kea-dhcp-ddns.conf'
 KEA4_CTRL = '/run/kea/dhcp4-ctrl-socket'
 HOSTSD_CLIENT = '/usr/bin/vyos-hostsd-client'
 base_path = ['service', 'dhcp-server']
@@ -96,6 +98,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(key in base_obj)
             self.assertEqual(base_obj[key], value)
 
+    def verify_service_running(self):
+        tmp = cmd('tail -n 100 /var/log/messages | grep kea')
+        self.assertTrue(process_named_running(PROCESS_NAME), msg=f'Service not running, log: {tmp}')
+
     def test_dhcp_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
 
@@ -106,9 +112,12 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['listen-interface', interface])
 
+        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'ping-check'])
+
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
         self.cli_set(pool + ['ignore-client-id'])
+        self.cli_set(pool + ['ping-check'])
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['option', 'default-router', router])
         self.cli_set(pool + ['option', 'name-server', dns_1])
@@ -151,6 +160,21 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'max-valid-lifetime', 86400
         )
 
+        # Verify ping-check
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'user-context'],
+            'enable-ping-check',
+            True
+        )
+
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'user-context'],
+            'enable-ping-check',
+            True
+        )
+
         # Verify options
         self.verify_config_object(
             obj,
@@ -181,7 +205,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_single_pool_options(self):
         shared_net_name = 'SMOKE-0815'
@@ -197,6 +221,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         wpad = 'http://wpad.vyos.io/foo/bar'
         server_identifier = bootfile_server
         ipv6_only_preferred = '300'
+        capwap_access_controller = '192.168.2.125'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
@@ -216,9 +241,15 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['option', 'bootfile-server', bootfile_server])
         self.cli_set(pool + ['option', 'wpad-url', wpad])
         self.cli_set(pool + ['option', 'server-identifier', server_identifier])
+        self.cli_set(
+            pool + ['option', 'capwap-controller', capwap_access_controller]
+        )
+
+        static_route = '10.0.0.0/24'
+        static_route_nexthop = '192.0.2.1'
 
         self.cli_set(
-            pool + ['option', 'static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1']
+            pool + ['option', 'static-route', static_route, 'next-hop', static_route_nexthop]
         )
         self.cli_set(pool + ['option', 'ipv6-only-preferred', ipv6_only_preferred])
         self.cli_set(pool + ['option', 'time-zone', 'Europe/London'])
@@ -301,6 +332,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_object(
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'capwap-ac-v4', 'data': capwap_access_controller},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
             {'name': 'tftp-server-name', 'data': tftp_server},
         )
         self.verify_config_object(
@@ -312,14 +348,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
             {
-                'name': 'rfc3442-static-route',
-                'data': '24,10,0,0,192,0,2,1, 0,192,0,2,1',
+                'name': 'classless-static-route',
+                'data': f'{static_route} - {static_route_nexthop}, 0.0.0.0/0 - {router}',
             },
-        )
-        self.verify_config_object(
-            obj,
-            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
-            {'name': 'windows-static-route', 'data': '24,10,0,0,192,0,2,1'},
         )
         self.verify_config_object(
             obj,
@@ -352,7 +383,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_single_pool_options_scoped(self):
         shared_net_name = 'SMOKE-2'
@@ -438,7 +469,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_single_pool_static_mapping(self):
         shared_net_name = 'SMOKE-2'
@@ -584,7 +615,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             client_base += 1
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_multiple_pools(self):
         lease_time = '14400'
@@ -726,7 +757,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 client_base += 1
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_exclude_not_in_range(self):
         # T3180: verify else path when slicing DHCP ranges and exclude address
@@ -773,7 +804,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_exclude_in_range(self):
         # T3180: verify else path when slicing DHCP ranges and exclude address
@@ -836,7 +867,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_relay_server(self):
         # Listen on specific address and return DHCP leases from a non
@@ -884,7 +915,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_high_availability(self):
         shared_net_name = 'FAILOVER'
@@ -987,8 +1018,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-        self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
+        self.verify_service_running()
 
     def test_dhcp_high_availability_standby(self):
         shared_net_name = 'FAILOVER'
@@ -1087,8 +1117,134 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
+        self.verify_service_running()
+
+    def test_dhcp_dynamic_dns_update(self):
+        shared_net_name = 'SMOKE-1DDNS'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+
+        self.cli_set(base_path + ['listen-interface', interface])
+
+        ddns = base_path + ['dynamic-dns-update']
+
+        self.cli_set(ddns + ['send-updates', 'enable'])
+        self.cli_set(ddns + ['conflict-resolution', 'enable'])
+        self.cli_set(ddns + ['override-no-update', 'enable'])
+        self.cli_set(ddns + ['override-client-update', 'enable'])
+        self.cli_set(ddns + ['replace-client-name', 'always'])
+        self.cli_set(ddns + ['update-on-renew', 'enable'])
+
+        self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'algorithm', 'sha256'])
+        self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'secret', 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='])
+        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'algorithm', 'sha256'])
+        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'secret', 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='])
+        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'dns-server', '1', 'address', '192.168.0.1'])
+        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'dns-server', '2', 'address', '100.100.0.1'])
+        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'key-name', 'domain-lan-updates'])
+        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '1', 'address', '192.168.0.1'])
+        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '1', 'port', '1053'])
+        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '2', 'address', '100.100.0.1'])
+        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '2', 'port', '1153'])
+        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'key-name', 'reverse-0-168-192'])
+
+        shared = base_path + ['shared-network-name', shared_net_name]
+
+        self.cli_set(shared + ['dynamic-dns-update', 'send-updates', 'enable'])
+        self.cli_set(shared + ['dynamic-dns-update', 'conflict-resolution', 'enable'])
+        self.cli_set(shared + ['dynamic-dns-update', 'ttl-percent', '75'])
+
+        pool = shared + [ 'subnet', subnet]
+
+        self.cli_set(pool + ['subnet-id', '1'])
+
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        self.cli_set(pool + ['dynamic-dns-update', 'send-updates', 'enable'])
+        self.cli_set(pool + ['dynamic-dns-update', 'generated-prefix', 'myfunnyprefix'])
+        self.cli_set(pool + ['dynamic-dns-update', 'qualifying-suffix', 'suffix.lan'])
+        self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-set', 'xXyYzZ'])
+        self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-replacement', '_xXx_'])
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        d2_config = read_file(KEA4_D2_CONF)
+
+        obj = loads(config)
+        d2_obj = loads(d2_config)
+
+        # Verify global DDNS parameters in the main config file
+        self.verify_config_value(
+            obj,
+            ['Dhcp4'], 'dhcp-ddns',
+            {'enable-updates': True, 'server-ip': '127.0.0.1', 'server-port': 53001, 'sender-ip': '', 'sender-port': 0,
+                'max-queue-size': 1024, 'ncr-protocol': 'UDP', 'ncr-format': 'JSON'})
+
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-send-updates', True)
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-use-conflict-resolution', True)
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-override-no-update', True)
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-override-client-update', True)
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-replace-client-name', 'always')
+        self.verify_config_value(obj, ['Dhcp4'], 'ddns-update-on-renew', True)
+
+        # Verify scoped DDNS parameters in the main config file
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-send-updates', True)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-use-conflict-resolution', True)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-ttl-percent', 0.75)
+
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-send-updates', True)
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-generated-prefix', 'myfunnyprefix')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-qualifying-suffix', 'suffix.lan')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'hostname-char-set', 'xXyYzZ')
+        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'hostname-char-replacement', '_xXx_')
+
+        # Verify keys and domains configuration in the D2 config
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'tsig-keys'],
+            {'name': 'domain-lan-updates', 'algorithm': 'HMAC-SHA256', 'secret': 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='}
+        )
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'tsig-keys'],
+            {'name': 'reverse-0-168-192', 'algorithm': 'HMAC-SHA256', 'secret': 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='}
+        )
+
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0], 'name', 'domain.lan')
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0], 'key-name', 'domain-lan-updates')
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '192.168.0.1'}
+            )
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '100.100.0.1'}
+            )
+
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0], 'name', '0.168.192.in-addr.arpa')
+        self.verify_config_value(d2_obj, ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0], 'key-name', 'reverse-0-168-192')
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '192.168.0.1', 'port': 1053}
+            )
+        self.verify_config_object(
+            d2_obj,
+            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0, 'dns-servers'],
+            {'ip-address': '100.100.0.1', 'port': 1153}
+            )
+
+        # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
-        self.assertTrue(process_named_running(CTRL_PROCESS_NAME))
+        self.assertTrue(process_named_running(D2_PROCESS_NAME))
 
     def test_dhcp_on_interface_with_vrf(self):
         self.cli_set(['interfaces', 'ethernet', 'eth1', 'address', '10.1.1.1/30'])
@@ -1250,7 +1406,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         )
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.verify_service_running()
 
         # All up and running, now test vyos-hostsd store
 

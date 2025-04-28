@@ -217,6 +217,14 @@
         <help>Global firewall state-policy</help>
       </properties>
       <children>
+        <node name="offload">
+          <properties>
+            <help>All stateful forward traffic is offloaded to a flowtable</help>
+          </properties>
+          <children>
+            #include <include/firewall/offload-target.xml.i>
+          </children>
+        </node>
         <node name="established">
           <properties>
             <help>Global firewall policy for packets part of an established connection</help>

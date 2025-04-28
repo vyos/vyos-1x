@@ -7,7 +7,7 @@ LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
-PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts)
+PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts src/services)
 LIBVYOSCONFIG_BUILD_PATH := /tmp/libvyosconfig/_build/libvyosconfig.so
 LIBVYOSCONFIG_STATUS := $(shell git submodule status)
 

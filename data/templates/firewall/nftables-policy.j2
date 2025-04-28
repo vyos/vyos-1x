@@ -33,6 +33,15 @@ table ip vyos_mangle {
 {%         endif %}
     }
 {%     endfor %}
+
+{%     if geoip_updated.name is vyos_defined %}
+{%         for setname in geoip_updated.name %}
+    set {{ setname }} {
+        type ipv4_addr
+        flags interval
+    }
+{%         endfor %}
+{%     endif %}
 {% endif %}
 
 {{ group_tmpl.groups(firewall_group, False, True) }}
@@ -65,6 +74,14 @@ table ip6 vyos_mangle {
 {%         endif %}
     }
 {%     endfor %}
+{%     if geoip_updated.ipv6_name is vyos_defined %}
+{%         for setname in geoip_updated.ipv6_name %}
+    set {{ setname }} {
+        type ipv6_addr
+        flags interval
+    }
+{%         endfor %}
+{%     endif %}
 {% endif %}
 
 {{ group_tmpl.groups(firewall_group, True, True) }}

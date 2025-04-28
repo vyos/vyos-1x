@@ -25,6 +25,7 @@ from vyos.configdict import has_vlan_subinterface_configured
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import BridgeIf
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
@@ -136,6 +137,7 @@ def verify(bridge):
 
     verify_dhcpv6(bridge)
     verify_vrf(bridge)
+    verify_mtu_ipv6(bridge)
     verify_mirror_redirect(bridge)
 
     ifname = bridge['ifname']

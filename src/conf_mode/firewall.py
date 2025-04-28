@@ -205,7 +205,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         if 'jump' not in rule_conf['action']:
             raise ConfigError('jump-target defined, but action jump needed and it is not defined')
         target = rule_conf['jump_target']
-        if hook != 'name': # This is a bit clumsy, but consolidates a chunk of code. 
+        if hook != 'name': # This is a bit clumsy, but consolidates a chunk of code.
             verify_jump_target(firewall, hook, target, family, recursive=True)
         else:
             verify_jump_target(firewall, hook, target, family, recursive=False)
@@ -268,12 +268,12 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
             if dict_search_args(rule_conf, 'gre', 'flags', 'checksum') is None:
                 # There is no builtin match in nftables for the GRE key, so we need to do a raw lookup.
-                # The offset of the key within the packet shifts depending on the C-flag. 
-                # 99% of the time, nobody will have checksums enabled - it's usually a manual config option. 
-                # We can either assume it is unset unless otherwise directed 
+                # The offset of the key within the packet shifts depending on the C-flag.
+                # 99% of the time, nobody will have checksums enabled - it's usually a manual config option.
+                # We can either assume it is unset unless otherwise directed
                 # (confusing, requires doco to explain why it doesn't work sometimes)
-                # or, demand an explicit selection to be made for this specific match rule. 
-                # This check enforces the latter. The user is free to create rules for both cases. 
+                # or, demand an explicit selection to be made for this specific match rule.
+                # This check enforces the latter. The user is free to create rules for both cases.
                 raise ConfigError('Matching GRE tunnel key requires an explicit checksum flag match. For most cases, use "gre flags checksum unset"')
 
             if dict_search_args(rule_conf, 'gre', 'flags', 'key', 'unset') is not None:
@@ -286,7 +286,7 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
                 if gre_inner_value < 0 or gre_inner_value > 65535:
                     raise ConfigError('inner-proto outside valid ethertype range 0-65535')
             except ValueError:
-                pass # Symbolic constant, pre-validated before reaching here. 
+                pass # Symbolic constant, pre-validated before reaching here.
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
@@ -436,6 +436,16 @@ def verify(firewall):
 
                 for ifname in interfaces:
                     verify_hardware_offload(ifname)
+
+    if 'offload' in firewall.get('global_options', {}).get('state_policy', {}):
+        offload_path = firewall['global_options']['state_policy']['offload']
+        if 'offload_target' not in offload_path:
+            raise ConfigError('offload-target must be specified')
+
+        offload_target = offload_path['offload_target']
+
+        if not dict_search_args(firewall, 'flowtable', offload_target):
+            raise ConfigError(f'Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
 
     if 'group' in firewall:
         for group_type in nested_group_types:
@@ -627,7 +637,7 @@ def apply(firewall):
         # Call helper script to Update set contents
         if 'name' in firewall['geoip_updated'] or 'ipv6_name' in firewall['geoip_updated']:
             print('Updating GeoIP. Please wait...')
-            geoip_update(firewall)
+            geoip_update(firewall=firewall)
 
     return None
 

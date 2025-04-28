@@ -642,6 +642,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
     def test_ipv4_global_state(self):
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
+
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'offload', 'offload-target', 'smoketest'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
@@ -651,6 +655,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['jump VYOS_STATE_POLICY'],
             ['chain VYOS_STATE_POLICY'],
+            ['jump VYOS_STATE_POLICY_FORWARD'],
+            ['chain VYOS_STATE_POLICY_FORWARD'],
+            ['flow add @VYOS_FLOWTABLE_smoketest'],
             ['ct state established', 'accept'],
             ['ct state invalid', 'drop'],
             ['ct state related', 'accept']

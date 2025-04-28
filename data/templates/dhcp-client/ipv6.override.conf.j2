@@ -4,6 +4,9 @@
 
 [Unit]
 ConditionPathExists={{ dhcp6_client_dir }}/dhcp6c.%i.conf
+{% if ifname.startswith('pppoe') %}
+After=ppp@{{ ifname }}.service
+{% endif %}
 
 [Service]
 ExecStart=
