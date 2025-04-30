@@ -527,7 +527,7 @@ def verify(config_dict):
                         or  dict_search('import.vrf', afi_config) is not None):
                     # FRR error: please unconfigure vpn to vrf commands before
                     # using import vrf commands
-                    if ('vpn' in afi_config['import']
+                    if (dict_search('import.vpn', afi_config) is not None
                             or dict_search('export.vpn', afi_config) is not None):
                         raise ConfigError('Please unconfigure VPN to VRF commands before '\
                                           'using "import vrf" commands!')
