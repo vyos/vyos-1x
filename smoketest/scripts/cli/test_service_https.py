@@ -16,6 +16,7 @@
 
 import unittest
 import json
+import psutil
 
 from requests import request
 from urllib3.exceptions import InsecureRequestWarning
@@ -112,6 +113,29 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
         # Check for stopped  process
         self.assertFalse(process_named_running(PROCESS_NAME))
+
+    def test_listen_address(self):
+        test_prefix = ['192.0.2.1/26', '2001:db8:1::ffff/64']
+        test_addr = [ i.split('/')[0] for i in test_prefix ]
+        for i, addr in enumerate(test_prefix):
+            self.cli_set(['interfaces', 'dummy', f'dum{i}', 'address', addr])
+
+        key = 'MySuperSecretVyOS'
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        # commit base config first, for testing update of listen-address
+        self.cli_commit()
+
+        for addr in test_addr:
+            self.cli_set(base_path + ['listen-address', addr])
+        self.cli_commit()
+
+        res = set()
+        t = psutil.net_connections(kind="tcp")
+        for c in t:
+            if c.laddr.port == 443:
+                res.add(c.laddr.ip)
+
+        self.assertEqual(res, set(test_addr))
 
     def test_certificate(self):
         cert_name = 'test_https'

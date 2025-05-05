@@ -417,7 +417,6 @@ gen_duid ()
 
 start ()
 {
-    echo -e "Initializing VyOS router\033[0m"
     # reset and clean config files
     security_reset || log_failure_msg "security reset failed"
 
@@ -526,6 +525,7 @@ start ()
 
     cleanup_post_commit_hooks
 
+    log_daemon_msg "Starting VyOS router"
     disabled migrate || migrate_bootfile
 
     restore_if_missing_preconfig_script

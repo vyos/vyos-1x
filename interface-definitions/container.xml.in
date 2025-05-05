@@ -75,6 +75,12 @@
               <multi/>
             </properties>
           </leafNode>
+          <leafNode name="privileged">
+             <properties>
+               <help>Grant root capabilities to the container</help>
+               <valueless/>
+             </properties>
+           </leafNode>
           <node name="sysctl">
             <properties>
               <help>Configure namespaced kernel parameters of the container</help>
@@ -621,6 +627,25 @@
           </node>
         </children>
       </tagNode>
+      <leafNode name="log-driver">
+        <properties>
+          <help>Configure container log driver</help>
+          <completionHelp>
+            <list>k8s-file journald</list>
+          </completionHelp>
+          <valueHelp>
+            <format>k8s-file</format>
+            <description>Logs to plain-text json file</description>
+          </valueHelp>
+          <valueHelp>
+            <format>journald</format>
+            <description>Logs to systemd's journal</description>
+          </valueHelp>
+          <constraint>
+            <regex>(k8s-file|journald)</regex>
+          </constraint>
+        </properties>
+      </leafNode>
     </children>
   </node>
 </interfaceDefinition>

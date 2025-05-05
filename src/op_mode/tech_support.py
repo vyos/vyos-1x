@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# Copyright (C) 2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,6 +20,7 @@ import json
 import vyos.opmode
 
 from vyos.utils.process import cmd
+from vyos.base import Warning
 
 def _get_version_data():
     from vyos.version import get_version_data
@@ -51,7 +52,12 @@ def _get_storage():
 def _get_devices():
     devices = {}
     devices["pci"] = cmd("lspci")
-    devices["usb"] = cmd("lsusb")
+
+    try:
+        devices["usb"] = cmd("lsusb")
+    except OSError:
+        Warning("Could not retrieve information about USB devices")
+        devices["usb"] = {}
 
     return devices
 

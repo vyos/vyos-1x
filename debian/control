@@ -120,7 +120,7 @@ Depends:
   dosfstools,
   grub-efi-amd64-signed [amd64],
   grub-efi-arm64-bin [arm64],
-  mokutil [amd64],
+  mokutil,
   shim-signed [amd64],
   sbsigntool [amd64],
 # Image signature verification tool

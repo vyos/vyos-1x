@@ -28,6 +28,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
 from vyos.configverify import verify_pki_dh_parameters
+from vyos.configdiff import get_config_diff
 from vyos.defaults import api_config_state
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
@@ -79,6 +80,14 @@ def get_config(config=None):
 
     # merge CLI and default dictionary
     https = config_dict_merge(default_values, https)
+
+    # some settings affecting nginx will require a restart:
+    # for example, a reload will not suffice when binding the listen address
+    # after nginx has started and dropped privileges; add flag here
+    diff = get_config_diff(conf)
+    children_changed = diff.node_changed_children(base)
+    https['nginx_restart_required'] = bool(set(children_changed) != set(['api']))
+
     return https
 
 def verify(https):
@@ -208,7 +217,10 @@ def apply(https):
     elif is_systemd_service_active(http_api_service_name):
         call(f'systemctl stop {http_api_service_name}')
 
-    call(f'systemctl reload-or-restart {https_service_name}')
+    if https['nginx_restart_required']:
+        call(f'systemctl restart {https_service_name}')
+    else:
+        call(f'systemctl reload-or-restart {https_service_name}')
 
 if __name__ == '__main__':
     try:

@@ -69,6 +69,12 @@
                   </valueHelp>
                 </properties>
               </leafNode>
+              <leafNode name="quiet">
+                <properties>
+                  <help>Disable most log messages</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <node name="debug">
                 <properties>
                   <help>Dynamic debugging for kernel module</help>

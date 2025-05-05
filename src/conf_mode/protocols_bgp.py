@@ -413,15 +413,19 @@ def verify(config_dict):
                             verify_route_map(afi_config['route_map'][tmp], bgp)
 
                 if 'route_reflector_client' in afi_config:
-                    peer_group_as = peer_config.get('remote_as')
+                    peer_as = peer_config.get('remote_as')
 
-                    if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
+                    if peer_as is not None and (peer_as != 'internal' and peer_as != bgp['system_as']):
                         raise ConfigError('route-reflector-client only supported for iBGP peers')
                     else:
+                        # Check into the peer group for the remote as, if we are in a peer group, check in peer itself
                         if 'peer_group' in peer_config:
                             peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', bgp)
-                            if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
-                                raise ConfigError('route-reflector-client only supported for iBGP peers')
+                        elif neighbor == 'peer_group':
+                            peer_group_as = peer_config.get('remote_as')
+                        
+                        if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
+                            raise ConfigError('route-reflector-client only supported for iBGP peers')
 
             # T5833 not all AFIs are supported for VRF
             if 'vrf' in bgp and 'address_family' in peer_config:
@@ -527,7 +531,7 @@ def verify(config_dict):
                         or  dict_search('import.vrf', afi_config) is not None):
                     # FRR error: please unconfigure vpn to vrf commands before
                     # using import vrf commands
-                    if ('vpn' in afi_config['import']
+                    if (dict_search('import.vpn', afi_config) is not None
                             or dict_search('export.vpn', afi_config) is not None):
                         raise ConfigError('Please unconfigure VPN to VRF commands before '\
                                           'using "import vrf" commands!')

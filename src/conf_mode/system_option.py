@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright (C) 2019-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -136,6 +136,8 @@ def generate(options):
             mode = options['kernel']['amd_pstate_driver']
             cmdline_options.append(
                 f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
+        if 'quiet' in options['kernel']:
+            cmdline_options.append('quiet')
     grub_util.update_kernel_cmdline_options(' '.join(cmdline_options))
 
     return None

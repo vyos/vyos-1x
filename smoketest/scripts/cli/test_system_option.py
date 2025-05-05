@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# Copyright (C) 2024-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,13 +16,17 @@
 
 import os
 import unittest
+
 from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.configsession import ConfigSessionError
+from vyos.utils.cpu import get_cpus
 from vyos.utils.file import read_file
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.system import sysctl_read
+from vyos.system import image
 
 base_path = ['system', 'option']
-
 
 class TestSystemOption(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
@@ -96,6 +100,30 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.assertFalse(os.path.exists(ssh_client_opt_file))
 
+    def test_kernel_options(self):
+        amd_pstate_mode = 'active'
+
+        self.cli_set(['system', 'option', 'kernel', 'disable-mitigations'])
+        self.cli_set(['system', 'option', 'kernel', 'disable-power-saving'])
+        self.cli_set(['system', 'option', 'kernel', 'quiet'])
+
+        self.cli_set(['system', 'option', 'kernel', 'amd-pstate-driver', amd_pstate_mode])
+        cpu_vendor = get_cpus()[0]['vendor_id']
+        if cpu_vendor != 'AuthenticAMD':
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_delete(['system', 'option', 'kernel', 'amd-pstate-driver'])
+
+        self.cli_commit()
+
+        # Read GRUB config file for current running image
+        tmp = read_file(f'{image.grub.GRUB_DIR_VYOS_VERS}/{image.get_running_image()}.cfg')
+        self.assertIn(' mitigations=off', tmp)
+        self.assertIn(' intel_idle.max_cstate=0 processor.max_cstate=1', tmp)
+        self.assertIn(' quiet', tmp)
+
+        if cpu_vendor == 'AuthenticAMD':
+            self.assertIn(f' initcall_blacklist=acpi_cpufreq_init amd_pstate={amd_pstate_mode}', tmp)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
