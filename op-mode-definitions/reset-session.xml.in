@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="clear">
+  <node name="reset">
     <children>
       <tagNode name="session">
         <properties>

@@ -256,12 +256,17 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         isp_prefix = '2001:db8::/64'
         ula_prefixes = ['fd00::/64', 'fd01::/64']
 
+        # configure wildcard prefix
+        self.cli_set(base_path + ['prefix', '::/64'])
+
+        # test auto-ignore CLI behaviors with no prefix overrides
+        # set auto-ignore for all three prefixes
         self.cli_set(base_path + ['auto-ignore', isp_prefix])
 
         for ula_prefix in ula_prefixes:
             self.cli_set(base_path + ['auto-ignore', ula_prefix])
         
-        # commit changes
+        # commit and reload config
         self.cli_commit()
         config = read_file(RADVD_CONF)
 
@@ -277,6 +282,7 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         # remove a prefix and verify it's gone
         self.cli_delete(base_path + ['auto-ignore', ula_prefixes[1]])
         
+        # commit and reload config
         self.cli_commit()
         config = read_file(RADVD_CONF)
 
@@ -290,9 +296,72 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['auto-ignore', ula_prefixes[0]])
         self.cli_delete(base_path + ['auto-ignore', isp_prefix])
 
+        # commit and reload config
         self.cli_commit()
         config = read_file(RADVD_CONF)
 
+        tmp = f'autoignoreprefixes' + ' {'
+        self.assertNotIn(tmp, config)
+
+        # test wildcard prefix overrides, with and without auto-ignore CLI configuration
+        newline = '\n'
+        left_curly = '{'
+        right_curly = '}'
+
+        # override ULA prefixes
+        for ula_prefix in ula_prefixes:
+            self.cli_set(base_path + ['prefix', ula_prefix])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # ensure autoignoreprefixes block is generated in config file with both prefixes
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[0]};{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # remove a ULA prefix and ensure there is only one prefix in the config block
+        self.cli_delete(base_path + ['prefix', ula_prefixes[0]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # ensure autoignoreprefixes block is generated in config file with only one prefix
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # exclude a prefix with auto-ignore CLI syntax
+        self.cli_set(base_path + ['auto-ignore', ula_prefixes[0]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # verify that both prefixes appear in config block once again
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[0]};{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # override first ULA prefix again
+        # first ULA is auto-ignored in CLI, it must appear only once in config
+        self.cli_set(base_path + ['prefix', ula_prefixes[0]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # verify that both prefixes appear uniquely
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[0]};{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # remove wildcard prefix and verify config block is gone
+        self.cli_delete(base_path + ['prefix', '::/64'])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # verify config block is gone
         tmp = f'autoignoreprefixes' + ' {'
         self.assertNotIn(tmp, config)
 

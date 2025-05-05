@@ -172,7 +172,11 @@ default_sysctls = [
 
 # Logging driver for the container. Available options: k8s-file and journald.
 #
+{% if log_driver is vyos_defined %}
+log_driver = "{{ log_driver }}"
+{% else %}
 #log_driver = "k8s-file"
+{% endif %}
 
 # Maximum size allowed for the container log file. Negative numbers indicate
 # that no size limit is imposed. If positive, it must be >= 8192 to match or
