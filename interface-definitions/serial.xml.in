@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="serial" owner="${vyos_conf_scripts_dir}/serial.py">
+    <properties>
+      <help>Serial</help>
+      <priority>2</priority>
+    </properties>
+    <children>
+      <node name="global">
+        <properties>
+          <help>Global setting for serial ports</help>
+        </properties>
+        <children>
+          <leafNode name="process-break">
+            <properties>
+              <help>Enable process Break Signals</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="flush-on-close">
+            <properties>
+              <help>Enable flush on Close</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <node name="keepalive">
+            <properties>
+              <help>Keepalive global setting</help>
+            </properties>
+            <children>
+              #include <include/serial/general/keepalive-setting.xml.i>
+            </children>
+          </node>
+        </children>
+      </node>
+      <tagNode name="device">
+        <properties>
+          <help>System serial interface name (ttyS or ttyUSB)</help>
+          <completionHelp>
+            <script>ls -1 /dev | grep ttyS</script>
+            <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
+          </completionHelp>
+          <valueHelp>
+            <format>ttySxxx</format>
+            <description>Regular serial interface</description>
+          </valueHelp>
+          <valueHelp>
+            <format>usbxbxpx</format>
+            <description>USB based serial interface</description>
+          </valueHelp>
+          <constraint>
+            <regex>(ttyS\d+|usb\d+b.*p.*)</regex>
+          </constraint>
+        </properties>
+        <children>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable the port</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          #include <include/generic-description.xml.i>
+          #include <include/serial/general/hardware.xml.i>
+          #include <include/serial/general/packet-forwarding.xml.i>
+          <leafNode name="service">
+            <properties>
+              <help>Active serial service</help>
+              <completionHelp>
+                <list>trueport-server trueport-client</list>
+              </completionHelp>
+              <constraint>
+                <regex>(trueport-server|trueport-client)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="service-setting">
+            <properties>
+              <help>Service specific setting</help>
+            </properties>
+            <children>
+              #include <include/serial/service/trueport.xml.i>
+              #include <include/serial/service/reverse.xml.i>
+            </children>
+          </node>
+          #include <include/serial/service/utils/tls.xml.i>
+          #include <include/serial/service/utils/data-logging.xml.i>
+          #include <include/serial/service/utils/sess-string-init.xml.i>
+          #include <include/serial/service/utils/sess-string-term.xml.i>
+          #include <include/serial/service/utils/sess-string-delay.xml.i>
+          #include <include/serial/service/utils/listen-port.xml.i>
+          #include <include/serial/service/utils/send-description.xml.i>
+          #include <include/serial/service/utils/host-list.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
