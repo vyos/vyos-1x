@@ -83,6 +83,7 @@
             </children>
           </node>
           #include <include/serial/service/utils/tls.xml.i>
+          #include <include/serial/service/utils/keepalive.xml.i>
           #include <include/serial/service/utils/data-logging.xml.i>
           #include <include/serial/service/utils/sess-string-init.xml.i>
           #include <include/serial/service/utils/sess-string-term.xml.i>
