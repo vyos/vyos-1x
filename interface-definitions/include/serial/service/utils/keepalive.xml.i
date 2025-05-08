@@ -1,5 +1,5 @@
 <!-- include start from serial/service/utils/keepalive.xml.i -->
-<leafNode name="enable-keepalive">
+<leafNode name="keepalive">
   <properties>
     <help>Enable Keepalive</help>
     <valueless/>
