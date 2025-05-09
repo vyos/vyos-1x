@@ -1,5 +1,5 @@
 <!-- include start from serial/service/utils/banner.xml.i -->
-<leafNode name="enable-pre-login-banner">
+<leafNode name="pre-login-banner">
   <properties>
     <help>Enable the display of the pre-login-banner</help>
     <valueless/>
