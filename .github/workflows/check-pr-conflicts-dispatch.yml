@@ -6,7 +6,7 @@ on:
       pr_number:
         description: "Pull Request Number"
         required: true
-        type: number
+        type: string
 
 permissions:
   pull-requests: write
