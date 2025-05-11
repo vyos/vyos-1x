@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
+  pull-requests: write
 
 jobs:
   check-pr-conflict-call:
