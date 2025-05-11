@@ -1,11 +1,13 @@
-
-name: "PR Conflicts checker"
+name: "Open PRs Conflicts checker"
 on:
-  pull_request_target:
-    types: [synchronize]
+  push:
+    branches:
+      - current
+      - sagitta
+      - circinus
 
 permissions:
-  pull-requests: write
+  actions: write
   contents: read
 
 jobs:
