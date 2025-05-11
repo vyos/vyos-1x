@@ -1,5 +1,5 @@
 
-name: "PR Conflicts checker"
+name: "PR Conflicts checker By Dispatch"
 on:
   workflow_dispatch:
     inputs:
