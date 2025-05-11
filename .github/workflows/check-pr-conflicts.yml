@@ -2,7 +2,7 @@
 name: "PR Conflicts checker"
 on:
   pull_request_target:
-    types: [synchronize]
+    types: [opened, reopened, synchronize]
 
 permissions:
   pull-requests: write
