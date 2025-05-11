@@ -5,6 +5,7 @@ on:
       - current
       - sagitta
       - circinus
+  workflow_dispatch:
 
 permissions:
   actions: write
