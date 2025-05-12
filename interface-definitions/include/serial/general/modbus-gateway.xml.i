@@ -4,6 +4,7 @@
     <help>Modbus gateway setting</help>
   </properties>
   <children>
+    #include <include/serial/service/utils/ip-aliasing.xml.i>
     <leafNode name="addr-mode">
       <properties>
         <help>Choose to insert slave address or UID to message header</help>

@@ -4,7 +4,6 @@
     <help>Modbus profile</help>
   </properties>
   <children>
-    #include <include/serial/service/utils/ip-aliasing.xml.i>
     <leafNode name="ascii-crlf">
       <properties>
         <help>Enable append CR/LF to the end of the transmission in ASCII mode</help>
