@@ -922,8 +922,7 @@ def install_image() -> None:
             for disk_target in l:
                 disk.partition_mount(disk_target.partition['efi'], f'{DIR_DST_ROOT}/boot/efi')
                 grub.install(disk_target.name, f'{DIR_DST_ROOT}/boot/',
-                             f'{DIR_DST_ROOT}/boot/efi',
-                             id=f'VyOS (RAID disk {l.index(disk_target) + 1})')
+                             f'{DIR_DST_ROOT}/boot/efi')
                 disk.partition_umount(disk_target.partition['efi'])
         else:
             print('Installing GRUB to the drive')

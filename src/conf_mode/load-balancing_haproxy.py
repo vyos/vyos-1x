@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# Copyright (C) 2023-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ import os
 from sys import exit
 from shutil import rmtree
 
+from vyos.defaults import systemd_services
 from vyos.config import Config
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
@@ -39,7 +40,6 @@ airbag.enable()
 
 load_balancing_dir = '/run/haproxy'
 load_balancing_conf_file = f'{load_balancing_dir}/haproxy.cfg'
-systemd_service = 'haproxy.service'
 systemd_override = '/run/systemd/system/haproxy.service.d/10-override.conf'
 
 def get_config(config=None):
@@ -65,18 +65,18 @@ def verify(lb):
         return None
 
     if 'backend' not in lb or 'service' not in lb:
-        raise ConfigError(f'"service" and "backend" must be configured!')
+        raise ConfigError('Both "service" and "backend" must be configured!')
 
     for front, front_config in lb['service'].items():
         if 'port' not in front_config:
             raise ConfigError(f'"{front} service port" must be configured!')
 
         # Check if bind address:port are used by another service
-        tmp_address = front_config.get('address', '0.0.0.0')
+        tmp_address = front_config.get('address', None)
         tmp_port = front_config['port']
         if check_port_availability(tmp_address, int(tmp_port), 'tcp') is not True and \
                 not is_listen_port_bind_service(int(tmp_port), 'haproxy'):
-            raise ConfigError(f'"TCP" port "{tmp_port}" is used by another service')
+            raise ConfigError(f'TCP port "{tmp_port}" is used by another service')
 
         if 'http_compression' in front_config:
             if front_config['mode'] != 'http':
@@ -85,16 +85,19 @@ def verify(lb):
                 raise ConfigError(f'service {front} must have at least one mime-type configured to use'
                                   f'http_compression!')
 
+        for cert in dict_search('ssl.certificate', front_config) or []:
+            verify_pki_certificate(lb, cert)
+
     for back, back_config in lb['backend'].items():
         if 'http_check' in back_config:
             http_check = back_config['http_check']
             if 'expect' in http_check and 'status' in http_check['expect'] and 'string' in http_check['expect']:
-                raise ConfigError(f'"expect status" and "expect string" can not be configured together!')
+                raise ConfigError('"expect status" and "expect string" can not be configured together!')
 
         if 'health_check' in back_config:
             if back_config['mode'] != 'tcp':
                 raise ConfigError(f'backend "{back}" can only be configured with {back_config["health_check"]} ' +
-                                  f'health-check whilst in TCP mode!')
+                                  'health-check whilst in TCP mode!')
             if 'http_check' in back_config:
                 raise ConfigError(f'backend "{back}" cannot be configured with both http-check and health-check!')
 
@@ -112,19 +115,14 @@ def verify(lb):
             if {'no_verify', 'ca_certificate'} <= set(back_config['ssl']):
                 raise ConfigError(f'backend {back} cannot have both ssl options no-verify and ca-certificate set!')
 
+            tmp = dict_search('ssl.ca_certificate', back_config)
+            if tmp: verify_pki_ca_certificate(lb, tmp)
+
     # Check if http-response-headers are configured in any frontend/backend where mode != http
     for group in ['service', 'backend']:
         for config_name, config in lb[group].items():
             if 'http_response_headers' in config and config['mode'] != 'http':
                 raise ConfigError(f'{group} {config_name} must be set to http mode to use http_response_headers!')
-
-    for front, front_config in lb['service'].items():
-        for cert in dict_search('ssl.certificate', front_config) or []:
-            verify_pki_certificate(lb, cert)
-
-    for back, back_config in lb['backend'].items():
-        tmp = dict_search('ssl.ca_certificate', back_config)
-        if tmp: verify_pki_ca_certificate(lb, tmp)
 
 
 def generate(lb):
@@ -193,12 +191,11 @@ def generate(lb):
     return None
 
 def apply(lb):
+    action = 'stop'
+    if lb:
+        action = 'reload-or-restart'
     call('systemctl daemon-reload')
-    if not lb:
-        call(f'systemctl stop {systemd_service}')
-    else:
-        call(f'systemctl reload-or-restart {systemd_service}')
-
+    call(f'systemctl {action} {systemd_services["haproxy"]}')
     return None
 
 

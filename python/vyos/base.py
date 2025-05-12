@@ -1,4 +1,4 @@
-# Copyright 2018-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,8 +15,7 @@
 
 from textwrap import fill
 
-
-class BaseWarning:
+class UserMessage:
     def __init__(self, header, message, **kwargs):
         self.message = message
         self.kwargs = kwargs
@@ -33,7 +32,6 @@ class BaseWarning:
         messages = self.message.split('\n')
         isfirstmessage = True
         initial_indent = self.textinitindent
-        print('')
         for mes in messages:
             mes = fill(mes, initial_indent=initial_indent,
                        subsequent_indent=self.standardindent, **self.kwargs)
@@ -44,17 +42,24 @@ class BaseWarning:
         print('', flush=True)
 
 
+class Message():
+    def __init__(self, message, **kwargs):
+        self.Message = UserMessage('', message, **kwargs)
+        self.Message.print()
+
 class Warning():
     def __init__(self, message, **kwargs):
-        self.BaseWarn = BaseWarning('WARNING: ', message, **kwargs)
-        self.BaseWarn.print()
+        print('')
+        self.UserMessage = UserMessage('WARNING: ', message, **kwargs)
+        self.UserMessage.print()
 
 
 class DeprecationWarning():
     def __init__(self, message, **kwargs):
         # Reformat the message and trim it to 72 characters in length
-        self.BaseWarn = BaseWarning('DEPRECATION WARNING: ', message, **kwargs)
-        self.BaseWarn.print()
+        print('')
+        self.UserMessage = UserMessage('DEPRECATION WARNING: ', message, **kwargs)
+        self.UserMessage.print()
 
 
 class ConfigError(Exception):

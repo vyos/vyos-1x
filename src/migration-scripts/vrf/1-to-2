@@ -37,7 +37,10 @@ def migrate(config: ConfigTree) -> None:
         new_static_base = vrf_base + [vrf, 'protocols']
         config.set(new_static_base)
         config.copy(static_base, new_static_base + ['static'])
-        config.set_tag(new_static_base + ['static', 'route'])
+        if config.exists(new_static_base + ['static', 'route']):
+            config.set_tag(new_static_base + ['static', 'route'])
+        if config.exists(new_static_base + ['static', 'route6']):
+            config.set_tag(new_static_base + ['static', 'route6'])
 
     # Now delete the old configuration
     config.delete(base)
