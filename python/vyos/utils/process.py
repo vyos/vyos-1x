@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shlex
 
 from subprocess import Popen
 from subprocess import PIPE
@@ -21,20 +22,17 @@ from subprocess import STDOUT
 from subprocess import DEVNULL
 
 
-def get_wrapper(vrf, netns, auth):
-    wrapper = ''
+def get_wrapper(vrf, netns):
+    wrapper = None
     if vrf:
-        wrapper = f'ip vrf exec {vrf} '
+        wrapper = ['ip', 'vrf', 'exec', vrf]
     elif netns:
-        wrapper = f'ip netns exec {netns} '
-    if auth:
-        wrapper = f'{auth} {wrapper}'
+        wrapper = ['ip', 'netns', 'exec', netns]
     return wrapper
 
 
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=PIPE, decode='utf-8', auth='', vrf=None,
-          netns=None):
+          stdout=PIPE, stderr=PIPE, decode='utf-8', vrf=None, netns=None):
     """
     popen is a wrapper helper around subprocess.Popen
     with it default setting it will return a tuple (out, err)
@@ -75,19 +73,6 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     if not debug.enabled(flag):
         flag = 'command'
 
-    # Must be run as root to execute command in VRF or network namespace
-    if vrf or netns:
-        if os.getuid() != 0:
-            raise OSError(
-                'Permission denied: cannot execute commands in VRF and netns contexts as an unprivileged user'
-            )
-
-    wrapper = get_wrapper(vrf, netns, auth)
-    command = f'{wrapper} {command}' if wrapper else command
-
-    cmd_msg = f"cmd '{command}'"
-    debug.message(cmd_msg, flag)
-
     use_shell = shell
     stdin = None
     if shell is None:
@@ -96,6 +81,24 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
             use_shell = True
         if env:
             use_shell = True
+
+    # Must be run as root to execute command in VRF or network namespace
+    wrapper = get_wrapper(vrf, netns)
+    if vrf or netns:
+        if os.getuid() != 0:
+            raise OSError(
+                'Permission denied: cannot execute commands in VRF and netns contexts as an unprivileged user'
+            )
+
+        if use_shell:
+            command = f'{shlex.join(wrapper)} {command}'
+        else:
+            if type(command) is not list:
+                command = [command]
+            command = wrapper + command
+
+    cmd_msg = f"cmd '{command}'" if use_shell else f"cmd '{shlex.join(command)}'"
+    debug.message(cmd_msg, flag)
 
     if input:
         stdin = PIPE
@@ -155,7 +158,7 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdout=PIPE, stderr=PIPE, decode='utf-8', raising=None, message='',
-        expect=[0], auth='', vrf=None, netns=None):
+        expect=[0], vrf=None, netns=None):
     """
     A wrapper around popen, which returns the stdout and
     will raise the error code of a command
@@ -171,12 +174,11 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
         input=input, timeout=timeout,
         env=env, shell=shell,
         decode=decode,
-        auth=auth,
         vrf=vrf,
         netns=netns,
     )
     if code not in expect:
-        wrapper = get_wrapper(vrf, netns, auth='')
+        wrapper = get_wrapper(vrf, netns)
         command = f'{wrapper} {command}'
         feedback = message + '\n' if message else ''
         feedback += f'failed to run command: {command}\n'

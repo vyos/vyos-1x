@@ -1,0 +1,66 @@
+# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7429: logging facility "all" unavailable in code
+
+from vyos.configtree import ConfigTree
+
+base = ['load-balancing', 'haproxy']
+unsupported_facilities = ['all', 'authpriv', 'mark']
+
+def config_migrator(config, config_path: list) -> None:
+    if not config.exists(config_path):
+        return
+    # Remove unsupported backend HAProxy syslog facilities form CLI
+    # Works for both backend and service CLI nodes
+    for service_backend in config.list_nodes(config_path):
+        log_path = config_path + [service_backend, 'logging', 'facility']
+        if not config.exists(log_path):
+            continue
+        # Remove unsupported syslog facilities form CLI
+        for facility in config.list_nodes(log_path):
+            if facility in unsupported_facilities:
+                config.delete(log_path + [facility])
+                continue
+            # Remove unsupported facility log level form CLI. VyOS will fallback
+            # to default log level if not set
+            if config.exists(log_path + [facility, 'level']):
+                tmp = config.return_value(log_path + [facility, 'level'])
+                if tmp == 'all':
+                    config.delete(log_path + [facility, 'level'])
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # Remove unsupported syslog facilities form CLI
+    global_path = base + ['global-parameters', 'logging', 'facility']
+    if config.exists(global_path):
+        for facility in config.list_nodes(global_path):
+            if facility in unsupported_facilities:
+                config.delete(global_path + [facility])
+                continue
+            # Remove unsupported facility log level form CLI. VyOS will fallback
+            # to default log level if not set
+            if config.exists(global_path + [facility, 'level']):
+                tmp = config.return_value(global_path + [facility, 'level'])
+                if tmp == 'all':
+                    config.delete(global_path + [facility, 'level'])
+
+    # Remove unsupported backend HAProxy syslog facilities from CLI
+    config_migrator(config, base + ['backend'])
+    # Remove unsupported service HAProxy syslog facilities from CLI
+    config_migrator(config, base + ['service'])

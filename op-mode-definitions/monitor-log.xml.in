@@ -107,6 +107,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit frr.service</command>
           </leafNode>
+          <leafNode name="haproxy">
+            <properties>
+              <help>Monitor last lines of HAProxy log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit haproxy.service</command>
+          </leafNode>
           <leafNode name="ipoe-server">
             <properties>
               <help>Monitor last lines of IP over Ethernet server log</help>

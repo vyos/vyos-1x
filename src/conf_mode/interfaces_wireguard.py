@@ -97,7 +97,7 @@ def verify(wireguard):
 
     if 'port' in wireguard and 'port_changed' in wireguard:
         listen_port = int(wireguard['port'])
-        if check_port_availability('0.0.0.0', listen_port, 'udp') is not True:
+        if check_port_availability(None, listen_port, protocol='udp') is not True:
             raise ConfigError(f'UDP port {listen_port} is busy or unavailable and '
                                'cannot be used for the interface!')
 

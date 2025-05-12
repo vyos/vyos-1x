@@ -92,6 +92,10 @@ def verify(nat):
             if prefix != None:
                 if not is_ipv6(prefix):
                     raise ConfigError(f'{err_msg} source-prefix not specified')
+                
+            if 'destination' in config and 'group' in config['destination']:
+                if len({'address_group', 'network_group', 'domain_group'} & set(config['destination']['group'])) > 1:
+                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
 
     if dict_search('destination.rule', nat):
         for rule, config in dict_search('destination.rule', nat).items():

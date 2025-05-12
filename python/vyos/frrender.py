@@ -697,6 +697,9 @@ class FRRender:
         debug('FRR:        START CONFIGURATION RENDERING')
         # we can not reload an empty file, thus we always embed the marker
         output = '!\n'
+        # Enable FRR logging
+        output += 'log syslog\n'
+        output += 'log facility local7\n'
         # Enable SNMP agentx support
         # SNMP AgentX support cannot be disabled once enabled
         if 'snmp' in config_dict:

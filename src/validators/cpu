@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+
+import re
+import sys
+
+MAX_CPU = 511
+
+
+def validate_isolcpus(value):
+    pattern = re.compile(r'^(\d{1,3}(-\d{1,3})?)(,(\d{1,3}(-\d{1,3})?))*$')
+    if not pattern.fullmatch(value):
+        return False
+
+    flat_list = []
+    for part in value.split(','):
+        if '-' in part:
+            start, end = map(int, part.split('-'))
+            if start > end or start < 0 or end > MAX_CPU:
+                return False
+            flat_list.extend(range(start, end + 1))
+        else:
+            num = int(part)
+            if num < 0 or num > MAX_CPU:
+                return False
+            flat_list.append(num)
+
+    for i in range(1, len(flat_list)):
+        if flat_list[i] <= flat_list[i - 1]:
+            return False
+
+    return True
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 cpu.py <cpu_list>")
+        sys.exit(1)
+
+    input_value = sys.argv[1]
+    if validate_isolcpus(input_value):
+        sys.exit(0)
+    else:
+        sys.exit(1)

@@ -43,8 +43,13 @@ directories = {
 }
 
 systemd_services = {
+    'haproxy' : 'haproxy.service',
     'syslog' : 'syslog.service',
     'snmpd' : 'snmpd.service',
+}
+
+internal_ports = {
+    'certbot_haproxy' : 65080, # Certbot running behing haproxy
 }
 
 config_status = '/tmp/vyos-config-status'
