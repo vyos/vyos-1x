@@ -20,10 +20,22 @@
         <leafNode name="name">
           <properties>
             <help>Multihost host name</help>
+            <valueHelp>
+              <format>ipv4</format>
+              <description>IP address of current host</description>
+            </valueHelp>
+            <valueHelp>
+              <format>ipv6</format>
+              <description>IPv6 address of current host</description>
+            </valueHelp>
+            <valueHelp>
+              <format>hostname</format>
+              <description>Fully qualified host name of current host</description>
+            </valueHelp>
             <constraint>
-              <regex>[-a-zA-Z0-9]+</regex>
+              <validator name="ip-address"/>
+              <validator name="fqdn"/>
             </constraint>
-            <constraintErrorMessage>Host name must be alphanumeric and can contain hyphens</constraintErrorMessage>
           </properties>
         </leafNode>
         <leafNode name="port">

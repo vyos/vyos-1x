@@ -41,7 +41,7 @@
         <valueHelp>
           <!-- table main with prio 32766 -->
           <format>u32:1-16</format>
-          <description>Mapping ID (1-16)</description>
+          <description>Mapping Entry ID (1-16)</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 1-16"/>
