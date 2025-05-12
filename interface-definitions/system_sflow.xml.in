@@ -112,6 +112,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="enable-vpp">
+            <properties>
+              <help>Enable VPP sampling</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/interface/vrf.xml.i>
         </children>
       </node>
