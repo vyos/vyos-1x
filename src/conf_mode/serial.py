@@ -149,6 +149,7 @@ def get_config(config=None):
         for device, serial_config in proxy['device'].items():
             port_config = serial_config
             ttynum = re.findall(r'\d+', device)[0]
+            service = ''
             port_config['ttynum'] = ttynum
 
             if 'global' in proxy:
@@ -185,6 +186,18 @@ def get_config(config=None):
                             set_nested(port_config, ['multihost_list', 'host', '0', 'port'], get_values_by_key(port_config['service_setting'], 'main_hostport')[0])
                             set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'], 'backup_hostname')[0])
                             set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'], 'backup_hostport')[0])
+
+            if 'data_logging' in port_config:
+                # trueport inbound and outbound use the same service enum
+                if 'trueport' in service:
+                    set_nested(port_config, ['datalogging', 'init_service'], 'trueport')
+                # direct/slient/reverse raw each has an enum
+                elif 'raw' in service:
+                    set_nested(port_config, ['datalogging', 'init_service'], service)
+
+                port_config['service'] = 'data-logging'
+                set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'], 'main_hostname')[0])
+                set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'], 'main_hostport')[0])
 
             if 'tls' in proxy_no_default['device'][device]:
                 if 'disable' not in proxy_no_default['device'][device].get('tls', []):
@@ -247,6 +260,9 @@ def apply(proxy):
                     else:
                         # inbound will exit when all connections disconnect
                         os.system(f'setsid /usr/src/iolan/monitor/monitor {ttynum} &')
+                elif 'data-logging' in serial_config['service']:
+                    write_string_to_file(file_path, 'iol_lldatalog')
+                    os.system(f'setsid /usr/src/iolan/monitor/monitor {ttynum} &')
             else:
                 kill_pid_file(device)
 
