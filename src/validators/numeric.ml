@@ -65,11 +65,11 @@ let check_positive opts m =
         failwith "option '--positive does' not apply to a range value"
 
 let looks_like_number value =
-  try let _ = Pcre.exec ~pat:"^(\\-?)[0-9]+(\\.[0-9]+)?$" value in true
+  try let _ = Pcre2.exec ~pat:"^(\\-?)[0-9]+(\\.[0-9]+)?$" value in true
   with Not_found -> false
 
 let is_relative value =
-  try let _ = Pcre.exec ~pat:"^[+-][0-9]+$" value in true
+  try let _ = Pcre2.exec ~pat:"^[+-][0-9]+$" value in true
   with Not_found -> false
 
 let number_string_drop_modifier value =
@@ -170,7 +170,7 @@ let check_argument_type opts m =
     else Printf.ksprintf failwith "Value must be a number, not a range"
 
 let is_range_val s =
-  try let _ = Pcre.exec ~pat:"^[0-9]+-[0-9]+$" s in true
+  try let _ = Pcre2.exec ~pat:"^[0-9]+-[0-9]+$" s in true
   with Not_found -> false
 
 let var_numeric_str s =

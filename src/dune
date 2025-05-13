@@ -4,13 +4,13 @@
  (name numeric)
  (public_name numeric)
  (modules numeric)
- (libraries pcre))
+ (libraries pcre2))
 
 (executable
  (name url)
  (public_name url)
  (modules url)
- (libraries pcre))
+ (libraries pcre2))
 
 (executable
  (name file_path)
@@ -22,13 +22,13 @@
  (name validate_value)
  (public_name validate-value)
  (modules validate_value)
- (libraries pcre unix containers))
+ (libraries pcre2 unix containers))
 
 (executable
  (name list_interfaces)
  (public_name list_interfaces)
  (modules func list_interfaces)
- (libraries pcre)
+ (libraries pcre2)
  (foreign_stubs
   (language c)
   (names iface)))
