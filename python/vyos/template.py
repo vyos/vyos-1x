@@ -36,6 +36,7 @@ DEFAULT_TEMPLATE_DIR = directories["templates"]
 # Holds template filters registered via register_filter()
 _FILTERS = {}
 _TESTS = {}
+_CLEVER_FUNCTIONS = {}
 
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
@@ -58,6 +59,7 @@ def _get_environment(location=None):
     )
     env.filters.update(_FILTERS)
     env.tests.update(_TESTS)
+    env.globals.update(_CLEVER_FUNCTIONS)
     return env
 
 
@@ -77,7 +79,7 @@ def register_filter(name, func=None):
             "Filters can only be registered before rendering the first template"
         )
     if name in _FILTERS:
-        raise ValueError(f"A filter with name {name!r} was registered already")
+        raise ValueError(f"A filter with name {name!r} was already registered")
     _FILTERS[name] = func
     return func
 
@@ -97,10 +99,30 @@ def register_test(name, func=None):
             "Tests can only be registered before rendering the first template"
             )
     if name in _TESTS:
-        raise ValueError(f"A test with name {name!r} was registered already")
+        raise ValueError(f"A test with name {name!r} was already registered")
     _TESTS[name] = func
     return func
 
+def register_clever_function(name, func=None):
+    """Register a function to be available as test in templates under given name.
+
+    It can also be used as a decorator, see below in this module for examples.
+
+    :raise RuntimeError:
+        when trying to register a test after a template has been rendered already
+    :raise ValueError: when trying to register a name which was taken already
+    """
+    if func is None:
+        return functools.partial(register_clever_function, name)
+    if _get_environment.cache_info().currsize:
+        raise RuntimeError(
+            "Clever functions can only be registered before rendering the" \
+            "first template")
+    if name in _CLEVER_FUNCTIONS:
+        raise ValueError(f"A clever function with name {name!r} was already "\
+                          "registered")
+    _CLEVER_FUNCTIONS[name] = func
+    return func
 
 def render_to_string(template, content, formater=None, location=None):
     """Render a template from the template directory, raise on any errors.
@@ -150,6 +172,8 @@ def render(
     # As we are opening the file with 'w', we are performing the rendering before
     # calling open() to not accidentally erase the file if rendering fails
     rendered = render_to_string(template, content, formater, location)
+    # Remove any trailing character and always add a new line at the end
+    rendered = rendered.rstrip() + "\n"
 
     # Write to file
     with open(destination, "w") as file:
@@ -1050,3 +1074,21 @@ def vyos_defined(value, test_value=None, var_type=None):
     else:
         # Valid value and is matching optional argument if provided - return true
         return True
+
+@register_clever_function('get_default_port')
+def get_default_port(service):
+    """
+    Jinja2 plugin to retrieve common service port number from vyos.defaults
+    class form a Jinja2 template. This removes the need to hardcode, or pass in
+    the data using the general dictionary.
+
+    Added to remove code complexity and make it easier to read.
+
+    Example:
+    {{ get_default_port('certbot_haproxy') }}
+    """
+    from vyos.defaults import internal_ports
+    if service not in internal_ports:
+        raise RuntimeError(f'Service "{service}" not found in internal ' \
+                           'vyos.defaults.internal_ports dict!')
+    return internal_ports[service]

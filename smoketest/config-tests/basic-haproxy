@@ -1,0 +1,46 @@
+set interfaces dummy dum0 address '172.18.254.203/32'
+set interfaces ethernet eth0 duplex 'auto'
+set interfaces ethernet eth0 speed 'auto'
+set interfaces ethernet eth0 vif 203 address '172.18.203.10/24'
+set interfaces ethernet eth1 duplex 'auto'
+set interfaces ethernet eth1 speed 'auto'
+set interfaces ethernet eth2 duplex 'auto'
+set interfaces ethernet eth2 speed 'auto'
+set load-balancing haproxy backend webserver logging facility daemon
+set load-balancing haproxy backend webserver logging facility user level 'info'
+set load-balancing haproxy backend webserver server web01 address '192.0.2.1'
+set load-balancing haproxy backend webserver server web01 port '443'
+set load-balancing haproxy backend webserver ssl no-verify
+set load-balancing haproxy global-parameters logging facility daemon
+set load-balancing haproxy global-parameters logging facility user level 'info'
+set load-balancing haproxy service frontend backend 'webserver'
+set load-balancing haproxy service frontend logging facility daemon
+set load-balancing haproxy service frontend logging facility user level 'info'
+set load-balancing haproxy service frontend port '443'
+set load-balancing haproxy service frontend ssl certificate 'dummy'
+set pki certificate dummy certificate 'MIIDsTCCApmgAwIBAgIUegVgO1wIN2v44trXZ+Kb1t48uL0wDQYJKoZIhvcNAQELBQAwVzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzEQMA4GA1UEAwwHdnlvcy5pbzAeFw0yNTA1MDUxODIzMTdaFw0yNjA1MDUxODIzMTdaMFcxCzAJBgNVBAYTAkdCMRMwEQYDVQQIDApTb21lLVN0YXRlMRIwEAYDVQQHDAlTb21lLUNpdHkxDTALBgNVBAoMBFZ5T1MxEDAOBgNVBAMMB3Z5b3MuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDEfMAwYLKKVhGlUXr9gkVC7uBi+0O9yyEgd5QzPByePXYw0FrSLWmLRfQuByFDPIVANcEa3FgIXIAeKmxItw7IhFRsG5soSOXXgBxdAH/qzEbWhwzgafnxZKJkmrQr8YA3IFtkFPr2+5s26WdjtwEM0tzIFkq6hmWSX1axUgvYlF2uCxjututMZ6I5JCa0uR3gBRuNONuGPH3Ko9zUEATffv53j9DbYVEM0lfVNewefPoVJmWz+oT0wP/kNx6tREf+aUAF4m+eBsqnggITftW2fyeFnoBPCcPp3HUgSwZhesunqz+YeW6Pk+WWb5vl+2QbMKKtz5qK6dI3q0z9yp4FAgMBAAGjdTBzMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsGAQUFBwMBMB0GA1UdDgQWBBSr4OYIWkb8UGuQnEFnjSbmvR+4vDAfBgNVHSMEGDAWgBSr4OYIWkb8UGuQnEFnjSbmvR+4vDANBgkqhkiG9w0BAQsFAAOCAQEAUmRWRPGXsvfuRT+53id3EufH1IJAdowrt6yBZsHobvqCXO2+YhG7oG6/UqUYiv5bHN5xEMQyWd7nyrLOUeFo2bpcMIOlpl6AoUIY65Gm2BqQ7FuPxLLO25RdpZ5WkMGX5kJsKY0/PcpamRKNz1khgFcRyxf9WGhCAIjDCWIWs8lkvPN3m75SFCW7MTuzzQOrzvI6nqqcHO4k8hRBznp26WLUW1rQKpNN09nZGOkeNYK5QbzKN/RUmtEHQZhlgLAIr09jUaA4RDLI1SdD6LR5nvpa9RJBTyS/kISF8BXKMgvUbDHN2nP+VUUrut2ZwoU+pxV4RVT2pS760HuYj4+sYQ=='
+set pki certificate dummy private key 'MIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQDEfMAwYLKKVhGlUXr9gkVC7uBi+0O9yyEgd5QzPByePXYw0FrSLWmLRfQuByFDPIVANcEa3FgIXIAeKmxItw7IhFRsG5soSOXXgBxdAH/qzEbWhwzgafnxZKJkmrQr8YA3IFtkFPr2+5s26WdjtwEM0tzIFkq6hmWSX1axUgvYlF2uCxjututMZ6I5JCa0uR3gBRuNONuGPH3Ko9zUEATffv53j9DbYVEM0lfVNewefPoVJmWz+oT0wP/kNx6tREf+aUAF4m+eBsqnggITftW2fyeFnoBPCcPp3HUgSwZhesunqz+YeW6Pk+WWb5vl+2QbMKKtz5qK6dI3q0z9yp4FAgMBAAECgf9plqCMg2pKEWRFl183bqWAm7lnLnsUOfABFNPYa3U+uKQUKZpboTBfzDfZqNak3XNQV0mTAR8pFfoMhQjQU9hUxH7ivjw1RUCHjixCF0vLBkTB34gL7FUbiEIFhR1NW3pCJY73OXOkIZG1Obh6Syb8KubDeu4bTmb90/TnDDAs6OYXJ5yo7ZDZLvLu5a3Dli+H4K5Qb5VJ74o/vtodBo3wmKBgy2Ey6JqF+y7/3HeE66rVhYNft5pURgemWnNYqh3oDTJASqpA/8n90o8ceYPVJugQ7029UiyTp0xgBRXFszgiYPkBlsNWB+9+ospopOmYU0owBykH+RtD/bQ0mwECgYEA4gxPdYbHg/GLihHrkv0t5V0pSEhBeBeTBdWG+P/6K90vXofpp7qISdOeYMGkh8mY+PfZNHksdu67d2ks5on5/dNf5YXWCm+LMMRiSsfOo11NISNdNHS6afqs18Wq1aKawv/rwotfxrakM4Gar692+jgz/l/X+FdOQwmE6uEus8ECgYEA3oW4eGtzGq28TiqyhTHduTkas0ckPWX8ulasyPnLxBKDNNohbXXpFIJIcrnl24QFJw3MJbo+R+OxZHgzPK8r64gIGVa7vLCR2fiU/RFoUa1Jo1pPOqXXWqf/Mvdokm2p0atrjRUX9VhjoFsDLcqTgAmfSCsVSqGucX6ER7Gy60UCgYAvmhoNjNFtFquk6rsqHAjTOTgdUaH/0S8T1nBy9SzQmeaEyKhKuvxCV78NbxnfwnNlUoQ6CZ50eTefINXkwn+TlTSnl/SIBA9SuLheOQ9p1ZcNeG4DQuWStcg6NBUSoghnMg+Ky2Di7slLU2qovpGWhcllMve/A1umwFVuRPdZwQKBgHS7mYYyd/Oq6HnpFDWjbzlXp5Yc3/oFooruJT5ZLHfzbjkvpRGTJW7I2dC1jMuXekx+hHXWOg3keI7IL7jJ/DRW7Ei+o0XdKuY57Y7ErwEJ8vNq0N1nWo4IS2wlNgp61PdVAdrFEgh3EexxUj2XY8FrSs/FKio4nxaS1Dn4EnAxAoGBAKqLvuPpmCMVwlIu57WGxL5d9i7EjIGY65l6HTKQYoHCzE51rkowH1La2fuUYz0IpExq2lcrLbOUtSyhXH7Zlktiz//Gu/P90SUfR/ZGcLeZi+EDyK2OctpnWBjs2Dmfg4D6vxk39yV8AB97pYG073GcJ/P54qRUuEitbpJwH+fB'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server 172.16.100.10
+set service ntp server 172.16.100.20
+set service ntp server 172.16.110.30
+set service ssh disable-host-validation
+set service ssh port '22'
+set system config-management commit-revisions '200'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''
+set system name-server '172.16.254.30'
+set system option kernel disable-mitigations
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'
+set system time-zone 'Europe/Berlin'

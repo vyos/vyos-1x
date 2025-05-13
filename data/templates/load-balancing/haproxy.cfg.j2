@@ -50,9 +50,29 @@ defaults
     errorfile 503 /etc/haproxy/errors/503.http
     errorfile 504 /etc/haproxy/errors/504.http
 
+# Default ACME backend
+backend buildin_acme_certbot
+    server localhost 127.0.0.1:{{ get_default_port('certbot_haproxy') }}
+
 # Frontend
 {% if service is vyos_defined %}
 {%     for front, front_config in service.items() %}
+{%         if front_config.redirect_http_to_https is vyos_defined %}
+{%             set certbot_backend_name = 'certbot_' ~ front ~ '_backend' %}
+frontend {{ front }}-http
+    mode http
+{%             if front_config.listen_address is vyos_defined %}
+{%                 for address in front_config.listen_address %}
+    bind {{ address | bracketize_ipv6 }}:80
+{%                 endfor %}
+{%             else %}
+    bind [::]:80 v4v6
+{%             endif %}
+    acl acme_acl path_beg /.well-known/acme-challenge/
+    use_backend buildin_acme_certbot if acme_acl
+    redirect scheme https code 301 if !acme_acl
+{%         endif %}
+
 frontend {{ front }}
 {%         set ssl_front = [] %}
 {%         if front_config.ssl.certificate is vyos_defined and front_config.ssl.certificate is iterable %}
@@ -67,9 +87,6 @@ frontend {{ front }}
 {%             endfor %}
 {%         else %}
     bind [::]:{{ front_config.port }} v4v6 {{ ssl_directive }} {{ ssl_front | join(' ') }}
-{%         endif %}
-{%         if front_config.redirect_http_to_https is vyos_defined %}
-    http-request redirect scheme https unless { ssl_fc }
 {%         endif %}
 {%         if front_config.logging is vyos_defined %}
 {%             for facility, facility_config in front_config.logging.facility.items() %}
@@ -237,6 +254,5 @@ backend {{ back }}
 {%         if back_config.timeout.server is vyos_defined %}
     timeout server {{ back_config.timeout.server }}s
 {%         endif %}
-
 {%     endfor %}
 {% endif %}

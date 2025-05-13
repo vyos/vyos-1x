@@ -4,7 +4,7 @@
     <children>
       <node name="haproxy" owner="${vyos_conf_scripts_dir}/load-balancing_haproxy.py">
         <properties>
-          <help>Configure haproxy</help>
+          <help>HAProxy TCP/HTTP Load Balancer</help>
           <priority>900</priority>
         </properties>
         <children>
@@ -26,7 +26,7 @@
                   <constraintErrorMessage>Backend name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Name of haproxy backend system</description>
+                    <description>HAProxy backend system name</description>
                   </valueHelp>
                   <completionHelp>
                     <path>load-balancing haproxy backend</path>
