@@ -9,9 +9,9 @@
  *)
 let split_scheme url =
   let aux url =
-    let res = Pcre.exec ~pat:{|^([a-zA-Z0-9\.\-]+):(.*)$|} url in
-    let scheme = Pcre.get_substring res 1 in
-    let uri = Pcre.get_substring res 2 in
+    let res = Pcre2.exec ~pat:{|^([a-zA-Z0-9\.\-]+):(.*)$|} url in
+    let scheme = Pcre2.get_substring res 1 in
+    let uri = Pcre2.get_substring res 2 in
     (String.lowercase_ascii scheme, uri)
   in
   try Ok (aux url)
@@ -24,17 +24,17 @@ let is_scheme_allowed allowed_schemes scheme =
 
 let regex_matches regex s =
   try
-    let _ = Pcre.exec ~rex:regex s in
+    let _ = Pcre2.exec ~rex:regex s in
     true
   with Not_found -> false
 
 let host_path_format =
-  Pcre.regexp
+  Pcre2.regexp
   {|^//(?:[^/?#]+(?::[^/?#]*)?@)?([a-zA-Z0-9\-\._~]+|\[[a-zA-Z0-9:\.]+\])(?::([0-9]+))?(/.*)?$|}
 
-let host_name_format = Pcre.regexp {|^[a-zA-Z0-9]+([\-\._~]{1}[a-zA-Z0-9]+)*$|}
-let ipv4_addr_format = Pcre.regexp {|^(([1-9]\d{0,2}|0)\.){3}([1-9]\d{0,2}|0)$|}
-let ipv6_addr_format = Pcre.regexp {|^\[([a-z0-9:\.]+|[A-Z0-9:\.]+)\]$|}
+let host_name_format = Pcre2.regexp {|^[a-zA-Z0-9]+([\-\._~]{1}[a-zA-Z0-9]+)*$|}
+let ipv4_addr_format = Pcre2.regexp {|^(([1-9]\d{0,2}|0)\.){3}([1-9]\d{0,2}|0)$|}
+let ipv6_addr_format = Pcre2.regexp {|^\[([a-z0-9:\.]+|[A-Z0-9:\.]+)\]$|}
 
 let is_port s =
   try
@@ -58,8 +58,8 @@ let is_ipv6_segment s =
   with Failure _ -> false
 
 let is_ipv4_addr s =
-  let res = Pcre.exec ~rex:ipv4_addr_format s in
-  let ipv4_addr_str = Pcre.get_substring res 0 in
+  let res = Pcre2.exec ~rex:ipv4_addr_format s in
+  let ipv4_addr_str = Pcre2.get_substring res 0 in
   let ipv4_addr_l = String.split_on_char '.' ipv4_addr_str in
   List.for_all is_ipv4_octet ipv4_addr_l
 
@@ -83,10 +83,10 @@ let is_ipv6_dual_addr s =
           List.for_all is_ipv6_segment seg_str_l
 
 let is_ipv6_addr s =
-  let res = Pcre.exec ~rex:ipv6_addr_format s in
-  let ipv6_addr_str = Pcre.get_substring res 1 in
+  let res = Pcre2.exec ~rex:ipv6_addr_format s in
+  let ipv6_addr_str = Pcre2.get_substring res 1 in
   try
-    let typo = Pcre.exec ~pat:{|:::|} ipv6_addr_str in
+    let typo = Pcre2.exec ~pat:{|:::|} ipv6_addr_str in
     match typo with
     | _ -> false
   with Not_found ->
@@ -94,8 +94,8 @@ let is_ipv6_addr s =
 
 let host_path_matches s =
   try
-    let res = Pcre.exec ~rex:host_path_format s in
-    let substr = Pcre.get_substrings ~full_match:false res in
+    let res = Pcre2.exec ~rex:host_path_format s in
+    let substr = Pcre2.get_substrings ~full_match:false res in
     let port_str = Array.get substr 1 in
     if String.length port_str > 0 && not (is_port port_str) then false
     else

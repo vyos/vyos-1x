@@ -12,14 +12,16 @@ let rec validate_value buf value_constraint value =
   | Group l ->
     List.for_all (fun c -> validate_value buf c value) l
   | Regex s ->
-    (try let _ = Pcre.exec ~pat:(Printf.sprintf "^%s$" s) value in true
+    (try let _ = Pcre2.exec ~pat:(Printf.sprintf "^%s$" s) value in true
      with Not_found -> false)
   | Exec c ->
     (* XXX: Unix.open_process_in is "shelling out", which is a bad idea on multiple levels,
        especially when the input comes directly from the user...
        We should do something about it.
      *)
-    let chan = Unix.open_process_in (Printf.sprintf "%s \'%s\' 2>&1" c value) in
+    let cmd = Printf.sprintf "%s \'%s\' 2>&1" c value in
+    let () = Printf.printf "COMMAND: %s" cmd in
+    let chan = Unix.open_process_in cmd in
     let out = try CCIO.read_all chan with _ -> "" in
     let result = Unix.close_process_in chan in
     match result with

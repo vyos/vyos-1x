@@ -3,8 +3,7 @@ Section: contrib/net
 Priority: extra
 Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
 Build-Depends: debhelper (>= 9),
-  quilt,
-  libpcre3-dev,
+  quilt
 Standards-Version: 3.9.6
 
 Package: vyos-utils

@@ -44,10 +44,10 @@ let type_to_prefix it =
 
 (* filter_section to match the constraint of python.vyos.ifconfig.section
  *)
-let rx = Pcre.regexp {|\d(\d|v|\.)*$|}
+let rx = Pcre2.regexp {|\d(\d|v|\.)*$|}
 
 let filter_section s =
-    let r = Pcre.qreplace_first ~rex:rx ~templ:"" s in
+    let r = Pcre2.qreplace_first ~rex:rx ~templ:"" s in
     match r with
     |"bond"|"br"|"dum"|"eth"|"gnv"|"ifb"|"l2tpeth"|"lo"|"macsec" -> true
     |"peth"|"pppoe"|"sstpc"|"tun"|"veth"|"vti"|"vtun"|"vxlan"|"wg"|"wlan"|"wwan" -> true
@@ -57,7 +57,7 @@ let filter_from_prefix p s =
     let pattern = Printf.sprintf "^%s(.*)$" p
     in
     try
-        let _ = Pcre.exec ~pat:pattern s in
+        let _ = Pcre2.exec ~pat:pattern s in
         true
     with Not_found -> false
 
@@ -71,7 +71,7 @@ let filter_broadcast s =
     let pattern = {|^(bond|br|tun|vtun|eth|gnv|peth|macsec|vxlan|wwan|wlan)(.*)$|}
     in
     try
-        let _ = Pcre.exec ~pat:pattern s in
+        let _ = Pcre2.exec ~pat:pattern s in
         true
     with Not_found -> false
 
@@ -79,7 +79,7 @@ let filter_bridgeable s =
     let pattern = {|^(bond|eth|gnv|l2tpeth|lo|tun|veth|vtun|vxlan|wlan)(.*)$|}
     in
     try
-        let _ = Pcre.exec ~pat:pattern s in
+        let _ = Pcre2.exec ~pat:pattern s in
         true
     with Not_found -> false
 
@@ -87,7 +87,7 @@ let filter_bondable s =
     let pattern = {|^(eth)(.*)$|}
     in
     try
-        let _ = Pcre.exec ~pat:pattern s in
+        let _ = Pcre2.exec ~pat:pattern s in
         true
     with Not_found -> false
 
@@ -95,7 +95,7 @@ let filter_no_vlan s =
     let pattern = {|^([^.]+)(\.\d+)+$|}
     in
     try
-        let _ = Pcre.exec ~pat:pattern s in
+        let _ = Pcre2.exec ~pat:pattern s in
         false
     with Not_found -> true
 
