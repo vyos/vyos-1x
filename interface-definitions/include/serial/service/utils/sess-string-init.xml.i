@@ -3,9 +3,9 @@
   <properties>
     <help>Init Session String</help>
     <constraint>
-      <regex>.{0,128}</regex>
+      <regex>.{0,127}</regex>
     </constraint>
-    <constraintErrorMessage>Session init string too long (limit 128 characters)</constraintErrorMessage>
+    <constraintErrorMessage>Session init string too long (limit 127 characters)</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->

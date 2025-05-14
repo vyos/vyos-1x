@@ -32,6 +32,7 @@
             </children>
           </node>
           #include <include/serial/general/modbus-gateway.xml.i>
+          #include <include/serial/general/vmodem-phonebook.xml.i>
         </children>
       </node>
       <tagNode name="device">
@@ -67,10 +68,10 @@
             <properties>
               <help>Active serial service</help>
               <completionHelp>
-                <list>trueport-server trueport-client modbus-master modbus-slave</list>
+                <list>trueport-server trueport-client modbus-master modbus-slave vmodem</list>
               </completionHelp>
               <constraint>
-                <regex>(trueport-server|trueport-client|modbus-master|modbus-slave)</regex>
+                <regex>(trueport-server|trueport-client|modbus-master|modbus-slave|vmodem)</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -82,6 +83,7 @@
               #include <include/serial/service/trueport.xml.i>
               #include <include/serial/service/reverse.xml.i>
               #include <include/serial/service/modbus.xml.i>
+              #include <include/serial/service/vmodem.xml.i>
             </children>
           </node>
           #include <include/serial/service/utils/tls.xml.i>

@@ -51,7 +51,7 @@
     </leafNode>
     <node name="multihost">
       <properties>
-        <help>Connect to multiple hosts [server init only]</help>
+        <help>Connect to multiple hosts [server init only] [trueport lite only]</help>
       </properties>
       <children>
         #include <include/serial/service/utils/multihost.xml.i>
