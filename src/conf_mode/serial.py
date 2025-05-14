@@ -150,6 +150,7 @@ def get_config(config=None):
             port_config = serial_config
             ttynum = re.findall(r'\d+', device)[0]
             service = ''
+            config_service = ''
             port_config['ttynum'] = ttynum
 
             if 'global' in proxy:
@@ -159,6 +160,7 @@ def get_config(config=None):
                 service = port_config.get('service', '')
                 if 'trueport' in service:
                     port_config['service'] = 'trueport'
+                    config_service = 'trueport'
                     if 'server' in service:
                         port_config['outbound'] = '1'
                         port_config['service_setting']['trueport']['mode'] = 'server-initiate'
@@ -182,10 +184,10 @@ def get_config(config=None):
                     if 'multihost' in port_config:
                         # these 2 keys are manually set, if 'multihost' exists 'mode' should exist
                         if port_config['multihost']['mode'] == 'backup-failover':
-                            set_nested(port_config, ['multihost_list', 'host', '0', 'name'], get_values_by_key(port_config['service_setting'], 'main_hostname')[0])
-                            set_nested(port_config, ['multihost_list', 'host', '0', 'port'], get_values_by_key(port_config['service_setting'], 'main_hostport')[0])
-                            set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'], 'backup_hostname')[0])
-                            set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'], 'backup_hostport')[0])
+                            set_nested(port_config, ['multihost_list', 'host', '0', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
+                            set_nested(port_config, ['multihost_list', 'host', '0', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
+                            set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostname')[0])
+                            set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostport')[0])
 
             if 'data_logging' in port_config:
                 # trueport inbound and outbound use the same service enum
@@ -196,8 +198,9 @@ def get_config(config=None):
                     set_nested(port_config, ['datalogging', 'init_service'], service)
 
                 port_config['service'] = 'data-logging'
-                set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'], 'main_hostname')[0])
-                set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'], 'main_hostport')[0])
+                if 'outbound' in port_config:
+                    set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
+                    set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
 
             if 'tls' in proxy_no_default['device'][device]:
                 if 'disable' not in proxy_no_default['device'][device].get('tls', []):
@@ -243,6 +246,7 @@ def apply(proxy):
             kill_pid_file(device)
 
     if 'device' in proxy:
+        ret = 0
         for device, serial_config in proxy['device'].items():
             ttynum = re.findall(r'\d+', device)[0]
             if 'disable' not in serial_config:
@@ -250,19 +254,23 @@ def apply(proxy):
 
                 if 'trueport' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_vc')
-                    os.system(f'setsid /usr/src/iolan/monitor/monitor {ttynum} &')
+                    ret = os.system(f'setsid monitor {ttynum} &')
+                    print(f'vc monitor ret {ret}')
                 elif 'multihost' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_multihost')
 
                     if 'outbound' in serial_config:
                         # outbound will keep running
-                        os.system(f'setsid /usr/src/iolan/multihost/iol_multihost {ttynum} &')
+                        ret = os.system(f'setsid iol_multihost {ttynum} &')
+                        print(f'iol_multihost ret {ret}')
                     else:
                         # inbound will exit when all connections disconnect
-                        os.system(f'setsid /usr/src/iolan/monitor/monitor {ttynum} &')
+                        ret = os.system(f'setsid monitor {ttynum} &')
+                        print(f'iol_multihost monitor ret {ret}')
                 elif 'data-logging' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_lldatalog')
-                    os.system(f'setsid /usr/src/iolan/monitor/monitor {ttynum} &')
+                    ret = os.system(f'setsid monitor {ttynum} &')
+                    print(f'data-logging monitor ret {ret}')
             else:
                 kill_pid_file(device)
 
