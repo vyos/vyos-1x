@@ -937,10 +937,21 @@ class Interface(Control):
         Delete the address based on the interface's MAC-based EUI64
         combined with the prefix address.
         """
-        if is_ipv6(prefix):
-            eui64 = mac2eui64(self.get_mac(), prefix)
+        if not is_ipv6(prefix):
+            return
+        mac = self.get_mac()
+        if mac:
+            eui64 = mac2eui64(mac, prefix)
             prefixlen = prefix.split('/')[1]
             self.del_addr(f'{eui64}/{prefixlen}')
+        else:
+            # PSL: mac not set, so delete all in self.get_addr()
+            # that matches prefix.
+            pfx, pfxlen = prefix.split('/')
+            for addr in self.get_addr():
+                if not addr.startswith(pfx):
+                    continue
+                self.del_addr(addr)
 
     def set_ipv6_interface_identifier(self, identifier):
         """

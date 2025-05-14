@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 from vyos.ifconfig.interface import Interface
+from vyos.utils.dict import dict_search
 
 @Interface.register
 class WWANIf(Interface):
@@ -42,3 +44,25 @@ class WWANIf(Interface):
             self.set_admin_state('down')
 
         super().remove()
+
+    def update(self, config):
+        '''Perform interface setup for wwan'''
+        super().update(config)
+
+        # PSL: If "ipv6 address autoconf" is set switch to address mode 3,
+        # else use the VyOS default of 1. This enables IPv6 since those
+        # addresses will come from the cell network via the modem.
+        sysfs_agm = f'/proc/sys/net/ipv6/conf/{self.ifname}/addr_gen_mode'
+        if dict_search('ipv6.address.autoconf', config) is None:
+            addr_gen_mode = '1'
+        else:
+            addr_gen_mode = '3'
+
+        if self._read_sysfs(sysfs_agm) != addr_gen_mode:
+            # Needs update
+            self._write_sysfs(sysfs_agm, addr_gen_mode)
+            if addr_gen_mode == '3' and self.get_admin_state() == 'up':
+                # Have to bounce the iface to get an IPv6 global addr
+                for state in ('down', 'up'):
+                    time.sleep(.1)
+                    self.set_admin_state(state)
