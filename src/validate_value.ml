@@ -20,7 +20,6 @@ let rec validate_value buf value_constraint value =
        We should do something about it.
      *)
     let cmd = Printf.sprintf "%s \'%s\' 2>&1" c value in
-    let () = Printf.printf "COMMAND: %s" cmd in
     let chan = Unix.open_process_in cmd in
     let out = try CCIO.read_all chan with _ -> "" in
     let result = Unix.close_process_in chan in
