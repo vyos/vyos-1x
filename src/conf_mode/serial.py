@@ -73,7 +73,7 @@ def kill_pid_file(tty):
                     continue
 
                 pid = int(pid_str)
-                os.kill(pid, signal.SIGKILL)
+                os.kill(pid, signal.SIGTERM)
                 print(f'Successfully killed PID {pid} from {file_path}')
 
         except ProcessLookupError:
