@@ -158,6 +158,7 @@ def get_config(config=None):
 
             if 'service' in port_config:
                 service = port_config.get('service', '')
+                # trueport
                 if 'trueport' in service:
                     port_config['service'] = 'trueport'
                     config_service = 'trueport'
@@ -178,6 +179,7 @@ def get_config(config=None):
                                 if 'allow_multiple_connection' in port_config['service_setting'].get('trueport', ''):
                                     port_config['service'] = 'multihost'
 
+                # multihost
                 if port_config['service'] == 'multihost':
                     if 'multihost_list' in port_config:
                         port_config['multihost_list']['host'] = subtract_from_key(port_config['multihost_list']['host'])
@@ -189,6 +191,18 @@ def get_config(config=None):
                             set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostname')[0])
                             set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostport')[0])
 
+                # vmodem
+                if 'vmodem' in service:
+                    if 'global' in port_config:
+                        if 'vmodem_phone_list' in port_config['global']:
+                            if 'entry' in port_config['global']['vmodem_phone_list']:
+                                port_config['global']['vmodem_phone_list']['entry'] = subtract_from_key(port_config['global']['vmodem_phone_list']['entry'])
+                    # vmodem would require service-setting to be set, skip checking if path exist for now
+                    if 'send_connect_status' in port_config['service_setting']['vmodem']:
+                        vmodem_style = port_config['service_setting']['vmodem'].get('send_connect_status', '')
+                        if vmodem_style == 'disable':
+                            set_nested(port_config, ['service_setting', 'vmodem', 'suppress'], '1')
+            # data-logging
             if 'data_logging' in port_config:
                 # trueport inbound and outbound use the same service enum
                 if 'trueport' in service:
@@ -201,6 +215,8 @@ def get_config(config=None):
                 if 'outbound' in port_config:
                     set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
                     set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
+
+
 
             if 'tls' in proxy_no_default['device'][device]:
                 if 'disable' not in proxy_no_default['device'][device].get('tls', []):
@@ -271,6 +287,10 @@ def apply(proxy):
                     write_string_to_file(file_path, 'iol_lldatalog')
                     ret = os.system(f'setsid monitor {ttynum} &')
                     print(f'data-logging monitor ret {ret}')
+                elif 'vmodem' in serial_config['service']:
+                    write_string_to_file(file_path, 'iol_vm')
+                    ret = os.system(f'setsid monitor {ttynum} &')
+                    print(f'vmodem monitor ret {ret}')
             else:
                 kill_pid_file(device)
 
