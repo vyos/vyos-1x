@@ -154,13 +154,15 @@ class WireGuardInterfaceTest(BasicInterfaceTest.TestCase):
             tmp = read_file(f'/sys/class/net/{intf}/threaded')
             self.assertTrue(tmp, "1")
 
-    def test_wireguard_peer_pubkey_change(self):
+    def test_wireguard_peer_change(self):
         # T5707 changing WireGuard CLI public key of a peer - it's not removed
+        # Also check if allowed-ips update
 
-        def get_peers(interface) -> list:
+        def get_peers(interface) -> list[tuple]:
             tmp = cmd(f'sudo wg show {interface} dump')
             first_line = True
             peers = []
+            allowed_ips = []
             for line in tmp.split('\n'):
                 if not line:
                     continue # Skip empty lines and last line
@@ -170,24 +172,27 @@ class WireGuardInterfaceTest(BasicInterfaceTest.TestCase):
                     first_line = False
                 else:
                     peers.append(items[0])
-            return peers
+                    allowed_ips.append(items[3])
+            return peers, allowed_ips
 
         interface = 'wg1337'
         port = '1337'
         privkey = 'iJi4lb2HhkLx2KSAGOjji2alKkYsJjSPkHkrcpxgEVU='
         pubkey_1 = 'srQ8VF6z/LDjKCzpxBzFpmaNUOeuHYzIfc2dcmoc/h4='
         pubkey_2 = '8pbMHiQ7NECVP7F65Mb2W8+4ldGG2oaGvDSpSEsOBn8='
+        allowed_ips_1 = '10.205.212.10/32'
+        allowed_ips_2 = '10.205.212.11/32'
 
         self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
         self.cli_set(base_path + [interface, 'port', port])
         self.cli_set(base_path + [interface, 'private-key', privkey])
 
         self.cli_set(base_path + [interface, 'peer', 'VyOS', 'public-key', pubkey_1])
-        self.cli_set(base_path + [interface, 'peer', 'VyOS', 'allowed-ips', '10.205.212.10/32'])
+        self.cli_set(base_path + [interface, 'peer', 'VyOS', 'allowed-ips', allowed_ips_1])
 
         self.cli_commit()
 
-        peers = get_peers(interface)
+        peers, _ = get_peers(interface)
         self.assertIn(pubkey_1, peers)
         self.assertNotIn(pubkey_2, peers)
 
@@ -196,9 +201,19 @@ class WireGuardInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_commit()
 
         # Verify config
-        peers = get_peers(interface)
+        peers, _ = get_peers(interface)
         self.assertNotIn(pubkey_1, peers)
         self.assertIn(pubkey_2, peers)
+
+        # Update allowed-ips
+        self.cli_delete(base_path + [interface, 'peer', 'VyOS', 'allowed-ips', allowed_ips_1])
+        self.cli_set(base_path + [interface, 'peer', 'VyOS', 'allowed-ips', allowed_ips_2])
+        self.cli_commit()
+
+        # Verify config
+        _, allowed_ips = get_peers(interface)
+        self.assertNotIn(allowed_ips_1, allowed_ips)
+        self.assertIn(allowed_ips_2, allowed_ips)
 
     def test_wireguard_hostname(self):
         # T4930: Test dynamic endpoint support

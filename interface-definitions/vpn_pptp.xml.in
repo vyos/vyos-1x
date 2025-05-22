@@ -53,6 +53,7 @@
               #include <include/accel-ppp/ppp-options.xml.i>
               #include <include/accel-ppp/shaper.xml.i>
               #include <include/accel-ppp/snmp.xml.i>
+              #include <include/accel-ppp/thread-count.xml.i>
               #include <include/accel-ppp/wins-server.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/name-server-ipv4-ipv6.xml.i>

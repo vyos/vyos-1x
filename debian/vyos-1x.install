@@ -6,7 +6,6 @@ etc/dhcp
 etc/ipsec.d
 etc/logrotate.d
 etc/netplug
-etc/opennhrp
 etc/modprobe.d
 etc/ppp
 etc/securetty

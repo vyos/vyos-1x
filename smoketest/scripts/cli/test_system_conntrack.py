@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -195,6 +195,8 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
     def test_conntrack_ignore(self):
         address_group = 'conntracktest'
         address_group_member = '192.168.0.1'
+        port_single = '53'
+        ports_multi = '500,4500'
         ipv6_address_group = 'conntracktest6'
         ipv6_address_group_member = 'dead:beef::1'
 
@@ -211,6 +213,14 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'destination', 'group', 'address-group', address_group])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'protocol', 'all'])
 
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '3', 'source', 'address', '192.0.2.1'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '3', 'destination', 'port', ports_multi])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '3', 'protocol', 'udp'])
+
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '4', 'source', 'address', '192.0.2.1'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '4', 'destination', 'port', port_single])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '4', 'protocol', 'udp'])
+
         self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'source', 'address', 'fe80::1'])
         self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'destination', 'address', 'fe80::2'])
         self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'destination', 'port', '22'])
@@ -226,7 +236,9 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'tcp flags & syn == syn', 'notrack'],
-            ['ip saddr 192.0.2.1', 'ip daddr @A_conntracktest', 'notrack']
+            ['ip saddr 192.0.2.1', 'ip daddr @A_conntracktest', 'notrack'],
+            ['ip saddr 192.0.2.1', 'udp dport { 500, 4500 }', 'notrack'],
+            ['ip saddr 192.0.2.1', 'udp dport 53', 'notrack']
         ]
 
         nftables6_search = [

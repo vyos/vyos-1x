@@ -13,7 +13,7 @@
             <properties>
               <help>Community name</help>
               <constraint>
-                <regex>[[:alnum:]-_!@*#]{1,100}</regex>
+                <regex>[[:alnum:]\-_!@*#]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Community string is limited to alphanumerical characters, -, _, !, @, *, and # with a total lenght of 100</constraintErrorMessage>
             </properties>

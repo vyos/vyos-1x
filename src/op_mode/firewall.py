@@ -18,12 +18,16 @@ import argparse
 import ipaddress
 import json
 import re
+from signal import signal, SIGPIPE, SIG_DFL
 import tabulate
 import textwrap
 
 from vyos.config import Config
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search_args
+
+signal(SIGPIPE, SIG_DFL)
+
 
 def get_config_node(conf, node=None, family=None, hook=None, priority=None):
     if node == 'nat':
@@ -648,12 +652,14 @@ def show_firewall_group(name=None):
                 references = find_references(group_type, remote_name)
                 row = [remote_name, textwrap.fill(remote_conf.get('description') or '', 50), group_type, '\n'.join(references) or 'N/D']
                 members = get_nftables_remote_group_members("ipv4", 'vyos_filter', f'R_{remote_name}')
+                members6 = get_nftables_remote_group_members("ipv6", 'vyos_filter', f'R6_{remote_name}')
 
                 if 'url' in remote_conf:
                     # display only the url if no members are found for both views
-                    if not members:
+                    if not members and not members6:
                         if args.detail:
-                            header_tail = ['Remote URL']
+                            header_tail = ['IPv6 Members', 'Remote URL']
+                            row.append('N/D')
                             row.append('N/D')
                             row.append(remote_conf['url'])
                         else:
@@ -662,8 +668,15 @@ def show_firewall_group(name=None):
                     else:
                         # display all table elements in detail view
                         if args.detail:
-                            header_tail = ['Remote URL']
-                            row += [' '.join(members)]
+                            header_tail = ['IPv6 Members', 'Remote URL']
+                            if members:
+                                row.append(' '.join(members))
+                            else:
+                                row.append('N/D')
+                            if members6:
+                                row.append(' '.join(members6))
+                            else:
+                                row.append('N/D')
                             row.append(remote_conf['url'])
                             rows.append(row)
                         else:
