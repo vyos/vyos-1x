@@ -67,37 +67,50 @@ disabled () {
     grep -q -w no-vyos-$1 /proc/cmdline
 }
 
+motd_helper() {
+    MOTD_DIR="/run/motd.d"
+    MOTD_FILE="${MOTD_DIR}/99-vyos-update-failed"
+
+    if [[ ! -d ${MOTD_DIR} ]]; then
+        mkdir -p ${MOTD_DIR}
+    fi
+
+    echo "" > ${MOTD_FILE}
+    echo "WARNING: Image update to \"$1\" failed." >> ${MOTD_FILE}
+    echo "Please check the logs:" >> ${MOTD_FILE}
+    echo "/usr/lib/live/mount/persistence/boot/$1/rw/var/log" >> ${MOTD_FILE}
+    echo "Message is cleared on next reboot!" >> ${MOTD_FILE}
+    echo "" >> ${MOTD_FILE}
+}
+
 # Load encrypted config volume
 mount_encrypted_config() {
     persist_path=$(/opt/vyatta/sbin/vyos-persistpath)
     if [ $? == 0 ]; then
         if [ -e $persist_path/boot ]; then
             image_name=$(cat /proc/cmdline | sed -e s+^.*vyos-union=/boot/++ | sed -e 's/ .*$//')
-
             if [ -z "$image_name" ]; then
-                return
+                return 0
             fi
 
             if [ ! -f $persist_path/luks/$image_name ]; then
-                return
+                return 0
             fi
 
             vyos_tpm_key=$(python3 -c 'from vyos.tpm import read_tpm_key; print(read_tpm_key().decode())' 2>/dev/null)
-
             if [ $? -ne 0 ]; then
                 echo "ERROR: Failed to fetch encryption key from TPM. Encrypted config volume has not been mounted"
                 echo "Use 'encryption load' to load volume with recovery key"
                 echo "or 'encryption disable' to decrypt volume with recovery key"
-                return
+                return 1
             fi
 
             echo $vyos_tpm_key | tr -d '\r\n' | cryptsetup open $persist_path/luks/$image_name vyos_config --key-file=-
-
             if [ $? -ne 0 ]; then
                 echo "ERROR: Failed to decrypt config volume. Encrypted config volume has not been mounted"
                 echo "Use 'encryption load' to load volume with recovery key"
                 echo "or 'encryption disable' to decrypt volume with recovery key"
-                return
+                return 1
             fi
 
             mount /dev/mapper/vyos_config /config
@@ -106,6 +119,7 @@ mount_encrypted_config() {
             echo "Mounted encrypted config volume"
         fi
     fi
+    return 0
 }
 
 unmount_encrypted_config() {
@@ -160,11 +174,16 @@ migrate_bootfile ()
     if [ -x $vyos_libexec_dir/run-config-migration.py ]; then
         log_progress_msg migrate
         sg ${GROUP} -c "$vyos_libexec_dir/run-config-migration.py $BOOTFILE"
+        STATUS=$?
+        if [[ "$STATUS" != "0" ]]; then
+            return 1
+        fi
         # update vyconf copy after migration
         if [ -d $VYCONF_CONFIG_DIR ] ; then
             cp -f $BOOTFILE $VYCONF_CONFIG_DIR/config.boot
         fi
     fi
+    return 0
 }
 
 # configure system-specific settings
@@ -187,8 +206,13 @@ load_bootfile ()
         fi
         if [ -x $vyos_libexec_dir/vyos-boot-config-loader.py ]; then
             sg ${GROUP} -c "$vyos_libexec_dir/vyos-boot-config-loader.py $BOOTFILE"
+            STATUS=$?
+            if [[ "$STATUS" != "0" ]]; then
+                return 1
+            fi
         fi
     )
+    return 0
 }
 
 # restore if missing pre-config script
@@ -289,10 +313,10 @@ clear_or_override_config_files ()
         keepalived/keepalived.conf cron.d/vyos-crontab \
         ipvsadm.rules default/ipvsadm resolv.conf
     do
-    if [ -s /etc/$conf ] ; then
-        empty /etc/$conf
-        chmod 0644 /etc/$conf
-    fi
+        if [ -s /etc/$conf ] ; then
+            empty /etc/$conf
+            chmod 0644 /etc/$conf
+        fi
     done
 }
 
@@ -417,6 +441,8 @@ gen_duid ()
 
 start ()
 {
+    log_success_msg "Starting VyOS router"
+
     # reset and clean config files
     security_reset || log_failure_msg "security reset failed"
 
@@ -482,7 +508,7 @@ start ()
 
     # enable some debugging before loading the configuration
     if grep -q vyos-debug /proc/cmdline; then
-        log_action_begin_msg "Enable runtime debugging options"
+        log_success_msg "Enable runtime debugging options"
         FRR_DEBUG=$(python3 -c "from vyos.defaults import frr_debug_enable; print(frr_debug_enable)")
         touch $FRR_DEBUG
         touch /tmp/vyos.container.debug
@@ -509,7 +535,7 @@ start ()
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
 
-    mount_encrypted_config
+    mount_encrypted_config || overall_status=1
 
     # T5239: early read of system hostname as this value is read-only once during
     # FRR initialisation
@@ -525,8 +551,7 @@ start ()
 
     cleanup_post_commit_hooks
 
-    log_daemon_msg "Starting VyOS router"
-    disabled migrate || migrate_bootfile
+    disabled migrate || migrate_bootfile || overall_status=1
 
     restore_if_missing_preconfig_script
 
@@ -534,26 +559,65 @@ start ()
 
     run_postupgrade_script
 
-    update_interface_config
+    update_interface_config || overall_status=1
 
-    disabled system_config || system_config
+    disabled system_config || system_config || overall_status=1
 
     systemctl start vyconfd.service
 
     for s in ${subinit[@]} ; do
-    if ! disabled $s; then
-        log_progress_msg $s
-        if ! ${vyatta_sbindir}/${s}.init start
-        then log_failure_msg
-         exit 1
+        if ! disabled $s; then
+            log_progress_msg $s
+            if ! ${vyatta_sbindir}/${s}.init start
+            then log_failure_msg
+            exit 1
+            fi
         fi
-    fi
     done
 
     bind_mount_boot
 
-    disabled configure || load_bootfile
+    disabled configure || load_bootfile || overall_status=1
     log_end_msg $?
+
+    FIRST_BOOT_FILE="/config/first_boot"
+    UPDATE_FAILED_BOOT_FILE="/config/update_failed"
+    AUTOMATIC_REBOOT_TMO=$(${vyos_libexec_dir}/read-saved-value.py --path "system option reboot-on-upgrade-failure")
+    # Image upgrade failed - get previous image name, re-set it as default image
+    # and perform an automatic reboot. Automatic reboot timeout can be set via CLI
+    if [[ -n $AUTOMATIC_REBOOT_TMO ]] && [[ -f ${FIRST_BOOT_FILE} ]] && [[ ${overall_status} -ne 0 ]]; then
+        previous_image=$(jq -r '.previous_image' ${FIRST_BOOT_FILE})
+
+        # If the image update failed, we need to inform the image we will revert
+        # to about this
+        running_image=$(${vyos_op_scripts_dir}/image_info.py show_images_current --raw | jq -r '.image_running')
+        echo "{\"failed_image_update\": \"${running_image}\"}" \
+            > /usr/lib/live/mount/persistence/boot/${previous_image}/rw/${UPDATE_FAILED_BOOT_FILE}
+
+        ${vyos_op_scripts_dir}/image_manager.py --action set --image-name "${previous_image}" >/dev/null 2>&1
+        motd_helper "${running_image}"
+
+        log_daemon_msg "Booting failed, reverting to previous image"
+        log_progress_msg ${previous_image}
+        log_end_msg 0
+        log_daemon_msg "Automatic reboot in ${AUTOMATIC_REBOOT_TMO} minutes"
+        sync ; shutdown --reboot --no-wall ${AUTOMATIC_REBOOT_TMO} >/dev/null 2>&1
+        log_progress_msg "Use \"reboot cancel\" to cancel"
+        log_end_msg 0
+    fi
+    # After image upgrade failure and once booted into the previous working
+    # image, inform the user via MOTD about the failure
+    if [[ -n $AUTOMATIC_REBOOT_TMO ]] && [[ -f ${UPDATE_FAILED_BOOT_FILE} ]] ; then
+        failed_image_update=$(jq -r '.failed_image_update' ${UPDATE_FAILED_BOOT_FILE})
+        motd_helper "${failed_image_update}"
+    fi
+    # Clear marker files used by automatic reboot on image upgrade mechanism
+    if [[ -f ${FIRST_BOOT_FILE} ]]; then
+        rm -f ${FIRST_BOOT_FILE}
+    fi
+    if [[ -f ${UPDATE_FAILED_BOOT_FILE} ]] ; then
+        rm -f ${UPDATE_FAILED_BOOT_FILE}
+    fi
 
     telinit q
     chmod g-w,o-w /

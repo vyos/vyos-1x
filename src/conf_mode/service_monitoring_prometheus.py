@@ -48,9 +48,21 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    monitoring = conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, with_recursive_defaults=True
-    )
+    monitoring = {}
+    exporters = {
+        'node_exporter': base + ['node-exporter'],
+        'frr_exporter': base + ['frr-exporter'],
+        'blackbox_exporter': base + ['blackbox-exporter'],
+    }
+
+    for exporter_name, exporter_base in exporters.items():
+        if conf.exists(exporter_base):
+            monitoring[exporter_name] = conf.get_config_dict(
+                exporter_base,
+                key_mangling=('-', '_'),
+                get_first_key=True,
+                with_recursive_defaults=True,
+            )
 
     tmp = is_node_changed(conf, base + ['node-exporter', 'vrf'])
     if tmp:

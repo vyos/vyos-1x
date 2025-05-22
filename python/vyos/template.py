@@ -728,7 +728,7 @@ def conntrack_rule(rule_conf, rule_id, action, ipv6=False):
                 if port[0] == '!':
                     operator = '!='
                     port = port[1:]
-                output.append(f'th {prefix}port {operator} {port}')
+                output.append(f'th {prefix}port {operator} {{ {port} }}')
 
             if 'group' in side_conf:
                 group = side_conf['group']

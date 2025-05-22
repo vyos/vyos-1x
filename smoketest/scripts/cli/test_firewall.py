@@ -1295,7 +1295,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['R_group01'],
             ['type ipv4_addr'],
             ['flags interval'],
-            ['meta l4proto', 'daddr @R_group01', "ipv4-INP-filter-10"]
+            ['meta l4proto', 'daddr @R_group01', 'ipv4-INP-filter-10']
         ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
@@ -1312,6 +1312,80 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_discard()
+
+
+    def test_ipv6_remote_group(self):
+        # Setup base config for test
+        self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'url', 'http://127.0.0.1:80/list.txt'])
+        self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'description', 'Example Group 01'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'destination', 'group', 'remote-group', 'group01'])
+
+        self.cli_commit()
+
+        # Test remote-group had been loaded correctly in nft
+        nftables_search = [
+            ['R6_group01'],
+            ['type ipv6_addr'],
+            ['flags interval'],
+            ['meta l4proto', 'daddr @R6_group01', 'ipv6-INP-filter-10']
+        ]
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        # Test remote-group cannot be configured without a URL
+        self.cli_delete(['firewall', 'group', 'remote-group', 'group01', 'url'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test remote-group cannot be set alongside address in rules
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'destination', 'address', '2001:db8::1'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+
+    def test_remote_group(self):
+        # Setup base config for test adding remote group to both ipv4 and ipv6 rules
+        self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'url', 'http://127.0.0.1:80/list.txt'])
+        self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'description', 'Example Group 01'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '10', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '10', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '10', 'destination', 'group', 'remote-group', 'group01'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'source', 'group', 'remote-group', 'group01'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '10', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '10', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '10', 'destination', 'group', 'remote-group', 'group01'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'source', 'group', 'remote-group', 'group01'])
+
+        self.cli_commit()
+
+        # Test remote-group had been loaded correctly in nft ip table
+        nftables_v4_search = [
+            ['R_group01'],
+            ['type ipv4_addr'],
+            ['flags interval'],
+            ['meta l4proto', 'daddr @R_group01', 'ipv4-OUT-filter-10'],
+            ['meta l4proto', 'saddr @R_group01', 'ipv4-INP-filter-10'],
+        ]
+        self.verify_nftables(nftables_v4_search, 'ip vyos_filter')
+
+        # Test remote-group had been loaded correctly in nft ip6 table
+        nftables_v6_search = [
+            ['R6_group01'],
+            ['type ipv6_addr'],
+            ['flags interval'],
+            ['meta l4proto', 'daddr @R6_group01', 'ipv6-OUT-filter-10'],
+            ['meta l4proto', 'saddr @R6_group01', 'ipv6-INP-filter-10'],
+        ]
+        self.verify_nftables(nftables_v6_search, 'ip6 vyos_filter')
 
 
 if __name__ == '__main__':
