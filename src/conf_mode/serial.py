@@ -179,18 +179,6 @@ def get_config(config=None):
                                 if 'allow_multiple_connection' in port_config['service_setting'].get('trueport', ''):
                                     port_config['service'] = 'multihost'
 
-                # multihost
-                if port_config['service'] == 'multihost':
-                    if 'multihost_list' in port_config:
-                        port_config['multihost_list']['host'] = subtract_from_key(port_config['multihost_list']['host'])
-                    if 'multihost' in port_config:
-                        # these 2 keys are manually set, if 'multihost' exists 'mode' should exist
-                        if port_config['multihost']['mode'] == 'backup-failover':
-                            set_nested(port_config, ['multihost_list', 'host', '0', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
-                            set_nested(port_config, ['multihost_list', 'host', '0', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
-                            set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostname')[0])
-                            set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostport')[0])
-
                 # vmodem
                 if 'vmodem' in service:
                     if 'global' in port_config:
@@ -202,6 +190,31 @@ def get_config(config=None):
                         vmodem_style = port_config['service_setting']['vmodem'].get('send_connect_status', '')
                         if vmodem_style == 'disable':
                             set_nested(port_config, ['service_setting', 'vmodem', 'suppress'], '1')
+                
+                # udp
+                if 'udp' in service:
+                    if 'entry' in port_config['service_setting']['udp']:
+                        port_config['service_setting']['udp']['entry'] = subtract_from_key(port_config['service_setting']['udp']['entry'])
+                        for key, value in port_config['service_setting']['udp']['entry'].items():
+                            if 'disable' in value:
+                                # This path should be a required field, skip checking if path exists
+                                port_config['service_setting']['udp']['entry'][key]['direction'] = 'disable'
+                            if 'udp_port' in value:
+                                if port_config['service_setting']['udp']['entry'][key]['udp_port'].isnumeric():
+                                    port_config['service_setting']['udp']['entry'][key]['outbound_port'] = port_config['service_setting']['udp']['entry'][key]['udp_port']
+
+            # multihost
+            if port_config['service'] == 'multihost':
+                if 'multihost_list' in port_config:
+                    port_config['multihost_list']['host'] = subtract_from_key(port_config['multihost_list']['host'])
+                if 'multihost' in port_config:
+                    # these 2 keys are manually set, if 'multihost' exists 'mode' should exist
+                    if port_config['multihost']['mode'] == 'backup-failover':
+                        set_nested(port_config, ['multihost_list', 'host', '0', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
+                        set_nested(port_config, ['multihost_list', 'host', '0', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
+                        set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostname')[0])
+                        set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostport')[0])
+
             # data-logging
             if 'data_logging' in port_config:
                 # trueport inbound and outbound use the same service enum
@@ -215,8 +228,6 @@ def get_config(config=None):
                 if 'outbound' in port_config:
                     set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
                     set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
-
-
 
             if 'tls' in proxy_no_default['device'][device]:
                 if 'disable' not in proxy_no_default['device'][device].get('tls', []):
@@ -291,6 +302,10 @@ def apply(proxy):
                     write_string_to_file(file_path, 'iol_vm')
                     ret = os.system(f'setsid monitor {ttynum} &')
                     print(f'vmodem monitor ret {ret}')
+                elif 'udp' in serial_config['service']:
+                    write_string_to_file(file_path, 'iol_udpd')
+                    ret = os.system(f'setsid iol_udpd {ttynum} &')
+                    print(f'iol_udpd ret {ret}')
             else:
                 kill_pid_file(device)
 
