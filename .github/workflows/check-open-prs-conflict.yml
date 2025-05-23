@@ -13,5 +13,5 @@ permissions:
 
 jobs:
   check-pr-conflict-call:
-    uses: vyos/.github/.github/workflows/check-open-prs-conflict.yml@T7445-open-prs-conflict-check
+    uses: vyos/.github/.github/workflows/check-open-prs-conflict.yml@T7445-conflict-open-prs-failure
     secrets: inherit
