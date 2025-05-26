@@ -661,6 +661,7 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
     Return a dictionary with the necessary interface config keys.
     """
     from vyos.utils.cpu import get_core_count
+    from vyos.utils.cpu import get_half_cpus
     from vyos.template import is_ipv4
 
     dict = config.get_config_dict(base, key_mangling=('-', '_'),
@@ -670,7 +671,16 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
                                   with_pki=with_pki)
 
     # set CPUs cores to process requests
-    dict.update({'thread_count' : get_core_count()})
+    match dict.get('thread_count'):
+        case 'all':
+            dict['thread_count'] = get_core_count()
+        case 'half':
+            dict['thread_count'] = get_half_cpus()
+        case str(x) if x.isdigit():
+            dict['thread_count'] = int(x)
+        case _:
+            dict['thread_count'] = get_core_count()
+
     # we need to store the path to the secrets file
     dict.update({'chap_secrets_file' : chap_secrets})
 

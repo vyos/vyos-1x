@@ -342,6 +342,19 @@
                <valueless/>
              </properties>
            </leafNode>
+           <leafNode name="reboot-on-upgrade-failure">
+             <properties>
+               <help>Automatic reboot into previous running image on upgrade failure</help>
+               <valueHelp>
+                 <format>u32:1-30</format>
+                 <description>Timeout before automatic reboot (minutes)</description>
+               </valueHelp>
+               <constraint>
+                 <validator name="numeric" argument="--range 5-30"/>
+               </constraint>
+               <constraintErrorMessage>Timeout out of range, must be 5 to 30 minutes</constraintErrorMessage>
+             </properties>
+           </leafNode>
            <node name="ssh-client">
              <properties>
                <help>Global options used for SSH client</help>

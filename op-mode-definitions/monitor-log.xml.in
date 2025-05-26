@@ -131,12 +131,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ndppd.service</command>
           </leafNode>
-          <leafNode name="nhrp">
-            <properties>
-              <help>Monitor last lines of Next Hop Resolution Protocol log</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --follow --unit opennhrp.service</command>
-          </leafNode>
           <leafNode name="ntp">
             <properties>
               <help>Monitor last lines of Network Time Protocol log</help>

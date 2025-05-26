@@ -50,6 +50,10 @@ if [[ -e /usr/share/pam-configs/tacplus ]]; then
     rm /usr/share/pam-configs/tacplus
 fi
 
+# Disable pam_nologin.so behavior for regular users
+sed -i '/^auth[[:space:]]\+requisite[[:space:]]\+pam_nologin\.so$/s/^/#/' /etc/pam.d/login
+sed -i '/^account[[:space:]]\+required[[:space:]]\+pam_nologin\.so$/s/^/#/' /etc/pam.d/sshd
+
 # Add TACACS system users required for TACACS based system authentication
 if ! grep -q '^tacacs' /etc/passwd; then
     # Add the tacacs group and all 16 possible tacacs privilege-level users to

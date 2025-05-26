@@ -26,6 +26,7 @@ It has special cases for x86_64 and MAY work correctly on other architectures,
 but nothing is certain.
 """
 
+import os
 import re
 
 def _read_cpuinfo():
@@ -114,3 +115,8 @@ def get_available_cpus():
     out = json.loads(cmd('lscpu --extended -b --json'))
 
     return out['cpus']
+
+
+def get_half_cpus():
+    """ return 1/2 of the numbers of available CPUs """
+    return max(1, os.cpu_count() // 2)

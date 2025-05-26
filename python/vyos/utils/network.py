@@ -416,6 +416,21 @@ def is_wireguard_key_pair(private_key: str, public_key:str) -> bool:
     else:
         return False
 
+def get_wireguard_peers(ifname: str) -> list:
+    """
+    Return list of configured Wireguard peers for interface
+    :param ifname: Interface name
+    :type ifname: str
+    :return: list of public keys
+    :rtype: list
+    """
+    if not interface_exists(ifname):
+        return []
+
+    from vyos.utils.process import cmd
+    peers = cmd(f'wg show {ifname} peers')
+    return peers.splitlines()
+
 def is_subnet_connected(subnet, primary=False):
     """
     Verify is the given IPv4/IPv6 subnet is connected to any interface on this
@@ -633,5 +648,21 @@ def is_valid_ipv4_address_or_range(addr: str) -> bool:
             return is_valid_ipv4_address_or_range(split[0]) and is_valid_ipv4_address_or_range(split[1])
         else:
             return ip_network(addr).version == 4
+    except:
+        return False
+
+def is_valid_ipv6_address_or_range(addr: str) -> bool:
+    """
+    Validates if the provided address is a valid IPv4, CIDR or IPv4 range
+    :param addr: address to test
+    :return: bool: True if provided address is valid
+    """
+    from ipaddress import ip_network
+    try:
+        if '-' in addr: # If we are checking a range, validate both address's individually
+            split = addr.split('-')
+            return is_valid_ipv6_address_or_range(split[0]) and is_valid_ipv6_address_or_range(split[1])
+        else:
+            return ip_network(addr).version == 6
     except:
         return False

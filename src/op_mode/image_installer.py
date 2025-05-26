@@ -27,6 +27,7 @@ from os import readlink
 from os import getpid
 from os import getppid
 from json import loads
+from json import dumps
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
@@ -54,6 +55,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.process import cmd, run, rc_cmd
 from vyos.version import get_version_data
 
@@ -1040,6 +1042,12 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             chmod_2775(target_config_dir)
             copytree('/opt/vyatta/etc/config/', target_config_dir, symlinks=True,
                      copy_function=copy_preserve_owner, dirs_exist_ok=True)
+
+            # Record information from which image we upgraded to the new one.
+            # This can be used for a future automatic rollback into the old image.
+            tmp = {'previous_image' : image.get_running_image()}
+            write_file(f'{target_config_dir}/first_boot', dumps(tmp))
+
         else:
             Path(target_config_dir).mkdir(parents=True)
             chown(target_config_dir, group='vyattacfg')

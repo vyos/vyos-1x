@@ -727,7 +727,7 @@ def generate(ipsec):
                         for remote_prefix in remote_prefixes:
                             local_net = ipaddress.ip_network(local_prefix)
                             remote_net = ipaddress.ip_network(remote_prefix)
-                            if local_net.overlaps(remote_net):
+                            if local_net.subnet_of(remote_net):
                                 if passthrough is None:
                                     passthrough = []
                                 passthrough.append(local_prefix)

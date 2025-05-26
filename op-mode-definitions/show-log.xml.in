@@ -677,12 +677,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit ndppd.service</command>
           </leafNode>
-          <leafNode name="nhrp">
-            <properties>
-              <help>Show log for Next Hop Resolution Protocol (NHRP)</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
-          </leafNode>
           <leafNode name="ntp">
             <properties>
               <help>Show log for Network Time Protocol (NTP)</help>

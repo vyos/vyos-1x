@@ -28,7 +28,7 @@ from vyos.utils.commit import commit_in_progress
 from vyos.utils.dict import dict_search_args
 from vyos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
 from vyos.utils.file import makedir, chmod_775, write_file, read_file
-from vyos.utils.network import is_valid_ipv4_address_or_range
+from vyos.utils.network import is_valid_ipv4_address_or_range, is_valid_ipv6_address_or_range
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.xml_ref import get_defaults
@@ -143,10 +143,11 @@ def update_remote_group(config):
         for set_name, remote_config in remote_groups.items():
             if 'url' not in remote_config:
                 continue
-            nft_set_name = f'R_{set_name}'
+            nft_ip_set_name = f'R_{set_name}'
+            nft_ip6_set_name = f'R6_{set_name}'
 
             # Create list file if necessary
-            list_file = os.path.join(firewall_config_dir, f"{nft_set_name}.txt")
+            list_file = os.path.join(firewall_config_dir, f"{nft_ip_set_name}.txt")
             if not os.path.exists(list_file):
                 write_file(list_file, '', user="root", group="vyattacfg", mode=0o644)
 
@@ -159,16 +160,32 @@ def update_remote_group(config):
 
             # Read list file
             ip_list = []
+            ip6_list = []
+            invalid_list = []
             for line in read_file(list_file).splitlines():
                 line_first_word = line.strip().partition(' ')[0]
 
                 if is_valid_ipv4_address_or_range(line_first_word):
                     ip_list.append(line_first_word)
+                elif is_valid_ipv6_address_or_range(line_first_word):
+                    ip6_list.append(line_first_word)
+                else:
+                    if line_first_word[0].isalnum():
+                        invalid_list.append(line_first_word)
 
-            # Load tables
+            # Load ip tables
             for table in ipv4_tables:
-                if (table, nft_set_name) in valid_sets:
-                    conf_lines += nft_output(table, nft_set_name, ip_list)
+                if (table, nft_ip_set_name) in valid_sets:
+                    conf_lines += nft_output(table, nft_ip_set_name, ip_list)
+
+            # Load ip6 tables
+            for table in ipv6_tables:
+                if (table, nft_ip6_set_name) in valid_sets:
+                    conf_lines += nft_output(table, nft_ip6_set_name, ip6_list)
+
+            invalid_str = ", ".join(invalid_list)
+            if invalid_str:
+                logger.info(f'Invalid address for set {set_name}: {invalid_str}')
 
             count += 1
 

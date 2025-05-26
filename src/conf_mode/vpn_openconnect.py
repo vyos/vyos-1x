@@ -93,7 +93,7 @@ def verify(ocserv):
                 "radius" in ocserv["authentication"]["mode"]):
                     raise ConfigError('OpenConnect authentication modes are mutually-exclusive, remove either local or radius from your configuration')
             if "radius" in ocserv["authentication"]["mode"]:
-                if not ocserv["authentication"]['radius']['server']:
+                if 'server' not in ocserv['authentication']['radius']:
                     raise ConfigError('OpenConnect authentication mode radius requires at least one RADIUS server')
             if "local" in ocserv["authentication"]["mode"]:
                 if not ocserv.get("authentication", {}).get("local_users"):
