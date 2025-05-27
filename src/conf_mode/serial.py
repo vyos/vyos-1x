@@ -56,32 +56,37 @@ def replace_empty_dicts(d):
             replace_empty_dicts(item)
 
 def kill_pid_file(tty):
-    paths_to_check = [
-        f'/run/serial/mon_{tty}.pid',
-        f'/run/serial/{tty}.pid'
-    ]
+    pid_suffix = f'{tty}.pid'
+    base_dir = '/run/serial'
 
-    for file_path in paths_to_check:
-        if not os.path.exists(file_path):
-            continue
+    try:
+        for filename in os.listdir(base_dir):
+            if not filename.endswith(pid_suffix):
+                continue
 
-        try:
-            with open(file_path, 'r') as pid_file:
-                pid_str = pid_file.read().strip()
-                if not pid_str.isdigit():
-                    print(f'Invalid PID in file {file_path}: {pid_str}')
-                    continue
+            file_path = os.path.join(base_dir, filename)
 
-                pid = int(pid_str)
-                os.kill(pid, signal.SIGTERM)
-                print(f'Successfully killed PID {pid} from {file_path}')
+            try:
+                with open(file_path, 'r') as pid_file:
+                    pid_str = pid_file.read().strip()
+                    if not pid_str.isdigit():
+                        print(f'Invalid PID in file {file_path}: {pid_str}')
+                        continue
 
-        except ProcessLookupError:
-            print(f'No such process with PID in {file_path}, ignore')
-        except PermissionError:
-            print(f'Permission denied when trying to kill PID from {file_path}')
-        except Exception as e:
-            print(f'An error occurred while handling {file_path}: {e}')
+                    pid = int(pid_str)
+                    os.kill(pid, signal.SIGTERM)
+                    print(f'Successfully killed PID {pid} from {file_path}')
+
+            except ProcessLookupError:
+                print(f'No such process with PID in {file_path}, ignore')
+            except PermissionError:
+                print(f'Permission denied when trying to kill PID from {file_path}')
+            except Exception as e:
+                print(f'An error occurred while handling {file_path}: {e}')
+    except FileNotFoundError:
+        print(f'Directory {base_dir} does not exist')
+    except Exception as e:
+        print(f'Error accessing {base_dir}: {e}')
 
 def subtract_from_key(original_items):
     new_items = {}
@@ -259,7 +264,7 @@ def write_string_to_file(filename, content):
     try:
         with open(filename, 'w') as f:
             f.write(content)
-        print(f'Content written to {filename}')
+        print(f'{content} written to {filename}')
     except Exception as e:
         print(f'Failed to write to {filename}: {e}')
 
