@@ -124,14 +124,16 @@ def show_log(name: str, follow: bool = False, raw: bool = False):
             log_command_list = ['sudo', 'podman', 'logs', '--follow', '--names', name]
         else:
             log_command_list = ['sudo', 'podman', 'logs', '--names', name]
-    if log_type == 'journald':
+    elif log_type == 'journald':
         if follow:
             log_command_list = ['journalctl', '--follow', '--unit', f'vyos-container-{name}.service']
         else:
             log_command_list = ['journalctl', '-e', '--no-pager', '--unit', f'vyos-container-{name}.service']
-    if log_type == 'none':
+    elif log_type == 'none':
         print(f'Container "{name}" has disabled logs.')
         return None
+    else:
+        raise vyos.opmode.InternalError(f'Unknown log type "{log_type}" for container "{name}".')
 
     process = None
     try:
