@@ -105,7 +105,7 @@
             <help>Slave UID range</help>
             <valueHelp>
               <format>start-end</format>
-              <description>UID range (e.g. 2-5) to match</description>
+              <description>UID range (e.g. 2-5) to match, [1, 247]</description>
             </valueHelp>
             <constraint>
               <validator name="modbus-uid-range"/>

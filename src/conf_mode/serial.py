@@ -208,6 +208,16 @@ def get_config(config=None):
                                 if port_config['service_setting']['udp']['entry'][key]['udp_port'].isnumeric():
                                     port_config['service_setting']['udp']['entry'][key]['outbound_port'] = port_config['service_setting']['udp']['entry'][key]['udp_port']
 
+                # modbus
+                if 'modbus' in service:
+                    if 'slave_mapping_list' in port_config['service_setting']['modbus']:
+                        port_config['service_setting']['modbus']['slave_mapping_list'] = subtract_from_key(port_config['service_setting']['modbus']['slave_mapping_list'])
+                        for key, value in port_config['service_setting']['modbus']['slave_mapping_list'].items():
+                            if 'uid_range' in value:
+                                uid_start, uid_end = map(int, s.split('-'))
+                                port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_start'] = uid_start
+                                port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_end'] = uid_end
+
             # multihost
             if port_config['service'] == 'multihost':
                 if 'multihost_list' in port_config:
