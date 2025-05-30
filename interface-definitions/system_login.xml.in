@@ -103,6 +103,15 @@
                       <help>Plaintext password used for encryption</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="principal">
+                    <properties>
+                      <help>Accepted principal names for certificate authentication</help>
+                      <constraint>
+                        #include <include/constraint/login-username.xml.i>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
                   <tagNode name="public-keys">
                     <properties>
                       <help>Remote access public keys</help>

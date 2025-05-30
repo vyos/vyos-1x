@@ -831,6 +831,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit snmpd.service</command>
           </leafNode>
+          <leafNode name="spanning-tree">
+            <properties>
+              <help>Show log for Spanning Tree Protocol (STP)</help>
+            </properties>
+            <command>journalctl --dmesg --no-hostname --boot --grep='br[0-9].*(stp|bpdu|blocking|disabled|forwarding|listening|root port)'</command>
+          </leafNode>
           <node name="ssh">
             <properties>
               <help>Show log for Secure Shell (SSH)</help>

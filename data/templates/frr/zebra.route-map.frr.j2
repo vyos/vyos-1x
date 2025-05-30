@@ -1,6 +1,12 @@
 !
 {{ 'no ' if disable_forwarding is vyos_defined }}{{ afi }} forwarding
 !
+{% if import_table is vyos_defined %}
+{%     for table_num, table_config in import_table.items() %}
+ip import-table {{ table_num }} {{ 'distance ' ~ table_config.distance if table_config.distance is vyos_defined }} {{ 'route-map ' ~ table_config.route_map if table_config.route_map is vyos_defined }}
+{%     endfor %}
+{% endif %}
+!
 {% if nht.no_resolve_via_default is vyos_defined %}
 no {{ afi }} nht resolve-via-default
 {% endif %}
