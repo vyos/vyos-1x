@@ -1,5 +1,5 @@
 
-# Copyright 2020-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,9 +17,16 @@
 import os
 import re
 import subprocess
+from typing import Union
 
 from vyos.configtree import ConfigTree
 from vyos.utils.boot import boot_configuration_complete
+from vyos.vyconf_session import VyconfSession
+from vyos.vyconf_session import VyconfSessionError
+from vyos.defaults import directories
+from vyos.xml_ref import is_tag
+from vyos.xml_ref import is_leaf
+from vyos.xml_ref import is_multi
 
 class VyOSError(Exception):
     """
@@ -308,6 +315,104 @@ class ConfigSourceSession(ConfigSource):
             self._run(self._make_command('isLeaf', path))
             return True
         except VyOSError:
+            return False
+
+class ConfigSourceVyconfSession(ConfigSource):
+    def __init__(self, session_env=None):
+        super().__init__()
+
+        if session_env:
+            self.__session_env = session_env
+        else:
+            self.__session_env = None
+
+        if session_env and 'CONFIGSESSION_PID' in session_env:
+            self.pid = int(session_env['CONFIGSESSION_PID'])
+        else:
+            self.pid = os.getppid()
+
+        self._vyconf_session = VyconfSession(pid=self.pid)
+        try:
+            out = self._vyconf_session.get_config()
+        except VyconfSessionError as e:
+            raise ConfigSourceError(f'Init error in {type(self)}: {e}')
+
+        session_dir = directories['vyconf_session_dir']
+
+        self.running_cache_path = os.path.join(session_dir, f'running_cache_{out}')
+        self.session_cache_path = os.path.join(session_dir, f'session_cache_{out}')
+
+        self._running_config = ConfigTree(internal=self.running_cache_path)
+        self._session_config = ConfigTree(internal=self.session_cache_path)
+
+        # N.B. level not yet implemented pending integration with legacy CLI
+        # cf. T7374
+        self._level = []
+
+    def get_level(self):
+        return self._level
+
+    def set_level(self):
+        pass
+
+    def session_changed(self):
+        """
+        Returns:
+            True if the config session has uncommited changes, False otherwise.
+        """
+        try:
+            return self._vyconf_session.session_changed()
+        except VyconfSessionError:
+            # no actionable session info on error
+            return False
+
+    def in_session(self):
+        """
+        Returns:
+            True if called from a configuration session, False otherwise.
+        """
+        return self._vyconf_session.in_session()
+
+    def show_config(self, path: Union[str,list] = None, default: str = None,
+                    effective: bool = False):
+        """
+        Args:
+            path (str|list): Configuration tree path, or empty
+            default (str): Default value to return
+
+        Returns:
+            str: working configuration
+        """
+
+        if path is None:
+            path = []
+        if isinstance(path, str):
+            path = path.split()
+
+        ct = self._running_config if effective else self._session_config
+        with_node = True if self.is_tag(path) else False
+        ct_at_path = ct.get_subtree(path, with_node=with_node) if path else ct
+
+        res = ct_at_path.to_string().strip()
+
+        return res if res else default
+
+    def is_tag(self, path):
+        try:
+            return is_tag(path)
+        except ValueError:
+            return False
+
+    def is_leaf(self, path):
+        try:
+            return is_leaf(path)
+        except ValueError:
+            return False
+
+    def is_multi(self, path):
+        try:
+            return is_multi(path)
+        except ValueError:
             return False
 
 class ConfigSourceString(ConfigSource):

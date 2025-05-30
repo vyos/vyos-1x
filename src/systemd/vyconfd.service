@@ -8,7 +8,7 @@ DefaultDependencies=no
 After=systemd-remount-fs.service
 
 [Service]
-ExecStart=/usr/libexec/vyos/vyconf/vyconfd --log-file /var/run/log/vyconfd.log
+ExecStart=/usr/libexec/vyos/vyconf/vyconfd --log-file /var/run/log/vyconfd.log --legacy-config-path
 Type=exec
 SyslogIdentifier=vyconfd
 SyslogFacility=daemon

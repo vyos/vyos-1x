@@ -151,7 +151,9 @@ class ConfigMgmt:
         self.num_revisions = 0
         self.locations = d.get('commit_archive', {}).get('location', [])
         self.source_address = d.get('commit_archive', {}).get('source_address', '')
-        self.reboot_unconfirmed = bool(d.get('commit_confirm') == 'reboot')
+        self.reboot_unconfirmed = bool(
+            d.get('commit_confirm', {}).get('action') == 'reboot'
+        )
         self.config_dict = d
 
         if config.exists(['system', 'host-name']):

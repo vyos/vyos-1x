@@ -167,6 +167,9 @@ def verify(bridge):
             if 'has_vrf' in interface_config:
                 raise ConfigError(error_msg + 'it has a VRF assigned!')
 
+            if 'bpdu_guard' in interface_config and 'root_guard' in interface_config:
+                raise ConfigError(error_msg + 'bpdu-guard and root-guard cannot be configured at the same time!')
+
             if 'enable_vlan' in bridge:
                 if 'has_vlan' in interface_config:
                     raise ConfigError(error_msg + 'it has VLAN subinterface(s) assigned!')

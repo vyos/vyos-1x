@@ -1,4 +1,4 @@
-# Copyright 2017-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017-2025 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -62,6 +62,7 @@ while functions prefixed "effective" return values from the running config.
 In operational mode, all functions return values from the running config.
 """
 
+import os
 import re
 import json
 from typing import Union
@@ -73,8 +74,11 @@ from vyos.xml_ref import ext_dict_merge
 from vyos.xml_ref import relative_defaults
 from vyos.utils.dict import get_sub_dict
 from vyos.utils.dict import mangle_dict_keys
+from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.backend import vyconf_backend
 from vyos.configsource import ConfigSource
 from vyos.configsource import ConfigSourceSession
+from vyos.configsource import ConfigSourceVyconfSession
 
 class ConfigDict(dict):
     _from_defaults = {}
@@ -132,7 +136,10 @@ class Config(object):
     """
     def __init__(self, session_env=None, config_source=None):
         if config_source is None:
-            self._config_source = ConfigSourceSession(session_env)
+            if vyconf_backend() and boot_configuration_complete():
+                self._config_source = ConfigSourceVyconfSession(session_env)
+            else:
+                self._config_source = ConfigSourceSession(session_env)
         else:
             if not isinstance(config_source, ConfigSource):
                 raise TypeError("config_source not of type ConfigSource")

@@ -703,3 +703,18 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
             dict['authentication']['radius']['server'][server]['acct_port'] = '0'
 
     return dict
+
+def get_flowtable_interfaces(config):
+    """
+    Return all interfaces used in flowtables
+    """
+    ft_base = ['firewall', 'flowtable']
+
+    if not config.exists(ft_base):
+        return []
+
+    ifaces = []
+    for ft_name in config.list_nodes(ft_base):
+        ifaces += config.return_values(ft_base + [ft_name, 'interface'])
+
+    return ifaces

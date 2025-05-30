@@ -1113,6 +1113,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
         self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
+        # Test interface deletion
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vif', '10'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
     def test_zone_flow_offload(self):
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
