@@ -97,6 +97,11 @@ override_dh_auto_install:
 	# Remove j2lint comments / linter configuration which would insert additional new-lines
 	find $(DIR)/$(VYOS_DATA_DIR) -name "*.j2" -type f | xargs sed -i -e '/^{#.*#}/d'
 
+ifeq ($(DEB_HOST_ARCH),arm64)
+	# T7484: On ARM64, remove the console ttyS0 section from default config, breaks if there is no such device
+	find $(DIR)/$(VYOS_DATA_DIR) -name "config.boot.default" -type f | xargs sed -i -e '/console {/,/^    }/d'
+endif
+
 	# Create localui dir
 	mkdir -p $(DIR)/$(VYOS_LOCALUI_DIR)
 
