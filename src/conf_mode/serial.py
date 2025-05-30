@@ -234,6 +234,10 @@ def get_config(config=None):
                     set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
                     set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
 
+            if 'hardware' in port_config:
+                if 'rts_toggle' in port_config['hardware']:
+                    port_config['hardware']['rts_toggle']['enabled'] = '1'
+
             if 'tls' in proxy_no_default['device'][device]:
                 if 'disable' not in proxy_no_default['device'][device].get('tls', []):
                     port_config['tls']['enabled'] = '1'
