@@ -977,6 +977,11 @@ interfaces {
     }
     wireguard wg100 {
         address 172.16.252.128/31
+        ipv6 {
+            address {
+                autoconf
+            }
+        }
         mtu 1500
         peer HR6 {
             address 100.65.151.213
@@ -988,6 +993,11 @@ interfaces {
     }
     wireguard wg200 {
         address 172.16.252.130/31
+        ipv6 {
+            address {
+                autoconf
+            }
+        }
         mtu 1500
         peer WH56 {
             address 80.151.69.205

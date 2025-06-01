@@ -76,6 +76,11 @@ interfaces {
         encapsulation gre-bridge
         local-ip 192.0.2.3
         remote-ip 192.0.2.103
+        ipv6 {
+            address {
+                autoconf
+           }
+        }
     }
     tunnel tun500 {
         address 172.16.0.17/30

@@ -3,6 +3,7 @@
   <children>
     <node name="address">
       <children>
+        #include <include/interface/ipv6-address-autoconf.xml.i>
         #include <include/interface/ipv6-address-interface-identifier.xml.i>
       </children>
     </node>

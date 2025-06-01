@@ -152,14 +152,14 @@ def verify(tunnel):
                 # bound to any one interface/IP address and the same remote. This will
                 # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
                 if our_remote == their_remote:
-                    if our_address is not None and their_address == our_address: 
-                        # If set to the same values, this is always a fail 
+                    if our_address is not None and their_address == our_address:
+                        # If set to the same values, this is always a fail
                         raise ConfigError(f'Missing required "ip key" parameter when '\
                                            'running more then one GRE based tunnel on the '\
                                            'same source-address')
 
                     if their_source_if == our_source_if and their_address == our_address:
-                        # Note that lack of None check on these is deliberate. 
+                        # Note that lack of None check on these is deliberate.
                         # source-if and source-ip matching while unset (all None) is a fail
                         # source-ifs set and matching with unset source-ips is a fail
                         raise ConfigError(f'Missing required "ip key" parameter when '\
@@ -195,6 +195,14 @@ def verify(tunnel):
         if dict_search('parameters.ip.no_pmtu_discovery', tunnel) == None:
             raise ConfigError('Option ignore-df requires path MTU discovery to be disabled!')
 
+    # T7388: not all interfaces do support IPv6 neighbor discovery. With tunnel
+    # interfaces this depends on the encapsulation type. If encapsulation mode
+    # is unsupported but IPv6 ND feature is enabled - error out
+    if tunnel['encapsulation'] not in ['gretap', 'ip6gretap']:
+        if dict_search('ipv6.address.autoconf', tunnel) != None:
+            tmp = tunnel['encapsulation']
+            raise ConfigError('IPv6 ND/RD "ipv6 address autoconf" not supported '\
+                             f'for encapsulation type "{tmp}"!')
 
 def generate(tunnel):
     return None

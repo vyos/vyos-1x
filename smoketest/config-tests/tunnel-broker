@@ -47,6 +47,7 @@ set interfaces tunnel tun300 remote '192.0.2.102'
 set interfaces tunnel tun300 source-address '192.0.2.2'
 set interfaces tunnel tun400 address '172.16.0.13/30'
 set interfaces tunnel tun400 encapsulation 'gretap'
+set interfaces tunnel tun400 ipv6 address autoconf
 set interfaces tunnel tun400 remote '192.0.2.103'
 set interfaces tunnel tun400 source-address '192.0.2.3'
 set interfaces tunnel tun500 address '172.16.0.17/30'
