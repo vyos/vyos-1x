@@ -15,6 +15,7 @@
 #
 #
 
+import os
 import tempfile
 import shutil
 from functools import wraps
@@ -24,25 +25,85 @@ from vyos.proto import vyconf_client
 from vyos.migrate import ConfigMigrate
 from vyos.migrate import ConfigMigrateError
 from vyos.component_version import append_system_version
+from vyos.utils.session import in_config_session
+from vyos.proto.vyconf_proto import Errnum
+from vyos.utils.commit import acquire_commit_lock_file
+from vyos.utils.commit import release_commit_lock_file
 
 
-def output(o):
-    out = ''
-    for res in (o.output, o.error, o.warning):
-        if res is not None:
-            out = out + res
-    return out
+class VyconfSessionError(Exception):
+    pass
 
 
 class VyconfSession:
-    def __init__(self, token: str = None, on_error: Type[Exception] = None):
+    def __init__(
+        self, token: str = None, pid: int = None, on_error: Type[Exception] = None
+    ):
+        self.pid = os.getpid() if pid is None else pid
         if token is None:
-            out = vyconf_client.send_request('setup_session')
+            # CLI applications with arg pid=getppid() allow coordination
+            # with the ambient session; other uses (such as ConfigSession)
+            # may default to self pid
+            out = vyconf_client.send_request('session_of_pid', client_pid=self.pid)
+            if out.output is None:
+                out = vyconf_client.send_request('setup_session', client_pid=self.pid)
             self.__token = out.output
         else:
+            out = vyconf_client.send_request(
+                'session_update_pid', token=token, client_pid=self.pid
+            )
+            if out.status:
+                raise ValueError(f'No existing session for token: {token}')
             self.__token = token
 
+        self.in_config_session = in_config_session()
+        if self.in_config_session:
+            out = vyconf_client.send_request(
+                'enter_configuration_mode', token=self.__token
+            )
+            if out.status:
+                raise VyconfSessionError(self.output(out))
+
         self.on_error = on_error
+
+    def __del__(self):
+        if not self.in_config_session:
+            self.teardown()
+
+    def teardown(self):
+        vyconf_client.send_request('teardown', token=self.__token)
+
+    def exit_config_mode(self):
+        if self.session_changed():
+            return 'Uncommited changes', Errnum.UNCOMMITED_CHANGES
+        out = vyconf_client.send_request('exit_configuration_mode', token=self.__token)
+        return self.output(out), out.status
+
+    def in_session(self) -> bool:
+        return self.in_config_session
+
+    def session_changed(self) -> bool:
+        out = vyconf_client.send_request('session_changed', token=self.__token)
+        return not bool(out.status)
+
+    def get_config(self):
+        out = vyconf_client.send_request('get_config', token=self.__token)
+        if out.status:
+            raise VyconfSessionError(self.output(out))
+        return out.output
+
+    @staticmethod
+    def config_mode(f):
+        @wraps(f)
+        def wrapped(self, *args, **kwargs):
+            msg = 'operation not available outside of config mode'
+            if not self.in_config_session:
+                if self.on_error is None:
+                    raise VyconfSessionError(msg)
+                raise self.on_error(msg)
+            return f(self, *args, **kwargs)
+
+        return wrapped
 
     @staticmethod
     def raise_exception(f):
@@ -57,31 +118,46 @@ class VyconfSession:
 
         return wrapped
 
+    @staticmethod
+    def output(o):
+        out = ''
+        for res in (o.output, o.error, o.warning):
+            if res is not None:
+                out = out + res
+        return out
+
     @raise_exception
+    @config_mode
     def set(self, path: list[str]) -> tuple[str, int]:
         out = vyconf_client.send_request('set', token=self.__token, path=path)
-        return output(out), out.status
+        return self.output(out), out.status
 
     @raise_exception
+    @config_mode
     def delete(self, path: list[str]) -> tuple[str, int]:
         out = vyconf_client.send_request('delete', token=self.__token, path=path)
-        return output(out), out.status
+        return self.output(out), out.status
 
     @raise_exception
+    @config_mode
     def commit(self) -> tuple[str, int]:
+        lock_fd, out = acquire_commit_lock_file()
+        if lock_fd is None:
+            return out, Errnum.COMMIT_IN_PROGRESS
+
         out = vyconf_client.send_request('commit', token=self.__token)
-        return output(out), out.status
+        release_commit_lock_file(lock_fd)
+
+        return self.output(out), out.status
 
     @raise_exception
+    @config_mode
     def discard(self) -> tuple[str, int]:
         out = vyconf_client.send_request('discard', token=self.__token)
-        return output(out), out.status
-
-    def session_changed(self) -> bool:
-        out = vyconf_client.send_request('session_changed', token=self.__token)
-        return not bool(out.status)
+        return self.output(out), out.status
 
     @raise_exception
+    @config_mode
     def load_config(self, file: str, migrate: bool = False) -> tuple[str, int]:
         # pylint: disable=consider-using-with
         if migrate:
@@ -101,23 +177,18 @@ class VyconfSession:
         if tmp:
             tmp.close()
 
-        return output(out), out.status
+        return self.output(out), out.status
 
     @raise_exception
     def save_config(self, file: str, append_version: bool = False) -> tuple[str, int]:
         out = vyconf_client.send_request('save', token=self.__token, location=file)
         if append_version:
             append_system_version(file)
-        return output(out), out.status
+        return self.output(out), out.status
 
     @raise_exception
     def show_config(self, path: list[str] = None) -> tuple[str, int]:
         if path is None:
             path = []
         out = vyconf_client.send_request('show_config', token=self.__token, path=path)
-        return output(out), out.status
-
-    def __del__(self):
-        out = vyconf_client.send_request('teardown', token=self.__token)
-        if out.status:
-            print(f'Could not tear down session {self.__token}: {output(out)}')
+        return self.output(out), out.status

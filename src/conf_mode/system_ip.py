@@ -53,6 +53,11 @@ def verify(config_dict):
         for protocol, protocol_options in opt['protocol'].items():
             if 'route_map' in protocol_options:
                 verify_route_map(protocol_options['route_map'], opt)
+
+    if dict_search('import_table', opt):
+        for table_num, import_config in opt['import_table'].items():
+            if dict_search('route_map', import_config):
+                verify_route_map(import_config['route_map'], opt)
     return
 
 def generate(config_dict):

@@ -376,6 +376,16 @@ class BridgeIf(Interface):
                 if 'priority' in interface_config:
                     lower.set_path_priority(interface_config['priority'])
 
+                # set BPDU guard
+                tmp = dict_search('bpdu_guard', interface_config)
+                value = '1' if (tmp != None) else '0'
+                lower.set_bpdu_guard(value)
+
+                # set root guard
+                tmp = dict_search('root_guard', interface_config)
+                value = '1' if (tmp != None) else '0'
+                lower.set_root_guard(value)
+
                 if 'enable_vlan' in config:
                     add_vlan = []
                     native_vlan_id = None

@@ -527,6 +527,25 @@ def verify_pki_dh_parameters(config: dict, dh_name: str, min_key_size: int=0):
         if dh_bits < min_key_size:
             raise ConfigError(f'Minimum DH key-size is {min_key_size} bits!')
 
+def verify_pki_openssh_key(config: dict, key_name: str):
+    """
+    Common helper function user by PKI consumers to perform recurring
+    validation functions on OpenSSH keys
+    """
+    if 'pki' not in config:
+        raise ConfigError('PKI is not configured!')
+
+    if 'openssh' not in config['pki']:
+        raise ConfigError('PKI does not contain any OpenSSH keys!')
+
+    if key_name not in config['pki']['openssh']:
+        raise ConfigError(f'OpenSSH key "{key_name}" not found in configuration!')
+
+    if 'public' in config['pki']['openssh'][key_name]:
+        if not {'key', 'type'} <= set(config['pki']['openssh'][key_name]['public']):
+            raise ConfigError('Both public key and type must be defined for '\
+                              f'OpenSSH public key "{key_name}"!')
+
 def verify_eapol(config: dict):
     """
     Common helper function used by interface implementations to perform

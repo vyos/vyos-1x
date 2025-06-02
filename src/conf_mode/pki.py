@@ -64,6 +64,10 @@ sync_search = [
         'path': ['service', 'https'],
     },
     {
+        'keys': ['key'],
+        'path': ['service', 'ssh'],
+    },
+    {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['interfaces', 'ethernet'],
     },
@@ -414,7 +418,8 @@ def verify(pki):
             if 'country' in default_values:
                 country = default_values['country']
                 if len(country) != 2 or not country.isalpha():
-                    raise ConfigError(f'Invalid default country value. Value must be 2 alpha characters.')
+                    raise ConfigError('Invalid default country value. '\
+                                      'Value must be 2 alpha characters.')
 
     if 'changed' in pki:
         # if the list is getting longer, we can move to a dict() and also embed the

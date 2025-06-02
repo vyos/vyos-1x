@@ -134,13 +134,15 @@ class RetrieveModel(ApiModel):
 class ConfigFileModel(ApiModel):
     op: StrictStr
     file: StrictStr = None
+    string: StrictStr = None
 
     class Config:
         json_schema_extra = {
             'example': {
                 'key': 'id_key',
-                'op': 'save | load',
+                'op': 'save | load | merge',
                 'file': 'filename',
+                'string': 'config_string'
             }
         }
 
@@ -246,6 +248,20 @@ class RebootModel(ApiModel):
             'example': {
                 'key': 'id_key',
                 'op': 'reboot',
+                'path': ['op', 'mode', 'path'],
+            }
+        }
+
+
+class RenewModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        json_schema_extra = {
+            'example': {
+                'key': 'id_key',
+                'op': 'renew',
                 'path': ['op', 'mode', 'path'],
             }
         }

@@ -192,10 +192,15 @@ class TestVyOSTemplate(TestCase):
             self.assertIn(IKEv2_DEFAULT, ','.join(ciphers))
 
     def test_get_default_port(self):
+        from vyos.defaults import config_files
         from vyos.defaults import internal_ports
 
         with self.assertRaises(RuntimeError):
+            vyos.template.get_default_config_file('UNKNOWN')
+        with self.assertRaises(RuntimeError):
             vyos.template.get_default_port('UNKNOWN')
 
+        self.assertEqual(vyos.template.get_default_config_file('sshd_user_ca'),
+                         config_files['sshd_user_ca'])
         self.assertEqual(vyos.template.get_default_port('certbot_haproxy'),
                          internal_ports['certbot_haproxy'])

@@ -85,7 +85,13 @@ def _clean_conf_dict(conf):
         }
     """
     if isinstance(conf, dict):
-        return {node: _clean_conf_dict(val) for node, val in conf.items() if val != {} and _clean_conf_dict(val) != {}}
+        preserve_empty_nodes = {'syn', 'ack'}
+
+        return {
+            node: _clean_conf_dict(val)
+            for node, val in conf.items()
+            if (val != {} and _clean_conf_dict(val) != {}) or node in preserve_empty_nodes
+        }
     else:
         return conf
 
