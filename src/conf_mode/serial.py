@@ -300,7 +300,7 @@ def apply(proxy):
 
                 if 'trueport' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_vc')
-                    ret = os.system(f'setsid monitor {ttynum} &')
+                    ret = os.system(f'setsid iol_monitor {ttynum} &')
                     print(f'vc monitor ret {ret}')
                 elif 'multihost' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_multihost')
@@ -311,15 +311,15 @@ def apply(proxy):
                         print(f'iol_multihost ret {ret}')
                     else:
                         # inbound will exit when all connections disconnect
-                        ret = os.system(f'setsid monitor {ttynum} &')
+                        ret = os.system(f'setsid iol_monitor {ttynum} &')
                         print(f'iol_multihost monitor ret {ret}')
                 elif 'data-logging' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_lldatalog')
-                    ret = os.system(f'setsid monitor {ttynum} &')
+                    ret = os.system(f'setsid iol_monitor {ttynum} &')
                     print(f'data-logging monitor ret {ret}')
                 elif 'vmodem' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_vm')
-                    ret = os.system(f'setsid monitor {ttynum} &')
+                    write_string_to_file(file_path, 'iol_vmodem')
+                    ret = os.system(f'setsid iol_monitor {ttynum} &')
                     print(f'vmodem monitor ret {ret}')
                 elif 'udp' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_udpd')
