@@ -444,6 +444,14 @@ def apply(proxy):
                 elif 'tcp-reverse' in serial_config['service']:
                     write_string_to_file(file_path, '')
                     print(f'running tcp-reverse on {device}')
+                elif 'modbus-master' in serial_config['service']:
+                    write_string_to_file(file_path, 'iol_mmodbusp')
+                    ret = os.system(f'setsid iol_mmodbusp -p {ttynum} &')
+                    print(f'iol_mmodbusp ret {ret}')
+                elif 'modbus-slave' in serial_config['service']:
+                    write_string_to_file(file_path, 'iol_smodbusp')
+                    ret = os.system(f'setsid iol_smodbusp -p {ttynum} &')
+                    print(f'iol_smodbusp ret {ret}')
             else:
                 kill_pid_file(device)
 
