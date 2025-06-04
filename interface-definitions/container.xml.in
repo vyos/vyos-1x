@@ -554,7 +554,7 @@
                 <regex>(k8s-file|journald|none)</regex>
               </constraint>
             </properties>
-             <defaultValue>k8s-file</defaultValue>
+             <defaultValue>journald</defaultValue>
           </leafNode>
         </children>
       </tagNode>
