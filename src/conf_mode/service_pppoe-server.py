@@ -73,7 +73,9 @@ def get_config(config=None):
     # https://phabricator.accel-ppp.org/T3
     conditions = [is_node_changed(conf, base + ['client-ip-pool']),
                   is_node_changed(conf, base + ['client-ipv6-pool']),
-                  is_node_changed(conf, base + ['interface'])]
+                  is_node_changed(conf, base + ['interface']),
+                  is_node_changed(conf, base + ['authentication','radius','dynamic-author']),
+                  is_node_changed(conf, base + ['authentication','mode'])]
     if any(conditions):
         pppoe.update({'restart_required': {}})
     pppoe['server_type'] = 'pppoe'

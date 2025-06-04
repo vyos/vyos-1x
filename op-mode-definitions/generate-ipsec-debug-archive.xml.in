@@ -8,7 +8,7 @@
             <properties>
               <help>Generate IPSec debug-archive</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/generate_ipsec_debug_archive.py</command>
+            <command>${vyos_op_scripts_dir}/generate_ipsec_debug_archive.py</command>
           </node>
         </children>
       </node>

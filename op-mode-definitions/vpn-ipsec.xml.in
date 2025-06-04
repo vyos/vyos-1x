@@ -24,7 +24,7 @@
                     <properties>
                       <help>Reset a specific tunnel for given DMVPN profile</help>
                       <completionHelp>
-                        <script>sudo ${vyos_completion_dir}/list_ipsec_profile_tunnels.py --profile ${COMP_WORDS[4]}</script>
+                        <script>${vyos_completion_dir}/list_ipsec_profile_tunnels.py --profile ${COMP_WORDS[4]}</script>
                       </completionHelp>
                     </properties>
                     <children>
@@ -35,10 +35,10 @@
                             <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_dst --profile="$5" --tunnel="$7" --nbma-dst="$9"</command>
+                        <command>${vyos_op_scripts_dir}/ipsec.py reset_profile_dst --profile="$5" --tunnel="$7" --nbma-dst="$9"</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_all --profile="$5" --tunnel="$7"</command>
+                    <command>${vyos_op_scripts_dir}/ipsec.py reset_profile_all --profile="$5" --tunnel="$7"</command>
                   </tagNode>
                 </children>
               </tagNode>
@@ -51,13 +51,13 @@
                     <properties>
                       <help>Reset all users current remote access IPSec VPN sessions</help>
                     </properties>
-                     <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_ra</command>
+                     <command>${vyos_op_scripts_dir}/ipsec.py reset_ra</command>
                   </node>
                   <tagNode name="user">
                     <properties>
                       <help>Reset specified user current remote access IPsec VPN session(s)</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_ra --user="$6"</command>
+                    <command>${vyos_op_scripts_dir}/ipsec.py reset_ra --user="$6"</command>
                   </tagNode>
                 </children>
               </node>
@@ -70,7 +70,7 @@
                     <properties>
                       <help>Reset all site-to-site IPSec VPN sessions</help>
                     </properties>
-                     <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_all_peers</command>
+                     <command>${vyos_op_scripts_dir}/ipsec.py reset_all_peers</command>
                   </node>
                   <tagNode name="peer">
                     <properties>
@@ -87,16 +87,16 @@
                             <path>vpn ipsec site-to-site peer ${COMP_WORDS[5]} tunnel</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6" --tunnel="$8"</command>
+                        <command>${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6" --tunnel="$8"</command>
                       </tagNode>
                       <node name="vti">
                         <properties>
                           <help>Reset the VTI tunnel for given peer</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6" --tunnel="vti"</command>
+                        <command>${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6" --tunnel="vti"</command>
                       </node>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6"</command>
+                    <command>${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6"</command>
                   </tagNode>
                 </children>
               </node>
@@ -112,7 +112,7 @@
         <properties>
           <help>Restart the IPsec VPN process</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name ipsec</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name ipsec</command>
       </node>
     </children>
   </node>
@@ -140,13 +140,13 @@
                     <properties>
                       <help>Show debug information for peer tunnel</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="$5" --tunnel="$7"</command>
+                    <command>${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="$5" --tunnel="$7"</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="$5" --tunnel="all"</command>
+                <command>${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="$5" --tunnel="all"</command>
               </tagNode>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="all"</command>
+            <command>${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="all"</command>
           </node>
           <node name="ike">
             <properties>
@@ -162,16 +162,16 @@
                     <properties>
                       <help>Show all currently active IKE Security Associations (SA) that are using NAT Traversal</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/vpn_ike_sa.py --nat="yes"</command>
+                    <command>${vyos_op_scripts_dir}/vpn_ike_sa.py --nat="yes"</command>
                   </node>
                   <tagNode name="peer">
                     <properties>
                       <help>Show all currently active IKE Security Associations (SA) for a peer</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/vpn_ike_sa.py --peer="$6"</command>
+                    <command>${vyos_op_scripts_dir}/vpn_ike_sa.py --peer="$6"</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ike_sa.py</command>
+                <command>${vyos_op_scripts_dir}/vpn_ike_sa.py</command>
               </node>
               <node name="secrets">
                 <properties>
@@ -196,13 +196,13 @@
                 <properties>
                   <help>Show VPN connections</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/ipsec.py show_connections</command>
+                <command>${vyos_op_scripts_dir}/ipsec.py show_connections</command>
               </node>
               <node name="policy">
                 <properties>
                   <help>Show the in-kernel crypto policies</help>
                 </properties>
-                <command>sudo ip xfrm policy list</command>
+                <command>ip xfrm policy list</command>
               </node>
               <node name="remote-access">
                 <properties>
@@ -213,25 +213,25 @@
                     <properties>
                       <help>Show detail active IKEv2 RA sessions</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then ${vyos_op_scripts_dir}/ipsec.py show_ra_detail; else echo "IPsec process not running" ; fi</command>
                   </node>
                   <tagNode name="connection-id">
                     <properties>
                       <help>Show detail active IKEv2 RA sessions by connection-id</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --conn-id="$6"; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --conn-id="$6"; else echo "IPsec process not running" ; fi</command>
                   </tagNode>
                   <node name="summary">
                     <properties>
                       <help>Show active IKEv2 RA sessions summary</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_summary; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then ${vyos_op_scripts_dir}/ipsec.py show_ra_summary; else echo "IPsec process not running" ; fi</command>
                   </node>
                   <tagNode name="username">
                     <properties>
                       <help>Show detail active IKEv2 RA sessions by username</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --username="$6"; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --username="$6"; else echo "IPsec process not running" ; fi</command>
                   </tagNode>
                 </children>
               </node>
@@ -270,22 +270,22 @@
                     <properties>
                       <help>Show Verbose Detail on all active IPsec Security Associations (SA)</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa_detail ; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then ${vyos_op_scripts_dir}/ipsec.py show_sa_detail ; else echo "IPsec process not running" ; fi</command>
                   </node>
                 </children>
-                <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPsec process not running" ; fi</command>
+                <command>if systemctl is-active --quiet strongswan ; then ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPsec process not running" ; fi</command>
               </node>
               <node name="state">
                 <properties>
                   <help>Show the in-kernel crypto state</help>
                 </properties>
-                <command>sudo ip xfrm state list</command>
+                <command>ip xfrm state list</command>
               </node>
               <node name="status">
                 <properties>
                   <help>Show status of IPsec process</help>
                 </properties>
-                <command>if systemctl is-active --quiet strongswan >/dev/null ; then echo -e "IPsec Process Running: $(pgrep charon)\n$(sudo /usr/sbin/ipsec status)" ; else echo "IPsec process not running" ; fi</command>
+                <command>if systemctl is-active --quiet strongswan >/dev/null ; then echo -e "IPsec Process Running: $(pgrep charon)\n$(/usr/sbin/ipsec status)" ; else echo "IPsec process not running" ; fi</command>
               </node>
             </children>
           </node>

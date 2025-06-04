@@ -22,6 +22,7 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import get_flowtable_interfaces
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_interface_exists
@@ -168,6 +169,8 @@ def get_config(config=None):
     tmp = is_node_changed(conf, base + [ifname, 'evpn'])
     if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
 
+    ethernet['flowtable_interfaces'] = get_flowtable_interfaces(conf)
+
     return ethernet
 
 def verify_speed_duplex(ethernet: dict, ethtool: Ethtool):
@@ -269,7 +272,38 @@ def verify_allowedbond_changes(ethernet: dict):
                               f' on interface "{ethernet["ifname"]}".' \
                               f' Interface is a bond member')
 
+def verify_flowtable(ethernet: dict):
+    ifname = ethernet['ifname']
+
+    if 'deleted' in ethernet and ifname in ethernet['flowtable_interfaces']:
+        raise ConfigError(f'Cannot delete interface "{ifname}", still referenced on a flowtable')
+
+    if 'vif_remove' in ethernet:
+        for vif in ethernet['vif_remove']:
+            vifname = f'{ifname}.{vif}'
+
+            if vifname in ethernet['flowtable_interfaces']:
+                raise ConfigError(f'Cannot delete interface "{vifname}", still referenced on a flowtable')
+
+    if 'vif_s_remove' in ethernet:
+        for vifs in ethernet['vif_s_remove']:
+            vifsname = f'{ifname}.{vifs}'
+
+            if vifsname in ethernet['flowtable_interfaces']:
+                raise ConfigError(f'Cannot delete interface "{vifsname}", still referenced on a flowtable')
+
+    if 'vif_s' in ethernet:
+        for vifs, vifs_conf in ethernet['vif_s'].items():
+            if 'vif_c_delete' in vifs_conf:
+                for vifc in vifs_conf['vif_c_delete']:
+                    vifcname = f'{ifname}.{vifs}.{vifc}'
+
+                    if vifcname in ethernet['flowtable_interfaces']:
+                        raise ConfigError(f'Cannot delete interface "{vifcname}", still referenced on a flowtable')
+
 def verify(ethernet):
+    verify_flowtable(ethernet)
+
     if 'deleted' in ethernet:
         return None
     if 'is_bond_member' in ethernet:

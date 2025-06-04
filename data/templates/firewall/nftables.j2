@@ -414,6 +414,8 @@ table bridge vyos_filter {
 {%                 if 'invalid_connections' in global_options.apply_to_bridged_traffic %}
         ct state invalid udp sport 67 udp dport 68 counter accept
         ct state invalid ether type arp counter accept
+        ct state invalid ether type 8021q counter accept
+        ct state invalid ether type 8021ad counter accept
         ct state invalid ether type 0x8864 counter accept
 {%                 endif %}
 {%             endif %}

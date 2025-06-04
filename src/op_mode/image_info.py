@@ -72,6 +72,14 @@ def _format_show_images_details(
 
     return tabulated
 
+def show_images_current(raw: bool) -> Union[image.BootDetails, str]:
+
+    images_summary = show_images_summary(raw=True)
+    if raw:
+        return {'image_running' : images_summary['image_running']}
+    else:
+        return images_summary['image_running']
+
 
 def show_images_summary(raw: bool) -> Union[image.BootDetails, str]:
     images_available: list[str] = grub.version_list()

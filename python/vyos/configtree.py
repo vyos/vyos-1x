@@ -194,6 +194,7 @@ class ConfigTree(object):
                 raise ValueError('Failed to read internal rep: {0}'.format(msg))
             else:
                 self.__config = config
+                self.__version = ''
         elif config_string is not None:
             config_section, version_section = extract_version(config_string)
             config_section = escape_backslash(config_section)

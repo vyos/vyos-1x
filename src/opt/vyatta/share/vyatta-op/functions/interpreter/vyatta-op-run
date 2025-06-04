@@ -222,10 +222,21 @@ _vyatta_op_run ()
     local cmd_regex="^(LESSOPEN=|less|pager|tail|(sudo )?$file_cmd).*"
     if [ -n "$run_cmd" ]; then
       eval $restore_shopts
-      if [[ -t 1 &&  "${args[1]}" == "show" && ! $run_cmd =~ $cmd_regex ]] ; then
-        eval "($run_cmd) | ${VYATTA_PAGER:-cat}"
-      else
+      if [[ "${args[1]}" == "configure" ]]; then
+        # The "configure" command modifies the shell environment
+        # and must run in the current shell.
         eval "$run_cmd"
+      elif [[ "${args[1]} ${args[2]}" =~ ^set[[:space:]]+(builtin|terminal) ]]; then
+        # Some commands like "set terminal width"
+        # only affect the user shell
+        # (so they don't need special privileges)
+        # and must be executed directly in the current shell
+        # to be able to do their job.
+        eval "$run_cmd"
+      elif [[ -t 1 && "${args[1]}" == "show" && ! $run_cmd =~ $cmd_regex ]] ; then
+        eval "(sudo $run_cmd) | ${VYATTA_PAGER:-cat}"
+      else
+        eval "sudo $run_cmd"
       fi
     else
       echo -ne "\n  Incomplete command: ${args[@]}\n\n" >&2

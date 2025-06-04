@@ -43,13 +43,13 @@
                 <properties>
                   <help>Scan for networks via specified wireless interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces_wireless.py show_scan --intf-name="$4"</command>
+                <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_scan --intf-name="$4"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
                       <help>Show detailed scan results</help>
                     </properties>
-                    <command>sudo /sbin/iw dev "$4" scan ap-force</command>
+                    <command>/sbin/iw dev "$4" scan ap-force</command>
                   </leafNode>
                 </children>
               </node>

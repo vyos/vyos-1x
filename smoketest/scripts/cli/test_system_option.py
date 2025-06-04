@@ -102,9 +102,28 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
 
     def test_kernel_options(self):
         amd_pstate_mode = 'active'
+        isolate_cpus = '1,2,3'
+        nohz_full = '2'
+        rcu_no_cbs = '1,2,4-5'
+        default_hp_size = '2M'
+        hp_size_1g = '1G'
+        hp_size_2m = '2M'
+        hp_count_1g = '2'
+        hp_count_2m = '512'
 
+        self.cli_set(['system', 'option', 'kernel', 'cpu', 'disable-nmi-watchdog'])
+        self.cli_set(['system', 'option', 'kernel', 'cpu', 'isolate-cpus', isolate_cpus])
+        self.cli_set(['system', 'option', 'kernel', 'cpu', 'nohz-full', nohz_full])
+        self.cli_set(['system', 'option', 'kernel', 'cpu', 'rcu-no-cbs', rcu_no_cbs])
+        self.cli_set(['system', 'option', 'kernel', 'disable-hpet'])
+        self.cli_set(['system', 'option', 'kernel', 'disable-mce'])
         self.cli_set(['system', 'option', 'kernel', 'disable-mitigations'])
         self.cli_set(['system', 'option', 'kernel', 'disable-power-saving'])
+        self.cli_set(['system', 'option', 'kernel', 'disable-softlockup'])
+        self.cli_set(['system', 'option', 'kernel', 'memory', 'disable-numa-balancing'])
+        self.cli_set(['system', 'option', 'kernel', 'memory', 'default-hugepage-size', default_hp_size])
+        self.cli_set(['system', 'option', 'kernel', 'memory', 'hugepage-size', hp_size_1g, 'hugepage-count', hp_count_1g])
+        self.cli_set(['system', 'option', 'kernel', 'memory', 'hugepage-size', hp_size_2m, 'hugepage-count', hp_count_2m])
         self.cli_set(['system', 'option', 'kernel', 'quiet'])
 
         self.cli_set(['system', 'option', 'kernel', 'amd-pstate-driver', amd_pstate_mode])
@@ -121,6 +140,17 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.assertIn(' mitigations=off', tmp)
         self.assertIn(' intel_idle.max_cstate=0 processor.max_cstate=1', tmp)
         self.assertIn(' quiet', tmp)
+        self.assertIn(' nmi_watchdog=0', tmp)
+        self.assertIn(' hpet=disable', tmp)
+        self.assertIn(' mce=off', tmp)
+        self.assertIn(' nosoftlockup', tmp)
+        self.assertIn(f' isolcpus={isolate_cpus}', tmp)
+        self.assertIn(f' nohz_full={nohz_full}', tmp)
+        self.assertIn(f' rcu_nocbs={rcu_no_cbs}', tmp)
+        self.assertIn(f' default_hugepagesz={default_hp_size}', tmp)
+        self.assertIn(f' hugepagesz={hp_size_1g} hugepages={hp_count_1g}', tmp)
+        self.assertIn(f' hugepagesz={hp_size_2m} hugepages={hp_count_2m}', tmp)
+        self.assertIn(' numa_balancing=disable', tmp)
 
         if cpu_vendor == 'AuthenticAMD':
             self.assertIn(f' initcall_blacklist=acpi_cpufreq_init amd_pstate={amd_pstate_mode}', tmp)

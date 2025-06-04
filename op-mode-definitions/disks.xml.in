@@ -19,7 +19,7 @@
                 <properties>
                   <help>Format this disk the same as another disk</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/format_disk.py --by-id --target $4 --proto $6</command>
+                <command>${vyos_op_scripts_dir}/format_disk.py --by-id --target $4 --proto $6</command>
               </tagNode>
             </children>
           </tagNode>
@@ -40,7 +40,7 @@
                 <script>${vyos_completion_dir}/list_disks.py --exclude ${COMP_WORDS[2]}</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/format_disk.py --target $3 --proto $5</command>
+            <command>${vyos_op_scripts_dir}/format_disk.py --target $3 --proto $5</command>
           </tagNode>
         </children>
       </tagNode>

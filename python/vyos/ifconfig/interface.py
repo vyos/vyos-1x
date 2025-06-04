@@ -217,6 +217,16 @@ class Interface(Control):
             'location': '/sys/class/net/{ifname}/brport/priority',
             'errormsg': '{ifname} is not a bridge port member'
         },
+        'bpdu_guard': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/brport/bpdu_guard',
+            'errormsg': '{ifname} is not a bridge port member'
+        },
+        'root_guard': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/brport/root_block',
+            'errormsg': '{ifname} is not a bridge port member'
+        },
         'proxy_arp': {
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp',
@@ -1105,6 +1115,28 @@ class Interface(Control):
         >>> Interface('eth0').set_path_priority(4)
         """
         self.set_interface('path_priority', priority)
+
+    def set_bpdu_guard(self, state):
+        """
+        Set BPDU guard state for a bridge port. When enabled, the port will be
+        disabled if it receives a BPDU packet.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_bpdu_guard(1)
+        """
+        self.set_interface('bpdu_guard', state)
+
+    def set_root_guard(self, state):
+        """
+        Set root guard state for a bridge port. When enabled, the port will be
+        disabled if it receives a superior BPDU that would make it a root port.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_root_guard(1)
+        """
+        self.set_interface('root_guard', state)
 
     def set_port_isolation(self, on_or_off):
         """

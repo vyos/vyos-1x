@@ -29,25 +29,25 @@
                         <properties>
                           <help>HOTP time-based token</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5"</command>
+                        <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5"</command>
                         <children>
                           <tagNode name="rate-limit">
                             <properties>
                               <help>Duration of single time interval</help>
                             </properties>
-                            <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "$9"</command>
+                            <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "$9"</command>
                             <children>
                               <tagNode name="rate-time">
                                 <properties>
                                   <help>The number of digits in the one-time password</help>
                                 </properties>
-                                <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "$9" --rate_time "${11}" </command>
+                                <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "$9" --rate_time "${11}" </command>
                                 <children>
                                   <tagNode name="window-size">
                                     <properties>
                                       <help>The number of digits in the one-time password</help>
                                     </properties>
-                                    <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "$9" --rate_time "${11}" --window_size "${13}"</command>
+                                    <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "$9" --rate_time "${11}" --window_size "${13}"</command>
                                   </tagNode>
                                 </children>
                               </tagNode>
@@ -57,19 +57,19 @@
                             <properties>
                               <help>The number of digits in the one-time password</help>
                             </properties>
-                            <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --window_size "${9}"</command>
+                            <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --window_size "${9}"</command>
                             <children>
                               <tagNode name="rate-limit">
                                 <properties>
                                   <help>Duration of single time interval</help>
                                 </properties>
-                                <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "${11}" --window_size "${9}"</command>
+                                <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "${11}" --window_size "${9}"</command>
                                 <children>
                                   <tagNode name="rate-time">
                                     <properties>
                                       <help>Duration of single time interval</help>
                                     </properties>
-                                    <command>sudo ${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "${11}" --rate_time "${13}" --window_size "${9}"</command>
+                                    <command>${vyos_op_scripts_dir}/generate_system_login_user.py --username "$5" --rate_limit "${11}" --rate_time "${13}" --window_size "${9}"</command>
                                   </tagNode>
                                 </children>
                               </tagNode>

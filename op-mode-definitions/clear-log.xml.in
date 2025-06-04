@@ -6,7 +6,7 @@
         <properties>
           <help>Clear contents of current master log file</help>
         </properties>
-        <command>sudo journalctl --rotate --vacuum-time=1s</command>
+        <command>journalctl --rotate --vacuum-time=1s</command>
       </leafNode>
     </children>
   </node>

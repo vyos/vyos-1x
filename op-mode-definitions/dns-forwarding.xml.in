@@ -54,7 +54,7 @@
                 <properties>
                   <help>Show DNS Forwarding statistics</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dns.py show_forwarding_statistics</command>
+                <command>${vyos_op_scripts_dir}/dns.py show_forwarding_statistics</command>
               </leafNode>
             </children>
           </node>
@@ -73,7 +73,7 @@
             <properties>
               <help>Restart DNS Forwarding service</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dns_forwarding</command>
+            <command>${vyos_op_scripts_dir}/restart.py restart_service --name dns_forwarding</command>
           </leafNode>
         </children>
       </node>
@@ -92,13 +92,13 @@
             </properties>
             <children>
               <tagNode name="domain">
-                <command>sudo ${vyos_op_scripts_dir}/dns.py reset_forwarding --domain $5</command>
+                <command>${vyos_op_scripts_dir}/dns.py reset_forwarding --domain $5</command>
                 <properties>
                   <help>Reset DNS Forwarding cache for a domain</help>
                 </properties>
               </tagNode>
               <leafNode name="all">
-                <command>sudo ${vyos_op_scripts_dir}/dns.py reset_forwarding --all</command>
+                <command>${vyos_op_scripts_dir}/dns.py reset_forwarding --all</command>
                 <properties>
                   <help>Reset DNS Forwarding cache for all domains</help>
                 </properties>

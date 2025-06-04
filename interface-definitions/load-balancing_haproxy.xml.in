@@ -159,7 +159,7 @@
                     <properties>
                       <help>URI used for HTTP health check (Example: '/' or '/health')</help>
                       <constraint>
-                        <regex>^\/([^?#\s]*)(\?[^#\s]*)?$</regex>
+                        <regex>\/([^?#\s]*)(\?[^#\s]*)?</regex>
                       </constraint>
                     </properties>
                   </leafNode>

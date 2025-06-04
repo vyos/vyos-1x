@@ -51,7 +51,7 @@
       <children>
         <leafNode name="invalid-connections">
           <properties>
-            <help>Accept ARP, DHCP and PPPoE despite they are marked as invalid connection</help>
+            <help>Accept ARP, 802.1q, 802.1ad, DHCP and PPPoE despite being marked as invalid connections</help>
             <valueless/>
           </properties>
         </leafNode>

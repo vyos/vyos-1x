@@ -7,8 +7,7 @@
         <properties>
           <help>Show sFlow statistics</help>
         </properties>
-        <!-- requires sudo, do not remove it -->
-        <command>sudo ${vyos_op_scripts_dir}/sflow.py show</command>
+        <command>${vyos_op_scripts_dir}/sflow.py show</command>
       </node>
     </children>
   </node>

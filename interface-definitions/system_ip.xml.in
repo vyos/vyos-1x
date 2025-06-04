@@ -17,6 +17,22 @@
               #include <include/arp-ndp-table-size.xml.i>
             </children>
           </node>
+          <tagNode name="import-table">
+            <properties>
+              <help>Routing table for import</help>
+              <valueHelp>
+                <format>u32:1-252</format>
+                <description>Table number</description>
+              </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-252"/>
+                </constraint>
+            </properties>
+            <children>
+              #include <include/static/static-route-distance.xml.i>
+              #include <include/route-map.xml.i>
+            </children>
+          </tagNode>
           <leafNode name="disable-forwarding">
             <properties>
               <help>Disable IPv4 forwarding on all interfaces</help>

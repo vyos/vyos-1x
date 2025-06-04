@@ -49,7 +49,7 @@ jobs:
       - name: Generate ISO version string
         id: version
         run: |
-          echo "build_version=1.5-integration-$(date -u +%Y%m%d%H%M)" >> $GITHUB_OUTPUT
+          echo "build_version=$(date -u +%Y.%m.%d-%H%M-integration)" >> $GITHUB_OUTPUT
       - name: Build custom ISO image
         shell: bash
         run: |

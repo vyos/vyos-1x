@@ -40,6 +40,9 @@ system {
             }
         }
     }
+    option {
+        reboot-on-upgrade-failure 5
+    }
     syslog {
         local {
             facility all {

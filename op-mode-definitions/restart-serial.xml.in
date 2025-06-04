@@ -11,7 +11,7 @@
             <properties>
               <help>Restart serial console service for login TTYs</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/serial.py restart_console</command>
+            <command>${vyos_op_scripts_dir}/serial.py restart_console</command>
             <children>
               <tagNode name="device">
                 <properties>
@@ -20,7 +20,7 @@
                     <script>${vyos_completion_dir}/list_login_ttys.py</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/serial.py restart_console --device-name "$5"</command>
+                <command>${vyos_op_scripts_dir}/serial.py restart_console --device-name "$5"</command>
               </tagNode>
             </children>
           </node>

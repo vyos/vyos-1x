@@ -30,7 +30,7 @@
             <properties>
               <help>Show contents of all master log files</help>
             </properties>
-            <command>sudo bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
+            <command>bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
           </leafNode>
           <leafNode name="authorization">
             <properties>
@@ -42,7 +42,7 @@
             <properties>
               <help>Show log for certbot</help>
             </properties>
-            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+            <command>if test -f /var/log/letsencrypt/letsencrypt.log; then cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>
@@ -677,12 +677,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit ndppd.service</command>
           </leafNode>
-          <leafNode name="nhrp">
-            <properties>
-              <help>Show log for Next Hop Resolution Protocol (NHRP)</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
-          </leafNode>
           <leafNode name="ntp">
             <properties>
               <help>Show log for Network Time Protocol (NTP)</help>
@@ -836,6 +830,12 @@
               <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit snmpd.service</command>
+          </leafNode>
+          <leafNode name="spanning-tree">
+            <properties>
+              <help>Show log for Spanning Tree Protocol (STP)</help>
+            </properties>
+            <command>journalctl --dmesg --no-hostname --boot --grep='br[0-9].*(stp|bpdu|blocking|disabled|forwarding|listening|root port)'</command>
           </leafNode>
           <node name="ssh">
             <properties>

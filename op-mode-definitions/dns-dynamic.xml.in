@@ -16,7 +16,7 @@
                 <properties>
                   <help>Clear Dynamic DNS information cache (ddclient)</help>
                 </properties>
-                <command>sudo rm -f /run/ddclient/ddclient.cache</command>
+                <command>rm -f /run/ddclient/ddclient.cache</command>
               </leafNode>
             </children>
           </node>
@@ -78,7 +78,7 @@
                 <properties>
                   <help>Show Dynamic DNS status</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dns.py show_dynamic_status</command>
+                <command>${vyos_op_scripts_dir}/dns.py show_dynamic_status</command>
               </leafNode>
             </children>
           </node>
@@ -97,7 +97,7 @@
             <properties>
               <help>Restart Dynamic DNS service</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dns_dynamic</command>
+            <command>${vyos_op_scripts_dir}/restart.py restart_service --name dns_dynamic</command>
           </node>
         </children>
       </node>
@@ -114,7 +114,7 @@
             <properties>
               <help>Reset Dynamic DNS information</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dns.py reset_dynamic</command>
+            <command>${vyos_op_scripts_dir}/dns.py reset_dynamic</command>
           </node>
         </children>
       </node>

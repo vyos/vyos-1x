@@ -6,10 +6,10 @@
         <properties>
           <help>Monitor Neighbor Discovery Protocol (NDP) information</help>
         </properties>
-        <command>sudo ndptool monitor</command>
+        <command>ndptool monitor</command>
         <children>
           <tagNode name="interface">
-            <command>sudo ndptool monitor --ifname=$4</command>
+            <command>ndptool monitor --ifname=$4</command>
             <properties>
               <help>Monitor Neighbor Discovery Protocol on specified interface</help>
               <completionHelp>
@@ -18,7 +18,7 @@
             </properties>
             <children>
               <tagNode name="type">
-                <command>sudo ndptool monitor --ifname=$4 --msg-type=$6</command>
+                <command>ndptool monitor --ifname=$4 --msg-type=$6</command>
                 <properties>
                   <help>Monitor specific Neighbor Discovery Protocol type</help>
                   <completionHelp>
@@ -29,7 +29,7 @@
             </children>
           </tagNode>
           <tagNode name="type">
-            <command>sudo ndptool monitor --msg-type=$4</command>
+            <command>ndptool monitor --msg-type=$4</command>
             <properties>
               <help>Monitor specific Neighbor Discovery Protocol type</help>
               <completionHelp>

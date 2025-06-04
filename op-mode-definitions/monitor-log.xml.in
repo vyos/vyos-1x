@@ -21,7 +21,7 @@
             <properties>
               <help>Monitor last lines of certbot log</help>
             </properties>
-            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo tail --follow=name /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+            <command>if test -f /var/log/letsencrypt/letsencrypt.log; then tail --follow=name /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
           </leafNode>
           <leafNode name="conntrack-sync">
             <properties>
@@ -130,12 +130,6 @@
               <help>Monitor last lines of Neighbor Discovery Protocol (NDP) Proxy</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ndppd.service</command>
-          </leafNode>
-          <leafNode name="nhrp">
-            <properties>
-              <help>Monitor last lines of Next Hop Resolution Protocol log</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --follow --unit opennhrp.service</command>
           </leafNode>
           <leafNode name="ntp">
             <properties>

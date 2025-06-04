@@ -88,6 +88,12 @@ def verify(ipoe):
                     'Can configure username with Lua script only for RADIUS authentication'
                 )
 
+        if dict_search('external_dhcp.dhcp_relay', iface_config):
+            if not dict_search('external_dhcp.giaddr', iface_config):
+                raise ConfigError(
+                    f'"external-dhcp dhcp-relay" requires "giaddr" to be set for interface {interface}'
+                )
+
     verify_accel_ppp_authentication(ipoe, local_users=False)
     verify_accel_ppp_ip_pool(ipoe)
     verify_accel_ppp_name_servers(ipoe)

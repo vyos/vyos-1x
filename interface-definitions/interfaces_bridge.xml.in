@@ -201,6 +201,18 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="bpdu-guard">
+                    <properties>
+                      <help>Enable BPDU Guard</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="root-guard">
+                    <properties>
+                      <help>Enable Root Guard</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>

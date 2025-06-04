@@ -95,7 +95,7 @@
             <properties>
               <help>Show messages in kernel ring buffer</help>
             </properties>
-            <command>sudo dmesg</command>
+            <command>dmesg</command>
           </leafNode>
           <node name="login">
             <properties>
@@ -155,31 +155,31 @@
                 <properties>
                   <help>Show user account information</help>
                 </properties>
-                <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py</command>
+                <command>${vyos_op_scripts_dir}/show_users.py</command>
                 <children>
                   <leafNode name="all">
                     <properties>
                       <help>Show information about all accounts</help>
                     </properties>
-                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py all</command>
+                    <command>${vyos_op_scripts_dir}/show_users.py all</command>
                   </leafNode>
                   <leafNode name="locked">
                     <properties>
                       <help>Show information about locked accounts</help>
                     </properties>
-                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py locked</command>
+                    <command>${vyos_op_scripts_dir}/show_users.py locked</command>
                   </leafNode>
                   <leafNode name="other">
                     <properties>
                       <help>Show information about non VyOS user accounts</help>
                     </properties>
-                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py other</command>
+                    <command>${vyos_op_scripts_dir}/show_users.py other</command>
                   </leafNode>
                   <leafNode name="vyos">
                     <properties>
                       <help>Show information about VyOS user accounts</help>
                     </properties>
-                    <command>${vyos_libexec_dir}/vyos-sudo.py ${vyos_op_scripts_dir}/show_users.py vyos</command>
+                    <command>${vyos_op_scripts_dir}/show_users.py vyos</command>
                   </leafNode>
                 </children>
               </node>
@@ -195,7 +195,7 @@
                 <properties>
                   <help>Show kernel cache information</help>
                 </properties>
-                <command>sudo slabtop -o</command>
+                <command>slabtop -o</command>
               </leafNode>
               <leafNode name="detail">
                 <properties>
