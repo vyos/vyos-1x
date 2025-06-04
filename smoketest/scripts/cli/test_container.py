@@ -110,8 +110,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         tmp = cmd(f'sudo podman exec -it {cont_name} sysctl kernel.msgmax')
         self.assertEqual(tmp, 'kernel.msgmax = 4096')
 
-        tmp = cmd(f'podman container inspect {cont_name} --format "{{{{ .HostConfig.LogConfig.Type }}}}""')
-        self.assertEqual(tmp, 'journald')
+        l = cmd_to_json(f'sudo podman container inspect {cont_name}')
+        self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
 
 
     def test_name_server(self):
