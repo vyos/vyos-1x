@@ -6,7 +6,7 @@
   <children>
     <leafNode name="auth-user">
       <properties>
-        <help>Enable authenticate user</help>
+        <help>Enable authenticate user [tcp and telnet only]</help>
         <valueless/>
       </properties>
     </leafNode>
@@ -14,7 +14,7 @@
     #include <include/serial/service/utils/multisession.xml.i>
     <leafNode name="allow-multiple-connection">
       <properties>
-        <help>Enable allow multiple connections</help>
+        <help>Enable allow multiple connections [tcp only]</help>
         <valueless/>
       </properties>
     </leafNode>
