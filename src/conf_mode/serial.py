@@ -23,10 +23,12 @@ import signal
 
 from sys import exit
 from psutil import process_iter
+from collections import defaultdict
 
 from vyos.config import Config
 from vyos.template import render
 from vyos.utils.process import call
+from vyos.utils.process import cmd
 from vyos import ConfigError
 
 from vyos.configdict import node_changed
@@ -262,8 +264,6 @@ def get_config(config=None):
     print(proxy)
     return proxy
 
-
-
 def verify(proxy):
     if not proxy:
         return None
@@ -282,14 +282,130 @@ def write_string_to_file(filename, content):
     except Exception as e:
         print(f'Failed to write to {filename}: {e}')
 
+def remove_files_with_prefix(base_dir, prefix):
+
+    removed_with_prefix_list = []
+    for filename in os.listdir(base_dir):
+        if filename.startswith(prefix):
+            filepath = os.path.join(base_dir, filename)
+            try:
+                os.remove(filepath)
+                removed_with_prefix_list.append(filename)
+                print(f'Removed: {filepath}')
+            except Exception as e:
+                print(f'Failed to remove {filepath}: {e}')
+    if not removed_with_prefix_list:
+        print(f'No files staring with "serialsvc_" found in {base_dir}.')
+    else:
+        return 1
+
+def generate_xinetd_service_file(executable, port, args, output_dir='/etc/xinetd.d'):
+    """
+    Create a xinetd service file for the given executable, arguments and TCP port.
+    Used with reverse raw, reverse ssh, reverse telnet, and serial tunnelling
+    """
+
+    service_name = f'serialsvc_{port}'
+    filename = os.path.join(output_dir, service_name)
+
+    content = f'''
+service {service_name}
+{{
+    disable         = no
+    socket_type     = stream
+    protocol        = tcp
+    wait            = no
+    user            = root
+    server          = {executable}
+    server_args     = {args}
+    port            = {port}
+    type            = UNLISTED
+    log_on_failure  += USERID
+}}
+'''
+
+    try:
+        with open(filename, 'w') as f:
+            f.write(content)
+            return 1
+        print(f'Service file written to: {filename}')
+    except Exception as e:
+        print(f'Error writing xinetd service file: {e}')
+
+def group_serial_ports_by_tcp_port_for_rev_raw():
+    """
+    For hunt group
+    Scan /run/serial for ttySx.json files
+    For each file, if 'service' == 'tcp-reverse', group the 'ttySx' part in filename by 'listen_port' value
+    Write output to <listen_port>_tcprvraw files in the same dir with ttySx list
+    """
+
+    base_dir = '/run/serial'
+    
+    removed_rev_list = []
+    for filename in os.listdir(base_dir):
+        if filename.endswith('_tcprvraw'):
+            filepath = os.path.join(base_dir, filename)
+            try:
+                os.remove(filepath)
+                removed_rev_list.append(filename)
+                print(f'Removed: {filepath}')
+            except Exception as e:
+                print(f'Failed to remove {filepath}: {e}')
+    if not removed_rev_list:
+        print(f'No files ending with "_tcprvraw" found in {base_dir}.')
+
+    groups = defaultdict(list)
+
+    for fname in os.listdir(base_dir):
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                print(f'tty port with {path} shows disabled')
+                continue
+            if data.get('service') == 'tcp-reverse':
+                tty = fname[:-5]
+                listen_port = data.get('listen_port')
+                if listen_port:
+                    groups[listen_port].append(tty)
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+    add_to_xinetd = 0
+    for listen_port, ttys in groups.items():
+        if ttys:
+            sorted_ttys = sorted(ttys, key=lambda x: int(x[4:])) # sort ttyS names by their numeric suffix
+            out_file = os.path.join(base_dir, f'{listen_port}_tcprvraw')
+            try:
+                with open(out_file, 'w') as f:
+                    f.write(', '.join(sorted_ttys) + '\n')
+                add_to_xinetd = generate_xinetd_service_file('/usr/bin/iol_revraw_pmgr', listen_port, listen_port)
+            except Exception as e:
+                print(f'Error writing to {out_file}: {e}')
+
+    return add_to_xinetd
+
 def apply(proxy):
+
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
+            remove_files_with_prefix('/run/serial', device)
             kill_pid_file(device)
 
     if 'serial_restart' in proxy:
         for device in proxy['serial_restart']:
             kill_pid_file(device)
+
+    add_to_xinted = 0
+    remove_from_xinetd = 0
+
+    remove_from_xinetd = remove_files_with_prefix('/etc/xinetd.d', 'serialsvc_')
+    add_to_xinted = group_serial_ports_by_tcp_port_for_rev_raw()
 
     if 'device' in proxy:
         ret = 0
@@ -325,9 +441,14 @@ def apply(proxy):
                     write_string_to_file(file_path, 'iol_udpd')
                     ret = os.system(f'setsid iol_udpd {ttynum} &')
                     print(f'iol_udpd ret {ret}')
+                elif 'tcp-reverse' in serial_config['service']:
+                    write_string_to_file(file_path, '')
+                    print(f'running tcp-reverse on {device}')
             else:
                 kill_pid_file(device)
 
+    if add_to_xinted or remove_from_xinetd:
+        cmd('systemctl restart xinetd')
     return None
 
 if __name__ == '__main__':
