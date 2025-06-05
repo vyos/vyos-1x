@@ -32,10 +32,10 @@
       <properties>
         <help>Data bits</help>
         <completionHelp>
-          <list>5 6 7 8</list>
+          <list>7 8</list>
         </completionHelp>
         <constraint>
-          <regex>(5|6|7|8)</regex>
+          <regex>(7|8)</regex>
         </constraint>
       </properties>
       <defaultValue>8</defaultValue>
