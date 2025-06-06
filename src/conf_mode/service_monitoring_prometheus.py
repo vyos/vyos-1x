@@ -64,18 +64,29 @@ def get_config(config=None):
                 with_recursive_defaults=True,
             )
 
-    tmp = is_node_changed(conf, base + ['node-exporter', 'vrf'])
-    if tmp:
+    # mark to stop services if they are removed
+    if not monitoring or 'node_exporter' not in monitoring:
+        if os.path.isfile(node_exporter_service_file):
+            monitoring.update({'node_exporter_stop_required': {}})
+
+    if not monitoring or 'frr_exporter' not in monitoring:
+        if os.path.isfile(frr_exporter_service_file):
+            monitoring.update({'frr_exporter_stop_required': {}})
+
+    if not monitoring or 'blackbox_exporter' not in monitoring:
+        if os.path.isfile(blackbox_exporter_service_file):
+            monitoring.update({'blackbox_exporter_stop_required': {}})
+
+    # mark to restart services if changed
+    if is_node_changed(conf, base + ['node-exporter', 'vrf']):
         monitoring.update({'node_exporter_restart_required': {}})
 
-    tmp = is_node_changed(conf, base + ['frr-exporter', 'vrf'])
-    if tmp:
+    if is_node_changed(conf, base + ['frr-exporter', 'vrf']):
         monitoring.update({'frr_exporter_restart_required': {}})
 
-    tmp = False
-    for node in ['vrf', 'config-file']:
-        tmp = tmp or is_node_changed(conf, base + ['blackbox-exporter', node])
-    if tmp:
+    if is_node_changed(conf, base + ['blackbox-exporter', 'vrf']) or is_node_changed(
+        conf, base + ['blackbox-exporter', 'conf-file']
+    ):
         monitoring.update({'blackbox_exporter_restart_required': {}})
 
     return monitoring
@@ -115,16 +126,19 @@ def generate(monitoring):
         # Delete systemd files
         if os.path.isfile(node_exporter_service_file):
             os.unlink(node_exporter_service_file)
+            monitoring.update({'node_exporter_stop_required': {}})
 
     if not monitoring or 'frr_exporter' not in monitoring:
         # Delete systemd files
         if os.path.isfile(frr_exporter_service_file):
             os.unlink(frr_exporter_service_file)
+            monitoring.update({'frr_exporter_stop_required': {}})
 
     if not monitoring or 'blackbox_exporter' not in monitoring:
         # Delete systemd files
         if os.path.isfile(blackbox_exporter_service_file):
             os.unlink(blackbox_exporter_service_file)
+            monitoring.update({'blackbox_exporter_stop_required': {}})
 
     if not monitoring:
         return None
@@ -173,11 +187,14 @@ def apply(monitoring):
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
     if not monitoring or 'node_exporter' not in monitoring:
-        call(f'systemctl stop {node_exporter_systemd_service}')
+        if 'node_exporter_stop_required' in monitoring:
+            call(f'systemctl stop {node_exporter_systemd_service}')
     if not monitoring or 'frr_exporter' not in monitoring:
-        call(f'systemctl stop {frr_exporter_systemd_service}')
+        if 'frr_exporter_stop_required' in monitoring:
+            call(f'systemctl stop {frr_exporter_systemd_service}')
     if not monitoring or 'blackbox_exporter' not in monitoring:
-        call(f'systemctl stop {blackbox_exporter_systemd_service}')
+        if 'blackbox_exporter_stop_required' in monitoring:
+            call(f'systemctl stop {blackbox_exporter_systemd_service}')
 
     if not monitoring:
         return
