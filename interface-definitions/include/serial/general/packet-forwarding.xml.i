@@ -64,6 +64,9 @@
           <format>txt</format>
           <description>Start of frame first char</description>
         </valueHelp>
+        <constraint>
+          <validator name="hex"/>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="end-of-frame-value1">
@@ -73,6 +76,9 @@
           <format>txt</format>
           <description>End of frame first char</description>
         </valueHelp>
+        <constraint>
+          <validator name="hex"/>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="start-of-frame-value2">
@@ -82,6 +88,9 @@
           <format>txt</format>
           <description>Start of frame second char</description>
         </valueHelp>
+        <constraint>
+          <validator name="hex"/>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="end-of-frame-value2">
@@ -91,11 +100,14 @@
           <format>txt</format>
           <description>End of frame second char</description>
         </valueHelp>
+        <constraint>
+          <validator name="hex"/>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="start-frame-transmit">
       <properties>
-        <help>Transmit Start of Frame Character(s)</help>
+        <help>Enable transmit Start of Frame Character(s)</help>
         <valueless/>
       </properties>
     </leafNode>
@@ -142,6 +154,9 @@
           <format>txt</format>
           <description>End trigger 1 char</description>
         </valueHelp>
+        <constraint>
+          <validator name="hex"/>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="end-trigger-value2">
@@ -151,6 +166,9 @@
           <format>txt</format>
           <description>End trigger 2 char</description>
         </valueHelp>
+        <constraint>
+          <validator name="hex"/>
+        </constraint>
       </properties>
     </leafNode>
   </children>
