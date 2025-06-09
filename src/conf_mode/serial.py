@@ -197,7 +197,7 @@ def get_config(config=None):
                         vmodem_style = port_config['service_setting']['vmodem'].get('send_connect_status', '')
                         if vmodem_style == 'disable':
                             set_nested(port_config, ['service_setting', 'vmodem', 'suppress'], '1')
-                
+
                 # udp
                 if 'udp' in service:
                     if 'entry' in port_config['service_setting']['udp']:
@@ -216,7 +216,7 @@ def get_config(config=None):
                         port_config['service_setting']['modbus']['slave_mapping_list'] = subtract_from_key(port_config['service_setting']['modbus']['slave_mapping_list'])
                         for key, value in port_config['service_setting']['modbus']['slave_mapping_list'].items():
                             if 'uid_range' in value:
-                                uid_start, uid_end = map(int, s.split('-'))
+                                uid_start, uid_end = map(int, port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_range'].split('-'))
                                 port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_start'] = uid_start
                                 port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_end'] = uid_end
 
@@ -341,7 +341,7 @@ def group_serial_ports_by_tcp_port_for_rev_raw():
     """
 
     base_dir = '/run/serial'
-    
+
     removed_rev_list = []
     for filename in os.listdir(base_dir):
         if filename.endswith('_tcprvraw'):
