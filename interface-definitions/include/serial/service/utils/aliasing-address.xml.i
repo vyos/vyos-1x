@@ -13,7 +13,6 @@
     <constraint>
       <validator name="ip-address"/>
     </constraint>
-    <multi/>
   </properties>
 </leafNode>
 <!-- include end -->

@@ -97,7 +97,6 @@
             <constraint>
               <validator name="ip-address"/>
             </constraint>
-            <multi/>
           </properties>
         </leafNode>
         <leafNode name="uid-range">
