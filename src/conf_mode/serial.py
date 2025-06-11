@@ -498,7 +498,12 @@ def apply(proxy):
                     print(f'data-logging monitor ret {ret}')
                 elif 'vmodem' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_vmodem')
-                    ret = os.system(f'setsid iol_monitor {ttynum} &')
+                    vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
+                    if vmodem_mode == 'manual':
+                        listen_port = serial_config['listen_port']
+                        ret = os.system(f'setsid iol_monitor {ttynum} {listen_port} &')
+                    else:
+                        ret = os.system(f'setsid iol_monitor {ttynum} &')
                     print(f'vmodem monitor ret {ret}')
                 elif 'udp' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_udpd')
