@@ -57,8 +57,11 @@ def replace_empty_dicts(d):
         for item in d:
             replace_empty_dicts(item)
 
-def kill_pid_file(tty):
-    pid_suffix = f'{tty}.pid'
+def kill_pid_file(tty, is_modbus):
+    if is_modbus:
+        pid_suffix = f'smodbusd.pid'
+    else:
+        pid_suffix = f'{tty}.pid'
     base_dir = '/run/serial'
 
     try:
@@ -139,6 +142,13 @@ def get_config(config=None):
                                      no_tag_node_value_mangle=True,
                                      get_first_key=True,
                                      with_recursive_defaults=True)
+    # if 'global' in proxy:
+    tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
+    print(f'is modbus gateway changed {tmp}')
+    if tmp:
+        if 'ip_aliasing' not in proxy['global']['modbus_gateway']:
+            print('should restart smodbusd_restart')
+            proxy['smodbusd_restart'] = '1'
 
     for device in proxy.get('device', []):
         # Want to restart serial if its config changed
@@ -297,7 +307,7 @@ def stop_services_and_remove_files_with_prefix(base_dir, prefix, stop):
             except Exception as e:
                 print(f'Failed to remove {filepath}: {e}')
     if not filelist:
-        print(f'No files staring with "{prefix}" found in {base_dir}.')
+        print(f'No files starting with "{prefix}" found in {base_dir}.')
     else:
         return 1
 
@@ -450,16 +460,78 @@ def group_serial_ports_by_tcp_port_for_rev_raw():
 
     return add_to_systemd
 
+def check_any_running_service_modbus():
+    """
+    For smodbusd
+    Scan /run/serial for ttySx.json files
+    If found a config file which has 'service' == 'modbus-y'
+    return x
+    """
+
+    base_dir = '/run/serial'
+
+    for fname in os.listdir(base_dir):
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                print(f'tty port with {path} shows disabled')
+                continue
+            if 'modbus' in data.get('service'):
+                return re.findall(r'\d+', fname)[0]
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+def is_pid_running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+def restart_smodbusd(tty):
+    print(f'Restarting service iol_smodbusd...')
+    ret = os.system(f'setsid iol_smodbusd -P {tty} &')
+    print(f'iol_smodbusd ret {ret}')
+
 def apply(proxy):
+    if not proxy:
+        return None
 
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
             stop_services_and_remove_files_with_prefix('/run/serial', device, False)
-            kill_pid_file(device)
+            kill_pid_file(device, 0)
 
     if 'serial_restart' in proxy:
         for device in proxy['serial_restart']:
-            kill_pid_file(device)
+            kill_pid_file(device, 0)
+
+    if 'smodbusd_restart' in proxy:
+        kill_pid_file('', 1)
+
+    tty = check_any_running_service_modbus()
+    if (tty):
+        smodbusd_pid_file = '/run/serial/smodbusd.pid'
+        if os.path.exists(smodbusd_pid_file):
+            try:
+                with open(smodbusd_pid_file, 'r') as f:
+                    pid = int(f.read().strip())
+                if not is_pid_running(pid):
+                    print(f'iol_smodbusd pid {pid} not running.')
+                    restart_smodbusd(tty)
+                else:
+                    print(f'iol_smodbusd pid {pid} is running.')
+            except Exception as e:
+                print(f'Error reading iol_smodbusd pid or checking status: {e}')
+                restart_smodbusd(tty)
+        else:
+            print(f'iol_smodbusd pid file {smodbusd_pid_file} not found.')
+            restart_smodbusd(tty)
 
     add_to_systemd = 0
     remove_from_systemd = 0
@@ -518,10 +590,10 @@ def apply(proxy):
                     print(f'iol_mmodbusp ret {ret}')
                 elif 'modbus-slave' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_smodbusp')
-                    ret = os.system(f'setsid iol_smodbusp -p {ttynum} &')
+                    ret = os.system(f'setsid iol_smodbusp -P {ttynum} &')
                     print(f'iol_smodbusp ret {ret}')
             else:
-                kill_pid_file(device)
+                kill_pid_file(device, 0)
 
     return None
 
