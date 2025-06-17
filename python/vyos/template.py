@@ -850,8 +850,24 @@ def kea_high_availability_json(config):
         peer1_role = 'standby' if ha_mode == 'hot-standby' else 'secondary'
         peer2_role = 'primary'
 
+    # FIX: Use config['name'] for this server instead of hostname
+    this_server_name = config['name']
+
+    # FIX: Derive remote peer name to avoid duplicates
+    if this_server_name == 'backup':
+        remote_peer_name = 'main'
+    elif this_server_name == 'main':
+        remote_peer_name = 'backup'
+    elif this_server_name == 'secondary':
+        remote_peer_name = 'primary'
+    elif this_server_name == 'primary':
+        remote_peer_name = 'secondary'
+    else:
+        # Fallback: append suffix to differentiate
+        remote_peer_name = f"{this_server_name}-peer"
+
     data = {
-        'this-server-name': os.uname()[1],
+        'this-server-name': this_server_name,
         'mode': ha_mode,
         'heartbeat-delay': 10000,
         'max-response-delay': 10000,
@@ -859,13 +875,13 @@ def kea_high_availability_json(config):
         'max-unacked-clients': 0,
         'peers': [
         {
-            'name': os.uname()[1],
+            'name': this_server_name,
             'url': f'http://{source_addr}:647/',
             'role': peer1_role,
             'auto-failover': True
         },
         {
-            'name': config['name'],
+            'name': remote_peer_name,
             'url': f'http://{remote_addr}:647/',
             'role': peer2_role,
             'auto-failover': True
