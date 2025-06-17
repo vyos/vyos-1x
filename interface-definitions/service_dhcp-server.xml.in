@@ -45,7 +45,7 @@
               </leafNode>
               <leafNode name="remote">
                 <properties>
-                  <help>IPv4 remote address used for connectio</help>
+                  <help>IPv4 remote address used for connection</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 address of failover peer</description>
