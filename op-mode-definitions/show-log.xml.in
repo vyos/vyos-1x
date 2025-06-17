@@ -30,7 +30,7 @@
             <properties>
               <help>Show contents of all master log files</help>
             </properties>
-            <command>sudo bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
+            <command>bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
           </leafNode>
           <leafNode name="authorization">
             <properties>
@@ -42,7 +42,7 @@
             <properties>
               <help>Show log for certbot</help>
             </properties>
-            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+            <command>if test -f /var/log/letsencrypt/letsencrypt.log; then cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>

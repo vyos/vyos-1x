@@ -6,7 +6,7 @@
         <properties>
           <help>Restart IPv6 Router Advertisement service</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name router_advert</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name router_advert</command>
       </node>
     </children>
   </node>

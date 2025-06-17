@@ -143,5 +143,23 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=3', self._config_data)
             self.assertTrue(tmp)
 
+    def test_inotify_stackfs(self):
+        for option in ['CONFIG_INOTIFY_USER', 'CONFIG_INOTIFY_STACKFS']:
+            tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_wwan(self):
+        for option in ['CONFIG_USB_NET_DRIVERS', 'CONFIG_USB_USBNET',
+                       'CONFIG_USB_NET_CDCETHER', 'CONFIG_USB_NET_HUAWEI_CDC_NCM',
+                       'CONFIG_USB_NET_CDC_MBIM', 'CONFIG_USB_NET_QMI_WWAN',
+                       'CONFIG_USB_SIERRA_NET', 'CONFIG_WWAN',
+                       'CONFIG_USB_SERIAL', 'CONFIG_USB_SERIAL_WWAN']:
+            tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
+        for option in ['CONFIG_WWAN_HWSIM', 'CONFIG_IOSM', 'CONFIG_MTK_T7XX']:
+            tmp = re.findall(f'{option}=m', self._config_data)
+            self.assertTrue(tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

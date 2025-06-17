@@ -14,7 +14,7 @@
                 <path>netns name</path>
               </completionHelp>
             </properties>
-            <command>sudo ip netns exec $4 su - $(whoami)</command>
+            <command>ip netns exec $4 su - $(whoami)</command>
           </tagNode>
           <tagNode name="vrf">
             <properties>
@@ -23,7 +23,7 @@
                 <path>vrf name</path>
               </completionHelp>
             </properties>
-            <command>sudo ip vrf exec $4 su - $(whoami)</command>
+            <command>ip vrf exec $4 su - $(whoami)</command>
           </tagNode>
         </children>
       </node>

@@ -543,6 +543,21 @@ def get_frrender_dict(conf, argv=None) -> dict:
             elif conf.exists_effective(ospfv3_vrf_path):
                 vrf['name'][vrf_name]['protocols'].update({'ospfv3' : {'deleted' : ''}})
 
+            # We need to check the CLI if the RPKI node is present and thus load in all the default
+            # values present on the CLI - that's why we have if conf.exists()
+            rpki_vrf_path = ['vrf', 'name', vrf_name, 'protocols', 'rpki']
+            if 'rpki' in vrf_config.get('protocols', []):
+                rpki = conf.get_config_dict(rpki_vrf_path, key_mangling=('-', '_'), get_first_key=True,
+                                            with_pki=True, with_recursive_defaults=True)
+                rpki_ssh_key_base = '/run/frr/id_rpki'
+                for cache, cache_config in rpki.get('cache',{}).items():
+                    if 'ssh' in cache_config:
+                        cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
+                        cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
+                vrf['name'][vrf_name]['protocols'].update({'rpki' : rpki})
+            elif conf.exists_effective(rpki_vrf_path):
+                vrf['name'][vrf_name]['protocols'].update({'rpki' : {'deleted' : ''}})
+
             # We need to check the CLI if the static node is present and thus load in all the default
             # values present on the CLI - that's why we have if conf.exists()
             static_vrf_path = ['vrf', 'name', vrf_name, 'protocols', 'static']
@@ -675,7 +690,7 @@ class FRRender:
                 output += render_to_string('frr/ripngd.frr.j2', config_dict['ripng'])
                 output += '\n'
             if 'rpki' in config_dict and 'deleted' not in config_dict['rpki']:
-                output += render_to_string('frr/rpki.frr.j2', config_dict['rpki'])
+                output += render_to_string('frr/rpki.frr.j2', {'rpki': config_dict['rpki']})
                 output += '\n'
             if 'segment_routing' in config_dict and 'deleted' not in config_dict['segment_routing']:
                 output += render_to_string('frr/zebra.segment_routing.frr.j2', config_dict['segment_routing'])

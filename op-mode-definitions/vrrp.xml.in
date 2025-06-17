@@ -11,13 +11,13 @@
             <properties>
               <help>Show VRRP statistics</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/vrrp.py show_statistics --group-name="$3"</command>
+            <command>${vyos_op_scripts_dir}/vrrp.py show_statistics --group-name="$3"</command>
           </node>
           <node name="detail">
             <properties>
               <help>Show detailed VRRP state information</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/vrrp.py show_detail --group-name="$3"</command>
+            <command>${vyos_op_scripts_dir}/vrrp.py show_detail --group-name="$3"</command>
           </node>
         </children>
       </tagNode>
@@ -25,19 +25,19 @@
         <properties>
           <help>Show VRRP (Virtual Router Redundancy Protocol) information</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/vrrp.py show_summary</command>
+        <command>${vyos_op_scripts_dir}/vrrp.py show_summary</command>
         <children>
           <node name="statistics">
             <properties>
               <help>Show VRRP statistics</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/vrrp.py show_statistics</command>
+            <command>${vyos_op_scripts_dir}/vrrp.py show_statistics</command>
           </node>
           <node name="detail">
             <properties>
               <help>Show detailed VRRP state information</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/vrrp.py show_detail</command>
+            <command>${vyos_op_scripts_dir}/vrrp.py show_detail</command>
           </node>
         </children>
       </node>
@@ -49,7 +49,7 @@
         <properties>
           <help>Restart VRRP (Virtual Router Redundancy Protocol) process</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name vrrp</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name vrrp</command>
       </node>
     </children>
   </node>

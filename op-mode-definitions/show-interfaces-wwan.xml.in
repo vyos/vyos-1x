@@ -18,55 +18,55 @@
                 <properties>
                   <help>Show WWAN module capabilities</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --capabilities</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --capabilities</command>
               </leafNode>
               <leafNode name="firmware">
                 <properties>
                   <help>Show WWAN module firmware</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --firmware</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --firmware</command>
               </leafNode>
               <leafNode name="imei">
                 <properties>
                   <help>Show WWAN module IMEI/ESN/MEID</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imei</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imei</command>
               </leafNode>
               <leafNode name="imsi">
                 <properties>
                   <help>Show WWAN module IMSI</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imsi</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imsi</command>
               </leafNode>
               <leafNode name="model">
                 <properties>
                   <help>Show WWAN module manufacturer</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --model</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --model</command>
               </leafNode>
               <leafNode name="msisdn">
                 <properties>
                   <help>Show WWAN module MSISDN</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --msisdn</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --msisdn</command>
               </leafNode>
               <leafNode name="revision">
                 <properties>
                   <help>Show WWAN module revision</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --revision</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --revision</command>
               </leafNode>
               <leafNode name="signal">
                 <properties>
                   <help>Show WWAN module RF signal info</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --signal</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --signal</command>
               </leafNode>
               <leafNode name="sim">
                 <properties>
                   <help>Show WWAN module connected SIM card information</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --sim</command>
+                <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --sim</command>
               </leafNode>
               <leafNode name="detail">
                 <properties>

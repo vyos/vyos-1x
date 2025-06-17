@@ -19,7 +19,7 @@
                 <properties>
                   <help>Station (MAC) address to wake up</help>
                 </properties>
-                <command>sudo /usr/sbin/etherwake -i "$4" "$6"</command>
+                <command>/usr/sbin/etherwake -i "$4" "$6"</command>
               </tagNode>
             </children>
             </tagNode>

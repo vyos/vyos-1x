@@ -88,7 +88,7 @@
             <properties>
               <help>Show IPv6 policy chain</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show_all --ipv6</command>
+            <command>${vyos_op_scripts_dir}/policy_route.py --action show_all --ipv6</command>
           </node>
           <tagNode name="route6">
             <properties>
@@ -105,16 +105,16 @@
                     <path>policy route6 ${COMP_WORDS[4]} rule</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6 --ipv6</command>
+                <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6 --ipv6</command>
               </tagNode>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --ipv6</command>
+            <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --ipv6</command>
           </tagNode>
           <node name="route">
             <properties>
               <help>Show IPv4 policy chain</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show_all</command>
+            <command>${vyos_op_scripts_dir}/policy_route.py --action show_all</command>
           </node>
           <tagNode name="route">
             <properties>
@@ -131,10 +131,10 @@
                     <path>policy route ${COMP_WORDS[4]} rule</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6</command>
+                <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6</command>
               </tagNode>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4</command>
+            <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4</command>
           </tagNode>
         </children>
       </node>

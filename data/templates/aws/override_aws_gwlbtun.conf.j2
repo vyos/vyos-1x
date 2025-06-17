@@ -30,7 +30,7 @@ After=vyos-router.service
 
 [Service]
 EnvironmentFile=
-ExecStart=/usr/bin/gwlbtun {{ args | join(' ') }}
-CapabilityBoundingSet=CAP_NET_ADMIN
+ExecStart=/usr/sbin/gwlbtun {{ args | join(' ') }}
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
 Restart=always
 RestartSec=10
