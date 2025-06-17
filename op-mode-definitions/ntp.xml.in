@@ -6,25 +6,25 @@
         <properties>
           <help>Show peer status of NTP daemon</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/ntp.py show_sourcestats</command>
+        <command>${vyos_op_scripts_dir}/ntp.py show_sourcestats</command>
         <children>
           <node name="activity">
             <properties>
               <help>Report the number of servers and peers that are online and offline</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/ntp.py show_activity</command>
+            <command>${vyos_op_scripts_dir}/ntp.py show_activity</command>
           </node>
           <node name="sources">
             <properties>
               <help>Show information about the current time sources being accessed</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/ntp.py show_sources</command>
+            <command>${vyos_op_scripts_dir}/ntp.py show_sources</command>
           </node>
           <node name="system">
             <properties>
               <help>Show parameters about the system clock performance</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/ntp.py show_tracking</command>
+            <command>${vyos_op_scripts_dir}/ntp.py show_tracking</command>
           </node>
         </children>
       </node>
@@ -49,10 +49,10 @@
                     <path>vrf name</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ip vrf exec $5 chronyc makestep</command>
+                <command>ip vrf exec $5 chronyc makestep</command>
               </tagNode>
             </children>
-            <command>sudo chronyc makestep</command>
+            <command>chronyc makestep</command>
           </node>
         </children>
       </node>

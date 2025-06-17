@@ -26,7 +26,7 @@
                     <path>interfaces sstpc</path>
                   </completionHelp>
                 </properties>
-                <command>if [ -d "/sys/class/net/$4" ]; then /usr/sbin/pppstats "$4"; fi</command>
+                <command>${vyos_op_scripts_dir}/show_ppp_stats.sh "$4"</command>
               </leafNode>
               #include <include/show-interface-type-event-log.xml.i>
             </children>

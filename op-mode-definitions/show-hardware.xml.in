@@ -31,7 +31,7 @@
             <properties>
               <help>Show system DMI details</help>
             </properties>
-            <command>sudo dmidecode</command>
+            <command>dmidecode</command>
           </node>
           <node name="mem">
             <properties>
@@ -62,7 +62,7 @@
                 <properties>
                   <help>Show NVMe device information</help>
                 </properties>
-                <command>sudo nvme list</command>
+                <command>nvme list</command>
               </leafNode>
               <node name="scsi">
                 <properties>
@@ -85,7 +85,7 @@
                     <script>ls /dev | egrep '([hsv]d[a-z]|nvme[0-9]+n[0-9])$'</script>
                   </completionHelp>
                 </properties>
-                <command>sudo smartctl -a "/dev/$5" | sed 1,3d</command>
+                <command>smartctl -a "/dev/$5" | sed 1,3d</command>
               </tagNode>
             </children>
           </node>

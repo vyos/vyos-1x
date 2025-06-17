@@ -101,3 +101,30 @@ def release_commit_lock_file(file_descr):
         return
     fcntl.lockf(file_descr, fcntl.LOCK_UN)
     file_descr.close()
+
+
+def call_commit_hooks(which: str):
+    import re
+    import os
+    from pathlib import Path
+    from vyos.defaults import commit_hooks
+    from vyos.utils.process import rc_cmd
+
+    if which not in list(commit_hooks):
+        raise ValueError(f'no entry {which} in commit_hooks')
+
+    hook_dir = commit_hooks[which]
+    file_list = list(Path(hook_dir).glob('*'))
+    regex = re.compile('^[a-zA-Z0-9._-]+$')
+    hook_list = sorted([str(f) for f in file_list if regex.match(f.name)])
+    err = False
+    out = ''
+    for runf in hook_list:
+        try:
+            e, o = rc_cmd(runf)
+        except FileNotFoundError:
+            continue
+        err = err | bool(e)
+        out = out + o
+
+    return out, int(err)

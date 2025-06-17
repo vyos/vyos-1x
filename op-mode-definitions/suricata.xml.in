@@ -6,7 +6,7 @@
         <properties>
           <help>Update Suricata</help>
         </properties>
-        <command>if test -f /run/suricata/suricata.yaml; then sudo suricata-update --suricata-conf /run/suricata/suricata.yaml; sudo systemctl restart suricata; else echo "Service Suricata not configured"; fi </command>
+        <command>${vyos_op_scripts_dir}/update_suricata.sh</command>
       </node>
     </children>
   </node>
@@ -16,7 +16,7 @@
         <properties>
           <help>Restart Suricata service</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name suricata</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name suricata</command>
       </node>
     </children>
   </node>

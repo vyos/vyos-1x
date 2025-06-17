@@ -17,7 +17,7 @@
                 <properties>
                   <help>Show consolidated tech-support report in JSON</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/tech_support.py show --raw</command>
+                <command>${vyos_op_scripts_dir}/tech_support.py show --raw</command>
               </node>
             </children>
           </node>

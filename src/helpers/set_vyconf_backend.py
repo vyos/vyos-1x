@@ -19,10 +19,14 @@
 # N.B. only for use within testing framework; explicit invocation will leave
 # system in inconsistent state.
 
+import os
+import sys
 from argparse import ArgumentParser
 
 from vyos.utils.backend import set_vyconf_backend
 
+if os.getuid() != 0:
+    sys.exit('Requires root privileges')
 
 parser = ArgumentParser()
 parser.add_argument('--disable', action='store_true',

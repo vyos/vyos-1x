@@ -29,6 +29,7 @@ from vyos.utils.session import in_config_session
 from vyos.proto.vyconf_proto import Errnum
 from vyos.utils.commit import acquire_commit_lock_file
 from vyos.utils.commit import release_commit_lock_file
+from vyos.utils.commit import call_commit_hooks
 
 
 class VyconfSessionError(Exception):
@@ -145,10 +146,14 @@ class VyconfSession:
         if lock_fd is None:
             return out, Errnum.COMMIT_IN_PROGRESS
 
+        pre_out, _ = call_commit_hooks('pre')
         out = vyconf_client.send_request('commit', token=self.__token)
+        os.environ['COMMIT_STATUS'] = 'FAILURE' if out.status else 'SUCCESS'
+        post_out, _ = call_commit_hooks('post')
+
         release_commit_lock_file(lock_fd)
 
-        return self.output(out), out.status
+        return pre_out + self.output(out) + post_out, out.status
 
     @raise_exception
     @config_mode

@@ -17,7 +17,7 @@
                 <list>/path/to/vyos-image.iso "http://example.com/vyos-image.iso" latest</list>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}"</command>
+            <command>${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}"</command>
             <children>
               <tagNode name="vrf">
                 <properties>
@@ -26,7 +26,7 @@
                     <path>vrf name</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --vrf "${6}"</command>
+                <command>${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --vrf "${6}"</command>
                 <children>
                   <tagNode name="username">
                     <properties>
@@ -37,7 +37,7 @@
                         <properties>
                           <help>Password to use with authentication</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --vrf "${6}" --username "${8}" --password "${10}"</command>
+                        <command>${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --vrf "${6}" --username "${8}" --password "${10}"</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -52,7 +52,7 @@
                     <properties>
                       <help>Password to use with authentication</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --username "${6}" --password "${8}"</command>
+                    <command>${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --username "${6}" --password "${8}"</command>
                   </tagNode>
                 </children>
               </tagNode>
@@ -76,10 +76,10 @@
             <properties>
               <help>Set system console type at boot</help>
               <completionHelp>
-                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list_console_types</script>
+                <script>${vyos_op_scripts_dir}/image_manager.py --action list_console_types</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set_console_type --console-type "${4}"</command>
+            <command>${vyos_op_scripts_dir}/image_manager.py --action set_console_type --console-type "${4}"</command>
           </tagNode>
           <node name="image">
             <properties>
@@ -90,16 +90,16 @@
                 <properties>
                   <help>Set default image to boot.</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set</command>
+                <command>${vyos_op_scripts_dir}/image_manager.py --action set</command>
               </node>
               <tagNode name="default-boot">
                 <properties>
                   <help>Set default image to boot.</help>
                   <completionHelp>
-                    <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+                    <script>${vyos_op_scripts_dir}/image_manager.py --action list</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set --image-name "${5}"</command>
+                <command>${vyos_op_scripts_dir}/image_manager.py --action set --image-name "${5}"</command>
               </tagNode>
             </children>
           </node>
@@ -116,7 +116,7 @@
         <properties>
           <help>Install new system image to hard drive</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action install</command>
+        <command>${vyos_op_scripts_dir}/image_installer.py --action install</command>
       </node>
     </children>
   </node>
@@ -134,16 +134,16 @@
             <properties>
               <help>Remove an installed image from the system</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete</command>
+            <command>${vyos_op_scripts_dir}/image_manager.py --action delete</command>
           </node>
           <tagNode name="image">
             <properties>
               <help>Remove an installed image from the system</help>
               <completionHelp>
-                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+                <script>${vyos_op_scripts_dir}/image_manager.py --action list</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image-name "${4}"</command>
+            <command>${vyos_op_scripts_dir}/image_manager.py --action delete --image-name "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -163,7 +163,7 @@
             <properties>
               <help>System image to rename</help>
               <completionHelp>
-                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+                <script>${vyos_op_scripts_dir}/image_manager.py --action list</script>
               </completionHelp>
             </properties>
             <children>
@@ -171,7 +171,7 @@
                 <properties>
                   <help>A new name for an image</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action rename --image-name "${4}" --image-new-name "${6}"</command>
+                <command>${vyos_op_scripts_dir}/image_manager.py --action rename --image-name "${4}" --image-new-name "${6}"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -199,7 +199,7 @@
                 <properties>
                   <help>Show details about installed VyOS images</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_info.py show_images_details</command>
+                <command>${vyos_op_scripts_dir}/image_info.py show_images_details</command>
               </node>
             </children>
           </node>

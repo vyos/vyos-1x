@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <tagNode name="connection">
+        <properties>
+          <help>Bring connection-oriented network interface down and up</help>
+          <completionHelp>
+            <path>interfaces pppoe</path>
+            <path>interfaces sstpc</path>
+            <path>interfaces wwan</path>
+          </completionHelp>
+        </properties>
+        <command>${vyos_op_scripts_dir}/connect_disconnect.py --connect --disconnect --interface "$3"</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

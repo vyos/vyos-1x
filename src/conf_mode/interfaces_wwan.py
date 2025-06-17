@@ -29,6 +29,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.dict import dict_search
+from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import DEVNULL
@@ -137,7 +138,7 @@ def apply(wwan):
                 break
             sleep(0.250)
 
-    if 'shutdown_required' in wwan:
+    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
         # we only need the modem number. wwan0 -> 0, wwan1 -> 1
         modem = wwan['ifname'].lstrip('wwan')
         base_cmd = f'mmcli --modem {modem}'
@@ -159,7 +160,7 @@ def apply(wwan):
 
         return None
 
-    if 'shutdown_required' in wwan:
+    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
         ip_type = 'ipv4'
         slaac = dict_search('ipv6.address.autoconf', wwan) != None
         if 'address' in wwan:

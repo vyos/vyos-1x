@@ -82,7 +82,7 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%     for area_id, area_config in area.items() %}
 {%         if area_config.area_type is vyos_defined %}
 {%             for type, type_config in area_config.area_type.items() if type != 'normal' %}
- area {{ area_id }} {{ type }} {{ 'no-summary' if type_config.no_summary is vyos_defined }}
+ area {{ area_id }} {{ type }} {{ 'translate-' + type_config.translate if type_config.translate is vyos_defined }} {{ 'no-summary' if type_config.no_summary is vyos_defined }}
 {%                 if type_config.default_cost is vyos_defined %}
  area {{ area_id }} default-cost {{ type_config.default_cost }}
 {%                 endif %}

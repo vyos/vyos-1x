@@ -8,7 +8,7 @@
             <properties>
               <help>Show IP ports in use by various system services</help>
             </properties>
-            <command>sudo /usr/bin/netstat -tulnp</command>
+            <command>/usr/bin/netstat -tulnp</command>
           </leafNode>
         </children>
       </node>

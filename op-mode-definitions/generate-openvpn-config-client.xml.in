@@ -40,10 +40,10 @@
                             <properties>
                               <help>Certificate key used by client</help>
                             </properties>
-                            <command>sudo ${vyos_op_scripts_dir}/generate_ovpn_client_file.py --interface "$5" --ca "$7" --cert "$9" --key "${11}"</command>
+                            <command>${vyos_op_scripts_dir}/generate_ovpn_client_file.py --interface "$5" --ca "$7" --cert "$9" --key "${11}"</command>
                           </tagNode>
                         </children>
-                        <command>sudo ${vyos_op_scripts_dir}/generate_ovpn_client_file.py --interface "$5" --ca "$7" --cert "$9"</command>
+                        <command>${vyos_op_scripts_dir}/generate_ovpn_client_file.py --interface "$5" --ca "$7" --cert "$9"</command>
                       </tagNode>
                     </children>
                   </tagNode>

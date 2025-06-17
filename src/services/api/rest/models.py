@@ -26,6 +26,7 @@ from typing import Self
 
 from pydantic import BaseModel
 from pydantic import StrictStr
+from pydantic import StrictInt
 from pydantic import field_validator
 from pydantic import model_validator
 from fastapi.responses import HTMLResponse
@@ -71,6 +72,8 @@ class BaseConfigureModel(BasePathModel):
 
 
 class ConfigureModel(ApiModel, BaseConfigureModel):
+    confirm_time: StrictInt = 0
+
     class Config:
         json_schema_extra = {
             'example': {
@@ -81,8 +84,12 @@ class ConfigureModel(ApiModel, BaseConfigureModel):
         }
 
 
+class ConfirmModel(ApiModel):
+    op: StrictStr
+
 class ConfigureListModel(ApiModel):
     commands: List[BaseConfigureModel]
+    confirm_time: StrictInt = 0
 
     class Config:
         json_schema_extra = {
@@ -135,12 +142,13 @@ class ConfigFileModel(ApiModel):
     op: StrictStr
     file: StrictStr = None
     string: StrictStr = None
+    confirm_time: StrictInt = 0
 
     class Config:
         json_schema_extra = {
             'example': {
                 'key': 'id_key',
-                'op': 'save | load | merge',
+                'op': 'save | load | merge | confirm',
                 'file': 'filename',
                 'string': 'config_string'
             }

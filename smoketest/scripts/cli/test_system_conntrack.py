@@ -20,7 +20,10 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.firewall import find_nftables_rule
-from vyos.utils.file import read_file, read_json
+from vyos.utils.file import read_file
+from vyos.utils.file import read_json
+from vyos.utils.system import sysctl_read
+from vyos.xml_ref import default_value
 
 base_path = ['system', 'conntrack']
 
@@ -168,8 +171,8 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                     self.assertTrue(find_nftables_rule('ip vyos_conntrack', 'VYOS_CT_HELPER', [rule]) == None)
 
     def test_conntrack_hash_size(self):
-        hash_size = '65536'
-        hash_size_default = '32768'
+        hash_size = '8192'
+        hash_size_default = default_value(base_path + ['hash-size'])
 
         self.cli_set(base_path + ['hash-size', hash_size])
 
@@ -178,7 +181,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         # verify new configuration - only effective after reboot, but
         # a valid config file is sufficient
-        tmp = read_file('/etc/modprobe.d/vyatta_nf_conntrack.conf')
+        tmp = sysctl_read('net.netfilter.nf_conntrack_buckets')
         self.assertIn(hash_size, tmp)
 
         # Test default value by deleting the configuration
@@ -189,7 +192,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         # verify new configuration - only effective after reboot, but
         # a valid config file is sufficient
-        tmp = read_file('/etc/modprobe.d/vyatta_nf_conntrack.conf')
+        tmp = sysctl_read('net.netfilter.nf_conntrack_buckets')
         self.assertIn(hash_size_default, tmp)
 
     def test_conntrack_ignore(self):

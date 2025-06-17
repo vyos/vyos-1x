@@ -24,7 +24,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation --external-address "$6"</command>
+                    <command>${vyos_op_scripts_dir}/cgnat.py show_allocation --external-address "$6"</command>
                   </tagNode>
                   <tagNode name="internal-address">
                     <properties>
@@ -33,10 +33,10 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation --internal-address "$6"</command>
+                    <command>${vyos_op_scripts_dir}/cgnat.py show_allocation --internal-address "$6"</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/cgnat.py show_allocation</command>
+                <command>${vyos_op_scripts_dir}/cgnat.py show_allocation</command>
               </node>
             </children>
           </node>
@@ -49,13 +49,13 @@
                 <properties>
                   <help>Show configured source NAT rules</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet</command>
               </node>
               <node name="statistics">
                 <properties>
                   <help>Show statistics for configured source NAT rules</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/nat.py show_statistics --direction source --family inet</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_statistics --direction source --family inet</command>
               </node>
               <node name="translations">
                 <properties>
@@ -69,10 +69,10 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet --address "$6"</command>
+                    <command>${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet --address "$6"</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet</command>
               </node>
             </children>
           </node>
@@ -85,13 +85,13 @@
                 <properties>
                   <help>Show configured destination NAT rules</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet</command>
               </node>
               <node name="statistics">
                 <properties>
                   <help>Show statistics for configured destination NAT rules</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/nat.py show_statistics --direction destination --family inet</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_statistics --direction destination --family inet</command>
               </node>
               <node name="translations">
                 <properties>
@@ -105,10 +105,10 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet --address "$6"</command>
+                    <command>${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet --address "$6"</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet</command>
               </node>
             </children>
           </node>
