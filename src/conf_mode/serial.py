@@ -27,6 +27,7 @@ from collections import defaultdict
 
 from vyos.config import Config
 from vyos.template import render
+from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos import ConfigError
@@ -34,6 +35,97 @@ from vyos import ConfigError
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 # from vyos.configdiff import get_config_diff, Diff
+
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
+    base = ['serial']
+
+    proxy_no_default = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                     no_tag_node_value_mangle=True,
+                                     get_first_key=True,
+                                     with_recursive_defaults=False)
+
+    proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                     no_tag_node_value_mangle=True,
+                                     get_first_key=True,
+                                     with_recursive_defaults=True)
+
+    tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
+    print(f'is modbus gateway changed {tmp}')
+    if tmp:
+        if 'ip_aliasing' not in proxy['global']['modbus_gateway']:
+            print('should restart smodbusd_restart')
+            proxy.update({'smodbusd_restart': {}})
+            proxy['smodbusd_restart'] = '1'
+
+    for device in proxy.get('device', []):
+        # Want to restart serial if its config changed
+        tmp = is_node_changed(conf, base + ['device', device])
+        print(tmp)
+        if tmp:
+            proxy['serial_restart'] = [device]
+            if 'tls' in proxy_no_default['device'][device]:
+                if 'disable' not in proxy_no_default['device'][device].get('tls', []):
+                    proxy['device'][device]['tls'].update({'enabled': {}})
+
+    # Delete serial port if was deleted from config tree
+    tmp = node_changed(conf, base + ['device'])
+    print(tmp)
+    if tmp: proxy.update({'serial_remove': tmp})
+
+    print('--------------------------------------- Use to validate ------------------------------- \n ')
+    print(proxy)
+    print('\n --------------------------------------- Finish use to validate ------------------------------- \n')
+    return proxy
+
+def verify(proxy):
+    if not proxy:
+        return None
+
+    if 'device' in proxy:
+        for device, device_conf in proxy['device'].items():
+            if dict_search('service', device_conf) == None:
+                raise ConfigError('serial requires service parameter!')
+            service = dict_search('service', device_conf)
+
+            listening_services = ['trueport-client', 'tcp-reverse', 'udp', 'vmodem']
+            if service in listening_services:
+                if dict_search('listen_port', device_conf) == None:
+                    raise ConfigError(f'Service {service} requires listening port parameter!')
+
+            outbound_multihost_service_mapping = {
+                'trueport-server': 'trueport',
+                'tcp-direct': 'direct',
+            }
+            if service in outbound_multihost_service_mapping:
+                service_class = outbound_multihost_service_mapping.get(service)
+                if dict_search('multihost.mode', device_conf['service_setting'][service_class]) == 'all-hosts':
+                    if dict_search('multihost_list.host', device_conf) == None:
+                        raise ConfigError(f'Must config hostname and hostport in multihost-list for multihost mode all-hosts!')
+                    for host_id, host_conf in dict_search('multihost_list.host', device_conf).items():
+                        if (dict_search('name', device_conf['multihost_list']['host'][host_id]) == None
+                            or dict_search('port', device_conf['multihost_list']['host'][host_id]) == None):
+                            raise ConfigError(f'Must config hostname and hostport in multihost-list for host {host_id}!')
+                else:
+                    if (dict_search('main_hostname', device_conf['service_setting'][service_class]) == None
+                        or dict_search('main_hostport', device_conf['service_setting'][service_class]) == None):
+                        raise ConfigError(f'Must config main hostname and hostport for service {service}!')
+                    if dict_search('multihost.mode', device_conf['service_setting'][service_class]) == 'backup-failover':
+                        if (dict_search('multihost.backup_hostname', device_conf['service_setting'][service_class]) == None
+                            or dict_search('multihost.backup_hostport', device_conf['service_setting'][service_class]) == None):
+                            raise ConfigError(f'Must config backup hostname and hostport for multihost mode backup-failover!')
+
+            outbound_service = ['trueport-server', 'tcp-direct']
+            if service in outbound_service:
+                if (dict_search('main_hostname', device_conf['service_setting'][service_class]) == None
+                    or dict_search('main_hostport', device_conf['service_setting'][service_class]) == None):
+                    raise ConfigError(f'Must config hostname and hostport for service {service}!')
+
+
+    return None
 
 def ensure_folder_exists(path):
     if not os.path.exists(path):
@@ -101,66 +193,14 @@ def subtract_from_key(original_items):
         new_items[new_key] = value
     return new_items
 
-def get_values_by_key(data, target_key):
-    results = []
-
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if key == target_key:
-                results.append(value)
-            # Search deeper
-            results.extend(get_values_by_key(value, target_key))
-
-    elif isinstance(data, list):
-        for item in data:
-            results.extend(get_values_by_key(item, target_key))
-
-    return results
-
 def set_nested(d, keys, value):
     for key in keys[:-1]:
         d = d.setdefault(key, {})
     d[keys[-1]] = value
 
-def get_config(config=None):
-    if config:
-        conf = config
-    else:
-        conf = Config()
-    base = ['serial']
-
-    # Retrieve CLI representation as dictionary
-    # proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
-    #                              get_first_key=True)
-
-    proxy_no_default = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     no_tag_node_value_mangle=True,
-                                     get_first_key=True,
-                                     with_recursive_defaults=False)
-
-    proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     no_tag_node_value_mangle=True,
-                                     get_first_key=True,
-                                     with_recursive_defaults=True)
-    # if 'global' in proxy:
-    tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
-    print(f'is modbus gateway changed {tmp}')
-    if tmp:
-        if 'ip_aliasing' not in proxy['global']['modbus_gateway']:
-            print('should restart smodbusd_restart')
-            proxy['smodbusd_restart'] = '1'
-
-    for device in proxy.get('device', []):
-        # Want to restart serial if its config changed
-        tmp = is_node_changed(conf, base + ['device', device])
-        print(tmp)
-        if tmp:
-            proxy['serial_restart'] = [device]
-
-    # Delete serial port if was deleted from config tree
-    tmp = node_changed(conf, base + ['device'])
-    print(tmp)
-    if tmp: proxy.update({'serial_remove': tmp})
+def generate(proxy):
+    if not proxy:
+        return None
 
     if 'device' in proxy:
         for device, serial_config in proxy['device'].items():
@@ -220,6 +260,19 @@ def get_config(config=None):
                                 if port_config['service_setting']['udp']['entry'][key]['udp_port'].isnumeric():
                                     port_config['service_setting']['udp']['entry'][key]['outbound_port'] = port_config['service_setting']['udp']['entry'][key]['udp_port']
 
+                # direct & slient raw
+                if 'tcp-direct' in service:
+                    if 'service_setting' in port_config:
+                        if 'direct' in port_config['service_setting']:
+                            if 'multihost'in port_config['service_setting']['direct']:
+                                multihost_mode = port_config['service_setting']['trueport']['multihost'].get('mode', '')
+                                if 'disable' not in multihost_mode:
+                                    port_config['service'] = 'multihost'
+                                    if 'backup' in multihost_mode:
+                                        set_nested(port_config, ['multihost', 'mode'], 'backup-failover')
+                            if port_config['service'] != 'multihost':
+                                if 'initiate_any_char' in port_config['service_setting']['direct']:
+                                    port_config['raw_option'] = 'initiate_any_char'
                 # modbus
                 if 'modbus' in service:
                     if 'slave_mapping_list' in port_config['service_setting']['modbus']:
@@ -237,10 +290,10 @@ def get_config(config=None):
                 if 'multihost' in port_config:
                     # these 2 keys are manually set, if 'multihost' exists 'mode' should exist
                     if port_config['multihost']['mode'] == 'backup-failover':
-                        set_nested(port_config, ['multihost_list', 'host', '0', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
-                        set_nested(port_config, ['multihost_list', 'host', '0', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
-                        set_nested(port_config, ['multihost_list', 'host', '1', 'name'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostname')[0])
-                        set_nested(port_config, ['multihost_list', 'host', '1', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'backup_hostport')[0])
+                        set_nested(port_config, ['multihost_list', 'host', '0', 'name'], dict_search('main_hostname', port_config['service_setting'][config_service]))
+                        set_nested(port_config, ['multihost_list', 'host', '0', 'port'], dict_search('main_hostport', port_config['service_setting'][config_service]))
+                        set_nested(port_config, ['multihost_list', 'host', '1', 'name'], dict_search('backup_hostname', port_config['service_setting'][config_service]))
+                        set_nested(port_config, ['multihost_list', 'host', '1', 'port'], dict_search('backup_hostport', port_config['service_setting'][config_service]))
 
             # data-logging
             if 'data_logging' in port_config:
@@ -253,16 +306,16 @@ def get_config(config=None):
 
                 port_config['service'] = 'data-logging'
                 if 'outbound' in port_config:
-                    set_nested(port_config, ['datalogging', 'hostname'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostname')[0])
-                    set_nested(port_config, ['datalogging', 'port'], get_values_by_key(port_config['service_setting'][config_service], 'main_hostport')[0])
+                    set_nested(port_config, ['datalogging', 'hostname'], dict_search('main_hostname', port_config['service_setting'][config_service]))
+                    set_nested(port_config, ['datalogging', 'port'], dict_search('main_hostport', port_config['service_setting'][config_service]))
 
             if 'hardware' in port_config:
                 if 'rts_toggle' in port_config['hardware']:
                     port_config['hardware']['rts_toggle']['enabled'] = '1'
 
-            if 'tls' in proxy_no_default['device'][device]:
-                if 'disable' not in proxy_no_default['device'][device].get('tls', []):
-                    port_config['tls']['enabled'] = '1'
+            # if 'tls' in proxy_no_default['device'][device]:
+            #     if 'disable' not in proxy_no_default['device'][device].get('tls', []):
+            #         port_config['tls']['enabled'] = '1'
 
             replace_empty_dicts(port_config)
 
@@ -273,16 +326,6 @@ def get_config(config=None):
 
     print(proxy)
     return proxy
-
-def verify(proxy):
-    if not proxy:
-        return None
-    return None
-
-def generate(proxy):
-    if not proxy:
-        return None
-    return None
 
 def write_string_to_file(filename, content):
     try:
@@ -601,8 +644,8 @@ if __name__ == '__main__':
     try:
         c = get_config()
         verify(c)
-        generate(c)
-        apply(c)
+        modified = generate(c)
+        apply(modified)
     except ConfigError as e:
         print(e)
         exit(1)
