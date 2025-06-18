@@ -57,7 +57,7 @@
         <properties>
           <help>Restart (net)flow accounting process</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/flow_accounting_op.py --action restart</command>
+        <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action restart</command>
       </leafNode>
     </children>
   </node>

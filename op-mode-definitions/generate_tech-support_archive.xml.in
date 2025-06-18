@@ -11,7 +11,7 @@
             <properties>
               <help>Generate tech support archive</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/generate_tech-support_archive.py</command>
+            <command>${vyos_op_scripts_dir}/generate_tech-support_archive.py</command>
           </node>
           <tagNode name="archive">
             <properties>
@@ -20,13 +20,13 @@
                 <list> &lt;file&gt; &lt;scp://user:passwd@host&gt; &lt;ftp://user:passwd@host&gt;</list>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/generate_tech-support_archive.py $4</command>
+            <command>${vyos_op_scripts_dir}/generate_tech-support_archive.py $4</command>
           </tagNode>
           <node name="machine-readable-archive">
             <properties>
               <help>Generate tech support archive</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/tech_support.py show --raw | gzip> $4.json.gz</command>
+            <command>${vyos_op_scripts_dir}/tech_support.py show --raw | gzip> $4.json.gz</command>
           </node>
           <tagNode name="machine-readable-archive">
             <properties>
@@ -35,7 +35,7 @@
                 <list> &lt;file&gt; </list>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/tech_support.py show --raw | gzip > $4.json.gz</command>
+            <command>${vyos_op_scripts_dir}/tech_support.py show --raw | gzip > $4.json.gz</command>
           </tagNode>
         </children>
       </node>

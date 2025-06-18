@@ -111,6 +111,11 @@ def get_config(config=None):
             elif interface.startswith('wlan') and interface_exists(interface):
                 set_dependents('wlan', conf, interface)
 
+            if interface.startswith('vtun'):
+                _, tmp_config = get_interface_dict(conf, ['interfaces', 'openvpn'], interface)
+                tmp = tmp_config.get('device_type') == 'tap'
+                bridge['member']['interface'][interface].update({'valid_ovpn' : tmp})
+
     # delete empty dictionary keys - no need to run code paths if nothing is there to do
     if 'member' in bridge:
         if 'interface' in bridge['member'] and len(bridge['member']['interface']) == 0:
@@ -177,6 +182,9 @@ def verify(bridge):
                 for option in ['allowed_vlan', 'native_vlan']:
                     if option in interface_config:
                         raise ConfigError('Can not use VLAN options on non VLAN aware bridge')
+
+            if interface.startswith('vtun') and not interface_config['valid_ovpn']:
+                raise ConfigError(error_msg + 'OpenVPN device-type must be set to "tap"')
 
     if 'enable_vlan' in bridge:
         if dict_search('vif.1', bridge):

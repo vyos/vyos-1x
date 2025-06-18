@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright (C) 2021-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 from sys import exit
 from sys import argv
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_route_map
@@ -62,6 +63,16 @@ def verify(config_dict):
     if 'area' in ospf:
           networks = []
           for area, area_config in ospf['area'].items():
+              # Implemented as warning to not break existing configurations
+              if area == '0' and dict_search('area_type.nssa', area_config) != None:
+                  Warning('You cannot configure NSSA to backbone!')
+              # Implemented as warning to not break existing configurations
+              if area == '0' and dict_search('area_type.stub', area_config) != None:
+                  Warning('You cannot configure STUB to backbone!')
+              # Implemented as warning to not break existing configurations
+              if len(area_config['area_type']) > 1:
+                  Warning(f'Only one area-type is supported for area "{area}"!')
+
               if 'import_list' in area_config:
                   acl_import = area_config['import_list']
                   if acl_import: verify_access_list(acl_import, ospf)

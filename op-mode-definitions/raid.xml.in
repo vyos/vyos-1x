@@ -19,7 +19,7 @@
                 <properties>
                   <help>Add a member to a RAID set</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/raid.py add --raid-set-name $3 --by-id --member $6</command>
+                <command>${vyos_op_scripts_dir}/raid.py add --raid-set-name $3 --by-id --member $6</command>
               </tagNode>
             </children>
           </node>
@@ -27,7 +27,7 @@
             <properties>
               <help>Add a member to a RAID set</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/raid.py add --raid-set-name $3 --member $5</command>
+            <command>${vyos_op_scripts_dir}/raid.py add --raid-set-name $3 --member $5</command>
           </tagNode>
         </children>
       </tagNode>
@@ -52,7 +52,7 @@
                 <properties>
                   <help>Delete a member from a RAID set</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --by-id --member $6</command>
+                <command>${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --by-id --member $6</command>
               </tagNode>
             </children>
           </node>
@@ -60,7 +60,7 @@
             <properties>
               <help>Delete a member from a RAID set</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --member $5</command>
+            <command>${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --member $5</command>
           </tagNode>
         </children>
       </tagNode>

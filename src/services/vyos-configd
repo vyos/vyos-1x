@@ -68,6 +68,7 @@ class Response(Enum):
     ERROR_COMMIT = 2
     ERROR_DAEMON = 4
     PASS = 8
+    ERROR_COMMIT_APPLY = 16
 
 
 vyos_conf_scripts_dir = directories['conf_mode']
@@ -142,8 +143,6 @@ def run_script(script_name, config, args) -> tuple[Response, str]:
     try:
         c = script.get_config(config)
         script.verify(c)
-        script.generate(c)
-        script.apply(c)
     except ConfigError as e:
         logger.error(e)
         return Response.ERROR_COMMIT, str(e)
@@ -151,6 +150,17 @@ def run_script(script_name, config, args) -> tuple[Response, str]:
         tb = traceback.format_exc()
         logger.error(tb)
         return Response.ERROR_COMMIT, tb
+
+    try:
+        script.generate(c)
+        script.apply(c)
+    except ConfigError as e:
+        logger.error(e)
+        return Response.ERROR_COMMIT_APPLY, str(e)
+    except Exception:
+        tb = traceback.format_exc()
+        logger.error(tb)
+        return Response.ERROR_COMMIT_APPLY, tb
 
     return Response.SUCCESS, ''
 

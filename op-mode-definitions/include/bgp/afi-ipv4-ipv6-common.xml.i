@@ -158,61 +158,14 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
-    <leafNode name="advertised-routes">
-      <properties>
-        <help>Show routes advertised to a BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="dampened-routes">
-      <properties>
-        <help>Show dampened routes received from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="flap-statistics">
-      <properties>
-        <help>Show flap statistics of the routes learned from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="prefix-counts">
-      <properties>
-        <help>Show detailed prefix count information for BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <node name="received">
-      <properties>
-        <help>Show information received from BGP neighbor</help>
-      </properties>
-      <children>
-        <leafNode name="prefix-filter">
-          <properties>
-            <help>Show prefixlist filter</help>
-          </properties>
-          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        </leafNode>
-      </children>
-    </node>
-    <leafNode name="filtered-routes">
-      <properties>
-        <help>Show filtered routes from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="received-routes">
-      <properties>
-        <help>Show received routes from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="routes">
-      <properties>
-        <help>Show routes learned from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/bgp/advertised-routes.xml.i>
+    #include <include/bgp/dampened-routes.xml.i>
+    #include <include/bgp/filtered-routes.xml.i>
+    #include <include/bgp/flap-statistics.xml.i>
+    #include <include/bgp/prefix-counts.xml.i>
+    #include <include/bgp/received.xml.i>
+    #include <include/bgp/received-routes.xml.i>
+    #include <include/bgp/routes.xml.i>
   </children>
 </tagNode>
 <tagNode name="prefix-list">

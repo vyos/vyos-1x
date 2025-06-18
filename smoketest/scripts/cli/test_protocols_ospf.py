@@ -574,5 +574,23 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' network {network} area {area1}', frrconfig)
 
+    def test_ospf_18_area_translate_no_summary(self):
+        area = '11'
+        area_type = 'nssa'
+        network = '100.64.0.0/10'
+
+        self.cli_set(base_path + ['area', area, 'area-type', area_type, 'no-summary'])
+        self.cli_set(base_path + ['area', area, 'area-type', area_type, 'translate', 'never'])
+        self.cli_set(base_path + ['area', area, 'network', network])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf', endsection='^exit')
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' area {area} {area_type} translate-never no-summary', frrconfig)
+        self.assertIn(f' network {network} area {area}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

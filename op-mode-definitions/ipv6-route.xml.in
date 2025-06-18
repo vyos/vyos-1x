@@ -65,7 +65,7 @@
                     <list>&lt;h:h:h:h:h:h:h:h&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo ip -f inet6 neigh flush to "$5"</command>
+                <command>ip -f inet6 neigh flush to "$5"</command>
               </tagNode>
               <tagNode name="interface">
                 <properties>
@@ -74,7 +74,7 @@
                     <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ip -f inet6 neigh flush dev "$5"</command>
+                <command>ip -f inet6 neigh flush dev "$5"</command>
               </tagNode>
             </children>
           </node>
@@ -87,7 +87,7 @@
                 <properties>
                   <help>Flush the kernel IPv6 route cache</help>
                 </properties>
-                <command>sudo ip -f inet6 route flush cache</command>
+                <command>ip -f inet6 route flush cache</command>
               </leafNode>
               <tagNode name="cache">
                 <properties>
@@ -96,7 +96,7 @@
                     <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo ip -f inet6 route flush cache "$5"</command>
+                <command>ip -f inet6 route flush cache "$5"</command>
               </tagNode>
             </children>
           </node>

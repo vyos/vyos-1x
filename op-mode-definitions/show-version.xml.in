@@ -6,13 +6,13 @@
         <properties>
           <help>Show system version information</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/version.py show</command>
+        <command>${vyos_op_scripts_dir}/version.py show</command>
         <children>
           <leafNode name="funny">
             <properties>
               <help>Show system version and some fun stuff</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/version.py show --funny</command>
+            <command>${vyos_op_scripts_dir}/version.py show --funny</command>
           </leafNode>
           <leafNode name="all">
              <properties>

@@ -6,7 +6,7 @@
         <properties>
           <help>Update GeoIP database and firewall sets</help>
         </properties>
-        <command>sudo ${vyos_libexec_dir}/geoip-update.py --force</command>
+        <command>${vyos_libexec_dir}/geoip-update.py --force</command>
       </leafNode>
     </children>
   </node>

@@ -25,6 +25,7 @@ from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.backend import vyconf_backend
 from vyos.vyconf_session import VyconfSession
 from vyos.base import Warning as Warn
+from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 
 
 CLI_SHELL_API = '/bin/cli-shell-api'
@@ -32,6 +33,8 @@ SET = '/opt/vyatta/sbin/my_set'
 DELETE = '/opt/vyatta/sbin/my_delete'
 COMMENT = '/opt/vyatta/sbin/my_comment'
 COMMIT = '/opt/vyatta/sbin/my_commit'
+COMMIT_CONFIRM = ['/usr/bin/config-mgmt', 'commit_confirm', '-y']
+CONFIRM = ['/usr/bin/config-mgmt', 'confirm']
 DISCARD = '/opt/vyatta/sbin/my_discard'
 SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
@@ -143,7 +146,7 @@ class ConfigSession(object):
     The write API of VyOS.
     """
 
-    def __init__(self, session_id, app=APP):
+    def __init__(self, session_id, app=APP, shared=False):
         """
          Creates a new config session.
 
@@ -184,7 +187,11 @@ class ConfigSession(object):
         else:
             self._vyconf_session = None
 
+        self.shared = shared
+
     def __del__(self):
+        if self.shared:
+            return
         if self._vyconf_session is None:
             try:
                 output = (
@@ -300,6 +307,22 @@ class ConfigSession(object):
 
         return out
 
+    def commit_confirm(self, minutes: int = DEFAULT_COMMIT_CONFIRM_MINUTES):
+        if self._vyconf_session is None:
+            out = self.__run_command(COMMIT_CONFIRM + [f'-t {minutes}'])
+        else:
+            out = 'unimplemented'
+
+        return out
+
+    def confirm(self):
+        if self._vyconf_session is None:
+            out = self.__run_command(CONFIRM)
+        else:
+            out = 'unimplemented'
+
+        return out
+
     def discard(self):
         if self._vyconf_session is None:
             self.__run_command([DISCARD])
@@ -344,7 +367,7 @@ class ConfigSession(object):
         if self._vyconf_session is None:
             out = self.__run_command(MERGE_CONFIG + [file_path])
         else:
-            out, _ = 'unimplemented'
+            out = 'unimplemented'
 
         return out
 

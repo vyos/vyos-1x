@@ -11,7 +11,7 @@
             <properties>
               <help>Pull a new image for container</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/container.py add_image --name "${4}"</command>
+            <command>${vyos_op_scripts_dir}/container.py add_image --name "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -26,7 +26,7 @@
             <path>container name</path>
           </completionHelp>
         </properties>
-        <command>sudo podman exec --interactive --tty "$3" /bin/sh</command>
+        <command>podman exec --interactive --tty "$3" /bin/sh</command>
       </tagNode>
     </children>
   </node>
@@ -42,10 +42,10 @@
               <help>Delete container image</help>
               <completionHelp>
                 <list>all</list>
-                <script>sudo podman image ls -q</script>
+                <script>podman image ls -q</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/container.py delete_image --name "${4}"</command>
+            <command>${vyos_op_scripts_dir}/container.py delete_image --name "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -70,7 +70,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo podman build --net host --layers --force-rm --tag "$4" $6</command>
+                <command>podman build --net host --layers --force-rm --tag "$4" $6</command>
               </tagNode>
             </children>
           </tagNode>
@@ -89,7 +89,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>sudo podman logs --follow --names "$4"</command>
+            <command>podman logs --follow --names "$4"</command>
           </tagNode>
         </children>
       </node>
@@ -101,27 +101,27 @@
         <properties>
           <help>Show containers</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/container.py show_container</command>
+        <command>${vyos_op_scripts_dir}/container.py show_container</command>
         <children>
           <node name="json">
             <properties>
               <help>Show containers in JSON format</help>
             </properties>
             <!-- no admin check -->
-            <command>sudo ${vyos_op_scripts_dir}/container.py show_container --raw</command>
+            <command>${vyos_op_scripts_dir}/container.py show_container --raw</command>
           </node>
           <node name="image">
             <properties>
               <help>Show container image</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/container.py show_image</command>
+            <command>${vyos_op_scripts_dir}/container.py show_image</command>
             <children>
               <node name="json">
                 <properties>
                   <help>Show container image in JSON format</help>
                 </properties>
                 <!-- no admin check -->
-                <command>sudo ${vyos_op_scripts_dir}/container.py show_image --raw</command>
+                <command>${vyos_op_scripts_dir}/container.py show_image --raw</command>
               </node>
             </children>
           </node>
@@ -133,21 +133,21 @@
               </completionHelp>
             </properties>
             <!-- no admin check -->
-            <command>sudo podman logs --names "$4"</command>
+            <command>podman logs --names "$4"</command>
           </tagNode>
           <node name="network">
             <properties>
               <help>Show available container networks</help>
             </properties>
             <!-- no admin check -->
-            <command>sudo ${vyos_op_scripts_dir}/container.py show_network</command>
+            <command>${vyos_op_scripts_dir}/container.py show_network</command>
             <children>
               <node name="json">
                 <properties>
                   <help>Show available container networks in JSON format</help>
                 </properties>
                 <!-- no admin check -->
-                <command>sudo ${vyos_op_scripts_dir}/container.py show_network --raw</command>
+                <command>${vyos_op_scripts_dir}/container.py show_network --raw</command>
               </node>
             </children>
           </node>
@@ -162,7 +162,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>sudo podman logs --names "$4"</command>
+            <command>podman logs --names "$4"</command>
           </tagNode>
         </children>
       </node>
@@ -177,7 +177,7 @@
             <path>container name</path>
           </completionHelp>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/container.py restart --name="$3"</command>
+        <command>${vyos_op_scripts_dir}/container.py restart --name="$3"</command>
       </tagNode>
     </children>
   </node>
@@ -198,7 +198,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>if cli-shell-api existsActive container name "$4"; then sudo podman pull $(cli-shell-api returnActiveValue container name "$4" image); else echo "Container $4 does not exist"; fi</command>
+            <command>if cli-shell-api existsActive container name "$4"; then podman pull $(cli-shell-api returnActiveValue container name "$4" image); else echo "Container $4 does not exist"; fi</command>
           </tagNode>
         </children>
       </node>

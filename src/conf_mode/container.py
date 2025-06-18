@@ -315,7 +315,7 @@ def generate_run_arguments(name, container_config):
     sysctl_opt = ''
     if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
         for k, v in container_config['sysctl']['parameter'].items():
-            sysctl_opt += f" --sysctl {k}={v['value']}"
+            sysctl_opt += f" --sysctl \"{k}={v['value']}\""
 
     # Add capability options. Should be in uppercase
     capabilities = ''

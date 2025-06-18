@@ -9,7 +9,7 @@
             <script>${vyos_completion_dir}/list_raidset.sh</script>
           </completionHelp>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/show_raid.sh $3</command>
+        <command>${vyos_op_scripts_dir}/show_raid.sh $3</command>
       </tagNode>
     </children>
   </node>

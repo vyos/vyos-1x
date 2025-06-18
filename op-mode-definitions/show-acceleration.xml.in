@@ -29,13 +29,13 @@
                         <properties>
                           <help>Intel QAT flows</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/show_acceleration.py --flow --dev $6</command>
+                        <command>${vyos_op_scripts_dir}/show_acceleration.py --flow --dev $6</command>
                       </node>
                       <node name="config">
                         <properties>
                           <help>Intel QAT configuration</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/show_acceleration.py --conf --dev $6</command>
+                        <command>${vyos_op_scripts_dir}/show_acceleration.py --conf --dev $6</command>
                       </node>
                     </children>
                   </tagNode>
@@ -43,16 +43,16 @@
                     <properties>
                       <help>Intel QAT status</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_acceleration.py --status</command>
+                    <command>${vyos_op_scripts_dir}/show_acceleration.py --status</command>
                   </node>
                   <node name="interrupts">
                     <properties>
                       <help>Intel QAT interrupts</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_acceleration.py --interrupts</command>
+                    <command>${vyos_op_scripts_dir}/show_acceleration.py --interrupts</command>
                   </node>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/show_acceleration.py --hw</command>
+                <command>${vyos_op_scripts_dir}/show_acceleration.py --hw</command>
               </node>
             </children>
           </node>

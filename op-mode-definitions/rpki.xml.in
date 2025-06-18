@@ -15,19 +15,28 @@
                </completionHelp>
              </properties>
              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+             <children>
+             #include <include/rpki/vrf.xml.i>
+             </children>
           </tagNode>
-          <leafNode name="cache-connection">
+          <node name="cache-connection">
             <properties>
               <help>Show RPKI cache connections</help>
             </properties>
-            <command>vtysh -c "show rpki cache-connection"</command>
-          </leafNode>
-          <leafNode name="cache-server">
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+             <children>
+             #include <include/rpki/vrf.xml.i>
+             </children>
+          </node>
+          <node name="cache-server">
              <properties>
                <help>Show RPKI cache servers information</help>
              </properties>
-             <command>vtysh -c "show rpki cache-server"</command>
-          </leafNode>
+             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+             <children>
+             #include <include/rpki/vrf.xml.i>
+             </children>
+          </node>
           <tagNode name="prefix">
              <properties>
                <help>Lookup IP prefix and optionally ASN in prefix table</help>
@@ -45,27 +54,53 @@
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $(echo $@ | sed -e "s/as-number //g")</command>
+                <children>
+                  <tagNode name="vrf">
+                    <properties>
+                      <help>Virtual Routing and Forwarding (VRF)</help>
+                      <completionHelp>
+                        <path>vrf name</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $(echo $@ | sed -e "s/as-number //g")</command>
+                  </tagNode>
+                </children>
               </tagNode>
+              #include <include/rpki/vrf.xml.i>
              </children>
           </tagNode>
-          <leafNode name="prefix-table">
+          <node name="prefix-table">
              <properties>
                <help>Show RPKI-validated prefixes</help>
              </properties>
-             <command>vtysh -c "show rpki prefix-table"</command>
-          </leafNode>
+             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+             <children>
+             #include <include/rpki/vrf.xml.i>
+             </children>
+          </node>
         </children>
       </node>
     </children>
   </node>
   <node name="reset">
     <children>
-      <leafNode name="rpki">
+      <node name="rpki">
         <properties>
           <help>Reset RPKI</help>
         </properties>
         <command>vtysh -c "rpki reset"</command>
-      </leafNode>
+        <children>
+          <tagNode name="vrf">
+            <properties>
+              <help>Reset RPKI in VRF</help>
+              <completionHelp>
+                <path>vrf name</path>
+              </completionHelp>
+            </properties>
+            <command>vtysh -c "rpki reset vrf $4"</command>
+          </tagNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>

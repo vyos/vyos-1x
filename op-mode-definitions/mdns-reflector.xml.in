@@ -53,7 +53,7 @@
             <properties>
               <help>Restart mDNS repeater service</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name mdns_repeater</command>
+            <command>${vyos_op_scripts_dir}/restart.py restart_service --name mdns_repeater</command>
           </node>
         </children>
       </node>
