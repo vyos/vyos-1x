@@ -76,9 +76,9 @@ def get_config(config=None):
     print(tmp)
     if tmp: proxy.update({'serial_remove': tmp})
 
-    print('--------------------------------------- Use to validate ------------------------------- \n ')
-    print(proxy)
-    print('\n --------------------------------------- Finish use to validate ------------------------------- \n')
+    # print('--------------------------------------- Use to validate ------------------------------- \n ')
+    # print(proxy)
+    # print('\n --------------------------------------- Finish use to validate ------------------------------- \n')
     return proxy
 
 def verify(proxy):
@@ -118,13 +118,6 @@ def verify(proxy):
                             or dict_search('multihost.backup_hostport', device_conf['service_setting'][service_class]) == None):
                             raise ConfigError(f'Must config backup hostname and hostport for multihost mode backup-failover!')
 
-            outbound_service = ['trueport-server', 'tcp-direct']
-            if service in outbound_service:
-                if (dict_search('main_hostname', device_conf['service_setting'][service_class]) == None
-                    or dict_search('main_hostport', device_conf['service_setting'][service_class]) == None):
-                    raise ConfigError(f'Must config hostname and hostport for service {service}!')
-
-
     return None
 
 def ensure_folder_exists(path):
@@ -138,7 +131,7 @@ def replace_empty_dicts(d):
     if isinstance(d, dict):
         for key, value in d.items():
             if value == {}:
-                print(f'key empty value is {key}')
+                # print(f'key empty value is {key}')
                 d[key] = '1'
             elif isinstance(value, dict):
                 replace_empty_dicts(value)
@@ -262,17 +255,26 @@ def generate(proxy):
 
                 # direct & slient raw
                 if 'tcp-direct' in service:
+                    config_service = 'direct'
                     if 'service_setting' in port_config:
                         if 'direct' in port_config['service_setting']:
                             if 'multihost'in port_config['service_setting']['direct']:
-                                multihost_mode = port_config['service_setting']['trueport']['multihost'].get('mode', '')
+                                multihost_mode = port_config['service_setting']['direct']['multihost'].get('mode', '')
                                 if 'disable' not in multihost_mode:
                                     port_config['service'] = 'multihost'
                                     if 'backup' in multihost_mode:
                                         set_nested(port_config, ['multihost', 'mode'], 'backup-failover')
                             if port_config['service'] != 'multihost':
-                                if 'initiate_any_char' in port_config['service_setting']['direct']:
-                                    port_config['raw_option'] = 'initiate_any_char'
+                                if (dict_search('service_setting.direct.initiate_any_char', port_config) == None
+                                    and dict_search('service_setting.direct.initiate_specific_char', port_config) == None):
+                                    port_config['service'] = 'tcp-slient'
+                                else:
+                                    if 'initiate_any_char' in port_config['service_setting']['direct']:
+                                        port_config['raw_option'] = 'initiate-any-char'
+                                    if 'initiate_specific_char' in port_config['service_setting']['direct']:
+                                        port_config['raw_option'] = 'initiate-specific-char'
+                                        port_config['direct_trigger'] = dict_search('service_setting.direct.initiate_specific_char', port_config)
+
                 # modbus
                 if 'modbus' in service:
                     if 'slave_mapping_list' in port_config['service_setting']['modbus']:
@@ -635,6 +637,10 @@ def apply(proxy):
                     write_string_to_file(file_path, 'iol_smodbusp')
                     ret = os.system(f'setsid iol_smodbusp -P {ttynum} &')
                     print(f'iol_smodbusp ret {ret}')
+                elif 'tcp-direct' in serial_config['service'] or 'tcp-slient' in serial_config['service']:
+                    write_string_to_file(file_path, 'iol_rawout')
+                    ret = os.system(f'setsid iol_monitor {ttynum} &')
+                    print(f'tcp-direct monitor ret {ret}')
             else:
                 kill_pid_file(device, 0)
 
