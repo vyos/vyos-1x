@@ -107,7 +107,7 @@ clean:
 .PHONY: test
 test: generate-configd-include-json
 	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/' .
-	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
+	PYTHONPATH=python/ python3 -m nose2 -v
 
 .PHONY: check_migration_scripts_executable
 .ONESHELL:

@@ -31,7 +31,7 @@ Build-Depends:
   python3-hurry.filesize,
   python3-netaddr,
   python3-netifaces,
-  python3-nose,
+  python3-nose2,
   python3-jinja2,
   python3-paramiko,
   python3-passlib,
