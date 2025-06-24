@@ -24,7 +24,6 @@ GLOB_GETTY_UNITS = 'serial-getty@*.service'
 RE_GETTY_DEVICES = re.compile(r'.+@(.+).service$')
 
 SD_UNIT_PATH = '/run/systemd/system'
-UTMP_PATH = '/run/utmp'
 
 def get_serial_units(include_devices=[]):
     # Since we cannot depend on the current config for decommissioned ports,
@@ -60,10 +59,10 @@ def get_authenticated_ports(units):
     #
     # We can safely skip blank or LOGIN sessions with valid device names.
     #
-    for line in cmd(f'utmpdump {UTMP_PATH}').splitlines():
-        row = line.split('] [')
-        user_name = row[3].strip()
-        user_term = row[4].strip()
+    for line in cmd(f'who').splitlines():
+        row = line.split()
+        user_name = row[0].strip()
+        user_term = row[1].strip()
         if user_name and user_name != 'LOGIN' and user_term in ports:
             connected.append(user_term)
 
