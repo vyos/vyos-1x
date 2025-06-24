@@ -251,7 +251,7 @@ def apply(options):
     # Time format 12|24-hour
     if 'time_format' in options:
         time_format = time_format_to_locale.get(options['time_format'])
-        cmd(f'localectl set-locale LC_TIME={time_format}')
+        cmd(f'update-locale LC_TIME={time_format}')
 
     # Reload UDEV, required for USB auto suspend
     cmd('udevadm control --reload-rules')
