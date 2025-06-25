@@ -248,9 +248,9 @@ def generate(stunnel):
 
 def apply(stunnel):
     if not stunnel or ('client' not in stunnel and 'server' not in stunnel):
-        call('systemctl stop stunnel.service')
+        call('systemctl stop stunnel4.service')
     else:
-        call('systemctl restart stunnel.service')
+        call('systemctl restart stunnel4.service')
 
 
 if __name__ == '__main__':
