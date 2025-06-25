@@ -1,0 +1,18 @@
+[Unit]
+Description=WIDE DHCPv6 Client
+After=vyos-router.service
+
+[Service]
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
+KillMode=process
+GuessMainPID=no
+RemainAfterExit=yes
+SuccessExitStatus=5 6
+ExecStart=/etc/init.d/wide-dhcpv6-client start
+ExecStop=/etc/init.d/wide-dhcpv6-client stop
+
+[Install]
+WantedBy=multi-user.target

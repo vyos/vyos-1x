@@ -1,0 +1,18 @@
+[Unit]
+Description=Intel QAT service
+After=vyos-router.service
+
+[Service]
+Type=forking
+Restart=no
+TimeoutSec=5min
+IgnoreSIGPIPE=no
+KillMode=process
+GuessMainPID=no
+RemainAfterExit=yes
+SuccessExitStatus=5 6
+ExecStart=/etc/init.d/qat_service start
+ExecStop=/etc/init.d/qat_service stop
+
+[Install]
+WantedBy=multi-user.target
