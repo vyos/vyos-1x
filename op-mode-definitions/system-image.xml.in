@@ -86,20 +86,18 @@
               <help>Set system image parameters</help>
             </properties>
             <children>
-              <node name="default-boot">
-                <properties>
-                  <help>Set default image to boot.</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/image_manager.py --action set</command>
-              </node>
               <tagNode name="default-boot">
                 <properties>
-                  <help>Set default image to boot.</help>
+                  <help>Set default image to boot</help>
                   <completionHelp>
                     <script>${vyos_op_scripts_dir}/image_manager.py --action list</script>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/image_manager.py --action set --image-name "${5}"</command>
+                <standalone>
+                  <help>Set default image to boot</help>
+                  <command>${vyos_op_scripts_dir}/image_manager.py --action set</command>
+                </standalone>
               </tagNode>
             </children>
           </node>
@@ -130,12 +128,6 @@
           <help>Delete system objects</help>
         </properties>
         <children>
-          <node name="image">
-            <properties>
-              <help>Remove an installed image from the system</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/image_manager.py --action delete</command>
-          </node>
           <tagNode name="image">
             <properties>
               <help>Remove an installed image from the system</help>
@@ -144,6 +136,10 @@
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/image_manager.py --action delete --image-name "${4}"</command>
+            <standalone>
+              <help>Remove an installed image from the system</help>
+              <command>${vyos_op_scripts_dir}/image_manager.py --action delete</command>
+            </standalone>
           </tagNode>
         </children>
       </node>

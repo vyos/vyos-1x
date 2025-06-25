@@ -62,7 +62,6 @@ while functions prefixed "effective" return values from the running config.
 In operational mode, all functions return values from the running config.
 """
 
-import os
 import re
 import json
 from typing import Union

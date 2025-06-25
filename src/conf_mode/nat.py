@@ -23,7 +23,6 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
-from vyos.template import is_ip_network
 from vyos.utils.kernel import check_kmod
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args

@@ -1,0 +1,60 @@
+firewall {
+    bridge {
+        prerouting {
+            filter {
+                rule 10 {
+                    action "accept"
+                    ethernet-type "arp"
+                }
+            }
+        }
+    }
+    global-options {
+        apply-to-bridged-traffic {
+            invalid-connections {
+            }
+        }
+        state-policy {
+            established {
+                action "accept"
+            }
+            invalid {
+                action "drop"
+            }
+            related {
+                action "accept"
+            }
+        }
+    }
+}
+interfaces {
+    ethernet eth0 {
+        duplex "auto"
+        speed "auto"
+    }
+    ethernet eth1 {
+        duplex auto
+        speed auto
+    }
+}
+system {
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos-ci-test.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@6:broadcast-relay@1:cluster@2:config-management@1:conntrack@6:conntrack-sync@2:container@2:dhcp-relay@2:dhcp-server@11:dhcpv6-server@6:dns-dynamic@4:dns-forwarding@4:firewall@18:flow-accounting@2:https@7:ids@2:interfaces@33:ipoe-server@4:ipsec@13:isis@3:l2tp@9:lldp@3:mdns@1:monitoring@2:nat@8:nat66@3:nhrp@1:ntp@3:openconnect@3:openvpn@4:ospf@2:pim@1:policy@9:pppoe-server@11:pptp@5:qos@3:quagga@12:reverse-proxy@3:rip@1:rpki@2:salt@1:snmp@3:ssh@2:sstp@6:system@29:vpp@1:vrf@3:vrrp@4:vyos-accel-ppp@2:wanloadbalance@4:webproxy@2"
+// Release version: 2025.06.17-0020-rolling

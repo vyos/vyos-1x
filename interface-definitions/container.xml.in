@@ -532,6 +532,30 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="log-driver">
+            <properties>
+              <help>Configure container log driver</help>
+              <completionHelp>
+                <list>k8s-file journald none</list>
+              </completionHelp>
+              <valueHelp>
+                <format>k8s-file</format>
+                <description>Logs to plain-text file</description>
+              </valueHelp>
+              <valueHelp>
+                <format>journald</format>
+                <description>Logs to systemd's journal</description>
+              </valueHelp>
+                <valueHelp>
+                <format>none</format>
+                <description>Disable logging for the container</description>
+              </valueHelp>
+              <constraint>
+                <regex>(k8s-file|journald|none)</regex>
+              </constraint>
+            </properties>
+             <defaultValue>journald</defaultValue>
+          </leafNode>
         </children>
       </tagNode>
       <tagNode name="network">
@@ -627,25 +651,6 @@
           </node>
         </children>
       </tagNode>
-      <leafNode name="log-driver">
-        <properties>
-          <help>Configure container log driver</help>
-          <completionHelp>
-            <list>k8s-file journald</list>
-          </completionHelp>
-          <valueHelp>
-            <format>k8s-file</format>
-            <description>Logs to plain-text json file</description>
-          </valueHelp>
-          <valueHelp>
-            <format>journald</format>
-            <description>Logs to systemd's journal</description>
-          </valueHelp>
-          <constraint>
-            <regex>(k8s-file|journald)</regex>
-          </constraint>
-        </properties>
-      </leafNode>
     </children>
   </node>
 </interfaceDefinition>

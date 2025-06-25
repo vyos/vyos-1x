@@ -89,7 +89,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>podman logs --follow --names "$4"</command>
+            <command>${vyos_op_scripts_dir}/container.py show_log --follow --name "$4"</command>
           </tagNode>
         </children>
       </node>
@@ -132,8 +132,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <!-- no admin check -->
-            <command>podman logs --names "$4"</command>
+            <command>${vyos_op_scripts_dir}/container.py show_log --name "$4"</command>
           </tagNode>
           <node name="network">
             <properties>
@@ -162,7 +161,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>podman logs --names "$4"</command>
+            <command>${vyos_op_scripts_dir}/container.py show_log --name "$4"</command>
           </tagNode>
         </children>
       </node>
