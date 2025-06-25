@@ -49,12 +49,53 @@
         <help>Apply configured firewall rules to traffic switched by bridges</help>
       </properties>
       <children>
-        <leafNode name="invalid-connections">
+        <node name="accept-invalid">
           <properties>
-            <help>Accept ARP, 802.1q, 802.1ad, DHCP, PPPoE and WoL despite being marked as invalid connections</help>
-            <valueless/>
+            <help>Accept connections despite they are marked as invalid</help>
           </properties>
-        </leafNode>
+          <children>
+            <leafNode name="ethernet-type">
+              <properties>
+                <help>Ethernet type</help>
+                <completionHelp>
+                  <list>arp dhcp pppoe 802.1q 802.1ad pppoe-discovery wol</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>arp</format>
+                  <description>Adress Resolution Protocol (ARP)</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>dhcp</format>
+                  <description>Dynamic Host Configuration Protocol (DHCP)</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>pppoe</format>
+                  <description>Point to Point over Ethernet (PPPoE) Session</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>pppoe-discovery</format>
+                  <description>PPPoE Discovery</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>802.1q</format>
+                  <description>Customer VLAN tag type (802.1Q)</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>802.1ad</format>
+                  <description>Service VLAN tag type (802.1ad)</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>wol</format>
+                  <description>Wake-on-LAN magic packet</description>
+                </valueHelp>
+                <constraint>
+                  <regex>(arp|dhcp|pppoe|pppoe-discovery|802.1q|802.1ad|wol)</regex>
+                </constraint>
+                <multi/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
         <leafNode name="ipv4">
           <properties>
             <help>Apply configured IPv4 firewall rules</help>

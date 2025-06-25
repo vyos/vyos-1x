@@ -43,12 +43,6 @@
           </leafNode>
         </children>
       </node>
-      <leafNode name="bridge">
-        <properties>
-          <help>Show bridging information</help>
-        </properties>
-        <command>${vyos_op_scripts_dir}/bridge.py show</command>
-      </leafNode>
       <tagNode name="bridge">
         <properties>
           <help>Show bridge information for a given bridge interface</help>
@@ -57,6 +51,10 @@
           </completionHelp>
         </properties>
         <command>bridge -c link show | grep "master $3"</command>
+        <standalone>
+          <help>Show bridge interface information</help>
+          <command>${vyos_op_scripts_dir}/bridge.py show</command>
+        </standalone>
         <children>
           <node name="spanning-tree">
             <properties>

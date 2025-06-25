@@ -78,12 +78,6 @@
               </node>
             </children>
           </tagNode>
-          <leafNode name="vrf">
-            <properties>
-              <help>Show BGP VRF information</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-          </leafNode>
           <tagNode name="vrf">
             <properties>
               <help>Show BGP VRF related information</help>
@@ -93,6 +87,10 @@
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <standalone>
+              <help>Show BGP VRF information</help>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            </standalone>
             <children>
               #include <include/bgp/show-bgp-common.xml.i>
               #include <include/bgp/martian-next-hop.xml.i>

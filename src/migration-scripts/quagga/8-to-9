@@ -16,6 +16,7 @@
 # - T2450: drop interface-route and interface-route6 from "protocols static"
 
 from vyos.configtree import ConfigTree
+from vyos.template import is_ip
 
 def migrate_interface_route(config, base, path, route_route6):
     """ Generic migration function which can be called on every instance of
@@ -31,11 +32,18 @@ def migrate_interface_route(config, base, path, route_route6):
 
             tmp = base + path + [route, 'next-hop-interface']
             for interface in config.list_nodes(tmp):
-                new_base = base + [route_route6, route, 'interface']
-                config.set(new_base)
-                config.set_tag(base + [route_route6])
-                config.set_tag(new_base)
-                config.copy(tmp + [interface], new_base + [interface])
+                if is_ip(interface): # not prohibited in 1.3.x, hence allowed
+                    new_base = base + [route_route6, route, 'next-hop']
+                    config.set(new_base)
+                    config.set_tag(base + [route_route6])
+                    config.set_tag(new_base)
+                    config.copy(tmp + [interface], new_base + [interface])
+                else:
+                    new_base = base + [route_route6, route, 'interface']
+                    config.set(new_base)
+                    config.set_tag(base + [route_route6])
+                    config.set_tag(new_base)
+                    config.copy(tmp + [interface], new_base + [interface])
 
         config.delete(base + path)
 

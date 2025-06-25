@@ -674,6 +674,29 @@ def nft_nested_group(out_list, includes, groups, key):
         add_includes(name)
     return out_list
 
+@register_filter('nft_accept_invalid')
+def nft_accept_invalid(ether_type):
+    ether_type_mapping = {
+        'dhcp': 'udp sport 67 udp dport 68',
+        'arp': 'arp',
+        'pppoe-discovery': '0x8863',
+        'pppoe': '0x8864',
+        '802.1q': '8021q',
+        '802.1ad': '8021ad',
+        'wol': '0x0842',
+    }
+    if ether_type not in ether_type_mapping:
+        raise RuntimeError(f'Ethernet type "{ether_type}" not found in ' \
+                           'available ethernet types!')
+    out = 'ct state invalid '
+
+    if ether_type != 'dhcp':
+        out += 'ether type '
+
+    out += f'{ether_type_mapping[ether_type]} counter accept'
+
+    return out
+
 @register_filter('nat_rule')
 def nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     from vyos.nat import parse_nat_rule

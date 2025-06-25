@@ -7,65 +7,57 @@
           <help>Show IPv4 routing information</help>
         </properties>
         <children>
-          <leafNode name="access-list">
-            <properties>
-              <help>Show all IP access-lists</help>
-            </properties>
-            <command>vtysh -c "show ip access-list"</command>
-          </leafNode>
           <tagNode name="access-list">
             <properties>
-              <help>Show all IP access-lists</help>
+              <help>Show IP access-list</help>
               <completionHelp>
                 <path>policy access-list</path>
               </completionHelp>
             </properties>
             <command>vtysh -c "show ip access-list $4"</command>
+            <standalone>
+              <help>Show all IP access lists</help>
+              <command>vtysh -c "show ip access-list"</command>
+            </standalone>
           </tagNode>
-          <leafNode name="as-path-access-list">
-            <properties>
-              <help>Show all as-path-access-lists</help>
-            </properties>
-            <command>vtysh -c "show ip as-path-access-list"</command>
-          </leafNode>
           <tagNode name="as-path-access-list">
             <properties>
-              <help>Show all as-path-access-lists</help>
+              <help>Show as-path-access-list</help>
               <completionHelp>
                 <path>policy as-path-list</path>
               </completionHelp>
             </properties>
             <command>vtysh -c "show ip as-path-access-list $4"</command>
+            <standalone>
+              <help>Show all AS path access lists</help>
+              <command>vtysh -c "show ip as-path-access-list"</command>
+            </standalone>
           </tagNode>
-          <leafNode name="community-list">
-            <properties>
-              <help>Show IP community-lists</help>
-            </properties>
-            <command>vtysh -c "show bgp community-list"</command>
-          </leafNode>
           <tagNode name="community-list">
             <properties>
-              <help>Show IP community-lists</help>
+              <help>Show BGP community-list</help>
               <completionHelp>
                 <path>policy community-list</path>
               </completionHelp>
             </properties>
             <command>vtysh -c "show bgp community-list $4 detail"</command>
+            <standalone>
+              <help>Show all BGP community lists</help>
+              <command>vtysh -c "show bgp community-list"</command>
+            </standalone>
           </tagNode>
-          <leafNode name="extcommunity-list">
-            <properties>
-              <help>Show extended IP community-lists</help>
-            </properties>
-            <command>vtysh -c "show bgp extcommunity-list"</command>
-          </leafNode>
           <tagNode name="extcommunity-list">
             <properties>
-              <help>Show extended IP community-lists</help>
+              <help>Show extended BGP community list</help>
               <completionHelp>
                 <path>policy extcommunity-list</path>
               </completionHelp>
             </properties>
             <command>vtysh -c "show bgp extcommunity-list $4 detail"</command>
+            <standalone>
+              <help>Show all extended BGP community lists</help>
+              <command>vtysh -c "show bgp extcommunity-list"</command>
+            </standalone>
           </tagNode>
           <leafNode name="forwarding">
             <properties>
@@ -73,35 +65,31 @@
             </properties>
             <command>vtysh -c "show ip forwarding"</command>
           </leafNode>
-          <leafNode name="large-community-list">
-            <properties>
-              <help>Show IP large-community-lists</help>
-            </properties>
-            <command>vtysh -c "show bgp large-community-list"</command>
-          </leafNode>
           <tagNode name="large-community-list">
             <properties>
-              <help>Show IP large-community-lists</help>
+              <help>Show BGP large-community-list</help>
               <completionHelp>
                 <path>policy large-community-list</path>
               </completionHelp>
             </properties>
             <command>vtysh -c "show bgp large-community-list $4 detail"</command>
+            <standalone>
+              <help>Show all BGP large community lists</help>
+              <command>vtysh -c "show bgp large-community-list"</command>
+            </standalone>
           </tagNode>
-          <leafNode name="prefix-list">
-            <properties>
-              <help>Show all IP prefix-lists</help>
-            </properties>
-            <command>vtysh -c "show ip prefix-list"</command>
-          </leafNode>
           <tagNode name="prefix-list">
             <properties>
-              <help>Show all IP prefix-lists</help>
+              <help>Show IP prefix-list</help>
               <completionHelp>
                 <path>policy prefix-list</path>
               </completionHelp>
             </properties>
             <command>vtysh -c "show ip prefix-list $4"</command>
+            <standalone>
+              <help>Show all IP prefix lists</help>
+              <command>vtysh -c "show ip prefix-list"</command>
+            </standalone>
           </tagNode>
           <leafNode name="protocol">
             <properties>

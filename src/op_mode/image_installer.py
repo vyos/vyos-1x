@@ -19,7 +19,7 @@
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from shutil import copy, chown, rmtree, copytree
+from shutil import copy, chown, rmtree, copytree, disk_usage
 from glob import glob
 from sys import exit
 from os import environ
@@ -62,6 +62,7 @@ from vyos.version import get_version_data
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
 MSG_ERR_LIVE: str = 'The system is in live-boot mode. Please use "install image" instead.'
+MSG_ERR_NOT_ENOUGH_SPACE: str = 'Image upgrade requires at least 2GB of free drive space.'
 MSG_ERR_NO_DISK: str = 'No suitable disk was found. There must be at least one disk of 2GB or greater size.'
 MSG_ERR_IMPROPER_IMAGE: str = 'Missing sha256sum.txt.\nEither this image is corrupted, or of era 1.2.x (md5sum) and would downgrade image tools;\ndisallowed in either case.'
 MSG_ERR_INCOMPATIBLE_IMAGE: str = 'Image compatibility check failed, aborting installation.'
@@ -975,6 +976,14 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     """
     if image.is_live_boot():
         exit(MSG_ERR_LIVE)
+
+    # Trying to upgrade with insufficient space can break the system.
+    # It's better to be on the safe side:
+    # our images are a bit below 1G,
+    # so one gigabyte to download the image plus one more to install it
+    # sounds like a sensible estimate.
+    if disk_usage('/').free < (2 * 1024**3):
+        exit(MSG_ERR_NOT_ENOUGH_SPACE)
 
     environ['REMOTE_USERNAME'] = username
     environ['REMOTE_PASSWORD'] = password

@@ -52,7 +52,7 @@ class WireGuardOperational(Operational):
                     'private_key': None if private_key == '(none)' else private_key,
                     'public_key': None if public_key == '(none)' else public_key,
                     'listen_port': int(listen_port),
-                    'fw_mark': None if fw_mark == 'off' else int(fw_mark),
+                    'fw_mark': None if fw_mark == 'off' else int(fw_mark, 16),
                     'peers': {},
                 }
             else:

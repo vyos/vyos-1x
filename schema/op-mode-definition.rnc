@@ -1,6 +1,6 @@
 #    interface_definition.rnc: VyConf reference tree XML grammar
 #
-#    Copyright (C) 2014. 2017 VyOS maintainers and contributors <maintainers@vyos.net>
+#    Copyright (C) 2014-2025 VyOS maintainers and contributors <maintainers@vyos.net>
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Lesser General Public
@@ -37,13 +37,27 @@ node = element node
 }
 
 # Tag nodes are containers for nodes without predefined names, like network interfaces
-# or user names (e.g. "interfaces ethernet eth0" or "user jrandomhacker")
-# Tag nodes may contain node and leafNode elements, and also nameConstraint tags
-# They must not contain other tag nodes
+# or user names (e.g. "show interfaces ethernet ethX").
+# Operational mode tag nodes can be parents to other tag nodes,
+# like in "ping <host> count <packets>".
+#
+# Some commands can be called either with or without arguments,
+# like "show interfaces ethernet eth0" (show info for eth0 only)
+# or "show interfaces ethernet" (show info about all ethernet interfaces).
+# That case is handled using the <standalone> element
 tagNode = element tagNode
 {
     nodeNameAttr,
-    (properties? & children? & command?)
+    (properties? & standalone? & children? & command?)
+}
+
+# The <standalone> element is only used inside tag nodes
+# to define their behavior when they are called without arguments
+# It can provide a help string and a command.
+# Everything else is handled in the <tagNode> itself.
+standalone = element standalone
+{
+    help & command
 }
 
 # Leaf nodes are terminal configuration nodes that can't have children,

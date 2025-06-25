@@ -1596,6 +1596,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="no-ipv6-auto-ra">
+      <properties>
+        <help>Disable IPv6 automatic router advertisement</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="no-suppress-duplicates">
       <properties>
         <help>Disable suppress duplicate updates if the route actually not changed</help>
