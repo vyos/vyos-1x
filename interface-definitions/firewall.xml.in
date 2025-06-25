@@ -387,6 +387,13 @@
           <help>IPv6 firewall</help>
         </properties>
         <children>
+          <!-- PSL: globally disable IPv6 via blocking -->
+          <leafNode name="block">
+            <properties>
+              <help>Block IPv6 traffic on all interfaces</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/firewall/ipv6-hook-forward.xml.i>
           #include <include/firewall/ipv6-hook-input.xml.i>
           #include <include/firewall/ipv6-hook-output.xml.i>
