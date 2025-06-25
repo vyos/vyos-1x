@@ -11,7 +11,7 @@
             <properties>
               <help>Show SSH server dynamic-protection blocked attackers</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/ssh.py show_dynamic_protection</command>
+            <command>${vyos_op_scripts_dir}/ssh.py show_dynamic_protection</command>
           </node>
           <node name="fingerprints">
             <properties>

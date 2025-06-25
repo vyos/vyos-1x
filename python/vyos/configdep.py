@@ -102,11 +102,16 @@ def run_config_mode_script(target: str, config: 'Config'):
     mod = load_as_module(name, path)
 
     config.set_level([])
+    dry_run = config.get_bool_attr('dry_run')
     try:
         c = mod.get_config(config)
         mod.verify(c)
-        mod.generate(c)
-        mod.apply(c)
+        if not dry_run:
+            mod.generate(c)
+            mod.apply(c)
+        else:
+            if hasattr(mod, 'call_dependents'):
+                mod.call_dependents()
     except (VyOSError, ConfigError) as e:
         raise ConfigError(str(e)) from e
 

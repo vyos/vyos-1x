@@ -41,9 +41,6 @@ def migrate(config: ConfigTree) -> None:
         for network in config.list_nodes(base + ['shared-network-name']):
             base_network = base + ['shared-network-name', network]
 
-            if config.exists(base_network + ['ping-check']):
-                config.delete(base_network + ['ping-check'])
-
             if config.exists(base_network + ['shared-network-parameters']):
                 config.delete(base_network +['shared-network-parameters'])
 
@@ -56,9 +53,6 @@ def migrate(config: ConfigTree) -> None:
 
                 if config.exists(base_subnet + ['enable-failover']):
                     config.delete(base_subnet + ['enable-failover'])
-
-                if config.exists(base_subnet + ['ping-check']):
-                    config.delete(base_subnet + ['ping-check'])
 
                 if config.exists(base_subnet + ['subnet-parameters']):
                     config.delete(base_subnet + ['subnet-parameters'])

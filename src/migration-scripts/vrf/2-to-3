@@ -76,7 +76,8 @@ def migrate(config: ConfigTree) -> None:
     # Get a list of all currently used VRFs and tables
     vrfs_current = {}
     for vrf in config.list_nodes(base):
-        vrfs_current[vrf] = int(config.return_value(base + [vrf, 'table']))
+        if config.exists(base + [vrf, 'table']):
+            vrfs_current[vrf] = int(config.return_value(base + [vrf, 'table']))
 
     # Check VRF names and table numbers
     name_regex = re.compile(r'^\d.*$')

@@ -51,7 +51,7 @@
       <children>
         <leafNode name="invalid-connections">
           <properties>
-            <help>Accept ARP, DHCP and PPPoE despite they are marked as invalid connection</help>
+            <help>Accept ARP, 802.1q, 802.1ad, DHCP, PPPoE and WoL despite being marked as invalid connections</help>
             <valueless/>
           </properties>
         </leafNode>
@@ -217,6 +217,14 @@
         <help>Global firewall state-policy</help>
       </properties>
       <children>
+        <node name="offload">
+          <properties>
+            <help>All stateful forward traffic is offloaded to a flowtable</help>
+          </properties>
+          <children>
+            #include <include/firewall/offload-target.xml.i>
+          </children>
+        </node>
         <node name="established">
           <properties>
             <help>Global firewall policy for packets part of an established connection</help>

@@ -18,12 +18,16 @@ import argparse
 import ipaddress
 import json
 import re
+from signal import signal, SIGPIPE, SIG_DFL
 import tabulate
 import textwrap
 
 from vyos.config import Config
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search_args
+
+signal(SIGPIPE, SIG_DFL)
+
 
 def get_config_node(conf, node=None, family=None, hook=None, priority=None):
     if node == 'nat':
@@ -145,6 +149,38 @@ def get_nftables_group_members(family, table, name):
                     out.append(elem)
                 elif isinstance(elem, dict) and 'elem' in elem:
                     out.append(elem['elem'])
+
+    return out
+
+def get_nftables_remote_group_members(family, table, name):
+    prefix = 'ip6' if family == 'ipv6' else 'ip'
+    out = []
+
+    try:
+        results_str = cmd(f'nft -j list set {prefix} {table} {name}')
+        results = json.loads(results_str)
+    except:
+        return out
+
+    if 'nftables' not in results:
+        return out
+
+    for obj in results['nftables']:
+        if 'set' not in obj:
+            continue
+
+        set_obj = obj['set']
+        if 'elem' in set_obj:
+            for elem in set_obj['elem']:
+                # search for single IP elements
+                if isinstance(elem, str):
+                    out.append(elem)
+                # search for prefix elements
+                elif isinstance(elem, dict) and 'prefix' in elem:
+                    out.append(f"{elem['prefix']['addr']}/{elem['prefix']['len']}")
+                # search for IP range elements
+                elif isinstance(elem, dict) and 'range' in elem:
+                    out.append(f"{elem['range'][0]}-{elem['range'][1]}")
 
     return out
 
@@ -556,32 +592,8 @@ def show_firewall_group(name=None):
     header_tail = []
 
     for group_type, group_type_conf in firewall['group'].items():
-        ##
-        if group_type != 'dynamic_group':
-
-            for group_name, group_conf in group_type_conf.items():
-                if name and name != group_name:
-                    continue
-
-                references = find_references(group_type, group_name)
-                row = [group_name,  textwrap.fill(group_conf.get('description') or '', 50), group_type, '\n'.join(references) or 'N/D']
-                if 'address' in group_conf:
-                    row.append("\n".join(sorted(group_conf['address'])))
-                elif 'network' in group_conf:
-                    row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
-                elif 'mac_address' in group_conf:
-                    row.append("\n".join(sorted(group_conf['mac_address'])))
-                elif 'port' in group_conf:
-                    row.append("\n".join(sorted(group_conf['port'])))
-                elif 'interface' in group_conf:
-                    row.append("\n".join(sorted(group_conf['interface'])))
-                elif 'url' in group_conf:
-                    row.append(group_conf['url'])
-                else:
-                    row.append('N/D')
-                rows.append(row)
-
-        else:
+        # interate over dynamic-groups
+        if group_type == 'dynamic_group':
             if not args.detail:
                 header_tail = ['Timeout', 'Expires']
 
@@ -590,6 +602,9 @@ def show_firewall_group(name=None):
                 prefix = 'DA_' if dynamic_type == 'address_group' else 'DA6_'
                 if dynamic_type in firewall['group']['dynamic_group']:
                     for dynamic_name, dynamic_conf in firewall['group']['dynamic_group'][dynamic_type].items():
+                        if name and name != dynamic_name:
+                            continue
+
                         references = find_references(dynamic_type, dynamic_name)
                         row = [dynamic_name, textwrap.fill(dynamic_conf.get('description') or '', 50), dynamic_type + '(dynamic)', '\n'.join(references) or 'N/D']
 
@@ -627,6 +642,68 @@ def show_firewall_group(name=None):
                         if args.detail:
                             header_tail += [""] * (len(members) - 1)
                             rows.append(row)
+
+        # iterate over remote-groups
+        elif group_type == 'remote_group':
+            for remote_name, remote_conf in group_type_conf.items():
+                if name and name != remote_name:
+                    continue
+
+                references = find_references(group_type, remote_name)
+                row = [remote_name, textwrap.fill(remote_conf.get('description') or '', 50), group_type, '\n'.join(references) or 'N/D']
+                members = get_nftables_remote_group_members("ipv4", 'vyos_filter', f'R_{remote_name}')
+                members6 = get_nftables_remote_group_members("ipv6", 'vyos_filter', f'R6_{remote_name}')
+
+                if 'url' in remote_conf:
+                    # display only the url if no members are found for both views
+                    if not members and not members6:
+                        if args.detail:
+                            header_tail = ['IPv6 Members', 'Remote URL']
+                            row.append('N/D')
+                            row.append('N/D')
+                            row.append(remote_conf['url'])
+                        else:
+                            row.append(remote_conf['url'])
+                        rows.append(row)
+                    else:
+                        # display all table elements in detail view
+                        if args.detail:
+                            header_tail = ['IPv6 Members', 'Remote URL']
+                            if members:
+                                row.append(' '.join(members))
+                            else:
+                                row.append('N/D')
+                            if members6:
+                                row.append(' '.join(members6))
+                            else:
+                                row.append('N/D')
+                            row.append(remote_conf['url'])
+                            rows.append(row)
+                        else:
+                            row.append(remote_conf['url'])
+                            rows.append(row)
+
+        # catch the rest of the group types
+        else:
+            for group_name, group_conf in group_type_conf.items():
+                if name and name != group_name:
+                    continue
+
+                references = find_references(group_type, group_name)
+                row = [group_name,  textwrap.fill(group_conf.get('description') or '', 50), group_type, '\n'.join(references) or 'N/D']
+                if 'address' in group_conf:
+                    row.append("\n".join(sorted(group_conf['address'])))
+                elif 'network' in group_conf:
+                    row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
+                elif 'mac_address' in group_conf:
+                    row.append("\n".join(sorted(group_conf['mac_address'])))
+                elif 'port' in group_conf:
+                    row.append("\n".join(sorted(group_conf['port'])))
+                elif 'interface' in group_conf:
+                    row.append("\n".join(sorted(group_conf['interface'])))
+                else:
+                    row.append('N/D')
+                rows.append(row)
 
     if rows:
         print('Firewall Groups\n')

@@ -44,6 +44,7 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
+from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 
 SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
 config_json = '/run/vyatta/config/config.json'
@@ -56,7 +57,6 @@ commit_hooks = {
     'commit_archive': '02vyos-commit-archive',
 }
 
-DEFAULT_TIME_MINUTES = 10
 timer_name = 'commit-confirm'
 
 config_file = os.path.join(directories['config'], 'config.boot')
@@ -144,14 +144,16 @@ class ConfigMgmt:
             ['system', 'config-management'],
             key_mangling=('-', '_'),
             get_first_key=True,
-            with_defaults=True,
+            with_recursive_defaults=True,
         )
 
         self.max_revisions = int(d.get('commit_revisions', 0))
         self.num_revisions = 0
         self.locations = d.get('commit_archive', {}).get('location', [])
         self.source_address = d.get('commit_archive', {}).get('source_address', '')
-        self.reboot_unconfirmed = bool(d.get('commit_confirm') == 'reboot')
+        self.reboot_unconfirmed = bool(
+            d.get('commit_confirm', {}).get('action') == 'reboot'
+        )
         self.config_dict = d
 
         if config.exists(['system', 'host-name']):
@@ -181,7 +183,7 @@ class ConfigMgmt:
     # Console script functions
     #
     def commit_confirm(
-        self, minutes: int = DEFAULT_TIME_MINUTES, no_prompt: bool = False
+        self, minutes: int = DEFAULT_COMMIT_CONFIRM_MINUTES, no_prompt: bool = False
     ) -> Tuple[str, int]:
         """Commit with reload/reboot to saved config in 'minutes' minutes if
         'confirm' call is not issued.
@@ -805,7 +807,7 @@ def run():
         '-t',
         dest='minutes',
         type=int,
-        default=DEFAULT_TIME_MINUTES,
+        default=DEFAULT_COMMIT_CONFIRM_MINUTES,
         help="Minutes until reboot, unless 'confirm'",
     )
     commit_confirm.add_argument(

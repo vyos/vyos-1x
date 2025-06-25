@@ -31,7 +31,7 @@
                         <list>&lt;hostname&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8"</command>
+                    <command>${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8"</command>
                     <children>
                       <tagNode name="address">
                         <properties>
@@ -40,7 +40,7 @@
                             <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8" --address "${10}"</command>
+                        <command>${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8" --address "${10}"</command>
                         <children>
                           <tagNode name="address">
                             <properties>
@@ -49,7 +49,7 @@
                                 <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
                               </completionHelp>
                             </properties>
-                            <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8" --address "${10}" --address "${12}"</command>
+                            <command>${vyos_op_scripts_dir}/wireguard_client.py --name "$4" --interface "$6" --server "$8" --address "${10}" --address "${12}"</command>
                           </tagNode>
                         </children>
                       </tagNode>

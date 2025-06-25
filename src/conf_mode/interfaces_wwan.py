@@ -26,8 +26,10 @@ from vyos.configverify import verify_authentication
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WWANIf
 from vyos.utils.dict import dict_search
+from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import DEVNULL
@@ -98,6 +100,7 @@ def verify(wwan):
     verify_interface_exists(wwan, ifname)
     verify_authentication(wwan)
     verify_vrf(wwan)
+    verify_mtu_ipv6(wwan)
     verify_mirror_redirect(wwan)
 
     return None
@@ -135,7 +138,7 @@ def apply(wwan):
                 break
             sleep(0.250)
 
-    if 'shutdown_required' in wwan:
+    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
         # deprecated: we only need the modem number. wwan0 -> 0, wwan1 -> 1
         # modem = wwan['ifname'].lstrip('wwan')
         # get the modem index of the first modem, assuming only one modem detected
@@ -160,7 +163,7 @@ def apply(wwan):
 
         return None
 
-    if 'shutdown_required' in wwan:
+    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
         ip_type = 'ipv4'
         slaac = dict_search('ipv6.address.autoconf', wwan) != None
         if 'address' in wwan:

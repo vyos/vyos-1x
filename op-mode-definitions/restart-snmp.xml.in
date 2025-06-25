@@ -6,7 +6,7 @@
         <properties>
           <help>Restart SNMP service</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name snmp</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name snmp</command>
       </node>
     </children>
   </node>

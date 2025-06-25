@@ -95,6 +95,15 @@
                   #include <include/ospfv3/protocol-common-config.xml.i>
                 </children>
               </node>
+              <node name="rpki" owner="${vyos_conf_scripts_dir}/protocols_rpki.py $VAR(../../@)">
+                <properties>
+                  <help>Resource Public Key Infrastructure (RPKI)</help>
+                  <priority>820</priority>
+                </properties>
+                <children>
+                  #include <include/rpki/protocol-common-config.xml.i>
+                </children>
+              </node>
               <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">
                 <properties>
                   <help>Static Routing</help>

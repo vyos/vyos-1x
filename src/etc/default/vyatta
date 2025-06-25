@@ -173,6 +173,7 @@ unset _vyatta_extglob
     declare -x -r vyos_bin_dir=/usr/bin
     declare -x -r vyos_sbin_dir=/usr/sbin
     declare -x -r vyos_share_dir=/usr/share
+    declare -x -r vyconf_bin_dir=/usr/libexec/vyos/vyconf/bin
 
     if test -z "$vyos_conf_scripts_dir" ; then
         declare -x -r vyos_conf_scripts_dir=$vyos_libexec_dir/conf_mode

@@ -28,6 +28,7 @@
 "load-balancing_haproxy.py",
 "route.py",
 "storage.py",
+"stp.py",
 "system.py",
 "uptime.py",
 "version.py",

@@ -307,5 +307,39 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables6_search, 'ip6 vyos_mangle')
 
+    def test_geoip(self):
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'se'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'gb'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'action', 'accept'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'source', 'geoip', 'country-code', 'de'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'source', 'geoip', 'country-code', 'fr'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'source', 'geoip', 'inverse-match'])
+
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'source', 'geoip', 'country-code', 'se'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'source', 'geoip', 'country-code', 'gb'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'action', 'accept'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'source', 'geoip', 'country-code', 'de'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'source', 'geoip', 'country-code', 'fr'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'source', 'geoip', 'inverse-match'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip saddr @GEOIP_CC_route_smoketest_1', 'drop'],
+            ['ip saddr != @GEOIP_CC_route_smoketest_2', 'accept'],
+        ]
+
+        # -t prevents 1000+ GeoIP elements being returned
+        self.verify_nftables(nftables_search, 'ip vyos_mangle', args='-t')
+
+        nftables_search = [
+            ['ip6 saddr @GEOIP_CC6_route6_smoketest6_1', 'drop'],
+            ['ip6 saddr != @GEOIP_CC6_route6_smoketest6_2', 'accept'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_mangle', args='-t')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

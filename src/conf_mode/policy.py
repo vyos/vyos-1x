@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 from sys import exit
 
 from vyos.config import Config
@@ -24,8 +25,19 @@ from vyos.frrender import get_frrender_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
+from vyos.base import Warning
 from vyos import airbag
 airbag.enable()
+
+# Sanity checks for large-community-list regex:
+# * Require complete 3-tuples, no blank members. Catch missed & doubled colons. 
+# * Permit appropriate community separators (whitespace, underscore)
+# * Permit common regex between tuples while requiring at least one separator
+#   (eg, "1:1:1_.*_4:4:4", matching "1:1:1 4:4:4" and "1:1:1 2:2:2 4:4:4",
+#        but not "1:1:13 24:4:4")
+# Best practice: stick with basic patterns, mind your wildcards and whitespace.
+# Regex that doesn't match this pattern will be allowed with a warning. 
+large_community_regex_pattern = r'([^: _]+):([^: _]+):([^: _]+)([ _]([^:]+):([^: _]+):([^: _]+))*'
 
 def community_action_compatibility(actions: dict) -> bool:
     """
@@ -146,6 +158,10 @@ def verify(config_dict):
                                    'large_community_list']:
                     if 'regex' not in rule_config:
                         raise ConfigError(f'A regex {mandatory_error}')
+
+                if policy_type == 'large_community_list':
+                    if not re.fullmatch(large_community_regex_pattern, rule_config['regex']):
+                        Warning(f'"policy large-community-list {instance} rule {rule} regex" does not follow expected form and may not match as expected.')
 
                 if policy_type in ['prefix_list', 'prefix_list6']:
                     if 'prefix' not in rule_config:

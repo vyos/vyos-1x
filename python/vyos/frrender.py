@@ -60,6 +60,10 @@ def get_frrender_dict(conf, argv=None) -> dict:
     from vyos.configdict import get_dhcp_interfaces
     from vyos.configdict import get_pppoe_interfaces
 
+    # We need to re-set the CLI path to the root level, as this function uses
+    # conf.exists() with an absolute path form the CLI root
+    conf.set_level([])
+
     # Create an empty dictionary which will be filled down the code path and
     # returned to the caller
     dict = {}
@@ -88,7 +92,7 @@ def get_frrender_dict(conf, argv=None) -> dict:
             if dict_search(f'area.{area_num}.area_type.nssa', ospf) is None:
                 del default_values['area'][area_num]['area_type']['nssa']
 
-        for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
+        for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'nhrp', 'rip', 'static']:
             if dict_search(f'redistribute.{protocol}', ospf) is None:
                 del default_values['redistribute'][protocol]
         if not bool(default_values['redistribute']):
@@ -539,6 +543,21 @@ def get_frrender_dict(conf, argv=None) -> dict:
             elif conf.exists_effective(ospfv3_vrf_path):
                 vrf['name'][vrf_name]['protocols'].update({'ospfv3' : {'deleted' : ''}})
 
+            # We need to check the CLI if the RPKI node is present and thus load in all the default
+            # values present on the CLI - that's why we have if conf.exists()
+            rpki_vrf_path = ['vrf', 'name', vrf_name, 'protocols', 'rpki']
+            if 'rpki' in vrf_config.get('protocols', []):
+                rpki = conf.get_config_dict(rpki_vrf_path, key_mangling=('-', '_'), get_first_key=True,
+                                            with_pki=True, with_recursive_defaults=True)
+                rpki_ssh_key_base = '/run/frr/id_rpki'
+                for cache, cache_config in rpki.get('cache',{}).items():
+                    if 'ssh' in cache_config:
+                        cache_config['ssh']['public_key_file'] = f'{rpki_ssh_key_base}_{cache}.pub'
+                        cache_config['ssh']['private_key_file'] = f'{rpki_ssh_key_base}_{cache}'
+                vrf['name'][vrf_name]['protocols'].update({'rpki' : rpki})
+            elif conf.exists_effective(rpki_vrf_path):
+                vrf['name'][vrf_name]['protocols'].update({'rpki' : {'deleted' : ''}})
+
             # We need to check the CLI if the static node is present and thus load in all the default
             # values present on the CLI - that's why we have if conf.exists()
             static_vrf_path = ['vrf', 'name', vrf_name, 'protocols', 'static']
@@ -599,8 +618,10 @@ def get_frrender_dict(conf, argv=None) -> dict:
         dict.update({'vrf' : vrf})
 
     if os.path.exists(frr_debug_enable):
+        print(f'---- get_frrender_dict({conf}) ----')
         import pprint
         pprint.pprint(dict)
+        print('-----------------------------------')
 
     return dict
 
@@ -669,7 +690,7 @@ class FRRender:
                 output += render_to_string('frr/ripngd.frr.j2', config_dict['ripng'])
                 output += '\n'
             if 'rpki' in config_dict and 'deleted' not in config_dict['rpki']:
-                output += render_to_string('frr/rpki.frr.j2', config_dict['rpki'])
+                output += render_to_string('frr/rpki.frr.j2', {'rpki': config_dict['rpki']})
                 output += '\n'
             if 'segment_routing' in config_dict and 'deleted' not in config_dict['segment_routing']:
                 output += render_to_string('frr/zebra.segment_routing.frr.j2', config_dict['segment_routing'])
@@ -691,6 +712,9 @@ class FRRender:
         debug('FRR:        START CONFIGURATION RENDERING')
         # we can not reload an empty file, thus we always embed the marker
         output = '!\n'
+        # Enable FRR logging
+        output += 'log syslog\n'
+        output += 'log facility local7\n'
         # Enable SNMP agentx support
         # SNMP AgentX support cannot be disabled once enabled
         if 'snmp' in config_dict:

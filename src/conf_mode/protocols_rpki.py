@@ -18,6 +18,7 @@ import os
 
 from glob import glob
 from sys import exit
+from sys import argv
 
 from vyos.config import Config
 from vyos.configverify import has_frr_protocol_in_dict
@@ -39,13 +40,18 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    return get_frrender_dict(conf)
+    return get_frrender_dict(conf, argv)
 
 def verify(config_dict):
     if not has_frr_protocol_in_dict(config_dict, 'rpki'):
         return None
 
-    rpki = config_dict['rpki']
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    rpki = vrf and config_dict['vrf']['name'][vrf]['protocols']['rpki'] or config_dict['rpki']
 
     if 'cache' in rpki:
         preferences = []
@@ -79,7 +85,12 @@ def generate(config_dict):
     if not has_frr_protocol_in_dict(config_dict, 'rpki'):
         return None
 
-    rpki = config_dict['rpki']
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
+
+    # eqivalent of the C foo ? 'a' : 'b' statement
+    rpki = vrf and config_dict['vrf']['name'][vrf]['protocols']['rpki'] or config_dict['rpki']
 
     if 'cache' in rpki:
         for cache, cache_config in rpki['cache'].items():

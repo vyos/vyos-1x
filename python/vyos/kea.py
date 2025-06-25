@@ -20,8 +20,8 @@ import socket
 from datetime import datetime
 from datetime import timezone
 
+from vyos import ConfigError
 from vyos.template import is_ipv6
-from vyos.template import isc_static_route
 from vyos.template import netmask_from_cidr
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import file_permissions
@@ -44,6 +44,7 @@ kea4_options = {
     'wpad_url': 'wpad-url',
     'ipv6_only_preferred': 'v6-only-preferred',
     'captive_portal': 'v4-captive-portal',
+    'capwap_controller': 'capwap-ac-v4',
 }
 
 kea6_options = {
@@ -56,6 +57,7 @@ kea6_options = {
     'nisplus_server': 'nisp-servers',
     'sntp_server': 'sntp-servers',
     'captive_portal': 'v6-captive-portal',
+    'capwap_controller': 'capwap-ac-v6',
 }
 
 kea_ctrl_socket = '/run/kea/dhcp{inet}-ctrl-socket'
@@ -111,22 +113,21 @@ def kea_parse_options(config):
         default_route = ''
 
         if 'default_router' in config:
-            default_route = isc_static_route('0.0.0.0/0', config['default_router'])
+            default_route = f'0.0.0.0/0 - {config["default_router"]}'
 
         routes = [
-            isc_static_route(route, route_options['next_hop'])
+            f'{route} - {route_options["next_hop"]}'
             for route, route_options in config['static_route'].items()
         ]
 
         options.append(
             {
-                'name': 'rfc3442-static-route',
+                'name': 'classless-static-route',
                 'data': ', '.join(
                     routes if not default_route else routes + [default_route]
                 ),
             }
         )
-        options.append({'name': 'windows-static-route', 'data': ', '.join(routes)})
 
     if 'time_zone' in config:
         with open('/usr/share/zoneinfo/' + config['time_zone'], 'rb') as f:
@@ -147,7 +148,7 @@ def kea_parse_options(config):
 
 
 def kea_parse_subnet(subnet, config):
-    out = {'subnet': subnet, 'id': int(config['subnet_id'])}
+    out = {'subnet': subnet, 'id': int(config['subnet_id']), 'user-context': {}}
 
     if 'option' in config:
         out['option-data'] = kea_parse_options(config['option'])
@@ -164,6 +165,9 @@ def kea_parse_subnet(subnet, config):
     if 'lease' in config:
         out['valid-lifetime'] = int(config['lease'])
         out['max-valid-lifetime'] = int(config['lease'])
+
+    if 'ping_check' in config:
+        out['user-context']['enable-ping-check'] = True
 
     if 'range' in config:
         pools = []
@@ -217,6 +221,9 @@ def kea_parse_subnet(subnet, config):
 
             reservations.append(reservation)
         out['reservations'] = reservations
+
+    if 'dynamic_dns_update' in config:
+        out.update(kea_parse_ddns_settings(config['dynamic_dns_update']))
 
     return out
 
@@ -347,6 +354,54 @@ def kea6_parse_subnet(subnet, config):
 
     return out
 
+def kea_parse_tsig_algo(algo_spec):
+    translate = {
+        'md5': 'HMAC-MD5',
+        'sha1': 'HMAC-SHA1',
+        'sha224': 'HMAC-SHA224',
+        'sha256': 'HMAC-SHA256',
+        'sha384': 'HMAC-SHA384',
+        'sha512': 'HMAC-SHA512'
+    }
+    if algo_spec not in translate:
+        raise ConfigError(f'Unsupported TSIG algorithm: {algo_spec}')
+    return translate[algo_spec]
+
+def kea_parse_enable_disable(value):
+    return True if value == 'enable' else False
+
+def kea_parse_ddns_settings(config):
+    data = {}
+
+    if send_updates := config.get('send_updates'):
+        data['ddns-send-updates'] = kea_parse_enable_disable(send_updates)
+
+    if override_client_update := config.get('override_client_update'):
+        data['ddns-override-client-update'] = kea_parse_enable_disable(override_client_update)
+
+    if override_no_update := config.get('override_no_update'):
+        data['ddns-override-no-update'] = kea_parse_enable_disable(override_no_update)
+
+    if update_on_renew := config.get('update_on_renew'):
+        data['ddns-update-on-renew'] = kea_parse_enable_disable(update_on_renew)
+
+    if conflict_resolution := config.get('conflict_resolution'):
+        data['ddns-use-conflict-resolution'] = kea_parse_enable_disable(conflict_resolution)
+
+    if 'replace_client_name' in config:
+        data['ddns-replace-client-name'] = config['replace_client_name']
+    if 'generated_prefix' in config:
+        data['ddns-generated-prefix'] = config['generated_prefix']
+    if 'qualifying_suffix' in config:
+        data['ddns-qualifying-suffix'] = config['qualifying_suffix']
+    if 'ttl_percent' in config:
+        data['ddns-ttl-percent'] = int(config['ttl_percent']) / 100
+    if 'hostname_char_set' in config:
+        data['hostname-char-set'] = config['hostname_char_set']
+    if 'hostname_char_replacement' in config:
+        data['hostname-char-replacement'] = config['hostname_char_replacement']
+
+    return data
 
 def _ctrl_socket_command(inet, command, args=None):
     path = kea_ctrl_socket.format(inet=inet)
@@ -483,10 +538,10 @@ def kea_get_domain_from_subnet_id(config, inet, subnet_id):
                     if option['name'] == 'domain-name':
                         return option['data']
 
-            # domain-name is not found in subnet, fallback to shared-network pool option
-            for option in network['option-data']:
-                if option['name'] == 'domain-name':
-                    return option['data']
+                # domain-name is not found in subnet, fallback to shared-network pool option
+                for option in network['option-data']:
+                    if option['name'] == 'domain-name':
+                        return option['data']
 
     return None
 

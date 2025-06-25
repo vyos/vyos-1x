@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright (C) 2019-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -122,7 +122,14 @@ def generate(options):
     render(ssh_config, 'system/ssh_config.j2', options)
     render(usb_autosuspend, 'system/40_usb_autosuspend.j2', options)
 
+    # XXX: This code path and if statements must be kept in sync with the Kernel
+    # option handling in image_installer.py:get_cli_kernel_options(). This
+    # occurance is used for having the appropriate options passed to GRUB
+    # when re-configuring options on the CLI.
     cmdline_options = []
+    kernel_opts = options.get('kernel', {})
+    k_cpu_opts = kernel_opts.get('cpu', {})
+    k_memory_opts = kernel_opts.get('memory', {})
     if 'kernel' in options:
         if 'disable_mitigations' in options['kernel']:
             cmdline_options.append('mitigations=off')
@@ -131,8 +138,51 @@ def generate(options):
         if 'amd_pstate_driver' in options['kernel']:
             mode = options['kernel']['amd_pstate_driver']
             cmdline_options.append(
-                f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}'
-            )
+                f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
+        if 'quiet' in options['kernel']:
+            cmdline_options.append('quiet')
+
+    if 'disable_hpet' in kernel_opts:
+        cmdline_options.append('hpet=disable')
+
+    if 'disable_mce' in kernel_opts:
+        cmdline_options.append('mce=off')
+
+    if 'disable_softlockup' in kernel_opts:
+        cmdline_options.append('nosoftlockup')
+
+    # CPU options
+    isol_cpus = k_cpu_opts.get('isolate_cpus')
+    if isol_cpus:
+        cmdline_options.append(f'isolcpus={isol_cpus}')
+
+    nohz_full = k_cpu_opts.get('nohz_full')
+    if nohz_full:
+        cmdline_options.append(f'nohz_full={nohz_full}')
+
+    rcu_nocbs = k_cpu_opts.get('rcu_no_cbs')
+    if rcu_nocbs:
+        cmdline_options.append(f'rcu_nocbs={rcu_nocbs}')
+
+    if 'disable_nmi_watchdog' in k_cpu_opts:
+        cmdline_options.append('nmi_watchdog=0')
+
+    # Memory options
+    if 'disable_numa_balancing' in k_memory_opts:
+        cmdline_options.append('numa_balancing=disable')
+
+    default_hp_size = k_memory_opts.get('default_hugepage_size')
+    if default_hp_size:
+        cmdline_options.append(f'default_hugepagesz={default_hp_size}')
+
+    hp_sizes = k_memory_opts.get('hugepage_size')
+    if hp_sizes:
+        for size, settings in hp_sizes.items():
+            cmdline_options.append(f'hugepagesz={size}')
+            count = settings.get('hugepage_count')
+            if count:
+                cmdline_options.append(f'hugepages={count}')
+
     grub_util.update_kernel_cmdline_options(' '.join(cmdline_options))
 
     return None

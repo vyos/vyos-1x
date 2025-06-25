@@ -6,7 +6,7 @@
         <properties>
           <help>Reset all currently tracked connections</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/clear_conntrack.py</command>
+        <command>${vyos_op_scripts_dir}/clear_conntrack.py</command>
       </node>
     </children>
   </node>

@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import warnings
 
 from passlib.hosts import linux_context
 from psutil import users
@@ -27,15 +26,14 @@ from time import sleep
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.template import is_ipv4
-from vyos.utils.auth import (
-    DEFAULT_PASSWORD,
-    EPasswdStrength,
-    evaluate_strength,
-    get_current_user
-)
+from vyos.utils.auth import EPasswdStrength
+from vyos.utils.auth import evaluate_strength
+from vyos.utils.auth import get_current_user
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
@@ -133,6 +131,7 @@ def get_config(config=None):
                                                  max_uid=MIN_USER_UID) + SYSTEM_USER_SKIP_LIST + cli_users
         login['tacacs_min_uid'] = MIN_TACACS_UID
 
+    set_dependents('ssh', conf)
     return login
 
 def verify(login):
@@ -352,6 +351,17 @@ def apply(login):
                        user_config, permission=0o600,
                        formater=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
+
+                principals_file = f'{home_dir}/.ssh/authorized_principals'
+                if dict_search('authentication.principal', user_config):
+                    render(principals_file, 'login/authorized_principals.j2',
+                           user_config, permission=0o600,
+                           formater=lambda _: _.replace("&quot;", '"'),
+                           user=user, group='users')
+                else:
+                    if os.path.exists(principals_file):
+                        os.unlink(principals_file)
+
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
 
@@ -368,14 +378,15 @@ def apply(login):
                     chown(home_dir, user=user, recursive=True)
 
             # Generate 2FA/MFA One-Time-Pad configuration
+            google_auth_file = f'{home_dir}/.google_authenticator'
             if dict_search('authentication.otp.key', user_config):
                 enable_otp = True
-                render(f'{home_dir}/.google_authenticator', 'login/pam_otp_ga.conf.j2',
+                render(google_auth_file, 'login/pam_otp_ga.conf.j2',
                        user_config, permission=0o400, user=user, group='users')
             else:
                 # delete configuration as it's not enabled for the user
-                if os.path.exists(f'{home_dir}/.google_authenticator'):
-                    os.remove(f'{home_dir}/.google_authenticator')
+                if os.path.exists(google_auth_file):
+                    os.unlink(google_auth_file)
 
             # Lock/Unlock local user account
             lock_unlock = '--unlock'
@@ -388,6 +399,22 @@ def apply(login):
             try:
                 # Disable user to prevent re-login
                 call(f'usermod -s /sbin/nologin {user}')
+
+                home_dir = getpwnam(user).pw_dir
+                # Remove SSH authorized keys file
+                authorized_keys_file = f'{home_dir}/.ssh/authorized_keys'
+                if os.path.exists(authorized_keys_file):
+                    os.unlink(authorized_keys_file)
+
+                # Remove SSH authorized principals file
+                principals_file = f'{home_dir}/.ssh/authorized_principals'
+                if os.path.exists(principals_file):
+                    os.unlink(principals_file)
+
+                # Remove Google Authenticator file
+                google_auth_file = f'{home_dir}/.google_authenticator'
+                if os.path.exists(google_auth_file):
+                    os.unlink(google_auth_file)
 
                 # Logout user if he is still logged in
                 if user in list(set([tmp[0] for tmp in users()])):
@@ -427,8 +454,9 @@ def apply(login):
     # Enable/disable Google authenticator
     cmd('pam-auth-update --disable mfa-google-authenticator')
     if enable_otp:
-        cmd(f'pam-auth-update --enable mfa-google-authenticator')
+        cmd('pam-auth-update --enable mfa-google-authenticator')
 
+    call_dependents()
     return None
 
 

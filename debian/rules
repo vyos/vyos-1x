@@ -32,7 +32,16 @@ override_dh_gencontrol:
 override_dh_auto_build:
 	make all
 
-override_dh_auto_install:
+# PSL: The VyOS build environment apparently assumes that the build unit
+# is VyOS to begin with.  Since we are not, we will clone in the necessary
+# directory (which is needed by setup.py below).
+/usr/share/vyos/vyconf: vyconf
+	sudo mkdir -p $$(dirname $@); sudo ln -rfs vyconf/data $@
+
+vyconf:
+	git clone -q $$(dirname $$(git config --get remote.origin.url))/$@
+
+override_dh_auto_install: /usr/share/vyos/vyconf
 	dh_auto_install
 
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..

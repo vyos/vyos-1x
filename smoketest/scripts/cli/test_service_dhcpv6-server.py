@@ -108,6 +108,7 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['lease-time', 'default', lease_time])
         self.cli_set(pool + ['lease-time', 'maximum', max_lease_time])
         self.cli_set(pool + ['lease-time', 'minimum', min_lease_time])
+        self.cli_set(pool + ['option', 'capwap-controller', dns_1])
         self.cli_set(pool + ['option', 'name-server', dns_1])
         self.cli_set(pool + ['option', 'name-server', dns_2])
         self.cli_set(pool + ['option', 'name-server', dns_2])
@@ -154,6 +155,10 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         self.verify_config_value(obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'max-valid-lifetime', int(max_lease_time))
 
         # Verify options
+        self.verify_config_object(
+                obj,
+                ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+                {'name': 'capwap-ac-v6', 'data': dns_1})
         self.verify_config_object(
                 obj,
                 ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],

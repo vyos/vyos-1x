@@ -517,6 +517,14 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         else:
             dict['ipv6']['address'].update({'eui64_old': eui64})
 
+    interface_identifier = leaf_node_changed(config, base + [ifname, 'ipv6', 'address', 'interface-identifier'])
+    if interface_identifier:
+        tmp = dict_search('ipv6.address', dict)
+        if not tmp:
+            dict.update({'ipv6': {'address': {'interface_identifier_old': interface_identifier}}})
+        else:
+            dict['ipv6']['address'].update({'interface_identifier_old': interface_identifier})
+
     for vif, vif_config in dict.get('vif', {}).items():
         # Add subinterface name to dictionary
         dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
@@ -626,6 +634,23 @@ def get_vlan_ids(interface):
 
     return vlan_ids
 
+def get_vlans_ids_and_range(interface):
+    vlan_ids = set()
+
+    vlan_filter_status = json.loads(cmd(f'bridge -j -d vlan show dev {interface}'))
+
+    if vlan_filter_status is not None:
+        for interface_status in vlan_filter_status:
+            for vlan_entry in interface_status.get("vlans", []):
+                start = vlan_entry["vlan"]
+                end = vlan_entry.get("vlanEnd")
+                if end:
+                    vlan_ids.add(f"{start}-{end}")
+                else:
+                    vlan_ids.add(str(start))
+
+    return vlan_ids
+
 def get_accel_dict(config, base, chap_secrets, with_pki=False):
     """
     Common utility function to retrieve and mangle the Accel-PPP configuration
@@ -636,6 +661,7 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
     Return a dictionary with the necessary interface config keys.
     """
     from vyos.utils.cpu import get_core_count
+    from vyos.utils.cpu import get_half_cpus
     from vyos.template import is_ipv4
 
     dict = config.get_config_dict(base, key_mangling=('-', '_'),
@@ -645,7 +671,16 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
                                   with_pki=with_pki)
 
     # set CPUs cores to process requests
-    dict.update({'thread_count' : get_core_count()})
+    match dict.get('thread_count'):
+        case 'all':
+            dict['thread_count'] = get_core_count()
+        case 'half':
+            dict['thread_count'] = get_half_cpus()
+        case str(x) if x.isdigit():
+            dict['thread_count'] = int(x)
+        case _:
+            dict['thread_count'] = get_core_count()
+
     # we need to store the path to the secrets file
     dict.update({'chap_secrets_file' : chap_secrets})
 
@@ -668,3 +703,18 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
             dict['authentication']['radius']['server'][server]['acct_port'] = '0'
 
     return dict
+
+def get_flowtable_interfaces(config):
+    """
+    Return all interfaces used in flowtables
+    """
+    ft_base = ['firewall', 'flowtable']
+
+    if not config.exists(ft_base):
+        return []
+
+    ifaces = []
+    for ft_name in config.list_nodes(ft_base):
+        ifaces += config.return_values(ft_base + [ft_name, 'interface'])
+
+    return ifaces

@@ -24,7 +24,10 @@ from glob import glob
 from sys import exit
 from os import environ
 from os import readlink
-from os import getpid, getppid
+from os import getpid
+from os import getppid
+from json import loads
+from json import dumps
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
@@ -35,15 +38,24 @@ from psutil import disk_partitions
 from vyos.base import Warning
 from vyos.configtree import ConfigTree
 from vyos.remote import download
-from vyos.system import disk, grub, image, compat, raid, SYSTEM_CFG_VER
+from vyos.system import disk
+from vyos.system import grub
+from vyos.system import image
+from vyos.system import compat
+from vyos.system import raid
+from vyos.system import SYSTEM_CFG_VER
+from vyos.system import grub_util
 from vyos.template import render
 from vyos.utils.auth import (
     DEFAULT_PASSWORD,
     EPasswdStrength,
     evaluate_strength
 )
+from vyos.utils.dict import dict_search
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.process import cmd, run, rc_cmd
 from vyos.version import get_version_data
 
@@ -58,6 +70,7 @@ MSG_ERR_FLAVOR_MISMATCH: str = 'The current image flavor is "{0}", the new image
 MSG_ERR_MISSING_ARCHITECTURE: str = 'The new image version data does not specify architecture, cannot check compatibility (is it a legacy release image?)'
 MSG_ERR_MISSING_FLAVOR: str = 'The new image version data does not specify flavor, cannot check compatibility (is it a legacy release image?)'
 MSG_ERR_CORRUPT_CURRENT_IMAGE: str = 'Version data in the current image is malformed: missing flavor and/or architecture fields. Upgrade compatibility cannot be checked.'
+MSG_ERR_UNSUPPORTED_SIGNATURE_TYPE: str = 'Unsupported signature type, signature cannot be verified.'
 MSG_INFO_INSTALL_WELCOME: str = 'Welcome to iGOS installation!\nThis command will install iGOS to your permanent storage.'
 MSG_INFO_INSTALL_EXIT: str = 'Exiting from iGOS installation'
 MSG_INFO_INSTALL_SUCCESS: str = 'The image installed successfully; please reboot now.'
@@ -73,6 +86,7 @@ MSG_INPUT_CONFIG_FOUND: str = 'An active configuration was found. Would you like
 MSG_INPUT_CONFIG_CHOICE: str = 'The following config files are available for boot:'
 MSG_INPUT_CONFIG_CHOOSE: str = 'Which file would you like as boot config?'
 MSG_INPUT_IMAGE_NAME: str = 'What would you like to name this image?'
+MSG_INPUT_IMAGE_NAME_TAKEN: str = 'There is already an installed image by that name; please choose again'
 MSG_INPUT_IMAGE_DEFAULT: str = 'Would you like to set the new image as the default one for boot?'
 MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user:'
 MSG_INPUT_PASSWORD_CONFIRM: str = 'Please confirm password for the "vyos" user:'
@@ -475,6 +489,29 @@ def setup_grub(root_dir: str) -> None:
     render(grub_cfg_menu, grub.TMPL_GRUB_MENU, {})
     render(grub_cfg_options, grub.TMPL_GRUB_OPTS, {})
 
+def get_cli_kernel_options(config_file: str) -> list:
+    config = ConfigTree(read_file(config_file))
+    config_dict = loads(config.to_json())
+    kernel_options = dict_search('system.option.kernel', config_dict)
+    if kernel_options is None:
+        kernel_options = {}
+    cmdline_options = []
+
+    # XXX: This code path and if statements must be kept in sync with the Kernel
+    # option handling in system_options.py:generate(). This occurance is used
+    # for having the appropriate options passed to GRUB after an image upgrade!
+    if 'disable-mitigations' in kernel_options:
+        cmdline_options.append('mitigations=off')
+    if 'disable-power-saving' in kernel_options:
+        cmdline_options.append('intel_idle.max_cstate=0 processor.max_cstate=1')
+    if 'amd-pstate-driver' in kernel_options:
+        mode = kernel_options['amd-pstate-driver']
+        cmdline_options.append(
+            f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
+    if 'quiet' in kernel_options:
+        cmdline_options.append('quiet')
+
+    return cmdline_options
 
 def configure_authentication(config_file: str, password: str) -> None:
     """Write encrypted password to config file
@@ -489,10 +526,7 @@ def configure_authentication(config_file: str, password: str) -> None:
     plaintext exposed
     """
     encrypted_password = linux_context.hash(password)
-
-    with open(config_file) as f:
-        config_string = f.read()
-
+    config_string = read_file(config_file)
     config = ConfigTree(config_string)
     config.set([
         'system', 'login', 'user', 'vyos', 'authentication',
@@ -514,7 +548,6 @@ def validate_signature(file_path: str, sign_type: str) -> None:
     """
     print('Validating signature')
     signature_valid: bool = False
-    # validate with minisig
     if sign_type == 'minisig':
         pub_key_list = glob('/usr/share/vyos/keys/*.minisign.pub')
         for pubkey in pub_key_list:
@@ -523,11 +556,8 @@ def validate_signature(file_path: str, sign_type: str) -> None:
                 signature_valid = True
                 break
         Path(f'{file_path}.minisig').unlink()
-    # validate with GPG
-    if sign_type == 'asc':
-        if run(f'gpg --verify ${file_path}.asc ${file_path}') == 0:
-            signature_valid = True
-        Path(f'{file_path}.asc').unlink()
+    else:
+        exit(MSG_ERR_UNSUPPORTED_SIGNATURE_TYPE)
 
     # warn or pass
     if not signature_valid:
@@ -537,21 +567,18 @@ def validate_signature(file_path: str, sign_type: str) -> None:
         print('Signature is valid')
 
 def download_file(local_file: str, remote_path: str, vrf: str,
-                  username: str, password: str,
                   progressbar: bool = False, check_space: bool = False):
-    environ['REMOTE_USERNAME'] = username
-    environ['REMOTE_PASSWORD'] = password
+    # Server credentials are implicitly passed in environment variables
+    # that are set by add_image
     if vrf is None:
         download(local_file, remote_path, progressbar=progressbar,
                  check_space=check_space, raise_error=True)
     else:
-        remote_auth = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password}'
         vrf_cmd = f'ip vrf exec {vrf} {external_download_script} \
                     --local-file {local_file} --remote-path {remote_path}'
-        cmd(vrf_cmd, auth=remote_auth)
+        cmd(vrf_cmd, env=environ)
 
 def image_fetch(image_path: str, vrf: str = None,
-                username: str = '', password: str = '',
                 no_prompt: bool = False) -> Path:
     """Fetch an ISO image
 
@@ -570,9 +597,8 @@ def image_fetch(image_path: str, vrf: str = None,
     if image_path == 'latest':
         command = external_latest_image_url_script
         if vrf:
-            command = f'REMOTE_USERNAME={username} REMOTE_PASSWORD={password} \
-                        ip vrf exec {vrf} ' + command
-        code, output = rc_cmd(command)
+            command = f'ip vrf exec {vrf} {command}'
+        code, output = rc_cmd(command, env=environ)
         if code:
             print(output)
             exit(MSG_INFO_INSTALL_EXIT)
@@ -581,24 +607,25 @@ def image_fetch(image_path: str, vrf: str = None,
     try:
         # check a type of path
         if urlparse(image_path).scheme:
-            # download an image
+            # Download the image file
             ISO_DOWNLOAD_PATH = os.path.join(os.path.expanduser("~"), '{0}.iso'.format(uuid4()))
             download_file(ISO_DOWNLOAD_PATH, image_path, vrf,
-                          username, password,
                           progressbar=True, check_space=True)
 
-            # download a signature
+            # Download the image signature
+            # VyOS only supports minisign signatures at the moment,
+            # but we keep the logic for multiple signatures
+            # in case we add something new in the future
             sign_file = (False, '')
-            for sign_type in ['minisig', 'asc']:
+            for sign_type in ['minisig']:
                 try:
                     download_file(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
-                                  f'{image_path}.{sign_type}', vrf,
-                                  username, password)
+                                  f'{image_path}.{sign_type}', vrf)
                     sign_file = (True, sign_type)
                     break
                 except Exception:
-                    print(f'{sign_type} signature is not available')
-            # validate a signature if it is available
+                    print(f'Could not download {sign_type} signature')
+            # Validate the signature if it is available
             if sign_file[0]:
                 validate_signature(ISO_DOWNLOAD_PATH, sign_file[1])
             else:
@@ -897,8 +924,7 @@ def install_image() -> None:
             for disk_target in l:
                 disk.partition_mount(disk_target.partition['efi'], f'{DIR_DST_ROOT}/boot/efi')
                 grub.install(disk_target.name, f'{DIR_DST_ROOT}/boot/',
-                             f'{DIR_DST_ROOT}/boot/efi',
-                             id=f'VyOS (RAID disk {l.index(disk_target) + 1})')
+                             f'{DIR_DST_ROOT}/boot/efi')
                 disk.partition_umount(disk_target.partition['efi'])
         else:
             print('Installing GRUB to the drive')
@@ -950,8 +976,11 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     if image.is_live_boot():
         exit(MSG_ERR_LIVE)
 
+    environ['REMOTE_USERNAME'] = username
+    environ['REMOTE_PASSWORD'] = password
+
     # fetch an image
-    iso_path: Path = image_fetch(image_path, vrf, username, password, no_prompt)
+    iso_path: Path = image_fetch(image_path, vrf, no_prompt)
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -984,8 +1013,12 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 f'Adding image would downgrade image tools to v.{cfg_ver}; disallowed')
 
         if not no_prompt:
+            versions = grub.version_list()
             while True:
                 image_name: str = ask_input(MSG_INPUT_IMAGE_NAME, version_name)
+                if image_name in versions:
+                    print(MSG_INPUT_IMAGE_NAME_TAKEN)
+                    continue
                 if image.validate_name(image_name):
                     break
                 print(MSG_WARN_IMAGE_NAME_WRONG)
@@ -1009,6 +1042,12 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             chmod_2775(target_config_dir)
             copytree('/opt/vyatta/etc/config/', target_config_dir, symlinks=True,
                      copy_function=copy_preserve_owner, dirs_exist_ok=True)
+
+            # Record information from which image we upgraded to the new one.
+            # This can be used for a future automatic rollback into the old image.
+            tmp = {'previous_image' : image.get_running_image()}
+            write_file(f'{target_config_dir}/first_boot', dumps(tmp))
+
         else:
             Path(target_config_dir).mkdir(parents=True)
             chown(target_config_dir, group='vyattacfg')
@@ -1039,6 +1078,12 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         grub.version_add(image_name, root_dir)
         if set_as_default:
             grub.set_default(image_name, root_dir)
+
+        cmdline_options = get_cli_kernel_options(
+            f'{target_config_dir}/config.boot')
+        grub_util.update_kernel_cmdline_options(' '.join(cmdline_options),
+                                                root_dir=root_dir,
+                                                version=image_name)
 
     except OSError as e:
         # if no space error, remove image dir and cleanup

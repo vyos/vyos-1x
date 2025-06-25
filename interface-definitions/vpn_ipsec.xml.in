@@ -1244,6 +1244,63 @@
                     <children>
                       #include <include/ipsec/bind.xml.i>
                       #include <include/ipsec/esp-group.xml.i>
+                      <node name="traffic-selector">
+                        <properties>
+                          <help>Traffic-selectors parameters</help>
+                        </properties>
+                        <children>
+                          <node name="local">
+                            <properties>
+                              <help>Local parameters for interesting traffic</help>
+                            </properties>
+                            <children>
+                              <leafNode name="prefix">
+                                <properties>
+                                  <help>Local IPv4 or IPv6 prefix</help>
+                                  <valueHelp>
+                                    <format>ipv4net</format>
+                                    <description>Local IPv4 prefix</description>
+                                  </valueHelp>
+                                  <valueHelp>
+                                    <format>ipv6net</format>
+                                    <description>Local IPv6 prefix</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="ipv4-prefix"/>
+                                    <validator name="ipv6-prefix"/>
+                                  </constraint>
+                                  <multi/>
+                                </properties>
+                              </leafNode>
+                            </children>
+                          </node>
+                          <node name="remote">
+                            <properties>
+                              <help>Remote parameters for interesting traffic</help>
+                            </properties>
+                            <children>
+                              <leafNode name="prefix">
+                                <properties>
+                                  <help>Remote IPv4 or IPv6 prefix</help>
+                                  <valueHelp>
+                                    <format>ipv4net</format>
+                                    <description>Remote IPv4 prefix</description>
+                                  </valueHelp>
+                                  <valueHelp>
+                                    <format>ipv6net</format>
+                                    <description>Remote IPv6 prefix</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="ipv4-prefix"/>
+                                    <validator name="ipv6-prefix"/>
+                                  </constraint>
+                                  <multi/>
+                                </properties>
+                              </leafNode>
+                            </children>
+                          </node>
+                        </children>
+                      </node>
                     </children>
                   </node>
                 </children>

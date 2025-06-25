@@ -255,6 +255,19 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <leafNode name="auto-ignore">
+                <properties>
+                  <help>IPv6 prefix to be excluded in Router Advertisements (RAs) - use in conjunction with the ::/64 wildcard prefix</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix to be excluded</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
               <tagNode name="prefix">
                 <properties>
                   <help>IPv6 prefix to be advertised in Router Advertisements (RAs)</help>

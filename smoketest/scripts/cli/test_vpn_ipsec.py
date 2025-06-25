@@ -352,6 +352,94 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.tearDownPKI()
 
 
+    def test_site_to_site_vti_ts_afi(self):
+        local_address = '192.0.2.10'
+        vti = 'vti10'
+        # IKE
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'disable-mobike'])
+        # ESP
+        self.cli_set(base_path + ['esp-group', esp_group, 'compression'])
+        # VTI interface
+        self.cli_set(vti_path + [vti, 'address', '10.1.1.1/24'])
+
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', peer_ip])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
+        # Site to site
+        peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
+        self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_base_path + ['connection-type', 'none'])
+        self.cli_set(peer_base_path + ['force-udp-encapsulation'])
+        self.cli_set(peer_base_path + ['ike-group', ike_group])
+        self.cli_set(peer_base_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_base_path + ['local-address', local_address])
+        self.cli_set(peer_base_path + ['remote-address', peer_ip])
+        self.cli_set(peer_base_path + ['vti', 'bind', vti])
+        self.cli_set(peer_base_path + ['vti', 'esp-group', esp_group])
+        self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'local', 'prefix', '0.0.0.0/0'])
+        self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'remote', 'prefix', '192.0.2.1/32'])
+        self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'remote', 'prefix', '192.0.2.3/32'])
+
+        self.cli_commit()
+
+        swanctl_conf = read_file(swanctl_file)
+        if_id = vti.lstrip('vti')
+        # The key defaults to 0 and will match any policies which similarly do
+        # not have a lookup key configuration - thus we shift the key by one
+        # to also support a vti0 interface
+        if_id = str(int(if_id) +1)
+        swanctl_conf_lines = [
+            f'version = 2',
+            f'auth = psk',
+            f'proposals = aes128-sha1-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024',
+            f'local_addrs = {local_address} # dhcp:no',
+            f'mobike = no',
+            f'remote_addrs = {peer_ip}',
+            f'mode = tunnel',
+            f'local_ts = 0.0.0.0/0',
+            f'remote_ts = 192.0.2.1/32,192.0.2.3/32',
+            f'ipcomp = yes',
+            f'start_action = none',
+            f'replay_window = 32',
+            f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
+            f'if_id_out = {if_id}',
+            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
+        ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # Check IPv6 TS
+        self.cli_delete(peer_base_path + ['vti', 'traffic-selector'])
+        self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'local', 'prefix', '::/0'])
+        self.cli_set(peer_base_path + ['vti', 'traffic-selector', 'remote', 'prefix', '::/0'])
+        self.cli_commit()
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            f'local_ts = ::/0',
+            f'remote_ts = ::/0',
+            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
+        ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # Check both TS (IPv4 + IPv6)
+        self.cli_delete(peer_base_path + ['vti', 'traffic-selector'])
+        self.cli_commit()
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            f'local_ts = 0.0.0.0/0,::/0',
+            f'remote_ts = 0.0.0.0/0,::/0',
+            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
+        ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
+
+
     def test_dmvpn(self):
         ike_lifetime = '3600'
         esp_lifetime = '1800'

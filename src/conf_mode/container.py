@@ -315,7 +315,7 @@ def generate_run_arguments(name, container_config):
     sysctl_opt = ''
     if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
         for k, v in container_config['sysctl']['parameter'].items():
-            sysctl_opt += f" --sysctl {k}={v['value']}"
+            sysctl_opt += f" --sysctl \"{k}={v['value']}\""
 
     # Add capability options. Should be in uppercase
     capabilities = ''
@@ -323,6 +323,11 @@ def generate_run_arguments(name, container_config):
         for cap in container_config['capability']:
             cap = cap.upper().replace('-', '_')
             capabilities += f' --cap-add={cap}'
+
+    # Grant root capabilities to the container
+    privileged = ''
+    if 'privileged' in container_config:
+        privileged = '--privileged'
 
     # Add a host device to the container /dev/x:/dev/x
     device = ''
@@ -402,7 +407,7 @@ def generate_run_arguments(name, container_config):
         for ns in container_config['name_server']:
             name_server += f'--dns {ns}'
 
-    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} --cpus {cpu_quota} {sysctl_opt} ' \
+    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} {privileged} --cpus {cpu_quota} {sysctl_opt} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
                          f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid}'
 

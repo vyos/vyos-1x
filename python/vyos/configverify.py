@@ -92,6 +92,9 @@ def verify_mtu_ipv6(config):
             tmp = dict_search('ipv6.address.eui64', config)
             if tmp != None: raise ConfigError(error_msg)
 
+            tmp = dict_search('ipv6.address.interface_identifier', config)
+            if tmp != None: raise ConfigError(error_msg)
+
 def verify_vrf(config):
     """
     Common helper function used by interface implementations to perform
@@ -356,6 +359,7 @@ def verify_vlan_config(config):
         verify_vrf(vlan)
         verify_mirror_redirect(vlan)
         verify_mtu_parent(vlan, config)
+        verify_mtu_ipv6(vlan)
 
     # 802.1ad (Q-in-Q) VLANs
     for s_vlan_id in config.get('vif_s', {}):
@@ -367,6 +371,7 @@ def verify_vlan_config(config):
         verify_vrf(s_vlan)
         verify_mirror_redirect(s_vlan)
         verify_mtu_parent(s_vlan, config)
+        verify_mtu_ipv6(s_vlan)
 
         for c_vlan_id in s_vlan.get('vif_c', {}):
             c_vlan = s_vlan['vif_c'][c_vlan_id]
@@ -378,6 +383,7 @@ def verify_vlan_config(config):
             verify_mirror_redirect(c_vlan)
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
+            verify_mtu_ipv6(c_vlan)
 
 
 def verify_diffie_hellman_length(file, min_keysize):
@@ -520,6 +526,25 @@ def verify_pki_dh_parameters(config: dict, dh_name: str, min_key_size: int=0):
         dh_bits = dh_numbers.p.bit_length()
         if dh_bits < min_key_size:
             raise ConfigError(f'Minimum DH key-size is {min_key_size} bits!')
+
+def verify_pki_openssh_key(config: dict, key_name: str):
+    """
+    Common helper function user by PKI consumers to perform recurring
+    validation functions on OpenSSH keys
+    """
+    if 'pki' not in config:
+        raise ConfigError('PKI is not configured!')
+
+    if 'openssh' not in config['pki']:
+        raise ConfigError('PKI does not contain any OpenSSH keys!')
+
+    if key_name not in config['pki']['openssh']:
+        raise ConfigError(f'OpenSSH key "{key_name}" not found in configuration!')
+
+    if 'public' in config['pki']['openssh'][key_name]:
+        if not {'key', 'type'} <= set(config['pki']['openssh'][key_name]['public']):
+            raise ConfigError('Both public key and type must be defined for '\
+                              f'OpenSSH public key "{key_name}"!')
 
 def verify_eapol(config: dict):
     """

@@ -31,3 +31,36 @@ table ip6 vyos_filter {
 {%     endfor %}
 }
 {% endif %}
+
+
+{% if ipv4_sets_policy is vyos_defined %}
+{%     for setname, ip_list in ipv4_sets_policy.items() %}
+flush set ip vyos_mangle {{ setname }}
+{%     endfor %}
+
+table ip vyos_mangle {
+{%     for setname, ip_list in ipv4_sets_policy.items() %}
+    set {{ setname }} {
+        type ipv4_addr
+        flags interval
+        elements = { {{ ','.join(ip_list) }} }
+    }
+{%     endfor %}
+}
+{% endif %}
+
+{% if ipv6_sets_policy is vyos_defined %}
+{%     for setname, ip_list in ipv6_sets_policy.items() %}
+flush set ip6 vyos_mangle {{ setname }}
+{%     endfor %}
+
+table ip6 vyos_mangle {
+{%     for setname, ip_list in ipv6_sets_policy.items() %}
+    set {{ setname }} {
+        type ipv6_addr
+        flags interval
+        elements = { {{ ','.join(ip_list) }} }
+    }
+{%     endfor %}
+}
+{% endif %}

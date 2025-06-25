@@ -49,7 +49,7 @@
             <properties>
               <help>Reconfigure console keyboard layout</help>
             </properties>
-            <command>sudo dpkg-reconfigure -f dialog keyboard-configuration &amp;&amp; sudo systemctl restart keyboard-setup</command>
+            <command>dpkg-reconfigure -f dialog keyboard-configuration &amp;&amp; systemctl restart keyboard-setup</command>
           </leafNode>
         </children>
       </node>

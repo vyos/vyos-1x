@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright (C) 2020-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -64,12 +64,22 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         # call base-classes classmethod
         super(WirelessInterfaceTest, cls).setUpClass()
 
-        # T5245 - currently testcases are disabled
-        cls._test_ipv6 = False
-        cls._test_vlan = False
+        # If any wireless interface is based on mac80211_hwsim, disable all
+        # VLAN related testcases. See T5245, T7325
+        tmp = read_file('/proc/modules')
+        if 'mac80211_hwsim' in tmp:
+            cls._test_ipv6 = False
+            cls._test_vlan = False
+            cls._test_qinq = False
+
+        # Loading mac80211_hwsim module created two WIFI Interfaces in the
+        # background (wlan0 and wlan1), remove them to have a clean test start.
+        # This must happen AFTER the above check for unsupported drivers
+        for interface in cls._interfaces:
+            if interface_exists(interface):
+                call(f'sudo iw dev {interface} del')
 
         cls.cli_set(cls, wifi_cc_path + [country])
-
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
@@ -627,9 +637,4 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
-    # loading the module created two WIFI Interfaces in the background (wlan0 and wlan1)
-    # remove them to have a clean test start
-    for interface in ['wlan0', 'wlan1']:
-        if interface_exists(interface):
-            call(f'sudo iw dev {interface} del')
     unittest.main(verbosity=2)

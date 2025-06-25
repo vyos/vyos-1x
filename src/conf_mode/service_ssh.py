@@ -23,14 +23,15 @@ from syslog import LOG_INFO
 from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
-from vyos.configverify import verify_pki_ca_certificate
+from vyos.configverify import verify_pki_openssh_key
+from vyos.defaults import config_files
 from vyos.utils.process import call
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
-from vyos.pki import find_chain
-from vyos.pki import encode_certificate
-from vyos.pki import load_certificate
+from vyos.pki import encode_public_key
+from vyos.pki import load_openssh_public_key
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.file import write_file
 
 airbag.enable()
@@ -44,8 +45,7 @@ key_rsa = '/etc/ssh/ssh_host_rsa_key'
 key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
 
-trusted_user_ca_key = '/etc/ssh/trusted_user_ca_key'
-
+trusted_user_ca = config_files['sshd_user_ca']
 
 def get_config(config=None):
     if config:
@@ -55,10 +55,8 @@ def get_config(config=None):
     base = ['service', 'ssh']
     if not conf.exists(base):
         return None
-
-    ssh = conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, with_pki=True
-    )
+    ssh = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True, with_pki=True)
 
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp:
@@ -68,13 +66,26 @@ def get_config(config=None):
     # options which we need to update into the dictionary retrived.
     ssh = conf.merge_defaults(ssh, recursive=True)
 
-    # pass config file path - used in override template
-    ssh['config_file'] = config_file
-
     # Ignore default XML values if config doesn't exists
     # Delete key from dict
     if not conf.exists(base + ['dynamic-protection']):
         del ssh['dynamic_protection']
+
+    # See if any user has specified a list of principal names that are accepted
+    # for certificate authentication.
+    tmp = conf.get_config_dict(['system', 'login', 'user'],
+                                key_mangling=('-', '_'),
+                                no_tag_node_value_mangle=True,
+                                get_first_key=True)
+
+    for value, _ in dict_search_recursive(tmp, 'principal'):
+        # Only enable principal handling if SSH trusted-user-ca is set
+        if 'trusted_user_ca' in ssh:
+            ssh['has_principals'] = {}
+        # We do only need to execute this code path once as we need to know
+        # if any one of the local users has a principal set or not - this
+        # accounts for the entire system.
+        break
 
     return ssh
 
@@ -86,15 +97,8 @@ def verify(ssh):
     if 'rekey' in ssh and 'data' not in ssh['rekey']:
         raise ConfigError('Rekey data is required!')
 
-    if 'trusted_user_ca_key' in ssh:
-        if 'ca_certificate' not in ssh['trusted_user_ca_key']:
-            raise ConfigError('CA certificate is required for TrustedUserCAKey')
-
-        ca_key_name = ssh['trusted_user_ca_key']['ca_certificate']
-        verify_pki_ca_certificate(ssh, ca_key_name)
-        pki_ca_cert = ssh['pki']['ca'][ca_key_name]
-        if 'certificate' not in pki_ca_cert or not pki_ca_cert['certificate']:
-            raise ConfigError(f"CA certificate '{ca_key_name}' is not valid or missing")
+    if 'trusted_user_ca' in ssh:
+        verify_pki_openssh_key(ssh, ssh['trusted_user_ca'])
 
     verify_vrf(ssh)
     return None
@@ -119,23 +123,17 @@ def generate(ssh):
         syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
 
-    if 'trusted_user_ca_key' in ssh:
-        ca_key_name = ssh['trusted_user_ca_key']['ca_certificate']
-        pki_ca_cert = ssh['pki']['ca'][ca_key_name]
-
-        loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
-        loaded_ca_certs = {
-            load_certificate(c['certificate'])
-            for c in ssh['pki']['ca'].values()
-            if 'certificate' in c
-        }
-
-        ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
-        write_file(
-            trusted_user_ca_key, '\n'.join(encode_certificate(c) for c in ca_full_chain)
-        )
-    elif os.path.exists(trusted_user_ca_key):
-        os.unlink(trusted_user_ca_key)
+    if 'trusted_user_ca' in ssh:
+        key_name = ssh['trusted_user_ca']
+        openssh_cert = ssh['pki']['openssh'][key_name]
+        loaded_ca_cert = load_openssh_public_key(openssh_cert['public']['key'],
+                                                 openssh_cert['public']['type'])
+        tmp = encode_public_key(loaded_ca_cert, encoding='OpenSSH',
+                                key_format='OpenSSH')
+        write_file(trusted_user_ca, tmp, trailing_newline=True)
+    else:
+        if os.path.exists(trusted_user_ca):
+            os.unlink(trusted_user_ca)
 
     render(config_file, 'ssh/sshd_config.j2', ssh)
 

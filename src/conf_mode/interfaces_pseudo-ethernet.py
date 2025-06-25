@@ -27,6 +27,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_mtu_parent
+from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import MACVLANIf
 from vyos.utils.network import interface_exists
@@ -71,6 +72,7 @@ def verify(peth):
     verify_vrf(peth)
     verify_address(peth)
     verify_mtu_parent(peth, peth['parent'])
+    verify_mtu_ipv6(peth)
     verify_mirror_redirect(peth)
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)

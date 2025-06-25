@@ -826,7 +826,6 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         gw_subnet = "192.168.0.1"
 
         self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
-        self.cli_set(path + ['device-type', 'tap'])
         self.cli_set(path + ['encryption', 'data-ciphers', 'aes192'])
         self.cli_set(path + ['hash', auth_hash])
         self.cli_set(path + ['mode', 'server'])
@@ -840,6 +839,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
         self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
 
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(path + ['device-type', 'tap'])
         self.cli_commit()
 
         config_file = f'/run/openvpn/{vtun_if}.conf'

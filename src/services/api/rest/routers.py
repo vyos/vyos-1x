@@ -51,6 +51,7 @@ from .models import error
 from .models import responses
 from .models import ApiModel
 from .models import ConfigureModel
+from .models import ConfirmModel
 from .models import ConfigureListModel
 from .models import ConfigSectionModel
 from .models import ConfigSectionListModel
@@ -66,6 +67,7 @@ from .models import GenerateModel
 from .models import ShowModel
 from .models import RebootModel
 from .models import ResetModel
+from .models import RenewModel
 from .models import ImportPkiModel
 from .models import PoweroffModel
 from .models import TracerouteModel
@@ -301,8 +303,24 @@ def call_commit(s: SessionState):
             LOG.warning(f'ConfigSessionError: {e}')
 
 
+def call_commit_confirm(s: SessionState):
+    env = s.session.get_session_env()
+    env['IN_COMMIT_CONFIRM'] = 't'
+    try:
+        s.session.commit()
+    except ConfigSessionError as e:
+        s.session.discard()
+        if s.debug:
+            LOG.warning(f'ConfigSessionError:\n {traceback.format_exc()}')
+        else:
+            LOG.warning(f'ConfigSessionError: {e}')
+    finally:
+        del env['IN_COMMIT_CONFIRM']
+
+
 def _configure_op(
     data: Union[
+        ConfirmModel,
         ConfigureModel,
         ConfigureListModel,
         ConfigSectionModel,
@@ -318,6 +336,11 @@ def _configure_op(
     state = SessionState()
     session = state.session
     env = session.get_session_env()
+
+    # A non-zero confirm_time will start commit-confirm timer on commit
+    confirm_time = 0
+    if isinstance(data, (ConfigureModel, ConfigureListModel, ConfigFileModel)):
+        confirm_time = data.confirm_time
 
     # Allow users to pass just one command
     if not isinstance(data, (ConfigureListModel, ConfigSectionListModel)):
@@ -338,10 +361,16 @@ def _configure_op(
     try:
         for c in data:
             op = c.op
-            if not isinstance(c, BaseConfigSectionTreeModel):
+            if not isinstance(c, (ConfirmModel, BaseConfigSectionTreeModel)):
                 path = c.path
 
-            if isinstance(c, BaseConfigureModel):
+            if isinstance(c, ConfirmModel):
+                if op == 'confirm':
+                    msg = session.confirm()
+                else:
+                    raise ConfigSessionError(f"'{op}' is not a valid operation")
+
+            elif isinstance(c, BaseConfigureModel):
                 if c.value:
                     value = c.value
                 else:
@@ -387,16 +416,26 @@ def _configure_op(
                 else:
                     raise ConfigSessionError(f"'{op}' is not a valid operation")
         # end for
+
         config = Config(session_env=env)
         d = get_config_diff(config)
 
+        if confirm_time:
+            out = session.commit_confirm(minutes=confirm_time)
+            msg = msg + out if msg else out
+            env['IN_COMMIT_CONFIRM'] = 't'
+
         if d.is_node_changed(['service', 'https']):
-            background_tasks.add_task(call_commit, state)
-            msg = self_ref_msg
+            if confirm_time:
+                background_tasks.add_task(call_commit_confirm, state)
+            else:
+                background_tasks.add_task(call_commit, state)
+            out = self_ref_msg
+            msg = msg + out if msg else out
         else:
             # capture non-fatal warnings
             out = session.commit()
-            msg = out if out else msg
+            msg = msg + out if msg else out
 
         LOG.info(f"Configuration modified via HTTP API using key '{state.id}'")
     except ConfigSessionError as e:
@@ -413,6 +452,8 @@ def _configure_op(
         # Don't give the details away to the outer world
         error_msg = 'An internal error occured. Check the logs for details.'
     finally:
+        if 'IN_COMMIT_CONFIRM' in env:
+            del env['IN_COMMIT_CONFIRM']
         lock.release()
 
     if status != 200:
@@ -432,7 +473,7 @@ def create_path_import_pki_no_prompt(path):
 
 @router.post('/configure')
 def configure_op(
-    data: Union[ConfigureModel, ConfigureListModel],
+    data: Union[ConfigureModel, ConfigureListModel, ConfirmModel],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
@@ -500,6 +541,8 @@ def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
     op = data.op
     msg = None
 
+    lock.acquire()
+
     try:
         if op == 'save':
             if data.file:
@@ -507,22 +550,42 @@ def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
             else:
                 path = '/config/config.boot'
             msg = session.save_config(path)
-        elif op == 'load':
+        elif op in ('load', 'merge'):
             if data.file:
                 path = data.file
+            elif data.string:
+                path = '/tmp/config.file'
+                with open(path, 'w') as f:
+                    f.write(data.string)
             else:
-                return error(400, 'Missing required field "file"')
+                return error(400, 'Missing required field "file | string"')
 
-            session.migrate_and_load_config(path)
+            match op:
+                case 'load':
+                    session.migrate_and_load_config(path)
+                case 'merge':
+                    session.merge_config(path)
 
             config = Config(session_env=env)
             d = get_config_diff(config)
 
+            if data.confirm_time:
+                out = session.commit_confirm(minutes=data.confirm_time)
+                msg = msg + out if msg else out
+                env['IN_COMMIT_CONFIRM'] = 't'
+
             if d.is_node_changed(['service', 'https']):
-                background_tasks.add_task(call_commit, state)
-                msg = self_ref_msg
+                if data.confirm_time:
+                    background_tasks.add_task(call_commit_confirm, state)
+                else:
+                    background_tasks.add_task(call_commit, state)
+                out = self_ref_msg
+                msg = msg + out if msg else out
             else:
-                session.commit()
+                out = session.commit()
+                msg = msg + out if msg else out
+        elif op == 'confirm':
+            msg = session.confirm()
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
@@ -530,6 +593,10 @@ def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
     except Exception:
         LOG.critical(traceback.format_exc())
         return error(500, 'An internal error occured. Check the logs for details.')
+    finally:
+        if 'IN_COMMIT_CONFIRM' in env:
+            del env['IN_COMMIT_CONFIRM']
+        lock.release()
 
     return success(msg)
 
@@ -657,6 +724,26 @@ def reboot_op(data: RebootModel):
 
     return success(res)
 
+@router.post('/renew')
+def renew_op(data: RenewModel):
+    state = SessionState()
+    session = state.session
+
+    op = data.op
+    path = data.path
+
+    try:
+        if op == 'renew':
+            res = session.renew(path)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception:
+        LOG.critical(traceback.format_exc())
+        return error(500, 'An internal error occured. Check the logs for details.')
+
+    return success(res)
 
 @router.post('/reset')
 def reset_op(data: ResetModel):

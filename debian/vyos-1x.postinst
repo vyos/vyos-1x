@@ -50,6 +50,10 @@ if [[ -e /usr/share/pam-configs/tacplus ]]; then
     rm /usr/share/pam-configs/tacplus
 fi
 
+# Disable pam_nologin.so behavior for regular users
+sed -i '/^auth[[:space:]]\+requisite[[:space:]]\+pam_nologin\.so$/s/^/#/' /etc/pam.d/login
+sed -i '/^account[[:space:]]\+required[[:space:]]\+pam_nologin\.so$/s/^/#/' /etc/pam.d/sshd
+
 # Add TACACS system users required for TACACS based system authentication
 if ! grep -q '^tacacs' /etc/passwd; then
     # Add the tacacs group and all 16 possible tacacs privilege-level users to
@@ -221,11 +225,9 @@ fi
 # Remove unwanted daemon files from /etc
 # conntackd
 # pmacct
-# fastnetmon
 # ntp
 DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd
         /etc/default/pmacctd /etc/pmacct
-        /etc/networks_list /etc/networks_whitelist /etc/fastnetmon.conf
         /etc/ntp.conf /etc/default/ssh /etc/avahi/avahi-daemon.conf /etc/avahi/hosts
         /etc/powerdns /etc/default/pdns-recursor
         /etc/ppp/ip-up.d/0000usepeerdns /etc/ppp/ip-down.d/0000usepeerdns"

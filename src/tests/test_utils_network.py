@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright (C) 2020-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -43,3 +43,12 @@ class TestVyOSUtilsNetwork(TestCase):
 
         self.assertFalse(vyos.utils.network.is_loopback_addr('::2'))
         self.assertFalse(vyos.utils.network.is_loopback_addr('192.0.2.1'))
+
+    def test_check_port_availability(self):
+        self.assertTrue(vyos.utils.network.check_port_availability('::1', 8080))
+        self.assertTrue(vyos.utils.network.check_port_availability('127.0.0.1', 8080))
+        self.assertTrue(vyos.utils.network.check_port_availability(None, 8080, protocol='udp'))
+        # We do not have 192.0.2.1 configured on this system
+        self.assertFalse(vyos.utils.network.check_port_availability('192.0.2.1', 443))
+        # We do not have 2001:db8::1 configured on this system
+        self.assertFalse(vyos.utils.network.check_port_availability('2001:db8::1', 80, protocol='udp'))

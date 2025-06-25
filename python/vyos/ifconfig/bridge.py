@@ -19,7 +19,7 @@ from vyos.utils.assertion import assert_list
 from vyos.utils.assertion import assert_positive
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
-from vyos.configdict import get_vlan_ids
+from vyos.configdict import get_vlans_ids_and_range
 from vyos.configdict import list_diff
 
 @Interface.register
@@ -376,11 +376,21 @@ class BridgeIf(Interface):
                 if 'priority' in interface_config:
                     lower.set_path_priority(interface_config['priority'])
 
+                # set BPDU guard
+                tmp = dict_search('bpdu_guard', interface_config)
+                value = '1' if (tmp != None) else '0'
+                lower.set_bpdu_guard(value)
+
+                # set root guard
+                tmp = dict_search('root_guard', interface_config)
+                value = '1' if (tmp != None) else '0'
+                lower.set_root_guard(value)
+
                 if 'enable_vlan' in config:
                     add_vlan = []
                     native_vlan_id = None
                     allowed_vlan_ids= []
-                    cur_vlan_ids = get_vlan_ids(interface)
+                    cur_vlan_ids = get_vlans_ids_and_range(interface)
 
                     if 'native_vlan' in interface_config:
                         vlan_id = interface_config['native_vlan']
@@ -389,14 +399,8 @@ class BridgeIf(Interface):
 
                     if 'allowed_vlan' in interface_config:
                         for vlan in interface_config['allowed_vlan']:
-                            vlan_range = vlan.split('-')
-                            if len(vlan_range) == 2:
-                                for vlan_add in range(int(vlan_range[0]),int(vlan_range[1]) + 1):
-                                    add_vlan.append(str(vlan_add))
-                                    allowed_vlan_ids.append(str(vlan_add))
-                            else:
-                                add_vlan.append(vlan)
-                                allowed_vlan_ids.append(vlan)
+                            add_vlan.append(vlan)
+                            allowed_vlan_ids.append(vlan)
 
                     # Remove redundant VLANs from the system
                     for vlan in list_diff(cur_vlan_ids, add_vlan):

@@ -194,6 +194,7 @@ class ConfigTree(object):
                 raise ValueError('Failed to read internal rep: {0}'.format(msg))
             else:
                 self.__config = config
+                self.__version = ''
         elif config_string is not None:
             config_section, version_section = extract_version(config_string)
             config_section = escape_backslash(config_section)
@@ -521,35 +522,6 @@ def mask_inclusive(left, right, libpath=LIBPATH):
     tree = ConfigTree(address=res)
 
     return tree
-
-
-def show_commit_data(active_tree, proposed_tree, libpath=LIBPATH):
-    if not (
-        isinstance(active_tree, ConfigTree) and isinstance(proposed_tree, ConfigTree)
-    ):
-        raise TypeError('Arguments must be instances of ConfigTree')
-
-    __lib = cdll.LoadLibrary(libpath)
-    __show_commit_data = __lib.show_commit_data
-    __show_commit_data.argtypes = [c_void_p, c_void_p]
-    __show_commit_data.restype = c_char_p
-
-    res = __show_commit_data(active_tree._get_config(), proposed_tree._get_config())
-
-    return res.decode()
-
-
-def test_commit(active_tree, proposed_tree, libpath=LIBPATH):
-    if not (
-        isinstance(active_tree, ConfigTree) and isinstance(proposed_tree, ConfigTree)
-    ):
-        raise TypeError('Arguments must be instances of ConfigTree')
-
-    __lib = cdll.LoadLibrary(libpath)
-    __test_commit = __lib.test_commit
-    __test_commit.argtypes = [c_void_p, c_void_p]
-
-    __test_commit(active_tree._get_config(), proposed_tree._get_config())
 
 
 def reference_tree_to_json(from_dir, to_file, internal_cache='', libpath=LIBPATH):

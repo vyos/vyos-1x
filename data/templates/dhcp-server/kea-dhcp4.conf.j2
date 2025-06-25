@@ -25,20 +25,6 @@
         },
         "option-def": [
             {
-                "name": "rfc3442-static-route",
-                "code": 121,
-                "type": "record",
-                "array": true,
-                "record-types": "uint8,uint8,uint8,uint8,uint8,uint8,uint8"
-            },
-            {
-                "name": "windows-static-route",
-                "code": 249,
-                "type": "record",
-                "array": true,
-                "record-types": "uint8,uint8,uint8,uint8,uint8,uint8,uint8"
-            },
-            {
                 "name": "wpad-url",
                 "code": 252,
                 "type": "string"
@@ -50,6 +36,19 @@
                 "space": "ubnt"
             }
         ],
+{% if dynamic_dns_update is vyos_defined %}
+        "dhcp-ddns": {
+            "enable-updates": true,
+            "server-ip": "127.0.0.1",
+            "server-port": 53001,
+            "sender-ip": "",
+            "sender-port": 0,
+            "max-queue-size": 1024,
+            "ncr-protocol": "UDP",
+            "ncr-format": "JSON"
+        },
+        {{ dynamic_dns_update | kea_dynamic_dns_update_main_json }}
+{% endif %}
         "hooks-libraries": [
 {% if high_availability is vyos_defined %}
             {
@@ -68,6 +67,16 @@
                 }
             },
 {% endif %}
+            {
+                "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_ping_check.so",
+                "parameters": {
+                    "enable-ping-check" : false,
+                    "min-ping-requests" : 1,
+                    "reply-timeout" : 100,
+                    "ping-cltt-secs" : 60,
+                    "ping-channel-threads" : 0
+                }
+            },
             {
                 "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_lease_cmds.so",
                 "parameters": {}

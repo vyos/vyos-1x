@@ -26,6 +26,48 @@
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary</command>
           </leafNode>
+          <tagNode name="kernel">
+            <properties>
+              <completionHelp>
+                <script>ip -j link show | jq -r '.[].ifname'</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --intf-name=$4</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show system interface in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --intf-name=$4 --detail</command>
+              </leafNode>
+              <leafNode name="json">
+                <properties>
+                  <help>Show system interface in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --intf-name=$4 --raw</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="kernel">
+            <properties>
+              <help>Show all interfaces on this system</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_kernel</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show system interface in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --detail</command>
+              </leafNode>
+              <leafNode name="json">
+                <properties>
+                  <help>Show all interfaces in JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --raw</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

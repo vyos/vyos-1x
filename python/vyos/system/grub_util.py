@@ -56,12 +56,11 @@ def set_kernel_cmdline_options(cmdline_options: str, version: str = '',
 
 @image.if_not_live_boot
 def update_kernel_cmdline_options(cmdline_options: str,
-                                  root_dir: str = '') -> None:
+                                  root_dir: str = '',
+                                  version = image.get_running_image()) -> None:
     """Update Kernel custom cmdline options"""
     if not root_dir:
         root_dir = disk.find_persistence()
-
-    version = image.get_running_image()
 
     boot_opts_current = grub.get_boot_opts(version, root_dir)
     boot_opts_proposed = grub.BOOT_OPTS_STEM + f'{version} {cmdline_options}'

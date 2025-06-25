@@ -227,6 +227,35 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
+    def test_source_nat66_network_group(self):
+        address_group = 'smoketest_addr'
+        address_group_member = 'fc00::1'
+        network_group = 'smoketest_net'
+        network_group_member = 'fc00::/64'
+        translation_prefix = 'fc01::/64'
+
+        self.cli_set(['firewall', 'group', 'ipv6-address-group', address_group, 'address', address_group_member])
+        self.cli_set(['firewall', 'group', 'ipv6-network-group', network_group, 'network', network_group_member])
+
+        self.cli_set(src_path + ['rule', '1', 'destination', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', '1', 'translation', 'address', translation_prefix])
+
+        self.cli_set(src_path + ['rule', '2', 'destination', 'group', 'network-group', network_group])
+        self.cli_set(src_path + ['rule', '2', 'translation', 'address', translation_prefix])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'set A6_{address_group}'],
+            [f'elements = {{ {address_group_member} }}'],
+            [f'set N6_{network_group}'],
+            [f'elements = {{ {network_group_member} }}'],
+            ['ip6 daddr', f'@A6_{address_group}', 'snat prefix to fc01::/64'],
+            ['ip6 daddr', f'@N6_{network_group}', 'snat prefix to fc01::/64']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_nat')
+
     def test_nat66_no_rules(self):
         # T3206: deleting all rules but keep the direction 'destination' or
         # 'source' resulteds in KeyError: 'rule'.

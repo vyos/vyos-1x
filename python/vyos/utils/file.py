@@ -28,22 +28,28 @@ def file_is_persistent(path):
     absolute = os.path.abspath(os.path.dirname(path))
     return re.match(location,absolute)
 
-def read_file(fname, defaultonfailure=None):
+def read_file(fname, defaultonfailure=None, sudo=False):
     """
     read the content of a file, stripping any end characters (space, newlines)
     should defaultonfailure be not None, it is returned on failure to read
     """
     try:
-        """ Read a file to string """
-        with open(fname, 'r') as f:
-            data = f.read().strip()
-        return data
+        # Some files can only be read by root - emulate sudo cat call
+        if sudo:
+            from vyos.utils.process import cmd
+            data = cmd(['sudo', 'cat', fname])
+        else:
+            # If not sudo, just read the file
+            with open(fname, 'r') as f:
+                data = f.read()
+        return data.strip()
     except Exception as e:
         if defaultonfailure is not None:
             return defaultonfailure
         raise e
 
-def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=None, append=False):
+def write_file(fname, data, defaultonfailure=None, user=None, group=None,
+               mode=None, append=False, trailing_newline=False):
     """
     Write content of data to given fname, should defaultonfailure be not None,
     it is returned on failure to read.
@@ -60,6 +66,9 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=N
         bytes = 0
         with open(fname, 'w' if not append else 'a') as f:
             bytes = f.write(data)
+            if trailing_newline and not data.endswith('\n'):
+                f.write('\n')
+                bytes += 1
         chown(fname, user, group)
         chmod(fname, mode)
         return bytes

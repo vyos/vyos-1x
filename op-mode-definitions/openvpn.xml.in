@@ -11,7 +11,7 @@
             <properties>
               <help>Reset specified OpenVPN client</help>
               <completionHelp>
-                <script>sudo ${vyos_completion_dir}/list_openvpn_clients.py --all</script>
+                <script>${vyos_completion_dir}/list_openvpn_clients.py --all</script>
               </completionHelp>
             </properties>
             <command>echo kill $4 | socat - UNIX-CONNECT:/run/openvpn/openvpn-mgmt-intf &gt; /dev/null</command>
@@ -20,10 +20,10 @@
             <properties>
               <help>Reset OpenVPN process on interface</help>
               <completionHelp>
-                <script>sudo ${vyos_completion_dir}/list_interfaces --type openvpn</script>
+                <script>${vyos_completion_dir}/list_interfaces --type openvpn</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/openvpn.py reset --interface $4</command>
+            <command>${vyos_op_scripts_dir}/openvpn.py reset --interface $4</command>
           </tagNode>
         </children>
       </node>
@@ -51,7 +51,7 @@
             <properties>
               <help>Show OpenVPN interface information</help>
               <completionHelp>
-                <script>sudo ${vyos_completion_dir}/list_interfaces --type openvpn</script>
+                <script>${vyos_completion_dir}/list_interfaces --type openvpn</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name=$4</command>
@@ -60,7 +60,7 @@
                 <properties>
                   <help>Show OpenVPN interface users</help>
                   <completionHelp>
-                    <script>sudo ${vyos_completion_dir}/list_openvpn_users.py --interface ${COMP_WORDS[3]}</script>
+                    <script>${vyos_completion_dir}/list_openvpn_users.py --interface ${COMP_WORDS[3]}</script>
                   </completionHelp>
                 </properties>
                 <children>
@@ -110,19 +110,19 @@
             <properties>
               <help>Show tunnel status for OpenVPN client interfaces</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/openvpn.py show --mode client</command>
+            <command>${vyos_op_scripts_dir}/openvpn.py show --mode client</command>
           </leafNode>
           <leafNode name="server">
             <properties>
               <help>Show tunnel status for OpenVPN server interfaces</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/openvpn.py show --mode server</command>
+            <command>${vyos_op_scripts_dir}/openvpn.py show --mode server</command>
           </leafNode>
           <leafNode name="site-to-site">
             <properties>
               <help>Show tunnel status for OpenVPN site-to-site interfaces</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/openvpn.py show --mode site_to_site</command>
+            <command>${vyos_op_scripts_dir}/openvpn.py show --mode site_to_site</command>
           </leafNode>
         </children>
       </node>

@@ -93,6 +93,7 @@
           </node>
           #include <include/interface/ipv4-options.xml.i>
           #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/ipv6-options-with-nd.xml.i>
           #include <include/interface/mac.xml.i>
           #include <include/interface/mirror.xml.i>
           <leafNode name="enable-vlan">
@@ -197,6 +198,18 @@
                   <leafNode name="isolated">
                     <properties>
                       <help>Port is isolated (also known as Private-VLAN)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bpdu-guard">
+                    <properties>
+                      <help>Enable BPDU Guard</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="root-guard">
+                    <properties>
+                      <help>Enable Root Guard</help>
                       <valueless/>
                     </properties>
                   </leafNode>

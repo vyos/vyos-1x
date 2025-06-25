@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -58,6 +59,11 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         # delete testing SYSLOG config
         self.cli_delete(base_path)
         self.cli_commit()
+
+        # The default syslog implementation should make syslog.service a
+        # symlink to itself
+        self.assertEqual(os.readlink('/etc/systemd/system/syslog.service'),
+                         '/lib/systemd/system/rsyslog.service')
 
         # Check for running process
         self.assertFalse(process_named_running(PROCESS_NAME))

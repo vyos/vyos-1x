@@ -36,6 +36,7 @@ DEFAULT_TEMPLATE_DIR = directories["templates"]
 # Holds template filters registered via register_filter()
 _FILTERS = {}
 _TESTS = {}
+_CLEVER_FUNCTIONS = {}
 
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
@@ -58,6 +59,7 @@ def _get_environment(location=None):
     )
     env.filters.update(_FILTERS)
     env.tests.update(_TESTS)
+    env.globals.update(_CLEVER_FUNCTIONS)
     return env
 
 
@@ -77,7 +79,7 @@ def register_filter(name, func=None):
             "Filters can only be registered before rendering the first template"
         )
     if name in _FILTERS:
-        raise ValueError(f"A filter with name {name!r} was registered already")
+        raise ValueError(f"A filter with name {name!r} was already registered")
     _FILTERS[name] = func
     return func
 
@@ -97,10 +99,30 @@ def register_test(name, func=None):
             "Tests can only be registered before rendering the first template"
             )
     if name in _TESTS:
-        raise ValueError(f"A test with name {name!r} was registered already")
+        raise ValueError(f"A test with name {name!r} was already registered")
     _TESTS[name] = func
     return func
 
+def register_clever_function(name, func=None):
+    """Register a function to be available as test in templates under given name.
+
+    It can also be used as a decorator, see below in this module for examples.
+
+    :raise RuntimeError:
+        when trying to register a test after a template has been rendered already
+    :raise ValueError: when trying to register a name which was taken already
+    """
+    if func is None:
+        return functools.partial(register_clever_function, name)
+    if _get_environment.cache_info().currsize:
+        raise RuntimeError(
+            "Clever functions can only be registered before rendering the" \
+            "first template")
+    if name in _CLEVER_FUNCTIONS:
+        raise ValueError(f"A clever function with name {name!r} was already "\
+                          "registered")
+    _CLEVER_FUNCTIONS[name] = func
+    return func
 
 def render_to_string(template, content, formater=None, location=None):
     """Render a template from the template directory, raise on any errors.
@@ -150,6 +172,8 @@ def render(
     # As we are opening the file with 'w', we are performing the rendering before
     # calling open() to not accidentally erase the file if rendering fails
     rendered = render_to_string(template, content, formater, location)
+    # Remove any trailing character and always add a new line at the end
+    rendered = rendered.rstrip() + "\n"
 
     # Write to file
     with open(destination, "w") as file:
@@ -389,28 +413,6 @@ def compare_netmask(netmask1, netmask2):
         return ip_network(netmask1).netmask == ip_network(netmask2).netmask
     except:
         return False
-
-@register_filter('isc_static_route')
-def isc_static_route(subnet, router):
-    # https://ercpe.de/blog/pushing-static-routes-with-isc-dhcp-server
-    # Option format is:
-    # <netmask>, <network-byte1>, <network-byte2>, <network-byte3>, <router-byte1>, <router-byte2>, <router-byte3>
-    # where bytes with the value 0 are omitted.
-    from ipaddress import ip_network
-    net = ip_network(subnet)
-    # add netmask
-    string = str(net.prefixlen) + ','
-    # add network bytes
-    if net.prefixlen:
-        width = net.prefixlen // 8
-        if net.prefixlen % 8:
-            width += 1
-        string += ','.join(map(str,tuple(net.network_address.packed)[:width])) + ','
-
-    # add router bytes
-    string += ','.join(router.split('.'))
-
-    return string
 
 @register_filter('is_file')
 def is_file(filename):
@@ -726,7 +728,7 @@ def conntrack_rule(rule_conf, rule_id, action, ipv6=False):
                 if port[0] == '!':
                     operator = '!='
                     port = port[1:]
-                output.append(f'th {prefix}port {operator} {port}')
+                output.append(f'th {prefix}port {operator} {{ {port} }}')
 
             if 'group' in side_conf:
                 group = side_conf['group']
@@ -881,10 +883,77 @@ def kea_high_availability_json(config):
 
     return dumps(data)
 
+@register_filter('kea_dynamic_dns_update_main_json')
+def kea_dynamic_dns_update_main_json(config):
+    from vyos.kea import kea_parse_ddns_settings
+    from json import dumps
+
+    data = kea_parse_ddns_settings(config)
+
+    if len(data) == 0:
+        return ''
+
+    return dumps(data, indent=8)[1:-1] + ','
+
+@register_filter('kea_dynamic_dns_update_tsig_key_json')
+def kea_dynamic_dns_update_tsig_key_json(config):
+    from vyos.kea import kea_parse_tsig_algo
+    from json import dumps
+    out = []
+
+    if 'tsig_key' not in config:
+        return dumps(out)
+
+    tsig_keys = config['tsig_key']
+
+    for tsig_key_name, tsig_key_config in tsig_keys.items():
+        tsig_key = {
+            'name': tsig_key_name,
+            'algorithm': kea_parse_tsig_algo(tsig_key_config['algorithm']),
+            'secret': tsig_key_config['secret']
+        }
+        out.append(tsig_key)
+
+    return dumps(out, indent=12)
+
+@register_filter('kea_dynamic_dns_update_domains')
+def kea_dynamic_dns_update_domains(config, type_key):
+    from json import dumps
+    out = []
+
+    if type_key not in config:
+        return dumps(out)
+
+    domains = config[type_key]
+
+    for domain_name, domain_config in domains.items():
+        domain = {
+            'name': domain_name,
+
+        }
+        if 'key_name' in domain_config:
+            domain['key-name'] = domain_config['key_name']
+
+        if 'dns_server' in domain_config:
+            dns_servers = []
+            for dns_server_config in domain_config['dns_server'].values():
+                dns_server = {
+                    'ip-address': dns_server_config['address']
+                }
+                if 'port' in dns_server_config:
+                    dns_server['port'] = int(dns_server_config['port'])
+                dns_servers.append(dns_server)
+            domain['dns-servers'] = dns_servers
+
+        out.append(domain)
+
+    return dumps(out, indent=12)
+
 @register_filter('kea_shared_network_json')
 def kea_shared_network_json(shared_networks):
     from vyos.kea import kea_parse_options
     from vyos.kea import kea_parse_subnet
+    from vyos.kea import kea_parse_ddns_settings
     from json import dumps
     out = []
 
@@ -895,8 +964,12 @@ def kea_shared_network_json(shared_networks):
         network = {
             'name': name,
             'authoritative': ('authoritative' in config),
-            'subnet4': []
+            'subnet4': [],
+            'user-context': {}
         }
+
+        if 'dynamic_dns_update' in config:
+            network.update(kea_parse_ddns_settings(config['dynamic_dns_update']))
 
         if 'option' in config:
             network['option-data'] = kea_parse_options(config['option'])
@@ -906,6 +979,9 @@ def kea_shared_network_json(shared_networks):
 
             if 'bootfile_server' in config['option']:
                 network['next-server'] = config['option']['bootfile_server']
+
+        if 'ping_check' in config:
+            network['user-context']['enable-ping-check'] = True
 
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
@@ -998,3 +1074,39 @@ def vyos_defined(value, test_value=None, var_type=None):
     else:
         # Valid value and is matching optional argument if provided - return true
         return True
+
+@register_clever_function('get_default_port')
+def get_default_port(service):
+    """
+    Jinja2 plugin to retrieve common service port number from vyos.defaults
+    class from a Jinja2 template. This removes the need to hardcode, or pass in
+    the data using the general dictionary.
+
+    Added to remove code complexity and make it easier to read.
+
+    Example:
+    {{ get_default_port('certbot_haproxy') }}
+    """
+    from vyos.defaults import internal_ports
+    if service not in internal_ports:
+        raise RuntimeError(f'Service "{service}" not found in internal ' \
+                           'vyos.defaults.internal_ports dict!')
+    return internal_ports[service]
+
+@register_clever_function('get_default_config_file')
+def get_default_config_file(filename):
+    """
+    Jinja2 plugin to retrieve a common configuration file path from
+    vyos.defaults class from a Jinja2 template. This removes the need to
+    hardcode, or pass in the data using the general dictionary.
+
+    Added to remove code complexity and make it easier to read.
+
+    Example:
+    {{ get_default_config_file('certbot_haproxy') }}
+    """
+    from vyos.defaults import config_files
+    if filename not in config_files:
+        raise RuntimeError(f'Configuration file "{filename}" not found in '\
+                           'internal vyos.defaults.config_files dict!')
+    return config_files[filename]

@@ -175,7 +175,7 @@ def apply(config):
 
     # Restart services that use the hostname
     if hostname_new != hostname_old:
-        tmp = systemd_services['rsyslog']
+        tmp = systemd_services['syslog']
         call(f'systemctl restart {tmp}')
 
     # If SNMP is running, restart it too

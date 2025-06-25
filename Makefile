@@ -7,7 +7,7 @@ LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
-PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts)
+PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts src/services)
 LIBVYOSCONFIG_BUILD_PATH := /tmp/libvyosconfig/_build/libvyosconfig.so
 LIBVYOSCONFIG_STATUS := $(shell git submodule status)
 
@@ -25,7 +25,7 @@ op_xml_obj = $(op_xml_src:.xml.in=.xml)
 .ONESHELL:
 libvyosconfig:
 	if test ! -f $(LIBVYOSCONFIG_BUILD_PATH); then
-		if ! echo $(firstword $(LIBVYOSCONFIG_STATUS))|grep -Eq '^[0-9]'; then
+		if ! echo $(firstword $(LIBVYOSCONFIG_STATUS))|grep -Eq '^[a-z0-9]'; then
 			git submodule sync; git submodule update --init --remote
 		fi
 		rm -rf /tmp/libvyosconfig && mkdir /tmp/libvyosconfig
@@ -95,7 +95,7 @@ clean:
 
 .PHONY: test
 test: generate-configd-include-json
-	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/, /ppp/' .
+	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
 .PHONY: check_migration_scripts_executable

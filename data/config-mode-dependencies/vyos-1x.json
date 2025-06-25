@@ -34,6 +34,7 @@
         "ipsec": ["vpn_ipsec"],
         "openconnect": ["vpn_openconnect"],
         "rpki": ["protocols_rpki"],
+        "ssh": ["service_ssh"],
         "sstp": ["vpn_sstp"],
         "sstpc": ["interfaces_sstpc"],
         "stunnel": ["service_stunnel"]
@@ -72,6 +73,9 @@
     },
     "system_ipv6": {
         "sysctl": ["system_sysctl"]
+    },
+    "system_login": {
+        "ssh": ["service_ssh"]
     },
     "system_option": {
         "ip_ipv6": ["system_ip", "system_ipv6"],
