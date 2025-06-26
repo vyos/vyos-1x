@@ -23,6 +23,7 @@ from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import is_node_changed
+from vyos.configdict import leaf_node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
@@ -128,6 +129,13 @@ def get_config(config=None):
                                     get_first_key=True,
                                     with_recursive_defaults=True)
 
+    # Reboot required when this feature used
+    blocknode = base + ['ipv6', 'block']
+    firewall['Config'] = conf  # Conf without defaults; see generate()
+    if leaf_node_changed(conf, blocknode):
+        firewall['reboot_required'] = \
+                f'Changing {" ".join(blocknode)} will take effect '\
+                'only when the system is rebooted.'
 
     firewall['group_resync'] = bool('group' in firewall or is_node_changed(conf, base + ['group']))
     if firewall['group_resync']:
@@ -556,6 +564,31 @@ def verify(firewall):
     return None
 
 def generate(firewall):
+    # Make firewall rules to block all ipv6 if requested
+    block_ipv6 = 'ipv6' in firewall and 'block' in firewall['ipv6']
+    if block_ipv6:
+        conf_cur = firewall['Config']
+        firewall_cur = conf_cur.get_config_dict(['firewall'],
+                                                key_mangling=('-', '_'),
+                                                no_tag_node_value_mangle=True,
+                                                get_first_key=True)
+        defact = 'default_action'
+        drop = {'filter': {defact: 'drop'}}
+        for action in ('input', 'output', 'forward'):
+            try:
+                # Warn if contradictory rules in place
+                cur = firewall_cur['ipv6'][action]
+                if cur['filter'][defact] != drop['filter'][defact]:
+                    print('Warning:'
+                          f' "firewall ipv6 {action} filter default-action"'
+                          ' forced to "drop" because'
+                          ' "firewall ipv6 block" is set')
+            except KeyError:
+                pass
+
+            # Set it
+            firewall['ipv6'][action] = drop
+
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     render(sysctl_file, 'firewall/sysctl-firewall.conf.j2', firewall)
 
@@ -605,6 +638,9 @@ def parse_firewall_error(output):
     raise ConfigError('\n'.join(error_output))
 
 def apply(firewall):
+    if 'reboot_required' in firewall:
+        print(firewall['reboot_required'])
+
     # Use nft -c option to check current configuration file
     completed_process = subp_run(['nft', '-c', '--file', nftables_conf], capture_output=True)
     install_result = completed_process.returncode
