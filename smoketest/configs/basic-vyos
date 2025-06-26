@@ -228,6 +228,10 @@ service {
         key-exchange curve25519-sha256@libssh.org
         key-exchange diffie-hellman-group1-sha1,diffie-hellman-group-exchange-sha1,diffie-hellman-group-exchange-sha256
         port 22
+        hostkey-algorithm ssh-rsa
+        hostkey-algorithm ssh-dss
+        pubkey-accepted-algorithm ssh-rsa
+        pubkey-accepted-algorithm ssh-dss
     }
 }
 system {

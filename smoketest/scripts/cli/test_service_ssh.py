@@ -38,7 +38,6 @@ base_path = ['service', 'ssh']
 pki_path = ['pki']
 
 key_rsa = '/etc/ssh/ssh_host_rsa_key'
-key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
 trusted_user_ca = config_files['sshd_user_ca']
 test_command = 'uname -a'
@@ -156,7 +155,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertTrue(os.path.isfile(key_rsa))
-        self.assertTrue(os.path.isfile(key_dsa))
         self.assertTrue(os.path.isfile(key_ed25519))
 
         # Established SSH connections remains running after service is stopped.
@@ -408,7 +406,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
             'ecdsa-sha2-nistp256',
             'ecdsa-sha2-nistp384',
             'ecdsa-sha2-nistp521',
-            'ssh-dss',
             'ssh-rsa',
             'rsa-sha2-256',
             'rsa-sha2-512',

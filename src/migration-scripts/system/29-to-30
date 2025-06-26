@@ -1,0 +1,34 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7557: OpenSSH does not support DSA keys in Debian Trixie
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'login', 'user']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    for user in config.list_nodes(base):
+        key_base = base + [user, 'authentication', 'public-keys']
+        if config.exists(key_base):
+            for key in config.list_nodes(key_base):
+                key_type = key_base + [key, 'type']
+                if config.exists(key_type):
+                    tmp = config.return_value(key_type)
+                    if tmp == 'ssh-dss':
+                        config.delete(key_base + [key])

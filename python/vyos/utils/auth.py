@@ -104,8 +104,8 @@ def split_ssh_public_key(key_string, defaultname=""):
     else:
         key_type, key_data, key_name = parts[0], parts[1], defaultname
 
-    if key_type not in ['ssh-rsa', 'ssh-dss', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519']:
-        raise ValueError("Bad key type \'{0}\', must be one of must be one of ssh-rsa, ssh-dss, ecdsa-sha2-nistp<256|384|521> or ssh-ed25519".format(key_type))
+    if key_type not in ['ssh-rsa', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521', 'ssh-ed25519']:
+        raise ValueError("Bad key type \'{0}\', must be one of must be one of ssh-rsa, ecdsa-sha2-nistp<256|384|521> or ssh-ed25519".format(key_type))
 
     return({"type": key_type, "data": key_data, "name": key_name})
 

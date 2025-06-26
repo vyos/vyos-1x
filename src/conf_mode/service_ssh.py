@@ -42,7 +42,6 @@ sshguard_config_file = '/etc/sshguard/sshguard.conf'
 sshguard_whitelist = '/etc/sshguard/whitelist'
 
 key_rsa = '/etc/ssh/ssh_host_rsa_key'
-key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
 
 trusted_user_ca = config_files['sshd_user_ca']
@@ -116,9 +115,6 @@ def generate(ssh):
     if not os.path.isfile(key_rsa):
         syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')
-    if not os.path.isfile(key_dsa):
-        syslog(LOG_INFO, 'SSH DSA host key not found, generating new key!')
-        call(f'ssh-keygen -q -N "" -t dsa -f {key_dsa}')
     if not os.path.isfile(key_ed25519):
         syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
