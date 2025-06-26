@@ -48,6 +48,8 @@ def generate(tz):
 def apply(tz):
     call('/usr/bin/timedatectl set-timezone {}'.format(tz['name']))
     call('systemctl restart rsyslog')
+    with open('/etc/timezone', 'w') as fp:
+        print(tz['name'], file=fp)
 
 if __name__ == '__main__':
     try:
