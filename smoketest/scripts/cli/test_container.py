@@ -29,7 +29,6 @@ from vyos.utils.process import process_named_running
 
 base_path = ['container']
 PROCESS_NAME = 'conmon'
-PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
 
 busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
@@ -68,10 +67,14 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertIsNone(process_named_running(PROCESS_NAME))
 
         # Ensure systemd units are removed
-        units = glob.glob('/run/systemd/system/vyos-container-*')
+        units = glob.glob('/run/containers/systemd/vyos*')
         self.assertEqual(units, [])
         # always forward to base class
         super().tearDown()
+
+    def is_running(self, name):
+        command = ['systemctl', 'show', f'vyos-container-{name}', '--property=ActiveState', '--value']
+        return cmdl(command).strip() == 'active'
 
     def test_basic(self):
         cont_name = 'c1'
@@ -91,12 +94,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        pid = 0
-        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
-            pid = int(f.read())
-
-        # Check for running process
-        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+        self.assertTrue(self.is_running(cont_name))
 
         # verify
         tmp = cmdl(['podman', 'exec', '-it', cont_name, 'sysctl', 'kernel.msgmax'], sudo=True)
@@ -106,6 +104,11 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
         self.assertEqual(l['Config']['Healthcheck']['Test'], ['NONE'])
         self.assertEqual(l['HostConfig']['CgroupMode'], 'host')
+
+        # cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address'])
+        self.cli_delete(['protocols', 'static'])
+        self.cli_delete(['system', 'name-server'])
 
     def test_healthcheck(self):
         cont_name = 'health-test'
@@ -171,12 +174,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        pid = 0
-        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
-            pid = int(f.read())
-
-        # Check for running process
-        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+        self.assertTrue(self.is_running(cont_name))
 
     def test_network_types(self):
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '100'])
@@ -202,6 +200,11 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', 'bridge2', 'prefix', '10.0.2.0/24'])
 
         self.cli_commit()
+
+        # Force-start the network quadlets, as not mapped to containers
+        for network in ['macvlan1', 'macvlan2', 'macvlan3', 'bridge1', 'bridge2']:
+            systemd_unit = f'vyos-{network}-network.service'
+            cmdl(['systemctl', 'start', systemd_unit], sudo=True)
 
         n = cmd_to_json(['network', 'inspect', 'macvlan1'])
         self.assertEqual(n['driver'], 'macvlan')
@@ -235,6 +238,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(n['network_interface'], 'pod-bridge2')
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.2.0/24')
         self.assertEqual(n['subnets'][0]['gateway'], '10.0.2.1')
+
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vif'])
 
     def test_user_defined_mac(self):
         # Bridge Network
@@ -277,10 +283,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # process name alone can't distinguish which container it belongs
         # to - verify each container's own recorded PID is still alive
         for name in (name_1, name_2):
-            pid = 0
-            with open(PROCESS_PIDFILE.format(name)) as f:
-                pid = int(f.read())
-            self.assertTrue(os.path.exists(f'/proc/{pid}'))
+            self.assertTrue(self.is_running(name))
 
     def test_colliding_host_interface_names(self):
         # T7736: the host-side veth name is "veth-<name[:5]>-<hash[:4]>" for
