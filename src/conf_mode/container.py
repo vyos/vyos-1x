@@ -50,7 +50,7 @@ airbag.enable()
 config_containers = '/etc/containers/containers.conf'
 config_registry = '/etc/containers/registries.conf'
 config_storage = '/etc/containers/storage.conf'
-systemd_unit_path = '/run/systemd/system'
+quadlet_unit_path = '/run/containers/systemd'
 
 
 def _cmd(command):
@@ -303,60 +303,106 @@ def verify(container):
 
     return None
 
+def generate_network_options(name, network_config):
+    out = [
+        f'NetworkName={name}',
+        'Driver=bridge',
+        'Internal=false',
+        'IPAMDriver=host-local',
+        f'PodmanArgs=--interface-name=pod-{name}',
+    ]
 
-def generate_run_arguments(name, container_config):
-    image = container_config['image']
-    cpu_quota = container_config['cpu_quota']
-    memory = container_config['memory']
-    shared_memory = container_config['shared_memory']
-    restart = container_config['restart']
-    log_driver = container_config['log_driver']
+    # TODO: if 'no_name_server' in network_config:
+    # DNS appears broken in trixie
+    out.append('DisableDNS=true')
 
-    # Add sysctl options
-    sysctl_opt = ''
-    if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
-        for k, v in container_config['sysctl']['parameter'].items():
-            sysctl_opt += f" --sysctl \"{k}={v['value']}\""
+    mtu = network_config['mtu'] if 'mtu' in network_config else '1500'
+    out.append(f'Options=mtu={mtu}')
 
-    # Add capability options. Should be in uppercase
-    capabilities = ''
+    ipv6 = False
+
+    for prefix in network_config['prefix']:
+        gw = inc_ip(prefix, 1)
+        out.append(f'Subnet={prefix}')
+        out.append(f'Gateway={gw}')
+
+        if is_ipv6(prefix):
+            ipv6 = True
+
+    if ipv6:
+        out.append('IPv6=true')
+
+    return out
+
+def generate_quadlet_options(name, container_config):
+    out = [
+        f'ContainerName={name}',
+        f'Image={container_config['image']}',
+        f'LogDriver={container_config['log_driver']}',
+        f'Memory={container_config['memory']}m',
+        f'ShmSize={container_config['shared_memory']}m',
+        f'PodmanArgs=--cpus={container_config['cpu_quota']}',
+        'PodmanArgs=--no-healthcheck',
+        'PodmanArgs=--interactive',
+        'PodmanArgs=--tty',
+    ]
+
+    if 'allow_host_networks' in container_config:
+        out.append('Network=host')
+
+    if 'allow_host_pid' in container_config:
+        out.append('PodmanArgs=--pid host')
+
     if 'capability' in container_config:
         for cap in container_config['capability']:
             cap = cap.upper().replace('-', '_')
-            capabilities += f' --cap-add={cap}'
+            out.append(f'AddCapability={cap}')
 
-    # Grant root capabilities to the container
-    privileged = ''
-    if 'privileged' in container_config:
-        privileged = '--privileged'
+    if 'command' in container_config:
+        command = container_config['command'].strip()
 
-    # Add a host device to the container /dev/x:/dev/x
-    device = ''
+        if 'arguments' in container_config:
+            command += ' ' + container_config['arguments'].strip()
+
+        out.append(f'Exec={command}')
+
     if 'device' in container_config:
         for dev, dev_config in container_config['device'].items():
             source_dev = dev_config['source']
             dest_dev = dev_config['destination']
-            device += f' --device={source_dev}:{dest_dev}'
+            out.append(f'AddDevice={source_dev}:{dest_dev}')
 
-    # Check/set environment options "-e foo=bar"
-    env_opt = ''
+    if 'entrypoint' in container_config:
+        entrypoint = container_config['entrypoint']
+        out.append(f'Entrypoint={entrypoint}')
+
     if 'environment' in container_config:
         for k, v in container_config['environment'].items():
-            env_opt += f" --env \"{k}={v['value']}\""
+            out.append(f'Environment={k}={v}')
 
-    # Check/set label options "--label foo=bar"
-    label = ''
-    if 'label' in container_config:
-        for k, v in container_config['label'].items():
-            label += f" --label \"{k}={v['value']}\""
-
-    hostname = ''
     if 'host_name' in container_config:
         hostname = container_config['host_name']
-        hostname = f'--hostname {hostname}'
+        out.append(f'HostName={hostname}')
 
-    # Publish ports
-    port = ''
+    if 'label' in container_config:
+        for k, v in container_config['label'].items():
+            out.append(f'Label={k}={v['value']}')
+
+    if 'name_server' in container_config:
+        for ns in container_config['name_server']:
+            out.append(f'DNS={ns}')
+
+    if 'network' in container_config:
+        for network in container_config['network']:
+            out.append(f'Network=vyos-{network}.network')
+
+            if 'address' in container_config['network'][network]:
+                for address in container_config['network'][network]['address']:
+                    if is_ipv6(address):
+                        out.append(f'IP6={address}')
+                    else:
+                        out.append(f'IP={address}')
+
     if 'port' in container_config:
         protocol = ''
         for portmap in container_config['port']:
@@ -368,80 +414,39 @@ def generate_run_arguments(name, container_config):
             # If listen_addresses is not empty, include them in the publish command
             if listen_addresses:
                 for listen_address in listen_addresses:
-                    port += f' --publish {bracketize_ipv6(listen_address)}:{sport}:{dport}/{protocol}'
+                    out.append(f'PublishPort={bracketize_ipv6(listen_address)}:{sport}:{dport}/{protocol}')
             else:
                 # If listen_addresses is empty, just include the standard publish command
-                port += f' --publish {sport}:{dport}/{protocol}'
+                out.append(f'PublishPort={sport}:{dport}/{protocol}')
 
-    # Set uid and gid
-    uid = ''
-    if 'uid' in container_config:
-        uid = container_config['uid']
-        if 'gid' in container_config:
-            uid += ':' + container_config['gid']
-        uid = f'--user {uid}'
+    if 'privileged' in container_config:
+        out.append('PodmanArgs=--privileged')
 
-    # Bind volume
-    volume = ''
-    if 'volume' in container_config:
-        for vol, vol_config in container_config['volume'].items():
-            svol = vol_config['source']
-            dvol = vol_config['destination']
-            mode = vol_config['mode']
-            prop = vol_config['propagation']
-            volume += f' --volume {svol}:{dvol}:{mode},{prop}'
+    if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
+        for k, v in container_config['sysctl']['parameter'].items():
+            out.append(f'Sysctl={k}={v['value']}')
 
-    # Mount tmpfs
-    tmpfs = ''
     if 'tmpfs' in container_config:
         for tmpfs_config in container_config['tmpfs'].values():
             dest = tmpfs_config['destination']
             size = tmpfs_config['size']
-            tmpfs += f' --mount=type=tmpfs,tmpfs-size={size}M,destination={dest}'
+            out.append(f'Mount=type=tmpfs,tmpfs-size={size}M,destination={dest}')
 
-    host_pid = ''
-    if 'allow_host_pid' in container_config:
-      host_pid = '--pid host'
+    if 'uid' in container_config:
+        uid = container_config['uid']
+        if 'gid' in container_config:
+            uid += ':' + container_config['gid']
+        out.append(f'User={uid}')
 
-    name_server = ''
-    if 'name_server' in container_config:
-        for ns in container_config['name_server']:
-            name_server += f'--dns {ns}'
+    if 'volume' in container_config:
+        for _, vol_config in container_config['volume'].items():
+            svol = vol_config['source']
+            dvol = vol_config['destination']
+            mode = vol_config['mode']
+            prop = vol_config['propagation']
+            out.append(f'Volume={svol}:{dvol}:{mode},{prop}')
 
-    container_base_cmd = f'--detach --interactive --tty --replace {capabilities} {privileged} --cpus {cpu_quota} {sysctl_opt} ' \
-                         f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} --log-driver={log_driver} ' \
-                         f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid}'
-
-    entrypoint = ''
-    if 'entrypoint' in container_config:
-        # it needs to be json-formatted with single quote on the outside
-        entrypoint = json_write(container_config['entrypoint'].split()).replace('"', "&quot;")
-        entrypoint = f'--entrypoint &apos;{entrypoint}&apos;'
-
-    command = ''
-    if 'command' in container_config:
-        command = container_config['command'].strip()
-
-    command_arguments = ''
-    if 'arguments' in container_config:
-        command_arguments = container_config['arguments'].strip()
-
-    if 'allow_host_networks' in container_config:
-        return f'{container_base_cmd} --net host {entrypoint} {image} {command} {command_arguments}'.strip()
-
-    ip_param = ''
-    networks = ",".join(container_config['network'])
-    for network in container_config['network']:
-        if 'address' not in container_config['network'][network]:
-            continue
-        for address in container_config['network'][network]['address']:
-            if is_ipv6(address):
-                ip_param += f' --ip6 {address}'
-            else:
-                ip_param += f' --ip {address}'
-
-    return f'{container_base_cmd} --no-healthcheck --net {networks} {ip_param} {entrypoint} {image} {command} {command_arguments}'.strip()
-
+    return out
 
 def generate(container):
     # bail out early - looks like removal from running config
@@ -451,53 +456,25 @@ def generate(container):
                 os.unlink(file)
         return None
 
-    if 'network' in container:
-        for network, network_config in container['network'].items():
-            tmp = {
-                'name': network,
-                'id': sha256(f'{network}'.encode()).hexdigest(),
-                'driver': 'bridge',
-                'network_interface': f'pod-{network}',
-                'subnets': [],
-                'ipv6_enabled': False,
-                'internal': False,
-                'dns_enabled': True,
-                'ipam_options': {
-                    'driver': 'host-local'
-                },
-                'options': {
-                    'mtu': '1500'
-                }
-            }
-
-            if 'no_name_server' in network_config:
-                tmp['dns_enabled'] = False
-
-            if 'mtu' in network_config:
-                tmp['options']['mtu'] = network_config['mtu']
-
-            for prefix in network_config['prefix']:
-                net = {'subnet': prefix, 'gateway': inc_ip(prefix, 1)}
-                tmp['subnets'].append(net)
-
-                if is_ipv6(prefix):
-                    tmp['ipv6_enabled'] = True
-
-            write_file(f'/etc/containers/networks/{network}.json', json_write(tmp, indent=2))
-
     render(config_containers, 'container/containers.conf.j2', container)
     render(config_registry, 'container/registries.conf.j2', container)
     render(config_storage, 'container/storage.conf.j2', container)
+
+    if 'network' in container:
+        for network, network_config in container['network'].items():
+            file_path = os.path.join(quadlet_unit_path, f'vyos-{network}.network')
+            opts = generate_network_options(network, network_config)
+            render(file_path, 'container/quadlet-network.j2', {'name': network, 'opts': opts})
 
     if 'name' in container:
         for name, container_config in container['name'].items():
             if 'disable' in container_config:
                 continue
 
-            file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
-            run_args = generate_run_arguments(name, container_config)
-            render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args, },
-                   formater=lambda _: _.replace("&quot;", '"').replace("&apos;", "'"))
+            file_path = os.path.join(quadlet_unit_path, f'vyos-{name}.container')
+            quadlet_opts = generate_quadlet_options(name, container_config)
+            restart = container_config['restart']
+            render(file_path, 'container/quadlet-unit.j2', {'name': name, 'opts': quadlet_opts, 'restart': restart})
 
     return None
 
@@ -507,8 +484,8 @@ def apply(container):
     # Option "--force" allows to delete containers with any status
     if 'container_remove' in container:
         for name in container['container_remove']:
-            file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
-            call(f'systemctl stop vyos-container-{name}.service')
+            file_path = os.path.join(quadlet_unit_path, f'vyos-{name}.container')
+            call(f'systemctl stop vyos-{name}')
             if os.path.exists(file_path):
                 os.unlink(file_path)
 
@@ -517,7 +494,13 @@ def apply(container):
     # Delete old networks if needed
     if 'network_remove' in container:
         for network in container['network_remove']:
-            call(f'podman network rm {network} >/dev/null 2>&1')
+            file_path = os.path.join(quadlet_unit_path, f'vyos-{network}.network')
+            call(f'systemctl stop vyos-{network}-network')
+            call(f'podman network rm {network}')
+            if os.path.exists(file_path):
+                os.unlink(file_path)
+
+    call('systemctl daemon-reload')
 
     # Add container
     disabled_new = False
@@ -534,15 +517,15 @@ def apply(container):
                 # check if there is a container by that name running
                 tmp = _cmd('podman ps -a --format "{{.Names}}"')
                 if name in tmp:
-                    file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
-                    call(f'systemctl stop vyos-container-{name}.service')
+                    file_path = os.path.join(quadlet_unit_path, f'vyos-{name}.container')
+                    call(f'systemctl stop vyos-{name}')
                     if os.path.exists(file_path):
                         disabled_new = True
                         os.unlink(file_path)
                 continue
 
             if 'container_restart' in container and name in container['container_restart']:
-                cmd(f'systemctl restart vyos-container-{name}.service')
+                cmd(f'systemctl restart vyos-{name}')
 
     if disabled_new:
         call('systemctl daemon-reload')

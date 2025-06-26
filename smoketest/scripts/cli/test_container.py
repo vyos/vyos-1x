@@ -28,7 +28,6 @@ from vyos.utils.process import process_named_running
 
 base_path = ['container']
 PROCESS_NAME = 'conmon'
-PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
 
 busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
@@ -68,8 +67,12 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertIsNone(process_named_running(PROCESS_NAME))
 
         # Ensure systemd units are removed
-        units = glob.glob('/run/systemd/system/vyos-container-*')
+        units = glob.glob('/run/containers/systemd/vyos*')
         self.assertEqual(units, [])
+
+    def is_running(self, name):
+        command = f'systemctl show vyos-{name} --property=ActiveState --value'
+        return cmd(command).strip() == 'active'
 
     def test_basic(self):
         cont_name = 'c1'
@@ -99,12 +102,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        pid = 0
-        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
-            pid = int(f.read())
-
-        # Check for running process
-        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+        self.assertTrue(self.is_running(cont_name))
 
         # verify
         tmp = cmd(f'sudo podman exec -it {cont_name} sysctl kernel.msgmax')
@@ -143,6 +141,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['network', net_name, 'no-name-server'])
         self.cli_commit()
 
+        self.assertTrue(self.is_running(cont_name))
+
         n = cmd_to_json(f'sudo podman inspect {cont_name}')
         self.assertEqual(n['HostConfig']['Dns'][0], name_server)
 
@@ -158,12 +158,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        pid = 0
-        with open(PROCESS_PIDFILE.format(cont_name), 'r') as f:
-            pid = int(f.read())
-
-        # Check for running process
-        self.assertEqual(process_named_running(PROCESS_NAME), pid)
+        self.assertTrue(self.is_running(cont_name))
 
     def test_ipv4_network(self):
         prefix = '192.0.2.0/24'
