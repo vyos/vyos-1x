@@ -1914,6 +1914,14 @@ class Interface(Control):
         # IPv6 forwarding
         tmp = dict_search('ipv6.disable_forwarding', config)
         value = '0' if (tmp != None) else '1'
+
+        # PSL: Also do it if "block" requested
+        import vyos.configquery
+        q = vyos.configquery.ConfigTreeQuery()
+        block_ipv6 = q.exists(['firewall', 'ipv6', 'block'])
+        if block_ipv6:
+            value = '0'
+
         self.set_ipv6_forwarding(value)
 
         # Delete old interface identifier
@@ -1960,7 +1968,10 @@ class Interface(Control):
             self.del_ipv6_eui64_address(addr)
 
         # Manage IPv6 link-local addresses
-        if dict_search('ipv6.address.no_default_link_local', config) != None:
+        no_default_link_local = dict_search('ipv6.address.no_default_link_local', config) is not None
+        if block_ipv6:
+            no_default_link_local = True
+        if no_default_link_local:
             self.del_ipv6_eui64_address(link_local_prefix)
         else:
             self.add_ipv6_eui64_address(link_local_prefix)

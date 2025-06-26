@@ -52,8 +52,24 @@ class WWANIf(Interface):
         # PSL: If "ipv6 address autoconf" is set switch to address mode 3,
         # else use the VyOS default of 1. This enables IPv6 since those
         # addresses will come from the cell network via the modem.
+        #
+        # addr_gen_mode:
+        #
+        # 0: generate address based on EUI64 (default)
+        # 1: do no generate a link-local address, use EUI64 for addresses
+        #    generated from autoconf
+        # 2: generate stable privacy addresses, using the secret from
+        #    stable_secret (RFC7217)
+        # 3: generate stable privacy addresses, using a random secret if unset
+        #
         sysfs_agm = f'/proc/sys/net/ipv6/conf/{self.ifname}/addr_gen_mode'
-        if dict_search('ipv6.address.autoconf', config) is None:
+
+        # Also force mode 1 if ipv6 blocked
+        import vyos.configquery
+        q = vyos.configquery.ConfigTreeQuery()
+        block_ipv6 = q.exists(['firewall', 'ipv6', 'block'])
+
+        if dict_search('ipv6.address.autoconf', config) is None or block_ipv6:
             addr_gen_mode = '1'
         else:
             addr_gen_mode = '3'

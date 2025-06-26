@@ -16,6 +16,7 @@
 
 import json
 import sys
+import subprocess
 
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
@@ -108,6 +109,47 @@ def restart(name: str):
         return None
     print(f'Container "{name}" restarted!')
     return output
+
+def show_log(name: str, follow: bool = False, raw: bool = False):
+    """
+    Show or monitor logs for a specific container.
+    Use --follow to continuously stream logs.
+    """
+    from vyos.configquery import ConfigTreeQuery
+    conf = ConfigTreeQuery()
+    container = conf.get_config_dict(['container', 'name', name],  get_first_key=True, with_recursive_defaults=True)
+    log_type = container.get('log-driver')
+    if log_type == 'k8s-file':
+        if follow:
+            log_command_list = ['sudo', 'podman', 'logs', '--follow', '--names', name]
+        else:
+            log_command_list = ['sudo', 'podman', 'logs', '--names', name]
+    elif log_type == 'journald':
+        if follow:
+            log_command_list = ['journalctl', '--follow', '--unit', f'vyos-container-{name}.service']
+        else:
+            log_command_list = ['journalctl', '-e', '--no-pager', '--unit', f'vyos-container-{name}.service']
+    elif log_type == 'none':
+        print(f'Container "{name}" has disabled logs.')
+        return None
+    else:
+        raise vyos.opmode.InternalError(f'Unknown log type "{log_type}" for container "{name}".')
+
+    process = None
+    try:
+        process = subprocess.Popen(log_command_list,
+                                   stdout=sys.stdout,
+                                   stderr=sys.stderr)
+        process.wait()
+    except KeyboardInterrupt:
+        if process:
+            process.terminate()
+            process.wait()
+        return None
+    except Exception as e:
+        raise vyos.opmode.InternalError(f"Error starting logging command: {e} ")
+    return None
+
 
 if __name__ == '__main__':
     try:

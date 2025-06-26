@@ -13,29 +13,25 @@
             </properties>
             <command>vtysh -c "show ipv6 prefix-list"</command>
             <children>
-              <node name="detail">
-                <properties>
-                  <help>Show detail of IPv6 prefix-lists</help>
-                </properties>
-                <command>vtysh -c "show ipv6 prefix-list detail"</command>
-              </node>
               <tagNode name="detail">
                 <properties>
                   <help>Show detail of specified IPv6 prefix-list</help>
                 </properties>
                 <command>vtysh -c "show ipv6 prefix-list detail $5"</command>
+                <standalone>
+                  <help>Show details of IPv6 prefix lists</help>
+                  <command>vtysh -c "show ipv6 prefix-list detail"</command>
+                </standalone>
               </tagNode>
-              <node name="summary">
-                <properties>
-                  <help>Show summary of IPv6 prefix-lists</help>
-                </properties>
-                <command>vtysh -c "show ipv6 prefix-list summary"</command>
-              </node>
               <tagNode name="summary">
                 <properties>
                   <help>Show summary of specified IPv6 prefix-list</help>
                 </properties>
                 <command>vtysh -c "show ipv6 prefix-list summary $5"</command>
+                <standalone>
+                  <help>Show summary of IPv6 prefix lists</help>
+                  <command>vtysh -c "show ipv6 prefix-list summary"</command>
+                </standalone>
               </tagNode>
             </children>
           </node>

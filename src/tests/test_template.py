@@ -199,8 +199,12 @@ class TestVyOSTemplate(TestCase):
             vyos.template.get_default_config_file('UNKNOWN')
         with self.assertRaises(RuntimeError):
             vyos.template.get_default_port('UNKNOWN')
+        with self.assertRaises(RuntimeError):
+            vyos.template.nft_accept_invalid('UNKNOWN')
 
         self.assertEqual(vyos.template.get_default_config_file('sshd_user_ca'),
                          config_files['sshd_user_ca'])
         self.assertEqual(vyos.template.get_default_port('certbot_haproxy'),
                          internal_ports['certbot_haproxy'])
+        self.assertEqual(vyos.template.nft_accept_invalid('arp'),
+                         'ct state invalid ether type arp counter accept')

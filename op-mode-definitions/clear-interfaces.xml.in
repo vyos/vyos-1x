@@ -12,590 +12,267 @@
         <children>
           <node name="counters">
             <properties>
-              <help>Clear interface counters for all interfaces</help>
+              <help>Clear interface counters</help>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py clear_counters</command>
-          </node>
-          <node name="bonding">
-            <properties>
-              <help>Clear Bonding interface information</help>
-            </properties>
             <children>
-              <node name="counters">
+              <tagNode name="bonding">
                 <properties>
-                  <help>Clear all bonding interface counters</help>
+                  <help>Clear counters for a given bonding interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type bonding</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear bonding interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type bonding</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="bridge">
+                <properties>
+                  <help>Clear counters for a given bridge interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear bridge interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type bridge</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="dummy">
+                <properties>
+                  <help>Clear counters for a given dummy interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type dummy</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear dummy interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type dummy</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="ethernet">
+                <properties>
+                  <help>Clear counters for a given ethernet interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type ethernet</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear ethernet interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type ethernet</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="geneve">
+                <properties>
+                  <help>Clear counters for a given GENEVE interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type geneve</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear GENEVE interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type geneve</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="input">
+                <properties>
+                  <help>Clear counters for a given Input interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type input</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear input interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type input</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="l2tpv3">
+                <properties>
+                  <help>Clear counters for a given L2TPv3 interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type l2tpeth</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear L2TPv3 interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type l2tpeth</command>
+                </standalone>
+              </tagNode>
+              <!-- There's only one loopback in Linux and it's unlikely to change,
+                   so we don't need a tag node here. -->
+              <node name="loopback">
+                <properties>
+                  <help>Clear loopback interface counters</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name lo</command>
               </node>
-            </children>
-          </node>
-          <tagNode name="bonding">
-            <properties>
-              <help>Clear interface information for a given bonding interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type bonding</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+              <tagNode name="macsec">
                 <properties>
-                  <help>Clear interface counters for a given bonding interface</help>
+                  <help>Clear counters for a given MACsec interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type macsec</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="bridge">
-            <properties>
-              <help>Clear Bridge interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear MACsec interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type macsec</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="openvpn">
                 <properties>
-                  <help>Clear all bridge interface counters</help>
+                  <help>Clear counters for a given OpenVPN interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type openvpn</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="bridge">
-            <properties>
-              <help>Clear interface information for a given bridge interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear OpenVPN interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type openvpn</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="pppoe">
                 <properties>
-                  <help>Clear interface counters for a given bridge interface</help>
+                  <help>Clear counters for a given PPPoE interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type pppoe</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="dummy">
-            <properties>
-              <help>Clear Dummy interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear PPPoE interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type pppoe</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="pseudo-ethernet">
                 <properties>
-                  <help>Clear all dummy interface counters</help>
+                  <help>Clear counters for a given pseudo-ethernet interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type pseudo-ethernet</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="dummy">
-            <properties>
-              <help>Clear interface information for a given dummy interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type dummy</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear pseudo-ethernet interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type pseudo-ethernet</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="sstp">
                 <properties>
-                  <help>Clear interface counters for a given dummy interface</help>
+                  <help>Clear counters for a given SSTP interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type sstp</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="ethernet">
-            <properties>
-              <help>Clear Ethernet interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear SSTP interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type sstp</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="tunnel">
                 <properties>
-                  <help>Clear all ethernet interface counters</help>
+                  <help>Clear counters for a given tunnel interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type tunnel</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="ethernet">
-            <properties>
-              <help>Clear interface information for a given ethernet interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type ethernet</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear tunnel interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type tunnel</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="virtual-ethernet">
                 <properties>
-                  <help>Clear interface counters for a given ethernet interface</help>
+                  <help>Clear counters for a given virtual-ethernet interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type virtual-ethernet</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="geneve">
-            <properties>
-              <help>Clear GENEVE interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear virtual-ethernet interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type virtual-ethernet</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="vti">
                 <properties>
-                  <help>Clear all GENEVE interface counters</help>
+                  <help>Clear counters for a given VTI interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type vti</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="geneve">
-            <properties>
-              <help>Clear interface information for a given GENEVE interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type geneve</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear VTI interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type vti</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="vxlan">
                 <properties>
-                  <help>Clear interface counters for a given GENEVE interface</help>
+                  <help>Clear counters for a given VXLAN interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type vxlan</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="input">
-            <properties>
-              <help>Clear Input (ifb) interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear VXLAN interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type vxlan</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="wireguard">
                 <properties>
-                  <help>Clear all Input interface counters</help>
+                  <help>Clear counters for a given WireGuard interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type wireguard</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="input">
-            <properties>
-              <help>Clear interface information for a given Input interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type input</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given Input interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="l2tpv3">
-            <properties>
-              <help>Clear L2TPv3 interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all L2TPv3 interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="l2tpv3">
-            <properties>
-              <help>Clear interface information for a given L2TPv3 interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type l2tpeth</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given L2TPv3 interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="loopback">
-            <properties>
-              <help>Clear Loopback interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all loopback interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="loopback">
-            <properties>
-              <help>Clear interface information for a given loopback interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type loopback</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given loopback interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="macsec">
-            <properties>
-              <help>Clear MACsec interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all MACsec interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="macsec">
-            <properties>
-              <help>Clear interface information for a given MACsec interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type macsec</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given MACsec interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="openvpn">
-            <properties>
-              <help>Clear OpenVPN interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all OpenVPN interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="openvpn">
-            <properties>
-              <help>Clear interface information for a given OpenVPN interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type openvpn</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given OpenVPN interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="pppoe">
-            <properties>
-              <help>Clear PPPoE interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all PPPoE interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="pppoe">
-            <properties>
-              <help>Clear interface information for a given PPPoE interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type pppoe</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given PPPoE interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="pseudo-ethernet">
-            <properties>
-              <help>Clear Pseudo-Ethernet/MACvlan interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all Pseudo-Ethernet interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="pseudo-ethernet">
-            <properties>
-              <help>Clear interface information for a given Pseudo-Ethernet interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type pseudo-ethernet</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given Pseudo-Ethernet interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="sstp">
-            <properties>
-              <help>Clear SSTP interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all SSTP interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="sstp">
-            <properties>
-              <help>Clear interface information for a given SSTP interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type sstp</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given SSTP interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="tunnel">
-            <properties>
-              <help>Clear Tunnel interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all tunnel interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="tunnel">
-            <properties>
-              <help>Clear interface information for a given tunnel interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type tunnel</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given tunnel interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="virtual-ethernet">
-            <properties>
-              <help>Clear virtual-ethernet interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all virtual-ethernet interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="virtual-ethernet">
-            <properties>
-              <help>Clear interface information for a given virtual-ethernet interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type virtual-ethernet</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given virtual-ethernet interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="vti">
-            <properties>
-              <help>Clear VTI interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all VTI interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="vti">
-            <properties>
-              <help>Clear interface information for a given VTI interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type vti</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given VTI interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="vxlan">
-            <properties>
-              <help>Clear VXLAN interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all VXLAN interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="vxlan">
-            <properties>
-              <help>Clear interface information for a given VXLAN interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type vxlan</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given VXLAN interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="wireguard">
-            <properties>
-              <help>Clear Wireguard interface information</help>
-            </properties>
-            <children>
-              <node name="counters">
-                <properties>
-                  <help>Clear all Wireguard interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </node>
-            </children>
-          </node>
-          <tagNode name="wireguard">
-            <properties>
-              <help>Clear interface information for a given Wireguard interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type wireguard</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear interface counters for a given Wireguard interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="wireless">
-            <properties>
-              <help>Clear Wireless (WLAN) interface information</help>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear all wireless interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </leafNode>
-            </children>
-          </node>
-          <tagNode name="wireless">
-            <properties>
-              <help>Clear interface information for a given wireless interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type wireless</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear WireGuard interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type wireguard</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="wireless">
                 <properties>
                   <help>Clear counters for a given wireless interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type wireless</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="wwan">
-            <properties>
-              <help>Clear Wireless Modem (WWAN) interface information</help>
-            </properties>
-            <children>
-              <leafNode name="counters">
-                <properties>
-                  <help>Clear all WWAN interface counters</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
-              </leafNode>
-            </children>
-          </node>
-          <tagNode name="wwan">
-            <properties>
-              <help>Clear interface information for a given WWAN interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type wwan</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="counters">
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear wireless interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type wireless</command>
+                </standalone>
+              </tagNode>
+              <tagNode name="wwan">
                 <properties>
                   <help>Clear counters for a given WWAN interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type wwan</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
-              </leafNode>
+                <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$5"</command>
+                <standalone>
+                  <help>Clear wireless wide area network interface counters</help>
+                  <command>${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type wwan</command>
+                </standalone>
+              </tagNode>
             </children>
-          </tagNode>
+          </node>
         </children>
       </node>
     </children>

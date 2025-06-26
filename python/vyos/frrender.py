@@ -639,6 +639,13 @@ class FRRender:
             tmp = type(config_dict)
             raise ValueError(f'Config must be of type "dict" and not "{tmp}"!')
 
+        # Check for ipv6 being blocked
+        import vyos.configquery
+        q = vyos.configquery.ConfigTreeQuery()
+        block_ipv6 = q.exists(['firewall', 'ipv6', 'block'])
+        if block_ipv6:
+            # Disable forwarding
+            config_dict['ipv6']['disable_forwarding'] = {}
 
         if self.cached_config_dict == config_dict:
             debug('FRR:        NO CHANGES DETECTED')
