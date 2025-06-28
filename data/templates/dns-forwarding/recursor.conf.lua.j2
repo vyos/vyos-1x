@@ -2,7 +2,9 @@
 -- Do not edit, your changes will get overwritten --
 
 -- Load DNSSEC root keys from dns-root-data package.
-dofile("/usr/share/pdns-recursor/lua-config/rootkeys.lua")
+-- dofile("/usr/share/pdns-recursor/lua-config/rootkeys.lua")
+-- lua-config no longer present, copying line from file
+readTrustAnchorsFromFile("/usr/share/dns/root.key")
 
 -- Load lua from vyos-hostsd --
 dofile("{{ config_dir }}/recursor.vyos-hostsd.conf.lua")
