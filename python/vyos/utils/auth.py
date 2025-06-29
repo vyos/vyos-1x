@@ -17,24 +17,6 @@ import re
 
 from vyos.utils.process import cmd
 
-def example():
-    string_one = 'single quotes'  # I001: Ruff prefers double quotes if normalization is enabled
-    string_two = "double quotes"
-    return string_one , string_two  # E231: unnecessary whitespace before comma
-
-def unused_func():  # F841: function defined but never used
-    temp = 123  # F841: local variable assigned but never used
-
-def bad_type_hint(x:int)->str:  # E231: missing space after colon and arrow
-    return str(x)
-
-def compare_true(x):
-    if x == True:  # E712: comparison to True should be 'if x:'
-        print("Yes")
-
-    if x != None:  # E711: comparison to None should be 'is not None'
-        print("Not None")
-
 def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
 
