@@ -405,6 +405,7 @@ Description: VyOS configuration scripts and data for AWS Gateway Load Balancer
 Package: vyos-1x-smoketest
 Architecture: all
 Depends:
+ python3-systemd,
  skopeo,
  snmp,
  vyos-1x
