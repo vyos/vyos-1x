@@ -28,6 +28,9 @@
 {% endif %}
 {% if config.bfd is vyos_defined %}
  neighbor {{ neighbor }} bfd
+{%     if config.bfd.strict is vyos_defined %}
+ neighbor {{ neighbor }} bfd strict {% if config.bfd.strict.hold_time is vyos_defined %} hold-time {{ config.bfd.strict.hold_time }} {% endif %}
+{%     endif %}
 {%     if config.bfd.check_control_plane_failure is vyos_defined %}
  neighbor {{ neighbor }} bfd check-control-plane-failure
 {%     endif %}
