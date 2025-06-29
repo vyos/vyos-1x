@@ -17,11 +17,6 @@ import re
 
 from vyos.utils.process import cmd
 
-def example():
-    string_one = 'single quotes'
-    string_two = "double quotes"
-    return string_one, string_two
-
 def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
 
