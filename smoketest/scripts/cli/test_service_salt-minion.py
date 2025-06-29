@@ -19,7 +19,7 @@ import unittest
 from socket import gethostname
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.utils.process import process_named_running
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 
@@ -47,7 +47,7 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(is_systemd_service_active(PROCESS_NAME))
 
         # delete testing SALT config
         self.cli_delete(base_path)
@@ -57,7 +57,7 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
         # from the CI) salt-minion process is not killed by systemd. Apparently
         # no issue on VMWare.
         if cmd('systemd-detect-virt') != 'kvm':
-            self.assertFalse(process_named_running(PROCESS_NAME))
+            self.assertFalse(is_systemd_service_active(PROCESS_NAME))
 
     def test_default(self):
         servers = ['192.0.2.1', '192.0.2.2']
