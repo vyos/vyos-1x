@@ -22,6 +22,7 @@ from time import sleep
 from vyos.config import Config
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.network import is_carrier_up
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.commit import commit_in_progress
@@ -49,7 +50,8 @@ interface_path = ['interfaces'] + Section.get_config_path(interface).split()
 
 systemdV4_service = f'dhclient@{interface}.service'
 systemdV6_service = f'dhcp6c@{interface}.service'
-if in_out == 'out':
+# T7557 - Check the interface is still down at time of script
+if in_out == 'out' and not is_carrier_up(interface):
     # Interface moved state to down
     if is_systemd_service_active(systemdV4_service):
         cmd(f'systemctl stop {systemdV4_service}')

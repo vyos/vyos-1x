@@ -663,3 +663,11 @@ def is_valid_ipv6_address_or_range(addr: str) -> bool:
             return ip_network(addr).version == 6
     except:
         return False
+
+def is_carrier_up(ifname: str) -> bool | None:
+    try:
+        carrier_path = f'/sys/class/net/{ifname}/carrier'
+        with open(carrier_path, 'r') as f:
+            return f.read().strip() == '1'
+    except:
+        return None
