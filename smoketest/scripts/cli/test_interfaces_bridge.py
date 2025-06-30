@@ -515,19 +515,16 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'root-guard'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_discard()
 
         # Test if bpdu_guard configured
-        self.cli_set(['interfaces', 'bridge', 'br0', 'stp'])
-        self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'bpdu-guard'])
+        self.cli_delete(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'root-guard'])
         self.cli_commit()
 
         tmp = read_file(f'/sys/class/net/eth0/brport/bpdu_guard')
         self.assertEqual(tmp, '1')
 
         # Test if root_guard configured
-        self.cli_delete(['interfaces', 'bridge', 'br0'])
-        self.cli_set(['interfaces', 'bridge', 'br0', 'stp'])
+        self.cli_delete(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'bpdu-guard'])
         self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'root-guard'])
         self.cli_commit()
 
