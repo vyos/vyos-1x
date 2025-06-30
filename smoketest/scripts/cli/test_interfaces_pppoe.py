@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import psutil
 
-from psutil import process_iter
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
@@ -48,10 +48,13 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # Validate PPPoE client process
         for interface in self._interfaces:
             running = False
-            for proc in process_iter():
-                if interface in proc.cmdline():
-                    running = True
-                    break
+            for proc in psutil.process_iter():
+                try:
+                    if interface in proc.cmdline():
+                        running = True
+                        break
+                except psutil.ZombieProcess:
+                    pass
             self.assertTrue(running)
 
         self.cli_delete(base_path)
@@ -110,10 +113,13 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # Validate PPPoE client process - must not run as interfaces are disabled
         for interface in self._interfaces:
             running = False
-            for proc in process_iter():
-                if interface in proc.cmdline():
-                    running = True
-                    break
+            for proc in psutil.process_iter():
+                try:
+                    if interface in proc.cmdline():
+                        running = True
+                        break
+                except psutil.ZombieProcess:
+                    pass
             self.assertFalse(running)
 
         # enable PPPoE interfaces
