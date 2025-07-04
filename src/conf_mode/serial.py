@@ -19,6 +19,7 @@ import re
 import sys
 import json
 import signal
+import socket
 import subprocess
 
 from sys import exit
@@ -543,6 +544,30 @@ def restart_smodbusd(tty):
     ret = os.system(f'setsid iol_smodbusd -P {tty} &')
     print(f'iol_smodbusd ret {ret}')
 
+SOCKET_PATH = '/tmp/iol_perleinit'
+
+def send_command_to_iolan(action, name, exe, ttynum, mtsport, monitor_signals, require_systemd):
+    msg = {
+        'action': action,  # 'restart' or 'stop'
+        'name': name,
+        'exe': exe,
+        'ttynum': ttynum,
+        'mtsport': mtsport,
+        'monitor_signals': monitor_signals,
+        'require_systemd': require_systemd,
+    }
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+    # Send message as JSON
+    try:
+        sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
+        print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
+    except Exception as e:
+        print(f'Error sending message: {e}')
+    finally:
+        sock.close()
+
 def apply(proxy):
     if not proxy:
         return None
@@ -550,33 +575,33 @@ def apply(proxy):
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
             stop_services_and_remove_files_with_prefix('/run/serial', device, False)
-            kill_pid_file(device, 0)
+            send_command_to_iolan('stop', device, '', int(re.findall(r'\d+', device)[0]), 0, 0, 0)
 
-    if 'serial_restart' in proxy:
-        for device in proxy['serial_restart']:
-            kill_pid_file(device, 0)
+    # if 'serial_restart' in proxy:
+    #     for device in proxy['serial_restart']:
+    #         kill_pid_file(device, 0)
 
-    if 'smodbusd_restart' in proxy:
-        kill_pid_file('', 1)
+    # if 'smodbusd_restart' in proxy:
+    #     kill_pid_file('', 1)
 
-    tty = check_any_running_service_modbus()
-    if (tty):
-        smodbusd_pid_file = '/run/serial/smodbusd.pid'
-        if os.path.exists(smodbusd_pid_file):
-            try:
-                with open(smodbusd_pid_file, 'r') as f:
-                    pid = int(f.read().strip())
-                if not is_pid_running(pid):
-                    print(f'iol_smodbusd pid {pid} not running.')
-                    restart_smodbusd(tty)
-                else:
-                    print(f'iol_smodbusd pid {pid} is running.')
-            except Exception as e:
-                print(f'Error reading iol_smodbusd pid or checking status: {e}')
-                restart_smodbusd(tty)
-        else:
-            print(f'iol_smodbusd pid file {smodbusd_pid_file} not found.')
-            restart_smodbusd(tty)
+    # tty = check_any_running_service_modbus()
+    # if (tty):
+    #     smodbusd_pid_file = '/run/serial/smodbusd.pid'
+    #     if os.path.exists(smodbusd_pid_file):
+    #         try:
+    #             with open(smodbusd_pid_file, 'r') as f:
+    #                 pid = int(f.read().strip())
+    #             if not is_pid_running(pid):
+    #                 print(f'iol_smodbusd pid {pid} not running.')
+    #                 restart_smodbusd(tty)
+    #             else:
+    #                 print(f'iol_smodbusd pid {pid} is running.')
+    #         except Exception as e:
+    #             print(f'Error reading iol_smodbusd pid or checking status: {e}')
+    #             restart_smodbusd(tty)
+    #     else:
+    #         print(f'iol_smodbusd pid file {smodbusd_pid_file} not found.')
+    #         restart_smodbusd(tty)
 
     add_to_systemd = 0
     remove_from_systemd = 0
@@ -591,43 +616,26 @@ def apply(proxy):
         ret = 0
         for device, serial_config in proxy['device'].items():
             ttynum = re.findall(r'\d+', device)[0]
+            exe_name = ''
+            mtsport = 0
+            monitor_dcd_or_dsr = 0
             if 'disable' not in serial_config:
-                file_path = f'/run/serial/{device}.exe'
 
                 if 'trueport' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_vc')
-                    ret = os.system(f'setsid iol_monitor {ttynum} &')
-                    print(f'vc monitor ret {ret}')
+                    exe_name = 'iol_vc'
                 elif 'multihost' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_multihost')
-
-                    if 'outbound' in serial_config:
-                        # outbound will keep running
-                        ret = os.system(f'setsid iol_multihost {ttynum} &')
-                        print(f'iol_multihost ret {ret}')
-                    else:
-                        # inbound will exit when all connections disconnect
-                        ret = os.system(f'setsid iol_monitor {ttynum} &')
-                        print(f'iol_multihost monitor ret {ret}')
+                    exe_name = 'iol_multihost'
                 elif 'data-logging' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_lldatalog')
-                    ret = os.system(f'setsid iol_monitor {ttynum} &')
-                    print(f'data-logging monitor ret {ret}')
+                    exe_name = 'iol_lldatalog'
                 elif 'vmodem' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_vmodem')
+                    exe_name = 'iol_vmodem'
                     vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
                     if vmodem_mode == 'manual':
-                        listen_port = serial_config['listen_port']
-                        ret = os.system(f'setsid iol_monitor {ttynum} {listen_port} &')
-                    else:
-                        ret = os.system(f'setsid iol_monitor {ttynum} &')
-                    print(f'vmodem monitor ret {ret}')
+                        mtsport = serial_config['listen_port']
                 elif 'udp' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_udpd')
-                    ret = os.system(f'setsid iol_udpd {ttynum} &')
-                    print(f'iol_udpd ret {ret}')
+                    exe_name = 'iol_udpd'
                 elif 'tcp-reverse' in serial_config['service']:
-                    write_string_to_file(file_path, '')
+                    # Need to rewrite
                     print(f'running tcp-reverse on {device}')
                 elif 'modbus-master' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_mmodbusp')
@@ -638,11 +646,15 @@ def apply(proxy):
                     ret = os.system(f'setsid iol_smodbusp -P {ttynum} &')
                     print(f'iol_smodbusp ret {ret}')
                 elif 'tcp-direct' in serial_config['service'] or 'tcp-slient' in serial_config['service']:
-                    write_string_to_file(file_path, 'iol_rawout')
-                    ret = os.system(f'setsid iol_monitor {ttynum} &')
-                    print(f'tcp-direct monitor ret {ret}')
+                    exe_name = 'iol_rawout'
+
+                if 'hardware' in serial_config:
+                    if 'monitor_dcd' in serial_config['hardware'] or 'monitor_dsr' in serial_config['hardware']:
+                        monitor_dcd_or_dsr = 1
+                
+                send_command_to_iolan('restart', device, exe_name, int(ttynum), mtsport, monitor_dcd_or_dsr, 0)
             else:
-                kill_pid_file(device, 0)
+                send_command_to_iolan('stop', device, '', int(ttynum), 0, 0, 0)
 
     return None
 
@@ -655,3 +667,40 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         exit(1)
+
+
+
+# #!/usr/bin/env python3
+
+# import socket
+# import json
+# import os
+
+# SOCKET_PATH = '/tmp/iol_perleinit'
+
+# def send_command(action, name, exe, ttynum, mtsport, monitor_signals, require_systemd):
+#     msg = {
+#         'action': action,  # 'restart' or 'stop'
+#         'name': name,
+#         'exe': exe,
+#         'ttynum': ttynum,
+#         'mtsport': mtsport,
+#         'monitor_signals': monitor_signals,
+#         'require_systemd': require_systemd,
+#     }
+
+#     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+#     # Send message as JSON
+#     try:
+#         sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
+#         print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
+#     except Exception as e:
+#         print(f'Error sending message: {e}')
+#     finally:
+#         sock.close()
+
+# if __name__ == '__main__':
+#     # Example usage
+#     send_command('restart', 'ttyS0', '/usr/bin/iol_vmodem', 0, 10085, 0, 0)
+
