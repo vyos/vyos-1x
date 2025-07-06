@@ -1,2 +1,2 @@
 open pr 3
-ob 5
+uni mirror 1
