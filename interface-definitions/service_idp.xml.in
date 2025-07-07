@@ -17,16 +17,18 @@
               <help>Identity provider metadata url</help>
               <valueHelp>
                 <format>https://example.com/idp</format>
-                <description>metadata url of the identity provider</description>
+                <description>Metadata URL of the identity provider</description>
               </valueHelp>
               <constraint>
                 <regex>https?://.*</regex>
               </constraint>
             </properties>
           </leafNode>
-          <tagNode name="domain">
+
+          <leafListNode name="domain">
             <properties>
               <help>Domain(s) associated with this identity provider</help>
+              <multi/>
               <valueHelp>
                 <format>company.com</format>
                 <description>Domain name (e.g., company.com)</description>
@@ -35,7 +37,7 @@
                 <regex>^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</regex>
               </constraint>
             </properties>
-          </tagNode>
+          </leafListNode>
         </children>
       </tagNode>
     </children>
