@@ -12,8 +12,9 @@
           </valueHelp>
         </properties>
         <children>
-          <leafNode name="metadata-url" type="single">
+          <leafNode name="metadata-url">
             <properties>
+              <priority>1</priority>
               <help>Identity provider metadata url</help>
               <valueHelp>
                 <format>https://example.com/idp</format>
@@ -26,6 +27,7 @@
           </leafNode>
           <tagNode name="domain">
             <properties>
+              <priority>2</priority>
               <help>Domain(s) associated with this identity provider</help>
               <valueHelp>
                 <format>company.com</format>
