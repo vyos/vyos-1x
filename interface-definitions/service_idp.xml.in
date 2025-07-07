@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <tagNode name="idp" owner="${vyos_conf_scripts_dir}/service_idp.py">
+        <properties>
+          <help>Identity provider configuration</help>
+          <valueHelp>
+            <format>&lt;idp-name&gt;</format>
+            <description>Name of the identity provider</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="metadata-url">
+            <properties>
+              <help>Identity provider metadata url</help>
+              <valueHelp>
+                <format>https://example.com/idp</format>
+                <description>metadata url of the identity provider</description>
+              </valueHelp>
+              <constraint>
+                <regex>https?://.*</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
