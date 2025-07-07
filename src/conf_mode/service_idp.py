@@ -28,33 +28,16 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['system', 'idp']
+    base = ['service', 'idp']
 
-    config_data = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    config_data = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=False)
     return config_data
 
 def verify(config_dict):
-    if not isinstance(config_dict, dict):
-        raise ConfigError("IDP config is not a dict")
-
-    for idp_name, data in config_dict.items():
-        if not idp_name:
-            raise ConfigError("IDP name cannot be empty")
-
-        if 'metadata-url' not in data or not data['metadata-url']:
-            raise ConfigError(f"IDP '{idp_name}' requires a metadat URL")
-    
-        url = data['metadata-url']
-        if not (url.startswith('http://') or url.startswith('https://')):
-            raise ConfigError(f"IDP '{idp_name}' URL must start with http:// or https://")
+    pass
 
 def generate(config_dict):
-    if not os.path.exists(CONFIG_DIR):
-        os.makedirs(CONFIG_DIR, exists_ok=True)
-    
-    path = os.path.join(CONFIG_DIR, 'idps.json')
-    with open(path, "w") as f:
-        json.dump(config_dict, f, indent=2)
+    pass
 
 def apply(config_dict):
     pass
