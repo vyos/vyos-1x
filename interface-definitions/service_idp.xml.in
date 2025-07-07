@@ -13,11 +13,11 @@
         </properties>
         <children>
           <leafNode name="metadata-url">
-            <properties type="single">
+            <properties>
               <help>Identity provider metadata url</help>
               <valueHelp>
                 <format>https://example.com/idp</format>
-                <description>Metadata URL of the identity provider</description>
+                <description>metadata url of the identity provider</description>
               </valueHelp>
               <constraint>
                 <regex>https?://.*</regex>
