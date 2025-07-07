@@ -24,6 +24,18 @@
               </constraint>
             </properties>
           </leafNode>
+          <leafNode name="domain">
+            <properties>
+              <help>Domain for the identity provider</help>
+              <multi/>
+              <valueHelp>
+                <format>example.com</format>
+                <description>Domain of the identity provider</description>
+              </valueHelp>
+              <constraint>
+                <regex>^[a-zA-Z0-9.-]+$</regex>
+              </constraint>
+            </properties>
         </children>
       </tagNode>
     </children>
