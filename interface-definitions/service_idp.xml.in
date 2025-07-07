@@ -36,6 +36,7 @@
                 <regex>^[a-zA-Z0-9.-]+$</regex>
               </constraint>
             </properties>
+          </leafNode>
         </children>
       </tagNode>
     </children>
