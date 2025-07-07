@@ -24,19 +24,6 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="domain">
-            <properties>
-              <help>Domain(s) associated with this identity provider</help>
-              <multi/>
-              <valueHelp>
-                <format>company.com</format>
-                <description>Domain name (e.g., company.com)</description>
-              </valueHelp>
-              <constraint>
-                <regex>^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</regex>
-              </constraint>
-            </properties>
-          </leafNode>
         </children>
       </tagNode>
     </children>
