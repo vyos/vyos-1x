@@ -24,8 +24,7 @@
               </constraint>
             </properties>
           </leafNode>
-
-          <leafListNode name="domain">
+          <leafNode name="domain">
             <properties>
               <help>Domain(s) associated with this identity provider</help>
               <multi/>
@@ -37,7 +36,7 @@
                 <regex>^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</regex>
               </constraint>
             </properties>
-          </leafListNode>
+          </leafNode>
         </children>
       </tagNode>
     </children>
