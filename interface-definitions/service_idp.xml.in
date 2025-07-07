@@ -2,44 +2,46 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <tagNode name="idp" owner="${vyos_conf_scripts_dir}/service_idp.py">
-        <properties>
-          <priority>50</priority>
-          <help>Identity provider configuration</help>
-          <valueHelp>
-            <format>&lt;idp-name&gt;</format>
-            <description>Name of the identity provider</description>
-          </valueHelp>
-        </properties>
+      <node name="idp">
         <children>
-          <leafNode name="metadata-url">
+          <tagNode name="idp" owner="${vyos_conf_scripts_dir}/service_idp.py">
             <properties>
-              <priority>1</priority>
-              <help>Identity provider metadata url</help>
+              <priority>50</priority>
+              <help>Identity provider configuration</help>
               <valueHelp>
-                <format>https://example.com/idp</format>
-                <description>metadata url of the identity provider</description>
+                <format>&lt;idp-name&gt;</format>
+                <description>Name of the identity provider</description>
               </valueHelp>
-              <constraint>
-                <regex>https?://.*</regex>
-              </constraint>
             </properties>
-          </leafNode>
-          <tagNode name="domain">
-            <properties>
-              <priority>2</priority>
-              <help>Domain(s) associated with this identity provider</help>
-              <valueHelp>
-                <format>company.com</format>
-                <description>Domain name (e.g., company.com)</description>
-              </valueHelp>
-              <constraint>
-                <regex>^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</regex>
-              </constraint>
-            </properties>
+            <children>
+              <leafNode name="metadata-url">
+                <properties type="single">
+                  <help>Identity provider metadata url</help>
+                  <valueHelp>
+                    <format>https://example.com/idp</format>
+                    <description>metadata url of the identity provider</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>https?://.*</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="domain">
+                <properties>
+                  <help>Domain(s) associated with this identity provider</help>
+                  <valueHelp>
+                    <format>company.com</format>
+                    <description>Domain name (e.g., company.com)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</regex>
+                  </constraint>
+                </properties>
+              </tagNode>
+            </children>
           </tagNode>
         </children>
-      </tagNode>
+      </node>
     </children>
   </node>
 </interfaceDefinition>
