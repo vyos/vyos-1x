@@ -2,50 +2,42 @@
 <interfaceDefinition>
   <node name="service">
     <children>
-      <node name="idp" owner="${vyos_conf_scripts_dir}/service_idp.py">
+      <tagNode name="idp" owner="${vyos_conf_scripts_dir}/service_idp.py">
         <properties>
-          <priority>50</priority>
-          <help>Identity Provider Service Configuration</help>
+          <help>Identity provider configuration</help>
+          <valueHelp>
+            <format>&lt;provider-name&gt;</format>
+            <description>Name of the identity provider</description>
+          </valueHelp>
         </properties>
         <children>
-          <tagNode name="provider">
+          <leafNode name="metadata-url">
             <properties>
-              <help>Identity provider configuration</help>
+              <help>Identity provider metadata url</help>
               <valueHelp>
-                <format>&lt;provider-name&gt;</format>
-                <description>Name of the identity provider</description>
+                <format>https://example.com/idp</format>
+                <description>metadata url of the identity provider</description>
               </valueHelp>
+              <constraint>
+                <regex>https?://.*</regex>
+              </constraint>
             </properties>
-            <children>
-              <leafNode name="metadata-url">
-                <properties>
-                  <help>Identity provider metadata url</help>
-                  <valueHelp>
-                    <format>https://example.com/idp</format>
-                    <description>metadata url of the identity provider</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>https?://.*</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="domain">
-                <properties>
-                  <help>Domain for the identity provider</help>
-                  <multi/>
-                  <valueHelp>
-                    <format>example.com</format>
-                    <description>Domain of the identity provider</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>^[a-zA-Z0-9.-]+$</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </tagNode>
+          </leafNode>
+          <leafNode name="domain">
+            <properties>
+              <help>Domain for the identity provider</help>
+              <multi/>
+              <valueHelp>
+                <format>example.com</format>
+                <description>Domain of the identity provider</description>
+              </valueHelp>
+              <constraint>
+                <regex>^[a-zA-Z0-9.-]+$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
         </children>
-      </node>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

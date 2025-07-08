@@ -42,7 +42,7 @@ def generate(config_dict):
     if not os.path.exists(CONFIG_DIR):
         os.makedirs(CONFIG_DIR, exist_ok=True)
 
-    with open(f"{CONFIG_DIR}/idp_config.json", "w") as f:
+    with open(f"{CONFIG_DIR}/idp.conf", "w") as f:
         f.write(config_json)
 
 def apply(config_dict):
