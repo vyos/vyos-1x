@@ -12,5 +12,5 @@ permissions:
 jobs:
   call-trigger-mirror-pr-repo-sync:
     if: github.repository_owner == 'vyos'
-    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7613-mirror-from-source-org
+    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7613-pr-mirror-branch-cleanup-from-src-repo
     secrets: inherit
