@@ -4,6 +4,7 @@
     <children>
       <tagNode name="idp" owner="${vyos_conf_scripts_dir}/service_idp.py">
         <properties>
+          <priority>100</priority>
           <help>Identity provider configuration</help>
           <valueHelp>
             <format>&lt;provider-name&gt;</format>
