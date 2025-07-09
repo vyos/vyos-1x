@@ -1,4 +1,4 @@
-name: Trigger Mirror PR and Repo Sync
+name: Mirror PR and Repo Sync
 on:
   pull_request_target:
       types:
@@ -22,4 +22,5 @@ jobs:
     uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7613-pr-mirror-checkout-issue
     with:
       sync_branch: ${{ inputs.sync_branch }}
-    secrets: inherit
+    secrets:
+      PAT: ${{ secrets.PAT }}
