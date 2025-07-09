@@ -117,14 +117,23 @@ def verify(config_dict):
             raise ConfigError(f"IDP '{name}' 'domain' must be a list of strings")
 
         # Validate attributes / users
-        if 'attribute' not in idp or not idp['attribute'] or not 'attr' in idp['attribute'] or not idp['attribute']['attr']:
+        attributes = idp.get('attributes', {}).get('attr', {})
+        if not attributes:
             print(f"WARNING: IDP '{name}' has no attributes defined, this is not an error but you may want to define some")
         else:
-            attributes = idp['attribute']['attr']
-            if isinstance(attributes, str):
-                attributes = [attributes]
-            if not isinstance(attributes, list) or not all(isinstance(attr, str) and attr.strip() for attr in attributes):
-                raise ConfigError(f"IDP '{name}' 'attribute' must be a list of strings")
+            for attr_name, attr in attributes.items():
+                if not attr:
+                    raise ConfigError(f"IDP '{name}' attribute '{attr_name}' must have atleast one 'value' defined")
+
+                if not values:
+                    raise ConfigError(f"IDP '{name}' attribute '{attr_name}' must have at least one 'value' defined")
+
+                values = attr.get('value', [])
+                if not isinstance(values, list):
+                    values = [values]
+
+                if not all(isinstance(value, str) and value.strip() for value in values):
+                    raise ConfigError(f"IDP '{name}' attribute '{attr_name}' 'value' must be a list of non-empty strings")
 
         if "user" not in idp or not idp['user']:
             print(f"WARNING: IDP '{name}' has no users defined, this is not an error but you may want to define some")
