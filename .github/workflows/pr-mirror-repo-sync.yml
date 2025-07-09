@@ -5,13 +5,13 @@ on:
         - closed
       branches:
         - current
-  workflow_dispatch:
-    inputs:
-      sync_branch:
-        description: 'branch to sync'
-        required: false
-        type: string
-        default: 'current'
+  # workflow_dispatch:
+  #   inputs:
+  #     sync_branch:
+  #       description: 'branch to sync'
+  #       required: false
+  #       type: string
+  #       default: 'current'
 permissions:
   pull-requests: write
   contents: write
@@ -20,7 +20,7 @@ jobs:
   call-trigger-mirror-pr-repo-sync:
     if: github.repository_owner == 'vyos'
     uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7613-pr-mirror-checkout-issue
-    with:
-      sync_branch: ${{ inputs.sync_branch }}
-    secrets:
-      PAT: ${{ secrets.PAT }}
+    # with:
+    #   sync_branch: ${{ inputs.sync_branch }}
+    secrets: inherit
+      # PAT: ${{ secrets.PAT }}
