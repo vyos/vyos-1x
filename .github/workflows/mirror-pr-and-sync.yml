@@ -14,7 +14,7 @@ permissions:
 jobs:
   call-mirror-pr-and-sync:
     if: github.repository_owner != 'vyos'
-    uses: VyOS-Networks/vyos-reusable-workflows/.github/workflows/mirror-pr-and-sync.yml@(T7613-pr-mirror-checkout-issue
+    uses: VyOS-Networks/vyos-reusable-workflows/.github/workflows/mirror-pr-and-sync.yml@T7613-pr-mirror-checkout-issue
     with:
       sync_branch: ${{ inputs.sync_branch }}
     secrets:
