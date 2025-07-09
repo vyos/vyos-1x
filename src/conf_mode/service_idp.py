@@ -19,8 +19,39 @@ import json
 from vyos.config import Config
 from vyos import ConfigError
 
+from urllib.parse import urlparse
+import ipaddress
+
 # Directory where the SAML IDP configuration will be stored
-CONFIG_DIR = "/lib/security/saml-auth"
+CONFIG_DIR = r'/lib/security/saml-auth'
+
+def check_url(url: str) -> bool:
+    """
+    Check if the given string is a valid URL.
+    Returns True if valid, False otherwise.
+    Uses urllib.parse to validate the URL.
+    :param url: The string to check.
+    :return: True if valid URL, False otherwise.
+    """
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
+
+def check_ip(ip: str) -> bool:
+    """
+    Check if the given string is a valid IP address (IPv4 or IPv6).
+    Returns True if valid, False otherwise.
+    Uses the ipaddress module to validate the IP address.
+    :param ip: The string to check.
+    :return: True if valid IP address, False otherwise.
+    """
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        return False
 
 def get_config(config=None):
     if config:
@@ -34,15 +65,44 @@ def get_config(config=None):
     return config_data
 
 def verify(config_dict):
-    pass
+    # User did not specify an IDP configuration kick out early
+    if 'idp' not in config_dict or not config_dict['idp']:
+        return
+
+    for name, idp in config_dict['idp'].items():
+        # Validate Metadata URL
+        if 'metadata_url' not in idp:
+            raise ConfigError(f"IDP '{name}' is missing 'metadata_url'")
+
+        metadata_url = idp['metadata_url']
+        if not check_url(metadata_url) and not check_ip(metadata_url):
+            raise ConfigError(f"IDP '{name}' has an invalid 'metadata_url': {metadata_url}")
+
+        # Validate Domains
+        if 'domain' not in idp:
+            raise ConfigError(f"IDP '{name}' must have at least one 'domain'")
+
+        domains = idp['domain']
+        if isinstance(domains, str):
+            domains = [domains]
+
+        if not isinstance(domains, list) or not domains:
+            raise ConfigError(f"IDP '{name}' must have at least one 'domain'")
+
+        if not all(isinstance(domain, str) and domain.strip() for domain in domains):
+            raise ConfigError(f"IDP '{name}' 'domain' must be a list of strings")
 
 def generate(config_dict):
+    # User did not specify an IDP configuration kick out early
+    if 'idp' not in config_dict or not config_dict['idp']:
+        return
+
     config_json = json.dumps(config_dict, indent=4)
 
     if not os.path.exists(CONFIG_DIR):
         os.makedirs(CONFIG_DIR, exist_ok=True)
 
-    with open(f"{CONFIG_DIR}/idp.conf", "w") as f:
+    with open(f"{CONFIG_DIR}/idp.conf", 'w') as f:
         f.write(config_json)
 
 def apply(config_dict):
@@ -55,4 +115,5 @@ if __name__ == '__main__':
         generate(c)
         apply(c)
     except ConfigError as e:
-        exit(1)
+        print(e)
+        sys.exit(1)
