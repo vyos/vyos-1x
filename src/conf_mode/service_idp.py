@@ -117,7 +117,7 @@ def verify(config_dict):
             raise ConfigError(f"IDP '{name}' 'domain' must be a list of strings")
 
         # Validate attributes / users
-        attributes = idp.get('attributes', {}).get('attr', {})
+        attributes = idp.get('attribute', {}).get('attr', {})
         if not attributes:
             print(f"WARNING: IDP '{name}' has no attributes defined, this is not an error but you may want to define some")
         else:
