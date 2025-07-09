@@ -34,36 +34,44 @@
               </constraint>
             </properties>
           </leafNode>
-          <tagNode name="attribute">
+          <node name="attribute">
             <properties>
               <help> Identity provider attributes</help>
-              <valueHelp>
-                <format>&lt;attribute-name&gt;</format>
-                <description>Attributes name</description>
-              </valueHelp>
             </properties>
             <children>
-              <leafNode name="value">
+              <tagNode name="attr">
                 <properties>
-                  <help>Value of the attribute</help>
-                  <multi/>
+                  <help>Identity provider attribute</help>
                   <valueHelp>
-                    <format>&lt;attribute-value&gt;</format>
-                    <description>Allowed value(s) of the identity provider attribute</description>
+                    <format>&lt;attribute-name&gt;</format>
+                    <description>Name of the identity provider attribute</description>
                   </valueHelp>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="value">
+                    <properties>
+                      <help>Value of the attribute</help>
+                      <multi/>
+                      <valueHelp>
+                        <format>&lt;attribute-value&gt;</format>
+                        <description>Allowed value(s) of the identity provider attribute</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
             </children>
-          </tagNode>
-          <tagNode name="user">
+          </node>
+          <leafNode name="user">
             <properties>
               <help>Allowed users for the identity provider</help>
+              <multi/>
               <valueHelp>
                 <format>&lt;username&gt;</format>
                 <description>Username of the allowed user</description>
               </valueHelp>
             </properties>
-          </tagNode>
+          </leafNode>
         </children>
       </tagNode>
     </children>
