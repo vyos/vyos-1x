@@ -125,10 +125,11 @@ def verify(config_dict):
                 if not attr:
                     raise ConfigError(f"IDP '{name}' attribute '{attr_name}' must have atleast one 'value' defined")
 
+                values = attr.get('value', [])
+
                 if not values:
                     raise ConfigError(f"IDP '{name}' attribute '{attr_name}' must have at least one 'value' defined")
 
-                values = attr.get('value', [])
                 if not isinstance(values, list):
                     values = [values]
 
