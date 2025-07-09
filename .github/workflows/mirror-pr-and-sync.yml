@@ -19,3 +19,5 @@ jobs:
       sync_branch: ${{ inputs.sync_branch }}
     secrets:
       PAT: ${{ secrets.PAT }}
+      REMOTE_OWNER: ${{ secrets.PAT }}
+      REMOTE_REPO: ${{ secrets.PAT }}
