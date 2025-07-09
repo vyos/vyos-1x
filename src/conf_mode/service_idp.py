@@ -30,7 +30,6 @@ CONFIG_DIR = r'/lib/security/saml-auth'
 def check_url(url: str) -> bool:
     """
     Check if the given string is a valid URL.
-    Returns True if valid, False otherwise.
     Uses urllib.parse to validate the URL.
     :param url: The string to check.
     :return: True if valid URL, False otherwise.
@@ -44,7 +43,6 @@ def check_url(url: str) -> bool:
 def check_ip(ip: str) -> bool:
     """
     Check if the given string is a valid IP address (IPv4 or IPv6).
-    Returns True if valid, False otherwise.
     Uses the ipaddress module to validate the IP address.
     :param ip: The string to check.
     :return: True if valid IP address, False otherwise.
@@ -55,21 +53,25 @@ def check_ip(ip: str) -> bool:
     except ValueError:
         return False
 
-def enable_pam_profile(profile: str) -> bool:
+def toggle_pam_profile(profile: str, enable: bool) -> bool:
     """
-    Enable a PAM profile using the pam-auth-update command.
-    :param profile: The name of the PAM profile to enable.
-    :return: True if the profile was enabled successfully, False otherwise.
+    Toggle a PAM profile using the pam-auth-update command.
+    Uses subprocess to run the command and handle errors.
+    :param profile: The name of the PAM profile to toggle.
+    :param enable: True to enable the profile, False to disable it.
+    :return: True if the profile was toggled successfully, False otherwise.
     """
-    cmd = ['pam-auth-update', '--enable', profile]
+
+    cmd = ['pam-auth-update', '--remove' if not enable else '--enable', profile]
+
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error enabling PAM profile '{profile}': {e.stderr.strip()}")
+        print(f"Error enabling PAM profile '{profile}': {e.stderr.strip() if e.stderr else str(e)}")
         return False
     except FileNotFoundError:
-        print(f"Command 'pam-a  uth-update' not found. Ensure the package is installed.")
+        print(f"Command 'pam-auth-update' not found. Ensure the package is installed.")
         return False
     except Exception as e:
         print(f"An unexpected error occurred while enabling PAM profile '{profile}': {str(e)}")
@@ -114,12 +116,28 @@ def verify(config_dict):
         if not all(isinstance(domain, str) and domain.strip() for domain in domains):
             raise ConfigError(f"IDP '{name}' 'domain' must be a list of strings")
 
-def generate(config_dict):
-    # User did not specify an IDP configuration kick out early
-    if 'idp' not in config_dict or not config_dict['idp']:
-        return
+        # Validate attributes / users
+        if 'attribute' not in idp or not idp['attribute'] or not 'attr' in idp['attribute'] or not idp['attribute']['attr']:
+            print(f"WARNING: IDP '{name}' has no attributes defined, this is not an error but you may want to define some")
+        else:
+            attributes = idp['attribute']['attr']
+            if isinstance(attributes, str):
+                attributes = [attributes]
+            if not isinstance(attributes, list) or not all(isinstance(attr, str) and attr.strip() for attr in attributes):
+                raise ConfigError(f"IDP '{name}' 'attribute' must be a list of strings")
 
-    config_json = json.dumps(config_dict, indent=4)
+        if "user" not in idp or not idp['user']:
+            print(f"WARNING: IDP '{name}' has no users defined, this is not an error but you may want to define some")
+        else:
+            users = idp['user']
+            if isinstance(users, str):
+                users = [users]
+            if not isinstance(users, list) or not all(isinstance(user, str) and user.strip() for user in users):
+                raise ConfigError(f"IDP '{name}' 'user' must be a list of strings")
+
+def generate(config_dict):
+    # Genrate the IDP configuration file even if the user did not specify an IDP configuration (it will just be empty)
+    config_json = json.dumps(config_dict, indent=4) if 'idp' in config_dict and config_dict['idp'] else '{}'
 
     if not os.path.exists(CONFIG_DIR):
         os.makedirs(CONFIG_DIR, exist_ok=True)
@@ -128,13 +146,10 @@ def generate(config_dict):
         f.write(config_json)
 
 def apply(config_dict):
-    # User did not specify an IDP configuration kick out early
-    if 'idp' not in config_dict or not config_dict['idp']:
-        return
+    enable = True if 'idp' in config_dict and config_dict['idp'] else False
 
-    # Enable the pam profile for saml-auth
-    if not enable_pam_profile('saml-auth'):
-        raise ConfigError("Failed to enable pam profile for saml-auth")
+    if not toggle_pam_profile('saml-auth', enable):
+        raise ConfigError("Failed to toggle pam profile for saml-auth")
 
 if __name__ == '__main__':
     try:
