@@ -1,17 +1,10 @@
-name: Mirror PR and Repo Sync
+name: Trigger Mirror PR and Repo Sync
 on:
   pull_request_target:
       types:
         - closed
       branches:
         - current
-  # workflow_dispatch:
-  #   inputs:
-  #     sync_branch:
-  #       description: 'branch to sync'
-  #       required: false
-  #       type: string
-  #       default: 'current'
 permissions:
   pull-requests: write
   contents: write
@@ -19,8 +12,5 @@ permissions:
 jobs:
   call-trigger-mirror-pr-repo-sync:
     if: github.repository_owner == 'vyos'
-    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7613-pr-mirror-checkout-issue
-    # with:
-    #   sync_branch: ${{ inputs.sync_branch }}
+    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@(T7613-pr-mirror-checkout-issue
     secrets: inherit
-      # PAT: ${{ secrets.PAT }}
