@@ -13,8 +13,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import sys
+import subprocess
 import json
 from vyos.config import Config
 from vyos import ConfigError
@@ -51,6 +53,26 @@ def check_ip(ip: str) -> bool:
         ipaddress.ip_address(ip)
         return True
     except ValueError:
+        return False
+
+def enable_pam_profile(profile: str) -> bool:
+    """
+    Enable a PAM profile using the pam-auth-update command.
+    :param profile: The name of the PAM profile to enable.
+    :return: True if the profile was enabled successfully, False otherwise.
+    """
+    cmd = ['pam-auth-update', '--enable', profile]
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error enabling PAM profile '{profile}': {e.stderr.strip()}")
+        return False
+    except FileNotFoundError:
+        print(f"Command 'pam-a  uth-update' not found. Ensure the package is installed.")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred while enabling PAM profile '{profile}': {str(e)}")
         return False
 
 def get_config(config=None):
@@ -106,7 +128,13 @@ def generate(config_dict):
         f.write(config_json)
 
 def apply(config_dict):
-    pass
+    # User did not specify an IDP configuration kick out early
+    if 'idp' not in config_dict or not config_dict['idp']:
+        return
+
+    # Enable the pam profile for saml-auth
+    if not enable_pam_profile('saml-auth'):
+        raise ConfigError("Failed to enable pam profile for saml-auth")
 
 if __name__ == '__main__':
     try:
