@@ -6,22 +6,16 @@ on:
       branches:
         - current
   workflow_dispatch:
-    inputs:
-      sync_branch:
-        description: 'branch to sync'
-        required: false
-        type: string
-        default: 'current'
 permissions:
   pull-requests: write
   contents: write
   issues: write
 jobs:
   call-trigger-mirror-pr-repo-sync:
-    if: github.repository_owner == 'vyos'
-    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7613-pr-mirror-checkout-issue
+    if: github.repository_owner == 'vyos' && github.event.pull_request.merged == true
+    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@current
     with:
-      sync_branch: ${{ inputs.sync_branch }}
+      sync_branch: 'current'
     secrets:
       PAT: ${{ secrets.PAT }}
       REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
