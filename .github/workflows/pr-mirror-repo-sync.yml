@@ -1,15 +1,21 @@
 name: PR Mirror and Repo Sync
+
 on:
   pull_request_target:
-      types:
-        - closed
-      branches:
-        - current
+    types: [closed]
+    branches: [current]
   workflow_dispatch:
+    inputs:
+      sync_branch:
+        description: 'Branch to mirror'
+        required: true
+        default: 'current'
+
 permissions:
   pull-requests: write
   contents: write
   issues: write
+
 jobs:
   call-trigger-mirror-pr-repo-sync:
     if: |
@@ -20,7 +26,7 @@ jobs:
       )
     uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@current
     with:
-      sync_branch: 'current'
+      sync_branch: ${{ github.event.inputs.sync_branch || 'current' }}
     secrets:
       PAT: ${{ secrets.PAT }}
       REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
