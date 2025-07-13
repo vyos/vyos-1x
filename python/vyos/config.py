@@ -345,9 +345,11 @@ class Config(object):
                                          abs_path=rpath,
                                          no_tag_node_value_mangle=no_tag_node_value_mangle)
 
-        if with_defaults or with_recursive_defaults:
-            defaults = self.get_config_defaults(**kwargs,
-                                                recursive=with_recursive_defaults)
+        if with_defaults:
+            defaults = self.get_config_defaults(**kwargs)
+            conf_dict = config_dict_merge(defaults, conf_dict)
+        elif with_recursive_defaults:
+            defaults = self.get_config_defaults(**kwargs, recursive=True)
             conf_dict = config_dict_merge(defaults, conf_dict)
         else:
             conf_dict = ConfigDict(conf_dict)
