@@ -33,14 +33,13 @@ def get_config(config=None):
 
     base = ['load-balancing', 'wan']
 
-    lb = conf.get_config_dict(base, key_mangling=('-', '_'),
-                              no_tag_node_value_mangle=True,
-                              get_first_key=True,
-                              with_recursive_defaults=True)
+    lb = conf.get_config_dict(
+        base, key_mangling=('-', '_'), no_tag_node_value_mangle=True, get_first_key=True
+    )
 
     # prune limit key if not set by user
     for rule in lb.get('rule', []):
-        if lb.from_defaults(['rule', rule, 'limit']):
+        if not conf.exists(base + ['rule', rule, 'limit']):
             del lb['rule'][rule]['limit']
 
     set_dependents('conntrack', conf)
