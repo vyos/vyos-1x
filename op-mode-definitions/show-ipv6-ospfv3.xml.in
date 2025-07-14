@@ -13,12 +13,6 @@
             </properties>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             <children>
-              <node name="area">
-                <properties>
-                  <help>Show Shortest Path First tree information</help>
-                </properties>
-                <command>vtysh -c "show ipv6 ospf6 spf tree"</command>
-              </node>
               <tagNode name="area">
                 <properties>
                   <help>Area ID (as an IPv4 notation)</help>
@@ -27,6 +21,10 @@
                   </completionHelp>
                 </properties>
                 <command>vtysh -c "show ipv6 ospf6 area $5 spf tree"</command>
+                <standalone>
+                  <help>Show Shortest Path First tree information</help>
+                  <command>vtysh -c "show ipv6 ospf6 spf tree"</command>
+                </standalone>
                 <children>
                   <tagNode name="router">
                     <properties>
@@ -47,16 +45,6 @@
               #include <include/ospfv3/neighbor.xml.i>
               #include <include/ospfv3/redistribute.xml.i>
               #include <include/ospfv3/route.xml.i>
-              <node name="vrf">
-                <properties>
-                  <help>Specify the VRF</help>
-                  <completionHelp>
-                    <list>all</list>
-                    <path>vrf name</path>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </node>
               <tagNode name="vrf">
                 <properties>
                   <help>VRF name</help>
@@ -66,13 +54,11 @@
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <standalone>
+                  <help>Show OSPFv3 information in given VRF</help>
+                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                </standalone>
                 <children>
-                  <node name="area">
-                    <properties>
-                      <help>Show Shortest Path First tree information</help>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 vrf $5 spf tree"</command>
-                  </node>
                   <tagNode name="area">
                     <properties>
                       <help>Area ID (as an IPv4 notation)</help>
@@ -81,6 +67,10 @@
                       </completionHelp>
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 vrf $5 area $7 spf tree"</command>
+                    <standalone>
+                      <help>Show Shortest Path First tree information</help>
+                      <command>vtysh -c "show ipv6 ospf6 vrf $5 spf tree"</command>
+                    </standalone>
                     <children>
                       <tagNode name="router">
                         <properties>

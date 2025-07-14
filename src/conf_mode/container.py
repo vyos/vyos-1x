@@ -310,6 +310,7 @@ def generate_run_arguments(name, container_config):
     memory = container_config['memory']
     shared_memory = container_config['shared_memory']
     restart = container_config['restart']
+    log_driver = container_config['log_driver']
 
     # Add sysctl options
     sysctl_opt = ''
@@ -408,7 +409,7 @@ def generate_run_arguments(name, container_config):
             name_server += f'--dns {ns}'
 
     container_base_cmd = f'--detach --interactive --tty --replace {capabilities} {privileged} --cpus {cpu_quota} {sysctl_opt} ' \
-                         f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
+                         f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} --log-driver={log_driver} ' \
                          f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid}'
 
     entrypoint = ''

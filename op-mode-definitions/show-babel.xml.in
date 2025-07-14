@@ -13,12 +13,6 @@
             </properties>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </leafNode>
-          <leafNode name="neighbor">
-            <properties>
-              <help>Show Babel neighbor information</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-          </leafNode>
           <tagNode name="neighbor">
             <properties>
               <help>Show Babel neighbor information for specified interface</help>
@@ -27,6 +21,10 @@
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <standalone>
+              <help>Show Babel neighbor information</help>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            </standalone>
           </tagNode>
           <leafNode name="route">
             <properties>

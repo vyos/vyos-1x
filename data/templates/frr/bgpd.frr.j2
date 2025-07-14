@@ -638,6 +638,9 @@ bgp route-reflector allow-outbound-policy
 {% if parameters.no_fast_external_failover is vyos_defined %}
  no bgp fast-external-failover
 {% endif %}
+{% if parameters.no_ipv6_auto_ra is vyos_defined %}
+ no bgp ipv6-auto-ra
+{% endif %}
 {% if parameters.no_suppress_duplicates is vyos_defined %}
  no bgp suppress-duplicates
 {% endif %}

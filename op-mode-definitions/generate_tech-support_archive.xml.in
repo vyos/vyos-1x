@@ -7,12 +7,6 @@
           <help>Generate tech support info</help>
         </properties>
         <children>
-          <node name="archive">
-            <properties>
-              <help>Generate tech support archive</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/generate_tech-support_archive.py</command>
-          </node>
           <tagNode name="archive">
             <properties>
               <help>Generate tech support archive to defined location</help>
@@ -21,13 +15,11 @@
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/generate_tech-support_archive.py $4</command>
-          </tagNode>
-          <node name="machine-readable-archive">
-            <properties>
+            <standalone>
               <help>Generate tech support archive</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/tech_support.py show --raw | gzip> $4.json.gz</command>
-          </node>
+              <command>${vyos_op_scripts_dir}/generate_tech-support_archive.py</command>
+            </standalone>
+          </tagNode>
           <tagNode name="machine-readable-archive">
             <properties>
               <help>Generate tech support archive to defined location</help>
@@ -36,6 +28,10 @@
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/tech_support.py show --raw | gzip > $4.json.gz</command>
+            <standalone>
+              <help>Generate a machine-readable tech support archive</help>
+              <command>${vyos_op_scripts_dir}/tech_support.py show --raw | gzip> $4.json.gz</command>
+            </standalone>
           </tagNode>
         </children>
       </node>

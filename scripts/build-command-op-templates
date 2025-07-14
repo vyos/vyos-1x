@@ -124,6 +124,26 @@ def get_properties(p):
 
     return props
 
+def get_standalone(s):
+    standalone = {}
+
+    if s is None:
+        return {}
+
+    # Get the help string
+    try:
+        standalone["help"] = s.find("help").text
+    except:
+        standalone["help"] = "No help available"
+
+    # Get the command -- it's required by the schema
+    try:
+        standalone["command"] = s.find("command")
+    except:
+        raise AssertionError("Found a <standalone> node without <command>")
+
+    return standalone
+
 
 def make_node_def(props, command):
     # XXX: replace with a template processor if it grows
@@ -150,6 +170,7 @@ def process_node(n, tmpl_dir):
     my_tmpl_dir = copy.copy(tmpl_dir)
 
     props_elem = n.find("properties")
+    standalone_elem = n.find("standalone")
     children = n.find("children")
     command = n.find("command")
     name = n.get("name")
@@ -163,6 +184,7 @@ def process_node(n, tmpl_dir):
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
     props = get_properties(props_elem)
+    standalone = get_standalone(standalone_elem)
 
     nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
     if node_type == "node":
@@ -189,7 +211,10 @@ def process_node(n, tmpl_dir):
         # does not exist at all.
         if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
             with open(nodedef_path, "w") as f:
-                f.write('help: {0}\n'.format(props['help']))
+                if standalone:
+                    f.write(make_node_def(standalone, standalone["command"]))
+                else:
+                    f.write('help: {0}\n'.format(props['help']))
 
         # Create the inner node.tag part
         my_tmpl_dir.append("node.tag")

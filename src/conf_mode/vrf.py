@@ -18,6 +18,8 @@ from sys import exit
 from jmespath import search
 from json import loads
 
+import vyos.defaults
+
 from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.configverify import verify_route_map
@@ -162,6 +164,11 @@ def verify(vrf):
             # table id is mandatory
             if 'table' not in vrf_config:
                 raise ConfigError(f'VRF "{name}" table id is mandatory!')
+
+            if int(vrf_config['table']) == vyos.defaults.rt_global_vrf:
+                raise ConfigError(
+                    f'VRF "{name}" table id {vrf_config["table"]} cannot be used!'
+                )
 
             # routing table id can't be changed - OS restriction
             if interface_exists(name):

@@ -410,15 +410,11 @@ table bridge vyos_filter {
 {%         for prior, conf in bridge.output.items() %}
     chain VYOS_OUTPUT_{{ prior }} {
         type filter hook output priority {{ prior }}; policy accept;
-{%             if global_options.apply_to_bridged_traffic is vyos_defined %}
-{%                 if 'invalid_connections' in global_options.apply_to_bridged_traffic %}
-        ct state invalid udp sport 67 udp dport 68 counter accept
-        ct state invalid ether type arp counter accept
-        ct state invalid ether type 8021q counter accept
-        ct state invalid ether type 8021ad counter accept
-        ct state invalid ether type 0x8863 counter accept
-        ct state invalid ether type 0x8864 counter accept
-        ct state invalid ether type 0x0842 counter accept
+{%             if global_options.apply_to_bridged_traffic.accept_invalid is vyos_defined %}
+{%                 if 'ethernet_type' in global_options.apply_to_bridged_traffic.accept_invalid %}
+{%                     for ether_type in global_options.apply_to_bridged_traffic.accept_invalid.ethernet_type %}
+        {{ ether_type | nft_accept_invalid() }}
+{%                     endfor %}
 {%                 endif %}
 {%             endif %}
 {%             if global_options.state_policy is vyos_defined %}
