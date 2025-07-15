@@ -61,6 +61,35 @@
         </constraint>
       </properties>
     </leafNode>
+    <leafNode name="echo-receive-interval">
+      <properties>
+        <help>Echo receive interval</help>
+        <valueHelp>
+          <format>disabled</format>
+          <description>This system doesn't want to receive echo packets</description>
+        </valueHelp>
+        <valueHelp>
+          <format>u32:10-60000</format>
+          <description>The minimum interval that this system is capable of receiving echo packets</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 10-60000"/>
+          <regex>(disabled)</regex>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="echo-transmit-interval">
+      <properties>
+        <help>Echo transmission interval</help>
+        <valueHelp>
+          <format>u32:10-60000</format>
+          <description>The minimum transmission interval (less jitter) that this system wants to use to send echo packets</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 10-60000"/>
+        </constraint>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <leafNode name="minimum-ttl">

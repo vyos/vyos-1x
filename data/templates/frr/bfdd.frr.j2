@@ -7,8 +7,23 @@ bfd
   receive-interval {{ profile_config.interval.receive }}
   transmit-interval {{ profile_config.interval.transmit }}
 {%             if profile_config.interval.echo_interval is vyos_defined %}
-  echo transmit-interval {{ profile_config.interval.echo_interval }}
+{%                 if profile_config.interval.echo_receive_interval is vyos_defined %}
+  echo receive-interval {{ profile_config.interval.echo_receive_interval }}
+{%                 else %}
   echo receive-interval {{ profile_config.interval.echo_interval }}
+{%                 endif %}
+{%                 if profile_config.interval.echo_transmit_interval is vyos_defined %}
+  echo transmit-interval {{ profile_config.interval.echo_transmit_interval }}
+{%                 else %}
+  echo transmit-interval {{ profile_config.interval.echo_interval }}
+{%                 endif %}
+{%             else %}
+{%                 if profile_config.interval.echo_receive_interval is vyos_defined %}
+  echo receive-interval {{ profile_config.interval.echo_receive_interval }}
+{%                 endif %}
+{%                 if profile_config.interval.echo_transmit_interval is vyos_defined %}
+  echo transmit-interval {{ profile_config.interval.echo_transmit_interval }}
+{%                 endif %}
 {%             endif %}
 {%             if profile_config.echo_mode is vyos_defined %}
   echo-mode
@@ -35,8 +50,23 @@ bfd
   receive-interval {{ peer_config.interval.receive }}
   transmit-interval {{ peer_config.interval.transmit }}
 {%             if peer_config.interval.echo_interval is vyos_defined %}
-  echo transmit-interval {{ peer_config.interval.echo_interval }}
+{%                 if peer_config.interval.echo_receive_interval is vyos_defined %}
+  echo receive-interval {{ peer_config.interval.echo_receive_interval }}
+{%                 else %}
   echo receive-interval {{ peer_config.interval.echo_interval }}
+{%                 endif %}
+{%                 if peer_config.interval.echo_transmit_interval is vyos_defined %}
+  echo transmit-interval {{ peer_config.interval.echo_transmit_interval }}
+{%                 else %}
+  echo transmit-interval {{ peer_config.interval.echo_interval }}
+{%                 endif %}
+{%             else %}
+{%                 if peer_config.interval.echo_receive_interval is vyos_defined %}
+  echo receive-interval {{ peer_config.interval.echo_receive_interval }}
+{%                 endif %}
+{%                 if peer_config.interval.echo_transmit_interval is vyos_defined %}
+  echo transmit-interval {{ peer_config.interval.echo_transmit_interval }}
+{%                 endif %}
 {%             endif %}
 {%             if peer_config.echo_mode is vyos_defined %}
   echo-mode

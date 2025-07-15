@@ -47,6 +47,30 @@ peers = {
         'profile'    : 'foo',
         'source_intf': dum_if,
     },
+    '192.0.2.30' : {
+        'echo_mode'         : '',
+        'intv_echo_receive' : 'disabled',
+        'intv_echo_transmit': '1000',
+        'intv_mult'         : '100',
+        'intv_rx'           : '222',
+        'intv_tx'           : '333',
+        'passive'           : '',
+        'shutdown'          : '',
+        'profile'           : 'foo',
+        'source_intf'       : dum_if,
+    },
+    '192.0.2.40' : {
+        'echo_mode'        : '',
+        'intv_echo'        : '100',
+        'intv_echo_receive': '200',
+        'intv_mult'        : '100',
+        'intv_rx'          : '222',
+        'intv_tx'          : '333',
+        'passive'          : '',
+        'shutdown'         : '',
+        'profile'          : 'foo',
+        'source_intf'      : dum_if,
+    },
     '2001:db8::1000:1' : {
         'source_addr': '2001:db8::1',
         'vrf'        : vrf_name,
@@ -67,17 +91,21 @@ profiles = {
         'intv_tx'    : '333',
         'shutdown'   : '',
         'minimum_ttl': '40',
-        },
+    },
     'foo-bar-baz' : {
         'intv_mult'  : '4',
         'intv_rx'    : '400',
         'intv_tx'    : '400',
-        },
+    },
     'baz_foo' : {
         'intv_mult'  : '102',
         'intv_rx'    : '444',
         'passive'    : '',
-        },
+    },
+    'bar_foo': {
+        'intv_echo_receive' : 'disabled',
+        'intv_echo_transmit': '100'
+    }
 }
 
 class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
@@ -110,6 +138,10 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer', peer, 'echo-mode'])
             if 'intv_echo' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'interval', 'echo-interval', peer_config["intv_echo"]])
+            if 'intv_echo_receive' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'interval', 'echo-receive-interval', peer_config["intv_echo_receive"]])
+            if 'intv_echo_transmit' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'interval', 'echo-transmit-interval', peer_config["intv_echo_transmit"]])
             if 'intv_mult' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'interval', 'multiplier', peer_config["intv_mult"]])
             if 'intv_rx' in peer_config:
@@ -153,8 +185,12 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
             if 'intv_echo' in peer_config:
-                self.assertIn(f'echo receive-interval {peer_config["intv_echo"]}', peerconfig)
-                self.assertIn(f'echo transmit-interval {peer_config["intv_echo"]}', peerconfig)
+                self.assertIn(f'echo receive-interval {peer_config["intv_echo_receive"] if "intv_echo_receive" in peer_config else peer_config["intv_echo"]}', peerconfig)
+                self.assertIn(f'echo transmit-interval {peer_config["intv_echo_transmit"] if "intv_echo_transmit" in peer_config else peer_config["intv_echo"]}', peerconfig)
+            if 'intv_echo_receive' in peer_config:
+                self.assertIn(f'echo receive-interval {peer_config["intv_echo_receive"]}', peerconfig)
+            if 'intv_echo_transmit' in peer_config:
+                self.assertIn(f'echo transmit-interval {peer_config["intv_echo_transmit"]}', peerconfig)
             if 'intv_mult' in peer_config:
                 self.assertIn(f'detect-multiplier {peer_config["intv_mult"]}', peerconfig)
             if 'intv_rx' in peer_config:
@@ -178,6 +214,10 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['profile', profile, 'echo-mode'])
             if 'intv_echo' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'interval', 'echo-interval', profile_config["intv_echo"]])
+            if 'intv_echo_receive' in profile_config:
+                self.cli_set(base_path + ['profile', profile, 'interval', 'echo-receive-interval', profile_config["intv_echo_receive"]])
+            if 'intv_echo_transmit' in profile_config:
+                self.cli_set(base_path + ['profile', profile, 'interval', 'echo-transmit-interval', profile_config["intv_echo_transmit"]])
             if 'intv_mult' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'interval', 'multiplier', profile_config["intv_mult"]])
             if 'intv_rx' in profile_config:
@@ -216,8 +256,12 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
             if 'echo_mode' in profile_config:
                 self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
-                self.assertIn(f' echo receive-interval {profile_config["intv_echo"]}', config)
-                self.assertIn(f' echo transmit-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f'echo receive-interval {profile_config["intv_echo_receive"] if "intv_echo_receive" in profile_config else profile_config["intv_echo"]}', config)
+                self.assertIn(f'echo transmit-interval {profile_config["intv_echo_transmit"] if "intv_echo_transmit" in profile_config else profile_config["intv_echo"]}', config)
+            if 'intv_echo_receive' in profile_config:
+                self.assertIn(f'echo receive-interval {profile_config["intv_echo_receive"]}', config)
+            if 'intv_echo_transmit' in profile_config:
+                self.assertIn(f'echo transmit-interval {profile_config["intv_echo_transmit"]}', config)
             if 'intv_mult' in profile_config:
                 self.assertIn(f' detect-multiplier {profile_config["intv_mult"]}', config)
             if 'intv_rx' in profile_config:
