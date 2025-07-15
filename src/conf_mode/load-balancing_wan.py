@@ -38,11 +38,6 @@ def get_config(config=None):
                               get_first_key=True,
                               with_recursive_defaults=True)
 
-    # prune limit key if not set by user
-    for rule in lb.get('rule', []):
-        if lb.from_defaults(['rule', rule, 'limit']):
-            del lb['rule'][rule]['limit']
-
     set_dependents('conntrack', conf)
 
     return lb
