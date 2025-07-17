@@ -25,7 +25,8 @@ from urllib.parse import urlparse
 import ipaddress
 
 # Directory where the SAML IDP configuration will be stored
-CONFIG_DIR = r'/lib/security/saml-auth'
+CONFIG_DIR = r'/etc'
+CONFIG_FILE = r'saml-sso-idp.conf'
 
 def check_url(url: str) -> bool:
     """
@@ -77,6 +78,20 @@ def toggle_pam_profile(profile: str, enable: bool) -> bool:
         print(f"An unexpected error occurred while enabling PAM profile '{profile}': {str(e)}")
         return False
 
+def toggle_service(service: str, enable: bool) -> bool:
+    try:
+        if enable:
+            subprocess.run(['systemctl', 'daemon-reload'], check=True)
+            subprocess.run(['systemctl', 'enable', service], check=True)
+            subprocess.run(['systemctl', 'start', service], check=True)
+        else:
+            subprocess.run(['systemctl', 'stop', service], check=True)
+            subprocess.run(['systemctl', 'disable', service], check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error toggling service '{service}': {e}")
+        return False
+
 def get_config(config=None):
     if config:
         conf = config
@@ -89,77 +104,72 @@ def get_config(config=None):
     return config_data
 
 def verify(config_dict):
-    # User did not specify an IDP configuration kick out early
-    if 'idp' not in config_dict or not config_dict['idp']:
-        return
+    idp = config_dict.get('idp', {})
+    if not idp:
+        return # No idp config, kick out early
 
-    for name, idp in config_dict['idp'].items():
-        # Validate Metadata URL
-        if 'metadata_url' not in idp:
-            raise ConfigError(f"IDP '{name}' is missing 'metadata_url'")
-
-        metadata_url = idp['metadata_url']
+    for name, provider in idp.items():
+        # Validate metadata URL
+        metadata_url = provider.get('metadata_url', None)
+        if not metadata_url:
+            raise ConfigError(f"IDP: {name} must have metadata-url")
         if not check_url(metadata_url) and not check_ip(metadata_url):
-            raise ConfigError(f"IDP '{name}' has an invalid 'metadata_url': {metadata_url}")
+            raise ConfigError(f"IDP: {name} must have a valid metadata-url")
 
-        # Validate Domains
-        if 'domain' not in idp:
-            raise ConfigError(f"IDP '{name}' must have at least one 'domain'")
-
-        domains = idp['domain']
-        if isinstance(domains, str):
+        # Validate domains
+        domains = provider.get('domain', [])
+        if not isinstance(domains, list):
             domains = [domains]
-
-        if not isinstance(domains, list) or not domains:
-            raise ConfigError(f"IDP '{name}' must have at least one 'domain'")
-
+        if not domains:
+            raise ConfigError(f"IDP: {name} must have at least one configured domain")
         if not all(isinstance(domain, str) and domain.strip() for domain in domains):
-            raise ConfigError(f"IDP '{name}' 'domain' must be a list of strings")
+            raise ConfigError(f"IDP: {name}, domains must be strings")
 
-        # Validate attributes / users
-        attributes = idp.get('attribute', {}).get('attr', {})
+        # Validate attributes
+        attributes = provider.get('attribute', {}).get('attr', {})
         if not attributes:
-            print(f"WARNING: IDP '{name}' has no attributes defined, this is not an error but you may want to define some")
+            print(f"WARNING: IDP: {name} has no attributes configured")
         else:
-            for attr_name, attr in attributes.items():
-                if not attr:
-                    raise ConfigError(f"IDP '{name}' attribute '{attr_name}' must have atleast one 'value' defined")
+            for attr_name, attribute in attributes.items():
+                if not attribute:
+                    raise ConfigError(f"IDP: {name} Attribute: {attr_name} must have atleaset one possible value")
 
-                values = attr.get('value', [])
-
-                if not values:
-                    raise ConfigError(f"IDP '{name}' attribute '{attr_name}' must have at least one 'value' defined")
-
+                values = attribute.get('value', [])
                 if not isinstance(values, list):
                     values = [values]
-
+                if not values:
+                    raise ConfigError(f"IDP: {name} Attribute: {attr_name} must have atleaset one possible value")
                 if not all(isinstance(value, str) and value.strip() for value in values):
-                    raise ConfigError(f"IDP '{name}' attribute '{attr_name}' 'value' must be a list of non-empty strings")
+                    raise ConfigError(f"IDP: {name} Attribute: {attr_name} values must be strings")
 
-        if "user" not in idp or not idp['user']:
-            print(f"WARNING: IDP '{name}' has no users defined, this is not an error but you may want to define some")
+        # Validate users
+        users = provider.get('user', [])
+        if not isinstance(users, list):
+            users = [users]
+        if not users:
+            print(f"WARNING: IDP: {name} has no users configured")
         else:
-            users = idp['user']
-            if isinstance(users, str):
-                users = [users]
-            if not isinstance(users, list) or not all(isinstance(user, str) and user.strip() for user in users):
-                raise ConfigError(f"IDP '{name}' 'user' must be a list of strings")
+            if not all(isinstance(user, str) and user.strip() for user in users):
+                raise ConfigError(f"IDP: {name}, users must be strings")
 
 def generate(config_dict):
-    # Genrate the IDP configuration file even if the user did not specify an IDP configuration (it will just be empty)
-    config_json = json.dumps(config_dict, indent=4) if 'idp' in config_dict and config_dict['idp'] else '{}'
-
-    if not os.path.exists(CONFIG_DIR):
-        os.makedirs(CONFIG_DIR, exist_ok=True)
-
-    with open(f"{CONFIG_DIR}/idp.conf", 'w') as f:
-        f.write(config_json)
+    try:
+        if not os.path.exists(CONFIG_DIR):
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(f"{CONFIG_DIR}/{CONFIG_FILE}", 'w') as conf_file:
+            json.dump(config_dict, conf_file, indent=4)
+    except Exception:
+        raise ConfigError("Could not generate config file")
 
 def apply(config_dict):
-    enable = True if 'idp' in config_dict and config_dict['idp'] else False
+    idp = config_dict.get('idp', {})
+    enable = True if idp else False
 
-    if not toggle_pam_profile('saml-auth', enable):
-        raise ConfigError("Failed to toggle pam profile for saml-auth")
+    if not toggle_pam_profile('saml_auth', enable):
+        raise ConfigError("Failed to toggle saml_auth PAM profile")
+
+    if not toggle_service('saml-sp', enable):
+        raise ConfigError("Failed to toggle saml-sp service")
 
 if __name__ == '__main__':
     try:
