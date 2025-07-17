@@ -7,43 +7,43 @@
           <help>Show firewall information</help>
         </properties>
         <children>
-          <tagNode name="group">
-            <properties>
-              <help>Show firewall group</help>
-              <completionHelp>
-                <path>firewall group address-group</path>
-                <path>firewall group network-group</path>
-                <path>firewall group port-group</path>
-                <path>firewall group domain-group</path>
-                <path>firewall group dynamic-group address-group</path>
-                <path>firewall group dynamic-group ipv6-address-group</path>
-                <path>firewall group interface-group</path>
-                <path>firewall group ipv6-address-group</path>
-                <path>firewall group ipv6-network-group</path>
-                <path>firewall group mac-group</path>
-                <path>firewall group network-group</path>
-                <path>firewall group port-group</path>
-                <path>firewall group remote-group</path>
-              </completionHelp>
-            </properties>
-            <children>
-              <leafNode name="detail">
-                <properties>
-                  <help>Show list view of firewall groups</help>
-                  <completionHelp>
-                    <path>firewall group detail</path>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/firewall.py --action show_group --name $4 --detail $5</command>
-              </leafNode>
-            </children>
-            <command>${vyos_op_scripts_dir}/firewall.py --action show_group --name $4</command>
-          </tagNode>
           <node name="group">
             <properties>
               <help>Show firewall group</help>
             </properties>
             <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Show firewall group</help>
+                  <completionHelp>
+                    <path>firewall group address-group</path>
+                    <path>firewall group network-group</path>
+                    <path>firewall group port-group</path>
+                    <path>firewall group domain-group</path>
+                    <path>firewall group dynamic-group address-group</path>
+                    <path>firewall group dynamic-group ipv6-address-group</path>
+                    <path>firewall group interface-group</path>
+                    <path>firewall group ipv6-address-group</path>
+                    <path>firewall group ipv6-network-group</path>
+                    <path>firewall group mac-group</path>
+                    <path>firewall group network-group</path>
+                    <path>firewall group port-group</path>
+                    <path>firewall group remote-group</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show list view of firewall groups</help>
+                      <completionHelp>
+                        <path>firewall group detail</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/firewall.py --action show_group --name $4 --detail $5</command>
+                  </leafNode>
+                </children>
+                <command>${vyos_op_scripts_dir}/firewall.py --action show_group --name $4</command>
+              </virtualTagNode>
               <leafNode name="detail">
                 <properties>
                   <help>Show list view of firewall group</help>

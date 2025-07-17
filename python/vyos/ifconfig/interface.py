@@ -1,4 +1,4 @@
-# Copyright 2019-2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -423,11 +423,11 @@ class Interface(Control):
             self._cmd(f'nft {nft_command}')
 
     def _del_interface_from_ct_iface_map(self):
-        nft_command = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
+        nft_command = f'delete element inet vrf_zones ct_iface_map {{ \'"{self.ifname}"\' }}'
         self._nft_check_and_run(nft_command)
 
     def _add_interface_to_ct_iface_map(self, vrf_table_id: int):
-        nft_command = f'add element inet vrf_zones ct_iface_map {{ "{self.ifname}" : {vrf_table_id} }}'
+        nft_command = f'add element inet vrf_zones ct_iface_map {{ \'"{self.ifname}"\' : {vrf_table_id} }}'
         self._nft_check_and_run(nft_command)
 
     def get_ifindex(self):

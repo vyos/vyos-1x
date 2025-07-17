@@ -8,7 +8,7 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
-    <tagNode name="">
+    <virtualTagNode>
       <properties>
         <help>Show IP routes of specified prefix</help>
         <completionHelp>
@@ -16,7 +16,7 @@
         </completionHelp>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
+    </virtualTagNode>
   </children>
 </tagNode>
 <!-- included end -->

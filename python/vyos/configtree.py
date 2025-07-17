@@ -1,5 +1,5 @@
 # configtree -- a standalone VyOS config file manipulation library (Python bindings)
-# Copyright (C) 2018-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -233,7 +233,7 @@ class ConfigTree(object):
         return self.__version
 
     def write_cache(self, file_name):
-        self.__write_internal(self._get_config(), file_name)
+        self.__write_internal(self._get_config(), file_name.encode())
 
     def to_string(self, ordered_values=False, no_version=False):
         config_string = self.__to_string(self.__config, ordered_values).decode()
@@ -494,6 +494,28 @@ def union(left, right, libpath=LIBPATH):
     __get_error.restype = c_char_p
 
     res = __tree_union(left._get_config(), right._get_config())
+    tree = ConfigTree(address=res)
+
+    return tree
+
+
+def merge(left, right, destructive=False, libpath=LIBPATH):
+    if left is None:
+        left = ConfigTree(config_string='\n')
+    if right is None:
+        right = ConfigTree(config_string='\n')
+    if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+        raise TypeError('Arguments must be instances of ConfigTree')
+
+    __lib = cdll.LoadLibrary(libpath)
+    __tree_merge = __lib.tree_merge
+    __tree_merge.argtypes = [c_bool, c_void_p, c_void_p]
+    __tree_merge.restype = c_void_p
+    __get_error = __lib.get_error
+    __get_error.argtypes = []
+    __get_error.restype = c_char_p
+
+    res = __tree_merge(destructive, left._get_config(), right._get_config())
     tree = ConfigTree(address=res)
 
     return tree

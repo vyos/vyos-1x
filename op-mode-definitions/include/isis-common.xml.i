@@ -4,19 +4,19 @@
     <help>Show IS-IS link state database</help>
   </properties>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Show IS-IS link state database PDU</help>
+        <completionHelp>
+          <list>lsp-id detail</list>
+        </completionHelp>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </virtualTagNode>
     #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="database">
-  <properties>
-    <help>Show IS-IS link state database PDU</help>
-    <completionHelp>
-      <list>lsp-id detail</list>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
 <node name="fast-reroute">
   <properties>
     <help>Show IS-IS fast reroute/loop free alternate (lfa) information</help>
@@ -59,10 +59,10 @@
   </properties>
   <children>
     #include <include/vtysh-generic-detail.xml.i>
+    #include <include/vtysh-generic-interface-virtualTagNode.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-#include <include/vtysh-generic-interface-tagNode.xml.i>
 <node name="mpls">
   <properties>
     <help>Show MPLS information</help>
@@ -82,13 +82,19 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
-    <leafNode name="interface">
+    <tagNode name="interface">
       <properties>
-        <help>Show interface information</help>
+        <help>Show information about specific interface</help>
+        <completionHelp>
+          <script>${vyos_completion_dir}/list_interfaces</script>
+        </completionHelp>
       </properties>
+      <standalone>
+        <help>Show interface information</help>
+        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+      </standalone>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    #include <include/vtysh-generic-interface-tagNode.xml.i>
+    </tagNode>
   </children>
 </node>
 <node name="neighbor">
@@ -96,19 +102,19 @@
     <help>Show IS-IS neighbor adjacencies</help>
   </properties>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Show specific IS-IS neighbor adjacency </help>
+        <completionHelp>
+          <list>system-id</list>
+        </completionHelp>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </virtualTagNode>
     #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="neighbor">
-  <properties>
-    <help>Show specific IS-IS neighbor adjacency </help>
-    <completionHelp>
-      <list>system-id</list>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
 <node name="route">
   <properties>
     <help>Show IS-IS routing table</help>

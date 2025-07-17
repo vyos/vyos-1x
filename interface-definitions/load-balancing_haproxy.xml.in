@@ -35,7 +35,7 @@
                 </properties>
               </leafNode>
               #include <include/generic-description.xml.i>
-              #include <include/listen-address.xml.i>
+              #include <include/haproxy/listen-address.xml.i>
               #include <include/haproxy/logging.xml.i>
               #include <include/haproxy/mode.xml.i>
               #include <include/port-number.xml.i>

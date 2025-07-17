@@ -4,27 +4,9 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="bridge">
+         <node name="bridge">
             <properties>
-              <help>Show specified Bridge interface information</help>
-              <completionHelp>
-                <path>interfaces bridge</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=bridge</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified bridge interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=bridge</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="bridge">
-            <properties>
-              <help>Show Bridge interface information</help>
+              <help>Show bridge interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=bridge</command>
             <children>
@@ -34,6 +16,24 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=bridge</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified bridge interface information</help>
+                  <completionHelp>
+                    <path>interfaces bridge</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=bridge</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified bridge interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=bridge</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -488,7 +488,10 @@ gen_duid ()
         UUID=$(cat ${UUID_FILE} | tr -d -)
     fi
     if [ -z ${UUID} ]; then
-        UUID=$(uuidgen --sha1 --namespace @dns --name $(cat ${UUID_FILE_ALT}) | tr -d -)
+        file_alt="$(cat ${UUID_FILE_ALT})"
+        if [ -n "${file_alt}" ]; then
+          UUID=$(uuidgen --sha1 --namespace @dns --name ${file_alt} | tr -d -)
+        fi
     fi
     # Add DUID type4 (UUID) information
     DUID_TYPE="0004"

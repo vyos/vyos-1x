@@ -492,12 +492,6 @@
         </properties>
         <command>${vyos_op_scripts_dir}/pki.py show_all</command>
         <children>
-          <leafNode name="ca">
-            <properties>
-              <help>Show x509 CA certificates</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority</command>
-          </leafNode>
           <tagNode name="ca">
             <properties>
               <help>Show x509 CA certificate by name</help>
@@ -505,6 +499,10 @@
                 <path>pki ca</path>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show x509 CA certificates</help>
+              <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority</command>
+            </standalone>
             <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4"</command>
             <children>
               <leafNode name="pem">
@@ -515,12 +513,6 @@
               </leafNode>
             </children>
           </tagNode>
-          <leafNode name="certificate">
-            <properties>
-              <help>Show x509 certificates</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/pki.py show_certificate</command>
-          </leafNode>
           <tagNode name="certificate">
             <properties>
               <help>Show x509 certificate by name</help>
@@ -528,6 +520,10 @@
                 <path>pki certificate</path>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show x509 certificates</help>
+              <command>${vyos_op_scripts_dir}/pki.py show_certificate</command>
+            </standalone>
             <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4"</command>
             <children>
               <leafNode name="pem">
@@ -547,12 +543,6 @@
               </tagNode>
             </children>
           </tagNode>
-          <leafNode name="crl">
-            <properties>
-              <help>Show x509 certificate revocation lists</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/pki.py show_crl</command>
-          </leafNode>
           <tagNode name="crl">
             <properties>
               <help>Show x509 certificate revocation lists by CA name</help>
@@ -560,6 +550,10 @@
                 <path>pki ca</path>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show x509 certificate revocation lists</help>
+              <command>${vyos_op_scripts_dir}/pki.py show_crl</command>
+            </standalone>
             <command>${vyos_op_scripts_dir}/pki.py show_crl --name "$4"</command>
             <children>
               <leafNode name="pem">
@@ -576,12 +570,20 @@
   </node>
   <node name="renew">
     <children>
-      <leafNode name="certbot">
+      <node name="certbot">
         <properties>
-          <help>Start manual certbot renewal</help>
+          <help>Manual certbot renewal</help>
         </properties>
-        <command>systemctl start certbot.service</command>
-      </leafNode>
+        <command>${vyos_op_scripts_dir}/pki.py renew_certbot</command>
+        <children>
+          <leafNode name="force">
+            <properties>
+              <help>Force manual certbot renewal</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/pki.py renew_certbot --force</command>
+          </leafNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>

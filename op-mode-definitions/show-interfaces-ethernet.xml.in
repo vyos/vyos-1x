@@ -4,85 +4,84 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="ethernet">
-            <properties>
-              <help>Show specified Ethernet interface information</help>
-              <completionHelp>
-                <path>interfaces ethernet</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=ethernet</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified ethernet interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=ethernet</command>
-              </leafNode>
-              <leafNode name="identify">
-                <properties>
-                  <help>Visually identify specified ethernet interface</help>
-                </properties>
-                <command>echo "Blinking interface $4 for 30 seconds."; ethtool --identify "$4" 30</command>
-              </leafNode>
-              <node name="physical">
-                <properties>
-                  <help>Show physical device information for specified ethernet interface</help>
-                </properties>
-                <command>ethtool "$4"; ethtool --show-ring "$4"; ethtool --driver "$4"</command>
-                <children>
-                  <leafNode name="offload">
-                    <properties>
-                      <help>Show physical device offloading capabilities</help>
-                    </properties>
-                    <command>ethtool --show-features "$4" | sed -e 1d -e '/fixed/d' -e 's/^\t*//g' -e 's/://' | column -t -s' '</command>
-                  </leafNode>
-                </children>
-              </node>
-              <leafNode name="statistics">
-                <properties>
-                  <help>Show physical device statistics for specified ethernet interface</help>
-                </properties>
-                <command>ethtool --statistics "$4"</command>
-              </leafNode>
-              <leafNode name="transceiver">
-                <properties>
-                  <help>Show transceiver information from modules (e.g SFP+, QSFP)</help>
-                </properties>
-                <command>ethtool --module-info "$4"</command>
-              </leafNode>
-              <tagNode name="vif">
-                <properties>
-                  <help>Show specified virtual network interface (vif) information</help>
-                  <completionHelp>
-                    <path>interfaces ethernet ${COMP_WORDS[3]} vif</path>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=ethernet</command>
-                <children>
-                  <leafNode name="brief">
-                    <properties>
-                      <help>Show summary of specified virtual network interface (vif) information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=ethernet</command>
-                  </leafNode>
-                </children>
-              </tagNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
           <node name="ethernet">
             <properties>
-              <help>Show Ethernet interface information</help>
-            </properties>
+              <help>Show specified Ethernet interface information</help>
+           </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=ethernet</command>
-            <children>
+	    <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed ethernet interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=ethernet</command>
               </leafNode>
+              <virtualTagNode>
+	        <properties>
+		  <completionHelp>
+                    <path>interfaces ethernet</path>
+                  </completionHelp>
+	        </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=ethernet</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified ethernet interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=ethernet</command>
+                  </leafNode>
+                  <leafNode name="identify">
+                    <properties>
+                      <help>Visually identify specified ethernet interface</help>
+                    </properties>
+                    <command>echo "Blinking interface $4 for 30 seconds."; ethtool --identify "$4" 30</command>
+                  </leafNode>
+                  <node name="physical">
+                    <properties>
+                      <help>Show physical device information for specified ethernet interface</help>
+                    </properties>
+                    <command>ethtool "$4"; ethtool --show-ring "$4"; ethtool --driver "$4"</command>
+                    <children>
+                      <leafNode name="offload">
+                        <properties>
+                          <help>Show physical device offloading capabilities</help>
+                        </properties>
+                        <command>ethtool --show-features "$4" | sed -e 1d -e '/fixed/d' -e 's/^\t*//g' -e 's/://' | column -t -s' '</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="statistics">
+                    <properties>
+                      <help>Show physical device statistics for specified ethernet interface</help>
+                    </properties>
+                    <command>ethtool --statistics "$4"</command>
+                  </leafNode>
+                  <leafNode name="transceiver">
+                    <properties>
+                      <help>Show transceiver information from modules (e.g SFP+, QSFP)</help>
+                    </properties>
+                    <command>ethtool --module-info "$4"</command>
+                  </leafNode>
+                  <tagNode name="vif">
+                    <properties>
+                      <help>Show specified virtual network interface (vif) information</help>
+                      <completionHelp>
+                        <path>interfaces ethernet ${COMP_WORDS[3]} vif</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=ethernet</command>
+                    <children>
+                      <leafNode name="brief">
+                        <properties>
+                          <help>Show summary of specified virtual network interface (vif) information</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=ethernet</command>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

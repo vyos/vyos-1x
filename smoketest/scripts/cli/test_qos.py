@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -884,6 +884,8 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             base_path + ['policy', 'cake', policy_name, 'bandwidth', str(bandwidth)]
         )
         self.cli_set(base_path + ['policy', 'cake', policy_name, 'rtt', str(rtt)])
+        self.cli_set(base_path + ['policy', 'cake', policy_name, 'no-split-gso'])
+        self.cli_set(base_path + ['policy', 'cake', policy_name, 'ack-filter', 'aggressive'])
 
         # commit changes
         self.cli_commit()
@@ -899,6 +901,23 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(tmp['options']['ingress'])
         self.assertFalse(tmp['options']['nat'])
         self.assertTrue(tmp['options']['raw'])
+        self.assertFalse(tmp['options']['split_gso'])
+        self.assertEqual(tmp['options']['ack-filter'], 'aggressive')
+
+        self.cli_delete(base_path + ['policy', 'cake', policy_name, 'ack-filter', 'aggressive'])
+        self.cli_commit()
+        tmp = get_tc_qdisc_json(interface)
+        self.assertEqual(tmp['options']['ack-filter'], 'enabled')
+
+        self.cli_delete(base_path + ['policy', 'cake', policy_name, 'ack-filter'])
+        self.cli_commit()
+        tmp = get_tc_qdisc_json(interface)
+        self.assertEqual(tmp['options']['ack-filter'], 'disabled')
+
+        self.cli_delete(base_path + ['policy', 'cake', policy_name, 'no-split-gso'])
+        self.cli_commit()
+        tmp = get_tc_qdisc_json(interface)
+        self.assertTrue(tmp['options']['split_gso'])
 
         nat = True
         for flow_isolation in [

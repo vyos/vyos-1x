@@ -1,7 +1,7 @@
 # initialsetup -- functions for setting common values in config file,
 # for use in installation and first boot scripts
 #
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;

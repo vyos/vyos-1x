@@ -1,28 +1,4 @@
 <!-- included start from bgp/afi-common.xml.i -->
-<tagNode name="community">
-  <properties>
-    <help>Community number where AA and NN are (0-65535)</help>
-    <completionHelp>
-      <list>AA:NN</list>
-    </completionHelp>
-  </properties>
-  <children>
-    #include <include/bgp/exact-match.xml.i>
-  </children>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
-<tagNode name="large-community">
-  <properties>
-    <help>Display routes matching the large-communities</help>
-    <completionHelp>
-      <list>AA:BB:CC</list>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-  <children>
-    #include <include/bgp/exact-match.xml.i>
-  </children>
-</tagNode>
 <tagNode name="large-community-list">
   <properties>
     <help>Display routes matching the large-community-list</help>

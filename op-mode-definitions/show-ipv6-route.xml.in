@@ -13,13 +13,24 @@
             </properties>
             <command>vtysh -c "show ipv6 route"</command>
             <children>
-              #include <include/show-route-bgp.xml.i>
-              <node name="cache">
+              <virtualTagNode>
                 <properties>
-                  <help>Show kernel IPv6 route cache</help>
+                  <help>Show IPv6 routes of given address or prefix</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
                 </properties>
-                <command>ip -s -f inet6 route list cache</command>
-              </node>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  <node name="longer-prefixes">
+                    <properties>
+                      <help>Show longer prefixes of routes for given prefix</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                  </node>
+                </children>
+              </virtualTagNode>
+              #include <include/show-route-bgp.xml.i>
               <tagNode name="cache">
                 <properties>
                   <help>Show kernel IPv6 route cache for a given route</help>
@@ -27,15 +38,13 @@
                     <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
                   </completionHelp>
                 </properties>
+                <standalone>
+                  <help>Show kernel IPv6 route cache</help>
+                  <command>ip -s -f inet6 route list cache</command>
+                </standalone>
                 <command>ip -s -f inet6 route list cache $5</command>
               </tagNode>
               #include <include/show-route-connected.xml.i>
-              <node name="forward">
-                <properties>
-                  <help>Show kernel IPv6 route table</help>
-                </properties>
-                <command>ip -f inet6 route list</command>
-              </node>
               <tagNode name="forward">
                 <properties>
                   <help>Show kernel IPv6 route table for a given route</help>
@@ -43,6 +52,10 @@
                     <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
                   </completionHelp>
                 </properties>
+                <standalone>
+                  <help>Show kernel IPv6 route table</help>
+                  <command>ip -f inet6 route list</command>
+                </standalone>
                 <command>ip -s -f inet6 route list $5</command>
               </tagNode>
               #include <include/show-route-isis.xml.i>
@@ -83,7 +96,7 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6 --vrf $5</command>
                   </node>
-                  <node name="node.tag">
+                  <virtualTagNode>
                     <properties>
                       <help>Show IPv6 routes of given address or prefix</help>
                       <completionHelp>
@@ -99,7 +112,7 @@
                         <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                       </node>
                     </children>
-                  </node>
+                  </virtualTagNode>
                   #include <include/show-route-bgp.xml.i>
                   #include <include/show-route-connected.xml.i>
                   #include <include/show-route-isis.xml.i>
@@ -114,23 +127,6 @@
               </tagNode>
             </children>
           </node>
-          <tagNode name="route">
-            <properties>
-              <help>Show IPv6 routes of given address or prefix</help>
-              <completionHelp>
-                <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            <children>
-              <node name="longer-prefixes">
-                <properties>
-                  <help>Show longer prefixes of routes for given prefix</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </node>
-            </children>
-          </tagNode>
         </children>
       </node>
     </children>

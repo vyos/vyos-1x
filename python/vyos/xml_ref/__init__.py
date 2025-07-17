@@ -1,4 +1,4 @@
-# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,6 +14,8 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Optional, Union, TYPE_CHECKING
+from typing import Callable
+from typing import Any
 from vyos.xml_ref import definition
 from vyos.xml_ref import op_definition
 
@@ -89,6 +91,7 @@ def from_source(d: dict, path: list) -> bool:
 def ext_dict_merge(source: dict, destination: Union[dict, 'ConfigDict']):
     return definition.ext_dict_merge(source, destination)
 
+
 def load_op_reference(op_cache=[]):
     if op_cache:
         return op_cache[0]
@@ -108,5 +111,26 @@ def load_op_reference(op_cache=[]):
 
     return op_xml
 
-def get_op_ref_path(path: list) -> list[op_definition.PathData]:
-    return load_op_reference()._get_op_ref_path(path)
+
+def walk_op_data(func: Callable[[tuple, dict], Any]):
+    return load_op_reference().walk(func)
+
+
+def walk_op_node_data():
+    return load_op_reference().walk_node_data()
+
+
+def lookup_op_data(
+    path: list, tag_values: bool = False, last_node_type: str = ''
+) -> (dict, list[str]):
+    return load_op_reference().lookup(
+        path, tag_values=tag_values, last_node_type=last_node_type
+    )
+
+
+def lookup_op_node_data(
+    path: list, tag_values: bool = False, last_node_type: str = ''
+) -> list[op_definition.NodeData]:
+    return load_op_reference().lookup_node_data(
+        path, tag_values=tag_values, last_node_type=last_node_type
+    )

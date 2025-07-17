@@ -1,23 +1,23 @@
 <!-- included start from bgp/show-bgp-common.xml.i -->
 #include <include/bgp/afi-common.xml.i>
 #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
-<tagNode name="ipv4">
-  <properties>
-    <help>Network in the BGP routing table to display</help>
-    <completionHelp>
-      <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-    </completionHelp>
-  </properties>
-  <children>
-    #include <include/bgp/prefix-bestpath-multipath.xml.i>
-  </children>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
 <node name="ipv4">
   <properties>
     <help>IPv4 Address Family</help>
   </properties>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Network in the BGP routing table to display</help>
+        <completionHelp>
+          <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+        </completionHelp>
+      </properties>
+      <children>
+        #include <include/bgp/prefix-bestpath-multipath.xml.i>
+      </children>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </virtualTagNode>
     #include <include/bgp/afi-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-flowspec.xml.i>
@@ -25,23 +25,23 @@
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="ipv6">
-  <properties>
-    <help>Network in the BGP routing table to display</help>
-    <completionHelp>
-      <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-    </completionHelp>
-  </properties>
-  <children>
-    #include <include/bgp/prefix-bestpath-multipath.xml.i>
-  </children>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
 <node name="ipv6">
   <properties>
     <help>IPv6 Address Family</help>
   </properties>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Network in the BGP routing table to display</help>
+          <completionHelp>
+          <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+        </completionHelp>
+        </properties>
+        <children>
+          #include <include/bgp/prefix-bestpath-multipath.xml.i>
+        </children>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </virtualTagNode>
     #include <include/bgp/afi-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-vpn.xml.i>
@@ -53,21 +53,21 @@
     <help>Layer 2 Virtual Private Network</help>
   </properties>
   <children>
-    <tagNode name="evpn">
-      <properties>
-        <help>Network in the BGP routing table to display</help>
-        <completionHelp>
-          <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
     <node name="evpn">
       <properties>
         <help>Ethernet Virtual Private Network</help>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
+        <virtualTagNode>
+          <properties>
+            <help>Network in the BGP routing table to display</help>
+            <completionHelp>
+              <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+            </completionHelp>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </virtualTagNode>
         #include <include/bgp/afi-common.xml.i>
         <node name="all">
           <properties>
@@ -188,13 +188,20 @@
             #include <include/vni-tagnode-all.xml.i>
           </children>
         </node>
-        #include <include/vni-tagnode.xml.i>
-        <leafNode name="vni">
+        <tagNode name="vni">
           <properties>
-            <help>VXLAN network identifier (VNI)</help>
+            <help>VXLAN network identifier (VNI) number</help>
+            <completionHelp>
+              <list>&lt;1-16777215&gt;</list>
+              <script>${vyos_completion_dir}/list_vni.sh</script>
+            </completionHelp>
           </properties>
-          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        </leafNode>
+         <standalone>
+           <help>VXLAN network identifier (VNI)</help>
+           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+         </standalone>
+         <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+        </tagNode>
       </children>
     </node>
   </children>

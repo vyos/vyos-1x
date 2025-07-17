@@ -14,31 +14,31 @@
             </properties>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </leafNode>
+          <virtualTagNode>
+            <properties>
+              <help>Show information on specific VRF instance</help>
+              <completionHelp>
+                <path>vrf name</path>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vrf.py show --name="$3"</command>
+            <children>
+              <leafNode name="processes">
+                <properties>
+                  <help>Shows all process ids associated with VRF</help>
+                </properties>
+                <command>ip vrf pids "$3"</command>
+              </leafNode>
+              <leafNode name="vni">
+                <properties>
+                  <help>Show VXLAN VNI association</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </virtualTagNode>
         </children>
       </node>
-      <tagNode name="vrf">
-        <properties>
-          <help>Show information on specific VRF instance</help>
-          <completionHelp>
-            <path>vrf name</path>
-          </completionHelp>
-        </properties>
-        <command>${vyos_op_scripts_dir}/vrf.py show --name="$3"</command>
-        <children>
-          <leafNode name="processes">
-            <properties>
-              <help>Shows all process ids associated with VRF</help>
-            </properties>
-            <command>ip vrf pids "$3"</command>
-          </leafNode>
-          <leafNode name="vni">
-            <properties>
-              <help>Show VXLAN VNI association</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-          </leafNode>
-        </children>
-      </tagNode>
-    </children>
+   </children>
   </node>
 </interfaceDefinition>

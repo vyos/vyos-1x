@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -361,7 +361,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             if iiface[0] == '!':
                 operator = '!='
                 iiface = iiface[1:]
-            output.append(f'iifname {operator} {{{iiface}}}')
+            output.append(f'iifname {operator} {{"{iiface}"}}')
         elif 'group' in rule_conf['inbound_interface']:
             iiface = rule_conf['inbound_interface']['group']
             if iiface[0] == '!':
@@ -376,7 +376,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             if oiface[0] == '!':
                 operator = '!='
                 oiface = oiface[1:]
-            output.append(f'oifname {operator} {{{oiface}}}')
+            output.append(f'oifname {operator} {{"{oiface}"}}')
         elif 'group' in rule_conf['outbound_interface']:
             oiface = rule_conf['outbound_interface']['group']
             if oiface[0] == '!':

@@ -63,12 +63,6 @@
               <help>Reset IP route</help>
             </properties>
             <children>
-              <leafNode name= "cache">
-                <properties>
-                  <help>Flush the kernel route cache</help>
-                </properties>
-                <command>ip route flush cache</command>
-              </leafNode>
               <tagNode name="cache">
                 <properties>
                   <help>Flush the kernel route cache for a given route</help>
@@ -76,6 +70,10 @@
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
+                <standalone>
+                  <help>Flush the kernel route cache</help>
+                  <command>ip route flush cache</command>
+                </standalone>
                 <command>ip route flush cache "$5"</command>
               </tagNode>
             </children>
