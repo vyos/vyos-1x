@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,13 +23,13 @@ SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
 
 
 def get_peer_connections(peer, tunnel, return_all = False):
-    search = rf'^[\s]*(peer_{peer}_(tunnel_[\d]+|vti)).*'
+    search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti))[\s]*{{'
     matches = []
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
             if result:
-                suffix = f'tunnel_{tunnel}' if tunnel.isnumeric() else tunnel
+                suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
                 if return_all or (result[2] == suffix):
                     matches.append(result[1])
     return matches
@@ -66,7 +66,8 @@ def debug_peer(peer, tunnel):
         return
 
     for conn in conns:
-        call(f'/usr/sbin/ipsec statusall | grep {conn}')
+        command = f'/usr/sbin/ipsec statusall | grep {conn}'
+        call(command)
 
 
 if __name__ == '__main__':

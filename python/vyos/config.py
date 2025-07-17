@@ -1,4 +1,4 @@
-# Copyright 2017-2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -134,9 +134,11 @@ class Config(object):
     subtrees.
     """
     def __init__(self, session_env=None, config_source=None):
+        self.vyconf_session = None
         if config_source is None:
             if vyconf_backend() and boot_configuration_complete():
                 self._config_source = ConfigSourceVyconfSession(session_env)
+                self.vyconf_session = self._config_source._vyconf_session
             else:
                 self._config_source = ConfigSourceSession(session_env)
         else:

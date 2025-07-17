@@ -1,4 +1,4 @@
-# Copyright 2018-2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,10 +15,10 @@
 
 import os
 
-base_dir = '/usr/libexec/vyos/'
+base_dir = '/usr/libexec/vyos'
 
 directories = {
-  'base' : base_dir,
+  'base' : f'{base_dir}',
   'data' : '/usr/share/vyos/',
   'conf_mode' : f'{base_dir}/conf_mode',
   'op_mode' : f'{base_dir}/op_mode',

@@ -3,7 +3,7 @@
 #    build-command-template: converts new style command definitions in XML
 #      to the old style (bunch of dirs and node.def's) command templates
 #
-#    Copyright (C) 2017-2024 VyOS maintainers <maintainers@vyos.net>
+#    Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,8 @@ import functools
 
 from lxml import etree as ET
 from textwrap import fill
+
+debug = True
 
 # Defaults
 validator_dir = "/opt/vyatta/libexec/validators"
@@ -177,7 +179,13 @@ def process_node(n, tmpl_dir):
 
     node_type = n.tag
 
-    my_tmpl_dir.append(name)
+    if name:
+        my_tmpl_dir.append(name)
+    else:
+        # Virtual tag nodes have no names,
+        # that's a normal situation.
+        # In that case we create subdirs at the current level.
+        pass
 
     if debug:
         print(f"Name of the node: {name};\n Created directory: ", end="")
@@ -221,6 +229,27 @@ def process_node(n, tmpl_dir):
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
         if debug:
             print("Created path for the tagNode: {}".format(make_path(my_tmpl_dir)), end="")
+
+        # Not sure if we want partially defined tag nodes, write the file unconditionally
+        nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
+        # Only create the "node.def" file if it exists but is empty, or if it
+        # does not exist at all.
+        if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
+            with open(nodedef_path, "w") as f:
+                f.write(make_node_def(props, command))
+
+        if children is not None:
+            inner_nodes = children.iterfind("*")
+            for inner_n in inner_nodes:
+                process_node(inner_n, my_tmpl_dir)
+    elif node_type == "virtualTagNode":
+        # The outer structure is already created
+
+        # Create the inner node.tag part
+        my_tmpl_dir.append("node.tag")
+        os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
+        if debug:
+            print("Created path for the virtualTagNode: {}".format(make_path(my_tmpl_dir)), end="")
 
         # Not sure if we want partially defined tag nodes, write the file unconditionally
         nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")

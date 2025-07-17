@@ -1,12 +1,7 @@
 <!-- included start from show-route-table.xml.i -->
-<node name="table">
-  <properties>
-    <help>Table to display</help>
-  </properties>
-</node>
 <tagNode name="table">
   <properties>
-    <help>The table number to display</help>
+    <help>Show routes in specific routing table</help>
     <completionHelp>
       <list>all</list>
       <path>protocols static table</path>

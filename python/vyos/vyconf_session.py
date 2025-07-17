@@ -1,4 +1,4 @@
-# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,6 @@
 
 import os
 import tempfile
-import shutil
 from functools import wraps
 from typing import Type
 
@@ -30,6 +29,7 @@ from vyos.proto.vyconf_proto import Errnum
 from vyos.utils.commit import acquire_commit_lock_file
 from vyos.utils.commit import release_commit_lock_file
 from vyos.utils.commit import call_commit_hooks
+from vyos.remote import get_config_file
 
 
 class VyconfSessionError(Exception):
@@ -142,6 +142,10 @@ class VyconfSession:
     @raise_exception
     @config_mode
     def commit(self) -> tuple[str, int]:
+        if not self.session_changed():
+            out = 'No changes to commit'
+            return out, 0
+
         lock_fd, out = acquire_commit_lock_file()
         if lock_fd is None:
             return out, Errnum.COMMIT_IN_PROGRESS
@@ -163,24 +167,57 @@ class VyconfSession:
 
     @raise_exception
     @config_mode
-    def load_config(self, file: str, migrate: bool = False) -> tuple[str, int]:
+    def load_config(
+        self, file_name: str, migrate: bool = False, cached: bool = False
+    ) -> tuple[str, int]:
         # pylint: disable=consider-using-with
+        file_path = tempfile.NamedTemporaryFile(delete=False).name
+        err = get_config_file(file_name, file_path)
+        if err:
+            os.remove(file_path)
+            return str(err), Errnum.INVALID_VALUE
+        if not cached:
+            if migrate:
+                config_migrate = ConfigMigrate(file_path)
+                try:
+                    config_migrate.run()
+                except ConfigMigrateError as e:
+                    os.remove(file_path)
+                    return repr(e), 1
+
+        out = vyconf_client.send_request(
+            'load', token=self.__token, location=file_path, cached=cached
+        )
+
+        if not cached:
+            os.remove(file_path)
+
+        return self.output(out), out.status
+
+    @raise_exception
+    @config_mode
+    def merge_config(
+        self, file_name: str, migrate: bool = False, destructive: bool = False
+    ) -> tuple[str, int]:
+        # pylint: disable=consider-using-with
+        file_path = tempfile.NamedTemporaryFile(delete=False).name
+        err = get_config_file(file_name, file_path)
+        if err:
+            os.remove(file_path)
+            return str(err), Errnum.INVALID_VALUE
         if migrate:
-            tmp = tempfile.NamedTemporaryFile()
-            shutil.copy2(file, tmp.name)
-            config_migrate = ConfigMigrate(tmp.name)
+            config_migrate = ConfigMigrate(file_path)
             try:
                 config_migrate.run()
             except ConfigMigrateError as e:
-                tmp.close()
+                os.remove(file_path)
                 return repr(e), 1
-            file = tmp.name
-        else:
-            tmp = ''
 
-        out = vyconf_client.send_request('load', token=self.__token, location=file)
-        if tmp:
-            tmp.close()
+        out = vyconf_client.send_request(
+            'merge', token=self.__token, location=file_path, destructive=destructive
+        )
+
+        os.remove(file_path)
 
         return self.output(out), out.status
 

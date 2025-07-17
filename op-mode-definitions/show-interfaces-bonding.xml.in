@@ -4,77 +4,11 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="bonding">
-            <properties>
-              <help>Show specified Bonding interface information</help>
-              <completionHelp>
-                <path>interfaces bonding</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=bonding</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified bonding interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=bonding</command>
-              </leafNode>
-              <leafNode name="detail">
-                <properties>
-                  <help>Show detailed interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/show_bonding_detail.sh "$4"</command>
-              </leafNode>
-              <node name="lacp">
-                <properties>
-                  <help>Show LACP related info</help>
-                </properties>
-                <children>
-                  <leafNode name="detail">
-                    <properties>
-                      <help>Show LACP details</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/bonding.py show_lacp_detail --interface="$4" </command>
-                  </leafNode>
-                  <leafNode name="neighbors">
-                    <properties>
-                      <help>Show LACP Neighbors</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/bonding.py show_lacp_neighbors --interface="$4"</command>
-                  </leafNode>
-                </children>
-              </node>
-              <leafNode name="slaves">
-                <properties>
-                  <help>Show specified bonding interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/show-bond.py --interface "$4"</command>
-              </leafNode>
-              <tagNode name="vif">
-                <properties>
-                  <help>Show specified virtual network interface (vif) information</help>
-                  <completionHelp>
-                    <path>interfaces bonding ${COMP_WORDS[3]} vif</path>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=bonding</command>
-                <children>
-                  <leafNode name="brief">
-                    <properties>
-                      <help>Show summary of specified virtual network interface (vif) information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=bonding</command>
-                  </leafNode>
-                </children>
-              </tagNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
           <node name="bonding">
             <properties>
-              <help>Show Bonding interface information</help>
+              <help>Show specified bonding interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=bonding</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=bonding</command>
             <children>
               <leafNode name="detail">
                 <properties>
@@ -101,6 +35,71 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/show-bond.py --slaves</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <completionHelp>
+                    <path>interfaces bonding</path>
+                  </completionHelp>
+	        </properties>
+	        <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=bonding</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified bonding interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=bonding</command>
+                  </leafNode>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show detailed interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_bonding_detail.sh "$4"</command>
+                  </leafNode>
+                  <node name="lacp">
+                    <properties>
+                      <help>Show LACP related info</help>
+                    </properties>
+                    <children>
+                      <leafNode name="detail">
+                        <properties>
+                          <help>Show LACP details</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/bonding.py show_lacp_detail --interface="$4" </command>
+                      </leafNode>
+                      <leafNode name="neighbors">
+                        <properties>
+                          <help>Show LACP Neighbors</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/bonding.py show_lacp_neighbors --interface="$4"</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="slaves">
+                    <properties>
+                      <help>Show specified bonding interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show-bond.py --interface "$4"</command>
+                  </leafNode>
+                  <tagNode name="vif">
+                    <properties>
+                      <help>Show specified virtual network interface (vif) information</help>
+                      <completionHelp>
+                        <path>interfaces bonding ${COMP_WORDS[3]} vif</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=bonding</command>
+                    <children>
+                      <leafNode name="brief">
+                        <properties>
+                          <help>Show summary of specified virtual network interface (vif) information</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=bonding</command>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

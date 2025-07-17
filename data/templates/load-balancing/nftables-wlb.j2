@@ -9,7 +9,7 @@ table ip vyos_wanloadbalance {
 {% for ifname, health_conf in interface_health.items() if health_state[ifname].if_addr %}
 {%     if disable_source_nat is not vyos_defined %}
 {%         set state = health_state[ifname] %}
-        ct mark {{ state.mark }} counter snat to {{ state.if_addr }}
+        ct mark {{ state.mark }} oifname {{ ifname }} counter snat to {{ state.if_addr }}
 {%     endif %}
 {% endfor %}
     }

@@ -4,27 +4,9 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="pseudo-ethernet">
+         <node name="pseudo-ethernet">
             <properties>
-              <help>Show specified Pseudo-Ethernet/MACvlan interface information</help>
-              <completionHelp>
-                <path>interfaces pseudo-ethernet</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=pseudo-ethernet</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified pseudo-ethernet/MACvlan interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=pseudo-ethernet</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="pseudo-ethernet">
-            <properties>
-              <help>Show Pseudo-Ethernet/MACvlan interface information</help>
+              <help>Show pseudo-ethernet/MACvlan interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=pseudo-ethernet</command>
             <children>
@@ -34,6 +16,24 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=pseudo-ethernet</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified pseudo-ethernet/MACvlan interface information</help>
+                  <completionHelp>
+                    <path>interfaces pseudo-ethernet</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=pseudo-ethernet</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified pseudo-ethernet/MACvlan interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=pseudo-ethernet</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

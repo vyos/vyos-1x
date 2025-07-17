@@ -7,6 +7,18 @@
           <help>Border Gateway Protocol (BGP) information</help>
         </properties>
         <children>
+          <virtualTagNode>
+            <properties>
+              <help>BGP IPv4/IPv6 neighbor to clear</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+            </children>
+          </virtualTagNode>
           <leafNode name="all">
             <properties>
               <help>Clear all peers</help>
@@ -37,20 +49,20 @@
               </leafNode>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
               #include <include/bgp/reset-bgp-peer-group.xml.i>
+              <virtualTagNode>
+                <properties>
+                  <help>IPv4 neighbor to clear</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
-          <tagNode name="ipv4">
-            <properties>
-              <help>IPv4 neighbor to clear</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            <children>
-              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-            </children>
-          </tagNode>
           <node name="ipv6">
             <properties>
               <help>IPv6 Address Family</help>
@@ -64,20 +76,20 @@
               </leafNode>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
               #include <include/bgp/reset-bgp-peer-group.xml.i>
+              <virtualTagNode>
+                <properties>
+                  <help>IPv6 neighbor to clear</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
-          <tagNode name="ipv6">
-            <properties>
-              <help>IPv6 neighbor to clear</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6</script>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            <children>
-              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-            </children>
-          </tagNode>
           <node name="l2vpn">
             <properties>
               <help>Layer 2 Virtual Private Network Address Family</help>
@@ -96,20 +108,20 @@
                   </leafNode>
                   #include <include/bgp/reset-bgp-afi-common.xml.i>
                   #include <include/bgp/reset-bgp-peer-group.xml.i>
+                  <virtualTagNode>
+                    <properties>
+                      <help>BGP IPv4/IPv6 neighbor to clear</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </virtualTagNode>
                 </children>
               </node>
-              <tagNode name="evpn">
-                <properties>
-                  <help>BGP IPv4/IPv6 neighbor to clear</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both</script>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-                </children>
-              </tagNode>
             </children>
           </node>
           <tagNode name="vrf">
@@ -120,7 +132,7 @@
               </completionHelp>
             </properties>
             <children>
-              <node name="node.tag">
+              <virtualTagNode>
                 <properties>
                   <help>IPv4/IPv6 neighbor to clear</help>
                   <completionHelp>
@@ -131,7 +143,7 @@
                 <children>
                   #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                 </children>
-              </node>
+              </virtualTagNode>
               <leafNode name="all">
                 <properties>
                   <help>Clear all peers</help>
@@ -162,20 +174,20 @@
                   </leafNode>
                   #include <include/bgp/reset-bgp-afi-common.xml.i>
                   #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
+                  <virtualTagNode>
+                    <properties>
+                      <help>IPv4 neighbor to clear</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4 --vrf ${COMP_WORDS[3]}</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </virtualTagNode>
                 </children>
               </node>
-              <tagNode name="ipv4">
-                <properties>
-                  <help>IPv4 neighbor to clear</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4 --vrf ${COMP_WORDS[3]}</script>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-                </children>
-              </tagNode>
               <node name="ipv6">
                 <properties>
                   <help>IPv6 Address Family</help>
@@ -189,20 +201,20 @@
                   </leafNode>
                   #include <include/bgp/reset-bgp-afi-common.xml.i>
                   #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
+                  <virtualTagNode>
+                    <properties>
+                      <help>IPv6 neighbor to clear</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6 --vrf ${COMP_WORDS[3]}</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </virtualTagNode>
                 </children>
               </node>
-              <tagNode name="ipv6">
-                <properties>
-                  <help>IPv6 neighbor to clear</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6 --vrf ${COMP_WORDS[3]}</script>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-                </children>
-              </tagNode>
               <node name="l2vpn">
                 <properties>
                   <help>Layer 2 Virtual Private Network Address Family</help>
@@ -221,38 +233,26 @@
                       </leafNode>
                       #include <include/bgp/reset-bgp-afi-common.xml.i>
                       #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
+                      <virtualTagNode>
+                        <properties>
+                          <help>BGP IPv4/IPv6 neighbor to clear</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both --vrf ${COMP_WORDS[3]}</script>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                        <children>
+                          #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                        </children>
+                      </virtualTagNode>
                     </children>
                   </node>
-                  <tagNode name="evpn">
-                    <properties>
-                      <help>BGP IPv4/IPv6 neighbor to clear</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both --vrf ${COMP_WORDS[3]}</script>
-                      </completionHelp>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-                    </children>
-                  </tagNode>
                 </children>
               </node>
             </children>
           </tagNode>
         </children>
       </node>
-      <tagNode name="bgp">
-        <properties>
-          <help>BGP IPv4/IPv6 neighbor to clear</help>
-          <completionHelp>
-            <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both</script>
-          </completionHelp>
-        </properties>
-        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        <children>
-          #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-        </children>
-      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

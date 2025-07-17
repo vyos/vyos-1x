@@ -16,7 +16,7 @@
               </completionHelp>
             </properties>
             <children>
-              <leafNode name="node.tag">
+              <virtualTagNode>
                 <properties>
                   <help>Traffic capture options</help>
                   <completionHelp>
@@ -24,7 +24,7 @@
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/tcpdump.py "${@:4}"</command>
-              </leafNode>
+              </virtualTagNode>
             </children>
           </tagNode>
         </children>
