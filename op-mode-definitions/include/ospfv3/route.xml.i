@@ -5,6 +5,32 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Show specified route/prefix information</help>
+        <completionHelp>
+          <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
+        </completionHelp>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+      <children>
+        <node name="longer">
+          <properties>
+            <help>Show routes longer than specified prefix</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </node>
+        <node name="match">
+          <properties>
+            <help>Show routes matching specified prefix</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          <children>
+            #include <include/frr-detail.xml.i>
+          </children>
+        </node>
+      </children>
+    </virtualTagNode>
     <node name="external-1">
       <properties>
         <help>Show Type-1 External route information</help>
@@ -50,30 +76,4 @@
     </node>
   </children>
 </node>
-<tagNode name="route">
-  <properties>
-    <help>Show specified route/prefix information</help>
-    <completionHelp>
-      <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-  <children>
-    <node name="longer">
-      <properties>
-        <help>Show routes longer than specified prefix</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </node>
-    <node name="match">
-      <properties>
-        <help>Show routes matching specified prefix</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-      <children>
-        #include <include/frr-detail.xml.i>
-      </children>
-    </node>
-  </children>
-</tagNode>
 <!-- included end -->

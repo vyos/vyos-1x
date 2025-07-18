@@ -1,4 +1,4 @@
-# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -221,10 +221,12 @@ def verify_accel_ppp_ip_pool(vpn_config):
                     for interface, interface_config in vpn_config['interface'].items():
                         if dict_search('client_subnet', interface_config):
                             break
+                        if dict_search('external_dhcp.dhcp_relay', interface_config):
+                            break
                     else:
                         raise ConfigError(
                             'Local auth and noauth mode requires local client-ip-pool \
-                             or client-ipv6-pool or client-subnet to be configured!')
+                             or client-ipv6-pool or client-subnet or dhcp-relay to be configured!')
             else:
                 raise ConfigError(
                     "Local auth mode requires local client-ip-pool \

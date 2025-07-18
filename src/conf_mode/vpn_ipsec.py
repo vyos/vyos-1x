@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -727,7 +727,7 @@ def generate(ipsec):
                         for remote_prefix in remote_prefixes:
                             local_net = ipaddress.ip_network(local_prefix)
                             remote_net = ipaddress.ip_network(remote_prefix)
-                            if local_net.overlaps(remote_net):
+                            if local_net.subnet_of(remote_net):
                                 if passthrough is None:
                                     passthrough = []
                                 passthrough.append(local_prefix)

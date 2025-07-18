@@ -1,4 +1,4 @@
-# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -375,6 +375,16 @@ class BridgeIf(Interface):
                 # set bridge port path priority
                 if 'priority' in interface_config:
                     lower.set_path_priority(interface_config['priority'])
+
+                # set BPDU guard
+                tmp = dict_search('bpdu_guard', interface_config)
+                value = '1' if (tmp != None) else '0'
+                lower.set_bpdu_guard(value)
+
+                # set root guard
+                tmp = dict_search('root_guard', interface_config)
+                value = '1' if (tmp != None) else '0'
+                lower.set_root_guard(value)
 
                 if 'enable_vlan' in config:
                     add_vlan = []

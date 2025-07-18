@@ -1,4 +1,4 @@
-# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -661,6 +661,7 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
     Return a dictionary with the necessary interface config keys.
     """
     from vyos.utils.cpu import get_core_count
+    from vyos.utils.cpu import get_half_cpus
     from vyos.template import is_ipv4
 
     dict = config.get_config_dict(base, key_mangling=('-', '_'),
@@ -670,7 +671,16 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
                                   with_pki=with_pki)
 
     # set CPUs cores to process requests
-    dict.update({'thread_count' : get_core_count()})
+    match dict.get('thread_count'):
+        case 'all':
+            dict['thread_count'] = get_core_count()
+        case 'half':
+            dict['thread_count'] = get_half_cpus()
+        case str(x) if x.isdigit():
+            dict['thread_count'] = int(x)
+        case _:
+            dict['thread_count'] = get_core_count()
+
     # we need to store the path to the secrets file
     dict.update({'chap_secrets_file' : chap_secrets})
 
@@ -693,3 +703,18 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
             dict['authentication']['radius']['server'][server]['acct_port'] = '0'
 
     return dict
+
+def get_flowtable_interfaces(config):
+    """
+    Return all interfaces used in flowtables
+    """
+    ft_base = ['firewall', 'flowtable']
+
+    if not config.exists(ft_base):
+        return []
+
+    ifaces = []
+    for ft_name in config.list_nodes(ft_base):
+        ifaces += config.return_values(ft_base + [ft_name, 'interface'])
+
+    return ifaces

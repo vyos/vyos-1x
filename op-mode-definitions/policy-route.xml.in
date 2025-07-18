@@ -84,12 +84,6 @@
           <help>Show policy information</help>
         </properties>
         <children>
-          <node name="route6">
-            <properties>
-              <help>Show IPv6 policy chain</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show_all --ipv6</command>
-          </node>
           <tagNode name="route6">
             <properties>
               <help>Show IPv6 policy chains</help>
@@ -97,6 +91,10 @@
                 <path>policy route6</path>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show IPv6 policy chain</help>
+              <command>${vyos_op_scripts_dir}/policy_route.py --action show_all --ipv6</command>
+            </standalone>
             <children>
               <tagNode name="rule">
                 <properties>
@@ -105,17 +103,11 @@
                     <path>policy route6 ${COMP_WORDS[4]} rule</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6 --ipv6</command>
+                <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6 --ipv6</command>
               </tagNode>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --ipv6</command>
+            <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --ipv6</command>
           </tagNode>
-          <node name="route">
-            <properties>
-              <help>Show IPv4 policy chain</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show_all</command>
-          </node>
           <tagNode name="route">
             <properties>
               <help>Show IPv4 policy chains</help>
@@ -123,6 +115,10 @@
                 <path>policy route</path>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show IPv4 policy chains</help>
+              <command>${vyos_op_scripts_dir}/policy_route.py --action show_all</command>
+            </standalone>
             <children>
               <tagNode name="rule">
                 <properties>
@@ -131,10 +127,10 @@
                     <path>policy route ${COMP_WORDS[4]} rule</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6</command>
+                <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6</command>
               </tagNode>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4</command>
+            <command>${vyos_op_scripts_dir}/policy_route.py --action show --name $4</command>
           </tagNode>
         </children>
       </node>

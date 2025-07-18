@@ -14,13 +14,13 @@
                 <properties>
                   <help>Monitor the last lines of the Webproxy access log</help>
                 </properties>
-                <command>if [ -f /var/log/squid/access.log ]; then sudo tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
+                <command>if [ -f /var/log/squid/access.log ]; then tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
               </leafNode>
               <leafNode name="cache-log">
                 <properties>
                   <help>Monitor the last lines of the Webproxy cache log</help>
                 </properties>
-                <command>if [ -f /var/log/squid/cache.log ]; then sudo tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
+                <command>if [ -f /var/log/squid/cache.log ]; then tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
               </leafNode>
             </children>
           </node>
@@ -34,7 +34,7 @@
         <properties>
           <help>Restart WebProxy service</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name webproxy</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name webproxy</command>
       </node>
     </children>
   </node>
@@ -63,7 +63,7 @@
             <properties>
               <help>Show contents of WebProxy access log</help>
             </properties>
-            <command>if [ -e /var/log/squid/access.log ]; then sudo less $_vyatta_less_options --prompt="file %i of %m, page %dt of %D" -- `printf "%s\n" /var/log/squid/access.log* | sort -nr`; else echo "No WebProxy log"; fi</command>
+            <command>if [ -e /var/log/squid/access.log ]; then less $_vyatta_less_options --prompt="file %i of %m, page %dt of %D" -- `printf "%s\n" /var/log/squid/access.log* | sort -nr`; else echo "No WebProxy log"; fi</command>
           </node>
           <node name="update-log">
             <properties>
@@ -86,7 +86,7 @@
             <properties>
               <help>Update the webproxy blacklist database</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist</command>
+            <command>${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist</command>
             <children>
               <tagNode name="vrf">
                 <properties>
@@ -95,7 +95,7 @@
                     <path>vrf name</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist --vrf "${5}" </command>
+                <command>${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist --vrf "${5}" </command>
               </tagNode>
             </children>
           </node>

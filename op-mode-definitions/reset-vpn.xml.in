@@ -16,19 +16,19 @@
                 <properties>
                   <help>Reset all L2TP server VPN sessions</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="l2tp"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="l2tp"</command>
               </node>
               <tagNode name="interface">
                 <properties>
                   <help>Reset specified interface on L2TP VPN server</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="l2tp" --interface="$5"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="l2tp" --interface="$5"</command>
               </tagNode>
               <tagNode name="user">
                 <properties>
                   <help>Reset specified user on L2TP VPN server</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="l2tp" --username="$5"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="l2tp" --username="$5"</command>
               </tagNode>
             </children>
           </node>
@@ -41,19 +41,19 @@
                 <properties>
                   <help>Reset all PPTP server VPN sessions</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="pptp"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="pptp"</command>
               </node>
               <tagNode name="interface">
                 <properties>
                   <help>Reset specified interface on PPTP VPN server</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="pptp" --interface="$5"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="pptp" --interface="$5"</command>
               </tagNode>
               <tagNode name="user">
                 <properties>
                   <help>Reset specified user on PPTP VPN server</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="pptp" --username="$5"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="pptp" --username="$5"</command>
               </tagNode>
             </children>
           </node>
@@ -66,19 +66,19 @@
                 <properties>
                   <help>Reset all SSTP server VPN sessions</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="sstp"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="sstp"</command>
               </node>
               <tagNode name="interface">
                 <properties>
                   <help>Reset specified interface on SSTP VPN server</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="sstp" --interface="$5"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="sstp" --interface="$5"</command>
               </tagNode>
               <tagNode name="user">
                 <properties>
                   <help>Reset specified user on SSTP VPN server</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="sstp" --username="$5"</command>
+                <command>${vyos_op_scripts_dir}/reset_vpn.py reset_conn --protocol="sstp" --username="$5"</command>
               </tagNode>
             </children>
           </node>

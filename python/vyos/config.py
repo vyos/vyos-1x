@@ -1,4 +1,4 @@
-# Copyright 2017-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -73,8 +73,11 @@ from vyos.xml_ref import ext_dict_merge
 from vyos.xml_ref import relative_defaults
 from vyos.utils.dict import get_sub_dict
 from vyos.utils.dict import mangle_dict_keys
+from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.backend import vyconf_backend
 from vyos.configsource import ConfigSource
 from vyos.configsource import ConfigSourceSession
+from vyos.configsource import ConfigSourceVyconfSession
 
 class ConfigDict(dict):
     _from_defaults = {}
@@ -131,8 +134,13 @@ class Config(object):
     subtrees.
     """
     def __init__(self, session_env=None, config_source=None):
+        self.vyconf_session = None
         if config_source is None:
-            self._config_source = ConfigSourceSession(session_env)
+            if vyconf_backend() and boot_configuration_complete():
+                self._config_source = ConfigSourceVyconfSession(session_env)
+                self.vyconf_session = self._config_source._vyconf_session
+            else:
+                self._config_source = ConfigSourceSession(session_env)
         else:
             if not isinstance(config_source, ConfigSource):
                 raise TypeError("config_source not of type ConfigSource")

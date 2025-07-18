@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -547,6 +547,35 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_discard()
+
+    def test_pam_nologin(self):
+        # Testcase for T7443, test if we can login with a non-privileged user
+        # when there are only 5 minutes left until the system reboots
+        username = users[0]
+        password = f'{username}-pSWd-t3st'
+
+        self.cli_set(base_path + ['user', username, 'authentication', 'plaintext-password', password])
+        self.cli_commit()
+
+        # Login with proper credentials
+        out, err = self.ssh_send_cmd(ssh_test_command, username, password)
+        # verify login
+        self.assertFalse(err)
+        self.assertEqual(out, self.ssh_test_command_result)
+
+        # Request system reboot in 5 minutes - this will activate pam_nologin.so
+        # and prevent any login - but we have this disabled, so we must be able
+        # to login to the router
+        self.op_mode(['reboot', 'in', '4'])
+
+        # verify login
+        # Login with proper credentials - after reboot is pending
+        out, err = self.ssh_send_cmd(ssh_test_command, username, password)
+        self.assertFalse(err)
+        self.assertEqual(out, self.ssh_test_command_result)
+
+        # Cancel pending reboot - we do wan't to preceed with the remaining tests
+        self.op_mode(['reboot', 'cancel'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

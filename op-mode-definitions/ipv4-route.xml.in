@@ -39,7 +39,7 @@
                     <list>&lt;x.x.x.x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet --address "$5"</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py reset --family inet --address "$5"</command>
               </tagNode>
               <tagNode name="interface">
                 <properties>
@@ -48,13 +48,13 @@
                     <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet --interface "$5"</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py reset --family inet --interface "$5"</command>
               </tagNode>
               <node name="table">
                 <properties>
                   <help>Flush the ARP cache completely</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py reset --family inet</command>
               </node>
             </children>
           </node>
@@ -63,12 +63,6 @@
               <help>Reset IP route</help>
             </properties>
             <children>
-              <leafNode name= "cache">
-                <properties>
-                  <help>Flush the kernel route cache</help>
-                </properties>
-                <command>sudo ip route flush cache</command>
-              </leafNode>
               <tagNode name="cache">
                 <properties>
                   <help>Flush the kernel route cache for a given route</help>
@@ -76,7 +70,11 @@
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo ip route flush cache "$5"</command>
+                <standalone>
+                  <help>Flush the kernel route cache</help>
+                  <command>ip route flush cache</command>
+                </standalone>
+                <command>ip route flush cache "$5"</command>
               </tagNode>
             </children>
           </node>

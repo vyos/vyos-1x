@@ -1,4 +1,4 @@
-# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -582,6 +582,10 @@ def snmp_auth_oid(type):
     }
     return OIDs[type]
 
+@register_filter('quoted_join')
+def quoted_join(input_list, join_str, quote='"'):
+    return str(join_str).join(f'{quote}{elem}{quote}' for elem in input_list)
+
 @register_filter('nft_action')
 def nft_action(vyos_action):
     if vyos_action == 'accept':
@@ -674,6 +678,29 @@ def nft_nested_group(out_list, includes, groups, key):
         add_includes(name)
     return out_list
 
+@register_filter('nft_accept_invalid')
+def nft_accept_invalid(ether_type):
+    ether_type_mapping = {
+        'dhcp': 'udp sport 67 udp dport 68',
+        'arp': 'arp',
+        'pppoe-discovery': '0x8863',
+        'pppoe': '0x8864',
+        '802.1q': '8021q',
+        '802.1ad': '8021ad',
+        'wol': '0x0842',
+    }
+    if ether_type not in ether_type_mapping:
+        raise RuntimeError(f'Ethernet type "{ether_type}" not found in ' \
+                           'available ethernet types!')
+    out = 'ct state invalid '
+
+    if ether_type != 'dhcp':
+        out += 'ether type '
+
+    out += f'{ether_type_mapping[ether_type]} counter accept'
+
+    return out
+
 @register_filter('nat_rule')
 def nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     from vyos.nat import parse_nat_rule
@@ -728,7 +755,7 @@ def conntrack_rule(rule_conf, rule_id, action, ipv6=False):
                 if port[0] == '!':
                     operator = '!='
                     port = port[1:]
-                output.append(f'th {prefix}port {operator} {port}')
+                output.append(f'th {prefix}port {operator} {{ {port} }}')
 
             if 'group' in side_conf:
                 group = side_conf['group']
@@ -1079,7 +1106,7 @@ def vyos_defined(value, test_value=None, var_type=None):
 def get_default_port(service):
     """
     Jinja2 plugin to retrieve common service port number from vyos.defaults
-    class form a Jinja2 template. This removes the need to hardcode, or pass in
+    class from a Jinja2 template. This removes the need to hardcode, or pass in
     the data using the general dictionary.
 
     Added to remove code complexity and make it easier to read.
@@ -1092,3 +1119,21 @@ def get_default_port(service):
         raise RuntimeError(f'Service "{service}" not found in internal ' \
                            'vyos.defaults.internal_ports dict!')
     return internal_ports[service]
+
+@register_clever_function('get_default_config_file')
+def get_default_config_file(filename):
+    """
+    Jinja2 plugin to retrieve a common configuration file path from
+    vyos.defaults class from a Jinja2 template. This removes the need to
+    hardcode, or pass in the data using the general dictionary.
+
+    Added to remove code complexity and make it easier to read.
+
+    Example:
+    {{ get_default_config_file('certbot_haproxy') }}
+    """
+    from vyos.defaults import config_files
+    if filename not in config_files:
+        raise RuntimeError(f'Configuration file "{filename}" not found in '\
+                           'internal vyos.defaults.config_files dict!')
+    return config_files[filename]

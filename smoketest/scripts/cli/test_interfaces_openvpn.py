@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -826,7 +826,6 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         gw_subnet = "192.168.0.1"
 
         self.cli_set(['interfaces', 'bridge', br_if, 'member', 'interface', vtun_if])
-        self.cli_set(path + ['device-type', 'tap'])
         self.cli_set(path + ['encryption', 'data-ciphers', 'aes192'])
         self.cli_set(path + ['hash', auth_hash])
         self.cli_set(path + ['mode', 'server'])
@@ -840,6 +839,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
         self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
 
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(path + ['device-type', 'tap'])
         self.cli_commit()
 
         config_file = f'/run/openvpn/{vtun_if}.conf'

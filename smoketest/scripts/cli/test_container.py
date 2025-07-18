@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -95,7 +95,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
                 '4096',
             ]
         )
-
+        self.cli_set(base_path + ['name', cont_name, 'log-driver', 'journald'])
         # commit changes
         self.cli_commit()
 
@@ -110,13 +110,9 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         tmp = cmd(f'sudo podman exec -it {cont_name} sysctl kernel.msgmax')
         self.assertEqual(tmp, 'kernel.msgmax = 4096')
 
-    def test_log_driver(self):
-        self.cli_set(base_path + ['log-driver', 'journald'])
+        l = cmd_to_json(f'sudo podman container inspect {cont_name}')
+        self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
 
-        self.cli_commit()
-
-        tmp = cmd('podman info --format "{{ .Host.LogDriver }}"')
-        self.assertEqual(tmp, 'journald')
 
     def test_name_server(self):
         cont_name = 'dns-test'

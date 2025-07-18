@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -71,6 +71,14 @@ def _format_show_images_details(
                               colalign=('left', 'left', 'right', 'right', 'right'))
 
     return tabulated
+
+def show_images_current(raw: bool) -> Union[image.BootDetails, str]:
+
+    images_summary = show_images_summary(raw=True)
+    if raw:
+        return {'image_running' : images_summary['image_running']}
+    else:
+        return images_summary['image_running']
 
 
 def show_images_summary(raw: bool) -> Union[image.BootDetails, str]:

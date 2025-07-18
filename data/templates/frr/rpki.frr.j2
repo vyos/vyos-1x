@@ -1,8 +1,8 @@
-!
+{% macro rpki_config(rpki) %}
 {# as FRR does not support deleting the entire rpki section we leave it in place even when it's empty #}
 rpki
-{% if cache is vyos_defined %}
-{%     for peer, peer_config in cache.items() %}
+{% if rpki.cache is vyos_defined %}
+{%     for peer, peer_config in rpki.cache.items() %}
 {#         port is mandatory and preference uses a default value #}
 {%         if peer_config.ssh.username is vyos_defined %}
  rpki cache ssh {{ peer | replace('_', '-') }} {{ peer_config.port }} {{ peer_config.ssh.username }} {{ peer_config.ssh.private_key_file }} {{ peer_config.ssh.public_key_file }}{{ ' source ' ~ peer_config.source_address if peer_config.source_address is vyos_defined }} preference {{ peer_config.preference }}
@@ -11,14 +11,24 @@ rpki
 {%         endif %}
 {%     endfor %}
 {% endif %}
-{% if expire_interval is vyos_defined %}
- rpki expire_interval {{ expire_interval }}
+{% if rpki.expire_interval is vyos_defined %}
+ rpki expire_interval {{ rpki.expire_interval }}
 {% endif %}
-{% if polling_period is vyos_defined %}
- rpki polling_period {{ polling_period }}
+{% if rpki.polling_period is vyos_defined %}
+ rpki polling_period {{ rpki.polling_period }}
 {% endif %}
-{% if retry_interval is vyos_defined %}
- rpki retry_interval {{ retry_interval }}
+{% if rpki.retry_interval is vyos_defined %}
+ rpki retry_interval {{ rpki.retry_interval }}
 {% endif %}
 exit
+{# j2lint: disable=jinja-statements-delimeter #}
+{%- endmacro -%}
+!
+{% if rpki.vrf is vyos_defined %}
+vrf {{ rpki.vrf }}
+ {{ rpki_config(rpki) | indent(width=1) }}
+exit-vrf
+{% else %}
+{{ rpki_config(rpki) }}
+{% endif %}
 !

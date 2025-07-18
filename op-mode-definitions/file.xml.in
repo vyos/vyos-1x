@@ -7,7 +7,7 @@
           <help>Show the contents of a file, a directory or an image</help>
           <completionHelp><imagePath/></completionHelp>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/file.py --show $3</command>
+        <command>${vyos_op_scripts_dir}/file.py --show $3</command>
       </tagNode>
     </children>
   </node>
@@ -27,7 +27,7 @@
               <help>Destination path</help>
               <completionHelp><imagePath/></completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/file.py --copy $3 $5
+            <command>${vyos_op_scripts_dir}/file.py --copy $3 $5
             </command>
           </tagNode>
         </children>
@@ -44,7 +44,7 @@
           <help>Delete a local file, possibly from an image</help>
           <completionHelp><imagePath/></completionHelp>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/file.py --delete $3</command>
+        <command>${vyos_op_scripts_dir}/file.py --delete $3</command>
       </tagNode>
     </children>
   </node>
@@ -65,7 +65,7 @@
                 <script>${vyos_completion_dir}/list_images.py --no-running</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/file.py --clone $4</command>
+            <command>${vyos_op_scripts_dir}/file.py --clone $4</command>
             <children>
               <tagNode name="from">
                 <properties>
@@ -75,7 +75,7 @@
                     <script>${vyos_completion_dir}/list_images.py</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/file.py --clone-from $6 $4</command>
+                <command>${vyos_op_scripts_dir}/file.py --clone-from $6 $4</command>
               </tagNode>
             </children>
           </tagNode>

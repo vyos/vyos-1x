@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -310,12 +310,13 @@ def generate_run_arguments(name, container_config):
     memory = container_config['memory']
     shared_memory = container_config['shared_memory']
     restart = container_config['restart']
+    log_driver = container_config['log_driver']
 
     # Add sysctl options
     sysctl_opt = ''
     if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
         for k, v in container_config['sysctl']['parameter'].items():
-            sysctl_opt += f" --sysctl {k}={v['value']}"
+            sysctl_opt += f" --sysctl \"{k}={v['value']}\""
 
     # Add capability options. Should be in uppercase
     capabilities = ''
@@ -408,7 +409,7 @@ def generate_run_arguments(name, container_config):
             name_server += f'--dns {ns}'
 
     container_base_cmd = f'--detach --interactive --tty --replace {capabilities} {privileged} --cpus {cpu_quota} {sysctl_opt} ' \
-                         f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
+                         f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} --log-driver={log_driver} ' \
                          f'--name {name} {hostname} {device} {port} {name_server} {volume} {tmpfs} {env_opt} {label} {uid} {host_pid}'
 
     entrypoint = ''

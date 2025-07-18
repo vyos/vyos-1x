@@ -1,12 +1,7 @@
 <!-- included start from show-route-tag.xml.i -->
-<node name="tag">
-  <properties>
-    <help>Show only routes with tag</help>
-  </properties>
-</node>
 <tagNode name="tag">
   <properties>
-    <help>Tag value</help>
+    <help>Show route with given tag</help>
     <completionHelp>
       <list>&lt;1-4294967295&gt;</list>
     </completionHelp>

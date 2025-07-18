@@ -385,7 +385,7 @@ Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
 Package: vyos-1x-vmware
-Architecture: amd64
+Architecture: all
 Depends:
  vyos-1x,
  open-vm-tools

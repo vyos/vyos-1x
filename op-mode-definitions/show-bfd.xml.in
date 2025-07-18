@@ -7,11 +7,6 @@
           <help>Show Bidirectional Forwarding Detection (BFD)</help>
         </properties>
         <children>
-          <node name="peer">
-            <properties>
-              <help>Show all Bidirectional Forwarding Detection (BFD) peer status</help>
-            </properties>
-          </node>
           <tagNode name="peer">
             <properties>
               <help>Show Bidirectional Forwarding Detection (BFD) peer status</help>

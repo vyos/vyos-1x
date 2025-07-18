@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -164,15 +164,15 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         mangle_prerouting = """table ip vyos_wanloadbalance {
 	chain wlb_mangle_prerouting {
 		type filter hook prerouting priority mangle; policy accept;
-		iifname "veth3" ip saddr 198.51.100.0/24 ct state new limit rate 5/second burst 5 packets counter numgen random mod 11 vmap { 0 : jump wlb_mangle_isp_veth1, 1-10 : jump wlb_mangle_isp_veth2 }
+		iifname "veth3" ip saddr 198.51.100.0/24 ct state new counter numgen random mod 11 vmap { 0 : jump wlb_mangle_isp_veth1, 1-10 : jump wlb_mangle_isp_veth2 }
 		iifname "veth3" ip saddr 198.51.100.0/24 counter meta mark set ct mark
 	}
 }"""
         nat_wanloadbalance = """table ip vyos_wanloadbalance {
 	chain wlb_nat_postrouting {
 		type nat hook postrouting priority srcnat - 1; policy accept;
-		ct mark 0x000000c9 counter snat to 203.0.113.10
-		ct mark 0x000000ca counter snat to 192.0.2.10
+		ct mark 0x000000c9 oifname "veth1" counter snat to 203.0.113.10
+		ct mark 0x000000ca oifname "veth2" counter snat to 192.0.2.10
 	}
 }"""
 
@@ -233,6 +233,27 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         # Check nat chains
         tmp = cmd('sudo nft -s list chain ip vyos_wanloadbalance wlb_nat_postrouting')
         self.assertEqual(tmp, nat_wanloadbalance)
+
+        # Set limit configuration
+        mangle_prerouting_limit = """table ip vyos_wanloadbalance {
+	chain wlb_mangle_prerouting {
+		type filter hook prerouting priority mangle; policy accept;
+		iifname "veth3" ip saddr 198.51.100.0/24 ct state new limit rate 10/second burst 10 packets counter numgen random mod 11 vmap { 0 : jump wlb_mangle_isp_veth1, 1-10 : jump wlb_mangle_isp_veth2 }
+		iifname "veth3" ip saddr 198.51.100.0/24 counter meta mark set ct mark
+	}
+}"""
+
+        self.cli_set(base_path + ['wan', 'rule', '10', 'limit', 'rate', '10'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'limit', 'burst', '10'])
+
+        # Commit changes
+        self.cli_commit()
+
+        time.sleep(5)
+
+        # Check prerouting mangle chain
+        tmp = cmd('sudo nft -s list chain ip vyos_wanloadbalance wlb_mangle_prerouting')
+        self.assertEqual(tmp, mangle_prerouting_limit)
 
         # Delete veth interfaces and netns
         for iface in [iface1, iface2, iface3]:

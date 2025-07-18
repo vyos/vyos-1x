@@ -133,17 +133,8 @@
             </valueHelp>
           </properties>
         </leafNode>
+        #include <include/port-number.xml.i>
         <leafNode name="port">
-          <properties>
-            <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
-            <valueHelp>
-              <format>u32:1-65535</format>
-              <description>TCP port</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-65535"/>
-            </constraint>
-          </properties>
           <defaultValue>1700</defaultValue>
         </leafNode>
         <leafNode name="key">

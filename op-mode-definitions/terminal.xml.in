@@ -49,7 +49,7 @@
             <properties>
               <help>Reconfigure console keyboard layout</help>
             </properties>
-            <command>sudo dpkg-reconfigure -f dialog keyboard-configuration &amp;&amp; sudo systemctl restart keyboard-setup</command>
+            <command>dpkg-reconfigure -f dialog keyboard-configuration &amp;&amp; systemctl restart keyboard-setup</command>
           </leafNode>
         </children>
       </node>
@@ -74,12 +74,6 @@
               </tagNode>
             </children>
           </node>
-          <node name="pager">
-            <properties>
-              <help>Set terminal pager to default (less)</help>
-            </properties>
-            <command>VYATTA_PAGER=${_vyatta_default_pager}</command>
-          </node>
           <tagNode name="pager">
             <properties>
               <help>Set terminal pager</help>
@@ -87,6 +81,10 @@
                 <list>&lt;PROGRAM&gt;</list>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Set terminal pager to default (less)</help>
+              <command>VYATTA_PAGER=${_vyatta_default_pager}</command>
+            </standalone>
             <command>VYATTA_PAGER=$4</command>
           </tagNode>
           <tagNode name="length">

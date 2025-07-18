@@ -35,7 +35,7 @@
             <list>&lt;MMDDhhmm&gt; &lt;MMDDhhmmYY&gt; &lt;MMDDhhmmCCYY&gt; &lt;MMDDhhmmCCYY.ss&gt;</list>
           </completionHelp>
         </properties>
-        <command>sudo bash -c "/bin/date '$3' &amp;&amp; hwclock --systohc --localtime"</command>
+        <command>bash -c "/bin/date '$3' &amp;&amp; hwclock --systohc --localtime"</command>
       </tagNode>
     </children>
   </node>

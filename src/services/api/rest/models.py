@@ -1,4 +1,4 @@
-# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@ from typing import Self
 
 from pydantic import BaseModel
 from pydantic import StrictStr
+from pydantic import StrictInt
 from pydantic import field_validator
 from pydantic import model_validator
 from fastapi.responses import HTMLResponse
@@ -71,6 +72,8 @@ class BaseConfigureModel(BasePathModel):
 
 
 class ConfigureModel(ApiModel, BaseConfigureModel):
+    confirm_time: StrictInt = 0
+
     class Config:
         json_schema_extra = {
             'example': {
@@ -81,8 +84,12 @@ class ConfigureModel(ApiModel, BaseConfigureModel):
         }
 
 
+class ConfirmModel(ApiModel):
+    op: StrictStr
+
 class ConfigureListModel(ApiModel):
     commands: List[BaseConfigureModel]
+    confirm_time: StrictInt = 0
 
     class Config:
         json_schema_extra = {
@@ -134,13 +141,17 @@ class RetrieveModel(ApiModel):
 class ConfigFileModel(ApiModel):
     op: StrictStr
     file: StrictStr = None
+    string: StrictStr = None
+    confirm_time: StrictInt = 0
+    destructive: bool = False
 
     class Config:
         json_schema_extra = {
             'example': {
                 'key': 'id_key',
-                'op': 'save | load',
+                'op': 'save | load | merge | confirm',
                 'file': 'filename',
+                'string': 'config_string'
             }
         }
 
@@ -246,6 +257,20 @@ class RebootModel(ApiModel):
             'example': {
                 'key': 'id_key',
                 'op': 'reboot',
+                'path': ['op', 'mode', 'path'],
+            }
+        }
+
+
+class RenewModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        json_schema_extra = {
+            'example': {
+                'key': 'id_key',
+                'op': 'renew',
                 'path': ['op', 'mode', 'path'],
             }
         }

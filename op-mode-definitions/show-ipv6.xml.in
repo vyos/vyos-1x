@@ -7,12 +7,6 @@
           <help>Show IPv6 networking information</help>
         </properties>
         <children>
-          <node name="access-list">
-            <properties>
-              <help>Show all IPv6 access-lists</help>
-            </properties>
-            <command>vtysh -c "show ipv6 access-list"</command>
-          </node>
           <tagNode name="access-list">
             <properties>
               <help>Show specified IPv6 access-list</help>
@@ -21,6 +15,10 @@
               </completionHelp>
             </properties>
             <command>vtysh -c "show ipv6 access-list $4"</command>
+            <standalone>
+              <help>Show all IPv6 access-lists</help>
+              <command>vtysh -c "show ipv6 access-list"</command>
+            </standalone>
           </tagNode>
           <node name="forwarding">
             <properties>

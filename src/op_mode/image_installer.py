@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2023-2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -19,7 +19,7 @@
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from shutil import copy, chown, rmtree, copytree
+from shutil import copy, chown, rmtree, copytree, disk_usage
 from glob import glob
 from sys import exit
 from os import environ
@@ -27,6 +27,7 @@ from os import readlink
 from os import getpid
 from os import getppid
 from json import loads
+from json import dumps
 from typing import Union
 from urllib.parse import urlparse
 from passlib.hosts import linux_context
@@ -54,12 +55,14 @@ from vyos.utils.dict import dict_search
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.process import cmd, run, rc_cmd
 from vyos.version import get_version_data
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
 MSG_ERR_LIVE: str = 'The system is in live-boot mode. Please use "install image" instead.'
+MSG_ERR_NOT_ENOUGH_SPACE: str = 'Image upgrade requires at least 2GB of free drive space.'
 MSG_ERR_NO_DISK: str = 'No suitable disk was found. There must be at least one disk of 2GB or greater size.'
 MSG_ERR_IMPROPER_IMAGE: str = 'Missing sha256sum.txt.\nEither this image is corrupted, or of era 1.2.x (md5sum) and would downgrade image tools;\ndisallowed in either case.'
 MSG_ERR_INCOMPATIBLE_IMAGE: str = 'Image compatibility check failed, aborting installation.'
@@ -974,6 +977,14 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
     if image.is_live_boot():
         exit(MSG_ERR_LIVE)
 
+    # Trying to upgrade with insufficient space can break the system.
+    # It's better to be on the safe side:
+    # our images are a bit below 1G,
+    # so one gigabyte to download the image plus one more to install it
+    # sounds like a sensible estimate.
+    if disk_usage('/').free < (2 * 1024**3):
+        exit(MSG_ERR_NOT_ENOUGH_SPACE)
+
     environ['REMOTE_USERNAME'] = username
     environ['REMOTE_PASSWORD'] = password
 
@@ -1040,6 +1051,12 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
             chmod_2775(target_config_dir)
             copytree('/opt/vyatta/etc/config/', target_config_dir, symlinks=True,
                      copy_function=copy_preserve_owner, dirs_exist_ok=True)
+
+            # Record information from which image we upgraded to the new one.
+            # This can be used for a future automatic rollback into the old image.
+            tmp = {'previous_image' : image.get_running_image()}
+            write_file(f'{target_config_dir}/first_boot', dumps(tmp))
+
         else:
             Path(target_config_dir).mkdir(parents=True)
             chown(target_config_dir, group='vyattacfg')

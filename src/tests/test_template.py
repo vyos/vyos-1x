@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -192,10 +192,19 @@ class TestVyOSTemplate(TestCase):
             self.assertIn(IKEv2_DEFAULT, ','.join(ciphers))
 
     def test_get_default_port(self):
+        from vyos.defaults import config_files
         from vyos.defaults import internal_ports
 
         with self.assertRaises(RuntimeError):
+            vyos.template.get_default_config_file('UNKNOWN')
+        with self.assertRaises(RuntimeError):
             vyos.template.get_default_port('UNKNOWN')
+        with self.assertRaises(RuntimeError):
+            vyos.template.nft_accept_invalid('UNKNOWN')
 
+        self.assertEqual(vyos.template.get_default_config_file('sshd_user_ca'),
+                         config_files['sshd_user_ca'])
         self.assertEqual(vyos.template.get_default_port('certbot_haproxy'),
                          internal_ports['certbot_haproxy'])
+        self.assertEqual(vyos.template.nft_accept_invalid('arp'),
+                         'ct state invalid ether type arp counter accept')

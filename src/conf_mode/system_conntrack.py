@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,7 +32,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-conntrack_config = r'/etc/modprobe.d/vyatta_nf_conntrack.conf'
 sysctl_file = r'/run/sysctl/10-vyos-conntrack.conf'
 nftables_ct_file = r'/run/nftables-ct.conf'
 vyos_conntrack_logger_config = r'/run/vyos-conntrack-logger.conf'
@@ -204,7 +203,6 @@ def generate(conntrack):
                 elif path[0] == 'ipv6':
                     conntrack['ipv6_firewall_action'] = 'accept'
 
-    render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)
     render(nftables_ct_file, 'conntrack/nftables-ct.j2', conntrack)
 

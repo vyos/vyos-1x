@@ -17,7 +17,7 @@
             <properties>
               <help>Show OpenConnect configured user settings</help>
               <completionHelp>
-                <script>sudo ${vyos_completion_dir}/list_openconnect_users.py</script>
+                <script>${vyos_completion_dir}/list_openconnect_users.py</script>
               </completionHelp>
             </properties>
             <children>

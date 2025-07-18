@@ -171,7 +171,7 @@
                 <properties>
                   <help>Show DHCPv6 server leases</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6</command>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
@@ -262,13 +262,13 @@
             <properties>
               <help>Restart DHCP server</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dhcp</command>
+            <command>${vyos_op_scripts_dir}/restart.py restart_service --name dhcp</command>
           </node>
           <node name="relay-agent">
             <properties>
               <help>Restart DHCP relay-agent</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv4</command>
+            <command>${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv4</command>
           </node>
         </children>
       </node>
@@ -281,13 +281,13 @@
             <properties>
               <help>Restart DHCPv6 server</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name dhcpv6</command>
+            <command>${vyos_op_scripts_dir}/restart.py restart_service --name dhcpv6</command>
           </node>
           <node name="relay-agent">
             <properties>
               <help>Restart DHCPv6 relay-agent</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv6</command>
+            <command>${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv6</command>
           </node>
         </children>
       </node>
@@ -310,7 +310,7 @@
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dhcp.py renew_client_lease --family inet --interface "$4"</command>
+            <command>${vyos_op_scripts_dir}/dhcp.py renew_client_lease --family inet --interface "$4"</command>
           </tagNode>
         </children>
       </node>
@@ -326,7 +326,7 @@
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dhcp.py renew_client_lease --family inet6 --interface "$4"</command>
+            <command>${vyos_op_scripts_dir}/dhcp.py renew_client_lease --family inet6 --interface "$4"</command>
           </tagNode>
         </children>
       </node>
@@ -349,7 +349,7 @@
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dhcp.py release_client_lease --family inet --interface "$4"</command>
+            <command>${vyos_op_scripts_dir}/dhcp.py release_client_lease --family inet --interface "$4"</command>
           </tagNode>
         </children>
       </node>
@@ -365,7 +365,7 @@
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dhcp.py release_client_lease --family inet6 --interface "$4"</command>
+            <command>${vyos_op_scripts_dir}/dhcp.py release_client_lease --family inet6 --interface "$4"</command>
           </tagNode>
         </children>
       </node>

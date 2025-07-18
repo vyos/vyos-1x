@@ -5,21 +5,21 @@
       <help>Show system information</help>
     </properties>
     <children>
-      <tagNode name="log">
-        <properties>
-          <help>Show last number of messages in master logging buffer</help>
-          <completionHelp>
-            <list>&lt;1-9999&gt;</list>
-          </completionHelp>
-        </properties>
-        <command>if ${vyos_validators_dir}/numeric --range 1-9999 "$3"; then journalctl --no-hostname --boot --lines "$3"; fi</command>
-      </tagNode>
-      <node name="log">
+     <node name="log">
         <properties>
           <help>Show contents of current master logging buffer</help>
         </properties>
         <command>journalctl --no-hostname --boot</command>
         <children>
+          <virtualTagNode>
+            <properties>
+              <help>Show last number of messages in master logging buffer</help>
+              <completionHelp>
+                <list>&lt;1-9999&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>if ${vyos_validators_dir}/numeric --range 1-9999 "$3"; then journalctl --no-hostname --boot --lines "$3"; fi</command>
+          </virtualTagNode>
           <leafNode name="audit">
             <properties>
               <help>Show audit logs</help>
@@ -30,7 +30,7 @@
             <properties>
               <help>Show contents of all master log files</help>
             </properties>
-            <command>sudo bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
+            <command>bash -c 'eval $(lesspipe); less $_vyatta_less_options --prompt=".logm, file %i of %m., page %dt of %D" -- `printf "%s\n" /var/log/messages* | sort -nr`'</command>
           </leafNode>
           <leafNode name="authorization">
             <properties>
@@ -42,7 +42,7 @@
             <properties>
               <help>Show log for certbot</help>
             </properties>
-            <command>if sudo test -f /var/log/letsencrypt/letsencrypt.log; then sudo cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+            <command>if test -f /var/log/letsencrypt/letsencrypt.log; then cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>
@@ -677,12 +677,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit ndppd.service</command>
           </leafNode>
-          <leafNode name="nhrp">
-            <properties>
-              <help>Show log for Next Hop Resolution Protocol (NHRP)</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
-          </leafNode>
           <leafNode name="ntp">
             <properties>
               <help>Show log for Network Time Protocol (NTP)</help>
@@ -837,6 +831,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit snmpd.service</command>
           </leafNode>
+          <leafNode name="spanning-tree">
+            <properties>
+              <help>Show log for Spanning Tree Protocol (STP)</help>
+            </properties>
+            <command>journalctl --dmesg --no-hostname --boot --grep='br[0-9].*(stp|bpdu|blocking|disabled|forwarding|listening|root port)'</command>
+          </leafNode>
           <node name="ssh">
             <properties>
               <help>Show log for Secure Shell (SSH)</help>
@@ -858,14 +858,12 @@
                 <list>&lt;NUMBER&gt;</list>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show last 10 lines of /var/log/messages file</help>
+              <command>tail -n 10 /var/log/messages</command>
+            </standalone>
             <command>tail -n "$4" /var/log/messages | ${VYATTA_PAGER:-cat}</command>
           </tagNode>
-          <node name="tail">
-            <properties>
-              <help>Show last 10 lines of /var/log/messages file</help>
-            </properties>
-            <command>tail -n 10 /var/log/messages</command>
-          </node>
           <leafNode name="vpn">
             <properties>
               <help>Show log for ALL Virtual Private Network services</help>

@@ -1,4 +1,4 @@
-# Copyright 2020-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -526,6 +526,25 @@ def verify_pki_dh_parameters(config: dict, dh_name: str, min_key_size: int=0):
         dh_bits = dh_numbers.p.bit_length()
         if dh_bits < min_key_size:
             raise ConfigError(f'Minimum DH key-size is {min_key_size} bits!')
+
+def verify_pki_openssh_key(config: dict, key_name: str):
+    """
+    Common helper function user by PKI consumers to perform recurring
+    validation functions on OpenSSH keys
+    """
+    if 'pki' not in config:
+        raise ConfigError('PKI is not configured!')
+
+    if 'openssh' not in config['pki']:
+        raise ConfigError('PKI does not contain any OpenSSH keys!')
+
+    if key_name not in config['pki']['openssh']:
+        raise ConfigError(f'OpenSSH key "{key_name}" not found in configuration!')
+
+    if 'public' in config['pki']['openssh'][key_name]:
+        if not {'key', 'type'} <= set(config['pki']['openssh'][key_name]['public']):
+            raise ConfigError('Both public key and type must be defined for '\
+                              f'OpenSSH public key "{key_name}"!')
 
 def verify_eapol(config: dict):
     """

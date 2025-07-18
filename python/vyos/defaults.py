@@ -1,4 +1,4 @@
-# Copyright 2018-2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,10 +15,10 @@
 
 import os
 
-base_dir = '/usr/libexec/vyos/'
+base_dir = '/usr/libexec/vyos'
 
 directories = {
-  'base' : base_dir,
+  'base' : f'{base_dir}',
   'data' : '/usr/share/vyos/',
   'conf_mode' : f'{base_dir}/conf_mode',
   'op_mode' : f'{base_dir}/op_mode',
@@ -39,7 +39,8 @@ directories = {
   'completion_dir' : f'{base_dir}/completion',
   'ca_certificates' : '/usr/local/share/ca-certificates/vyos',
   'ppp_nexthop_dir' : '/run/ppp_nexthop',
-  'proto_path' : '/usr/share/vyos/vyconf'
+  'proto_path' : '/usr/share/vyos/vyconf',
+  'vyconf_session_dir' : f'{base_dir}/vyconf/session'
 }
 
 systemd_services = {
@@ -50,6 +51,10 @@ systemd_services = {
 
 internal_ports = {
     'certbot_haproxy' : 65080, # Certbot running behing haproxy
+}
+
+config_files = {
+    'sshd_user_ca' : '/run/sshd/trusted_user_ca',
 }
 
 config_status = '/tmp/vyos-config-status'
@@ -68,8 +73,8 @@ config_default = os.path.join(directories['data'], 'config.boot.default')
 
 rt_symbolic_names = {
   # Standard routing tables for Linux & reserved IDs for VyOS
-  'default': 253, # Confusingly, a final fallthru, not the default. 
-  'main': 254,    # The actual global table used by iproute2 unless told otherwise. 
+  'default': 253, # Confusingly, a final fallthru, not the default.
+  'main': 254,    # The actual global table used by iproute2 unless told otherwise.
   'local': 255,   # Special kernel loopback table.
 }
 
@@ -77,3 +82,9 @@ rt_global_vrf = rt_symbolic_names['main']
 rt_global_table = rt_symbolic_names['main']
 
 vyconfd_conf = '/etc/vyos/vyconfd.conf'
+
+DEFAULT_COMMIT_CONFIRM_MINUTES = 10
+
+commit_hooks = {'pre': '/etc/commit/pre-hooks.d',
+                'post': '/etc/commit/post-hooks.d'
+               }

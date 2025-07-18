@@ -13,13 +13,24 @@
             </properties>
             <command>vtysh -c "show ip route"</command>
             <children>
-              #include <include/show-route-bgp.xml.i>
-              <node name="cache">
+              <virtualTagNode>
                 <properties>
-                  <help>Show kernel route cache</help>
+                  <help>Show IP routes of specified IP address or prefix</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
                 </properties>
-                <command>ip -s route list cache</command>
-              </node>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  <leafNode name="longer-prefixes">
+                    <properties>
+                      <help>Show longer prefixes of routes for specified prefix</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                  </leafNode>
+                </children>
+              </virtualTagNode>
+              #include <include/show-route-bgp.xml.i>
               <tagNode name="cache">
                 <properties>
                   <help>Show kernel route cache for a given route</help>
@@ -27,15 +38,13 @@
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
+                <standalone>
+                  <help>Show kernel route cache</help>
+                  <command>ip -s route list cache</command>
+                </standalone>
                 <command>ip -s route list cache $5</command>
               </tagNode>
               #include <include/show-route-connected.xml.i>
-              <node name="forward">
-                <properties>
-                  <help>Show kernel route table</help>
-                </properties>
-                <command>ip route list</command>
-              </node>
               <tagNode name="forward">
                 <properties>
                   <help>Show kernel route table for a given route</help>
@@ -43,6 +52,10 @@
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
+                <standalone>
+                  <help>Show kernel route table</help>
+                  <command>ip route list</command>
+                </standalone>
                 <command>ip -s route list $5</command>
               </tagNode>
               #include <include/show-route-isis.xml.i>
@@ -93,7 +106,7 @@
                   #include <include/show-route-static.xml.i>
                   #include <include/show-route-supernets-only.xml.i>
                   #include <include/show-route-tag.xml.i>
-                  <node name="node.tag">
+                  <virtualTagNode>
                     <properties>
                       <help>Show IP routes of specified IP address or prefix</help>
                       <completionHelp>
@@ -109,28 +122,11 @@
                         <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                       </leafNode>
                     </children>
-                  </node>
+                  </virtualTagNode>
                 </children>
               </tagNode>
             </children>
           </node>
-          <tagNode name="route">
-            <properties>
-              <help>Show IP routes of specified IP address or prefix</help>
-              <completionHelp>
-                <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            <children>
-              <leafNode name="longer-prefixes">
-                <properties>
-                  <help>Show longer prefixes of routes for specified prefix</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
-            </children>
-          </tagNode>
         </children>
       </node>
     </children>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -358,6 +358,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'no-suppress-duplicates'])
         self.cli_set(base_path + ['parameters', 'reject-as-sets'])
         self.cli_set(base_path + ['parameters', 'route-reflector-allow-outbound-policy'])
+        self.cli_set(base_path + ['parameters', 'no-ipv6-auto-ra'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
         self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'idle', tcp_keepalive_idle])
@@ -396,6 +397,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp minimum-holdtime {min_hold_time}', frrconfig)
         self.assertIn(f' bgp reject-as-sets', frrconfig)
         self.assertIn(f' bgp route-reflector allow-outbound-policy', frrconfig)
+        self.assertIn(f' no bgp ipv6-auto-ra', frrconfig)
         self.assertIn(f' bgp shutdown', frrconfig)
         self.assertIn(f' bgp suppress-fib-pending', frrconfig)
         self.assertIn(f' bgp tcp-keepalive {tcp_keepalive_idle} {tcp_keepalive_interval} {tcp_keepalive_probes}', frrconfig)

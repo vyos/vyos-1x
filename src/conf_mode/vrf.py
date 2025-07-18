@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,8 @@
 from sys import exit
 from jmespath import search
 from json import loads
+
+import vyos.defaults
 
 from vyos.config import Config
 from vyos.configdict import node_changed
@@ -163,6 +165,11 @@ def verify(vrf):
             if 'table' not in vrf_config:
                 raise ConfigError(f'VRF "{name}" table id is mandatory!')
 
+            if int(vrf_config['table']) == vyos.defaults.rt_global_vrf:
+                raise ConfigError(
+                    f'VRF "{name}" table id {vrf_config["table"]} cannot be used!'
+                )
+
             # routing table id can't be changed - OS restriction
             if interface_exists(name):
                 tmp = get_vrf_tableid(name)
@@ -233,7 +240,7 @@ def apply(vrf):
                 vrf_iface.set_dhcpv6(False)
 
             # Remove nftables conntrack zone map item
-            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{tmp}" }}'
+            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ \'"{tmp}"\' }}'
             # Check if deleting is possible first to avoid raising errors
             _, err = popen(f'nft --check {nft_del_element}')
             if not err:
@@ -313,7 +320,7 @@ def apply(vrf):
             state = 'down' if 'disable' in config else 'up'
             vrf_if.set_admin_state(state)
             # Add nftables conntrack zone map item
-            nft_add_element = f'add element inet vrf_zones ct_iface_map {{ "{name}" : {table} }}'
+            nft_add_element = f'add element inet vrf_zones ct_iface_map {{ \'"{name}"\' : {table} }}'
             cmd(f'nft {nft_add_element}')
 
         # Only call into nftables as long as there is nothing setup to avoid wasting

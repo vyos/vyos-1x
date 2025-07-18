@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -86,6 +86,12 @@ def verify(ipoe):
             if dict_search('authentication.mode', ipoe) != 'radius':
                 raise ConfigError(
                     'Can configure username with Lua script only for RADIUS authentication'
+                )
+
+        if dict_search('external_dhcp.dhcp_relay', iface_config):
+            if not dict_search('external_dhcp.giaddr', iface_config):
+                raise ConfigError(
+                    f'"external-dhcp dhcp-relay" requires "giaddr" to be set for interface {interface}'
                 )
 
     verify_accel_ppp_authentication(ipoe, local_users=False)

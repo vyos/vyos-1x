@@ -1,4 +1,4 @@
-# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,10 +25,12 @@ from filecmp import cmp
 from datetime import datetime
 from textwrap import dedent
 from pathlib import Path
-from tabulate import tabulate
 from shutil import copy, chown
+from subprocess import Popen
+from subprocess import DEVNULL
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
+from tabulate import tabulate
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree
@@ -44,6 +46,7 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
+from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 
 SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
 config_json = '/run/vyatta/config/config.json'
@@ -56,7 +59,6 @@ commit_hooks = {
     'commit_archive': '02vyos-commit-archive',
 }
 
-DEFAULT_TIME_MINUTES = 10
 timer_name = 'commit-confirm'
 
 config_file = os.path.join(directories['config'], 'config.boot')
@@ -144,14 +146,16 @@ class ConfigMgmt:
             ['system', 'config-management'],
             key_mangling=('-', '_'),
             get_first_key=True,
-            with_defaults=True,
+            with_recursive_defaults=True,
         )
 
         self.max_revisions = int(d.get('commit_revisions', 0))
         self.num_revisions = 0
         self.locations = d.get('commit_archive', {}).get('location', [])
         self.source_address = d.get('commit_archive', {}).get('source_address', '')
-        self.reboot_unconfirmed = bool(d.get('commit_confirm') == 'reboot')
+        self.reboot_unconfirmed = bool(
+            d.get('commit_confirm', {}).get('action') == 'reboot'
+        )
         self.config_dict = d
 
         if config.exists(['system', 'host-name']):
@@ -181,7 +185,7 @@ class ConfigMgmt:
     # Console script functions
     #
     def commit_confirm(
-        self, minutes: int = DEFAULT_TIME_MINUTES, no_prompt: bool = False
+        self, minutes: int = DEFAULT_COMMIT_CONFIRM_MINUTES, no_prompt: bool = False
     ) -> Tuple[str, int]:
         """Commit with reload/reboot to saved config in 'minutes' minutes if
         'confirm' call is not issued.
@@ -229,7 +233,14 @@ Proceed ?"""
         else:
             cmd = f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py {minutes}'
 
-        os.system(cmd)
+        Popen(
+            cmd.split(),
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+            stdin=DEVNULL,
+            close_fds=True,
+            preexec_fn=os.setsid,
+        )
 
         if self.reboot_unconfirmed:
             msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reboot'
@@ -805,7 +816,7 @@ def run():
         '-t',
         dest='minutes',
         type=int,
-        default=DEFAULT_TIME_MINUTES,
+        default=DEFAULT_COMMIT_CONFIRM_MINUTES,
         help="Minutes until reboot, unless 'confirm'",
     )
     commit_confirm.add_argument(

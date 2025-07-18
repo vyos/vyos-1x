@@ -27,7 +27,7 @@
                         <list>&lt;filename&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type ca --name "$7" --sign "$5" --file</command>
+                    <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type ca --name "$7" --sign "$5" --file</command>
                   </tagNode>
                   <tagNode name="install">
                     <properties>
@@ -48,7 +48,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type ca --name "$5" --file</command>
+                <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type ca --name "$5" --file</command>
               </tagNode>
               <tagNode name="install">
                 <properties>
@@ -79,7 +79,7 @@
                         <list>&lt;filename&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type certificate --name "$6" --self-sign --file</command>
+                    <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type certificate --name "$6" --self-sign --file</command>
                   </tagNode>
                   <tagNode name="install">
                     <properties>
@@ -108,7 +108,7 @@
                         <list>&lt;filename&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type certificate --name "$7" --sign "$5" --file</command>
+                    <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type certificate --name "$7" --sign "$5" --file</command>
                   </tagNode>
                   <tagNode name="install">
                     <properties>
@@ -129,7 +129,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type certificate --name "$5" --file</command>
+                <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type certificate --name "$5" --file</command>
               </tagNode>
               <tagNode name="install">
                 <properties>
@@ -158,7 +158,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type crl --name "$4" --file</command>
+                <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type crl --name "$4" --file</command>
               </tagNode>
               <leafNode name="install">
                 <properties>
@@ -181,7 +181,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type dh --name "$5" --file</command>
+                <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type dh --name "$5" --file</command>
               </tagNode>
               <tagNode name="install">
                 <properties>
@@ -207,7 +207,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type key-pair --name "$5" --file</command>
+                <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type key-pair --name "$5" --file</command>
               </tagNode>
               <tagNode name="install">
                 <properties>
@@ -238,7 +238,7 @@
                         <list>&lt;filename&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type openvpn --name "$6" --file</command>
+                    <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type openvpn --name "$6" --file</command>
                   </tagNode>
                   <tagNode name="install">
                     <properties>
@@ -266,7 +266,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py generate_pki --pki-type ssh --name "$5" --file</command>
+                <command>${vyos_op_scripts_dir}/pki.py generate_pki --pki-type ssh --name "$5" --file</command>
               </tagNode>
               <tagNode name="install">
                 <properties>
@@ -371,13 +371,13 @@
                 <properties>
                   <help>Path to CA certificate file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type ca --name "$4" --filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ca --name "$4" --filename "$6"</command>
               </tagNode>
               <tagNode name="key-file">
                 <properties>
                   <help>Path to private key file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type ca --name "$4" --key-filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ca --name "$4" --key-filename "$6"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -393,13 +393,13 @@
                 <properties>
                   <help>Path to certificate file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type certificate --name "$4" --filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type certificate --name "$4" --filename "$6"</command>
               </tagNode>
               <tagNode name="key-file">
                 <properties>
                   <help>Path to private key file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type certificate --name "$4" --key-filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type certificate --name "$4" --key-filename "$6"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -415,7 +415,7 @@
                 <properties>
                   <help>Path to CRL file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type crl --name "$4" --filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type crl --name "$4" --filename "$6"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -431,7 +431,7 @@
                 <properties>
                   <help>Path to DH parameters file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type dh --name "$4" --filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type dh --name "$4" --filename "$6"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -447,13 +447,13 @@
                 <properties>
                   <help>Path to public key file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type key-pair --name "$4" --filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type key-pair --name "$4" --filename "$6"</command>
               </tagNode>
               <tagNode name="private-file">
                 <properties>
                   <help>Path to private key file</help>
                 </properties>
-                <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type key-pair --name "$4" --key-filename "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type key-pair --name "$4" --key-filename "$6"</command>
               </tagNode>
             </children>
           </tagNode>
@@ -474,7 +474,7 @@
                     <properties>
                       <help>Path to shared secret key file</help>
                     </properties>
-                    <command>sudo -E ${vyos_op_scripts_dir}/pki.py import_pki --pki-type openvpn --name "$5" --filename "$7"</command>
+                    <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type openvpn --name "$5" --filename "$7"</command>
                   </tagNode>
                 </children>
               </tagNode>
@@ -490,14 +490,8 @@
         <properties>
           <help>Show PKI x509 certificates</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/pki.py show_all</command>
+        <command>${vyos_op_scripts_dir}/pki.py show_all</command>
         <children>
-          <leafNode name="ca">
-            <properties>
-              <help>Show x509 CA certificates</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate_authority</command>
-          </leafNode>
           <tagNode name="ca">
             <properties>
               <help>Show x509 CA certificate by name</help>
@@ -505,22 +499,20 @@
                 <path>pki ca</path>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4"</command>
+            <standalone>
+              <help>Show x509 CA certificates</help>
+              <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority</command>
+            </standalone>
+            <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4"</command>
             <children>
               <leafNode name="pem">
                 <properties>
                   <help>Show x509 CA certificate in PEM format</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4" --pem</command>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate_authority --name "$4" --pem</command>
               </leafNode>
             </children>
           </tagNode>
-          <leafNode name="certificate">
-            <properties>
-              <help>Show x509 certificates</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate</command>
-          </leafNode>
           <tagNode name="certificate">
             <properties>
               <help>Show x509 certificate by name</help>
@@ -528,13 +520,17 @@
                 <path>pki certificate</path>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate --name "$4"</command>
+            <standalone>
+              <help>Show x509 certificates</help>
+              <command>${vyos_op_scripts_dir}/pki.py show_certificate</command>
+            </standalone>
+            <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4"</command>
             <children>
               <leafNode name="pem">
                 <properties>
                   <help>Show x509 certificate in PEM format</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --pem</command>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --pem</command>
               </leafNode>
               <tagNode name="fingerprint">
                 <properties>
@@ -543,16 +539,10 @@
                     <list>sha256 sha384 sha512</list>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --fingerprint "$6"</command>
+                <command>${vyos_op_scripts_dir}/pki.py show_certificate --name "$4" --fingerprint "$6"</command>
               </tagNode>
             </children>
           </tagNode>
-          <leafNode name="crl">
-            <properties>
-              <help>Show x509 certificate revocation lists</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/pki.py show_crl</command>
-          </leafNode>
           <tagNode name="crl">
             <properties>
               <help>Show x509 certificate revocation lists by CA name</help>
@@ -560,6 +550,10 @@
                 <path>pki ca</path>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Show x509 certificate revocation lists</help>
+              <command>${vyos_op_scripts_dir}/pki.py show_crl</command>
+            </standalone>
             <command>${vyos_op_scripts_dir}/pki.py show_crl --name "$4"</command>
             <children>
               <leafNode name="pem">
@@ -576,12 +570,20 @@
   </node>
   <node name="renew">
     <children>
-      <leafNode name="certbot">
+      <node name="certbot">
         <properties>
-          <help>Start manual certbot renewal</help>
+          <help>Manual certbot renewal</help>
         </properties>
-        <command>sudo systemctl start certbot.service</command>
-      </leafNode>
+        <command>${vyos_op_scripts_dir}/pki.py renew_certbot</command>
+        <children>
+          <leafNode name="force">
+            <properties>
+              <help>Force manual certbot renewal</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/pki.py renew_certbot --force</command>
+          </leafNode>
+        </children>
+      </node>
     </children>
   </node>
 </interfaceDefinition>

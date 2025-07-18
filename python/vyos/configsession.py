@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -22,19 +22,24 @@ from vyos.defaults import directories
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.dict import dict_to_paths
 from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.backend import vyconf_backend
 from vyos.vyconf_session import VyconfSession
+from vyos.base import Warning as Warn
+from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 
-vyconf_backend = False
 
 CLI_SHELL_API = '/bin/cli-shell-api'
 SET = '/opt/vyatta/sbin/my_set'
 DELETE = '/opt/vyatta/sbin/my_delete'
 COMMENT = '/opt/vyatta/sbin/my_comment'
 COMMIT = '/opt/vyatta/sbin/my_commit'
+COMMIT_CONFIRM = ['/usr/bin/config-mgmt', 'commit_confirm', '-y']
+CONFIRM = ['/usr/bin/config-mgmt', 'confirm']
 DISCARD = '/opt/vyatta/sbin/my_discard'
 SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
 MIGRATE_LOAD_CONFIG = ['/usr/libexec/vyos/vyos-load-config.py']
+MERGE_CONFIG = ['/usr/libexec/vyos/vyos-merge-config.py']
 SAVE_CONFIG = ['/usr/libexec/vyos/vyos-save-config.py']
 INSTALL_IMAGE = [
     '/usr/libexec/vyos/op_mode/image_installer.py',
@@ -67,6 +72,7 @@ GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
 REBOOT = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reboot']
+RENEW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'renew']
 POWEROFF = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'poweroff']
 OP_CMD_ADD = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'add']
 OP_CMD_DELETE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'delete']
@@ -120,6 +126,10 @@ def inject_vyos_env(env):
     env['vyos_sbin_dir'] = '/usr/sbin'
     env['vyos_validators_dir'] = '/usr/libexec/vyos/validators'
 
+    # with the retirement of the Cstore backend, this will remain as the
+    # sole indication of legacy CLI config mode, as checked by VyconfSession
+    env['_OFR_CONFIGURE'] = 'ok'
+
     # if running the vyos-configd daemon, inject the vyshim env var
     if is_systemd_service_running('vyos-configd.service'):
         env['vyshim'] = '/usr/sbin/vyshim'
@@ -136,7 +146,7 @@ class ConfigSession(object):
     The write API of VyOS.
     """
 
-    def __init__(self, session_id, app=APP):
+    def __init__(self, session_id, app=APP, shared=False):
         """
          Creates a new config session.
 
@@ -164,37 +174,52 @@ class ConfigSession(object):
         for k, v in env_list:
             session_env[k] = v
 
+        session_env['CONFIGSESSION_PID'] = str(session_id)
+
         self.__session_env = session_env
         self.__session_env['COMMIT_VIA'] = app
 
         self.__run_command([CLI_SHELL_API, 'setupSession'])
 
-        if vyconf_backend and boot_configuration_complete():
-            self._vyconf_session = VyconfSession(on_error=ConfigSessionError)
+        if vyconf_backend() and boot_configuration_complete():
+            self._vyconf_session = VyconfSession(
+                pid=session_id, on_error=ConfigSessionError
+            )
         else:
             self._vyconf_session = None
 
+        self.shared = shared
+
     def __del__(self):
-        try:
-            output = (
-                subprocess.check_output(
-                    [CLI_SHELL_API, 'teardownSession'], env=self.__session_env
+        if self.shared:
+            return
+        if self._vyconf_session is None:
+            try:
+                output = (
+                    subprocess.check_output(
+                        [CLI_SHELL_API, 'teardownSession'], env=self.__session_env
+                    )
+                    .decode()
+                    .strip()
                 )
-                .decode()
-                .strip()
-            )
-            if output:
+                if output:
+                    print(
+                        'cli-shell-api teardownSession output for sesion {0}: {1}'.format(
+                            self.__session_id, output
+                        ),
+                        file=sys.stderr,
+                    )
+            except Exception as e:
                 print(
-                    'cli-shell-api teardownSession output for sesion {0}: {1}'.format(
-                        self.__session_id, output
-                    ),
+                    'Could not tear down session {0}: {1}'.format(self.__session_id, e),
                     file=sys.stderr,
                 )
-        except Exception as e:
-            print(
-                'Could not tear down session {0}: {1}'.format(self.__session_id, e),
-                file=sys.stderr,
-            )
+        else:
+            if self._vyconf_session.session_changed():
+                Warn('Exiting with uncommitted changes')
+                self._vyconf_session.discard()
+            self._vyconf_session.exit_config_mode()
+            self._vyconf_session.teardown()
 
     def __run_command(self, cmd_list):
         p = subprocess.Popen(
@@ -283,6 +308,22 @@ class ConfigSession(object):
 
         return out
 
+    def commit_confirm(self, minutes: int = DEFAULT_COMMIT_CONFIRM_MINUTES):
+        if self._vyconf_session is None:
+            out = self.__run_command(COMMIT_CONFIRM + [f'-t {minutes}'])
+        else:
+            out = 'unimplemented'
+
+        return out
+
+    def confirm(self):
+        if self._vyconf_session is None:
+            out = self.__run_command(CONFIRM)
+        else:
+            out = 'unimplemented'
+
+        return out
+
     def discard(self):
         if self._vyconf_session is None:
             self.__run_command([DISCARD])
@@ -293,7 +334,7 @@ class ConfigSession(object):
         if self._vyconf_session is None:
             config_data = self.__run_command(SHOW_CONFIG + path)
         else:
-            config_data, _ = self._vyconf_session.show_config()
+            config_data, _ = self._vyconf_session.show_config(path)
 
         if format == 'raw':
             return config_data
@@ -302,7 +343,7 @@ class ConfigSession(object):
         if self._vyconf_session is None:
             out = self.__run_command(LOAD_CONFIG + [file_path])
         else:
-            out, _ = self._vyconf_session.load_config(file=file_path)
+            out, _ = self._vyconf_session.load_config(file_name=file_path)
 
         return out
 
@@ -319,7 +360,18 @@ class ConfigSession(object):
         if self._vyconf_session is None:
             out = self.__run_command(MIGRATE_LOAD_CONFIG + [file_path])
         else:
-            out, _ = self._vyconf_session.load_config(file=file_path, migrate=True)
+            out, _ = self._vyconf_session.load_config(file_name=file_path, migrate=True)
+
+        return out
+
+    def merge_config(self, file_path, destructive=False):
+        if self._vyconf_session is None:
+            destr = ['--destructive'] if destructive else []
+            out = self.__run_command(MERGE_CONFIG + [file_path] + destr)
+        else:
+            out, _ = self._vyconf_session.merge_config(
+                file_name=file_path, destructive=destructive
+            )
 
         return out
 
@@ -367,6 +419,10 @@ class ConfigSession(object):
 
     def reset(self, path):
         out = self.__run_command(RESET + path)
+        return out
+
+    def renew(self, path):
+        out = self.__run_command(RENEW + path)
         return out
 
     def poweroff(self, path):

@@ -4,6 +4,18 @@
     <help>Display routes matching the community</help>
   </properties>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Community number where AA and NN are (0-65535)</help>
+        <completionHelp>
+          <list>AA:NN</list>
+        </completionHelp>
+      </properties>
+      <children>
+        #include <include/bgp/exact-match.xml.i>
+      </children>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </virtualTagNode>
     <leafNode name="accept-own">
       <properties>
         <help>Should accept local VPN route if exported and imported into different VRF (well-known community)</help>
@@ -142,13 +154,21 @@
     <help>Show BGP routes matching the specified large-communities</help>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <children>
+    <virtualTagNode>
+      <properties>
+        <help>Display routes matching the large-communities</help>
+        <completionHelp>
+          <list>AA:BB:CC</list>
+        </completionHelp>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+      <children>
+        #include <include/bgp/exact-match.xml.i>
+      </children>
+    </virtualTagNode>
+  </children>
 </node>
-<leafNode name="neighbors">
-  <properties>
-    <help>Detailed information on TCP and BGP neighbor connections</help>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</leafNode>
 <tagNode name="neighbors">
   <properties>
     <help>Show BGP information for specified neighbor</help>
@@ -156,63 +176,20 @@
       <script>vtysh -c "$(IFS=$' '; echo "${COMP_WORDS[@]:0:${#COMP_WORDS[@]}-2} summary")" |  awk '/^[0-9a-f]/ {print $1}'</script>
     </completionHelp>
   </properties>
+  <standalone>
+    <help>Detailed information on TCP and BGP neighbor connections</help>
+    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  </standalone>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
-    <leafNode name="advertised-routes">
-      <properties>
-        <help>Show routes advertised to a BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="dampened-routes">
-      <properties>
-        <help>Show dampened routes received from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="flap-statistics">
-      <properties>
-        <help>Show flap statistics of the routes learned from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="prefix-counts">
-      <properties>
-        <help>Show detailed prefix count information for BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <node name="received">
-      <properties>
-        <help>Show information received from BGP neighbor</help>
-      </properties>
-      <children>
-        <leafNode name="prefix-filter">
-          <properties>
-            <help>Show prefixlist filter</help>
-          </properties>
-          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        </leafNode>
-      </children>
-    </node>
-    <leafNode name="filtered-routes">
-      <properties>
-        <help>Show filtered routes from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="received-routes">
-      <properties>
-        <help>Show received routes from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="routes">
-      <properties>
-        <help>Show routes learned from BGP neighbor</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/bgp/advertised-routes.xml.i>
+    #include <include/bgp/dampened-routes.xml.i>
+    #include <include/bgp/filtered-routes.xml.i>
+    #include <include/bgp/flap-statistics.xml.i>
+    #include <include/bgp/prefix-counts.xml.i>
+    #include <include/bgp/received.xml.i>
+    #include <include/bgp/received-routes.xml.i>
+    #include <include/bgp/routes.xml.i>
   </children>
 </tagNode>
 <tagNode name="prefix-list">

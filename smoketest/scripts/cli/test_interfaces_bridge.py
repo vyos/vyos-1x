@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -508,6 +508,31 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(['interfaces', 'vxlan', vxlan_if])
         self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
 
+    def test_bridge_root_bpdu_guard(self):
+        # Test if both bpdu_guard and root_guard configured
+        self.cli_set(['interfaces', 'bridge', 'br0', 'stp'])
+        self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'bpdu-guard'])
+        self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'root-guard'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
+        # Test if bpdu_guard configured
+        self.cli_set(['interfaces', 'bridge', 'br0', 'stp'])
+        self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'bpdu-guard'])
+        self.cli_commit()
+
+        tmp = read_file(f'/sys/class/net/eth0/brport/bpdu_guard')
+        self.assertEqual(tmp, '1')
+
+        # Test if root_guard configured
+        self.cli_delete(['interfaces', 'bridge', 'br0'])
+        self.cli_set(['interfaces', 'bridge', 'br0', 'stp'])
+        self.cli_set(['interfaces', 'bridge', 'br0', 'member', 'interface', 'eth0', 'root-guard'])
+        self.cli_commit()
+
+        tmp = read_file(f'/sys/class/net/eth0/brport/root_block')
+        self.assertEqual(tmp, '1')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

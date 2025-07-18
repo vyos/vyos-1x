@@ -11,13 +11,13 @@
             <properties>
               <help>Reset external cache and request resync with other systems</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py reset_external_cache</command>
+            <command>${vyos_op_scripts_dir}/conntrack_sync.py reset_external_cache</command>
           </leafNode>
           <leafNode name="internal-cache">
             <properties>
               <help>Reset internal cache and request resync with other systems</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py reset_internal_cache</command>
+            <command>${vyos_op_scripts_dir}/conntrack_sync.py reset_internal_cache</command>
           </leafNode>
         </children>
       </node>
@@ -29,7 +29,7 @@
         <properties>
           <help>Restart the connection tracking synchronization service</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py restart</command>
+        <command>${vyos_op_scripts_dir}/conntrack_sync.py restart</command>
       </leafNode>
     </children>
   </node>
@@ -49,19 +49,19 @@
                 <properties>
                   <help>Show external connection tracking cache entries</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_external_cache</command>
+                <command>${vyos_op_scripts_dir}/conntrack_sync.py show_external_cache</command>
                 <children>
                   <leafNode name="main">
                     <properties>
                       <help>Show external main connection tracking cache entries</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_external_cache</command>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py show_external_cache</command>
                   </leafNode>
                   <leafNode name="expect">
                     <properties>
                       <help>Show external expect connection tracking cache entries</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_external_expect</command>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py show_external_expect</command>
                   </leafNode>
                 </children>
               </node>
@@ -69,19 +69,19 @@
                 <properties>
                   <help>Show internal connection tracking cache entries</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_internal_cache</command>
+                <command>${vyos_op_scripts_dir}/conntrack_sync.py show_internal_cache</command>
                 <children>
                   <leafNode name="main">
                     <properties>
                       <help>Show internal main connection tracking cache entries</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_internal_cache</command>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py show_internal_cache</command>
                   </leafNode>
                   <leafNode name="expect">
                     <properties>
                       <help>Show internal expect connection tracking cache entries</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_internal_expect</command>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py show_internal_expect</command>
                   </leafNode>
                 </children>
               </node>
@@ -91,13 +91,13 @@
             <properties>
               <help>Show connection syncing statistics</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_statistics</command>
+            <command>${vyos_op_scripts_dir}/conntrack_sync.py show_statistics</command>
           </leafNode>
           <leafNode name="status">
             <properties>
               <help>Show conntrack-sync status</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py show_status</command>
+            <command>${vyos_op_scripts_dir}/conntrack_sync.py show_status</command>
           </leafNode>
         </children>
       </node>

@@ -35,12 +35,6 @@
                     </properties>
                     <command>vtysh -c "no debug bgp ${@:5}"</command>
                   </node>
-                  <node name="bestpath">
-                    <properties>
-                      <help>Disable BGP allow best path debugging</help>
-                    </properties>
-                    <command>vtysh -c "no debug bgp ${@:5}"</command>
-                  </node>
                   <tagNode name="bestpath">
                     <properties>
                       <help>Disable BGP bestpath IPv4 IPv6</help>
@@ -48,6 +42,10 @@
                         <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
                       </completionHelp>
                     </properties>
+                    <standalone>
+                      <help>Disable BGP allow best path debugging</help>
+                      <command>vtysh -c "no debug bgp ${@:5}"</command>
+                    </standalone>
                     <command>vtysh -c "no debug bgp ${@:5}"</command>
                   </tagNode>
                   <node name="flowspec">
@@ -155,12 +153,6 @@
                     </properties>
                     <command>vtysh -c "debug bgp ${@:5}"</command>
                   </node>
-                  <node name="bestpath">
-                    <properties>
-                      <help>Enable BGP allow best path debugging</help>
-                    </properties>
-                    <command>vtysh -c "debug bgp ${@:5}"</command>
-                  </node>
                   <tagNode name="bestpath">
                     <properties>
                       <help>Debug bestpath IPv4 IPv6</help>
@@ -168,6 +160,10 @@
                         <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
                       </completionHelp>
                     </properties>
+                    <standalone>
+                      <help>Enable BGP allow best path debugging</help>
+                      <command>vtysh -c "debug bgp ${@:5}"</command>
+                    </standalone>
                     <command>vtysh -c "debug bgp ${@:5}"</command>
                   </tagNode>
                   <node name="flowspec">

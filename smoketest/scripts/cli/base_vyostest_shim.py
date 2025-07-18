@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -152,12 +152,14 @@ class VyOSUnitTestSHIM:
             return out
 
         @staticmethod
-        def ssh_send_cmd(command, username, password, hostname='localhost'):
+        def ssh_send_cmd(command, username, password, key_filename=None,
+                         hostname='localhost'):
             """ SSH command execution helper """
             # Try to login via SSH
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_client.connect(hostname=hostname, username=username, password=password)
+            ssh_client.connect(hostname=hostname, username=username,
+                               password=password, key_filename=key_filename)
             _, stdout, stderr = ssh_client.exec_command(command)
             output = stdout.read().decode().strip()
             error = stderr.read().decode().strip()

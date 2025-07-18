@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -127,6 +127,27 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
         # Verify CLI config removed to FRR
         frrconfig = self.getFRRconfig('', end='')
         self.assertNotIn(f'no ip nht resolve-via-default', frrconfig)
+
+    def test_system_ip_import_table(self):
+        table_num = '100'
+        distance = '200'
+        route_map_in = 'foo-map-in'
+        self.cli_set(['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
+        self.cli_set(base_path + ['import-table', table_num, 'distance', distance])
+        self.cli_set(base_path + ['import-table', table_num, 'route-map', route_map_in])
+
+        self.cli_commit()
+        # Verify CLI config applied to FRR
+        frrconfig = self.getFRRconfig('', end='')
+        self.assertIn(f'ip import-table {table_num} distance {distance} route-map {route_map_in}', frrconfig)
+
+        self.cli_delete(['policy', 'route-map', route_map_in])
+
+        self.cli_delete(base_path + ['import-table'])
+        self.cli_commit()
+        # Verify CLI config removed to FRR
+        frrconfig = self.getFRRconfig('', end='')
+        self.assertNotIn(f'ip import-table {table_num} distance {distance}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

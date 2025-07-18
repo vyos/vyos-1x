@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 VyOS maintainers and contributors
+ * Copyright VyOS maintainers and contributors <maintainers@vyos.io>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 or later as
@@ -18,8 +18,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
 #include <stdint.h>
@@ -55,15 +57,17 @@ enum {
     SUCCESS =      1 << 0,
     ERROR_COMMIT = 1 << 1,
     ERROR_DAEMON = 1 << 2,
-    PASS =         1 << 3
+    PASS =         1 << 3,
+    ERROR_COMMIT_APPLY = 1 << 4
 };
 
 volatile int init_alarm = 0;
 volatile int timeout = 0;
 
-int initialization(void *);
+int initialization(void *, char *);
 int pass_through(char **, int);
 void timer_handler(int);
+void leave_hint(char *);
 
 double get_posix_clock_time(void);
 
@@ -94,8 +98,17 @@ int main(int argc, char* argv[])
     char *test = strstr(string_node_data, "VYOS_TAGNODE_VALUE");
     ex_index = test ? 2 : 1;
 
+    char *env_tmp = getenv("VYATTA_CONFIG_TMP");
+    if (env_tmp == NULL) {
+        fprintf(stderr, "Error: Environment variable VYATTA_CONFIG_TMP is not set.\n");
+        exit(EXIT_FAILURE);
+    }
+    char *pid_str = strdup(env_tmp);
+    strsep(&pid_str, "_");
+    debug_print("config session pid: %s\n", pid_str);
+
     if (access(COMMIT_MARKER, F_OK) != -1) {
-        init_timeout = initialization(requester);
+        init_timeout = initialization(requester, pid_str);
         if (!init_timeout) remove(COMMIT_MARKER);
     }
 
@@ -151,13 +164,19 @@ int main(int argc, char* argv[])
         ret = -1;
     }
 
+    if (err & ERROR_COMMIT_APPLY) {
+        debug_print("Received ERROR_COMMIT_APPLY\n");
+        leave_hint(pid_str);
+        ret = -1;
+    }
+
     zmq_close(requester);
     zmq_ctx_destroy(context);
 
     return ret;
 }
 
-int initialization(void* Requester)
+int initialization(void* Requester, char* pid_val)
 {
     char *active_str = NULL;
     size_t active_len = 0;
@@ -184,10 +203,6 @@ int initialization(void* Requester)
 
     double prev_time_value, time_value;
     double time_diff;
-
-    char *pid_val = getenv("VYATTA_CONFIG_TMP");
-    strsep(&pid_val, "_");
-    debug_print("config session pid: %s\n", pid_val);
 
     char *sudo_user = getenv("SUDO_USER");
     if (!sudo_user) {
@@ -336,6 +351,16 @@ void timer_handler(int signum)
     init_alarm = 1;
 
     return;
+}
+
+void leave_hint(char *pid_val)
+{
+    char tmp_str[16];
+    mode_t omask = umask(0);
+    snprintf(tmp_str, sizeof(tmp_str), "/tmp/apply_%s", pid_val);
+    open(tmp_str, O_CREAT|O_RDWR|O_TRUNC, 0666);
+    chown(tmp_str, 1002, 102);
+    umask(omask);
 }
 
 #ifdef _POSIX_MONOTONIC_CLOCK

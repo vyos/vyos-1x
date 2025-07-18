@@ -14,7 +14,7 @@
             <properties>
               <help>Re-generate SSH host keys and restart SSH server</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/generate_ssh_server_key.py</command>
+            <command>${vyos_op_scripts_dir}/generate_ssh_server_key.py</command>
           </node>
           <tagNode name="client-key">
             <properties>

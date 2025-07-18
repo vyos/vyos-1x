@@ -69,7 +69,7 @@ op_mode_definitions: $(op_xml_obj)
 
 	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
-	$(CURDIR)/python/vyos/xml_ref/generate_op_cache.py --xml-dir $(BUILD_DIR)/op-mode-definitions || exit 1
+	$(CURDIR)/python/vyos/xml_ref/generate_op_cache.py --check-path-ambiguity --xml-dir $(BUILD_DIR)/op-mode-definitions || exit 1
 
 	# XXX: tcpdump, ping, traceroute and mtr must be able to recursivly call themselves as the
 	# options are provided from the scripts themselves
@@ -89,7 +89,14 @@ vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+all: clean copyright libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+
+.PHONY: copyright
+copyright:
+	@if git grep -q -E "Copyright( \(C\))? (19|20)[0-9]{2}(-[0-9]{4})? VyOS maintainers"; then \
+		echo "Error: Legacy copyright notice found."; \
+		exit 1; \
+	fi
 
 .PHONY: clean
 clean:
@@ -100,7 +107,7 @@ clean:
 
 .PHONY: test
 test: generate-configd-include-json
-	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/, /ppp/' .
+	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
 .PHONY: check_migration_scripts_executable

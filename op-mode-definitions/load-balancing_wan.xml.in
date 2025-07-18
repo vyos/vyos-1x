@@ -6,7 +6,7 @@
         <properties>
           <help>Restart Wide Area Network (WAN) load-balancing daemon</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart.py restart_service --name load-balancing_wan</command>
+        <command>${vyos_op_scripts_dir}/restart.py restart_service --name load-balancing_wan</command>
       </node>
     </children>
   </node>

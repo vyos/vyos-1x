@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2023 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,18 +17,27 @@
 import re
 import sys
 
-pattern = '(.*):(.*):(.*)'
-allowedChars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '+', '*', '?', '^', '$', '(', ')', '[', ']', '{', '}', '|', '\\', ':', '-' }
+allowedChars = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '+', '*', '?', '^', '$', '(', ')', '[', ']', '{', '}', '|', '\\', ':', '-', '_', ' ' }
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         sys.exit(1)
 
-    value = sys.argv[1].split(':')
-    if not len(value) == 3:
+    value = sys.argv[1]
+
+    # Require at least one well-formed large-community tuple in the pattern. 
+    tmp = value.split(':')
+    if len(tmp) < 3:
         sys.exit(1)
 
-    if not (re.match(pattern, sys.argv[1]) and set(sys.argv[1]).issubset(allowedChars)):
+    # Simple guard against invalid community & 1003.2 pattern chars
+    if not set(value).issubset(allowedChars):
+        sys.exit(1)
+
+    # Don't feed FRR badly formed regex
+    try:
+        re.compile(value)
+    except re.error:
         sys.exit(1)
 
     sys.exit(0)

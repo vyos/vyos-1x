@@ -37,18 +37,21 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
+        <virtualTagNode>
+          <properties>
+            <help>Show BGP information for specified IP address or prefix</help>
+            <completionHelp>
+              <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+            </completionHelp>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </virtualTagNode>
         <leafNode name="cidr-only">
           <properties>
             <help>Display only routes with non-natural netmasks</help>
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
         </leafNode>
-        <node name="community">
-          <properties>
-            <help>Show BGP routes matching the communities</help>
-          </properties>
-          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        </node>
         <tagNode name="community">
           <properties>
             <help>Display routes matching the specified communities</help>
@@ -56,6 +59,10 @@
               <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
             </completionHelp>
           </properties>
+          <standalone>
+            <help>Show BGP routes matching the communities</help>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </standalone>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
         </tagNode>
         <tagNode name="community-list">
@@ -81,36 +88,14 @@
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           <children>
-            <leafNode name="advertised-routes">
-              <properties>
-                <help>Show routes advertised to a BGP neighbor</help>
-              </properties>
-              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            </leafNode>
-            <leafNode name="prefix-counts">
-              <properties>
-                <help>Show detailed prefix count information</help>
-              </properties>
-              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            </leafNode>
-            <leafNode name="filtered-routes">
-              <properties>
-                <help>Show the filtered routes from neighbor</help>
-              </properties>
-              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            </leafNode>
-            <leafNode name="received-routes">
-              <properties>
-                <help>Show the received routes from neighbor</help>
-              </properties>
-              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            </leafNode>
-            <leafNode name="routes">
-              <properties>
-                <help>Show routes learned from neighbor</help>
-              </properties>
-              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            </leafNode>
+            #include <include/bgp/advertised-routes.xml.i>
+            #include <include/bgp/dampened-routes.xml.i>
+            #include <include/bgp/filtered-routes.xml.i>
+            #include <include/bgp/flap-statistics.xml.i>
+            #include <include/bgp/prefix-counts.xml.i>
+            #include <include/bgp/received.xml.i>
+            #include <include/bgp/received-routes.xml.i>
+            #include <include/bgp/routes.xml.i>
           </children>
         </tagNode>
         <leafNode name="paths">
@@ -145,15 +130,6 @@
         </leafNode>
       </children>
     </node>
-    <tagNode name="unicast">
-      <properties>
-        <help>Show BGP information for specified IP address or prefix</help>
-        <completionHelp>
-          <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
   </children>
 </node>
 <leafNode name="large-community-info">

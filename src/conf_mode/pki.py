@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -62,6 +62,10 @@ sync_search = [
     {
         'keys': ['certificate'],
         'path': ['service', 'https'],
+    },
+    {
+        'keys': ['key'],
+        'path': ['service', 'ssh'],
     },
     {
         'keys': ['certificate', 'ca_certificate'],
@@ -140,7 +144,7 @@ def certbot_request(name: str, config: dict, dry_run: bool=True):
 
     # When ACME is used behind a reverse proxy, we always bind to localhost
     # whatever the CLI listen-address is configured for.
-    if ('haproxy' in dict_search('used_by', config) and
+    if ('used_by' in config and 'haproxy' in config['used_by'] and
         is_systemd_service_running(systemd_services['haproxy']) and
         not check_port_availability(listen_address, 80)):
         tmp += f' --http-01-address 127.0.0.1 --http-01-port {internal_ports["certbot_haproxy"]}'
@@ -414,7 +418,8 @@ def verify(pki):
             if 'country' in default_values:
                 country = default_values['country']
                 if len(country) != 2 or not country.isalpha():
-                    raise ConfigError(f'Invalid default country value. Value must be 2 alpha characters.')
+                    raise ConfigError('Invalid default country value. '\
+                                      'Value must be 2 alpha characters.')
 
     if 'changed' in pki:
         # if the list is getting longer, we can move to a dict() and also embed the
@@ -546,7 +551,7 @@ def generate(pki):
             if not ca_cert_present:
                 tmp = dict_search_args(pki, 'ca', f'{autochain_prefix}{cert}', 'certificate')
                 if not bool(tmp) or tmp != cert_chain_base64:
-                    Message(f'Add/replace automatically imported CA certificate for "{cert}"...')
+                    Message(f'Add/replace automatically imported CA certificate for "{cert}" ...')
                     add_cli_node(['pki', 'ca', f'{autochain_prefix}{cert}', 'certificate'], value=cert_chain_base64)
 
     return None

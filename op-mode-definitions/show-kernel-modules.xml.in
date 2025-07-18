@@ -11,7 +11,7 @@
             <properties>
               <help>Show kernel modules</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/kernel_modules.py show</command>
+            <command>${vyos_op_scripts_dir}/kernel_modules.py show</command>
           </node>
         </children>
       </node>
