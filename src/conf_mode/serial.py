@@ -338,173 +338,173 @@ def write_string_to_file(filename, content):
     except Exception as e:
         print(f'Failed to write to {filename}: {e}')
 
-def stop_services_and_remove_files_with_prefix(base_dir, prefix, stop):
-    filelist = []
-    for filename in os.listdir(base_dir):
-        if filename.startswith(prefix):
-            filepath = os.path.join(base_dir, filename)
-            try:
-                if stop:
-                    if filename.endswith('.socket'):
-                        cmd(f'systemctl stop {filename}')
-                os.remove(filepath)
-                filelist.append(filename)
-                print(f'Removed: {filepath}')
-            except Exception as e:
-                print(f'Failed to remove {filepath}: {e}')
-    if not filelist:
-        print(f'No files starting with "{prefix}" found in {base_dir}.')
-    else:
-        return 1
+# def stop_services_and_remove_files_with_prefix(base_dir, prefix, stop):
+#     filelist = []
+#     for filename in os.listdir(base_dir):
+#         if filename.startswith(prefix):
+#             filepath = os.path.join(base_dir, filename)
+#             try:
+#                 if stop:
+#                     if filename.endswith('.socket'):
+#                         cmd(f'systemctl stop {filename}')
+#                 os.remove(filepath)
+#                 filelist.append(filename)
+#                 print(f'Removed: {filepath}')
+#             except Exception as e:
+#                 print(f'Failed to remove {filepath}: {e}')
+#     if not filelist:
+#         print(f'No files starting with "{prefix}" found in {base_dir}.')
+#     else:
+#         return 1
 
-def generate_systemd_socket_file(service, port, output_dir='/etc/systemd/system'):
-    """
-    Create a systemd socket unit that listens on a specified port
-    When a connection is received, systemd activates and runs the associated service unit with the same name
+# def generate_systemd_socket_file(service, port, output_dir='/etc/systemd/system'):
+#     """
+#     Create a systemd socket unit that listens on a specified port
+#     When a connection is received, systemd activates and runs the associated service unit with the same name
 
-    Used with reverse raw, reverse ssh, reverse telnet, and serial tunnelling
-    """
+#     Used with reverse raw, reverse ssh, reverse telnet, and serial tunnelling
+#     """
 
-    socket_file_name = f'iol_{service}_{port}.socket'
-    filename = os.path.join(output_dir, socket_file_name)
+#     socket_file_name = f'iol_{service}_{port}.socket'
+#     filename = os.path.join(output_dir, socket_file_name)
 
-    content = f'''
-[Unit]
-Description=Socket listener on port {port} for on-demand activation of service {service}
+#     content = f'''
+# [Unit]
+# Description=Socket listener on port {port} for on-demand activation of service {service}
 
-[Socket]
-ListenStream={port}
-Accept=yes
+# [Socket]
+# ListenStream={port}
+# Accept=yes
 
-[Install]
-WantedBy=sockets.target
-'''
-    ret = 0
-    try:
-        with open(filename, 'w') as f:
-            f.write(content)
-        try:
-            result = subprocess.run(
-                ['systemctl', 'is-enabled', socket_file_name],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            status = result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            status = e.stdout.strip() or e.stderr.strip()
-            print(f'Error checking enable status: {status}')
+# [Install]
+# WantedBy=sockets.target
+# '''
+#     ret = 0
+#     try:
+#         with open(filename, 'w') as f:
+#             f.write(content)
+#         try:
+#             result = subprocess.run(
+#                 ['systemctl', 'is-enabled', socket_file_name],
+#                 check=True,
+#                 stdout=subprocess.PIPE,
+#                 stderr=subprocess.PIPE,
+#                 text=True
+#             )
+#             status = result.stdout.strip()
+#         except subprocess.CalledProcessError as e:
+#             status = e.stdout.strip() or e.stderr.strip()
+#             print(f'Error checking enable status: {status}')
 
-        if (status == 'masked'):
-            os.system(f'systemctl unmask {socket_file_name}')
-        os.system(f'systemctl enable {socket_file_name}')
-        os.system(f'systemctl start {socket_file_name}')
-        ret = 1
-        print(f'Socket file written to: {filename}')
-    except Exception as e:
-        print(f'Error writing systemd socket file: {e}')
-    return ret
+#         if (status == 'masked'):
+#             os.system(f'systemctl unmask {socket_file_name}')
+#         os.system(f'systemctl enable {socket_file_name}')
+#         os.system(f'systemctl start {socket_file_name}')
+#         ret = 1
+#         print(f'Socket file written to: {filename}')
+#     except Exception as e:
+#         print(f'Error writing systemd socket file: {e}')
+#     return ret
 
-def generate_systemd_service_file(service, exe, port, args, output_dir='/etc/systemd/system'):
-    """
-    Create a systemd service unit for socket activation
-    When a connection is received on the matching socket unit,
-    this service will be triggered to launch the specified executable
+# def generate_systemd_service_file(service, exe, port, args, output_dir='/etc/systemd/system'):
+#     """
+#     Create a systemd service unit for socket activation
+#     When a connection is received on the matching socket unit,
+#     this service will be triggered to launch the specified executable
 
-    Used with reverse raw, reverse ssh, reverse telnet, and serial tunnelling
-    """
+#     Used with reverse raw, reverse ssh, reverse telnet, and serial tunnelling
+#     """
 
-    socket_file_name = f'iol_{service}_{port}@.service'
-    filename = os.path.join(output_dir, socket_file_name)
+#     socket_file_name = f'iol_{service}_{port}@.service'
+#     filename = os.path.join(output_dir, socket_file_name)
 
-    content = f'''
-[Unit]
-Description=Service started on incoming connection to TCP port {port}
+#     content = f'''
+# [Unit]
+# Description=Service started on incoming connection to TCP port {port}
 
-[Service]
-ExecStart={exe} {args}
+# [Service]
+# ExecStart={exe} {args}
 
-StandardInput=socket
-'''
+# StandardInput=socket
+# '''
 
-    ret = 0
-    try:
-        with open(filename, 'w') as f:
-            f.write(content)
-            ret = 1
-        print(f'Service file written to: {filename}')
-    except Exception as e:
-        print(f'Error writing systemd service file: {e}')
-    return ret
+#     ret = 0
+#     try:
+#         with open(filename, 'w') as f:
+#             f.write(content)
+#             ret = 1
+#         print(f'Service file written to: {filename}')
+#     except Exception as e:
+#         print(f'Error writing systemd service file: {e}')
+#     return ret
 
-def group_serial_ports_by_tcp_port_for_rev_raw():
-    """
-    For hunt group
-    Scan /run/serial for ttySx.json files
-    For each file, if 'service' == 'tcp-reverse', group the 'ttySx' part in filename by 'listen_port' value
-    Write output to <listen_port>_tcprvraw files in the same dir with ttySx list
-    """
+# def group_serial_ports_by_tcp_port_for_rev_raw():
+#     """
+#     For hunt group
+#     Scan /run/serial for ttySx.json files
+#     For each file, if 'service' == 'tcp-reverse', group the 'ttySx' part in filename by 'listen_port' value
+#     Write output to <listen_port>_tcprvraw files in the same dir with ttySx list
+#     """
 
-    base_dir = '/run/serial'
+#     base_dir = '/run/serial'
 
-    removed_rev_list = []
-    for filename in os.listdir(base_dir):
-        if filename.endswith('_tcprvraw'):
-            filepath = os.path.join(base_dir, filename)
-            try:
-                os.remove(filepath)
-                removed_rev_list.append(filename)
-                print(f'Removed: {filepath}')
-            except Exception as e:
-                print(f'Failed to remove {filepath}: {e}')
-    if not removed_rev_list:
-        print(f'No files ending with "_tcprvraw" found in {base_dir}.')
+#     removed_rev_list = []
+#     for filename in os.listdir(base_dir):
+#         if filename.endswith('_tcprvraw'):
+#             filepath = os.path.join(base_dir, filename)
+#             try:
+#                 os.remove(filepath)
+#                 removed_rev_list.append(filename)
+#                 print(f'Removed: {filepath}')
+#             except Exception as e:
+#                 print(f'Failed to remove {filepath}: {e}')
+#     if not removed_rev_list:
+#         print(f'No files ending with "_tcprvraw" found in {base_dir}.')
 
-    groups = defaultdict(list)
-    service = 'default'
-    for fname in os.listdir(base_dir):
-        if not fname.startswith('ttyS') or not fname.endswith('.json'):
-            continue
+#     groups = defaultdict(list)
+#     service = 'default'
+#     for fname in os.listdir(base_dir):
+#         if not fname.startswith('ttyS') or not fname.endswith('.json'):
+#             continue
 
-        path = os.path.join(base_dir, fname)
-        try:
-            with open(path, 'r') as f:
-                data = json.load(f)
-            if 'disable' in data:
-                print(f'tty port with {path} shows disabled')
-                continue
-            if data.get('service') == 'tcp-reverse':
-                service = data.get('service')
-                tty = fname[:-5]
-                listen_port = data.get('listen_port')
-                if listen_port:
-                    groups[listen_port].append(tty)
-        except Exception as e:
-            print(f'Error processing {path}: {e}')
+#         path = os.path.join(base_dir, fname)
+#         try:
+#             with open(path, 'r') as f:
+#                 data = json.load(f)
+#             if 'disable' in data:
+#                 print(f'tty port with {path} shows disabled')
+#                 continue
+#             if data.get('service') == 'tcp-reverse':
+#                 service = data.get('service')
+#                 tty = fname[:-5]
+#                 listen_port = data.get('listen_port')
+#                 if listen_port:
+#                     groups[listen_port].append(tty)
+#         except Exception as e:
+#             print(f'Error processing {path}: {e}')
 
-    add_to_systemd = 0
-    for listen_port, ttys in groups.items():
-        if ttys:
-            sorted_ttys = sorted(ttys, key=lambda x: int(x[4:])) # sort ttyS names by their numeric suffix
-            out_file = os.path.join(base_dir, f'{listen_port}_tcprvraw')
-            try:
-                with open(out_file, 'w') as f:
-                    f.write(', '.join(sorted_ttys) + '\n')
+#     add_to_systemd = 0
+#     for listen_port, ttys in groups.items():
+#         if ttys:
+#             sorted_ttys = sorted(ttys, key=lambda x: int(x[4:])) # sort ttyS names by their numeric suffix
+#             out_file = os.path.join(base_dir, f'{listen_port}_tcprvraw')
+#             try:
+#                 with open(out_file, 'w') as f:
+#                     f.write(', '.join(sorted_ttys) + '\n')
 
-                if service == 'tcp-reverse':
-                    add_service = generate_systemd_service_file('revraw', '/usr/bin/iol_revraw_pmgr', listen_port, listen_port)
-                    add_socket = generate_systemd_socket_file('revraw', listen_port)
+#                 if service == 'tcp-reverse':
+#                     add_service = generate_systemd_service_file('revraw', '/usr/bin/iol_revraw_pmgr', listen_port, listen_port)
+#                     add_socket = generate_systemd_socket_file('revraw', listen_port)
 
-                if add_socket and add_service:
-                    add_to_systemd = 1
-                else:
-                    print(f'Error creating systemd files')
-                    sys.exit(2)
-            except Exception as e:
-                print(f'Error writing to {out_file}: {e}')
+#                 if add_socket and add_service:
+#                     add_to_systemd = 1
+#                 else:
+#                     print(f'Error creating systemd files')
+#                     sys.exit(2)
+#             except Exception as e:
+#                 print(f'Error writing to {out_file}: {e}')
 
-    return add_to_systemd
+#     return add_to_systemd
 
 def check_any_running_service_modbus():
     """
@@ -546,11 +546,11 @@ def restart_smodbusd(tty):
 
 SOCKET_PATH = '/tmp/iol_perleinit'
 
-def send_command_to_iolan(action, name, exe, ttynum, mtsport, monitor_signals, require_systemd):
+def send_command_to_iolan(action, name, service, ttynum, mtsport, monitor_signals, require_systemd):
     msg = {
         'action': action,  # 'restart' or 'stop'
         'name': name,
-        'exe': exe,
+        'service': service,
         'ttynum': ttynum,
         'mtsport': mtsport,
         'monitor_signals': monitor_signals,
@@ -574,8 +574,8 @@ def apply(proxy):
 
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
-            stop_services_and_remove_files_with_prefix('/run/serial', device, False)
-            send_command_to_iolan('stop', device, '', int(re.findall(r'\d+', device)[0]), 0, 0, 0)
+            # stop_services_and_remove_files_with_prefix('/run/serial', device, False)
+            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, 0, 0)
 
     # if 'serial_restart' in proxy:
     #     for device in proxy['serial_restart']:
@@ -603,14 +603,14 @@ def apply(proxy):
     #         print(f'iol_smodbusd pid file {smodbusd_pid_file} not found.')
     #         restart_smodbusd(tty)
 
-    add_to_systemd = 0
-    remove_from_systemd = 0
+    # add_to_systemd = 0
+    # remove_from_systemd = 0
 
-    remove_from_systemd = stop_services_and_remove_files_with_prefix('/etc/systemd/system', 'iol_', True)
-    add_to_systemd = group_serial_ports_by_tcp_port_for_rev_raw()
+    # remove_from_systemd = stop_services_and_remove_files_with_prefix('/etc/systemd/system', 'iol_', True)
+    # add_to_systemd = group_serial_ports_by_tcp_port_for_rev_raw()
 
-    if add_to_systemd or remove_from_systemd:
-        call('systemctl daemon-reload')
+    # if add_to_systemd or remove_from_systemd:
+    #     call('systemctl daemon-reload')
 
     if 'device' in proxy:
         ret = 0
@@ -619,6 +619,7 @@ def apply(proxy):
             exe_name = ''
             mtsport = 0
             monitor_dcd_or_dsr = 0
+            require_systemd = 0
             if 'disable' not in serial_config:
 
                 if 'trueport' in serial_config['service']:
@@ -636,6 +637,8 @@ def apply(proxy):
                     exe_name = 'iol_udpd'
                 elif 'tcp-reverse' in serial_config['service']:
                     # Need to rewrite
+                    require_systemd = 1
+                    mtsport = serial_config['listen_port']
                     print(f'running tcp-reverse on {device}')
                 elif 'modbus-master' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_mmodbusp')
@@ -651,8 +654,8 @@ def apply(proxy):
                 if 'hardware' in serial_config:
                     if 'monitor_dcd' in serial_config['hardware'] or 'monitor_dsr' in serial_config['hardware']:
                         monitor_dcd_or_dsr = 1
-                
-                send_command_to_iolan('restart', device, exe_name, int(ttynum), mtsport, monitor_dcd_or_dsr, 0)
+
+                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, monitor_dcd_or_dsr, require_systemd)
             else:
                 send_command_to_iolan('stop', device, '', int(ttynum), 0, 0, 0)
 
@@ -703,4 +706,3 @@ if __name__ == '__main__':
 # if __name__ == '__main__':
 #     # Example usage
 #     send_command('restart', 'ttyS0', '/usr/bin/iol_vmodem', 0, 10085, 0, 0)
-
