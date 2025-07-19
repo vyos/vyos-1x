@@ -27,7 +27,7 @@ jobs:
         github.event_name == 'workflow_dispatch' ||
         (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
       )
-    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@current
+    uses: vyos/.github/.github/workflows/pr-mirror-repo-sync.yml@T7619-mirror-remote-repo-name-fix
     with:
       sync_branch: ${{ github.event.inputs.sync_branch || 'current' }}
     secrets:
