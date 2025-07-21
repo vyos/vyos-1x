@@ -102,17 +102,16 @@ def verify(config_dict):
 
     idp = config_dict.get('idp', {})
 
-    # Check SSO level fallback
-    default_sso_level = idp.get('default_sso_level')
-    if not default_sso_level:
-        raise ConfigError("IDP: default-sso-level must be set as operator or admin")
-
     providers = idp.get('providers', {})
 
     if not providers:
         return # Early kick out (no providers/idp)
 
     for provider_name, provider in providers.items():
+        default_sso_level = provider.get('default_sso_level')
+        if not default_sso_level:
+            raise ConfigError("IDP: default-sso-level must be set as operator or admin")
+
         # Verify provider domains
         domains = provider.get('domain', [])
         if not isinstance(domains, list):
