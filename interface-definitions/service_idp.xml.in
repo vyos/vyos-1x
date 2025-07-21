@@ -18,9 +18,9 @@
             </properties>
             <children>
               <leafNode name="domain">
-                <help>Domain(s) for the identity provider</help>
-                <multi/>
                 <properties>
+                  <multi/>
+                  <help>Domain(s) for the identity provider</help>
                   <valueHelp>
                     <format>example.com</format>
                     <description>Domain of the identity provider</description>
