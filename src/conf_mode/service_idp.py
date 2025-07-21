@@ -28,70 +28,6 @@ import ipaddress
 CONFIG_DIR = r'/etc'
 CONFIG_FILE = r'saml-sso-idp.conf'
 
-def check_url(url: str) -> bool:
-    """
-    Check if the given string is a valid URL.
-    Uses urllib.parse to validate the URL.
-    :param url: The string to check.
-    :return: True if valid URL, False otherwise.
-    """
-    try:
-        result = urlparse(url)
-        return all([result.scheme, result.netloc])
-    except ValueError:
-        return False
-
-def check_ip(ip: str) -> bool:
-    """
-    Check if the given string is a valid IP address (IPv4 or IPv6).
-    Uses the ipaddress module to validate the IP address.
-    :param ip: The string to check.
-    :return: True if valid IP address, False otherwise.
-    """
-    try:
-        ipaddress.ip_address(ip)
-        return True
-    except ValueError:
-        return False
-
-def toggle_pam_profile(profile: str, enable: bool) -> bool:
-    """
-    Toggle a PAM profile using the pam-auth-update command.
-    Uses subprocess to run the command and handle errors.
-    :param profile: The name of the PAM profile to toggle.
-    :param enable: True to enable the profile, False to disable it.
-    :return: True if the profile was toggled successfully, False otherwise.
-    """
-
-    cmd = ['pam-auth-update', '--remove' if not enable else '--enable', profile]
-
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Error enabling PAM profile '{profile}': {e.stderr.strip() if e.stderr else str(e)}")
-        return False
-    except FileNotFoundError:
-        print(f"Command 'pam-auth-update' not found. Ensure the package is installed.")
-        return False
-    except Exception as e:
-        print(f"An unexpected error occurred while enabling PAM profile '{profile}': {str(e)}")
-        return False
-
-def toggle_service(service: str, enable: bool) -> bool:
-    try:
-        if enable:
-            subprocess.run(['systemctl', 'daemon-reload'], check=True)
-            subprocess.run(['systemctl', 'enable', service], check=True)
-            subprocess.run(['systemctl', 'start', service], check=True)
-        else:
-            subprocess.run(['systemctl', 'stop', service], check=True)
-            subprocess.run(['systemctl', 'disable', service], check=True)
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Error toggling service '{service}': {e}")
-        return False
-
 def get_config(config=None):
     if config:
         conf = config
@@ -104,53 +40,121 @@ def get_config(config=None):
     return config_data
 
 def verify(config_dict):
+    def check_url(url: str) -> bool:
+        """
+        Verify if a string is a valid URL.
+
+        Args:
+            url (str): The URL string.
+
+        Returns:
+            True if the string is a valid URL false otherwise.
+        """
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except ValueError:
+            return False
+    def check_ip(ip: str) -> bool:
+        """
+        Verify if a string is a valid IPv4/IPv6.
+
+        Args:
+            url (str): The IP string.
+
+        Returns:
+            True if the string is a valid IPv4/IPv6 false otherwise.
+        """
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            return False
+    def verify_attributes(attributes: dict):
+        """
+        Verify a list of attributes
+
+        Args:
+            attributes (dict): Attributes to verify.
+
+        Raises:
+            ConfigError: If attributes are not valid
+        """
+        req_attributes = attributes.get('req', {})
+        suff_attributes = attributes.get('suff', {})
+        for attr_name, attr in req_attributes.items():
+            values = attr.get('value', [])
+            if not values:
+                raise ConfigError(f"IDP attribute '{attr_name}' must have a value")
+            if not isinstance(values, list):
+                values = [values]
+            if not all(isinstance(value, str) and value.strip() for value in values):
+                raise ConfigError(f"IDP attribute '{attr_name}' values must be non-empty strings")
+
+        for attr_name, attr in suff_attributes.items():
+            values = attr.get('value', [])
+            if not values:
+                raise ConfigError(f"IDP attribute '{attr_name}' must have a value")
+            if not isinstance(values, list):
+                values = [values]
+            if not all(isinstance(value, str) and value.strip() for value in values):
+                raise ConfigError(f"IDP attribute '{attr_name}' values must be non-empty strings")
+
     idp = config_dict.get('idp', {})
-    if not idp:
-        return # No idp config, kick out early
 
-    for name, provider in idp.items():
-        # Validate metadata URL
-        metadata_url = provider.get('metadata_url', None)
-        if not metadata_url:
-            raise ConfigError(f"IDP: {name} must have metadata-url")
-        if not check_url(metadata_url) and not check_ip(metadata_url):
-            raise ConfigError(f"IDP: {name} must have a valid metadata-url")
+    # Check SSO level fallback
+    default_sso_level = idp.get('default_sso_level')
+    if not default_sso_level:
+        raise ConfigError("IDP: default-sso-level must be set as operator or admin")
 
-        # Validate domains
+    providers = idp.get('providers', {})
+
+    if not providers:
+        return # Early kick out (no providers/idp)
+
+    for provider_name, provider in providers.items():
+        # Verify provider domains
         domains = provider.get('domain', [])
         if not isinstance(domains, list):
             domains = [domains]
         if not domains:
-            raise ConfigError(f"IDP: {name} must have at least one configured domain")
+            raise ConfigError(f"IDP: {provider_name}: Must have atleast one domain set")
         if not all(isinstance(domain, str) and domain.strip() for domain in domains):
-            raise ConfigError(f"IDP: {name}, domains must be strings")
+            raise ConfigError(f"IDP: {provider_name}: Domains must be non-empty strings")
 
-        # Validate attributes
-        attributes = provider.get('attribute', {}).get('attr', {})
-        if not attributes:
-            print(f"WARNING: IDP: {name} has no attributes configured")
-        else:
-            for attr_name, attribute in attributes.items():
-                if not attribute:
-                    raise ConfigError(f"IDP: {name} Attribute: {attr_name} must have atleaset one possible value")
+        # Verify metadata-url
+        metadata_url = provider.get('metadata_url')
+        if not metadata_url:
+            raise ConfigError(f"IDP: {provider_name}: Must have a metadata-url")
+        if not check_url(metadata_url) and not check_ip(metadata_url):
+            raise ConfigError(f"IDP: {provider_name}: metadata-url must be a valid URL")
 
-                values = attribute.get('value', [])
-                if not isinstance(values, list):
-                    values = [values]
-                if not values:
-                    raise ConfigError(f"IDP: {name} Attribute: {attr_name} must have atleaset one possible value")
-                if not all(isinstance(value, str) and value.strip() for value in values):
-                    raise ConfigError(f"IDP: {name} Attribute: {attr_name} values must be strings")
+        users = provider.get("user", {})
+        attributes = provider.get("attribute", {})
 
-        # Validate users
-        users = provider.get('user', [])
-        if not isinstance(users, list):
-            users = [users]
-        if not users:
-            print(f"WARNING: IDP: {name} has no users configured")
-        else:
-            if not all(isinstance(user, str) and user.strip() for user in users):
-                raise ConfigError(f"IDP: {name}, users must be strings")
+        if not users and not attributes:
+            print(f"""WARNING: IDP: '{provider_name}' has no attributes or users configured,\n
+            any user from your domain list will be able to login at the default-sso-level""")
+
+        # Verify Users
+        admin_users = users.get('admin', [])
+        operator_users = users.get('operator', [])
+        if admin_users:
+            if not isinstance(admin_users, list):
+                admin_users = [admin_users]
+            if not all(isinstance(admin_user, str) and admin_user.strip() for admin_user in admin_users):
+                raise ConfigError(f"IDP: {provider_name}: Admin users must be non-empty strings")
+        if operator_users:
+            if not isinstance(operator_users, list):
+                operator_users = [operator_users]
+            if not all(isinstance(operator_user, str) and operator_user.strip() for operator_user in operator_users):
+                raise ConfigError(f"IDP: {provider_name}: Operator users must be non-empty strings")
+
+        # Verify attributes
+        admin_attributes = attributes.get('admin', {})
+        verify_attributes(admin_attributes)
+        operator_attributes = attributes.get('operator', {})
+        verify_attributes(operator_attributes)
 
 def generate(config_dict):
     try:
@@ -162,8 +166,59 @@ def generate(config_dict):
         raise ConfigError("Could not generate config file")
 
 def apply(config_dict):
+    def toggle_pam_profile(profile: str, enable: bool) -> bool:
+        """
+        Enable / Disable a pam profile
+
+        Args:
+            profile (str): Name of the profile to toggle
+            enable (bool): Should the pam profile be enabled or disabled
+
+        Returns:
+            True if the profile was successfully toggled, False otherwise
+        """
+        cmd = ['pam-auth-update', '--remove' if not enable else '--enable', profile]
+
+        try:
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error enabling PAM profile '{profile}': {e.stderr.strip() if e.stderr else str(e)}")
+            return False
+        except FileNotFoundError:
+            print(f"Command 'pam-auth-update' not found. Ensure the package is installed.")
+            return False
+        except Exception as e:
+            print(f"An unexpected error occurred while enabling PAM profile '{profile}': {str(e)}")
+            return False
+
+    def toggle_service(service: str, enable: bool) -> bool:
+        """
+        Enable / Disable a systemd service
+
+        Args:
+            service (str): Name of the service to toggle
+            enable (bool): Should the service be enabled or disabled
+
+        Returns:
+            True if the service was successfully toggled, False otherwise
+        """
+        try:
+            if enable:
+                subprocess.run(['systemctl', 'daemon-reload'], check=True)
+                subprocess.run(['systemctl', 'enable', service], check=True)
+                subprocess.run(['systemctl', 'start', service], check=True)
+            else:
+                subprocess.run(['systemctl', 'stop', service], check=True)
+                subprocess.run(['systemctl', 'disable', service], check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error toggling service '{service}': {e}")
+            return False
+
     idp = config_dict.get('idp', {})
-    enable = True if idp else False
+    providers = idp.get('provider', {})
+    enable = True if idp and providers else False
 
     if not toggle_pam_profile('saml_auth', enable):
         raise ConfigError("Failed to toggle saml_auth PAM profile")
