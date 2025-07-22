@@ -1,4 +1,4 @@
-# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -143,6 +143,7 @@ class ConfigFileModel(ApiModel):
     file: StrictStr = None
     string: StrictStr = None
     confirm_time: StrictInt = 0
+    destructive: bool = False
 
     class Config:
         json_schema_extra = {

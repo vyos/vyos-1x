@@ -111,7 +111,7 @@
         flags interval
         auto-merge
 {%             if group_conf.interface is vyos_defined or includes %}
-        elements = { {{ group_conf.interface | nft_nested_group(includes, group.interface_group, 'interface') | join(",") }} }
+        elements = { {{ group_conf.interface | nft_nested_group(includes, group.interface_group, 'interface') | quoted_join(",") }} }
 {%             endif %}
     }
 {%         endfor %}

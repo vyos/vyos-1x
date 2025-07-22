@@ -1,4 +1,4 @@
-# Copyright 2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@ from fastapi import HTTPException
 from fastapi import APIRouter
 from fastapi import BackgroundTasks
 from fastapi.routing import APIRoute
+from fastapi.concurrency import run_in_threadpool
 from starlette.datastructures import FormData
 from starlette.formparsers import FormParser
 from starlette.formparsers import MultiPartParser
@@ -308,6 +309,7 @@ def call_commit_confirm(s: SessionState):
     env['IN_COMMIT_CONFIRM'] = 't'
     try:
         s.session.commit()
+        s.session.commit_confirm(minutes=s.confirm_time)
     except ConfigSessionError as e:
         s.session.discard()
         if s.debug:
@@ -318,7 +320,29 @@ def call_commit_confirm(s: SessionState):
         del env['IN_COMMIT_CONFIRM']
 
 
-def _configure_op(
+def run_commit(s: SessionState):
+    try:
+        out = s.session.commit()
+        return out, None
+    except Exception as e:
+        return None, e
+
+
+def run_commit_confirm(s: SessionState):
+    env = s.session.get_session_env()
+    env['IN_COMMIT_CONFIRM'] = 't'
+    try:
+        out_c = s.session.commit()
+        out_cc = s.session.commit_confirm(minutes=s.confirm_time)
+        out = out_c + '\n' + out_cc
+        return out, None
+    except Exception as e:
+        return None, e
+    finally:
+        del env['IN_COMMIT_CONFIRM']
+
+
+async def _configure_op(
     data: Union[
         ConfirmModel,
         ConfigureModel,
@@ -420,21 +444,25 @@ def _configure_op(
         config = Config(session_env=env)
         d = get_config_diff(config)
 
-        if confirm_time:
-            out = session.commit_confirm(minutes=confirm_time)
-            msg = msg + out if msg else out
-            env['IN_COMMIT_CONFIRM'] = 't'
+        state.confirm_time = confirm_time if confirm_time else 0
 
-        if d.is_node_changed(['service', 'https']):
+        if not d.is_node_changed(['service', 'https']):
+            if confirm_time:
+                out, err = await run_in_threadpool(run_commit_confirm, state)
+                if err:
+                    raise err
+                msg = msg + out if msg else out
+            else:
+                out, err = await run_in_threadpool(run_commit, state)
+                if err:
+                    raise err
+                msg = msg + out if msg else out
+        else:
             if confirm_time:
                 background_tasks.add_task(call_commit_confirm, state)
             else:
                 background_tasks.add_task(call_commit, state)
             out = self_ref_msg
-            msg = msg + out if msg else out
-        else:
-            # capture non-fatal warnings
-            out = session.commit()
             msg = msg + out if msg else out
 
         LOG.info(f"Configuration modified via HTTP API using key '{state.id}'")
@@ -472,12 +500,14 @@ def create_path_import_pki_no_prompt(path):
 
 
 @router.post('/configure')
-def configure_op(
+async def configure_op(
     data: Union[ConfigureModel, ConfigureListModel, ConfirmModel],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
-    return _configure_op(data, request, background_tasks)
+    out = await _configure_op(data, request, background_tasks)
+
+    return out
 
 
 @router.post('/configure-section')
@@ -534,12 +564,15 @@ async def retrieve_op(data: RetrieveModel):
 
 
 @router.post('/config-file')
-def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
+async def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
     state = SessionState()
     session = state.session
     env = session.get_session_env()
     op = data.op
     msg = None
+
+    # A non-zero confirm_time will start commit-confirm timer on commit
+    confirm_time = data.confirm_time
 
     lock.acquire()
 
@@ -564,26 +597,32 @@ def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTasks):
                 case 'load':
                     session.migrate_and_load_config(path)
                 case 'merge':
-                    session.merge_config(path)
+                    session.merge_config(path, destructive=data.destructive)
 
             config = Config(session_env=env)
             d = get_config_diff(config)
 
-            if data.confirm_time:
-                out = session.commit_confirm(minutes=data.confirm_time)
-                msg = msg + out if msg else out
-                env['IN_COMMIT_CONFIRM'] = 't'
+            state.confirm_time = confirm_time if confirm_time else 0
 
-            if d.is_node_changed(['service', 'https']):
-                if data.confirm_time:
+            if not d.is_node_changed(['service', 'https']):
+                if confirm_time:
+                    out, err = await run_in_threadpool(run_commit_confirm, state)
+                    if err:
+                        raise err
+                    msg = msg + out if msg else out
+                else:
+                    out, err = await run_in_threadpool(run_commit, state)
+                    if err:
+                        raise err
+                    msg = msg + out if msg else out
+            else:
+                if confirm_time:
                     background_tasks.add_task(call_commit_confirm, state)
                 else:
                     background_tasks.add_task(call_commit, state)
                 out = self_ref_msg
                 msg = msg + out if msg else out
-            else:
-                out = session.commit()
-                msg = msg + out if msg else out
+
         elif op == 'confirm':
             msg = session.confirm()
         else:

@@ -1,6 +1,6 @@
 #    interface_definition.rnc: VyConf reference tree XML grammar
 #
-#    Copyright (C) 2014-2025 VyOS maintainers and contributors <maintainers@vyos.net>
+#    Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Lesser General Public
@@ -60,6 +60,15 @@ standalone = element standalone
     help & command
 }
 
+# Virtual tag nodes provide a way to add a variable argument
+# to a command that also needs fixed arguments,
+# like "show ip route" that can take "show ip route bgp"
+# or a network and arguments after it, like "show ip route 10.0.0.0/8 longer-prefixes"
+virtualTagNode = element virtualTagNode
+{
+    (properties? & children? & command?)
+}
+
 # Leaf nodes are terminal configuration nodes that can't have children,
 # but can have values.
 
@@ -69,9 +78,11 @@ leafNode = element leafNode
     (command & properties)
 }
 
-# Normal and tag nodes may have children
+# Normal and tag nodes may have children: nodes, leaf nodes, or tag nodes.
+# There can only be one virtual tag node child, though.
 children = element children
 {
+    (virtualTagNode? & (node | tagNode | leafNode)*) |
     (node | tagNode | leafNode)+
 }
 

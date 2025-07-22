@@ -1,4 +1,4 @@
-# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -581,6 +581,10 @@ def snmp_auth_oid(type):
         'none': '.1.3.6.1.6.3.10.1.2.1'
     }
     return OIDs[type]
+
+@register_filter('quoted_join')
+def quoted_join(input_list, join_str, quote='"'):
+    return str(join_str).join(f'{quote}{elem}{quote}' for elem in input_list)
 
 @register_filter('nft_action')
 def nft_action(vyos_action):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,84 +16,60 @@
 #
 #
 
-"""Load config file from within config session.
-Config file specified by URI or path (without scheme prefix).
-Example: load https://somewhere.net/some.config
-        or
-         load /tmp/some.config
-"""
-
 import os
 import sys
-import gzip
+import argparse
 import tempfile
-import vyos.defaults
-import vyos.remote
-from vyos.configsource import ConfigSourceSession, VyOSError
+
+from vyos.remote import get_config_file
+from vyos.config import Config
 from vyos.migrate import ConfigMigrate
 from vyos.migrate import ConfigMigrateError
+from vyos.load_config import load as load_config
+from vyos.defaults import directories
 
-class LoadConfig(ConfigSourceSession):
-    """A subclass for calling 'loadFile'.
-    This does not belong in configsource.py, and only has a single caller.
-    """
-    def load_config(self, path):
-        return self._run(['/bin/cli-shell-api','loadFile',path])
 
-file_name = sys.argv[1] if len(sys.argv) > 1 else 'config.boot'
-configdir = vyos.defaults.directories['config']
-protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
+default_config_file = os.path.join(directories['config'], 'config.boot')
 
-def get_local_config(filename):
-    if os.path.isfile(filename):
-        fname = filename
-    elif os.path.isfile(os.path.join(configdir, filename)):
-        fname = os.path.join(configdir, filename)
-    else:
-        sys.exit(f"No such file '{filename}'")
+parser = argparse.ArgumentParser()
+parser.add_argument('config_file', nargs='?', help='config file to load')
+parser.add_argument(
+    '--migrate', action='store_true', help='migrate config file before merge'
+)
 
-    if fname.endswith('.gz'):
-        with gzip.open(fname, 'rb') as f:
-            try:
-                config_str = f.read().decode()
-            except OSError as e:
-                sys.exit(e)
-    else:
-        with open(fname, 'r') as f:
-            try:
-                config_str = f.read()
-            except OSError as e:
-                sys.exit(e)
+args = parser.parse_args()
 
-    return config_str
+file_name = args.config_file if args.config_file else default_config_file
 
-if any(file_name.startswith(f'{x}://') for x in protocols):
-    config_string = vyos.remote.get_remote_config(file_name)
-    if not config_string:
-        sys.exit(f"No such config file at '{file_name}'")
+# pylint: disable=consider-using-with
+file_path = tempfile.NamedTemporaryFile(delete=False).name
+err = get_config_file(file_name, file_path)
+if err:
+    os.remove(file_path)
+    sys.exit(err)
+
+if args.migrate:
+    migrate = ConfigMigrate(file_path)
+    try:
+        migrate.run()
+    except ConfigMigrateError as e:
+        os.remove(file_path)
+        sys.exit(e)
+
+config = Config()
+
+if config.vyconf_session is not None:
+    out, err = config.vyconf_session.load_config(file_path)
+    if err:
+        os.remove(file_path)
+        sys.exit(out)
+    print(out)
 else:
-    config_string = get_local_config(file_name)
+    load_config(file_path)
 
-config = LoadConfig()
-
-print(f"Loading configuration from '{file_name}'")
-
-with tempfile.NamedTemporaryFile() as fp:
-    with open(fp.name, 'w') as fd:
-        fd.write(config_string)
-
-    config_migrate = ConfigMigrate(fp.name)
-    try:
-        config_migrate.run()
-    except ConfigMigrateError as err:
-        sys.exit(err)
-
-    try:
-        config.load_config(fp.name)
-    except VyOSError as err:
-        sys.exit(err)
+os.remove(file_path)
 
 if config.session_changed():
     print("Load complete. Use 'commit' to make changes effective.")
 else:
-    print("No configuration changes to commit.")
+    print('No configuration changes to commit.')

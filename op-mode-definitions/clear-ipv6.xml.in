@@ -7,12 +7,6 @@
           <help>Clear Internet Protocol (IPv6) statistics or status</help>
         </properties>
         <children>
-          <node name="prefix-list">
-            <properties>
-              <help>Clear prefix-list statistics or status</help>
-            </properties>
-            <command>vtysh -c "$*"</command>
-          </node>
           <tagNode name="prefix-list">
             <properties>
               <help>Clear prefix-list statistics or status for specified word</help>
@@ -20,9 +14,13 @@
                 <list>WORD</list>
               </completionHelp>
             </properties>
+            <standalone>
+              <help>Clear prefix-list statistics or status</help>
+              <command>vtysh -c "$*"</command>
+            </standalone>
             <command>vtysh -c "$*"</command>
             <children>
-              <leafNode name="node.tag">
+              <virtualTagNode>
                 <properties>
                   <help>Clear prefix-list statistics or status for given word|network</help>
                   <completionHelp>
@@ -30,7 +28,7 @@
                   </completionHelp>
                 </properties>
                 <command>vtysh -c "$*"</command>
-              </leafNode>
+              </virtualTagNode>
             </children>
           </tagNode>
         </children>

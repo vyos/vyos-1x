@@ -21,7 +21,7 @@
         <help>Search by Any Link state Type</help>
       </properties>
       <children>
-        <tagNode name="any">
+        <virtualTagNode>
           <properties>
             <help>Search by Link state ID</help>
             <completionHelp>
@@ -32,31 +32,32 @@
             #include <include/frr-detail.xml.i>
             #include <include/ospfv3/dump.xml.i>
             #include <include/ospfv3/internal.xml.i>
+            #include <include/ospfv3/adv-router-id-node-tag.xml.i>
           </children>
-        </tagNode>
+        </virtualTagNode>
       </children>
     </node>
-    <tagNode name="any">
-      <properties>
-        <help>Search by Link state ID</help>
-        <completionHelp>
-          <list>&lt;x.x.x.x&gt;</list>
-        </completionHelp>
-      </properties>
-      <command>vtysh -c "show ipv6 ospf6 database * $6"</command>
-      <children>
-        #include <include/frr-detail.xml.i>
-        #include <include/ospfv3/dump.xml.i>
-        #include <include/ospfv3/internal.xml.i>
-        #include <include/ospfv3/adv-router-id-node-tag.xml.i>
-      </children>
-    </tagNode>
     <node name="as-external">
       <properties>
         <help>Show AS-External LSAs</help>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
+        <virtualTagNode>
+          <properties>
+            <help>Search by Advertising Router IDs</help>
+            <completionHelp>
+              <list>&lt;x.x.x.x&gt;</list>
+            </completionHelp>
+          </properties>
+          <children>
+            #include <include/frr-detail.xml.i>
+            #include <include/ospfv3/dump.xml.i>
+            #include <include/ospfv3/internal.xml.i>
+            #include <include/ospfv3/self-originated.xml.i>
+            #include <include/ospfv3/adv-router-id-node-tag.xml.i>
+          </children>
+        </virtualTagNode>
         #include <include/ospfv3/adv-router.xml.i>
         <tagNode name="any">
           <properties>
@@ -79,21 +80,6 @@
         #include <include/ospfv3/self-originated.xml.i>
       </children>
     </node>
-    <tagNode name="as-external">
-      <properties>
-        <help>Search by Advertising Router IDs</help>
-        <completionHelp>
-          <list>&lt;x.x.x.x&gt;</list>
-        </completionHelp>
-      </properties>
-      <children>
-        #include <include/frr-detail.xml.i>
-        #include <include/ospfv3/dump.xml.i>
-        #include <include/ospfv3/internal.xml.i>
-        #include <include/ospfv3/self-originated.xml.i>
-        #include <include/ospfv3/adv-router-id-node-tag.xml.i>
-      </children>
-    </tagNode>
     #include <include/frr-detail.xml.i>
     #include <include/ospfv3/internal.xml.i>
     #include <include/ospfv3/linkstate-id.xml.i>
@@ -188,7 +174,7 @@
         #include <include/ospfv3/self-originated.xml.i>
       </children>
     </node>
-    <node name="node.tag">
+    <virtualTagNode>
       <properties>
         <help>Show LSAs</help>
       </properties>
@@ -202,7 +188,7 @@
         #include <include/ospfv3/linkstate-id-node-tag.xml.i>
         #include <include/ospfv3/self-originated.xml.i>
       </children>
-    </node>
+    </virtualTagNode>
     <node name="router">
       <properties>
         <help>Show router LSAs</help>

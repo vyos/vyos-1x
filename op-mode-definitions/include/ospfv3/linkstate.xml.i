@@ -13,7 +13,7 @@
         </completionHelp>
       </properties>
       <children>
-        <node name="node.tag">
+        <virtualTagNode>
           <properties>
             <help>Specify Link state ID as IPv4 address notation</help>
             <completionHelp>
@@ -21,7 +21,7 @@
             </completionHelp>
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        </node>
+        </virtualTagNode>
       </children>
     </tagNode>
     <tagNode name="router">

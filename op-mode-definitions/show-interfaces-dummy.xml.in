@@ -4,27 +4,9 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="dummy">
+         <node name="dummy">
             <properties>
-              <help>Show specified Dummy interface information</help>
-              <completionHelp>
-                <path>interfaces dummy</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=dummy</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified dummy interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=dummy</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="dummy">
-            <properties>
-              <help>Show Dummy interface information</help>
+              <help>Show dummy interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=dummy</command>
             <children>
@@ -34,6 +16,24 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=dummy</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified dummy interface information</help>
+                  <completionHelp>
+                    <path>interfaces dummy</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=dummy</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified dummy interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=dummy</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

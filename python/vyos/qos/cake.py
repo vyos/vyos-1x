@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -54,7 +54,16 @@ class CAKE(QoSBase):
                     f'Invalid flow isolation parameter: {config["flow_isolation"]}'
                 )
 
+        if 'ack_filter' in config:
+            if 'aggressive' in config['ack_filter']:
+                tmp += ' ack-filter-aggressive'
+            else:
+                tmp += ' ack-filter'
+        else:
+            tmp += ' no-ack-filter'
+
         tmp += ' nat' if 'flow_isolation_nat' in config else ' nonat'
+        tmp += ' no-split-gso' if 'no_split_gso' in config else ' split-gso'
 
         self._cmd(tmp)
 

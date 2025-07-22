@@ -18,6 +18,23 @@
                 </properties>
                 <command>vtysh -c "show mpls ldp binding"</command>
                 <children>
+                  <virtualTagNode>
+                    <properties>
+                      <help>LDP forwarding equivalence class</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show mpls ldp binding $5"</command>
+                    <children>
+                      <leafNode name="detail">
+                        <properties>
+                          <help>Show detailed information</help>
+                        </properties>
+                        <command>vtysh -c "show mpls ldp binding $5 detail"</command>
+                      </leafNode>
+                    </children>
+                  </virtualTagNode>
                   <node name="detail">
                     <properties>
                       <help>Show detailed information</help>
@@ -116,23 +133,6 @@
                   </tagNode>
                 </children>
               </node>
-              <tagNode name="binding">
-                <properties>
-                  <help>LDP forwarding equivalence class</help>
-                  <completionHelp>
-                    <list>&lt;x.x.x.x/x&gt; &lt;h:h:h:h:h:h:h:h/h&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>vtysh -c "show mpls ldp binding $5"</command>
-                <children>
-                  <leafNode name="detail">
-                    <properties>
-                      <help>Show detailed information</help>
-                    </properties>
-                    <command>vtysh -c "show mpls ldp binding $5 detail"</command>
-                  </leafNode>
-                </children>
-              </tagNode>
               <node name="discovery">
                 <properties>
                   <help>Discovery hello information</help>
@@ -171,32 +171,32 @@
                     </properties>
                     <command>vtysh -c "show mpls ldp neighbor capabilities"</command>
                   </leafNode>
+                  <virtualTagNode>
+                    <properties>
+                      <help>LDP neighbor</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                        <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show mpls ldp neighbor $5"</command>
+                    <children>
+                      <leafNode name="detail">
+                        <properties>
+                          <help>Show detailed information</help>
+                        </properties>
+                        <command>vtysh -c "show mpls ldp neighbor $5 detail"</command>
+                      </leafNode>
+                      <leafNode name="capabilities">
+                        <properties>
+                          <help>Show neighbor capability information</help>
+                        </properties>
+                        <command>vtysh -c "show mpls ldp neighbor $5 capabilities"</command>
+                      </leafNode>
+                    </children>
+                  </virtualTagNode>
                 </children>
               </node>
-              <tagNode name="neighbor">
-                <properties>
-                  <help>LDP neighbor</help>
-                  <completionHelp>
-                    <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-                    <script>vtysh -c "show mpls ldp neighbor" | awk '{print $2}' | egrep -v "ID"</script>
-                  </completionHelp>
-                </properties>
-                <command>vtysh -c "show mpls ldp neighbor $5"</command>
-                <children>
-                  <leafNode name="detail">
-                    <properties>
-                      <help>Show detailed information</help>
-                    </properties>
-                    <command>vtysh -c "show mpls ldp neighbor $5 detail"</command>
-                  </leafNode>
-                  <leafNode name="capabilities">
-                    <properties>
-                      <help>Show neighbor capability information</help>
-                    </properties>
-                    <command>vtysh -c "show mpls ldp neighbor $5 capabilities"</command>
-                  </leafNode>
-                </children>
-              </tagNode>
             </children>
           </node>
           <node name="pseudowire">
