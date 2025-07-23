@@ -34,7 +34,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['service', 'idp']
+    base = ['service', 'saml']
 
     config_data = conf.get_config_dict(base, key_mangling=('-', '_'))
     return config_data
