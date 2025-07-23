@@ -7,11 +7,12 @@
     <leafNode name="speed">
       <properties>
         <help>Baud rate</help>
-        <completionHelp>
-          <list>300 600 1200 1800 2400 4800 9600 19200 28800 38400 57600 115200 230400</list>
-        </completionHelp>
+        <valueHelp>
+          <format>u32:300-1843200</format>
+          <description>Decimal integer (300 - 1843200)</description>
+        </valueHelp>
         <constraint>
-          <regex>(300|600|1200|1800|2400|4800|9600|19200|28800|38400|57600|115200|230400)</regex>
+          <validator name="numeric" argument="--range 300-1843200"/>
         </constraint>
       </properties>
       <defaultValue>9600</defaultValue>
@@ -63,6 +64,30 @@
         </constraint>
       </properties>
       <defaultValue>1</defaultValue>
+    </leafNode>
+    <leafNode name="interface">
+      <properties>
+        <help>Serial protocol</help>
+        <completionHelp>
+          <list>rs232 rs422 rs485f rs485h</list>
+        </completionHelp>
+        <constraint>
+          <regex>(rs232|rs422|rs485f|rs485h)</regex>
+        </constraint>
+      </properties>
+      <defaultValue>rs232</defaultValue>
+    </leafNode>
+    <leafNode name="line-termination">
+      <properties>
+        <help>Enable line-termination for rs422 and rs485</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="echo-suppression">
+      <properties>
+        <help>Enable echo-suppression for rs485 half only</help>
+        <valueless/>
+      </properties>
     </leafNode>
     <leafNode name="monitor-dsr">
       <properties>
