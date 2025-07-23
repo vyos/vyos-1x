@@ -16,7 +16,7 @@
             </properties>
             <command>nmap -p- -T4 --max-retries=1 --host-timeout=30s "$4"</command>
             <children>
-              <leafNode name="node.tag">
+              <virtualTagNode>
                 <properties>
                   <help>Port scan options</help>
                   <completionHelp>
@@ -24,7 +24,7 @@
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/execute_port-scan.py "${@:4}"</command>
-              </leafNode>
+              </virtualTagNode>
             </children>
           </tagNode>
         </children>

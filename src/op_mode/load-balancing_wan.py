@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -56,13 +56,15 @@ def _get_raw_data():
         return data
 
 def _get_formatted_output(raw_data):
+    from time import time
+
     for ifname, if_data in raw_data.items():
         latest_change = if_data['last_success'] if if_data['last_success'] > if_data['last_failure'] else if_data['last_failure']
 
         change_dt = datetime.fromtimestamp(latest_change) if latest_change > 0 else None
         success_dt = datetime.fromtimestamp(if_data['last_success']) if if_data['last_success'] > 0 else None
         failure_dt = datetime.fromtimestamp(if_data['last_failure']) if if_data['last_failure'] > 0 else None
-        now = datetime.utcnow()
+        now = datetime.fromtimestamp(time())
 
         fmt_data = {
             'ifname': ifname,

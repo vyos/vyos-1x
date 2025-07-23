@@ -11,30 +11,30 @@
             <properties>
               <help>Access VLANs</help>
             </properties>
-            <children>
+	        <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Access VLANs interface name</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --bridgeable --no-vlan-subinterfaces</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <virtualTagNode>
+                    <properties>
+                      <help>VLAN ID</help>
+                      <completionHelp>
+                        <list>&lt;1-4094&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+                  </virtualTagNode>
+                </children>
+              </virtualTagNode>
               #include <include/frr-detail.xml.i>
             </children>
             <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
           </node>
-          <tagNode name="access-vlan">
-            <properties>
-              <help>Access VLANs interface name</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --bridgeable --no-vlan-subinterfaces</script>
-              </completionHelp>
-            </properties>
-            <children>
-              <node name="node.tag">
-                <properties>
-                  <help>VLAN ID</help>
-                  <completionHelp>
-                    <list>&lt;1-4094&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
-              </node>
-            </children>
-          </tagNode>
           <node name="arp-cache">
             <properties>
               <help>ARP and ND cache</help>
@@ -43,22 +43,22 @@
               #include <include/vni-tagnode-all.xml.i>
             </children>
           </node>
-          <tagNode name="es">
-            <properties>
-              <help>Show ESI information for specified ESI</help>
-              <completionHelp>
-                <list>&lt;esi&gt;</list>
-                <script>${vyos_completion_dir}/list_esi.sh</script>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
-          </tagNode>
           <node name="es">
             <properties>
               <help>Show ESI information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
             <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Show ESI information for specified ESI</help>
+                  <completionHelp>
+                    <list>&lt;esi&gt;</list>
+                    <script>${vyos_completion_dir}/list_esi.sh</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+              </virtualTagNode>
               <leafNode name="detail">
                 <properties>
                   <help>Show ESI details</help>
@@ -106,13 +106,22 @@
               #include <include/vni-tagnode-all.xml.i>
             </children>
           </node>
-          #include <include/vni-tagnode.xml.i>
           <node name="vni">
             <properties>
               <help>Show VNI information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
-            <children>
+	    <children>
+              <virtualTagNode>
+                <properties>
+                  <help>VXLAN network identifier (VNI) number</help>
+                  <completionHelp>
+                    <list>&lt;1-16777215&gt;</list>
+                    <script>${vyos_completion_dir}/list_vni.sh</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/evpn.py show_evpn --command "$*"</command>
+              </virtualTagNode>
               <leafNode name="detail">
                 <properties>
                   <help>Show VNI details</help>

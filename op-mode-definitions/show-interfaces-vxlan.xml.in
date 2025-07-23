@@ -4,25 +4,7 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="vxlan">
-            <properties>
-              <help>Show specified VXLAN interface information</help>
-              <completionHelp>
-                <path>interfaces vxlan</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=vxlan</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified VXLAN interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=vxlan</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="vxlan">
+         <node name="vxlan">
             <properties>
               <help>Show VXLAN interface information</help>
             </properties>
@@ -34,6 +16,24 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=vxlan</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified VXLAN interface information</help>
+                  <completionHelp>
+                    <path>interfaces vxlan</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=vxlan</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified VXLAN interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=vxlan</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

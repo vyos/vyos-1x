@@ -4,25 +4,7 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="geneve">
-            <properties>
-              <help>Show specified GENEVE interface information</help>
-              <completionHelp>
-                <path>interfaces geneve</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=geneve</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified GENEVE interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=geneve</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="geneve">
+         <node name="geneve">
             <properties>
               <help>Show GENEVE interface information</help>
             </properties>
@@ -34,6 +16,24 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=geneve</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified GENEVE interface information</help>
+                  <completionHelp>
+                    <path>interfaces geneve</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=geneve</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified GENEVE interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=geneve</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

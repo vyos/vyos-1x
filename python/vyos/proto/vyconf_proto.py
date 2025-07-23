@@ -100,11 +100,13 @@ class Rollback:
 @dataclass
 class Load:
     Location: str = ""
+    cached: bool = False
     format: ConfigFormat = None
 
 @dataclass
 class Merge:
     Location: str = ""
+    destructive: bool = False
     format: ConfigFormat = None
 
 @dataclass
@@ -298,14 +300,14 @@ def set_request_rollback(token: str = None, revision: int = 0):
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_load(token: str = None, location: str = "", format: ConfigFormat = None):
-    reqi = Load (location, format)
+def set_request_load(token: str = None, location: str = "", cached: bool = False, format: ConfigFormat = None):
+    reqi = Load (location, cached, format)
     req = Request(load=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_merge(token: str = None, location: str = "", format: ConfigFormat = None):
-    reqi = Merge (location, format)
+def set_request_merge(token: str = None, location: str = "", destructive: bool = False, format: ConfigFormat = None):
+    reqi = Merge (location, destructive, format)
     req = Request(merge=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env

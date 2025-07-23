@@ -9,28 +9,38 @@
               <help>Border Gateway Protocol (BGP) information</help>
             </properties>
             <children>
+              <virtualTagNode>
+                <properties>
+                  <help>BGP IPv4/IPv6 neighbor to clear</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </virtualTagNode>
               <leafNode name="all">
                 <properties>
                   <help>Clear all BGP peering sessions</help>
                 </properties>
                 <command>vtysh -c "clear bgp ipv4 *"</command>
               </leafNode>
-              <node name="dampening">
-                <properties>
-                  <help>Clear BGP route flap dampening information</help>
-                </properties>
-                <command>vtysh -c "clear ip bgp dampening"</command>
-              </node>
               <tagNode name="dampening">
                 <properties>
-                  <help>Clear BGP route flap dampening information for given host|network address</help>
+                  <help>Clear BGP route flap dampening information for given host ornetwork address</help>
                   <completionHelp>
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
+                <standalone>
+                  <help>Clear BGP route flap dampening information</help>
+                  <command>vtysh -c "clear ip bgp dampening"</command>
+                </standalone>
                 <command>vtysh -c "clear ip bgp dampening $5"</command>
                 <children>
-                  <leafNode name="node.tag">
+                  <virtualTagNode>
                     <properties>
                       <help>Clear BGP route flap dampening information for given network address</help>
                       <completionHelp>
@@ -38,7 +48,7 @@
                       </completionHelp>
                     </properties>
                     <command>vtysh -c "clear ip bgp dampening $5 $6"</command>
-                  </leafNode>
+                  </virtualTagNode>
                 </children>
               </tagNode>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
@@ -57,7 +67,7 @@
                     </properties>
                     <command>vtysh -c "clear bgp vrf $5 *"</command>
                   </leafNode>
-                  <leafNode name="node.tag">
+                  <virtualTagNode>
                     <properties>
                       <help>Clear BGP neighbor IP address</help>
                       <completionHelp>
@@ -65,24 +75,12 @@
                       </completionHelp>
                     </properties>
                     <command>vtysh -c "clear bgp vrf $5 $6"</command>
-                  </leafNode>
+                  </virtualTagNode>
                 </children>
               </tagNode>
             </children>
           </node>
-          <tagNode name="bgp">
-            <properties>
-              <help>BGP IPv4/IPv6 neighbor to clear</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-            <children>
-              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
-            </children>
-          </tagNode>
-        </children>
+       </children>
       </node>
     </children>
   </node>

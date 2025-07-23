@@ -1,4 +1,4 @@
-# Copyright 2023-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,10 +25,12 @@ from filecmp import cmp
 from datetime import datetime
 from textwrap import dedent
 from pathlib import Path
-from tabulate import tabulate
 from shutil import copy, chown
+from subprocess import Popen
+from subprocess import DEVNULL
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
+from tabulate import tabulate
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree
@@ -231,7 +233,14 @@ Proceed ?"""
         else:
             cmd = f'sudo -b /usr/libexec/vyos/commit-confirm-notify.py {minutes}'
 
-        os.system(cmd)
+        Popen(
+            cmd.split(),
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+            stdin=DEVNULL,
+            close_fds=True,
+            preexec_fn=os.setsid,
+        )
 
         if self.reboot_unconfirmed:
             msg = f'Initialized commit-confirm; {minutes} minutes to confirm before reboot'

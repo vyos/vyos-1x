@@ -6,7 +6,57 @@
         <properties>
           <help>Show bridging information</help>
         </properties>
+        <command>${vyos_op_scripts_dir}/bridge.py show</command>
         <children>
+          <virtualTagNode>
+            <properties>
+              <help>Show bridge information for a given bridge interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
+              </completionHelp>
+            </properties>
+            <command>bridge -c link show | grep "master $3"</command>
+            <children>
+              <node name="spanning-tree">
+                <properties>
+                  <help>View Spanning Tree info for specified bridges</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/stp.py show_stp --ifname=$3</command>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show detailed Spanning Tree info for specified bridge</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/stp.py show_stp --ifname=$3 --detail</command>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="mdb">
+                <properties>
+                  <help>Displays the multicast group database for the bridge</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/bridge.py show_mdb --interface=$3</command>
+              </leafNode>
+              <leafNode name="fdb">
+                <properties>
+                  <help>Show the forwarding database of the bridge</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/bridge.py show_fdb --interface=$3</command>
+              </leafNode>
+              <leafNode name="detail">
+                <properties>
+                  <help>Display bridge interface details</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/bridge.py show_detail --interface=$3</command>
+              </leafNode>
+              <leafNode name="nexthop-group">
+                <properties>
+                  <help>Display bridge interface nexthop-group</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/bridge.py show_detail --nexthop-group --interface=$3</command>
+              </leafNode>
+            </children>
+          </virtualTagNode>
           <node name="spanning-tree">
             <properties>
               <help>View Spanning Tree info for all bridges</help>
@@ -43,59 +93,6 @@
           </leafNode>
         </children>
       </node>
-      <tagNode name="bridge">
-        <properties>
-          <help>Show bridge information for a given bridge interface</help>
-          <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
-          </completionHelp>
-        </properties>
-        <command>bridge -c link show | grep "master $3"</command>
-        <standalone>
-          <help>Show bridge interface information</help>
-          <command>${vyos_op_scripts_dir}/bridge.py show</command>
-        </standalone>
-        <children>
-          <node name="spanning-tree">
-            <properties>
-              <help>View Spanning Tree info for specified bridges</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/stp.py show_stp --ifname=$3</command>
-            <children>
-              <leafNode name="detail">
-                <properties>
-                  <help>Show detailed Spanning Tree info for specified bridge</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/stp.py show_stp --ifname=$3 --detail</command>
-              </leafNode>
-            </children>
-          </node>
-          <leafNode name="mdb">
-            <properties>
-              <help>Displays the multicast group database for the bridge</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/bridge.py show_mdb --interface=$3</command>
-          </leafNode>
-          <leafNode name="fdb">
-            <properties>
-              <help>Show the forwarding database of the bridge</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/bridge.py show_fdb --interface=$3</command>
-          </leafNode>
-          <leafNode name="detail">
-            <properties>
-              <help>Display bridge interface details</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/bridge.py show_detail --interface=$3</command>
-          </leafNode>
-          <leafNode name="nexthop-group">
-            <properties>
-              <help>Display bridge interface nexthop-group</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/bridge.py show_detail --nexthop-group --interface=$3</command>
-          </leafNode>
-        </children>
-      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

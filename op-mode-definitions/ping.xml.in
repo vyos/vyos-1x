@@ -9,7 +9,7 @@
     </properties>
     <command>${vyos_op_scripts_dir}/ping.py ${@:2}</command>
     <children>
-      <leafNode name="node.tag">
+      <virtualTagNode>
         <properties>
           <help>Ping options</help>
           <completionHelp>
@@ -17,7 +17,7 @@
           </completionHelp>
         </properties>
         <command>${vyos_op_scripts_dir}/ping.py ${@:2}</command>
-      </leafNode>
+      </virtualTagNode>
     </children>
   </tagNode>
 </interfaceDefinition>

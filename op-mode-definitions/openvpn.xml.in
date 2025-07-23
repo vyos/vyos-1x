@@ -39,91 +39,84 @@
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=openvpn</command>
             <children>
+              <leafNode name="client">
+                <properties>
+                  <help>Show tunnel status for OpenVPN client interfaces</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/openvpn.py show --mode client</command>
+              </leafNode>
+              <leafNode name="server">
+                <properties>
+                  <help>Show tunnel status for OpenVPN server interfaces</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/openvpn.py show --mode server</command>
+              </leafNode>
+              <leafNode name="site-to-site">
+                <properties>
+                  <help>Show tunnel status for OpenVPN site-to-site interfaces</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/openvpn.py show --mode site_to_site</command>
+              </leafNode>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed OpenVPN interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=openvpn</command>
               </leafNode>
-            </children>
-          </node>
-          <tagNode name="openvpn">
-            <properties>
-              <help>Show OpenVPN interface information</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type openvpn</script>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name=$4</command>
-            <children>
-              <tagNode name="user">
+              <virtualTagNode>
                 <properties>
-                  <help>Show OpenVPN interface users</help>
+                  <help>Show OpenVPN interface information</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_openvpn_users.py --interface ${COMP_WORDS[3]}</script>
+                    <script>${vyos_completion_dir}/list_interfaces --type openvpn</script>
                   </completionHelp>
                 </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name=$4</command>
                 <children>
-                  <node name="mfa">
+                  <tagNode name="user">
                     <properties>
-                      <help>Show multi-factor authentication information</help>
+                      <help>Show OpenVPN interface users</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_openvpn_users.py --interface ${COMP_WORDS[3]}</script>
+                      </completionHelp>
                     </properties>
                     <children>
-                      <leafNode name="secret">
+                      <node name="mfa">
                         <properties>
-                          <help>Show multi-factor authentication secret</help>
+                          <help>Show multi-factor authentication information</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=secret</command>
-                      </leafNode>
-                      <leafNode name="uri">
-                        <properties>
-                          <help>Show multi-factor authentication otpauth uri</help>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=uri</command>
-                      </leafNode>
-                      <leafNode name="qrcode">
-                        <properties>
-                          <help>Show multi-factor authentication QR code</help>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=qrcode</command>
-                      </leafNode>
+                        <children>
+                          <leafNode name="secret">
+                            <properties>
+                              <help>Show multi-factor authentication secret</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=secret</command>
+                          </leafNode>
+                          <leafNode name="uri">
+                            <properties>
+                              <help>Show multi-factor authentication otpauth uri</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=uri</command>
+                          </leafNode>
+                          <leafNode name="qrcode">
+                            <properties>
+                              <help>Show multi-factor authentication QR code</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=qrcode</command>
+                          </leafNode>
+                        </children>
+                      </node>
                     </children>
-                  </node>
+                  </tagNode>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of specified OpenVPN interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4"</command>
+                  </leafNode>
                 </children>
-              </tagNode>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of specified OpenVPN interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4"</command>
-              </leafNode>
+              </virtualTagNode>
             </children>
-          </tagNode>
-        </children>
-      </node>
-      <node name="openvpn">
-        <properties>
-          <help>Show OpenVPN information</help>
-        </properties>
-        <children>
-          <leafNode name="client">
-            <properties>
-              <help>Show tunnel status for OpenVPN client interfaces</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/openvpn.py show --mode client</command>
-          </leafNode>
-          <leafNode name="server">
-            <properties>
-              <help>Show tunnel status for OpenVPN server interfaces</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/openvpn.py show --mode server</command>
-          </leafNode>
-          <leafNode name="site-to-site">
-            <properties>
-              <help>Show tunnel status for OpenVPN site-to-site interfaces</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/openvpn.py show --mode site_to_site</command>
-          </leafNode>
+          </node>
         </children>
       </node>
     </children>
