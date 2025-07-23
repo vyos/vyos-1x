@@ -85,75 +85,68 @@ def verify(config_dict):
         for attr_name, attr in req_attributes.items():
             values = attr.get('value', [])
             if not values:
-                raise ConfigError(f"IDP attribute '{attr_name}' must have a value")
+                raise ConfigError(f"SAML attribute '{attr_name}' must have a value")
             if not isinstance(values, list):
                 values = [values]
             if not all(isinstance(value, str) and value.strip() for value in values):
-                raise ConfigError(f"IDP attribute '{attr_name}' values must be non-empty strings")
+                raise ConfigError(f"SAML attribute '{attr_name}' values must be non-empty strings")
 
         for attr_name, attr in suff_attributes.items():
             values = attr.get('value', [])
             if not values:
-                raise ConfigError(f"IDP attribute '{attr_name}' must have a value")
+                raise ConfigError(f"SAML attribute '{attr_name}' must have a value")
             if not isinstance(values, list):
                 values = [values]
             if not all(isinstance(value, str) and value.strip() for value in values):
-                raise ConfigError(f"IDP attribute '{attr_name}' values must be non-empty strings")
+                raise ConfigError(f"SAML attribute '{attr_name}' values must be non-empty strings")
 
-    idp = config_dict.get('idp', {})
+        saml = config_dict.get('saml', {})
+        if not saml:
+            return # no config, leave early
 
-    providers = idp.get('providers', {})
+        idp_name = saml.get('name')
+        if not idp_name:
+            raise ConfigError("SAML: provider name must be set")
+        if not isinstance(idp_name, str):
+            raise ConfigError("SAML: provider name must be a string")
+        if not idp_name.strip():
+            raise ConfigError("SAML: provider name must be a non empty string")
 
-    if not providers:
-        return # Early kick out (no providers/idp)
-
-    for provider_name, provider in providers.items():
-        default_sso_level = provider.get('default_sso_level')
-        if not default_sso_level:
-            raise ConfigError("IDP: default-sso-level must be set as operator or admin")
-
-        # Verify provider domains
-        domains = provider.get('domain', [])
-        if not isinstance(domains, list):
-            domains = [domains]
-        if not domains:
-            raise ConfigError(f"IDP: {provider_name}: Must have atleast one domain set")
-        if not all(isinstance(domain, str) and domain.strip() for domain in domains):
-            raise ConfigError(f"IDP: {provider_name}: Domains must be non-empty strings")
-
-        # Verify metadata-url
-        metadata_url = provider.get('metadata_url')
+        metadata_url = saml.get('metadata_url')
         if not metadata_url:
-            raise ConfigError(f"IDP: {provider_name}: Must have a metadata-url")
+            raise ConfigError(f"SAML: Must have a metadata-url")
         if not check_url(metadata_url) and not check_ip(metadata_url):
-            raise ConfigError(f"IDP: {provider_name}: metadata-url must be a valid URL")
+            raise ConfigError(f"SAML: metadata-url must be a valid URL")
 
-        users = provider.get("user", {})
-        attributes = provider.get("attribute", {})
+        users = saml.get("user", {})
+        attributes = saml.get("attribute", {})
 
         if not users and not attributes:
-            print(f"""WARNING: IDP: '{provider_name}' has no attributes or users configured,\n
-            any user from your domain list will be able to login at the default-sso-level""")
+            print(f"""WARNING: SAML:' has no attributes or users configured,\n
+            any user from your provider will be able to login at the default-sso-level""")
 
-        # Verify Users
         admin_users = users.get('admin', [])
         operator_users = users.get('operator', [])
         if admin_users:
             if not isinstance(admin_users, list):
                 admin_users = [admin_users]
             if not all(isinstance(admin_user, str) and admin_user.strip() for admin_user in admin_users):
-                raise ConfigError(f"IDP: {provider_name}: Admin users must be non-empty strings")
+                raise ConfigError(f"SAML: Admin users must be non-empty strings")
         if operator_users:
             if not isinstance(operator_users, list):
                 operator_users = [operator_users]
             if not all(isinstance(operator_user, str) and operator_user.strip() for operator_user in operator_users):
-                raise ConfigError(f"IDP: {provider_name}: Operator users must be non-empty strings")
+                raise ConfigError(f"SAML: Operator users must be non-empty strings")
 
         # Verify attributes
         admin_attributes = attributes.get('admin', {})
         verify_attributes(admin_attributes)
         operator_attributes = attributes.get('operator', {})
         verify_attributes(operator_attributes)
+
+        default_sso_level = saml.get('default_sso_level')
+        if not default_sso_level:
+            raise ConfigError("IDP: default-sso-level must be set as operator or admin")
 
 def generate(config_dict):
     try:
@@ -215,9 +208,9 @@ def apply(config_dict):
             print(f"Error toggling service '{service}': {e}")
             return False
 
-    idp = config_dict.get('idp', {})
-    providers = idp.get('provider', {})
-    enable = True if idp and providers else False
+    saml = config_dict.get('saml', {})
+    idp_name = saml.get('name')
+    enable = True if saml and idp_name else False
 
     if not toggle_pam_profile('saml_auth', enable):
         raise ConfigError("Failed to toggle saml_auth PAM profile")
