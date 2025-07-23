@@ -100,54 +100,53 @@ def verify(config_dict):
             if not all(isinstance(value, str) and value.strip() for value in values):
                 raise ConfigError(f"SAML attribute '{attr_name}' values must be non-empty strings")
 
-        print(json.dumps(config_dict, indent=4))
-        saml = config_dict.get('saml', {})
-        if not saml:
-            return # no config, leave early
+    saml = config_dict.get('saml', {})
+    if not saml:
+        return # no config, leave early
 
-        idp_name = saml.get('name')
-        if not idp_name:
-            raise ConfigError("SAML: provider name must be set")
-        if not isinstance(idp_name, str):
-            raise ConfigError("SAML: provider name must be a string")
-        if not idp_name.strip():
-            raise ConfigError("SAML: provider name must be a non empty string")
+    idp_name = saml.get('name')
+    if not idp_name:
+        raise ConfigError("SAML: provider name must be set")
+    if not isinstance(idp_name, str):
+        raise ConfigError("SAML: provider name must be a string")
+    if not idp_name.strip():
+        raise ConfigError("SAML: provider name must be a non empty string")
 
-        metadata_url = saml.get('metadata_url')
-        if not metadata_url:
-            raise ConfigError(f"SAML: Must have a metadata-url")
-        if not check_url(metadata_url) and not check_ip(metadata_url):
-            raise ConfigError(f"SAML: metadata-url must be a valid URL")
+    metadata_url = saml.get('metadata_url')
+    if not metadata_url:
+        raise ConfigError(f"SAML: Must have a metadata-url")
+    if not check_url(metadata_url) and not check_ip(metadata_url):
+        raise ConfigError(f"SAML: metadata-url must be a valid URL")
 
-        users = saml.get("user", {})
-        attributes = saml.get("attribute", {})
+    users = saml.get("user", {})
+    attributes = saml.get("attribute", {})
 
-        if not users and not attributes:
-            print(f"""WARNING: SAML:' has no attributes or users configured,\n
-            any user from your provider will be able to login at the default-sso-level""")
+    if not users and not attributes:
+        print(f"""WARNING: SAML:' has no attributes or users configured,\n
+        any user from your provider will be able to login at the default-sso-level""")
 
-        admin_users = users.get('admin', [])
-        operator_users = users.get('operator', [])
-        if admin_users:
-            if not isinstance(admin_users, list):
-                admin_users = [admin_users]
-            if not all(isinstance(admin_user, str) and admin_user.strip() for admin_user in admin_users):
-                raise ConfigError(f"SAML: Admin users must be non-empty strings")
-        if operator_users:
-            if not isinstance(operator_users, list):
-                operator_users = [operator_users]
-            if not all(isinstance(operator_user, str) and operator_user.strip() for operator_user in operator_users):
-                raise ConfigError(f"SAML: Operator users must be non-empty strings")
+    admin_users = users.get('admin', [])
+    operator_users = users.get('operator', [])
+    if admin_users:
+        if not isinstance(admin_users, list):
+            admin_users = [admin_users]
+        if not all(isinstance(admin_user, str) and admin_user.strip() for admin_user in admin_users):
+            raise ConfigError(f"SAML: Admin users must be non-empty strings")
+    if operator_users:
+        if not isinstance(operator_users, list):
+            operator_users = [operator_users]
+        if not all(isinstance(operator_user, str) and operator_user.strip() for operator_user in operator_users):
+            raise ConfigError(f"SAML: Operator users must be non-empty strings")
 
-        # Verify attributes
-        admin_attributes = attributes.get('admin', {})
-        verify_attributes(admin_attributes)
-        operator_attributes = attributes.get('operator', {})
-        verify_attributes(operator_attributes)
+    # Verify attributes
+    admin_attributes = attributes.get('admin', {})
+    verify_attributes(admin_attributes)
+    operator_attributes = attributes.get('operator', {})
+    verify_attributes(operator_attributes)
 
-        default_sso_level = saml.get('default_sso_level')
-        if not default_sso_level:
-            raise ConfigError("IDP: default-sso-level must be set as operator or admin")
+    default_sso_level = saml.get('default_sso_level')
+    if not default_sso_level:
+        raise ConfigError("IDP: default-sso-level must be set as operator or admin")
 
 def generate(config_dict):
     try:
