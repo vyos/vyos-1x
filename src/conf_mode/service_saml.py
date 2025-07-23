@@ -100,6 +100,7 @@ def verify(config_dict):
             if not all(isinstance(value, str) and value.strip() for value in values):
                 raise ConfigError(f"SAML attribute '{attr_name}' values must be non-empty strings")
 
+        print(json.dumps(config_dict, indent=4))
         saml = config_dict.get('saml', {})
         if not saml:
             return # no config, leave early
