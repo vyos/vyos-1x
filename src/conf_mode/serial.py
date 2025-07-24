@@ -546,13 +546,14 @@ def restart_smodbusd(tty):
 
 SOCKET_PATH = '/tmp/iol_perleinit'
 
-def send_command_to_iolan(action, name, service, ttynum, mtsport, monitor_signals, require_systemd):
+def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, monitor_signals, require_systemd):
     msg = {
         'action': action,  # 'restart' or 'stop'
         'name': name,
         'service': service,
         'ttynum': ttynum,
         'mtsport': mtsport,
+        'alias_ip': alias_ip,
         'monitor_signals': monitor_signals,
         'require_systemd': require_systemd,
     }
@@ -575,7 +576,7 @@ def apply(proxy):
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
             # stop_services_and_remove_files_with_prefix('/run/serial', device, False)
-            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, 0, 0)
+            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0)
 
     # if 'serial_restart' in proxy:
     #     for device in proxy['serial_restart']:
@@ -620,6 +621,7 @@ def apply(proxy):
             mtsport = 0
             monitor_dcd_or_dsr = 0
             require_systemd = 0
+            alias_ip = ''
             if 'disable' not in serial_config:
 
                 if 'trueport' in serial_config['service']:
@@ -631,14 +633,14 @@ def apply(proxy):
                 elif 'vmodem' in serial_config['service']:
                     exe_name = 'iol_vmodem'
                     vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
-                    if vmodem_mode == 'manual':
-                        mtsport = serial_config['listen_port']
+                    # if vmodem_mode == 'manual':
+                    #     mtsport = serial_config['listen_port']
                 elif 'udp' in serial_config['service']:
                     exe_name = 'iol_udpd'
                 elif 'tcp-reverse' in serial_config['service']:
                     # Need to rewrite
                     require_systemd = 1
-                    mtsport = serial_config['listen_port']
+
                     print(f'running tcp-reverse on {device}')
                 elif 'modbus-master' in serial_config['service']:
                     write_string_to_file(file_path, 'iol_mmodbusp')
@@ -655,9 +657,15 @@ def apply(proxy):
                     if 'monitor_dcd' in serial_config['hardware'] or 'monitor_dsr' in serial_config['hardware']:
                         monitor_dcd_or_dsr = 1
 
-                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, monitor_dcd_or_dsr, require_systemd)
+                if 'listen_port' in serial_config:
+                    mtsport = serial_config['listen_port']
+
+                if 'inet' in serial_config:
+                    alias_ip = serial_config['inet']
+
+                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd)
             else:
-                send_command_to_iolan('stop', device, '', int(ttynum), 0, 0, 0)
+                send_command_to_iolan('stop', device, '', int(ttynum), 0, '', 0, 0)
 
     return None
 
