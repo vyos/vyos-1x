@@ -218,9 +218,10 @@
                     <description>Administrator level user type</description>
                   </valueHelp>
                 </properties>
-              </leafNode>              
+              </leafNode>
             </children>
           </tagNode>
+          #include <include/saml.xml.i>
           #include <include/radius-server-ipv4-ipv6.xml.i>
           <node name="radius">
             <children>
