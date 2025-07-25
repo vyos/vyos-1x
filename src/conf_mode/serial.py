@@ -633,8 +633,8 @@ def apply(proxy):
                 elif 'vmodem' in serial_config['service']:
                     exe_name = 'iol_vmodem'
                     vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
-                    # if vmodem_mode == 'manual':
-                    #     mtsport = serial_config['listen_port']
+                    if vmodem_mode == 'auto':
+                        mtsport = 0
                 elif 'udp' in serial_config['service']:
                     exe_name = 'iol_udpd'
                 elif 'tcp-reverse' in serial_config['service']:
