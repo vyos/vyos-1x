@@ -1,7 +1,6 @@
 <!-- include start from saml.xml.i -->
 <node name="saml">
   <properties>
-    <priority>100</priority>
     <help>Identity provider configuration</help>
   </properties>
   <children>

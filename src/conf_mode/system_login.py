@@ -294,6 +294,7 @@ def verify(login):
 
         verify_vrf(login['tacacs'])
 
+    print(json.dumps(login, indent=4))
     if 'saml' in login:
         saml = login.get('saml', {})
         idp_name = saml.get('name')
@@ -396,15 +397,15 @@ def generate(login):
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
 
+    print(json.dumps(login, indent=4))
     if 'saml' in login:
         SAML_CONFIG_DIR = r'/etc'
         SAML_CONFIG_FILE = r'saml.conf'
-        saml_config = {'saml': login.get('saml', {})}
         try:
             if not os.path.exists(SAML_CONFIG_DIR):
                 os.makedirs(SAML_CONFIG_DIR, exist_ok=True)
             with open(f"{SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}", 'w') as saml_conf_file:
-                json.dump(saml_config, saml_conf_file, indent=4)
+                json.dump(login.get("saml"), saml_conf_file, indent=4)
         except Exception:
             raise ConfigError("SAML: Could not generate config file")
 
