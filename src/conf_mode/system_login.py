@@ -294,7 +294,6 @@ def verify(login):
 
         verify_vrf(login['tacacs'])
 
-    print(json.dumps(login, indent=4))
     if 'saml' in login:
         saml = login.get('saml', {})
         idp_name = saml.get('name')
@@ -339,7 +338,7 @@ def verify(login):
 
         default_sso_level = saml.get('default_sso_level')
         if not default_sso_level:
-            raise ConfigError("IDP: default-sso-level must be set as operator or admin")
+            raise ConfigError("SAML: default-sso-level must be set as operator or admin")
 
     if 'max_login_session' in login and 'timeout' not in login:
         raise ConfigError('"login timeout" must be configured!')
@@ -397,7 +396,6 @@ def generate(login):
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
 
-    print(json.dumps(login, indent=4))
     if 'saml' in login:
         SAML_CONFIG_DIR = r'/etc'
         SAML_CONFIG_FILE = r'saml.conf'
