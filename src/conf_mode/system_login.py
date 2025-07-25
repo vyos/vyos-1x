@@ -579,13 +579,11 @@ def apply(login):
         cmd('pam-auth-update --enable mfa-google-authenticator')
 
     # Enable/disable SAML in PAM configuration
-    cmd('systemctl deamon-reload')
     cmd('systemctl stop saml-sp')
     cmd('systemctl disable saml-sp')
     cmd('pam-auth-update --disable saml_auth')
     if 'saml' in login:
         cmd('pam-auth-update --enable saml_auth')
-        cmd('systemctl deamon-reload')
         cmd('systemctl start saml-sp')
         cmd('systemctl enable saml-sp')
 
