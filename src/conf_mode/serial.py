@@ -54,14 +54,6 @@ def get_config(config=None):
                                      get_first_key=True,
                                      with_recursive_defaults=True)
 
-    tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
-    print(f'is modbus gateway changed {tmp}')
-    if tmp:
-        if 'ip_aliasing' not in proxy['global']['modbus_gateway']:
-            print('should restart smodbusd_restart')
-            proxy.update({'smodbusd_restart': {}})
-            proxy['smodbusd_restart'] = '1'
-
     for device in proxy.get('device', []):
         # Want to restart serial if its config changed
         tmp = is_node_changed(conf, base + ['device', device])
@@ -142,42 +134,6 @@ def replace_empty_dicts(d):
     elif isinstance(d, list):
         for item in d:
             replace_empty_dicts(item)
-
-def kill_pid_file(tty, is_modbus):
-    if is_modbus:
-        pid_suffix = f'smodbusd.pid'
-    else:
-        pid_suffix = f'{tty}.pid'
-    base_dir = '/run/serial'
-
-    try:
-        for filename in os.listdir(base_dir):
-            if not filename.endswith(pid_suffix):
-                continue
-
-            file_path = os.path.join(base_dir, filename)
-
-            try:
-                with open(file_path, 'r') as pid_file:
-                    pid_str = pid_file.read().strip()
-                    if not pid_str.isdigit():
-                        print(f'Invalid PID in file {file_path}: {pid_str}')
-                        continue
-
-                    pid = int(pid_str)
-                    os.kill(pid, signal.SIGTERM)
-                    print(f'Successfully killed PID {pid} from {file_path}')
-
-            except ProcessLookupError:
-                print(f'No such process with PID in {file_path}, ignore')
-            except PermissionError:
-                print(f'Permission denied when trying to kill PID from {file_path}')
-            except Exception as e:
-                print(f'An error occurred while handling {file_path}: {e}')
-    except FileNotFoundError:
-        print(f'Directory {base_dir} does not exist')
-    except Exception as e:
-        print(f'Error accessing {base_dir}: {e}')
 
 def subtract_from_key(original_items):
     new_items = {}
@@ -316,10 +272,6 @@ def generate(proxy):
                 if 'rts_toggle' in port_config['hardware']:
                     port_config['hardware']['rts_toggle']['enabled'] = '1'
 
-            # if 'tls' in proxy_no_default['device'][device]:
-            #     if 'disable' not in proxy_no_default['device'][device].get('tls', []):
-            #         port_config['tls']['enabled'] = '1'
-
             replace_empty_dicts(port_config)
 
             ensure_folder_exists('/run/serial')
@@ -329,44 +281,6 @@ def generate(proxy):
 
     print(proxy)
     return proxy
-
-def check_any_running_service_modbus():
-    """
-    For smodbusd
-    Scan /run/serial for ttySx.json files
-    If found a config file which has 'service' == 'modbus-y'
-    return x
-    """
-
-    base_dir = '/run/serial'
-
-    for fname in os.listdir(base_dir):
-        if not fname.startswith('ttyS') or not fname.endswith('.json'):
-            continue
-
-        path = os.path.join(base_dir, fname)
-        try:
-            with open(path, 'r') as f:
-                data = json.load(f)
-            if 'disable' in data:
-                print(f'tty port with {path} shows disabled')
-                continue
-            if 'modbus' in data.get('service'):
-                return re.findall(r'\d+', fname)[0]
-        except Exception as e:
-            print(f'Error processing {path}: {e}')
-
-def is_pid_running(pid):
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
-
-def restart_smodbusd(tty):
-    print(f'Restarting service iol_smodbusd...')
-    ret = os.system(f'setsid iol_smodbusd -P {tty} &')
-    print(f'iol_smodbusd ret {ret}')
 
 SOCKET_PATH = '/tmp/iol_perleinit'
 
