@@ -29,9 +29,9 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import chmod_775
-from vyos.utils.file import chown
 from vyos.utils.file import makedir
 from vyos.utils.file import write_file
+from vyos.utils.permission import chown
 from vyos.utils.process import call
 from vyos.utils.network import interface_exists
 from vyos.utils.network import is_subnet_connected

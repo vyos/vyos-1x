@@ -88,3 +88,5 @@ DEFAULT_COMMIT_CONFIRM_MINUTES = 10
 commit_hooks = {'pre': '/etc/commit/pre-hooks.d',
                 'post': '/etc/commit/post-hooks.d'
                }
+
+airbag_noteworthy_size = 20

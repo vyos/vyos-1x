@@ -60,7 +60,8 @@ def verify(sflow):
             )
 
     # Check if at least one interface is configured
-    if 'interface' not in sflow:
+    # Skip this check if VPP is enabled
+    if 'interface' not in sflow and 'vpp' not in sflow:
         raise ConfigError(
             'sFlow requires at least one interface to be configured!')
 

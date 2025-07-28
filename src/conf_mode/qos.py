@@ -15,7 +15,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
-from netifaces import interfaces
+
+from netifaces import interfaces # pylint: disable = no-name-in-module
 
 from vyos.base import Warning
 from vyos.config import Config

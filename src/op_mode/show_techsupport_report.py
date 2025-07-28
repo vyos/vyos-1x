@@ -59,7 +59,7 @@ def execute_command(command: str, header_text: str) -> None:
     # Flush standard streams; redirect remaining output to devnull
     # Resolves T5633: Bug #1 and 3
     except (BrokenPipeError, KeyboardInterrupt):
-        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno()) # pylint: disable = no-member
         sys.exit(1)
     except Exception as e:
         print(f"Error executing command: {command}")

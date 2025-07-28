@@ -33,4 +33,3 @@ jobs:
     secrets:
       PAT: ${{ secrets.PAT }}
       REMOTE_OWNER: ${{ secrets.REMOTE_OWNER }}
-      REMOTE_REPO: ${{ secrets.REMOTE_REPO }}

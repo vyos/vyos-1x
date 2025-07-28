@@ -494,6 +494,8 @@ def get_cli_kernel_options(config_file: str) -> list:
     config = ConfigTree(read_file(config_file))
     config_dict = loads(config.to_json())
     kernel_options = dict_search('system.option.kernel', config_dict)
+    k_cpu_opts = kernel_options.get('cpu', {})
+    k_memory_opts = kernel_options.get('memory', {})
     if kernel_options is None:
         kernel_options = {}
     cmdline_options = []
@@ -511,6 +513,47 @@ def get_cli_kernel_options(config_file: str) -> list:
             f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
     if 'quiet' in kernel_options:
         cmdline_options.append('quiet')
+
+    if 'disable-hpet' in kernel_options:
+        cmdline_options.append('hpet=disable')
+
+    if 'disable-mce' in kernel_options:
+        cmdline_options.append('mce=off')
+
+    if 'disable-softlockup' in kernel_options:
+        cmdline_options.append('nosoftlockup')
+
+    # CPU options
+    isol_cpus = k_cpu_opts.get('isolate-cpus')
+    if isol_cpus:
+        cmdline_options.append(f'isolcpus={isol_cpus}')
+
+    nohz_full = k_cpu_opts.get('nohz-full')
+    if nohz_full:
+        cmdline_options.append(f'nohz_full={nohz_full}')
+
+    rcu_nocbs = k_cpu_opts.get('rcu-no-cbs')
+    if rcu_nocbs:
+        cmdline_options.append(f'rcu_nocbs={rcu_nocbs}')
+
+    if 'disable-nmi-watchdog' in k_cpu_opts:
+        cmdline_options.append('nmi_watchdog=0')
+
+    # Memory options
+    if 'disable-numa-balancing' in k_memory_opts:
+        cmdline_options.append('numa_balancing=disable')
+
+    default_hp_size = k_memory_opts.get('default-hugepage-size')
+    if default_hp_size:
+        cmdline_options.append(f'default_hugepagesz={default_hp_size}')
+
+    hp_sizes = k_memory_opts.get('hugepage-size')
+    if hp_sizes:
+        for size, settings in hp_sizes.items():
+            cmdline_options.append(f'hugepagesz={size}')
+            count = settings.get('hugepage-count')
+            if count:
+                cmdline_options.append(f'hugepages={count}')
 
     return cmdline_options
 

@@ -32,4 +32,7 @@ sflow {
   dropmon { limit={{ drop_monitor_limit }} start=on sw=on hw=off }
 {% endif %}
   dbus { }
+{% if vpp is vyos_defined %}
+  vpp { }
+{% endif %}
 }

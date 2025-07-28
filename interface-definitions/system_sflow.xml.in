@@ -106,6 +106,12 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="vpp">
+            <properties>
+              <help>Enable VPP sampling</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="enable-egress">
             <properties>
               <help>Enable egress sampling</help>

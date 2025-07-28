@@ -19,7 +19,7 @@ from shutil import rmtree
 
 from sys import exit
 
-from netifaces import AF_INET
+from socket import AF_INET
 from psutil import net_if_addrs
 
 from vyos.config import Config

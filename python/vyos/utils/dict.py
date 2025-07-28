@@ -347,8 +347,6 @@ class FixedDict(dict):
     raise ConfigError(f'Option "{k}" has no defined default')
     """
 
-    from vyos import ConfigError
-
     def __init__(self, **options):
         self._allowed = options.keys()
         super().__init__(**options)
@@ -368,6 +366,7 @@ class FixedDict(dict):
         >>> d
         {'key': 'value'}
         """
+        from vyos import ConfigError
         if k not in self._allowed:
             raise ConfigError(f'Option "{k}" has no defined default')
         super().__setitem__(k, v)
