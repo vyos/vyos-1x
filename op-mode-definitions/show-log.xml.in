@@ -42,7 +42,7 @@
             <properties>
               <help>Show log for certbot</help>
             </properties>
-            <command>if test -f /var/log/letsencrypt/letsencrypt.log; then cat /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+            <command>bash -c 'if test -f /var/log/letsencrypt/letsencrypt.log; then cat /var/log/letsencrypt/letsencrypt.log; else echo "Certbot log does not exist"; fi'</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>

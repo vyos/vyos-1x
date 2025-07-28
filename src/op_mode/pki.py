@@ -417,7 +417,7 @@ def parse_san_string(san_string):
             output.append(ipaddress.IPv6Address(value))
         elif tag == 'dns' or tag == 'rfc822':
             output.append(value)
-    return
+    return output
 
 
 def generate_certificate_request(

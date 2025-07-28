@@ -18,6 +18,7 @@ import os
 import argparse
 
 from psutil import process_iter
+from time import sleep
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import call
@@ -68,7 +69,7 @@ def connect(interface):
             if ( count % 60 == 0 ):
                 print(f'Commit still in progress after {count}s - waiting')
             count += 1
-            time.sleep(1)
+            sleep(1)
         call('/usr/libexec/vyos/conf_mode/qos.py')
 
 def disconnect(interface):

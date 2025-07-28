@@ -13,9 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from socket import AF_INET
+from socket import AF_INET6
+
 def _are_same_ip(one, two):
-    from socket import AF_INET
-    from socket import AF_INET6
     from socket import inet_pton
     from vyos.template import is_ipv4
     # compare the binary representation of the IP
@@ -347,7 +348,7 @@ def is_ipv6_link_local(addr):
 
 def is_addr_assigned(ip_address, vrf=None, return_ifname=False, include_vrf=False) -> bool | str:
     """ Verify if the given IPv4/IPv6 address is assigned to any interface """
-    from netifaces import interfaces
+    from netifaces import interfaces # pylint: disable = no-name-in-module
     from vyos.utils.network import get_interface_config
     from vyos.utils.dict import dict_search
 
@@ -445,10 +446,8 @@ def is_subnet_connected(subnet, primary=False):
     from ipaddress import ip_address
     from ipaddress import ip_network
 
-    from netifaces import ifaddresses
-    from netifaces import interfaces
-    from netifaces import AF_INET
-    from netifaces import AF_INET6
+    from netifaces import ifaddresses # pylint: disable = no-name-in-module
+    from netifaces import interfaces # pylint: disable = no-name-in-module
 
     from vyos.template import is_ipv6
 
@@ -482,9 +481,7 @@ def is_subnet_connected(subnet, primary=False):
 def is_afi_configured(interface: str, afi):
     """ Check if given address family is configured, or in other words - an IP
     address is assigned to the interface. """
-    from netifaces import ifaddresses
-    from netifaces import AF_INET
-    from netifaces import AF_INET6
+    from netifaces import ifaddresses # pylint: disable = no-name-in-module
 
     if afi not in [AF_INET, AF_INET6]:
         raise ValueError('Address family must be in [AF_INET, AF_INET6]')

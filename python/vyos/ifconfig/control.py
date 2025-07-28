@@ -29,6 +29,8 @@ class Control(Section):
     _command_get = {}
     _command_set = {}
     _signature = {}
+    config = {}
+    ifname = None
 
     def __init__(self, **kargs):
         # some commands (such as operation comands - show interfaces, etc.)

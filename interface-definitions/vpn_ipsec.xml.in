@@ -701,6 +701,52 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="retransmission">
+                <properties>
+                  <help>IPsec retransmission settings</help>
+                </properties>
+                <children>
+                  <leafNode name="attempts">
+                    <properties>
+                      <help>Maximum number of retransmissions</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Maximum number of retransmissions</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>5</defaultValue>
+                  </leafNode>
+                  <leafNode name="base">
+                    <properties>
+                      <help>Base of exponential backoff</help>
+                      <valueHelp>
+                        <format>&lt;1.0-5.0&gt;</format>
+                        <description>Base of exponential backoff</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-5 --float"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>1.8</defaultValue>
+                  </leafNode>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Timeout in seconds before the first retransmission</help>
+                      <valueHelp>
+                        <format>u32:1-1000</format>
+                        <description>Timeout in seconds before the first retransmission</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-1000"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>4</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           <tagNode name="profile">
@@ -1182,6 +1228,13 @@
                       #include <include/generic-disable-node.xml.i>
                       #include <include/ipsec/esp-group.xml.i>
                       #include <include/ipsec/local-traffic-selector.xml.i>
+                      <node name="local">
+                        <children>
+                          <leafNode name="prefix">
+                            <defaultValue>dynamic</defaultValue>
+                          </leafNode>
+                        </children>
+                      </node>
                       #include <include/ip-protocol.xml.i>
                       <leafNode name="priority">
                         <properties>
@@ -1218,6 +1271,7 @@
                               </constraint>
                               <multi/>
                             </properties>
+                            <defaultValue>dynamic</defaultValue>
                           </leafNode>
                         </children>
                       </node>

@@ -696,6 +696,8 @@ def generate(ipsec):
                 generate_pki_files_x509(ipsec['pki'], rw_conf['authentication']['x509'])
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
+        DEFAULT_TS_PREFIX = 'dynamic'
+
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
             if f'peer_{peer}' in ipsec['dhcp_no_address']:
                 continue
@@ -724,7 +726,13 @@ def generate(ipsec):
                     passthrough = None
 
                     for local_prefix in local_prefixes:
+                        if local_prefix == DEFAULT_TS_PREFIX:
+                            continue
+
                         for remote_prefix in remote_prefixes:
+                            if remote_prefix == DEFAULT_TS_PREFIX:
+                                continue
+
                             local_net = ipaddress.ip_network(local_prefix)
                             remote_net = ipaddress.ip_network(remote_prefix)
                             if local_net.subnet_of(remote_net):

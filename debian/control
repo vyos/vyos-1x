@@ -10,8 +10,17 @@ Build-Depends:
   iproute2,
   libzmq3-dev,
   python3 (>= 3.10),
-# For QA
+# For QA/Lint
   pylint,
+  python3-vici (>= 5.7.2),
+  python3-fastapi,
+  python3-pyudev,
+  python3-systemd,
+  python3-certbot-nginx,
+  python3-pam,
+  python3-dbus,
+  python3-pyroute2,
+  python3-voluptuous,
 # For generating command definitions
   python3-lxml,
   python3-xmltodict,

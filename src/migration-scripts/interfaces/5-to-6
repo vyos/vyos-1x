@@ -56,7 +56,7 @@ def copy_rtradv(c, old_base, interface):
         # cleanup boolean nodes in individual route
         route_base = new_base + ['route']
         if c.exists(route_base):
-            for route in config.list_nodes(route_base):
+            for route in c.list_nodes(route_base):
                 if c.exists(route_base + [route, 'remove-route']):
                     tmp = c.return_value(route_base + [route, 'remove-route'])
                     c.delete(route_base + [route, 'remove-route'])
@@ -66,7 +66,7 @@ def copy_rtradv(c, old_base, interface):
         # cleanup boolean nodes in individual prefix
         prefix_base = new_base + ['prefix']
         if c.exists(prefix_base):
-            for prefix in config.list_nodes(prefix_base):
+            for prefix in c.list_nodes(prefix_base):
                 if c.exists(prefix_base + [prefix, 'autonomous-flag']):
                     tmp = c.return_value(prefix_base + [prefix, 'autonomous-flag'])
                     c.delete(prefix_base + [prefix, 'autonomous-flag'])

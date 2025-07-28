@@ -37,7 +37,7 @@ from vyos.utils.auth import get_current_user
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
-from vyos.utils.file import chown
+from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import run
