@@ -326,28 +326,6 @@ def apply(proxy):
             require_systemd = 0
             alias_ip = ''
             if 'disable' not in serial_config:
-
-                if 'trueport' in serial_config['service']:
-                    exe_name = 'iol_vc'
-                elif 'multihost' in serial_config['service']:
-                    exe_name = 'iol_multihost'
-                elif 'data-logging' in serial_config['service']:
-                    exe_name = 'iol_lldatalog'
-                elif 'vmodem' in serial_config['service']:
-                    exe_name = 'iol_vmodem'
-                    vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
-                    if vmodem_mode == 'auto':
-                        mtsport = 0
-                elif 'udp' in serial_config['service']:
-                    exe_name = 'iol_udpd'
-                elif 'tcp-reverse' in serial_config['service']:
-                    # Need to rewrite
-                    require_systemd = 1
-
-                    print(f'running tcp-reverse on {device}')
-                elif 'tcp-direct' in serial_config['service'] or 'tcp-slient' in serial_config['service']:
-                    exe_name = 'iol_rawout'
-
                 if 'hardware' in serial_config:
                     if 'monitor_dcd' in serial_config['hardware'] or 'monitor_dsr' in serial_config['hardware']:
                         monitor_dcd_or_dsr = 1
@@ -357,6 +335,14 @@ def apply(proxy):
 
                 if 'inet' in serial_config:
                     alias_ip = serial_config['inet']
+
+                if 'vmodem' in serial_config['service']:
+                    exe_name = 'iol_vmodem'
+                    vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
+                    if vmodem_mode == 'auto':
+                        mtsport = 0
+                elif 'tcp-reverse' in serial_config['service']:
+                    require_systemd = 1
 
                 send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd)
             else:
