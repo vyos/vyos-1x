@@ -92,36 +92,6 @@ def read_json(fname, defaultonfailure=None):
             return defaultonfailure
         raise e
 
-def chown(path, user=None, group=None, recursive=False):
-    """ change file/directory owner """
-    from pwd import getpwnam
-    from grp import getgrnam
-
-    if user is None and group is None:
-        return False
-
-    # path may also be an open file descriptor
-    if not isinstance(path, int) and not os.path.exists(path):
-        return False
-
-    # keep current value if not specified otherwise
-    uid = -1
-    gid = -1
-
-    if user:
-        uid = getpwnam(user).pw_uid
-    if group:
-        gid = getgrnam(group).gr_gid
-
-    if recursive:
-        for dirpath, dirnames, filenames in os.walk(path):
-            os.chown(dirpath, uid, gid)
-            for filename in filenames:
-                os.chown(os.path.join(dirpath, filename), uid, gid)
-    else:
-        os.chown(path, uid, gid)
-    return True
-
 
 def chmod(path, bitmask):
     # path may also be an open file descriptor
@@ -174,12 +144,6 @@ def chmod_775(path):
 def file_permissions(path):
     """ Return file permissions in string format, e.g '0755' """
     return oct(os.stat(path).st_mode)[4:]
-
-def makedir(path, user=None, group=None):
-    if os.path.exists(path):
-        return
-    os.makedirs(path, mode=0o755)
-    chown(path, user, group)
 
 def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sleep_interval=0.1):
     """ Waits for an inotify event to occur """

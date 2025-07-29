@@ -202,15 +202,16 @@ charon {
     # Size of the AH/ESP replay window, in packets.
     # replay_window = 32
 
-    # Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
-    # in strongswan.conf(5).
-    # retransmit_base = 1.8
-
-    # Timeout in seconds before sending first retransmit.
-    # retransmit_timeout = 4.0
-
-    # Number of times to retransmit a packet before giving up.
-    # retransmit_tries = 5
+    # IKEv2 RETRANSMISSION
+{% if options.retransmission.attempts is vyos_defined %}
+    retransmit_tries = {{ options.retransmission.attempts }}
+{% endif %}
+{% if options.retransmission.base is vyos_defined %}
+    retransmit_base = {{ options.retransmission.base }}
+{% endif %}
+{% if options.retransmission.timeout is vyos_defined %}
+    retransmit_timeout = {{ options.retransmission.timeout }}
+{% endif %}
 
     # Interval in seconds to use when retrying to initiate an IKE_SA (e.g. if
     # DNS resolution failed), 0 to disable retries.

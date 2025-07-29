@@ -111,6 +111,12 @@
 {%         set tunnel_esp_name = tunnel_conf.esp_group if tunnel_conf.esp_group is vyos_defined else peer_conf.default_esp_group %}
 {%         set tunnel_esp = esp_group[tunnel_esp_name] %}
 {%         set proto = tunnel_conf.protocol if tunnel_conf.protocol is vyos_defined else '' %}
+{#         VyOS 1.3.x (with strongSwan 5.7.x) previously allowed using `all` in traffic selectors, converting it to `%any`. #}
+{#         In strongSwan 5.9.x (VyOS >= 1.4.x), the syntax `x.x.x.0/24[all/]` is no longer accepted. #}
+{#         We must now explicitly specify a protocol (e.g., `tcp`, `udp`). #}
+{#         To achieve "all" protocol behavior, simply use the subnet notation without brackets, #}
+{#         such as `x.x.x.0/24` or `x.x.x.0/24[/443]`. #}
+{%         set proto = '' if proto == 'all' else proto %}
 {%         set local_port = tunnel_conf.local.port if tunnel_conf.local.port is vyos_defined else '' %}
 {%         set local_suffix = '[{0}/{1}]'.format(proto, local_port) if proto or local_port else '' %}
 {%         set remote_port = tunnel_conf.remote.port if tunnel_conf.remote.port is vyos_defined else '' %}

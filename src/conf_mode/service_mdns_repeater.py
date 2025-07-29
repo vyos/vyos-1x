@@ -18,7 +18,9 @@ import os
 
 from json import loads
 from sys import exit
-from netifaces import ifaddresses, AF_INET, AF_INET6
+from socket import AF_INET
+from socket import AF_INET6
+from netifaces import ifaddresses # pylint: disable = no-name-in-module
 
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists

@@ -17,7 +17,7 @@
 import os
 
 from glob import glob
-from netifaces import AF_INET
+from socket import AF_INET
 from sys import exit
 
 from vyos.config import Config

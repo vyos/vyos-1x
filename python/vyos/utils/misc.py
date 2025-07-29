@@ -48,7 +48,7 @@ def install_into_config(conf, config_paths, override_prompt=True):
 
     for path in config_paths:
         if override_prompt and conf.exists(path) and not conf.is_multi(path):
-            if not ask_yes_no(f'Config node "{node}" already exists. Do you want to overwrite it?'):
+            if not ask_yes_no(f'Config node "{path}" already exists. Do you want to overwrite it?'):
                 continue
 
         try:

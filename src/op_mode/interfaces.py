@@ -39,7 +39,7 @@ def catch_broken_pipe(func):
             func(*args, **kwargs)
         except (BrokenPipeError, KeyboardInterrupt):
             # Flush output to /dev/null and bail out.
-            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno()) # pylint: disable = no-member
     return wrapped
 
 # The original implementation of filtered_interfaces has signature:

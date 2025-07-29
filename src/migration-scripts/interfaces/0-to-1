@@ -20,6 +20,8 @@
 
 from vyos.configtree import ConfigTree
 
+base = ['interfaces', 'bridge']
+
 def migrate_bridge(config, tree, intf):
     # check if bridge-group exists
     tree_bridge = tree + ['bridge-group']
@@ -49,8 +51,6 @@ def migrate_bridge(config, tree, intf):
 
 
 def migrate(config: ConfigTree) -> None:
-    base = ['interfaces', 'bridge']
-
     if not config.exists(base):
         # Nothing to do
         return

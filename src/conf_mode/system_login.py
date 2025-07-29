@@ -37,7 +37,7 @@ from vyos.utils.auth import get_current_user
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
-from vyos.utils.file import chown
+from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import run
@@ -337,7 +337,7 @@ def apply(login):
 
             tmp = dict_search('type', user_config)
             # PERLE - for now, if the config is empty (ie config.boot.default) for user type, assume adminstrator
-            if tmp == 'operator': command += f' --groups frr,frrvty,vyattaop,sudo,adm,dip,disk,_kea {user}'
+            if tmp == 'operator' or tmp == 'operator+': command += f' --groups frr,frrvty,vyattaop,sudo,adm,dip,disk,_kea {user}'
             else: command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea {user}'
             try:
                 cmd(command)
