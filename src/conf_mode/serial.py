@@ -164,7 +164,7 @@ def generate(proxy):
             port_config['ttynum'] = ttynum
 
             if 'global' in proxy:
-                port_config['global'] = proxy.pop('global')
+                port_config['global'] = proxy['global']
 
             if 'service' in port_config:
                 service = port_config.get('service', '')
