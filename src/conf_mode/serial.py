@@ -20,9 +20,9 @@ import sys
 import json
 import signal
 import socket
-import subprocess
 
 from sys import exit
+from time import sleep
 from psutil import process_iter
 from collections import defaultdict
 
@@ -332,6 +332,10 @@ def apply(proxy):
             monitor_dcd_or_dsr = 0
             require_systemd = 0
             alias_ip = ''
+
+            while not is_systemd_service_active(service_name):
+                sleep(0.100)
+
             if 'disable' not in serial_config:
                 if 'hardware' in serial_config:
                     if 'monitor_dcd' in serial_config['hardware'] or 'monitor_dsr' in serial_config['hardware']:
