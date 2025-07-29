@@ -350,6 +350,14 @@ def apply(proxy):
                         mtsport = 0
                 elif 'tcp-reverse' in serial_config['service']:
                     require_systemd = 1
+                    if 'reverse' in serial_config['service_setting']:
+                        if 'ip_aliasing' not in serial_config['service_setting']['reverse']:
+                            alias_ip = ''
+                    else:
+                        alias_ip = ''
+                elif 'modbus' in serial_config['service']:
+                    if 'ip_aliasing' not in serial_config['global']['modbus_gateway']:
+                        alias_ip = ''
 
                 send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd)
             else:
