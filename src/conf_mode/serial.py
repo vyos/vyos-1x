@@ -31,11 +31,14 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_active
 from vyos import ConfigError
 
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 # from vyos.configdiff import get_config_diff, Diff
+
+service_name = 'iolan.service'
 
 def get_config(config=None):
     if config:
@@ -308,7 +311,9 @@ def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, moni
         sock.close()
 
 def apply(proxy):
-    if not proxy:
+    if not proxy or 'device' not in proxy:
+        if is_systemd_service_active(service_name):
+            cmd(f'systemctl stop {service_name}')
         return None
 
     if 'serial_remove' in proxy:
@@ -317,7 +322,9 @@ def apply(proxy):
             send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0)
 
     if 'device' in proxy:
-        ret = 0
+        if not is_systemd_service_active(service_name):
+            cmd(f'systemctl start {service_name}')
+
         for device, serial_config in proxy['device'].items():
             ttynum = re.findall(r'\d+', device)[0]
             exe_name = ''
