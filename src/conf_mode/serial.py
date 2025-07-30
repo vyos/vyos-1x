@@ -248,7 +248,8 @@ def generate(proxy):
                                 port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_start'] = uid_start
                                 port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_end'] = uid_end
 
-                if 'serial_tunnel' in service:
+                # serial-tunnel
+                if 'serial-tunnel' in service:
                     port_config['service'] = 'serial-tunnel-server'
                     if 'serial_tunnel' in port_config['service_setting']:
                         if port_config['service_setting']['serial_tunnel'].get('mode', '') == 'client':
