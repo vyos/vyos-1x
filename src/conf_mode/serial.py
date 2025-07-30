@@ -90,7 +90,8 @@ def verify(proxy):
                 raise ConfigError('serial requires service parameter!')
             service = dict_search('service', device_conf)
 
-            listening_services = ['trueport-client', 'tcp-reverse', 'udp', 'vmodem']
+            # TODO: need to differentiate server and and client mode, only server would need to listen
+            listening_services = ['trueport-client', 'tcp-reverse', 'udp', 'vmodem', 'serial-tunnel']
             if service in listening_services:
                 if dict_search('listen_port', device_conf) == None:
                     raise ConfigError(f'Service {service} requires listening port parameter!')
@@ -376,6 +377,8 @@ def apply(proxy):
                 elif 'modbus' in serial_config['service']:
                     if 'ip_aliasing' not in serial_config['global']['modbus_gateway']:
                         alias_ip = ''
+                elif 'serial-tunnel-server' in serial_config['service']:
+                    require_systemd = 1
 
                 send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd)
             else:
