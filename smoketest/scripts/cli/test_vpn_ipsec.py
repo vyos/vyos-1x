@@ -265,7 +265,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         # if dpd is not specified it should not be enabled (see T6599)
         swanctl_unexpected_lines = [
-            f'dpd_timeout'
+            f'dpd_timeout',
             f'dpd_delay'
         ]
 
