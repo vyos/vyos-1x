@@ -57,15 +57,18 @@ def get_config(config=None):
                                      get_first_key=True,
                                      with_recursive_defaults=True)
 
+    changed_tty_list = []
     for device in proxy.get('device', []):
         # Want to restart serial if its config changed
         tmp = is_node_changed(conf, base + ['device', device])
         print(tmp)
         if tmp:
-            proxy['serial_restart'] = [device]
+            changed_tty_list.append(device)
             if 'tls' in proxy_no_default['device'][device]:
                 if 'disable' not in proxy_no_default['device'][device].get('tls', []):
                     proxy['device'][device]['tls'].update({'enabled': {}})
+    if changed_tty_list:
+        proxy['serial_restart'] = changed_tty_list
 
     # Delete serial port if was deleted from config tree
     tmp = node_changed(conf, base + ['device'])
@@ -332,6 +335,10 @@ def apply(proxy):
             cmd(f'systemctl start {service_name}')
 
         for device, serial_config in proxy['device'].items():
+            if 'serial_restart' in proxy:
+                if device not in proxy['serial_restart']:
+                    continue
+
             ttynum = re.findall(r'\d+', device)[0]
             exe_name = ''
             mtsport = 0
