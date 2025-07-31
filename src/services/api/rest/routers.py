@@ -868,17 +868,19 @@ def traceroute_op(data: TracerouteModel):
 def handle_saml_auth(data: SAMLAuthRequestData):
     match data.type:
         case SAMLType.AUTH:
+            data_json = data.model_dump()
+
             url = "http://127.0.0.1/saml/gen_signon_url"
             payload = {
-                'RelayState': data.RelayState
+                'RelayState': data_json.get("RelayState")
             }
             try:
                 req = requests.post(url=url, json=payload, timeout=10)
                 req.raise_for_status()
-            except requests.exceptions.Timeout as e:
+            except requests.exceptions.Timeout:
                 return error(500, "SSO (saml-sp): timed out")
             except requests.exceptions.HTTPError as e:
-                error_detail = e.response.json.get('detail')
+                error_detail = e.response.json().get('detail')
                 return error(500, f"SSO (saml-sp): {error_detail}")
             except Exception as e:
                 return error(500, str(e))
