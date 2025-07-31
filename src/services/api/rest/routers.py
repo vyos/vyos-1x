@@ -72,6 +72,15 @@ from .models import ImportPkiModel
 from .models import PoweroffModel
 from .models import TracerouteModel
 
+from .models import AuthService
+from .models import AuthRequestModel
+from .models import register_auth
+from .models import auth_handler
+
+from .models import SAMLAuthRequestData
+
+from pydantic import ValidationError
+
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -851,6 +860,31 @@ def traceroute_op(data: TracerouteModel):
         return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
+
+
+@register_auth(AuthService.SAML, SAMLAuthRequestData)
+def handle_saml_auth(data: SAMLAuthRequestData):
+    return success({"Auth Type": "SAML"})
+
+
+@router.post('/auth')
+def auth(data: AuthRequestModel):
+    entry = auth_handler.get(data.service)
+    if not entry:
+        raise HTTPException(status_code=400, detail="Unsuported Auth Service")
+
+    handler_func, model_class = entry
+
+    try:
+        validated_data = model_class.parse_obj(data.data)
+    except ValidationError as e:
+        error_msgs = "; ".join(
+            f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}"
+            for err in e.errors()
+        )
+        return error(422, error_msgs)
+
+    return handler_func(validated_data)
 
 
 def rest_init(app: 'FastAPI'):
