@@ -18,6 +18,7 @@
 # pylint: disable=wildcard-import,unused-wildcard-import
 # pylint: disable=broad-exception-caught
 
+import requests
 import json
 import copy
 import logging
@@ -78,6 +79,7 @@ from .models import register_auth
 from .models import auth_handler
 
 from .models import SAMLAuthRequestData
+from .models import SAMLType
 
 from pydantic import ValidationError
 
@@ -864,7 +866,42 @@ def traceroute_op(data: TracerouteModel):
 
 @register_auth(AuthService.SAML, SAMLAuthRequestData)
 def handle_saml_auth(data: SAMLAuthRequestData):
-    return success({"Auth Type": "SAML"})
+    match data.type:
+        case SAMLType.AUTH:
+            url = "http://127.0.0.1/saml/gen_signon_url"
+            payload = {
+                'RelayState': data.RelayState
+            }
+            try:
+                req = requests.post(url=url, json=payload, timeout=10)
+                req.raise_for_status()
+            except requests.exceptions.Timeout as e:
+                return error(500, "SSO (saml-sp): timed out")
+            except requests.exceptions.HTTPError as e:
+                error_detail = e.response.json.get('detail')
+                return error(500, f"SSO (saml-sp): {error_detail}")
+            except Exception as e:
+                return error(500, str(e))
+
+            resp = req.json()
+
+            sso_url = resp.get('sso_url')
+            session = resp.get('session')
+
+            if not sso_url:
+                return error(500, "Could not get sso url")
+            if not session:
+                return error(500, "Could not create session")
+
+            res = {
+                'sso_url': sso_url,
+                'session': session
+            }
+
+            return success(res)
+
+        case SAMLType.CHECK_AUTH:
+            return success({"SAMLType": SAMLType.CHECK_AUTH})
 
 
 @router.post('/auth')
