@@ -99,7 +99,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(base_obj[key], value)
 
     def verify_service_running(self):
-        tmp = cmd('tail -n 100 /var/log/messages | grep kea')
+        try:
+            tmp = cmd('grep Kea /var/log/messages | tail -n 100')
+        except OSError:
+            tmp = "No relevant log entries"
         self.assertTrue(process_named_running(PROCESS_NAME), msg=f'Service not running, log: {tmp}')
 
     def test_dhcp_single_pool_range(self):
