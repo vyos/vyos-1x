@@ -334,6 +334,12 @@ class SAMLAuthRequestData(BaseModel):
     RelayState: Optional[AnyHttpUrl] = None
     session: Optional[StrictStr] = None
 
+    @property
+    def relay_state_str(self) -> str | None:
+        if self.RelayState:
+            return str(self.RelayState)
+        return None
+
     @model_validator(mode="after")
     def check_required_fields(self):
         if self.type == SAMLType.CHECK_AUTH and not self.session:
@@ -358,7 +364,7 @@ def register_auth(service: AuthService, model: Type[BaseModel]):
     return decorator
 
 class AuthRequestModel(ApiModel):
-    service: AuthService
+    op: AuthService
     data: dict
 
 

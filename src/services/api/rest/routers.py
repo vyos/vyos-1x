@@ -224,6 +224,7 @@ class MultipartRequest(Request):
                         '/image',
                         '/configure-section',
                         '/traceroute',
+                        '/auth',
                     ):
                         if 'path' not in c:
                             self.form_err = (
@@ -870,7 +871,7 @@ def handle_saml_auth(data: SAMLAuthRequestData):
         case SAMLType.AUTH:
             url = "http://127.0.0.1/saml/gen_signon_url"
             payload = {
-                'RelayState': str(data.RelayState)
+                'RelayState': data.relay_state_str
             }
             try:
                 req = requests.post(url=url, json=payload, timeout=10)
@@ -906,7 +907,7 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
 @router.post('/auth')
 def auth(data: AuthRequestModel):
-    entry = auth_handler.get(data.service)
+    entry = auth_handler.get(data.op)
     if not entry:
         raise HTTPException(status_code=400, detail="Unsuported Auth Service")
 
