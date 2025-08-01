@@ -869,12 +869,12 @@ def traceroute_op(data: TracerouteModel):
 def handle_saml_auth(data: SAMLAuthRequestData):
     match data.type:
         case SAMLType.AUTH:
-            url = "http://127.0.0.1/saml/gen_signon_url"
+            url = "https://127.0.0.1/saml/gen_signon_url"
             payload = {
                 'RelayState': str(data.RelayState)
             }
             try:
-                req = requests.post(url=url, json=payload, timeout=10)
+                req = requests.post(url=url, json=payload, timeout=10, verify=False)
                 req.raise_for_status()
                 resp = req.json()
             except requests.exceptions.Timeout:
@@ -903,12 +903,12 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
             return success(res)
         case SAMLType.CHECK_AUTH:
-            url = "http://127.0.0.1/saml/is_auth"
+            url = "https://127.0.0.1/saml/is_auth"
             payload = {
                 'session': data.session
             }
             try:
-                req = requests.post(url=url, json=payload, timeout=10)
+                req = requests.post(url=url, json=payload, timeout=10, verify=False)
                 req.raise_for_status()
                 resp = req.json()
             except requests.exceptions.Timeout:
