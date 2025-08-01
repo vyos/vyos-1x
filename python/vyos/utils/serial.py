@@ -14,6 +14,8 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, re, json
+import glob
+import socket
 from typing import List
 
 from vyos.base import Warning
@@ -25,6 +27,43 @@ RE_GETTY_DEVICES = re.compile(r'.+@(.+).service$')
 
 SD_UNIT_PATH = '/run/systemd/system'
 UTMP_PATH = '/run/utmp'
+
+SOCKET_PATH = '/tmp/iol_perleinit'
+
+def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, monitor_signals, require_systemd):
+    msg = {
+        'action': action,  # 'restart' | 'stop' | 'delete' | 'relaunch'
+        'name': name,
+        'service': service,
+        'ttynum': ttynum,
+        'mtsport': mtsport,
+        'alias_ip': alias_ip,
+        'monitor_signals': monitor_signals,
+        'require_systemd': require_systemd,
+    }
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+    # Send message as JSON
+    try:
+        sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
+        print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
+    except Exception as e:
+        print(f'Error sending message: {e}')
+    finally:
+        sock.close()
+
+def find_all_ttyS_devices():
+    tty_devices = []
+    for entry in os.listdir('/dev'):
+        if re.fullmatch(r'ttyS\d+', entry):
+            tty_devices.append(entry)
+    return sorted(tty_devices)
+
+def find_active_ttyS_devices():
+    files = glob.glob('/run/serial/ttyS*.json')
+    tty_devices = [os.path.splitext(os.path.basename(f))[0] for f in files]
+    return sorted(tty_devices)
 
 def get_serial_units(include_devices=[]):
     # Since we cannot depend on the current config for decommissioned ports,
@@ -96,7 +135,7 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
                 # This flag is used by conf_mode/system_console.py to reset things, if there's
                 # a problem, the user should issue a manual restart for serial-getty.
                 Warning('Please ensure all settings are committed and saved before issuing a ' \
-                      '"restart serial console" command to apply new configuration!')
+                      '"restart serial" command to apply new configuration!')
         if not prompt_user:
             return False
         if not ask_yes_no('Any uncommitted changes from these sessions will be lost\n' \

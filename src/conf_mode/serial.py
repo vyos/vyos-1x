@@ -32,11 +32,13 @@ from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.serial import send_command_to_iolan
 from vyos import ConfigError
 
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 # from vyos.configdiff import get_config_diff, Diff
+
 
 service_name = 'iolan.service'
 
@@ -162,7 +164,7 @@ def generate(proxy):
     if 'device' in proxy:
         for device, serial_config in proxy['device'].items():
             port_config = serial_config
-            ttynum = re.findall(r'\d+', device)[0]
+            ttynum = int(re.findall(r'\d+', device)[0])
             service = ''
             config_service = ''
             port_config['ttynum'] = ttynum
@@ -296,31 +298,6 @@ def generate(proxy):
     print(proxy)
     return proxy
 
-SOCKET_PATH = '/tmp/iol_perleinit'
-
-def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, monitor_signals, require_systemd):
-    msg = {
-        'action': action,  # 'restart' or 'stop'
-        'name': name,
-        'service': service,
-        'ttynum': ttynum,
-        'mtsport': mtsport,
-        'alias_ip': alias_ip,
-        'monitor_signals': monitor_signals,
-        'require_systemd': require_systemd,
-    }
-
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-
-    # Send message as JSON
-    try:
-        sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
-        print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
-    except Exception as e:
-        print(f'Error sending message: {e}')
-    finally:
-        sock.close()
-
 def apply(proxy):
     if not proxy or 'device' not in proxy:
         if is_systemd_service_active(service_name):
@@ -341,7 +318,7 @@ def apply(proxy):
                 if device not in proxy['serial_restart']:
                     continue
 
-            ttynum = re.findall(r'\d+', device)[0]
+            ttynum = int(re.findall(r'\d+', device)[0])
             exe_name = ''
             mtsport = 0
             monitor_dcd_or_dsr = 0
