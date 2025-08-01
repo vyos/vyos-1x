@@ -68,7 +68,7 @@ server {
 
     location /saml/ {
         include proxy_params;
-        proxy_pass http://unix:/run/saml.sock;
+        proxy_pass http://unix:/run/saml-sp/saml.sock;
         proxy_buffering off;
         proxy_cache off;
     }
