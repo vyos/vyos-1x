@@ -871,20 +871,22 @@ def handle_saml_auth(data: SAMLAuthRequestData):
         case SAMLType.AUTH:
             url = "http://127.0.0.1/saml/gen_signon_url"
             payload = {
-                'RelayState': data.relay_state_str
+                'RelayState': str(data.RelayState)
             }
             try:
                 req = requests.post(url=url, json=payload, timeout=10)
                 req.raise_for_status()
+                resp = req.json()
             except requests.exceptions.Timeout:
                 return error(500, "SSO (saml-sp): timed out")
             except requests.exceptions.HTTPError as e:
-                error_detail = e.response.json().get('detail')
+                try:
+                    error_detail = e.response.json().get('detail')
+                except Exception:
+                    error_detail = "Unknown HTTPError, Check if saml-sp is running"
                 return error(500, f"SSO (saml-sp): {error_detail}")
             except Exception as e:
                 return error(500, str(e))
-
-            resp = req.json()
 
             sso_url = resp.get('sso_url')
             session = resp.get('session')
@@ -900,9 +902,40 @@ def handle_saml_auth(data: SAMLAuthRequestData):
             }
 
             return success(res)
-
         case SAMLType.CHECK_AUTH:
-            return success({"SAMLType": SAMLType.CHECK_AUTH})
+            url = "http://127.0.0.1/saml/is_auth"
+            payload = {
+                'session': data.session
+            }
+            try:
+                req = requests.post(url=url, json=payload, timeout=10)
+                req.raise_for_status()
+                resp = req.json()
+            except requests.exceptions.Timeout:
+                return error(500, "SSO (saml-sp): timed out")
+            except requests.exceptions.HTTPError as e:
+                try:
+                    error_detail = e.response.json().get('detail')
+                except Exception:
+                    error_detail = "Unknown HTTPError, Check if saml-sp is running"
+                return error(500, f"SSO (saml-sp): {error_detail}")
+            except Exception as e:
+                return error(500, str(e))
+
+            auth_status = resp.get("auth_status")
+            auth_level = resp.get("auth_level")
+
+            if not auth_status:
+                return error(500, "Could not get auth status")
+            if not auth_level:
+                return error(500, "Could not get auth level")
+
+            res = {
+                'auth_status': auth_status,
+                'auth_level': auth_level
+            }
+
+            return success(res)
 
 
 @router.post('/auth')
