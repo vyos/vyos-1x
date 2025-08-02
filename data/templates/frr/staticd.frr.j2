@@ -51,10 +51,7 @@
 {% endif %}
 {% if prefix_config.dhcp_interface is vyos_defined %}
 {%     for dhcp_interface in prefix_config.dhcp_interface %}
-{%         set next_hop = dhcp_interface | get_dhcp_router %}
-{%         if next_hop is vyos_defined %}
-{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ dhcp_interface }} {{ 'table ' ~ table if table is vyos_defined }}
-{%         endif %}
+{{ ip_ipv6 }} route {{ prefix }} dhcp-gateway {{ dhcp_interface }} {{ 'table ' ~ table if table is vyos_defined }}
 {%     endfor %}
 {% endif %}
 {% if prefix_config.blackhole is vyos_defined %}
@@ -84,10 +81,7 @@ vrf {{ vrf }}
 {# IPv4 default routes from DHCP interfaces #}
 {% if dhcp is vyos_defined %}
 {%     for interface, interface_config in dhcp.items() if interface_config.dhcp_options.no_default_route is not vyos_defined %}
-{%         set next_hop = interface | get_dhcp_router %}
-{%         if next_hop is vyos_defined %}
-{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 {{ interface_config.dhcp_options.default_route_distance if interface_config.dhcp_options.default_route_distance is vyos_defined }}
-{%         endif %}
+{{ ip_prefix }} route 0.0.0.0/0 dhcp-gateway {{ interface }} tag 210 {{ interface_config.dhcp_options.default_route_distance if interface_config.dhcp_options.default_route_distance is vyos_defined }}
 {%     endfor %}
 {% endif %}
 {# IPv4 default routes from PPPoE interfaces #}
