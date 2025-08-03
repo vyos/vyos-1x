@@ -47,13 +47,14 @@ def is_locked(user_name: str) -> bool:
     """Check if a given user has password in shadow db"""
 
     try:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore",category=DeprecationWarning)
-            import spwd
-        encrypted_password = spwd.getspnam(user_name)[1]
-        return encrypted_password == '*' or encrypted_password.startswith('!')
-    except (KeyError, PermissionError):
+        with open('/etc/shadow', 'r') as f:
+            for line in f.readlines():
+                args = line.strip().split(':')
+                if len(args) < 2:
+                    continue
+                if args[0] == user_name:
+                    return len(args[1]) > 0 and args[1].startswith('!')
+    except PermissionError:
         print('Cannot access shadow database, ensure this script is run with sufficient permissions')
         sys.exit(1)
 
