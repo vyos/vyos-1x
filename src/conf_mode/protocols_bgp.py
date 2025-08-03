@@ -419,11 +419,12 @@ def verify(config_dict):
                         raise ConfigError('route-reflector-client only supported for iBGP peers')
                     else:
                         # Check into the peer group for the remote as, if we are in a peer group, check in peer itself
+                        peer_group_as = None
                         if 'peer_group' in peer_config:
                             peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', bgp)
                         elif neighbor == 'peer_group':
                             peer_group_as = peer_config.get('remote_as')
-                        
+
                         if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
                             raise ConfigError('route-reflector-client only supported for iBGP peers')
 

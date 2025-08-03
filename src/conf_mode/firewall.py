@@ -589,6 +589,7 @@ def parse_firewall_error(output):
         # Parse the comment
         parsed_entries = comment.split('-')
         family = 'bridge' if parsed_entries[0] == 'bri' else parsed_entries[0]
+        chain = ''
         if parsed_entries[1] == 'NAM':
             chain = 'name'
         elif parsed_entries[1] == 'FWD':

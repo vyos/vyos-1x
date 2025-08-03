@@ -36,6 +36,7 @@ def _get_xml_translation(direction, family, address=None):
     """
     Get conntrack XML output --src-nat|--dst-nat
     """
+    opt = ''
     if direction == 'source':
         opt = '--src-nat'
     if direction == 'destination':
@@ -62,6 +63,7 @@ def _get_json_data(direction, family):
     """
     Get NAT format JSON
     """
+    chain = ''
     if direction == 'source':
         chain = 'POSTROUTING'
     if direction == 'destination':
@@ -137,6 +139,7 @@ def _get_formatted_output_rules(data, direction, family):
 
     data_entries = []
     for rule in data:
+        interface = 'any'
         if 'comment' in rule['rule']:
             comment = rule.get('rule').get('comment')
             rule_number = comment.split('-')[-1]
@@ -239,6 +242,9 @@ port {port}'''
 def _get_formatted_output_statistics(data, direction):
     data_entries = []
     for rule in data:
+        packets = ''
+        _bytes = ''
+        interface = 'any'
         if 'comment' in rule['rule']:
             comment = rule.get('rule').get('comment')
             rule_number = comment.split('-')[-1]

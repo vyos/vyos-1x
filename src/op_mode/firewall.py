@@ -192,7 +192,7 @@ def output_firewall_vertical(rules, headers, adjust=True):
         print(tabulate.tabulate(transformed_rule, tablefmt="presto"))
         print()
 
-def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=None):
+def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=None, detail=False):
     print(f'\n---------------------------------\n{family} Firewall "{hook} {priority}"\n')
 
     details = get_nftables_details(family, hook, priority)
@@ -226,10 +226,10 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
     rows.append(row)
 
     if rows:
-        if args.rule:
+        if single_rule_id:
             rows.pop()
 
-        if args.detail:
+        if detail:
             header = ['Rule', 'Description', 'Action', 'Protocol', 'Packets', 'Bytes', 'Conditions']
             output_firewall_vertical(rows, header)
         else:
@@ -238,7 +238,7 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
                 rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
 
-def output_firewall_state_policy(family):
+def output_firewall_state_policy(family, detail=None):
     if family == 'bridge':
         return {}
     print(f'\n---------------------------------\n{family} State Policy\n')
@@ -254,10 +254,7 @@ def output_firewall_state_policy(family):
         rows.append(row)
 
     if rows:
-        if args.rule:
-            rows.pop()
-
-        if args.detail:
+        if detail:
             header = ['State', 'Conditions', 'Packets', 'Bytes']
             output_firewall_vertical(rows, header)
         else:
@@ -266,7 +263,7 @@ def output_firewall_state_policy(family):
                 rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
 
-def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule_id=None):
+def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule_id=None, detail=None):
     print(f'\n---------------------------------\n{family} Firewall "{hook} {prior}"\n')
 
     details = get_nftables_details(family, hook, prior)
@@ -384,7 +381,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
         rows.append(row)
 
     if rows:
-        if args.detail:
+        if detail:
             header = ['Rule', 'Description', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
             output_firewall_vertical(rows, header)
         else:
@@ -393,7 +390,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
                 rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header) + '\n')
 
-def show_firewall():
+def show_firewall(detail=None):
     print('Rulesets Information')
 
     conf = Config()
@@ -405,14 +402,14 @@ def show_firewall():
     for family in ['ipv4', 'ipv6', 'bridge']:
         if 'global_options' in firewall:
             if 'state_policy' in firewall['global_options']:
-                output_firewall_state_policy(family)
+                output_firewall_state_policy(family, detail=detail)
 
         if family in firewall:
             for hook, hook_conf in firewall[family].items():
                 for prior, prior_conf in firewall[family][hook].items():
-                    output_firewall_name(family, hook, prior, prior_conf)
+                    output_firewall_name(family, hook, prior, prior_conf, detail=detail)
 
-def show_firewall_family(family):
+def show_firewall_family(family, detail=None):
     print(f'Rulesets {family} Information')
 
     conf = Config()
@@ -423,30 +420,30 @@ def show_firewall_family(family):
 
     if 'global_options' in firewall:
         if 'state_policy' in firewall['global_options']:
-            output_firewall_state_policy(family)
+            output_firewall_state_policy(family, detail=detail)
 
     if family in firewall:
         for hook, hook_conf in firewall[family].items():
             for prior, prior_conf in firewall[family][hook].items():
-                output_firewall_name(family, hook, prior, prior_conf)
+                output_firewall_name(family, hook, prior, prior_conf, detail=detail)
 
-def show_firewall_name(family, hook, priority):
+def show_firewall_name(family, hook, priority, detail=None):
     print('Ruleset Information')
 
     conf = Config()
     firewall = get_config_node(conf, 'firewall', family, hook, priority)
     if firewall:
-        output_firewall_name(family, hook, priority, firewall)
+        output_firewall_name(family, hook, priority, firewall, detail=detail)
 
-def show_firewall_rule(family, hook, priority, rule_id):
+def show_firewall_rule(family, hook, priority, rule_id, detail=None):
     print('Rule Information')
 
     conf = Config()
     firewall = get_config_node(conf, 'firewall', family, hook, priority)
     if firewall:
-        output_firewall_name(family, hook, priority, firewall, rule_id)
+        output_firewall_name(family, hook, priority, firewall, rule_id, detail=detail)
 
-def show_firewall_group(name=None):
+def show_firewall_group(name=None, detail=None):
     conf = Config()
     firewall = get_config_node(conf, node='firewall')
 
@@ -594,7 +591,7 @@ def show_firewall_group(name=None):
     for group_type, group_type_conf in firewall['group'].items():
         # interate over dynamic-groups
         if group_type == 'dynamic_group':
-            if not args.detail:
+            if not detail:
                 header_tail = ['Timeout', 'Expires']
 
             for dynamic_type in ['address_group', 'ipv6_address_group']:
@@ -611,7 +608,7 @@ def show_firewall_group(name=None):
                         members = get_nftables_group_members(family, 'vyos_filter', f'{prefix}{dynamic_name}')
 
                         if not members:
-                            if args.detail:
+                            if detail:
                                 row.append('N/D')
                             else:
                                 row += ["N/D"] * 3
@@ -629,7 +626,7 @@ def show_firewall_group(name=None):
                                 timeout = str(member.get('timeout', 'N/D'))
                                 expires = str(member.get('expires', 'N/D'))
 
-                            if args.detail:
+                            if detail:
                                 row.append(f'{val} (timeout: {timeout}, expires: {expires})')
                                 continue
 
@@ -639,7 +636,7 @@ def show_firewall_group(name=None):
                             row += [val, timeout, expires]
                             rows.append(row)
 
-                        if args.detail:
+                        if detail:
                             header_tail += [""] * (len(members) - 1)
                             rows.append(row)
 
@@ -657,7 +654,7 @@ def show_firewall_group(name=None):
                 if 'url' in remote_conf:
                     # display only the url if no members are found for both views
                     if not members and not members6:
-                        if args.detail:
+                        if detail:
                             header_tail = ['IPv6 Members', 'Remote URL']
                             row.append('N/D')
                             row.append('N/D')
@@ -667,7 +664,7 @@ def show_firewall_group(name=None):
                         rows.append(row)
                     else:
                         # display all table elements in detail view
-                        if args.detail:
+                        if detail:
                             header_tail = ['IPv6 Members', 'Remote URL']
                             if members:
                                 row.append(' '.join(members))
@@ -707,7 +704,7 @@ def show_firewall_group(name=None):
 
     if rows:
         print('Firewall Groups\n')
-        if args.detail:
+        if detail:
             header = ['Name', 'Description', 'Type', 'References', 'Members'] + header_tail
             output_firewall_vertical(rows, header, adjust=False)
         else:
@@ -716,7 +713,7 @@ def show_firewall_group(name=None):
                 rows[rows.index(i)].pop(1)
             print(tabulate.tabulate(rows, header))
 
-def show_summary():
+def show_summary(detail=None):
     print('Ruleset Summary')
 
     conf = Config()
@@ -760,9 +757,9 @@ def show_summary():
         print('\nBridge Ruleset:\n')
         print(tabulate.tabulate(br_out, header) + '\n')
 
-    show_firewall_group()
+    show_firewall_group(detail=detail)
 
-def show_statistics():
+def show_statistics(detail=None):
     print('Rulesets Statistics')
 
     conf = Config()
@@ -779,7 +776,7 @@ def show_statistics():
         if family in firewall:
             for hook, hook_conf in firewall[family].items():
                 for prior, prior_conf in firewall[family][hook].items():
-                    output_firewall_name_statistics(family, hook,prior, prior_conf)
+                    output_firewall_name_statistics(family, hook,prior, prior_conf, detail=detail)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -796,16 +793,16 @@ if __name__ == '__main__':
 
     if args.action == 'show':
         if not args.rule:
-            show_firewall_name(args.family, args.hook, args.priority)
+            show_firewall_name(args.family, args.hook, args.priority, args.detail)
         else:
-            show_firewall_rule(args.family, args.hook, args.priority, args.rule)
+            show_firewall_rule(args.family, args.hook, args.priority, args.rule, args.detail)
     elif args.action == 'show_all':
-        show_firewall()
+        show_firewall(args.detail)
     elif args.action == 'show_family':
-        show_firewall_family(args.family)
+        show_firewall_family(args.family, args.detail)
     elif args.action == 'show_group':
-        show_firewall_group(args.name)
+        show_firewall_group(args.name, args.detail)
     elif args.action == 'show_statistics':
-        show_statistics()
+        show_statistics(args.detail)
     elif args.action == 'show_summary':
-        show_summary()
+        show_summary(args.detail)

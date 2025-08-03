@@ -68,6 +68,7 @@ def migrate(config: ConfigTree) -> None:
         namedpools_base = pool_base + ['name']
 
         for pool_name in config.list_nodes(namedpools_base):
+            mask = None
             pool_path = namedpools_base + [pool_name]
             if config.exists(pool_path + ['subnet']):
                 subnet = config.return_value(pool_path + ['subnet'])

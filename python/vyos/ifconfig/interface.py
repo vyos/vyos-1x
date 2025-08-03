@@ -1629,7 +1629,7 @@ class Interface(Control):
                 if direction == 'ingress':
                     handle = 'ffff: ingress'
                     parent = 'ffff:'
-                elif direction == 'egress':
+                else: # egress
                     handle = '1: root prio'
                     parent = '1:'
 

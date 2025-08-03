@@ -85,6 +85,7 @@ def _get_login_otp(username: str, info:str):
     result['otp_length'] = '6'
     result['interval'] = '30'
     result['token_type'] = 'hotp-time'
+    token_type_acrn = ''
     if result['token_type'] == 'hotp-time':
         token_type_acrn = 'totp'
     result['otp_url'] = ''.join(["otpauth://",token_type_acrn,"/",username,"@",\

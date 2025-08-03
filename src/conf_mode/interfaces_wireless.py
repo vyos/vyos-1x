@@ -170,7 +170,7 @@ def verify(wifi):
         # 802.11ax (WiFi-6e - HE) can use up to 160MHz bandwidth channels
         six_ghz_op_modes_he = ['131', '132', '133', '134', '135']
         # 802.11be (WiFi-7 - EHT) can use up to 320MHz bandwidth channels
-        six_ghz_op_modes_eht = six_ghz_op_modes_he.append('137')
+        six_ghz_op_modes_he.append('137')
         if 'security' in wifi and 'wpa' in wifi['security'] and 'mode' in wifi['security']['wpa']:
             if wifi['security']['wpa']['mode'] == 'wpa3':
                 if 'he' in wifi['capabilities']:

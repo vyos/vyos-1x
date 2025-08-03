@@ -169,6 +169,8 @@ def show_status(raw: bool):
     ct_sync_intf = config.list_nodes(['service', 'conntrack-sync', 'interface'])
     ct_sync_intf = ', '.join(ct_sync_intf)
     failover_state = "no transition yet!"
+    failover_mechanism = None
+    vrrp_sync_grp = None
     expect_sync_protocols = []
 
     if config.exists(['service', 'conntrack-sync', 'failover-mechanism', 'vrrp']):

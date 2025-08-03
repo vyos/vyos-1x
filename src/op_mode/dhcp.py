@@ -100,6 +100,7 @@ def _get_raw_server_leases(
 
 def _get_formatted_server_leases(raw_data, family='inet'):
     data_entries = []
+    headers = []
     if family == 'inet':
         for lease in raw_data:
             ipaddr = lease.get('ip')

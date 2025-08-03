@@ -225,6 +225,7 @@ vyos2client_dh_group = vyos2apple_dh_group if args.os == 'ios' else vyos2windows
 
 def transform_pfs(pfs, ike_dh_group):
     pfs_enabled = (pfs != 'disable')
+    pfs_dh_group = None
     if pfs == 'enable':
         pfs_dh_group = ike_dh_group
     elif pfs.startswith('dh-group'):

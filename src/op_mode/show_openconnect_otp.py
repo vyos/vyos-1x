@@ -63,6 +63,7 @@ def display_otp_ocserv(username, params, info):
     otp_length = params['otp']['otp_length']
     interval = params['otp']['interval']
     token_type = params['otp']['token_type']
+    token_type_acrn = ''
     if token_type == 'hotp-time':
         token_type_acrn = 'totp'
     key_base32 = b32encode(bytes.fromhex(key_hex)).decode()

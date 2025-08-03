@@ -400,6 +400,9 @@ def verify(ipsec):
                 if 'prefix' in pool_config and 'range' in pool_config:
                     raise ConfigError(f'Only one of prefix or range can be specified for pool "{pool}"!')
 
+                range_is_ipv4 = False
+                range_is_ipv6 = False
+
                 if 'prefix' in pool_config:
                     range_is_ipv4 = is_ipv4(pool_config['prefix'])
                     range_is_ipv6 = is_ipv6(pool_config['prefix'])
