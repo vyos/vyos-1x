@@ -903,7 +903,7 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
             return success(res)
         case SAMLType.CHECK_AUTH:
-            url = "https://127.0.0.1/saml/is_auth"
+            url = "https://127.0.0.1/saml/validate"
             payload = {
                 'session': data.session
             }
@@ -924,6 +924,7 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
             auth_status = resp.get("auth_status")
             auth_level = resp.get("auth_level")
+            user_id = resp.get("user_id")
 
             if not auth_status:
                 return error(500, "Could not get auth status")
@@ -932,7 +933,8 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
             res = {
                 'auth_status': auth_status,
-                'auth_level': auth_level
+                'auth_level': auth_level,
+                'user_id': user_id
             }
 
             return success(res)
@@ -942,7 +944,7 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 def auth(data: AuthRequestModel):
     entry = auth_handler.get(data.op)
     if not entry:
-        raise HTTPException(status_code=400, detail="Unsuported Auth Service")
+        raise HTTPException(status_code=400, detail="Unknown Auth Service")
 
     handler_func, model_class = entry
 
