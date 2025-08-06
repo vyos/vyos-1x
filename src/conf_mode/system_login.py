@@ -17,6 +17,7 @@
 import ipaddress
 import json
 import os
+import re
 from urllib.parse import urlparse
 
 from passlib.hosts import linux_context
@@ -96,66 +97,6 @@ def get_shadow_password(username):
                 return items[1]
     return None
 
-def check_url(url: str) -> bool:
-        """
-        Verify if a string is a valid URL.
-
-        Args:
-            url (str): The URL string.
-
-        Returns:
-            True if the string is a valid URL false otherwise.
-        """
-        try:
-            result = urlparse(url)
-            return all([result.scheme, result.netloc])
-        except ValueError:
-            return False
-def check_ip(ip: str) -> bool:
-    """
-    Verify if a string is a valid IPv4/IPv6.
-
-    Args:
-        url (str): The IP string.
-
-    Returns:
-        True if the string is a valid IPv4/IPv6 false otherwise.
-    """
-    try:
-        ipaddress.ip_address(ip)
-        return True
-    except ValueError:
-        return False
-def verify_attributes(attributes: dict):
-    """
-    Verify a list of attributes
-
-    Args:
-        attributes (dict): Attributes to verify.
-
-    Raises:
-        ConfigError: If attributes are not valid
-    """
-    req_attributes = attributes.get('req', {})
-    suff_attributes = attributes.get('suff', {})
-    for attr_name, attr in req_attributes.items():
-        values = attr.get('value', [])
-        if not values:
-            raise ConfigError(f"SAML attribute '{attr_name}' must have a value")
-        if not isinstance(values, list):
-            values = [values]
-        if not all(isinstance(value, str) and value.strip() for value in values):
-            raise ConfigError(f"SAML attribute '{attr_name}' values must be non-empty strings")
-
-    for attr_name, attr in suff_attributes.items():
-        values = attr.get('value', [])
-        if not values:
-            raise ConfigError(f"SAML attribute '{attr_name}' must have a value")
-        if not isinstance(values, list):
-            values = [values]
-        if not all(isinstance(value, str) and value.strip() for value in values):
-            raise ConfigError(f"SAML attribute '{attr_name}' values must be non-empty strings")
-
 def get_config(config=None):
     if config:
         conf = config
@@ -234,7 +175,7 @@ def verify(login):
                 if 'key' not in pubkey_options:
                     raise ConfigError(f'Missing key for public-key "{pubkey}"!')
 
-    if {'radius', 'tacacs', 'saml'} <= set(login):
+    if {'radius', 'tacacs'} <= set(login) or {'radius', 'saml'} <= set(login) or {'saml', 'tacacs'} <= set(login):
         raise ConfigError('Using RADIUS and TACACS and SAML at the same time is not supported!')
 
     # At lease one RADIUS server must not be disabled
@@ -295,50 +236,46 @@ def verify(login):
         verify_vrf(login['tacacs'])
 
     if 'saml' in login:
-        saml = login.get('saml', {})
-        idp_name = saml.get('name')
-        if not idp_name:
-            raise ConfigError("SAML: provider name must be set")
-        if not isinstance(idp_name, str):
-            raise ConfigError("SAML: provider name must be a string")
-        if not idp_name.strip():
-            raise ConfigError("SAML: provider name must be a non empty string")
+        # Verify name
+        if not 'name' in login['saml']:
+            raise ConfigError("SAML provider name must be set")
 
-        metadata_url = saml.get('metadata_url')
-        if not metadata_url:
-            raise ConfigError(f"SAML: Must have a metadata-url")
-        if not check_url(metadata_url) and not check_ip(metadata_url):
-            raise ConfigError(f"SAML: metadata-url must be a valid URL")
+        # Verify metadata-url
+        if not 'metadata_url' in login['saml']:
+            raise ConfigError("SAML metadata-url must be set")
+        metadata_url = login['saml']['metadata_url']
+        try:
+            url_res = urlparse(metadata_url)
+            if not url_res.scheme in ("https", "http") or not url_res.netloc:
+                raise ConfigError("SAML metadata-url must be a valid http/https url")
+        except ValueError:
+            raise ConfigError("SAML metadata-url must be a valid http/https url [ValueError]")
 
-        users = saml.get("user", {})
-        attributes = saml.get("attribute", {})
+        # Verify default sso level
+        if not 'default_sso_level' in login['saml']:
+            raise ConfigError("Default sso level must be set")
 
-        if not users and not attributes:
-            print(f"""WARNING: SAML:' has no attributes or users configured,\n
-            any user from your provider will be able to login at the default-sso-level""")
+        saml_config = login['saml']
+        user_levels = ("admin", "operator")
 
-        admin_users = users.get('admin', [])
-        operator_users = users.get('operator', [])
-        if admin_users:
-            if not isinstance(admin_users, list):
-                admin_users = [admin_users]
-            if not all(isinstance(admin_user, str) and admin_user.strip() for admin_user in admin_users):
-                raise ConfigError(f"SAML: Admin users must be non-empty strings")
-        if operator_users:
-            if not isinstance(operator_users, list):
-                operator_users = [operator_users]
-            if not all(isinstance(operator_user, str) and operator_user.strip() for operator_user in operator_users):
-                raise ConfigError(f"SAML: Operator users must be non-empty strings")
+        if not any(level in saml_config for level in user_levels):
+            sso_level = saml_config['default_sso_level']
+            print(f"Warning: No user/attribute config set for saml, All users will be set to '{sso_level}'.")
 
-        # Verify attributes
-        admin_attributes = attributes.get('admin', {})
-        verify_attributes(admin_attributes)
-        operator_attributes = attributes.get('operator', {})
-        verify_attributes(operator_attributes)
+        for level in user_levels:
+            level_config = saml_config.get(level, {})
+            attr_types = ("req", "suff")
 
-        default_sso_level = saml.get('default_sso_level')
-        if not default_sso_level:
-            raise ConfigError("SAML: default-sso-level must be set as operator or admin")
+            for attr_type in attr_types:
+                attrs = level_config.get('attr', {}).get(attr_type, {})
+                for attr_name, attr_config in attrs.items():
+                    values = attr_config.get('value', [])
+                    if not values:
+                        raise ConfigError(f"SAML attribute '{attr_name}' under '{level}/{attr_type}' must have values")
+            EMAIL_REGEX = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
+            for username in level_config.get("user", []):
+                if not EMAIL_REGEX.match(username):
+                    raise ConfigError("SAML usernames must be emails")
 
     if 'max_login_session' in login and 'timeout' not in login:
         raise ConfigError('"login timeout" must be configured!')
@@ -397,7 +334,7 @@ def generate(login):
             os.unlink(tacacs_nss_config_file)
 
     if 'saml' in login:
-        SAML_CONFIG_DIR = r'/etc'
+        SAML_CONFIG_DIR = r'/etc/saml-sp'
         SAML_CONFIG_FILE = r'saml.conf'
         try:
             if not os.path.exists(SAML_CONFIG_DIR):
@@ -571,19 +508,21 @@ def apply(login):
             pam_profile = 'tacplus-optional'
         cmd(f'pam-auth-update --enable {pam_profile}')
 
+    try:
+        cmd('systemctl stop saml-sp')
+        cmd('systemctl disable saml-sp')
+        cmd('pam-auth-update --disable saml_auth')
+        if 'saml' in login:
+            cmd('pam-auth-update --enable saml_auth')
+            cmd('systemctl start saml-sp')
+            cmd('systemctl enable saml-sp')
+    except Exception as e:
+        print(f"WARNING SAML: could not toggle SAML services: '{str(e)}'")
+
     # Enable/disable Google authenticator
     cmd('pam-auth-update --disable mfa-google-authenticator')
     if enable_otp:
         cmd('pam-auth-update --enable mfa-google-authenticator')
-
-    # Enable/disable SAML in PAM configuration
-    cmd('systemctl stop saml-sp')
-    cmd('systemctl disable saml-sp')
-    cmd('pam-auth-update --disable saml_auth')
-    if 'saml' in login:
-        cmd('pam-auth-update --enable saml_auth')
-        cmd('systemctl start saml-sp')
-        cmd('systemctl enable saml-sp')
 
     call_dependents()
     return None
