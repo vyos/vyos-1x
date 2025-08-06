@@ -64,7 +64,7 @@
               <children>
                 <leafNode name="value">
                   <properties>
-                    <help>Value reqired</help>
+                    <help>Value required</help>
                     <multi/>
                     <valueHelp>
                       <format>&lt;value&gt;</format>
@@ -84,7 +84,7 @@
               <children>
                 <leafNode name="value">
                   <properties>
-                    <help>Value reqired</help>
+                    <help>Value required</help>
                     <multi/>
                     <valueHelp>
                       <format>&lt;value&gt;</format>
@@ -95,7 +95,7 @@
               </children>
             </tagNode>
             <!--End of Suff Attributes-->
-          </children
+          </children>
         </node>
         <!--End of Admin Attributes-->
 
@@ -133,7 +133,7 @@
               <children>
                 <leafNode name="value">
                   <properties>
-                    <help>Value reqired</help>
+                    <help>Value required</help>
                     <multi/>
                     <valueHelp>
                       <format>&lt;value&gt;</format>
@@ -153,7 +153,7 @@
               <children>
                 <leafNode name="value">
                   <properties>
-                    <help>Value reqired</help>
+                    <help>Value required</help>
                     <multi/>
                     <valueHelp>
                       <format>&lt;value&gt;</format>
@@ -164,7 +164,7 @@
               </children>
             </tagNode>
             <!--End of Suff Attributes-->
-          </children
+          </children>
         </node>
         <!--End of Operator Attributes-->
 
