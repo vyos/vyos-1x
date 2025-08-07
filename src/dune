@@ -32,3 +32,16 @@
  (foreign_stubs
   (language c)
   (names iface)))
+
+(executable
+ (name vyos_op_run)
+ (public_name vyos-op-run)
+ (modules vyos_op_run)
+ (libraries
+   logs
+   logs.fmt
+   fmt.tty
+   yojson
+   mustache
+   pcre2
+   unix))

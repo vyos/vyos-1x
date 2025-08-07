@@ -13,11 +13,13 @@ override_dh_auto_build:
 override_dh_auto_install:
 	mkdir -p $(DIR)/usr/libexec/vyos/validators
 	mkdir -p $(DIR)/usr/libexec/vyos/completion
+	mkdir -p $(DIR)/usr/bin
 	cp _build/install/default/bin/numeric $(DIR)/usr/libexec/vyos/validators
 	cp _build/install/default/bin/validate-value $(DIR)/usr/libexec/vyos/
 	cp _build/install/default/bin/file-path $(DIR)/usr/libexec/vyos/validators
 	cp _build/install/default/bin/url $(DIR)/usr/libexec/vyos/validators
 	cp _build/install/default/bin/list_interfaces $(DIR)/usr/libexec/vyos/completion
+	cp _build/install/default/bin/vyos-op-run $(DIR)/usr/bin/
 
 override_dh_auto_test:
 	echo "No tests yet"

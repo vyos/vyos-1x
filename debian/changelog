@@ -1,3 +1,9 @@
+vyos-utils (0.0.4) unstable; urgency=medium
+
+  * Add an operational command runner.
+
+ -- Daniil Baturin <daniil@vyos.io>  Thu, 07 Aug 2025 12:39:14 +0000
+
 vyos-utils (0.0.3) unstable; urgency=medium
 
   * Quote values properly (T1901).

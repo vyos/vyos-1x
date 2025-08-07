@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Set the SUID bit on the runner
+# so that it can have the prigilege to run commands as root.
+# Permissions will be enforced at the VyOS command level.
+chmod u+s /usr/bin/vyos-op-run
