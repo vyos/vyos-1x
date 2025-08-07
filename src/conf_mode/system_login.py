@@ -267,12 +267,12 @@ def verify(login):
             attr_types = ("req", "suff")
 
             for attr_type in attr_types:
-                attrs = level_config.get('attr', {}).get(attr_type, {})
+                attrs = level_config.get(attr_type, {})
                 for attr_name, attr_config in attrs.items():
                     values = attr_config.get('value', [])
                     if not values:
                         raise ConfigError(f"SAML attribute '{attr_name}' under '{level}/{attr_type}' must have values")
-            EMAIL_REGEX = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
+            EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
             for username in level_config.get("user", []):
                 if not EMAIL_REGEX.match(username):
                     raise ConfigError("SAML usernames must be emails")

@@ -50,54 +50,45 @@
         <help>SAML Admin level configuration</help>
       </properties>
       <children>
-        <!--Admin Attributes-->
-        <node name="attr">
+        <!--Req Attributes-->
+        <tagNode name="req">
           <properties>
-            <help>SAML attribute configuration</help>
+            <help>Required attributes</help>
           </properties>
           <children>
-            <!--Req Attributes-->
-            <tagNode name="req">
+            <leafNode name="value">
               <properties>
-                <help>Required attributes</help>
+                <help>Value required</help>
+                <multi/>
+                <valueHelp>
+                  <format>&lt;value&gt;</format>
+                  <description>Required value(s)</description>
+                </valueHelp>
               </properties>
-              <children>
-                <leafNode name="value">
-                  <properties>
-                    <help>Value required</help>
-                    <multi/>
-                    <valueHelp>
-                      <format>&lt;value&gt;</format>
-                      <description>Required value(s)</description>
-                    </valueHelp>
-                  </properties>
-                </leafNode>
-              </children>
-            </tagNode>
-            <!--End of Req Attributes-->
-
-            <!--Suff Attributes-->
-            <tagNode name="suff">
-              <properties>
-                <help>Sufficient attributes</help>
-              </properties>
-              <children>
-                <leafNode name="value">
-                  <properties>
-                    <help>Value required</help>
-                    <multi/>
-                    <valueHelp>
-                      <format>&lt;value&gt;</format>
-                      <description>Sufficient value(s)</description>
-                    </valueHelp>
-                  </properties>
-                </leafNode>
-              </children>
-            </tagNode>
-            <!--End of Suff Attributes-->
+            </leafNode>
           </children>
-        </node>
-        <!--End of Admin Attributes-->
+        </tagNode>
+        <!--End of Req Attributes-->
+
+        <!--Suff Attributes-->
+        <tagNode name="suff">
+          <properties>
+            <help>Sufficient attributes</help>
+          </properties>
+          <children>
+            <leafNode name="value">
+              <properties>
+                <help>Value required</help>
+                <multi/>
+                <valueHelp>
+                  <format>&lt;value&gt;</format>
+                  <description>Sufficient value(s)</description>
+                </valueHelp>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
+        <!--End ofSuff Attributes-->
 
         <!--Admin Users-->
         <leafNode name="user">
@@ -119,54 +110,45 @@
         <help>SAML Admin level configuration</help>
       </properties>
       <children>
-        <!--Operator Attributes-->
-        <node name="attr">
+        <!--Req Attributes-->
+        <tagNode name="req">
           <properties>
-            <help>SAML attribute configuration</help>
+            <help>Required attributes</help>
           </properties>
           <children>
-            <!--Req Attributes-->
-            <tagNode name="req">
+            <leafNode name="value">
               <properties>
-                <help>Required attributes</help>
+                <help>Value required</help>
+                <multi/>
+                <valueHelp>
+                  <format>&lt;value&gt;</format>
+                  <description>Required value(s)</description>
+                </valueHelp>
               </properties>
-              <children>
-                <leafNode name="value">
-                  <properties>
-                    <help>Value required</help>
-                    <multi/>
-                    <valueHelp>
-                      <format>&lt;value&gt;</format>
-                      <description>Required value(s)</description>
-                    </valueHelp>
-                  </properties>
-                </leafNode>
-              </children>
-            </tagNode>
-            <!--End of Req Attributes-->
-
-            <!--Suff Attributes-->
-            <tagNode name="suff">
-              <properties>
-                <help>Sufficient attributes</help>
-              </properties>
-              <children>
-                <leafNode name="value">
-                  <properties>
-                    <help>Value required</help>
-                    <multi/>
-                    <valueHelp>
-                      <format>&lt;value&gt;</format>
-                      <description>Sufficient value(s)</description>
-                    </valueHelp>
-                  </properties>
-                </leafNode>
-              </children>
-            </tagNode>
-            <!--End of Suff Attributes-->
+            </leafNode>
           </children>
-        </node>
-        <!--End of Operator Attributes-->
+        </tagNode>
+        <!--End of Req Attributes-->
+
+        <!--Suff Attributes-->
+        <tagNode name="suff">
+          <properties>
+            <help>Sufficient attributes</help>
+          </properties>
+          <children>
+            <leafNode name="value">
+              <properties>
+                <help>Value required</help>
+                <multi/>
+                <valueHelp>
+                  <format>&lt;value&gt;</format>
+                  <description>Sufficient value(s)</description>
+                </valueHelp>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
+        <!--End ofSuff Attributes-->
 
         <!--Operator Users-->
         <leafNode name="user">
