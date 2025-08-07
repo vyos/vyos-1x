@@ -107,6 +107,9 @@ def verify(https):
         Warning('No certificate specified, using build-in self-signed certificates. '\
                 'Do not use them in a production environment!')
 
+    # check if /etc/nginx/flask.conf existed
+    https['flask_conf_exist'] = os.path.exists('/etc/nginx/flask.conf')
+
     # Check if server port is already in use by a different appliaction
     listen_address = ['0.0.0.0']
     port = int(https['port'])
