@@ -19,7 +19,7 @@
               <regex>(chap|pap|none)</regex>
             </constraint>
           </properties>
-          <defaultValue>none</defaultValue>
+          <defaultValue>chap</defaultValue>
         </leafNode>
         <leafNode name="chap-challenge-interval">
           <properties>
