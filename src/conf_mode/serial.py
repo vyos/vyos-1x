@@ -264,11 +264,11 @@ def generate(proxy):
                     if 'local_address' in port_config['service_setting']['ppp']:
                         inet = ipaddress.IPv4Interface(port_config['service_setting']['ppp']['local_address'])
                         port_config['service_setting']['ppp']['v4_local_inet'] = str(inet.ip)
-                        port_config['service_setting']['ppp']['v4_subnet_bits'] = str(inet.network.netmask)
+                        port_config['service_setting']['ppp']['v4_mask'] = str(inet.network.netmask)
                     if 'remote_address' in port_config['service_setting']['ppp']:
                         inet = ipaddress.IPv4Interface(port_config['service_setting']['ppp']['remote_address'])
                         port_config['service_setting']['ppp']['v4_remote_inet'] = str(inet.ip)
-                        port_config['service_setting']['ppp']['v4_subnet_bits'] = str(inet.network.netmask)
+                        port_config['service_setting']['ppp']['v4_mask'] = str(inet.network.netmask)
                     if 'ipv6_global_network_prefix' in port_config['service_setting']['ppp']:
                         port_config['service_setting']['ppp']['v6_local_prefix'], port_config['service_setting']['ppp']['prefix_length'] = port_config['service_setting']['ppp']['ipv6_global_network_prefix'].split('/')
 
