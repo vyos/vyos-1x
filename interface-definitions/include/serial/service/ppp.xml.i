@@ -195,27 +195,27 @@
         </constraint>
       </properties>
     </leafNode>
-    <leafNode name="ipv6-local-interface">
+    <leafNode name="ipv6-local-interface-identifier">
       <properties>
-        <help>The local IPv6 interface identifier of the IGOS end of the PPP link (format and val need to be checked)</help>
+        <help>The local IPv6 interface identifier of the IGOS end of the PPP link</help>
         <valueHelp>
-          <format>ipv6</format>
-          <description>IPv6 address</description>
+          <format>&lt;::h:h:h:h&gt;</format>
+          <description>Standard ASCII notation of IPv6 addresses</description>
         </valueHelp>
         <constraint>
-          <validator name="ipv6-address"/>
+          <validator name="ppp-v6-interface-identifier"/>
         </constraint>
       </properties>
     </leafNode>
-    <leafNode name="ipv6-remote-interface">
+    <leafNode name="ipv6-remote-interface-identifier">
       <properties>
-        <help>The remote IPv6 interface identifier of the remote end of the PPP link (format and val need to be checked)</help>
+        <help>The remote IPv6 interface identifier of the remote end of the PPP link</help>
         <valueHelp>
-          <format>ipv6</format>
-          <description>IPv6 address</description>
+          <format>&lt;::h:h:h:h&gt;</format>
+          <description>Standard ASCII notation of IPv6 addresses</description>
         </valueHelp>
         <constraint>
-          <validator name="ipv6-address"/>
+          <validator name="ppp-v6-interface-identifier"/>
         </constraint>
       </properties>
     </leafNode>

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# The identifier must be specified in standard ASCII notation of IPv6 addresses (e.g. ::dead:beef)
+
+# Must start with "::"
+case "$1" in
+    ::*)
+        if echo "$1" | grep -Eq '^::([0-9a-fA-F]{1,4}(:[0-9a-fA-F]{1,4})*)?$'; then
+            exit 0
+        else
+            echo "Error: $1 is not a valid IPv6 interface identifier"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Error: PPP IPv6 interface identifier must start with '::'"
+        exit 1
+        ;;
+esac
