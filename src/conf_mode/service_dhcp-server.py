@@ -231,6 +231,15 @@ def verify(dhcp):
                             f'DHCP static-route "{route}" requires router to be defined!'
                         )
 
+            # If a client class has been specified then it must exist
+            if 'client_class' in subnet_config:
+                client_class = subnet_config['client_class']
+                if 'client_class' not in dhcp:
+                    raise ConfigError(f'Client class "{client_class}" set in subnet "{subnet}" but does not exist')
+
+                if client_class not in dhcp['client_class'].keys():
+                    raise ConfigError(f'Client class "{client_class}" set in subnet "{subnet}" but does not exist')
+
             # Check if DHCP address range is inside configured subnet declaration
             if 'range' in subnet_config:
                 networks = []
@@ -239,6 +248,15 @@ def verify(dhcp):
                         raise ConfigError(
                             f'DHCP range "{range}" start and stop address must be defined!'
                         )
+
+                    # If a client class has been specified then it must exist
+                    if 'client_class' in range_config:
+                        client_class = range_config['client_class']
+                        if 'client_class' not in dhcp:
+                            raise ConfigError(f'Client class "{client_class}" set in range "{range}" but does not exist')
+
+                        if client_class not in dhcp['client_class'].keys():
+                            raise ConfigError(f'Client class "{client_class}" set in range "{range}" but does not exist')
 
                     # Start/Stop address must be inside network
                     for key in ['start', 'stop']:
