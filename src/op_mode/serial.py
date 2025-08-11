@@ -45,7 +45,8 @@ def restart_serial_tty(device_name_start: typing.Optional[str], device_name_end:
             _restart_login_consoles(prompt_user=True, quiet=False, devices=[f'ttyS{i}'])
     else:
         if device_name_start:
-            send_command_to_iolan('relaunch', device_name_start, '', re.findall(r'\d+', device_name_start)[0], 0, '', 0, 0)
+            if device_name_start in active_ttys:
+                send_command_to_iolan('relaunch', device_name_start, '', re.findall(r'\d+', device_name_start)[0], 0, '', 0, 0)
             _restart_login_consoles(prompt_user=True, quiet=False, devices=[device_name_start])
         else:
             for device in active_ttys:

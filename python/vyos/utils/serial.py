@@ -61,8 +61,22 @@ def find_all_ttyS_devices():
     return sorted(tty_devices)
 
 def find_active_ttyS_devices():
-    files = glob.glob('/run/serial/ttyS*.json')
-    tty_devices = [os.path.splitext(os.path.basename(f))[0] for f in files]
+    base_dir = '/run/serial'
+    tty_devices = []
+    for fname in os.listdir(base_dir):
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                continue
+            tty_devices.append(os.path.splitext(fname)[0])
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
     return sorted(tty_devices)
 
 def get_serial_units(include_devices=[]):
