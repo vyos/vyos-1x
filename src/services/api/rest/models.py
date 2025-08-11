@@ -329,6 +329,7 @@ class AuthService(StrEnum):
 class SAMLType(str, Enum):
     AUTH = "AUTH"
     CHECK_AUTH = "CHECK_AUTH"
+    INFO = "INFO"
 class SAMLAuthRequestData(BaseModel):
     type: SAMLType
     RelayState: Optional[AnyHttpUrl] = None

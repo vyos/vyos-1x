@@ -938,6 +938,34 @@ def handle_saml_auth(data: SAMLAuthRequestData):
             }
 
             return success(res)
+        case SAMLType.INFO:
+            url = "https://127.0.0.1/saml/info"
+            try:
+                req = requests.get(url, timeout=10, verify=False)
+                req.raise_for_status()
+                resp = req.json()
+            except requests.exceptions.Timeout:
+                return error(500, "SSO (saml-sp): timed out")
+            except requests.exceptions.HTTPError as e:
+                try:
+                    error_detail = e.response.json().get('detail')
+                except Exception:
+                    error_detail = "Unknown HTTPError, Check if saml-sp is running"
+                return error(500, f"SSO (saml-sp): {error_detail}")
+            except Exception as e:
+                return error(500, str(e))
+
+            name = resp.get("name")
+            icon = resp.get("icon")
+
+            res = {
+                'name': name,
+                'icon': icon
+            }
+
+            return success(res)
+
+
 
 
 @router.post('/auth')
