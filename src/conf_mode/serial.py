@@ -220,6 +220,13 @@ def generate(proxy):
                                 if port_config['service_setting']['udp']['entry'][key]['udp_port'].isnumeric():
                                     port_config['service_setting']['udp']['entry'][key]['outbound_port'] = port_config['service_setting']['udp']['entry'][key]['udp_port']
 
+                # reverse raw
+                if 'tcp-reverse' in service:
+                    if 'service_setting' in port_config:
+                        if 'reverse' in port_config['service_setting']:
+                            if 'allow_multiple_connection' in port_config['service_setting'].get('reverse', ''):
+                                port_config['service'] = 'multihost'
+
                 # direct & slient raw
                 if 'tcp-direct' in service:
                     config_service = 'direct'
@@ -273,7 +280,7 @@ def generate(proxy):
                         port_config['service_setting']['ppp']['v6_local_prefix'], port_config['service_setting']['ppp']['prefix_length'] = port_config['service_setting']['ppp']['ipv6_global_network_prefix'].split('/')
 
             # multihost
-            if port_config['service'] == 'multihost':
+            if port_config['service'] == 'multihost' and 'outbound' in port_config:
                 if 'multihost_list' in port_config:
                     port_config['multihost_list']['host'] = subtract_from_key(port_config['multihost_list']['host'])
                 if 'multihost' in port_config:
