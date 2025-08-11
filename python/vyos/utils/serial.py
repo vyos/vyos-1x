@@ -63,6 +63,9 @@ def find_all_ttyS_devices():
 def find_active_ttyS_devices():
     base_dir = '/run/serial'
     tty_devices = []
+    if not os.path.exists(base_dir):
+        return tty_devices
+
     for fname in os.listdir(base_dir):
         if not fname.startswith('ttyS') or not fname.endswith('.json'):
             continue
