@@ -289,8 +289,8 @@ def generate(proxy):
                     if port_config['multihost']['mode'] == 'backup-failover':
                         set_nested(port_config, ['multihost_list', 'host', '0', 'name'], dict_search('main_hostname', port_config['service_setting'][config_service]))
                         set_nested(port_config, ['multihost_list', 'host', '0', 'port'], dict_search('main_hostport', port_config['service_setting'][config_service]))
-                        set_nested(port_config, ['multihost_list', 'host', '1', 'name'], dict_search('backup_hostname', port_config['service_setting'][config_service]))
-                        set_nested(port_config, ['multihost_list', 'host', '1', 'port'], dict_search('backup_hostport', port_config['service_setting'][config_service]))
+                        set_nested(port_config, ['multihost_list', 'host', '1', 'name'], dict_search('multihost.backup_hostname', port_config['service_setting'][config_service]))
+                        set_nested(port_config, ['multihost_list', 'host', '1', 'port'], dict_search('multihost.backup_hostport', port_config['service_setting'][config_service]))
 
             # data-logging
             if 'data_logging' in port_config:
@@ -358,9 +358,6 @@ def apply(proxy):
                 if 'listen_port' in serial_config:
                     mtsport = serial_config['listen_port']
 
-                if 'inet' in serial_config:
-                    alias_ip = serial_config['inet']
-
                 if 'vmodem' in serial_config['service']:
                     exe_name = 'iol_vmodem'
                     vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
@@ -369,13 +366,11 @@ def apply(proxy):
                 elif 'tcp-reverse' in serial_config['service']:
                     require_systemd = 1
                     if 'reverse' in serial_config['service_setting']:
-                        if 'ip_aliasing' not in serial_config['service_setting']['reverse']:
-                            alias_ip = ''
-                    else:
-                        alias_ip = ''
+                        if 'ip_aliasing' in serial_config['service_setting']['reverse'] and 'inet' in serial_config:
+                            alias_ip = serial_config['inet']
                 elif 'modbus' in serial_config['service']:
-                    if 'ip_aliasing' not in serial_config['global']['modbus_gateway']:
-                        alias_ip = ''
+                    if 'ip_aliasing' in serial_config['global']['modbus_gateway'] and 'inet' in serial_config:
+                        alias_ip = serial_config['inet']
                 elif 'serial-tunnel-server' in serial_config['service']:
                     require_systemd = 1
 
