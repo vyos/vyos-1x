@@ -945,38 +945,38 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
             lock.acquire()
             config = Config(session_env=env)
-
-            if config.exists("system login saml"):
-                url = "https://127.0.0.1/saml/info"
-                try:
-                    req = requests.get(url, timeout=10, verify=False)
-                    req.raise_for_status()
-                    resp = req.json()
-                except requests.exceptions.Timeout:
-                    return error(500, "SSO (saml-sp): timed out")
-                except requests.exceptions.HTTPError as e:
+            try:
+                if config.exists("system login saml"):
+                    url = "https://127.0.0.1/saml/info"
                     try:
-                        error_detail = e.response.json().get('detail')
-                    except Exception:
-                        error_detail = "Unknown HTTPError, Check if saml-sp is running"
-                    return error(500, f"SSO (saml-sp): {error_detail}")
-                except Exception as e:
-                    return error(500, str(e))
-                finally:
-                    lock.release()
+                        req = requests.get(url, timeout=10, verify=False)
+                        req.raise_for_status()
+                        resp = req.json()
+                    except requests.exceptions.Timeout:
+                        return error(500, "SSO (saml-sp): timed out")
+                    except requests.exceptions.HTTPError as e:
+                        try:
+                            error_detail = e.response.json().get('detail')
+                        except Exception:
+                            error_detail = "Unknown HTTPError, Check if saml-sp is running"
+                        return error(500, f"SSO (saml-sp): {error_detail}")
+                    except Exception as e:
+                        return error(500, str(e))
 
-                name = resp.get("name")
-                icon = resp.get("icon")
+                    name = resp.get("name")
+                    icon = resp.get("icon")
 
-                res = {
-                    'enabled': True,
-                    'name': name,
-                    'icon': icon
-                }
-            else:
-                res = {
-                    'enabled': False
-                }
+                    res = {
+                        'enabled': True,
+                        'name': name,
+                        'icon': icon
+                    }
+                else:
+                    res = {
+                        'enabled': False
+                    }
+            finally:
+                lock.release()
             return success(res)
 
 
