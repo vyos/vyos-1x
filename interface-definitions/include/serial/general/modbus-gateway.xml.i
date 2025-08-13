@@ -87,7 +87,7 @@
           <validator name="numeric" argument="--range 0-1000"/>
         </constraint>
       </properties>
-      <defaultValue>1000</defaultValue>
+      <defaultValue>50</defaultValue>
     </leafNode>
     <leafNode name="port">
       <properties>
