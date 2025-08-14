@@ -44,9 +44,9 @@
       </properties>
       <defaultValue>30</defaultValue>
     </leafNode>
-    <leafNode name="exceptions">
+    <leafNode name="disable-exceptions">
       <properties>
-        <help>Enable Modbus Exceptions</help>
+        <help>Disable Modbus Exceptions</help>
         <valueless/>
       </properties>
     </leafNode>
