@@ -61,7 +61,7 @@
           <validator name="numeric" argument="--range 0-300"/>
         </constraint>
       </properties>
-      <defaultValue>0</defaultValue>
+      <defaultValue>10</defaultValue>
     </leafNode>
     <leafNode name="mess-timeout">
       <properties>
