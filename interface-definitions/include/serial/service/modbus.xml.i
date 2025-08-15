@@ -14,20 +14,24 @@
       <properties>
         <help>Protocol</help>
         <completionHelp>
-          <list>RTU ASCII</list>
+          <list>rtu ascii</list>
         </completionHelp>
         <constraint>
-          <regex>(RTU|ASCII)</regex>
+          <regex>(rtu|ascii)</regex>
         </constraint>
       </properties>
-      <defaultValue>RTU</defaultValue>
+      <defaultValue>rtu</defaultValue>
     </leafNode>
-    <leafNode name="uid-range">
+    <leafNode name="uid">
       <properties>
-        <help>Slave UID range [slave only]</help>
+        <help>Slave UID or UID range [slave only]</help>
         <valueHelp>
           <format>start-end</format>
           <description>UID range (e.g. 2-5) to match</description>
+        </valueHelp>
+        <valueHelp>
+          <format>&lt;1-247&gt;</format>
+          <description>UID number, from 1 to 247</description>
         </valueHelp>
         <constraint>
           <validator name="modbus-uid-range"/>
@@ -51,13 +55,13 @@
           <properties>
             <help>Protocol</help>
             <completionHelp>
-              <list>TCP UDP</list>
+              <list>tcp udp</list>
             </completionHelp>
             <constraint>
-              <regex>(TCP|UDP)</regex>
+              <regex>(tcp|udp)</regex>
             </constraint>
           </properties>
-          <defaultValue>TCP</defaultValue>
+          <defaultValue>tcp</defaultValue>
         </leafNode>
         <leafNode name="range-mode">
           <properties>
@@ -99,12 +103,16 @@
             </constraint>
           </properties>
         </leafNode>
-        <leafNode name="uid-range">
+        <leafNode name="uid">
           <properties>
-            <help>Slave UID range</help>
+            <help>Slave UID or UID range</help>
             <valueHelp>
               <format>start-end</format>
               <description>UID range (e.g. 2-5) to match, [1, 247]</description>
+            </valueHelp>
+            <valueHelp>
+              <format>&lt;1-247&gt;</format>
+              <description>UID number, from 1 to 247</description>
             </valueHelp>
             <constraint>
               <validator name="modbus-uid-range"/>
