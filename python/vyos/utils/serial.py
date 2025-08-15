@@ -30,7 +30,7 @@ UTMP_PATH = '/run/utmp'
 
 SOCKET_PATH = '/tmp/iol_perleinit'
 
-def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, monitor_signals, require_systemd):
+def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, monitor_signals, require_systemd, changed_modbus_gateway_id):
     msg = {
         'action': action,  # 'restart' | 'stop' | 'delete' | 'relaunch'
         'name': name,
@@ -40,6 +40,7 @@ def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, moni
         'alias_ip': alias_ip,
         'monitor_signals': monitor_signals,
         'require_systemd': require_systemd,
+        'changed_modbus_gateway_id': changed_modbus_gateway_id,
     }
 
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)

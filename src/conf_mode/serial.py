@@ -20,6 +20,7 @@ import sys
 import json
 import signal
 import socket
+import hashlib
 import ipaddress
 
 from sys import exit
@@ -59,6 +60,10 @@ def get_config(config=None):
                                      no_tag_node_value_mangle=True,
                                      get_first_key=True,
                                      with_recursive_defaults=True)
+
+    tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
+    print(f'is modbus gateway changed {tmp}')
+    if tmp: proxy.update({'smodbusd_restart': tmp})
 
     changed_tty_list = []
     for device in proxy.get('device', []):
@@ -320,6 +325,17 @@ def generate(proxy):
     print(proxy)
     return proxy
 
+def generate_config_id(sub_json, digits=8):
+    json_str = json.dumps(sub_json, sort_keys=True)
+
+    hash_obj = hashlib.sha256(json_str.encode('utf-8'))
+
+    full_int = int(hash_obj.hexdigest(), 16)
+
+    short_id = full_int % (10 ** digits)
+
+    return short_id
+
 def apply(proxy):
     if not proxy or 'device' not in proxy:
         if is_systemd_service_active(service_name):
@@ -328,8 +344,7 @@ def apply(proxy):
 
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
-            # stop_services_and_remove_files_with_prefix('/run/serial', device, False)
-            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0)
+            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0, 0)
 
     if 'device' in proxy:
         if not is_systemd_service_active(service_name):
@@ -341,11 +356,11 @@ def apply(proxy):
                     continue
 
             ttynum = int(re.findall(r'\d+', device)[0])
-            exe_name = ''
             mtsport = 0
             monitor_dcd_or_dsr = 0
             require_systemd = 0
             alias_ip = ''
+            changed_modbus_gateway_id = 0
 
             while not is_systemd_service_active(service_name):
                 sleep(0.100)
@@ -359,7 +374,6 @@ def apply(proxy):
                     mtsport = serial_config['listen_port']
 
                 if 'vmodem' in serial_config['service']:
-                    exe_name = 'iol_vmodem'
                     vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
                     if vmodem_mode == 'auto':
                         mtsport = 0
@@ -371,12 +385,14 @@ def apply(proxy):
                 elif 'modbus' in serial_config['service']:
                     if 'ip_aliasing' in serial_config['global']['modbus_gateway'] and 'inet' in serial_config:
                         alias_ip = serial_config['inet']
+                    if 'smodbusd_restart' in proxy:
+                        changed_modbus_gateway_id = generate_config_id(proxy['global']['modbus_gateway'], digits=8)
                 elif 'serial-tunnel-server' in serial_config['service']:
                     require_systemd = 1
 
-                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd)
+                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd, changed_modbus_gateway_id)
             else:
-                send_command_to_iolan('stop', device, '', int(ttynum), 0, '', 0, 0)
+                send_command_to_iolan('stop', device, '', int(ttynum), 0, '', 0, 0, changed_modbus_gateway_id)
 
     return None
 
