@@ -361,7 +361,6 @@ def kea6_parse_subnet(subnet, config):
 
     return out
 
-
 def kea_parse_tsig_algo(algo_spec):
     translate = {
         'md5': 'HMAC-MD5',
@@ -451,13 +450,13 @@ def kea_get_leases(inet):
 
 
 def kea_add_lease(
-        inet,
-        ip_address,
-        host_name=None,
-        mac_address=None,
-        iaid=None,
-        duid=None,
-        subnet_id=None,
+    inet,
+    ip_address,
+    host_name=None,
+    mac_address=None,
+    iaid=None,
+    duid=None,
+    subnet_id=None,
 ):
     args = {'ip-address': ip_address}
 
@@ -653,10 +652,10 @@ def kea_get_server_leases(config, inet, pools=[], state=[], origin=None) -> list
 
         # Do not add old leases
         if (
-                data_lease['remaining'] != ''
-                and data_lease['pool'] in pools
-                and data_lease['state'] != 'free'
-                and (not state or state == 'all' or data_lease['state'] in state)
+            data_lease['remaining'] != ''
+            and data_lease['pool'] in pools
+            and data_lease['state'] != 'free'
+            and (not state or state == 'all' or data_lease['state'] in state)
         ):
             data.append(data_lease)
 
