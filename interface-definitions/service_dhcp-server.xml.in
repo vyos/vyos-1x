@@ -11,17 +11,17 @@
         <children>
           <tagNode name="client-class">
             <properties>
-              <help>Name of client class</help>
+              <help>Client class name</help>
               <constraint>
                 #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
               </constraint>
-              <constraintErrorMessage>Invalid shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
+              <constraintErrorMessage>Shared network name may only contain letters, numbers and, dots, underscores, and hyphens</constraintErrorMessage>
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
               <node name="option82">
                 <properties>
-                  <help>Match this class based on the contents of Option 82 of the DHCP request</help>
+                  <help>Match DHCP option 82 (relay agent information)</help>
                 </properties>
                 <children>
                 <leafNode name="circuit-id">
@@ -270,7 +270,7 @@
                   #include <include/generic-disable-node.xml.i>
                   <leafNode name="client-class">
                     <properties>
-                      <help>Client class which should match against this range</help>
+                      <help>DHCP client class</help>
                         <completionHelp>
                           <path>service dhcp-server client-class</path>
                         </completionHelp>
@@ -329,7 +329,7 @@
                       #include <include/dhcp/option-v4.xml.i>
                       <leafNode name="client-class">
                         <properties>
-                          <help>Client class which should match against this range</help>
+                          <help>DHCP client class</help>
                           <completionHelp>
                             <path>service dhcp-server client-class</path>
                           </completionHelp>
