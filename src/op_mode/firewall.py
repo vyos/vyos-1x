@@ -17,13 +17,24 @@
 import argparse
 import ipaddress
 import json
+import os
 import re
+import sys
 import tabulate
 import textwrap
 
 from vyos.config import Config
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search_args
+
+def catch_broken_pipe(func):
+    def wrapped(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except (BrokenPipeError, KeyboardInterrupt):
+            # Flush standard streams; redirect remaining output to devnull
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno()) # pylint: disable = no-member
+    return wrapped
 
 def get_config_node(conf, node=None, family=None, hook=None, priority=None):
     if node == 'nat':
@@ -339,6 +350,7 @@ def show_firewall_rule(family, hook, priority, rule_id):
     if firewall:
         output_firewall_name(family, hook, priority, firewall, rule_id)
 
+@catch_broken_pipe
 def show_firewall_group(name=None):
     conf = Config()
     firewall = get_config_node(conf, node='firewall')
