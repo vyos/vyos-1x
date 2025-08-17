@@ -19,7 +19,6 @@ import socket
 
 from datetime import datetime
 from datetime import timezone
-from operator import truediv
 
 from vyos import ConfigError
 from vyos.template import is_ipv6
@@ -361,7 +360,6 @@ def kea6_parse_subnet(subnet, config):
 
     return out
 
-
 def kea_parse_tsig_algo(algo_spec):
     translate = {
         'md5': 'HMAC-MD5',
@@ -375,10 +373,8 @@ def kea_parse_tsig_algo(algo_spec):
         raise ConfigError(f'Unsupported TSIG algorithm: {algo_spec}')
     return translate[algo_spec]
 
-
 def kea_parse_enable_disable(value):
     return True if value == 'enable' else False
-
 
 def kea_parse_ddns_settings(config):
     data = {}
@@ -412,7 +408,6 @@ def kea_parse_ddns_settings(config):
         data['hostname-char-replacement'] = config['hostname_char_replacement']
 
     return data
-
 
 def _ctrl_socket_command(inet, command, args=None):
     path = kea_ctrl_socket.format(inet=inet)
@@ -451,13 +446,13 @@ def kea_get_leases(inet):
 
 
 def kea_add_lease(
-        inet,
-        ip_address,
-        host_name=None,
-        mac_address=None,
-        iaid=None,
-        duid=None,
-        subnet_id=None,
+    inet,
+    ip_address,
+    host_name=None,
+    mac_address=None,
+    iaid=None,
+    duid=None,
+    subnet_id=None,
 ):
     args = {'ip-address': ip_address}
 
@@ -653,10 +648,10 @@ def kea_get_server_leases(config, inet, pools=[], state=[], origin=None) -> list
 
         # Do not add old leases
         if (
-                data_lease['remaining'] != ''
-                and data_lease['pool'] in pools
-                and data_lease['state'] != 'free'
-                and (not state or state == 'all' or data_lease['state'] in state)
+            data_lease['remaining'] != ''
+            and data_lease['pool'] in pools
+            and data_lease['state'] != 'free'
+            and (not state or state == 'all' or data_lease['state'] in state)
         ):
             data.append(data_lease)
 
@@ -672,7 +667,6 @@ def kea_get_server_leases(config, inet, pools=[], state=[], origin=None) -> list
                     data.pop(idx)
 
     return data
-
 
 def kea_build_client_class_test(config):
     conditions = []

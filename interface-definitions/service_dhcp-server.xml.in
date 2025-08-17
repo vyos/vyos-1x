@@ -26,12 +26,20 @@
                 <children>
                 <leafNode name="circuit-id">
                     <properties>
-                      <help>Filters on the contents of the circuit-id sub option. Assumes ASCII text unless input starts with 0x in which case it is interpreted as raw hex</help>
+                      <help>Filters on the contents of the circuit-id sub option.</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Assumes ASCII text unless input starts with 0x in which case it is interpreted as raw hex</description>
+                      </valueHelp>
                     </properties>
                   </leafNode>
                   <leafNode name="remote-id">
                     <properties>
-                      <help>Filters on the contents of the remote-id sub option. Assumes ASCII text unless input starts with 0x in which case it is interpreted as raw hex</help>
+                      <help>Filters on the contents of the remote-id sub option.</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Assumes ASCII text unless input starts with 0x in which case it is interpreted as raw hex</description>
+                      </valueHelp>
                     </properties>
                   </leafNode>
                 </children>
