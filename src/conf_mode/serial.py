@@ -315,6 +315,12 @@ def generate(proxy):
                 if 'rts_toggle' in port_config['hardware']:
                     port_config['hardware']['rts_toggle']['enabled'] = '1'
 
+            if 'tls' in port_config:
+                if 'peer_verification' in port_config['tls']:
+                    port_config['tls']['verify_peer'] = 1
+                if 'cipher_options' in port_config['tls']:
+                    port_config['tls']['cipher_options'] = subtract_from_key(port_config['tls']['cipher_options'])
+
             replace_empty_dicts(port_config)
 
             ensure_folder_exists('/run/serial')
