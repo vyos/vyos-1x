@@ -14,10 +14,10 @@
       <properties>
         <help>TLS version</help>
         <completionHelp>
-          <list>any TLSv1.2 TLSv1.2b TLSv1.3 TLSv3</list>
+          <list>any tlsv1.2 tlsv1.2b tlsv1.3</list>
         </completionHelp>
         <constraint>
-          <regex>(any|TLSv1.2|TLSv1.2b|TLSv1.3|TLSv3)</regex>
+          <regex>(any|tlsv1.2|tlsv1.2b|tlsv1.3)</regex>
         </constraint>
       </properties>
       <defaultValue>any</defaultValue>
