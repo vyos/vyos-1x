@@ -45,6 +45,7 @@ kea4_options = {
     'ipv6_only_preferred': 'v6-only-preferred',
     'captive_portal': 'v4-captive-portal',
     'capwap_controller': 'capwap-ac-v4',
+    'interface_mtu': 'interface-mtu',
 }
 
 kea6_options = {

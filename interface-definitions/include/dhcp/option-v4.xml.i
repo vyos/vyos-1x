@@ -83,6 +83,18 @@
         </constraint>
       </properties>
     </leafNode>
+    <leafNode name="interface-mtu">
+      <properties>
+        <help>Interface MTU</help>
+        <valueHelp>
+          <format>u32:1-16</format>
+          <description>Client interface MTU</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1200-9000"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <leafNode name="ip-forwarding">
       <properties>
         <help>Enable IP forwarding on client</help>
