@@ -126,10 +126,10 @@
           <properties>
             <help>Cipher encryption</help>
             <completionHelp>
-              <list>one any aes 3des des rc2 rc4 aes-gcm</list>
+              <list>any aes aes-gcm</list>
             </completionHelp>
             <constraint>
-              <regex>(one|any|aes|3des|des|rc2|rc4|aes-gcm)</regex>
+              <regex>(any|aes|aes-gcm)</regex>
             </constraint>
           </properties>
           <defaultValue>any</defaultValue>
@@ -172,12 +172,12 @@
         </leafNode>
         <leafNode name="hmac">
           <properties>
-            <help>Cipher hash message authentication code, SHA1 MD5</help>
+            <help>Cipher hash message authentication code</help>
             <completionHelp>
-              <list>any sha md5 sha256 sha384</list>
+              <list>any sha1 md5 sha256 sha384</list>
             </completionHelp>
             <constraint>
-              <regex>(any|sha|md5|sha256|sha384)</regex>
+              <regex>(any|sha1|md5|sha256|sha384)</regex>
             </constraint>
           </properties>
           <defaultValue>any</defaultValue>
