@@ -251,6 +251,16 @@ def verify(login):
         except ValueError:
             raise ConfigError("SAML metadata-url must be a valid http/https url [ValueError]")
 
+        if not 'entityID' in login['saml']:
+            raise ConfigError("SAML entityID must be set")
+        entityID = login['saml']['entityID']
+        try:
+            url_res = urlparse(entityID)
+            if not url_res.scheme in ("https", "http") or not url_res.netloc:
+                raise ConfigError("SAML entityID must be a valid http/https uri")
+        except ValueError:
+            raise ConfigError("SAML entityID must be a valid http/https uri [ValueError]")
+
         # Verify default sso level
         if not 'default_sso_level' in login['saml']:
             raise ConfigError("Default sso level must be set")

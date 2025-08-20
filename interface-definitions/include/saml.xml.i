@@ -30,6 +30,19 @@
     <!--End of Define Metadata URL-->
 
     <!--Default SAML level-->
+    <leafNode name="entityID">
+      <properties>
+        <help>Your SAML Entity ID</help>
+        <valueHelp>
+          <format>&lt;https://company.com/sso/saml&gt;</format>
+          <description>SAML Entity ID</description>
+        </valueHelp>
+      </properties>
+      <defaultValue>https://www.perle.com/soo/saml</defaultValue>
+    </leafNode>
+    <!--End of Default SAML level-->
+
+    <!--Default SAML level-->
     <leafNode name="default-sso-level">
       <properties>
         <help>Default level for SSO users</help>
