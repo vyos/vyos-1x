@@ -260,8 +260,8 @@ def generate(proxy):
                     if 'slave_mapping_list' in port_config['service_setting']['modbus']:
                         port_config['service_setting']['modbus']['slave_mapping_list'] = subtract_from_key(port_config['service_setting']['modbus']['slave_mapping_list'])
                         for key, value in port_config['service_setting']['modbus']['slave_mapping_list'].items():
-                            if 'uid_range' in value:
-                                uid_start, uid_end = map(int, port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_range'].split('-'))
+                            if 'uid' in value:
+                                uid_start, uid_end = map(int, port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid'].split('-'))
                                 port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_start'] = uid_start
                                 port_config['service_setting']['modbus']['slave_mapping_list'][key]['uid_end'] = uid_end
 
