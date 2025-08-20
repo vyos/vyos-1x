@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2023-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
-from netifaces import interfaces
+
+from netifaces import interfaces # pylint: disable = no-name-in-module
 
 from vyos.base import Warning
 from vyos.config import Config

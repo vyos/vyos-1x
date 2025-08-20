@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,7 +18,9 @@ import os
 
 from json import loads
 from sys import exit
-from netifaces import ifaddresses, AF_INET, AF_INET6
+from socket import AF_INET
+from socket import AF_INET6
+from netifaces import ifaddresses # pylint: disable = no-name-in-module
 
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists

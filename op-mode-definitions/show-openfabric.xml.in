@@ -24,11 +24,11 @@
               </completionHelp>
             </properties>
             <children>
+              #include <include/vtysh-generic-interface-virtualTagNode.xml.i>
               #include <include/vtysh-generic-detail.xml.i>
             </children>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </node>
-          #include <include/vtysh-generic-interface-tagNode.xml.i>
           <node name="neighbor">
             <properties>
               <help>Show OpenFabric neighbor adjacencies</help>

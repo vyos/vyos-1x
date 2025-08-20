@@ -37,18 +37,21 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
+        <virtualTagNode>
+          <properties>
+            <help>Show BGP information for specified IP address or prefix</help>
+            <completionHelp>
+              <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+            </completionHelp>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </virtualTagNode>
         <leafNode name="cidr-only">
           <properties>
             <help>Display only routes with non-natural netmasks</help>
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
         </leafNode>
-        <node name="community">
-          <properties>
-            <help>Show BGP routes matching the communities</help>
-          </properties>
-          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-        </node>
         <tagNode name="community">
           <properties>
             <help>Display routes matching the specified communities</help>
@@ -56,6 +59,10 @@
               <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
             </completionHelp>
           </properties>
+          <standalone>
+            <help>Show BGP routes matching the communities</help>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </standalone>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
         </tagNode>
         <tagNode name="community-list">
@@ -123,15 +130,6 @@
         </leafNode>
       </children>
     </node>
-    <tagNode name="unicast">
-      <properties>
-        <help>Show BGP information for specified IP address or prefix</help>
-        <completionHelp>
-          <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
   </children>
 </node>
 <leafNode name="large-community-info">

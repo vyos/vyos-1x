@@ -135,6 +135,25 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="no-split-gso">
+                <properties>
+                  <help>Do not split GSO super-packets into on-the-wire components</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="ack-filter">
+                <properties>
+                  <help>Identify and filter out TCP ACK packets that do not convey significant new information</help>
+                </properties>
+                <children>
+                  <leafNode name="aggressive">
+                    <properties>
+                      <help>Enable aggressive mode which will result in more ACK packets being compresses/filtered</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="rtt">
                 <properties>
                   <help>Round-Trip-Time for Active Queue Management (AQM)</help>

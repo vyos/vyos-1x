@@ -1,5 +1,5 @@
 <!-- included start from ospfv3/linkstate-id-node-tag.xml.i -->
-<node name="node.tag">
+<virtualTagNode>
   <properties>
     <help>Search by Link state ID</help>
     <completionHelp>
@@ -13,5 +13,5 @@
     #include <include/ospfv3/internal.xml.i>
     #include <include/ospfv3/self-originated.xml.i>
   </children>
-</node>
+</virtualTagNode>
 <!-- included end -->

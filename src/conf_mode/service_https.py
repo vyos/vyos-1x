@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -106,6 +106,9 @@ def verify(https):
     else:
         Warning('No certificate specified, using build-in self-signed certificates. '\
                 'Do not use them in a production environment!')
+
+    # check if /etc/nginx/flask.conf existed
+    https['flask_conf_exist'] = os.path.exists('/etc/nginx/flask.conf')
 
     # Check if server port is already in use by a different appliaction
     listen_address = ['0.0.0.0']

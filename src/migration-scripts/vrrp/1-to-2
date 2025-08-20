@@ -1,4 +1,4 @@
-# Copyright 2018-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,7 +25,7 @@ from vyos.configtree import ConfigTree
 # It was supported only under ethernet and bonding and their
 # respective vif, vif-s, and vif-c subinterfaces
 
-def get_vrrp_group(path):
+def get_vrrp_group(config, path):
     group = {"preempt": True, "rfc_compatibility": False, "disable": False}
 
     if config.exists(path + ["advertise-interval"]):
@@ -115,7 +115,7 @@ def migrate(config: ConfigTree) -> None:
             if config.exists(parent_path + vg_path):
                 pgroups = config.list_nodes(parent_path + vg_path)
                 for pg in pgroups:
-                    g = get_vrrp_group(parent_path + vg_path + [pg])
+                    g = get_vrrp_group(config, parent_path + vg_path + [pg])
                     g["interface"] = pi
                     g["vrid"] = pg
                     groups.append(g)
@@ -132,7 +132,7 @@ def migrate(config: ConfigTree) -> None:
                     if config.exists(parent_path + vif_vg_path):
                         vifgroups = config.list_nodes(parent_path + vif_vg_path)
                         for vif_group in vifgroups:
-                            g = get_vrrp_group(parent_path + vif_vg_path + [vif_group])
+                            g = get_vrrp_group(config, parent_path + vif_vg_path + [vif_group])
                             g["interface"] = "{0}.{1}".format(pi, vif)
                             g["vrid"] = vif_group
                             groups.append(g)
@@ -147,7 +147,7 @@ def migrate(config: ConfigTree) -> None:
                     if config.exists(parent_path + vifs_vg_path):
                         vifsgroups = config.list_nodes(parent_path + vifs_vg_path)
                         for vifs_group in vifsgroups:
-                            g = get_vrrp_group(parent_path + vifs_vg_path + [vifs_group])
+                            g = get_vrrp_group(config, parent_path + vifs_vg_path + [vifs_group])
                             g["interface"] = "{0}.{1}".format(pi, vif_s)
                             g["vrid"] = vifs_group
                             groups.append(g)
@@ -161,7 +161,7 @@ def migrate(config: ConfigTree) -> None:
                              vifc_vg_path = [pi, "vif-s", vif_s, "vif-c", vif_c, "vrrp", "vrrp-group"]
                              vifcgroups = config.list_nodes(parent_path + vifc_vg_path)
                              for vifc_group in vifcgroups:
-                                  g = get_vrrp_group(parent_path + vifc_vg_path + [vifc_group])
+                                  g = get_vrrp_group(config, parent_path + vifc_vg_path + [vifc_group])
                                   g["interface"] = "{0}.{1}.{2}".format(pi, vif_s, vif_c)
                                   g["vrid"] = vifc_group
                                   groups.append(g)
@@ -173,7 +173,7 @@ def migrate(config: ConfigTree) -> None:
         return
 
     # Otherwise, there is VRRP to convert
-     
+
     # Now convert the collected groups to the new syntax
     base_group_path = ["high-availability", "vrrp", "group"]
     sync_path = ["high-availability", "vrrp", "sync-group"]

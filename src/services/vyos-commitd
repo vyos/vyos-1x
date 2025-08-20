@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -42,6 +42,7 @@ from vyos.defaults import directories
 from vyos.utils.boot import boot_configuration_complete
 from vyos.configsource import ConfigSourceCache
 from vyos.configsource import ConfigSourceError
+from vyos.configdiff import get_commit_scripts
 from vyos.config import Config
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
@@ -229,6 +230,9 @@ def initialization(session: Session) -> Session:
 
     dependent_func: dict[str, list[typing.Callable]] = {}
     setattr(config, 'dependent_func', dependent_func)
+
+    commit_scripts = get_commit_scripts(config)
+    logger.debug(f'commit_scripts: {commit_scripts}')
 
     scripts_called = []
     setattr(config, 'scripts_called', scripts_called)

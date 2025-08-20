@@ -1,4 +1,4 @@
-# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@ import stat
 import sys
 import tempfile
 import urllib.parse
+import gzip
 
 from contextlib import contextmanager
 from pathlib import Path
@@ -44,6 +45,7 @@ from vyos.utils.misc import begin
 from vyos.utils.process import cmd, rc_cmd
 from vyos.version import get_version
 from vyos.base import Warning
+from vyos.defaults import directories
 
 CHUNK_SIZE = 8192
 
@@ -478,3 +480,45 @@ def get_remote_config(urlstring, source_host='', source_port=0):
             return f.read()
     finally:
         os.remove(temp)
+
+
+def get_config_file(file_in: str, file_out: str, source_host='', source_port=0):
+    protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
+    config_dir = directories['config']
+
+    with tempfile.NamedTemporaryFile() as tmp_file:
+        if any(file_in.startswith(f'{x}://') for x in protocols):
+            try:
+                download(
+                    tmp_file.name,
+                    file_in,
+                    check_space=True,
+                    source_host='',
+                    source_port=0,
+                    raise_error=True,
+                )
+            except Exception as e:
+                return e
+            file_name = tmp_file.name
+        else:
+            full_path = os.path.realpath(file_in)
+            if os.path.isfile(full_path):
+                file_in = full_path
+            else:
+                file_in = os.path.join(config_dir, file_in)
+                if not os.path.isfile(file_in):
+                    return ValueError(f'No such file {file_in}')
+
+            file_name = file_in
+
+        if file_in.endswith('.gz'):
+            try:
+                with gzip.open(file_name, 'rb') as f_in:
+                    with open(file_out, 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+            except Exception as e:
+                return e
+        else:
+            shutil.copyfile(file_name, file_out)
+
+    return None

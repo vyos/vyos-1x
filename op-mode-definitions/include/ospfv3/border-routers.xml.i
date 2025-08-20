@@ -5,16 +5,16 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
+    <virtualTagNode>
+      <properties>
+        <help>Border router ID</help>
+        <completionHelp>
+          <list>&lt;x.x.x.x&gt;</list>
+        </completionHelp>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </virtualTagNode>
     #include <include/frr-detail.xml.i>
   </children>
 </node>
-<tagNode name="border-routers">
-  <properties>
-    <help>Border router ID</help>
-    <completionHelp>
-      <list>&lt;x.x.x.x&gt;</list>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
 <!-- included end -->

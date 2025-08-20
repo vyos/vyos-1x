@@ -6,7 +6,7 @@
         <children>
           <node name="wireless">
             <properties>
-              <help>Show Wireless (WLAN) interface information</help>
+              <help>Show wireless (WLAN) interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=wireless</command>
             <children>
@@ -22,61 +22,61 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_info</command>
               </leafNode>
-            </children>
-          </node>
-          <tagNode name="wireless">
-            <properties>
-              <help>Show specified wireless interface information</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --type wireless</script>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=wireless</command>
-            <children>
-              <leafNode name="brief">
+              <virtualTagNode>
                 <properties>
-                  <help>Show brief summary of the specified wireless interface</help>
+                  <help>Show specified wireless interface information</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --type wireless</script>
+                  </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=wireless</command>
-              </leafNode>
-              <node name="scan">
-                <properties>
-                  <help>Scan for networks via specified wireless interface</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_scan --intf-name="$4"</command>
-                <children>
-                  <leafNode name="detail">
-                    <properties>
-                      <help>Show detailed scan results</help>
-                    </properties>
-                    <command>/sbin/iw dev "$4" scan ap-force</command>
-                  </leafNode>
-                </children>
-              </node>
-              <leafNode name="stations">
-                <properties>
-                  <help>Show specified Wireless interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_stations --intf-name="$4"</command>
-              </leafNode>
-              <tagNode name="vif">
-                <properties>
-                  <help>Show specified virtual network interface (vif) information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=wireless</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=wireless</command>
                 <children>
                   <leafNode name="brief">
                     <properties>
-                      <help>Show summary of specified virtual network interface (vif) information</help>
+                      <help>Show brief summary of the specified wireless interface</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=wireless</command>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=wireless</command>
                   </leafNode>
+                  <node name="scan">
+                    <properties>
+                      <help>Scan for networks via specified wireless interface</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_scan --intf-name="$4"</command>
+                    <children>
+                      <leafNode name="detail">
+                        <properties>
+                          <help>Show detailed scan results</help>
+                        </properties>
+                        <command>/sbin/iw dev "$4" scan ap-force</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="stations">
+                    <properties>
+                      <help>Show specified wireless interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_stations --intf-name="$4"</command>
+                  </leafNode>
+                  <tagNode name="vif">
+                    <properties>
+                      <help>Show specified virtual network interface (vif) information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=wireless</command>
+                    <children>
+                      <leafNode name="brief">
+                        <properties>
+                          <help>Show summary of specified virtual network interface (vif) information</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=wireless</command>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  #include <include/show-interface-type-event-log.xml.i>
                 </children>
-              </tagNode>
-              #include <include/show-interface-type-event-log.xml.i>
+              </virtualTagNode>
             </children>
-          </tagNode>
-        </children>
+          </node>
+       </children>
       </node>
     </children>
   </node>

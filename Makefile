@@ -7,7 +7,6 @@ LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 J2LINT := $(shell command -v j2lint 2> /dev/null)
-PYLINT_FILES := $(shell git ls-files *.py src/migration-scripts src/services)
 LIBVYOSCONFIG_BUILD_PATH := /tmp/libvyosconfig/_build/libvyosconfig.so
 LIBVYOSCONFIG_STATUS := $(shell git submodule status)
 
@@ -64,7 +63,7 @@ op_mode_definitions: $(op_xml_obj)
 
 	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
-	$(CURDIR)/python/vyos/xml_ref/generate_op_cache.py --xml-dir $(BUILD_DIR)/op-mode-definitions || exit 1
+	$(CURDIR)/python/vyos/xml_ref/generate_op_cache.py --check-path-ambiguity --xml-dir $(BUILD_DIR)/op-mode-definitions || exit 1
 
 	# XXX: tcpdump, ping, traceroute and mtr must be able to recursivly call themselves as the
 	# options are provided from the scripts themselves
@@ -84,7 +83,14 @@ vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+all: clean copyright pylint libvyosconfig interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+
+.PHONY: copyright
+copyright:
+	@if git grep -q -E "Copyright( \(C\))? (19|20)[0-9]{2}(-[0-9]{4})? VyOS maintainers"; then \
+		echo "Error: Legacy copyright notice found."; \
+		exit 1; \
+	fi
 
 .PHONY: clean
 clean:
@@ -104,6 +110,11 @@ check_migration_scripts_executable:
 	@echo "Checking if migration scripts have executable bit set..."
 	find src/migration-scripts -type f -not -executable -print -exec false {} + || sh -c 'echo "Found files that are not executable! Add permissions." && exit 1'
 
+.PHONE: pylint
+pylint: interface_definitions
+	@echo Running "pylint --errors-only ..."
+	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*)
+
 .PHONY: j2lint
 j2lint:
 ifndef J2LINT
@@ -117,7 +128,7 @@ sonar:
 
 .PHONY: unused-imports
 unused-imports:
-	@pylint --disable=all --enable=W0611 $(PYLINT_FILES)
+	@pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b

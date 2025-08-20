@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -29,9 +29,9 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import chmod_775
-from vyos.utils.file import chown
 from vyos.utils.file import makedir
 from vyos.utils.file import write_file
+from vyos.utils.permission import chown
 from vyos.utils.process import call
 from vyos.utils.network import interface_exists
 from vyos.utils.network import is_subnet_connected

@@ -14,18 +14,17 @@
             </properties>
             <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history 20</command>
           </leafNode>
+          <virtualTagNode>
+            <properties>
+              <help>Show last N commands in history</help>
+              <completionHelp>
+                <list>&lt;NUMBER&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history $3</command>
+          </virtualTagNode>
         </children>
       </node>
-
-      <tagNode name="history">
-        <properties>
-          <help>Show last N commands in history</help>
-          <completionHelp>
-            <list>&lt;NUMBER&gt;</list>
-          </completionHelp>
-        </properties>
-        <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history $3</command>
-      </tagNode>
-    </children>
+   </children>
   </node>
 </interfaceDefinition>

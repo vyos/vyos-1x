@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2023 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,7 +39,7 @@ def catch_broken_pipe(func):
             func(*args, **kwargs)
         except (BrokenPipeError, KeyboardInterrupt):
             # Flush output to /dev/null and bail out.
-            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno()) # pylint: disable = no-member
     return wrapped
 
 # The original implementation of filtered_interfaces has signature:

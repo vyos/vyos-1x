@@ -19,21 +19,21 @@
                 </properties>
                 <command>ip -s macsec show</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified MACsec interface information</help>
+                  <completionHelp>
+                    <path>interfaces macsec</path>
+                  </completionHelp>
+                </properties>
+                <command>ip macsec show $4</command>
+                <children>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>      
           </node>
-          <tagNode name="macsec">
-            <properties>
-              <help>Show specified MACsec interface information</help>
-              <completionHelp>
-                <path>interfaces macsec</path>
-              </completionHelp>
-            </properties>
-            <command>ip macsec show $4</command>
-            <children>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-        </children>
+       </children>
       </node>
     </children>
   </node>

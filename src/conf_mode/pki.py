@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -144,7 +144,7 @@ def certbot_request(name: str, config: dict, dry_run: bool=True):
 
     # When ACME is used behind a reverse proxy, we always bind to localhost
     # whatever the CLI listen-address is configured for.
-    if ('haproxy' in dict_search('used_by', config) and
+    if ('used_by' in config and 'haproxy' in config['used_by'] and
         is_systemd_service_running(systemd_services['haproxy']) and
         not check_port_availability(listen_address, 80)):
         tmp += f' --http-01-address 127.0.0.1 --http-01-port {internal_ports["certbot_haproxy"]}'
@@ -551,7 +551,7 @@ def generate(pki):
             if not ca_cert_present:
                 tmp = dict_search_args(pki, 'ca', f'{autochain_prefix}{cert}', 'certificate')
                 if not bool(tmp) or tmp != cert_chain_base64:
-                    Message(f'Add/replace automatically imported CA certificate for "{cert}"...')
+                    Message(f'Add/replace automatically imported CA certificate for "{cert}" ...')
                     add_cli_node(['pki', 'ca', f'{autochain_prefix}{cert}', 'certificate'], value=cert_chain_base64)
 
     return None

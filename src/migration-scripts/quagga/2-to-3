@@ -1,4 +1,4 @@
-# Copyright 2018-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,6 +15,8 @@
 
 from vyos.configtree import ConfigTree
 
+# Just to avoid writing it so many times
+af_path = ['address-family', 'ipv4-unicast']
 
 def migrate_neighbor(config, neighbor_path, neighbor):
     if config.exists(neighbor_path):
@@ -105,9 +107,6 @@ def migrate(config: ConfigTree) -> None:
     if not config.exists(['protocols', 'bgp']):
         # Nothing to do
         return
-
-    # Just to avoid writing it so many times
-    af_path = ['address-family', 'ipv4-unicast']
 
     # Check if BGP is actually configured and obtain the ASN
     asn_list = config.list_nodes(['protocols', 'bgp'])

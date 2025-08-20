@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -417,7 +417,7 @@ def parse_san_string(san_string):
             output.append(ipaddress.IPv6Address(value))
         elif tag == 'dns' or tag == 'rfc822':
             output.append(value)
-    return
+    return output
 
 
 def generate_certificate_request(
@@ -1373,6 +1373,21 @@ def show_all(raw: bool):
     print('\n')
     show_crl(raw)
 
+def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
+    from vyos.defaults import directories
+
+    certbot_config = directories['certbot']
+    hook_dir = directories['base']
+
+    tmp = f'/usr/bin/certbot renew --no-random-sleep-on-renew ' \
+          f'--config-dir "{certbot_config}" ' \
+          f'--post-hook "{hook_dir}/vyos-certbot-renew-pki.sh"'
+    if force:
+        tmp += ' --force-renewal'
+
+    out = cmd(tmp)
+    if not raw:
+        print(out)
 
 if __name__ == '__main__':
     try:

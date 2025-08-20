@@ -11,7 +11,7 @@
         </properties>
         <command>${vyos_op_scripts_dir}/mtr.py ${@:3}</command>
         <children>
-          <leafNode name="node.tag">
+          <virtualTagNode>
             <properties>
               <help>Traceroute options</help>
               <completionHelp>
@@ -19,7 +19,7 @@
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/mtr.py ${@:3}</command>
-          </leafNode>
+          </virtualTagNode>
         </children>
       </tagNode>
     </children>
@@ -33,7 +33,7 @@
     </properties>
     <command>${vyos_op_scripts_dir}/mtr.py ${@:2}</command>
     <children>
-      <leafNode name="node.tag">
+      <virtualTagNode>
         <properties>
           <help>mtr options</help>
           <completionHelp>
@@ -41,7 +41,7 @@
           </completionHelp>
         </properties>
         <command>${vyos_op_scripts_dir}/mtr.py ${@:2}</command>
-      </leafNode>
+      </virtualTagNode>
     </children>
   </tagNode>
 </interfaceDefinition>

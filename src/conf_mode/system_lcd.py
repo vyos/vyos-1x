@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2020-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as

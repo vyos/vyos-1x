@@ -4,25 +4,7 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="l2tpv3">
-            <properties>
-              <help>Show specified L2TPv3 interface information</help>
-              <completionHelp>
-                <path>interfaces l2tpv3</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=l2tpv3</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified L2TPv3 interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=l2tpv3</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="l2tpv3">
+         <node name="l2tpv3">
             <properties>
               <help>Show L2TPv3 interface information</help>
             </properties>
@@ -34,6 +16,24 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=l2tpv3</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified L2TPv3 interface information</help>
+                  <completionHelp>
+                    <path>interfaces l2tpv3</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=l2tpv3</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified L2TPv3 interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=l2tpv3</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,6 +18,7 @@ import os
 import argparse
 
 from psutil import process_iter
+from time import sleep
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import call
@@ -68,7 +69,7 @@ def connect(interface):
             if ( count % 60 == 0 ):
                 print(f'Commit still in progress after {count}s - waiting')
             count += 1
-            time.sleep(1)
+            sleep(1)
         call('/usr/libexec/vyos/conf_mode/qos.py')
 
 def disconnect(interface):

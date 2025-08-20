@@ -1,4 +1,4 @@
-# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -29,6 +29,8 @@ class Control(Section):
     _command_get = {}
     _command_set = {}
     _signature = {}
+    config = {}
+    ifname = None
 
     def __init__(self, **kargs):
         # some commands (such as operation comands - show interfaces, etc.)

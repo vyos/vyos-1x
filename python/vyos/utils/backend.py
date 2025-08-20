@@ -1,4 +1,4 @@
-# Copyright 2025 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@ from pathlib import Path
 
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_active
 
 VYCONF_SENTINEL = '/run/vyconf_backend'
 
@@ -69,6 +70,8 @@ def vyconf_backend() -> bool:
 
 def set_vyconf_backend(value: bool, no_prompt: bool = False):
     vyconfd_service = 'vyconfd.service'
+    commitd_service = 'vyos-commitd.service'
+    http_api_service = 'vyos-http-api.service'
     match value:
         case True:
             if vyconf_backend():
@@ -78,6 +81,9 @@ def set_vyconf_backend(value: bool, no_prompt: bool = False):
             Path(VYCONF_SENTINEL).touch()
             chattri(VYCONF_SENTINEL, True)
             call(f'systemctl restart {vyconfd_service}')
+            call(f'systemctl restart {commitd_service}')
+            if is_systemd_service_active(http_api_service):
+                call(f'systemctl restart {http_api_service}')
         case False:
             if not vyconf_backend():
                 return

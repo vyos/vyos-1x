@@ -2,31 +2,31 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-      <tagNode name="vrrp">
-        <properties>
-          <help>Show specified VRRP (Virtual Router Redundancy Protocol) group information</help>
-        </properties>
-        <children>
-          <node name="statistics">
-            <properties>
-              <help>Show VRRP statistics</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vrrp.py show_statistics --group-name="$3"</command>
-          </node>
-          <node name="detail">
-            <properties>
-              <help>Show detailed VRRP state information</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/vrrp.py show_detail --group-name="$3"</command>
-          </node>
-        </children>
-      </tagNode>
       <node name="vrrp">
         <properties>
           <help>Show VRRP (Virtual Router Redundancy Protocol) information</help>
         </properties>
         <command>${vyos_op_scripts_dir}/vrrp.py show_summary</command>
         <children>
+          <virtualTagNode>
+            <properties>
+              <help>Show specified VRRP (Virtual Router Redundancy Protocol) group information</help>
+            </properties>
+            <children>
+              <node name="statistics">
+                <properties>
+                  <help>Show VRRP statistics</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vrrp.py show_statistics --group-name="$3"</command>
+              </node>
+              <node name="detail">
+                <properties>
+                  <help>Show detailed VRRP state information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vrrp.py show_detail --group-name="$3"</command>
+              </node>
+            </children>
+          </virtualTagNode>
           <node name="statistics">
             <properties>
               <help>Show VRRP statistics</help>

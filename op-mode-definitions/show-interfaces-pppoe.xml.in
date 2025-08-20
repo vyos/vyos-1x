@@ -4,34 +4,7 @@
     <children>
       <node name="interfaces">
         <children>
-          <tagNode name="pppoe">
-            <properties>
-              <help>Show specified PPPoE interface information</help>
-              <completionHelp>
-                <path>interfaces pppoe</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=pppoe</command>
-            <children>
-              <leafNode name="log">
-                <properties>
-                  <help>Show specified PPPoE interface log</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit "ppp@$4".service</command>
-              </leafNode>
-              <leafNode name="statistics">
-                <properties>
-                  <help>Show specified PPPoE interface statistics</help>
-                  <completionHelp>
-                    <path>interfaces pppoe</path>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/show_ppp_stats.sh "$4"</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </tagNode>
-          <node name="pppoe">
+         <node name="pppoe">
             <properties>
               <help>Show PPPoE interface information</help>
             </properties>
@@ -43,6 +16,33 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=pppoe</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified PPPoE interface information</help>
+                  <completionHelp>
+                    <path>interfaces pppoe</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=pppoe</command>
+                <children>
+                  <leafNode name="log">
+                    <properties>
+                      <help>Show specified PPPoE interface log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot --follow --unit "ppp@$4".service</command>
+                  </leafNode>
+                  <leafNode name="statistics">
+                    <properties>
+                      <help>Show specified PPPoE interface statistics</help>
+                      <completionHelp>
+                        <path>interfaces pppoe</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_ppp_stats.sh "$4"</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
         </children>

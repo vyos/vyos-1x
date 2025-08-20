@@ -1,4 +1,4 @@
-# Copyright 2019-2024 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,8 @@
 # https://vyos.dev/T1556
 
 from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'bridge']
 
 def migrate_bridge(config, tree, intf):
     # check if bridge-group exists
@@ -49,8 +51,6 @@ def migrate_bridge(config, tree, intf):
 
 
 def migrate(config: ConfigTree) -> None:
-    base = ['interfaces', 'bridge']
-
     if not config.exists(base):
         # Nothing to do
         return

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2024 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,10 +13,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import sys
-
 import vyos.opmode
 
 from jinja2 import Template
@@ -27,9 +25,6 @@ Size:       {{size}}
 Used:       {{used}} ({{use_percentage}}%)
 Available:  {{avail}} ({{avail_percentage}}%)
 """
-
-def _get_formatted_output():
-    return _get_system_storage()
 
 def show(raw: bool):
     from vyos.utils.disk import get_persistent_storage_stats
@@ -49,7 +44,7 @@ def show(raw: bool):
             tmpl = Template(output_tmpl)
             return tmpl.render(data).strip()
 
-    return output
+    return None
 
 if __name__ == '__main__':
     try:
@@ -59,4 +54,3 @@ if __name__ == '__main__':
     except (ValueError, vyos.opmode.Error) as e:
         print(e)
         sys.exit(1)
-

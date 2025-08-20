@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022-2025 VyOS maintainers and contributors
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -230,17 +230,25 @@ def _get_parent_sa_state(connection_name: str, data: list) -> str:
     return ike_state
 
 
-def _get_child_sa_state(connection_name: str, tunnel_name: str, data: list) -> str:
+def _get_child_sa_state(
+    connection_name: str, tunnel_name: str, data: list, mode: str
+) -> str:
     """Get child SA state by connection and tunnel name
 
     Args:
         connection_name (str): Connection name
         tunnel_name (str): Tunnel name
         data (list): List of current SAs from vici
+        mode (str): Mode of child from vici list_connections
 
     Returns:
-        str: `up` if child SA state is 'installed' otherwise `down`
+        str: `up` if child SA state is 'installed' or child is passthrough
+             otherwise `down`
     """
+    # passthrough child (trap mode) has 'PASS' mode and is always up,
+    # but has no sa, so is not present in list_sas (data)
+    if mode == 'PASS':
+        return 'up'
     child_sa = 'down'
     if not data:
         return child_sa
@@ -330,7 +338,8 @@ def _get_raw_data_connections(list_connections: list, list_sas: list) -> list:
             base_list['children'] = []
             children = conn_conf['children']
             for tunnel, tun_options in children.items():
-                state = _get_child_sa_state(connection, tunnel, list_sas)
+                mode = tun_options.get('mode')
+                state = _get_child_sa_state(connection, tunnel, list_sas, mode)
                 local_ts = tun_options.get('local-ts')
                 remote_ts = tun_options.get('remote-ts')
                 dpd_action = tun_options.get('dpd_action')

@@ -1,4 +1,4 @@
-# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,22 +15,36 @@
 
 import os
 
-def chown(path, user, group):
+def chown(path, user=None, group=None, recursive=False):
     """ change file/directory owner """
     from pwd import getpwnam
     from grp import getgrnam
 
-    if user is None or group is None:
+    if user is None and group is None:
         return False
 
     # path may also be an open file descriptor
     if not isinstance(path, int) and not os.path.exists(path):
         return False
 
-    uid = getpwnam(user).pw_uid
-    gid = getgrnam(group).gr_gid
-    os.chown(path, uid, gid)
+    # keep current value if not specified otherwise
+    uid = -1
+    gid = -1
+
+    if user:
+        uid = getpwnam(user).pw_uid
+    if group:
+        gid = getgrnam(group).gr_gid
+
+    if recursive:
+        for dirpath, dirnames, filenames in os.walk(path):
+            os.chown(dirpath, uid, gid)
+            for filename in filenames:
+                os.chown(os.path.join(dirpath, filename), uid, gid)
+    else:
+        os.chown(path, uid, gid)
     return True
+
 
 def chmod(path, bitmask):
     # path may also be an open file descriptor
