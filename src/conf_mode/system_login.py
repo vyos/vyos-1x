@@ -252,7 +252,7 @@ def verify(login):
             raise ConfigError("SAML metadata-url must be a valid http/https url [ValueError]")
 
         if not 'entityID' in login['saml']:
-            raise ConfigError("SAML entityID must be set")
+            login['saml']['entityID'] = r'https://perle.com/sso/saml'
         entityID = login['saml']['entityID']
         try:
             url_res = urlparse(entityID)

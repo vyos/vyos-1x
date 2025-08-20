@@ -38,7 +38,6 @@
           <description>SAML Entity ID</description>
         </valueHelp>
       </properties>
-      <defaultValue>https://www.perle.com/soo/saml</defaultValue>
     </leafNode>
     <!--End of Default SAML level-->
 
