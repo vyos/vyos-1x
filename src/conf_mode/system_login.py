@@ -253,6 +253,7 @@ def verify(login):
 
         if not 'entityID' in login['saml']:
             login['saml']['entityID'] = r'https://perle.com/sso/saml'
+            print(f"Warning: No entityID set useing default entityID '{login['saml']['entityID']}'")
         entityID = login['saml']['entityID']
         try:
             url_res = urlparse(entityID)
@@ -343,9 +344,9 @@ def generate(login):
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
 
+    SAML_CONFIG_DIR = r'/etc/saml-sp'
+    SAML_CONFIG_FILE = r'saml.conf'
     if 'saml' in login:
-        SAML_CONFIG_DIR = r'/etc/saml-sp'
-        SAML_CONFIG_FILE = r'saml.conf'
         try:
             if not os.path.exists(SAML_CONFIG_DIR):
                 os.makedirs(SAML_CONFIG_DIR, exist_ok=True)
@@ -353,6 +354,11 @@ def generate(login):
                 json.dump(login.get("saml"), saml_conf_file, indent=4)
         except Exception:
             raise ConfigError("SAML: Could not generate config file")
+    elif os.path.isfile(f"{SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}"):
+        try:
+            os.unlink(f"{SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}")
+        except Exception as e:
+            print(f"Warning: could not remove {SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}, error: {str(e)}")
 
     # NSS must always be present on the system
     render(nss_config_file, 'login/nsswitch.conf.j2', login,
