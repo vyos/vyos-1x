@@ -10,6 +10,18 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="certificate">
+      <properties>
+        <help>Certificate</help>
+        <completionHelp>
+          <path>pki certificate</path>
+        </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Certificate name</description>
+        </valueHelp>
+      </properties>
+    </leafNode>
     <leafNode name="version">
       <properties>
         <help>TLS version</help>
