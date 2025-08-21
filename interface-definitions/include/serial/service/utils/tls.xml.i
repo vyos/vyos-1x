@@ -22,6 +22,18 @@
         </valueHelp>
       </properties>
     </leafNode>
+    <leafNode name="passphrase">
+      <properties>
+        <help>Private key passphrase</help>
+        <constraint>
+          <regex>.{0,16}</regex>
+        </constraint>
+        <valueHelp>
+          <format>txt</format>
+          <description>Passphrase to decrypt the private key</description>
+        </valueHelp>
+      </properties>
+    </leafNode>
     <leafNode name="version">
       <properties>
         <help>TLS version</help>
