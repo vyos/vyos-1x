@@ -395,6 +395,11 @@ def apply(proxy):
                         changed_modbus_gateway_id = generate_config_id(proxy['global']['modbus_gateway'], digits=8)
                 elif 'serial-tunnel-server' in serial_config['service']:
                     require_systemd = 1
+                elif 'ssh-reverse' in serial_config['service']:
+                    require_systemd = 1
+                    if 'reverse' in serial_config['service_setting']:
+                        if 'ip_aliasing' in serial_config['service_setting']['reverse'] and 'inet' in serial_config:
+                            alias_ip = serial_config['inet']
 
                 send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd, changed_modbus_gateway_id)
             else:
