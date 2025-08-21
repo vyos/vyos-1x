@@ -73,7 +73,7 @@ MIN_TACACS_UID = 900
 SYSTEM_USER_SKIP_LIST: list = ['nobody', 'radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
                               'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
                               'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10','tacacs11',
-                              'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
+                              'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15', 'sso_user']
 
 def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
