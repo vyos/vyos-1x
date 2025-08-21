@@ -253,7 +253,7 @@ def verify(login):
 
         if not 'entityID' in login['saml']:
             login['saml']['entityID'] = r'https://perle.com/sso/saml'
-            print(f"Warning: No entityID set useing default entityID '{login['saml']['entityID']}'")
+            print(f"Warning: No entityID set using default entityID '{login['saml']['entityID']}'")
         entityID = login['saml']['entityID']
         try:
             url_res = urlparse(entityID)
