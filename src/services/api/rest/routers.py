@@ -908,6 +908,17 @@ def traceroute_op(data: TracerouteModel):
 def handle_saml_auth(data: SAMLAuthRequestData):
     match data.type:
         case SAMLType.AUTH:
+            state = SessionState()
+            session = state.session
+            env = session.get_session_env()
+
+            lock.acquire()
+            config = Config(session_env=env)
+            if not config.exists("system login saml"):
+                lock.release()
+                return error(504, "SAML not enabled")
+            lock.release()
+
             url = "https://127.0.0.1/saml/gen_signon_url"
             payload = {
                 'RelayState': str(data.RelayState)
@@ -942,6 +953,17 @@ def handle_saml_auth(data: SAMLAuthRequestData):
 
             return success(res)
         case SAMLType.CHECK_AUTH:
+            state = SessionState()
+            session = state.session
+            env = session.get_session_env()
+
+            lock.acquire()
+            config = Config(session_env=env)
+            if not config.exists("system login saml"):
+                lock.release()
+                return error(504, "SAML not enabled")
+            lock.release()
+
             url = "https://127.0.0.1/saml/validate"
             payload = {
                 'session': data.session
