@@ -31,17 +31,21 @@ from collections import defaultdict
 from vyos.config import Config
 from vyos.template import render
 from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.serial import send_command_to_iolan
 from vyos import ConfigError
 
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_private_key
+
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 # from vyos.configdiff import get_config_diff, Diff
 
-
+CERT_PATH = '/etc/vyos_pki/'
 service_name = 'iolan.service'
 
 def get_config(config=None):
@@ -59,7 +63,13 @@ def get_config(config=None):
     proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
                                      no_tag_node_value_mangle=True,
                                      get_first_key=True,
-                                     with_recursive_defaults=True)
+                                     with_recursive_defaults=True,
+                                     with_pki=True)
+
+    if 'pki' in proxy:
+        print(f"proxy['pki'] {proxy['pki']}")
+    else:
+        print('No pki configured')
 
     tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
     print(f'is modbus gateway changed {tmp}')
@@ -316,10 +326,39 @@ def generate(proxy):
                     port_config['hardware']['rts_toggle']['enabled'] = '1'
 
             if 'tls' in port_config:
-                if 'peer_verification' in port_config['tls']:
-                    port_config['tls']['verify_peer'] = 1
-                if 'cipher_options' in port_config['tls']:
-                    port_config['tls']['cipher_options'] = subtract_from_key(port_config['tls']['cipher_options'])
+                if 'disable' in port_config['tls']:
+                    port_config['tls']['enabled'] = 0
+                else:
+                    if 'peer_verification' in port_config['tls']:
+                        port_config['tls']['verify_peer'] = 1
+                        port_config['tls']['enabled'] = 1
+                    if 'cipher_options' in port_config['tls']:
+                        port_config['tls']['cipher_options'] = subtract_from_key(port_config['tls']['cipher_options'])
+                        port_config['tls']['enabled'] = 1
+
+                    cert_name = ''
+                    if 'certificate' in port_config['tls']:
+                        port_config['tls']['enabled'] = 1
+                        cert_name = port_config['tls']['certificate']
+
+                        cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
+                        key_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'private', 'key')
+
+                        ensure_folder_exists('/etc/vyos_pki')
+                        with open(os.path.join(CERT_PATH, f'ssl_rsa_cert_{cert_name}.pem'), 'w') as f:
+                            f.write(wrap_certificate(cert_data))
+
+                        password_protected = 0
+                        if 'passphrase' in port_config['tls']:
+                            if 'password_protected' not in proxy['pki']['certificate'][cert_name]['private']:
+                                port_config['tls']['passphrase'] = ''
+                            else:
+                                password_protected = 1
+
+                        with open(os.path.join(CERT_PATH, f'ssl_rsa_key_{cert_name}.pem'), 'w') as f:
+                            f.write(wrap_private_key(key_data, password_protected))
+
+
 
             replace_empty_dicts(port_config)
 

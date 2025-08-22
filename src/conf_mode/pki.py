@@ -102,6 +102,10 @@ sync_search = [
     {
         'keys': ['certificate', 'ca_certificate'],
         'path': ['service', 'stunnel'],
+    },
+    {
+        'keys': ['certificate'],
+        'path': ['serial', 'device'],
     }
 ]
 

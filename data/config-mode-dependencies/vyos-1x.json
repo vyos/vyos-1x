@@ -37,7 +37,8 @@
         "ssh": ["service_ssh"],
         "sstp": ["vpn_sstp"],
         "sstpc": ["interfaces_sstpc"],
-        "stunnel": ["service_stunnel"]
+        "stunnel": ["service_stunnel"],
+        "device": ["serial"]
     },
     "vpn_ipsec": {
         "nhrp": ["protocols_nhrp"]
