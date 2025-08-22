@@ -389,7 +389,8 @@ Depends:
   mtr-tiny,
   telnet,
   stunnel4,
-  uidmap
+  uidmap,
+  saml-sso
 ## End optional utilities
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
