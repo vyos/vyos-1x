@@ -52,7 +52,7 @@ server {
 {% endif %}
 
     # proxy settings for HTTP API, if enabled; 503, if not
-    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|traceroute|info|docs|openapi.json|redoc|graphql|renew) {
+    location ~ ^/(retrieve|configure|config-file|image|import-pki|container-image|generate|show|reboot|reset|poweroff|traceroute|info|docs|openapi.json|redoc|graphql|renew|auth) {
 {% if api is vyos_defined %}
         proxy_pass http://unix:/run/api.sock;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -69,5 +69,18 @@ server {
         deny all;
 {% endif %}
     }
+
+    location /saml/ {
+        proxy_pass http://unix:/run/saml-sp/saml.sock;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+        proxy_cache off;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     error_page 497 =301 https://$host:{{ port }}$request_uri;
 }

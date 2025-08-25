@@ -19,14 +19,18 @@
 import json
 from html import escape
 from enum import Enum
-from typing import List
+from enum import StrEnum
+from typing import Any, Callable, List, Type
 from typing import Union
 from typing import Dict
 from typing import Self
+from typing import Tuple
+from typing import Optional
 
 from pydantic import BaseModel
 from pydantic import StrictStr
 from pydantic import StrictInt
+from pydantic import AnyHttpUrl
 from pydantic import field_validator
 from pydantic import model_validator
 from fastapi.responses import HTMLResponse
@@ -316,6 +320,48 @@ class TracerouteModel(ApiModel):
                 'host': 'host',
             }
         }
+
+# ==== Auth Services ====
+class AuthService(StrEnum):
+    SAML = "SAML"
+
+
+# ==== Auth Service Data Model ====
+class SAMLType(str, Enum):
+    AUTH = "AUTH"
+    CHECK_AUTH = "CHECK_AUTH"
+    INFO = "INFO"
+class SAMLAuthRequestData(BaseModel):
+    type: SAMLType
+    RelayState: Optional[AnyHttpUrl] = None
+    session: Optional[StrictStr] = None
+
+    @model_validator(mode="after")
+    def check_required_fields(self):
+        if self.type == SAMLType.CHECK_AUTH and not self.session:
+            raise ValueError("Field 'session' is required when type is CHECK_AUTH")
+        if self.type == SAMLType.AUTH and not self.RelayState:
+            raise ValueError("Field 'RelayState' is required when type is AUTH")
+        return self
+
+
+auth_handler: Dict[
+    AuthService,
+    Tuple[
+        Callable[[BaseModel], Any],
+        Type[BaseModel]
+    ]
+] = {}
+
+def register_auth(service: AuthService, model: Type[BaseModel]):
+    def decorator(func: Callable[[BaseModel], Any]) -> Callable[[BaseModel], Any]:
+        auth_handler[service] = (func, model)
+        return func
+    return decorator
+
+class AuthRequestModel(ApiModel):
+    op: AuthService
+    data: dict
 
 
 class InfoQueryParams(BaseModel):

@@ -18,6 +18,7 @@
 # pylint: disable=wildcard-import,unused-wildcard-import
 # pylint: disable=broad-exception-caught
 
+import requests
 import json
 import copy
 import logging
@@ -72,6 +73,16 @@ from .models import RenewModel
 from .models import ImportPkiModel
 from .models import PoweroffModel
 from .models import TracerouteModel
+
+from .models import AuthService
+from .models import AuthRequestModel
+from .models import register_auth
+from .models import auth_handler
+
+from .models import SAMLAuthRequestData
+from .models import SAMLType
+
+from pydantic import ValidationError
 
 
 if TYPE_CHECKING:
@@ -214,6 +225,7 @@ class MultipartRequest(Request):
                         '/image',
                         '/configure-section',
                         '/traceroute',
+                        '/auth',
                     ):
                         if 'path' not in c:
                             self.form_err = (
@@ -890,6 +902,163 @@ def traceroute_op(data: TracerouteModel):
         return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
+
+
+@register_auth(AuthService.SAML, SAMLAuthRequestData)
+def handle_saml_auth(data: SAMLAuthRequestData):
+    match data.type:
+        case SAMLType.AUTH:
+            state = SessionState()
+            session = state.session
+            env = session.get_session_env()
+
+            lock.acquire()
+            config = Config(session_env=env)
+            if not config.exists("system login saml"):
+                lock.release()
+                return error(504, "SAML not enabled")
+            lock.release()
+
+            url = "https://127.0.0.1/saml/gen_signon_url"
+            payload = {
+                'RelayState': str(data.RelayState)
+            }
+            try:
+                req = requests.post(url=url, json=payload, timeout=10, verify=False)
+                req.raise_for_status()
+                resp = req.json()
+            except requests.exceptions.Timeout:
+                return error(500, "SSO (saml-sp): timed out")
+            except requests.exceptions.HTTPError as e:
+                try:
+                    error_detail = e.response.json().get('detail')
+                except Exception:
+                    error_detail = "Unknown HTTPError, Check if saml-sp is running"
+                return error(500, f"SSO (saml-sp): {error_detail}")
+            except Exception as e:
+                return error(500, str(e))
+
+            sso_url = resp.get('sso_url')
+            session = resp.get('session')
+
+            if not sso_url:
+                return error(500, "Could not get sso url")
+            if not session:
+                return error(500, "Could not create session")
+
+            res = {
+                'sso_url': sso_url,
+                'session': session
+            }
+
+            return success(res)
+        case SAMLType.CHECK_AUTH:
+            state = SessionState()
+            session = state.session
+            env = session.get_session_env()
+
+            lock.acquire()
+            config = Config(session_env=env)
+            if not config.exists("system login saml"):
+                lock.release()
+                return error(504, "SAML not enabled")
+            lock.release()
+
+            url = "https://127.0.0.1/saml/validate"
+            payload = {
+                'session': data.session
+            }
+            try:
+                req = requests.post(url=url, json=payload, timeout=10, verify=False)
+                req.raise_for_status()
+                resp = req.json()
+            except requests.exceptions.Timeout:
+                return error(500, "SSO (saml-sp): timed out")
+            except requests.exceptions.HTTPError as e:
+                try:
+                    error_detail = e.response.json().get('detail')
+                except Exception:
+                    error_detail = "Unknown HTTPError, Check if saml-sp is running"
+                return error(500, f"SSO (saml-sp): {error_detail}")
+            except Exception as e:
+                return error(500, str(e))
+
+            auth_status = resp.get("auth_status")
+            auth_level = resp.get("auth_level")
+            user_id = resp.get("user_id")
+
+            if not auth_status:
+                return error(500, "Could not get auth status")
+            if not auth_level:
+                return error(500, "Could not get auth level")
+
+            res = {
+                'auth_status': auth_status,
+                'auth_level': auth_level,
+                'user_id': user_id
+            }
+
+            return success(res)
+        case SAMLType.INFO:
+            state = SessionState()
+            session = state.session
+            env = session.get_session_env()
+
+            lock.acquire()
+            config = Config(session_env=env)
+            try:
+                if config.exists("system login saml"):
+                    url = "https://127.0.0.1/saml/info"
+                    try:
+                        req = requests.get(url, timeout=10, verify=False)
+                        req.raise_for_status()
+                        resp = req.json()
+                    except requests.exceptions.Timeout:
+                        return error(500, "SSO (saml-sp): timed out")
+                    except requests.exceptions.HTTPError as e:
+                        try:
+                            error_detail = e.response.json().get('detail')
+                        except Exception:
+                            error_detail = "Unknown HTTPError, Check if saml-sp is running"
+                        return error(500, f"SSO (saml-sp): {error_detail}")
+                    except Exception as e:
+                        return error(500, str(e))
+
+                    name = resp.get("name")
+                    icon = resp.get("icon")
+
+                    res = {
+                        'enabled': True,
+                        'name': name,
+                        'icon': icon
+                    }
+                else:
+                    res = {
+                        'enabled': False
+                    }
+            finally:
+                lock.release()
+            return success(res)
+
+
+@router.post('/auth')
+def auth(data: AuthRequestModel):
+    entry = auth_handler.get(data.op)
+    if not entry:
+        raise HTTPException(status_code=400, detail="Unknown Auth Service")
+
+    handler_func, model_class = entry
+
+    try:
+        validated_data = model_class.parse_obj(data.data)
+    except ValidationError as e:
+        error_msgs = "; ".join(
+            f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}"
+            for err in e.errors()
+        )
+        return error(422, error_msgs)
+
+    return handler_func(validated_data)
 
 
 def rest_init(app: 'FastAPI'):
