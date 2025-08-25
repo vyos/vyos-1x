@@ -1,0 +1,128 @@
+interfaces {
+    ethernet eth0 {
+        description "WAN"
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+    }
+    ethernet eth1 {
+        address "192.0.2.1/30"
+        address "192.0.2.21/30"
+        description "WAN"
+    }
+    ethernet eth2 {
+    }
+    ethernet eth3 {
+    }
+    ethernet eth4 {
+        description "Bonding"
+    }
+    loopback lo {
+    }
+}
+system {
+    config-management {
+        commit-revisions "100"
+    }
+    console {
+        device ttyS0 {
+            speed "115200"
+        }
+    }
+    host-name "r16"
+    login {
+        user vyos {
+            authentication {
+                encrypted-password "$6$rounds=656000$FZBlGpWsmSrV2Rvq$YPNAPtk4k6u99FAMxR6cw4DUPCgOomwCgRZRSO5rAoJK8RlMSCkVAFVF3ozL/3mZMfxcuCnwvd5HX6f9V5KzO."
+            }
+        }
+    }
+    name-server "203.0.113.1"
+    option {
+        kernel {
+            memory {
+                hugepage-size 2M {
+                    hugepage-count "2048"
+                }
+            }
+        }
+        time-format "24-hour"
+    }
+    syslog {
+        global {
+            facility all {
+                level "info"
+            }
+            facility local7 {
+                level "debug"
+            }
+        }
+    }
+}
+vpp {
+    interfaces {
+        bonding bond0 {
+            hash-policy "layer2+3"
+            member {
+                interface "eth4"
+            }
+            mode "802.3ad"
+        }
+        gre gre10 {
+            description "Layer-3"
+            mode "point-to-point"
+            remote "192.0.2.2"
+            source-address "192.0.2.1"
+            tunnel-type "l3"
+        }
+        gre gre11 {
+            description "L2-bridge-to-eth2"
+            remote "192.0.2.123"
+            source-address "192.0.2.1"
+            tunnel-type "teb"
+        }
+        gre gre12 {
+            description "Multipoint"
+            mode "point-to-multipoint"
+            remote "0.0.0.0"
+            source-address "192.0.2.21"
+            tunnel-type "l3"
+        }
+        ipip ipip20 {
+            remote "192.0.2.2"
+            source-address "192.0.2.1"
+        }
+        loopback lo12 {
+            description "Loop12"
+        }
+        vxlan vxlan10 {
+            remote "192.0.2.2"
+            source-address "192.0.2.1"
+            vni "10"
+        }
+    }
+    settings {
+        interface eth1 {
+            driver "dpdk"
+        }
+        interface eth2 {
+            driver "dpdk"
+        }
+        interface eth3 {
+            driver "dpdk"
+        }
+        interface eth4 {
+            driver "dpdk"
+        }
+        unix {
+            poll-sleep-usec "12"
+        }
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@5:broadcast-relay@1:cluster@2:config-management@1:conntrack@5:conntrack-sync@2:container@2:dhcp-relay@2:dhcp-server@11:dhcpv6-server@6:dns-dynamic@4:dns-forwarding@4:firewall@18:flow-accounting@2:https@7:ids@1:interfaces@33:ipoe-server@4:ipsec@13:isis@3:l2tp@9:lldp@2:mdns@1:monitoring@2:nat@8:nat66@3:nhrp@1:ntp@3:openconnect@3:openvpn@4:ospf@2:pim@1:policy@8:pppoe-server@11:pptp@5:qos@3:quagga@12:reverse-proxy@2:rip@1:rpki@2:salt@1:snmp@3:ssh@2:sstp@6:system@28:vpp@1:vrf@3:vrrp@4:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2"
+// Release version: 1.5-rolling-202502030007

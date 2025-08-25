@@ -84,13 +84,13 @@
                     <properties>
                       <help>Show WWAN module detailed information summary</help>
                     </properties>
-                    <command>if cli-shell-api existsActive interfaces wwan $4; then mmcli --modem ${4#wwan}; else echo "Interface \"$4\" unconfigured!"; fi</command>
+                    <command>bash -c "if cli-shell-api existsActive interfaces wwan $4; then mmcli --modem ${4#wwan}; else echo \"Interface \"$4\" unconfigured!\"; fi"</command>
                   </leafNode>
                   <leafNode name="log">
                     <properties>
                       <help>Show interface log for specified interface</help>
                     </properties>
-                    <command>echo not implemented</command>
+                    <command>bash -c 'echo Unimplemented'</command>
                   </leafNode>
                   #include <include/show-interface-type-event-log.xml.i>
                 </children>

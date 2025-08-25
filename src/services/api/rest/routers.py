@@ -511,12 +511,14 @@ async def configure_op(
 
 
 @router.post('/configure-section')
-def configure_section_op(
+async def configure_section_op(
     data: Union[ConfigSectionModel, ConfigSectionListModel, ConfigSectionTreeModel],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
-    return _configure_op(data, request, background_tasks)
+    out = await _configure_op(data, request, background_tasks)
+
+    return out
 
 
 @router.post('/retrieve')

@@ -17,9 +17,11 @@
 import os
 from pathlib import Path
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.utils.process import call
 from vyos.utils.serial import restart_login_consoles
+from vyos.utils.serial import is_tty
 from vyos.system import grub_util
 from vyos.template import render
 from vyos import ConfigError
@@ -66,6 +68,8 @@ def verify(console):
             # and it can not be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
                 raise ConfigError(f'Device {device} does not support beeing used as tty')
+        if not is_tty(device):
+            Warning(f'Device "{device}" used for console is not a TTY!')
 
     return None
 
@@ -98,6 +102,9 @@ def generate(console):
                 raise ConfigError(f'Device {device} does not support beeing used as tty')
 
     for device, device_config in console['device'].items():
+        # Do not render getty configuration if specified device is not a TTY.
+        if not is_tty(device):
+            continue
         config_file = base_dir + f'/serial-getty@{device}.service'
         Path(f'{base_dir}/getty.target.wants').mkdir(exist_ok=True)
         getty_wants_symlink = base_dir + f'/getty.target.wants/serial-getty@{device}.service'
@@ -119,8 +126,6 @@ def generate(console):
 def apply(console):
     # Reset screen blanking
     call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
 
     # Service control moved to vyos.utils.serial to unify checks and prompts. 
     # If users are connected, we want to show an informational message on completing 

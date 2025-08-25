@@ -33,6 +33,7 @@ from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.system import sysctl_write
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos import ConfigError
@@ -265,6 +266,41 @@ def apply(options):
             write_file(kernel_dynamic_debug, f'module {module} +p')
         else:
             write_file(kernel_dynamic_debug, f'module {module} -p')
+
+    if 'resource_limits' in options:
+        unit_map = {'M': 1 << 20, 'G': 1 << 30}
+
+        total_pages = 0
+        total_bytes = 0
+
+        hp_sizes = options.get('kernel', {}).get('memory', {}).get('hugepage_size', {})
+        for size_str, hp_config in hp_sizes.items():
+            pages = int(hp_config.get('hugepage_count', 0))
+            total_pages += pages
+            total_bytes += pages * int(size_str[:-1]) * unit_map[size_str[-1]]
+
+        # Minimum recommended system values
+        max_map_count_min = 65530  # ensures large workload compatibility
+        shmmax_min = 8589934592  # 8 GiB safe default for large allocations
+
+        max_map_count_conf = options['resource_limits'].get('max_map_count', 'auto')
+        shmmax_conf = options['resource_limits'].get('shmmax', 'auto')
+
+        parameters = {
+            'vm.max_map_count': (
+                max(total_pages * 2, max_map_count_min)
+                if max_map_count_conf == 'auto'
+                else int(max_map_count_conf)
+            ),
+            'kernel.shmmax': (
+                max(total_bytes, shmmax_min)
+                if shmmax_conf == 'auto'
+                else int(shmmax_conf)
+            ),
+        }
+
+        for parameter, value in parameters.items():
+            sysctl_write(parameter, value)
 
 
 if __name__ == '__main__':

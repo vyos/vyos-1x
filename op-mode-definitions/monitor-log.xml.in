@@ -9,19 +9,19 @@
         <properties>
           <help>Monitor last lines of messages file</help>
         </properties>
-        <command>SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot</command>
+        <command>bash -c 'SYSTEMD_COLORS=false journalctl --no-hostname --follow --boot'</command>
         <children>
           <node name="color">
             <properties>
               <help>Output log in a colored fashion</help>
             </properties>
-            <command>SYSTEMD_COLORS=false grc journalctl --no-hostname --follow --boot</command>
+            <command>bash -c 'SYSTEMD_COLORS=false grc journalctl --no-hostname --follow --boot'</command>
           </node>
           <leafNode name="certbot">
             <properties>
               <help>Monitor last lines of certbot log</help>
             </properties>
-            <command>if test -f /var/log/letsencrypt/letsencrypt.log; then tail --follow=name /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi</command>
+            <command>bash -c 'if test -f /var/log/letsencrypt/letsencrypt.log; then tail --follow=name /var/log/letsencrypt/letsencrypt.log; else echo "Cerbot log does not exist"; fi'</command>
           </leafNode>
           <leafNode name="conntrack-sync">
             <properties>
@@ -45,6 +45,14 @@
                   <help>Monitor last lines of DHCP server log</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit kea-dhcp4-server.service</command>
+                <children>
+                  <tagNode name="vrf">
+                    <properties>
+                      <help>Monitor last lines of DHCP server log on specific vrf</help>
+                    </properties>
+                    <command>journalctl --no-hostname --follow --boot --unit "kea-dhcp4-server@$6.service"</command>
+                  </tagNode>
+                </children>
               </node>
               <node name="client">
                 <properties>
@@ -75,6 +83,14 @@
                   <help>Monitor last lines of DHCPv6 server log</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit kea-dhcp6-server.service</command>
+                <children>
+                  <tagNode name="vrf">
+                    <properties>
+                      <help>Monitor last lines of DHCPv6 server log on specific vrf</help>
+                    </properties>
+                    <command>journalctl --no-hostname --follow --boot --unit "kea-dhcp6-server@$6.service"</command>
+                  </tagNode>
+                </children>
               </node>
               <node name="client">
                 <properties>
@@ -269,7 +285,7 @@
                     <path>interfaces macsec</path>
                   </completionHelp>
                 </properties>
-                <command>SRC=$(cli-shell-api returnValue interfaces macsec "$5" source-interface); journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@$SRC.service"</command>
+                <command>journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@`cli-shell-api returnEffectiveValue interfaces macsec $5 source-interface`.service"</command>
               </tagNode>
             </children>
           </node>
@@ -379,7 +395,7 @@
                 <properties>
                   <help>Monitor last lines of WPA supplicant</help>
                 </properties>
-                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --follow --unit "wpa_supplicant@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <command>journalctl --no-hostname --boot --follow --unit "wpa_supplicant@*.service"</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -388,7 +404,7 @@
                         <path>interfaces wireless</path>
                       </completionHelp>
                     </properties>
-                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "station" ]]; then journalctl --no-hostname --boot --follow --unit "wpa_supplicant@$6.service"; else echo "Wireless interface $6 not configured as station!"; fi</command>
+                    <command>journalctl --no-hostname --boot --follow --unit "wpa_supplicant@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -396,7 +412,7 @@
                 <properties>
                   <help>Monitor last lines of host access point daemon</help>
                 </properties>
-                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --follow --unit "hostapd@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <command>journalctl --no-hostname --boot --follow --unit "hostapd@*.service"</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -405,7 +421,7 @@
                         <path>interfaces wireless</path>
                       </completionHelp>
                     </properties>
-                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "access-point" ]]; then journalctl --no-hostname --boot --follow --unit "hostapd@$6.service"; else echo "Wireless interface $6 not configured as access-point!"; fi</command>
+                    <command>journalctl --no-hostname --boot --follow --unit "hostapd@$6.service"</command>
                   </tagNode>
                 </children>
               </node>

@@ -337,7 +337,7 @@
                   </leafNode>
                   <leafNode name="segment-routing">
                     <properties>
-                      <help>Segment Routing</help>
+                      <help>Segment-Routing (SR) parameters</help>
                       <valueless/>
                     </properties>
                   </leafNode>

@@ -97,6 +97,13 @@ mount_encrypted_config() {
                 return 0
             fi
 
+            if [ ! -e /sys/class/tpm/tpm0 ]; then
+                echo "WARN: TPM device not found, encrypted config volume will not be automatically mounted"
+                echo "Use 'encryption load' to load volume manually with a key"
+                echo "or 'encryption disable' to decrypt volume with a key"
+                return 1
+            fi
+
             vyos_tpm_key=$(python3 -c 'from vyos.tpm import read_tpm_key; print(read_tpm_key().decode())' 2>/dev/null)
             if [ $? -ne 0 ]; then
                 echo "ERROR: Failed to fetch encryption key from TPM. Encrypted config volume has not been mounted"

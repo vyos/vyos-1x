@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 A small library that allows querying existence or value(s) of config
 settings from op mode, and execution of arbitrary op mode commands.
-'''
+"""
 
 import os
 import json
@@ -37,11 +37,15 @@ from vyos.utils.error import cli_shell_api_err
 from vyos.xml_ref import multi_to_list
 from vyos.xml_ref import is_tag
 from vyos.base import Warning
+from vyos.utils.backend import vyconf_backend
+from vyos.configsource import ConfigSourceVyconfSession
 
 config_file = os.path.join(directories['config'], 'config.boot')
 
+
 class ConfigQueryError(Exception):
     pass
+
 
 class GenericConfigQuery:
     def __init__(self):
@@ -56,12 +60,14 @@ class GenericConfigQuery:
     def values(self, path: list):
         raise NotImplementedError
 
+
 class GenericOpRun:
     def __init__(self):
         pass
 
     def run(self, path: list, **kwargs):
         raise NotImplementedError
+
 
 class CliShellApiConfigQuery(GenericConfigQuery):
     def __init__(self):
@@ -88,22 +94,27 @@ class CliShellApiConfigQuery(GenericConfigQuery):
             raise ConfigQueryError('No values for given path')
         return out
 
+
 class ConfigTreeQuery(GenericConfigQuery):
     def __init__(self):
         super().__init__()
 
         if boot_configuration_complete():
-            config_source = ConfigSourceSession()
+            if vyconf_backend():
+                config_source = ConfigSourceVyconfSession()
+            else:
+                config_source = ConfigSourceSession()
             self.config = Config(config_source=config_source)
         else:
             try:
                 with open(config_file) as f:
                     config_string = f.read()
-            except OSError as err:
+            except OSError:
                 config_string = ''
 
-            config_source = ConfigSourceString(running_config_text=config_string,
-                                               session_config_text=config_string)
+            config_source = ConfigSourceString(
+                running_config_text=config_string, session_config_text=config_string
+            )
             self.config = Config(config_source=config_source)
 
     def exists(self, path: list):
@@ -118,16 +129,28 @@ class ConfigTreeQuery(GenericConfigQuery):
     def list_nodes(self, path: list):
         return self.config.list_nodes(path)
 
-    def get_config_dict(self, path=[], effective=False, key_mangling=None,
-                        get_first_key=False, no_multi_convert=False,
-                        no_tag_node_value_mangle=False, with_defaults=False,
-                        with_recursive_defaults=False):
-        return self.config.get_config_dict(path, effective=effective,
-                key_mangling=key_mangling, get_first_key=get_first_key,
-                no_multi_convert=no_multi_convert,
-                no_tag_node_value_mangle=no_tag_node_value_mangle,
-                with_defaults=with_defaults,
-                with_recursive_defaults=with_recursive_defaults)
+    def get_config_dict(
+        self,
+        path=[],
+        effective=False,
+        key_mangling=None,
+        get_first_key=False,
+        no_multi_convert=False,
+        no_tag_node_value_mangle=False,
+        with_defaults=False,
+        with_recursive_defaults=False,
+    ):
+        return self.config.get_config_dict(
+            path,
+            effective=effective,
+            key_mangling=key_mangling,
+            get_first_key=get_first_key,
+            no_multi_convert=no_multi_convert,
+            no_tag_node_value_mangle=no_tag_node_value_mangle,
+            with_defaults=with_defaults,
+            with_recursive_defaults=with_recursive_defaults,
+        )
+
 
 class VbashOpRun(GenericOpRun):
     def __init__(self):
@@ -135,35 +158,45 @@ class VbashOpRun(GenericOpRun):
 
     def run(self, path: list, **kwargs):
         cmd = ' '.join(path)
-        (out, err) = popen(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}', stderr=STDOUT, **kwargs)
+        (out, err) = popen(
+            f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}', stderr=STDOUT, **kwargs
+        )
         if err:
             raise ConfigQueryError(out)
         return out
 
-def query_context(config_query_class=CliShellApiConfigQuery,
-                  op_run_class=VbashOpRun):
+
+def query_context(config_query_class=CliShellApiConfigQuery, op_run_class=VbashOpRun):
     query = config_query_class()
     run = op_run_class()
     return query, run
 
+
 def verify_mangling(key_mangling):
-    if not (isinstance(key_mangling, tuple) and
-            len(key_mangling) == 2 and
-            isinstance(key_mangling[0], str) and
-            isinstance(key_mangling[1], str)):
-        raise ValueError("key_mangling must be a tuple of two strings")
+    if not (
+        isinstance(key_mangling, tuple)
+        and len(key_mangling) == 2
+        and isinstance(key_mangling[0], str)
+        and isinstance(key_mangling[1], str)
+    ):
+        raise ValueError('key_mangling must be a tuple of two strings')
+
 
 def op_mode_run(cmd):
-    """ low-level to avoid overhead  """
+    """low-level to avoid overhead"""
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     out = p.stdout.read()
     p.wait()
     return p.returncode, out.decode()
 
-def op_mode_config_dict(path=None, key_mangling=None,
-                        no_tag_node_value_mangle=False,
-                        no_multi_convert=False, get_first_key=False):
 
+def op_mode_config_dict(
+    path=None,
+    key_mangling=None,
+    no_tag_node_value_mangle=False,
+    no_multi_convert=False,
+    get_first_key=False,
+):
     if path is None:
         path = []
     command = ['/bin/cli-shell-api', '--show-active-only', 'showConfig']
@@ -188,8 +221,11 @@ def op_mode_config_dict(path=None, key_mangling=None,
 
     if key_mangling is not None:
         verify_mangling(key_mangling)
-        config_dict = mangle_dict_keys(config_dict,
-                                       key_mangling[0], key_mangling[1],
-                                       no_tag_node_value_mangle=no_tag_node_value_mangle)
+        config_dict = mangle_dict_keys(
+            config_dict,
+            key_mangling[0],
+            key_mangling[1],
+            no_tag_node_value_mangle=no_tag_node_value_mangle,
+        )
 
     return get_sub_dict(config_dict, path, get_first_key=get_first_key)

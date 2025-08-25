@@ -6,7 +6,7 @@
         <properties>
           <help>Restart NTP service</help>
         </properties>
-        <command>if cli-shell-api existsActive service ntp; then systemctl restart chrony.service; else echo "Service NTP not configured"; fi</command>
+        <command>bash -c 'if cli-shell-api existsActive service ntp; then systemctl restart chrony.service; else echo "Service NTP not configured"; fi'</command>
       </node>
     </children>
   </node>

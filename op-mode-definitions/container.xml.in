@@ -42,10 +42,18 @@
               <help>Delete container image</help>
               <completionHelp>
                 <list>all</list>
-                <script>podman image ls -q</script>
+                <script>sudo bash -c 'podman image ls -q'</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/container.py delete_image --name "${4}"</command>
+            <children>
+              <leafNode name="force">
+                <properties>
+                  <help>Force removal of container image</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/container.py delete_image --name "${4}" --force</command>
+              </leafNode>
+            </children>
           </tagNode>
         </children>
       </node>

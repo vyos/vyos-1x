@@ -116,3 +116,16 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
             cmd(f'systemctl stop {unit_name}')
 
     return True
+
+def is_tty(name: str) -> bool:
+    """ Check if a given device file (e.g. /dev/ttyS0) is a TTY (teletypewriter)
+    device in Linux
+    """
+    import os
+    path_tty = f'/dev/{name}'
+    if os.path.exists(path_tty):
+        with open(path_tty, 'rb') as f:
+            fd = f.fileno()
+            # True if filename is a TTY
+            return os.isatty(fd)
+    return False

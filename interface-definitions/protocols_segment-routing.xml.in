@@ -4,13 +4,13 @@
     <children>
        <node name="segment-routing" owner="${vyos_conf_scripts_dir}/protocols_segment-routing.py">
         <properties>
-          <help>Segment Routing</help>
+          <help>Segment-Routing (SR) parameters</help>
           <priority>900</priority>
         </properties>
         <children>
           <tagNode name="interface">
             <properties>
-              <help>Interface specific Segment Routing options</help>
+              <help>Interface specific Segment-Routing options</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
@@ -63,7 +63,7 @@
             <children>
               <tagNode name="locator">
                 <properties>
-                  <help>Segment Routing SRv6 locator</help>
+                  <help>Segment-Routing SRv6 locators configuration</help>
                   <constraint>
                     #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                   </constraint>

@@ -1,0 +1,342 @@
+<!-- include start from dhcp/dhcp-server-common-config.xml.i -->
+#include <include/generic-disable-node.xml.i>
+<node name="dynamic-dns-update">
+  <properties>
+    <help>Dynamically update Domain Name System (RFC4702)</help>
+  </properties>
+  <children>
+    #include <include/dhcp/ddns-settings.xml.i>
+    <tagNode name="tsig-key">
+      <properties>
+        <help>TSIG key definition for DNS updates</help>
+        <constraint>
+          #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+        </constraint>
+        <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, hyphen and underscore</constraintErrorMessage>
+      </properties>
+      <children>
+        <leafNode name="algorithm">
+          <properties>
+            <help>TSIG key algorithm</help>
+            <completionHelp>
+              <list>md5 sha1 sha224 sha256 sha384 sha512</list>
+            </completionHelp>
+            <valueHelp>
+              <format>md5</format>
+              <description>MD5 HMAC algorithm</description>
+            </valueHelp>
+            <valueHelp>
+              <format>sha1</format>
+              <description>SHA1 HMAC algorithm</description>
+            </valueHelp>
+            <valueHelp>
+              <format>sha224</format>
+              <description>SHA224 HMAC algorithm</description>
+            </valueHelp>
+            <valueHelp>
+              <format>sha256</format>
+              <description>SHA256 HMAC algorithm</description>
+            </valueHelp>
+            <valueHelp>
+              <format>sha384</format>
+              <description>SHA384 HMAC algorithm</description>
+            </valueHelp>
+            <valueHelp>
+              <format>sha512</format>
+              <description>SHA512 HMAC algorithm</description>
+            </valueHelp>
+            <constraint>
+              <regex>(md5|sha1|sha224|sha256|sha384|sha512)</regex>
+            </constraint>
+            <constraintErrorMessage>Invalid TSIG key algorithm</constraintErrorMessage>
+          </properties>
+        </leafNode>
+        <leafNode name="secret">
+          <properties>
+            <help>TSIG key secret (base64-encoded)</help>
+            <constraint>
+              <validator name="base64"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </tagNode>
+    <tagNode name="forward-domain">
+      <properties>
+        <help>Forward DNS domain name</help>
+        <constraint>
+          <validator name="fqdn"/>
+        </constraint>
+        <constraintErrorMessage>Invalid forward DNS domain name</constraintErrorMessage>
+      </properties>
+      <children>
+        <leafNode name="key-name">
+          <properties>
+            <help>TSIG key name for forward DNS updates</help>
+            <constraint>
+              #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+            </constraint>
+            <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, numbers, hyphen and underscore</constraintErrorMessage>
+          </properties>
+        </leafNode>
+        #include <include/dhcp/ddns-dns-server.xml.i>
+      </children>
+    </tagNode>
+    <tagNode name="reverse-domain">
+      <properties>
+        <help>Reverse DNS domain name</help>
+        <constraint>
+          <validator name="fqdn"/>
+        </constraint>
+        <constraintErrorMessage>Invalid reverse DNS domain name</constraintErrorMessage>
+      </properties>
+      <children>
+        <leafNode name="key-name">
+          <properties>
+            <help>TSIG key name for reverse DNS updates</help>
+            <constraint>
+              #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+            </constraint>
+            <constraintErrorMessage>Invalid TSIG key name. May only contain letters, numbers, numbers, hyphen and underscore</constraintErrorMessage>
+          </properties>
+        </leafNode>
+        #include <include/dhcp/ddns-dns-server.xml.i>
+      </children>
+    </tagNode>
+  </children>
+</node>
+<node name="high-availability">
+  <properties>
+    <help>DHCP high availability configuration</help>
+  </properties>
+  <children>
+    #include <include/source-address-ipv4.xml.i>
+    <leafNode name="mode">
+      <properties>
+        <help>Configure high availability mode</help>
+        <completionHelp>
+          <list>active-active active-passive</list>
+        </completionHelp>
+        <valueHelp>
+          <format>active-active</format>
+          <description>Both server attend DHCP requests</description>
+        </valueHelp>
+        <valueHelp>
+          <format>active-passive</format>
+          <description>Only primary server attends DHCP requests</description>
+        </valueHelp>
+        <constraint>
+          <regex>(active-active|active-passive)</regex>
+        </constraint>
+        <constraintErrorMessage>Invalid DHCP high availability mode</constraintErrorMessage>
+      </properties>
+      <defaultValue>active-active</defaultValue>
+    </leafNode>
+    <leafNode name="remote">
+      <properties>
+        <help>IPv4 remote address used for connection</help>
+        <valueHelp>
+          <format>ipv4</format>
+          <description>IPv4 address of high availability peer</description>
+        </valueHelp>
+        <constraint>
+          <validator name="ipv4-address"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="name">
+      <properties>
+        <help>Peer name used to identify connection</help>
+        <constraint>
+          #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+        </constraint>
+        <constraintErrorMessage>Invalid failover peer name. May only contain letters, numbers and .-_</constraintErrorMessage>
+      </properties>
+    </leafNode>
+    <leafNode name="status">
+      <properties>
+        <help>High availability hierarchy</help>
+        <completionHelp>
+          <list>primary secondary</list>
+        </completionHelp>
+        <valueHelp>
+          <format>primary</format>
+          <description>Configure this server to be the primary node</description>
+        </valueHelp>
+        <valueHelp>
+          <format>secondary</format>
+          <description>Configure this server to be the secondary node</description>
+        </valueHelp>
+        <constraint>
+          <regex>(primary|secondary)</regex>
+        </constraint>
+        <constraintErrorMessage>Invalid DHCP high availability peer status</constraintErrorMessage>
+      </properties>
+    </leafNode>
+    #include <include/pki/ca-certificate.xml.i>
+    #include <include/pki/certificate.xml.i>
+  </children>
+</node>
+<leafNode name="hostfile-update">
+  <properties>
+    <help>Updating /etc/hosts file (per client lease)</help>
+    <valueless/>
+  </properties>
+</leafNode>
+#include <include/listen-address-ipv4.xml.i>
+#include <include/listen-interface-multi-broadcast.xml.i>
+<tagNode name="shared-network-name">
+  <properties>
+    <help>Name of DHCP shared network</help>
+    <constraint>
+      #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+    </constraint>
+    <constraintErrorMessage>Invalid shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
+  </properties>
+  <children>
+    <node name="dynamic-dns-update">
+      <properties>
+        <help>Dynamically update Domain Name System (RFC4702)</help>
+      </properties>
+      <children>
+        #include <include/dhcp/ddns-settings.xml.i>
+      </children>
+    </node>
+    <leafNode name="authoritative">
+      <properties>
+        <help>Option to make DHCP server authoritative for this physical network</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    #include <include/dhcp/option-v4.xml.i>
+    #include <include/dhcp/ping-check.xml.i>
+    #include <include/generic-description.xml.i>
+    #include <include/generic-disable-node.xml.i>
+    <tagNode name="subnet">
+      <properties>
+        <help>DHCP subnet for shared network</help>
+        <valueHelp>
+          <format>ipv4net</format>
+          <description>IPv4 address and prefix length</description>
+        </valueHelp>
+        <constraint>
+          <validator name="ipv4-prefix"/>
+        </constraint>
+        <constraintErrorMessage>Invalid IPv4 subnet definition</constraintErrorMessage>
+      </properties>
+      <children>
+        #include <include/dhcp/option-v4.xml.i>
+        #include <include/dhcp/ping-check.xml.i>
+        #include <include/generic-description.xml.i>
+        #include <include/generic-disable-node.xml.i>
+        <node name="dynamic-dns-update">
+          <properties>
+            <help>Dynamically update Domain Name System (RFC4702)</help>
+          </properties>
+          <children>
+            #include <include/dhcp/ddns-settings.xml.i>
+          </children>
+        </node>
+        <leafNode name="exclude">
+          <properties>
+            <help>IP address to exclude from DHCP lease range</help>
+            <valueHelp>
+              <format>ipv4</format>
+              <description>IPv4 address to exclude from lease range</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv4-address"/>
+            </constraint>
+            <multi/>
+          </properties>
+        </leafNode>
+        <leafNode name="ignore-client-id">
+          <properties>
+            <help>Ignore client identifier for lease lookups</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        <leafNode name="lease">
+          <properties>
+            <help>Lease timeout in seconds</help>
+            <valueHelp>
+              <format>u32</format>
+              <description>DHCP lease time in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 0-4294967295"/>
+            </constraint>
+            <constraintErrorMessage>DHCP lease time must be between 0 and 4294967295 (49 days)</constraintErrorMessage>
+          </properties>
+          <defaultValue>86400</defaultValue>
+        </leafNode>
+        <tagNode name="range">
+          <properties>
+            <help>DHCP lease range</help>
+            <constraint>
+              #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+            </constraint>
+            <constraintErrorMessage>Invalid range name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
+          </properties>
+          <children>
+            #include <include/dhcp/option-v4.xml.i>
+            <leafNode name="start">
+              <properties>
+                <help>First IP address for DHCP lease range</help>
+                <valueHelp>
+                  <format>ipv4</format>
+                  <description>IPv4 start address of pool</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv4-address"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="stop">
+              <properties>
+                <help>Last IP address for DHCP lease range</help>
+                <valueHelp>
+                  <format>ipv4</format>
+                  <description>IPv4 end address of pool</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv4-address"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
+        <tagNode name="static-mapping">
+          <properties>
+            <help>Hostname for static mapping reservation</help>
+            <constraint>
+              <validator name="fqdn"/>
+            </constraint>
+            <constraintErrorMessage>Invalid static mapping hostname</constraintErrorMessage>
+          </properties>
+          <children>
+            #include <include/dhcp/option-v4.xml.i>
+            #include <include/generic-description.xml.i>
+            #include <include/generic-disable-node.xml.i>
+            #include <include/ip-address.xml.i>
+            #include <include/interface/mac.xml.i>
+            #include <include/interface/duid.xml.i>
+          </children>
+        </tagNode>
+        <leafNode name="subnet-id">
+          <properties>
+            <help>Unique ID mapped to leases in the lease file</help>
+            <valueHelp>
+              <format>u32</format>
+              <description>Unique subnet ID</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-4294967295"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </tagNode>
+  </children>
+</tagNode>
+<!-- include end -->

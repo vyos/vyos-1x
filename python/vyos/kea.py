@@ -60,7 +60,7 @@ kea6_options = {
     'capwap_controller': 'capwap-ac-v6',
 }
 
-kea_ctrl_socket = '/run/kea/dhcp{inet}-ctrl-socket'
+kea_ctrl_socket = '/run/kea/dhcp{inet}{vrf_append}-ctrl-socket'
 
 
 def _format_hex_string(in_str):
@@ -403,8 +403,13 @@ def kea_parse_ddns_settings(config):
 
     return data
 
-def _ctrl_socket_command(inet, command, args=None):
-    path = kea_ctrl_socket.format(inet=inet)
+def _ctrl_socket_command(inet, vrf_name, command, args=None):
+    if vrf_name:
+        vrf_append = f'-{vrf_name}'
+    else:
+        vrf_append = ''
+
+    path = kea_ctrl_socket.format(inet=inet, vrf_append=vrf_append)
 
     if not os.path.exists(path):
         return None
@@ -430,8 +435,8 @@ def _ctrl_socket_command(inet, command, args=None):
         return json.loads(result.decode('utf-8'))
 
 
-def kea_get_leases(inet):
-    leases = _ctrl_socket_command(inet, f'lease{inet}-get-all')
+def kea_get_leases(inet, vrf_name):
+    leases = _ctrl_socket_command(inet, vrf_name, f'lease{inet}-get-all')
 
     if not leases or 'result' not in leases or leases['result'] != 0:
         return []
@@ -441,6 +446,7 @@ def kea_get_leases(inet):
 
 def kea_add_lease(
     inet,
+    vrf_name,
     ip_address,
     host_name=None,
     mac_address=None,
@@ -466,7 +472,7 @@ def kea_add_lease(
     if inet == '6' and iaid:
         args['iaid'] = iaid
 
-    result = _ctrl_socket_command(inet, f'lease{inet}-add', args)
+    result = _ctrl_socket_command(inet, vrf_name, f'lease{inet}-add', args)
 
     if result and 'result' in result:
         return result['result'] == 0
@@ -474,10 +480,10 @@ def kea_add_lease(
     return False
 
 
-def kea_delete_lease(inet, ip_address):
+def kea_delete_lease(inet, ip_address, vrf_name=''):
     args = {'ip-address': ip_address}
 
-    result = _ctrl_socket_command(inet, f'lease{inet}-del', args)
+    result = _ctrl_socket_command(inet, vrf_name, f'lease{inet}-del', args)
 
     if result and 'result' in result:
         return result['result'] == 0
@@ -485,8 +491,8 @@ def kea_delete_lease(inet, ip_address):
     return False
 
 
-def kea_get_active_config(inet):
-    config = _ctrl_socket_command(inet, 'config-get')
+def kea_get_active_config(inet, vrf_name):
+    config = _ctrl_socket_command(inet, vrf_name, 'config-get')
 
     if not config or 'result' not in config or config['result'] != 0:
         return None
@@ -580,12 +586,12 @@ def kea_get_static_mappings(config, inet, pools=[]) -> list:
     return mappings
 
 
-def kea_get_server_leases(config, inet, pools=[], state=[], origin=None) -> list:
+def kea_get_server_leases(config, inet, vrf_name, pools=[], state=[], origin=None) -> list:
     """
     Get DHCP server leases from active Kea DHCPv4 or DHCPv6 configuration
     :return list
     """
-    leases = kea_get_leases(inet)
+    leases = kea_get_leases(inet, vrf_name)
 
     data = []
     for lease in leases:

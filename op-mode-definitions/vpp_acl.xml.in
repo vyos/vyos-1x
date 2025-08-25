@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="acl">
+            <properties>
+              <help>Show VPP ACL information</help>
+            </properties>
+            <children>
+              <node name="ip">
+                <properties>
+                  <help>Show VPP ACL by IPv4/IPv6</help>
+                </properties>
+                <children>
+                  <tagNode name="tag-name">
+                    <properties>
+                      <help>Show specified VPP ACL</help>
+                      <completionHelp>
+                        <path>vpp acl ip tag-name</path>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_ip_acls --tag-name="$6"</command>
+                  </tagNode>
+                  <node name="interface">
+                    <properties>
+                      <help>Show VPP ACL interfaces</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_interfaces</command>
+                  </node>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_ip_acls</command>
+              </node>
+              <node name="macip">
+                <properties>
+                  <help>Show VPP ACL by macip</help>
+                </properties>
+                <children>
+                  <tagNode name="tag-name">
+                    <properties>
+                      <help>Show specified VPP ACL</help>
+                      <completionHelp>
+                        <path>vpp acl macip tag-name</path>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_macip_acls --tag-name="$6"</command>
+                  </tagNode>
+                  <node name="interface">
+                    <properties>
+                      <help>Show VPP ACL interfaces</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_macip_interfaces</command>
+                  </node>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_macip_acls</command>
+              </node>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_all_acls</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

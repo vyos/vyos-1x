@@ -1,4 +1,4 @@
-{% macro conn(name, profile_conf, ike_group, esp_group) %}
+{% macro conn(name, profile_conf, ike_group, esp_group, uniqreqids) %}
 {# peer needs to reference the global IKE configuration for certain values #}
 {% set ike = ike_group[profile_conf.ike_group] %}
 {% set esp = esp_group[profile_conf.esp_group] %}
@@ -12,6 +12,9 @@
 {%         if ike.dead_peer_detection is vyos_defined %}
         dpd_timeout = {{ ike.dead_peer_detection.timeout }}
         dpd_delay = {{ ike.dead_peer_detection.interval }}
+{%         endif %}
+{%         if uniqreqids is vyos_defined %}
+        unique = {{ uniqreqids }}
 {%         endif %}
 {%         if profile_conf.authentication.mode is vyos_defined('pre-shared-secret') %}
         local {

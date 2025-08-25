@@ -1,0 +1,69 @@
+{
+    "vpp": {
+        "ethernet": ["interfaces_ethernet"],
+        "vpp_interfaces_bonding": ["vpp_interfaces_bonding"],
+        "vpp_interfaces_bridge": ["vpp_interfaces_bridge"],
+        "vpp_interfaces_ethernet": ["vpp_interfaces_ethernet"],
+        "vpp_interfaces_geneve": ["vpp_interfaces_geneve"],
+        "vpp_interfaces_gre": ["vpp_interfaces_gre"],
+        "vpp_interfaces_ipip": ["vpp_interfaces_ipip"],
+        "vpp_interfaces_loopback": ["vpp_interfaces_loopback"],
+        "vpp_interfaces_vxlan": ["vpp_interfaces_vxlan"],
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"],
+        "vpp_sflow": ["vpp_sflow"]
+    },
+    "vpp_interfaces_bonding": {
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    },
+    "vpp_interfaces_ethernet": {
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    },
+    "vpp_interfaces_geneve": {
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    },
+    "vpp_interfaces_gre": {
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    },
+    "vpp_interfaces_ipip": {
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    },
+    "vpp_interfaces_loopback": {
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    },
+    "vpp_interfaces_vxlan": {
+        "vpp_interfaces_bridge": ["vpp_interfaces_bridge"],
+        "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
+        "vpp_acl": ["vpp_acl"],
+        "vpp_nat": ["vpp_nat"],
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_kernel_interface": ["vpp_kernel-interfaces"]
+    }
+}
+

@@ -66,7 +66,8 @@ def get_config(config=None):
         vxlan.update({'vlan_to_vni_removed': {}})
         for vlan in tmp:
             vni = leaf_node_changed(conf, base + [ifname, 'vlan-to-vni', vlan, 'vni'])
-            vxlan['vlan_to_vni_removed'].update({vlan : {'vni' : vni[0]}})
+            if vni:
+                vxlan['vlan_to_vni_removed'].update({vlan : {'vni' : vni[0]}})
 
     # We need to verify that no other VXLAN tunnel is configured when external
     # mode is in use - Linux Kernel limitation

@@ -31,6 +31,37 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=vxlan</command>
                   </leafNode>
+                  <node name="vlan-to-vni">
+                    <properties>
+                      <help>Show VLAN to VNI mapping for the specified VXLAN interface</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4"</command>
+                    <children>
+                      <tagNode name="vlan">
+                        <properties>
+                          <help>Show VLAN to VNI mapping for the specified VLAN</help>
+                          <completionHelp>
+                            <path>interfaces vxlan ${COMP_WORDS[3]} vlan-to-vni</path>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --vid="$7"</command>
+                        <children>
+                          <leafNode name="detail">
+                            <properties>
+                              <help>Show detailed VLAN to VNI mapping for the specified VLAN</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --vid="$7" --detail</command>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <leafNode name="detail">
+                        <properties>
+                          <help>Show detailed VLAN to VNI mapping for the specified VXLAN interface</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --detail</command>
+                      </leafNode>
+                    </children>
+                  </node>
                   #include <include/show-interface-type-event-log.xml.i>
                 </children>
               </virtualTagNode>

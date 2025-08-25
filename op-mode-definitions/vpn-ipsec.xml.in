@@ -225,7 +225,7 @@
                     <properties>
                       <help>Show active IKEv2 RA sessions summary</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/ipsec.py show_ra_summary; else echo "IPsec process not running"</command>
+                    <command>${vyos_op_scripts_dir}/ipsec.py show_ra_summary</command>
                   </node>
                   <tagNode name="username">
                     <properties>

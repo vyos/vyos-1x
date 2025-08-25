@@ -15,8 +15,13 @@
             "service-sockets-retry-wait-time": 5000
         },
         "control-socket": {
+{% if vrf_context is vyos_defined %}
+            "socket-type": "unix",
+            "socket-name": "/run/kea/dhcp4-{{ vrf_context }}-ctrl-socket"
+{% else %}
             "socket-type": "unix",
             "socket-name": "/run/kea/dhcp4-ctrl-socket"
+{% endif %}
         },
         "lease-database": {
             "type": "memfile",

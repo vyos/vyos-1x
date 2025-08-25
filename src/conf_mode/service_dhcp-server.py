@@ -16,11 +16,13 @@
 
 import os
 
+from sys import exit
+from sys import argv
+
 from glob import glob
 from ipaddress import ip_address
 from ipaddress import ip_network
 from netaddr import IPRange
-from sys import exit
 
 from vyos.config import Config
 from vyos.pki import wrap_certificate
@@ -41,16 +43,53 @@ from vyos import airbag
 
 airbag.enable()
 
-ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
-config_file = '/run/kea/kea-dhcp4.conf'
-config_file_d2 = '/run/kea/kea-dhcp-ddns.conf'
-lease_file = '/config/dhcp/dhcp4-leases.csv'
-lease_file_glob = '/config/dhcp/dhcp4-leases*'
+ctrl_socket = ''
+config_file = ''
+config_file_d2 = ''
+lease_file = ''
+lease_file_glob = ''
+
+ca_cert_file = ''
+cert_file = ''
+cert_key_file = ''
+
 user_group = '_kea'
 
-ca_cert_file = '/run/kea/kea-failover-ca.pem'
-cert_file = '/run/kea/kea-failover.pem'
-cert_key_file = '/run/kea/kea-failover-key.pem'
+
+def _override_for_vrf(vrf_name):
+    """
+    This function is intended to override global vars when vrf is enabled
+    """
+    global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global ca_cert_file, cert_file, cert_key_file
+
+    ctrl_socket = f'/run/kea/dhcp4-{vrf_name}-ctrl-socket'
+    config_file = f'/run/kea/kea-{vrf_name}-dhcp4.conf'
+    config_file_d2 = f'/run/kea/kea-{vrf_name}-dhcp-ddns.conf'
+    lease_file = f'/config/dhcp/dhcp4-{vrf_name}-leases.csv'
+    lease_file_glob = f'/config/dhcp/dhcp4-{vrf_name}-leases*'
+
+    ca_cert_file = f'/run/kea/kea-{vrf_name}-failover-ca.pem'
+    cert_file = f'/run/kea/kea-{vrf_name}-failover.pem'
+    cert_key_file = f'/run/kea/kea-{vrf_name}-failover-key.pem'
+
+
+def _reset_vars():
+    """
+    This function is intended to reset global vars when vrf is not enabled
+    """
+    global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global ca_cert_file, cert_file, cert_key_file
+
+    ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
+    config_file = '/run/kea/kea-dhcp4.conf'
+    config_file_d2 = '/run/kea/kea-dhcp-ddns.conf'
+    lease_file = '/config/dhcp/dhcp4-leases.csv'
+    lease_file_glob = '/config/dhcp/dhcp4-leases*'
+
+    ca_cert_file = '/run/kea/kea-failover-ca.pem'
+    cert_file = '/run/kea/kea-failover.pem'
+    cert_key_file = '/run/kea/kea-failover-key.pem'
 
 
 def dhcp_slice_range(exclude_list, range_dict):
@@ -125,7 +164,19 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['service', 'dhcp-server']
+
+    # if running in vrf, set base diffrently
+    if argv and len(argv) > 1:
+        vrf_name = argv[1]
+        base = ['vrf', 'name', vrf_name, 'service', 'dhcp-server']
+
+        # vrf is defined, override other vars aswell
+        _override_for_vrf(vrf_name)
+    else:
+        base = ['service', 'dhcp-server']
+
+        # vrf is not defined reset vars
+        _reset_vars()
     if not conf.exists(base):
         return None
 
@@ -136,6 +187,10 @@ def get_config(config=None):
         get_first_key=True,
         with_recursive_defaults=True,
     )
+
+    # add vrf context if present
+    if argv and len(argv) > 1:
+        dhcp['vrf_context'] = argv[1]
 
     if 'shared_network_name' in dhcp:
         for network, network_config in dhcp['shared_network_name'].items():
@@ -524,7 +579,12 @@ def generate(dhcp):
 
 
 def apply(dhcp):
-    services = ['kea-dhcp4-server', 'kea-dhcp-ddns-server']
+    # if running in vrf, set base diffrently
+    if argv and len(argv) > 1:
+        vrf_name = argv[1]
+        services = [f'kea-dhcp4-server@{vrf_name}', f'kea-dhcp-ddns-server@{vrf_name}']
+    else:
+        services = ['kea-dhcp4-server', 'kea-dhcp-ddns-server']
 
     if not dhcp or 'disable' in dhcp:
         for service in services:
@@ -538,7 +598,7 @@ def apply(dhcp):
     for service in services:
         action = 'restart'
 
-        if service == 'kea-dhcp-ddns-server' and 'dynamic_dns_update' not in dhcp:
+        if 'kea-dhcp-ddns-server' in service and 'dynamic_dns_update' not in dhcp:
             action = 'stop'
 
         call(f'systemctl {action} {service}.service')

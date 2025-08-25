@@ -30,7 +30,7 @@ get_subnet_domain_name () {
 from vyos.kea import kea_get_active_config
 from vyos.utils.dict import dict_search_args
 
-config = kea_get_active_config('4')
+config = kea_get_active_config('4', '')
 shared_networks = dict_search_args(config, 'arguments', f'Dhcp4', 'shared-networks')
 
 found = False

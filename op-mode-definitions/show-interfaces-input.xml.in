@@ -16,26 +16,26 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=input</command>
               </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified input interface information</help>
+                  <completionHelp>
+                    <path>interfaces input</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=input</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified input interface information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=input</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
             </children>
           </node>
-          <virtualTagNode>
-            <properties>
-              <help>Show specified input interface information</help>
-              <completionHelp>
-                <path>interfaces input</path>
-              </completionHelp>
-            </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=input</command>
-            <children>
-              <leafNode name="brief">
-                <properties>
-                  <help>Show summary of the specified input interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=input</command>
-              </leafNode>
-              #include <include/show-interface-type-event-log.xml.i>
-            </children>
-          </virtualTagNode>
         </children>
       </node>
     </children>

@@ -493,12 +493,13 @@ def setup_grub(root_dir: str) -> None:
 def get_cli_kernel_options(config_file: str) -> list:
     config = ConfigTree(read_file(config_file))
     config_dict = loads(config.to_json())
+    cmdline_options = []
     kernel_options = dict_search('system.option.kernel', config_dict)
+    if kernel_options is None:
+        return cmdline_options
+
     k_cpu_opts = kernel_options.get('cpu', {})
     k_memory_opts = kernel_options.get('memory', {})
-    if kernel_options is None:
-        kernel_options = {}
-    cmdline_options = []
 
     # XXX: This code path and if statements must be kept in sync with the Kernel
     # option handling in system_options.py:generate(). This occurance is used

@@ -1,6 +1,7 @@
 #!/usr/bin/make -f
 
 DIR := debian/tmp
+DIR_AWS := $(DIR)/vyos-1x-aws
 VYOS_SBIN_DIR := usr/sbin
 VYOS_BIN_DIR := usr/bin
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
@@ -35,6 +36,9 @@ override_dh_auto_install:
 	dh_auto_install
 
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
+
+	# Remove all __pycache__ directories before installing
+	find . -type d -name '__pycache__' -exec rm -rf {} +
 
 	# Install scripts
 	mkdir -p $(DIR)/$(VYOS_SBIN_DIR)
@@ -142,6 +146,21 @@ override_dh_auto_install:
 	# Install udev script
 	mkdir -p $(DIR)/usr/lib/udev
 	cp src/helpers/vyos_net_name $(DIR)/usr/lib/udev
+
+	# vyos-1x-aws package
+	# Move some files to dedicated DEB packages
+	#
+	mkdir -p $(DIR_AWS)/lib/systemd/system
+	mv $(DIR)/lib/systemd/system/aws-gwlbtun.service $(DIR_AWS)/lib/systemd/system
+
+	mkdir -p $(DIR_AWS)/opt/vyatta/share/vyatta-cfg/templates/service
+	mv $(DIR)/opt/vyatta/share/vyatta-cfg/templates/service/aws $(DIR_AWS)/opt/vyatta/share/vyatta-cfg/templates/service
+
+	mkdir -p $(DIR_AWS)/usr/libexec/vyos/conf_mode
+	mv $(DIR)/usr/libexec/vyos/conf_mode/service_aws_glb.py $(DIR_AWS)/usr/libexec/vyos/conf_mode
+
+	mkdir -p $(DIR_AWS)/usr/share/vyos/templates
+	mv $(DIR)/usr/share/vyos/templates/aws/ $(DIR_AWS)/usr/share/vyos/templates
 
 override_dh_installsystemd:
 	dh_installsystemd -pvyos-1x --name vyos-router vyos-router.service
