@@ -572,7 +572,7 @@ def _get_formatted_client_leases(lease_data):
         if 'new_dhcp_server_identifier' in lease:
             data_entries.append(['DHCP Server', lease['new_dhcp_server_identifier']])
         if 'new_dhcp_lease_time' in lease:
-            data_entries.append(['DHCP Server', lease['new_dhcp_lease_time']])
+            data_entries.append(['Lease Time', lease['new_dhcp_lease_time']])
         if 'vrf' in lease:
             data_entries.append(['VRF', lease['vrf']])
         if 'last_update' in lease:
