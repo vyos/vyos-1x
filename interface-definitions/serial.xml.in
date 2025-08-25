@@ -64,6 +64,7 @@
           #include <include/generic-description.xml.i>
           #include <include/serial/general/hardware.xml.i>
           #include <include/serial/general/packet-forwarding.xml.i>
+          #include <include/serial/general/tls-global.xml.i>
           <leafNode name="service">
             <properties>
               <help>Active serial service</help>
@@ -90,7 +91,7 @@
               #include <include/serial/service/ppp.xml.i>
             </children>
           </node>
-          #include <include/serial/service/utils/tls.xml.i>
+          #include <include/serial/service/utils/tls-port.xml.i>
           #include <include/serial/service/utils/keepalive.xml.i>
           #include <include/serial/service/utils/data-logging.xml.i>
           #include <include/serial/service/utils/sess-string-init.xml.i>
