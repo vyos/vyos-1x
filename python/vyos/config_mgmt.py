@@ -307,7 +307,11 @@ Proceed ?"""
         session = ConfigSession(os.getpid(), app='config-mgmt')
 
         try:
-            session.load_explicit(revert_ct)
+            if session.vyconf_backend():
+                session.load_config_obj(revert_ct)
+            else:
+                session.load_explicit(revert_ct)
+
             session.commit()
         except ConfigSessionError as e:
             raise ConfigMgmtError(e) from e

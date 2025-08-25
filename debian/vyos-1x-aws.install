@@ -1,0 +1,3 @@
+vyos-1x-aws/lib/* /lib
+vyos-1x-aws/opt/* /opt
+vyos-1x-aws/usr/* /usr

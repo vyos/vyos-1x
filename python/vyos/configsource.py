@@ -354,6 +354,13 @@ class ConfigSourceVyconfSession(ConfigSource):
         # cf. T7374
         self._level = []
 
+    def __del__(self):
+        try:
+            if not self._vyconf_session.in_session():
+                self._vyconf_session.teardown()
+        except AttributeError:
+            pass
+
     def get_level(self):
         return self._level
 

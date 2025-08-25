@@ -39,9 +39,12 @@ if hasattr(vs, func_name):
 else:
     sys.exit(f'Call unimplemented: {func_name}')
 
-out = func()
-if isinstance(out, bool):
+res = func()
+if isinstance(res, bool):
     # for use in shell scripts
-    sys.exit(int(not out))
+    sys.exit(int(not res))
 
-print(out)
+if isinstance(res, tuple):
+    out, err = res
+    print(out)
+    sys.exit(err)

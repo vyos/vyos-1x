@@ -130,6 +130,11 @@ advertise-passive-only
 {%     if segment_routing.maximum_label_depth is vyos_defined %}
  segment-routing node-msd {{ segment_routing.maximum_label_depth }}
 {%     endif %}
+{%     if segment_routing.srv6.locator is vyos_defined %}
+ segment-routing srv6
+  locator {{ segment_routing.srv6.locator }}
+ exit
+{%     endif %}
 {%     if segment_routing.global_block is vyos_defined %}
 {%         if segment_routing.local_block is vyos_defined %}
  segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }} local-block {{ segment_routing.local_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}

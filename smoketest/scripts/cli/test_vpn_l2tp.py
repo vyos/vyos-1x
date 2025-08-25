@@ -19,6 +19,10 @@ import unittest
 from base_accel_ppp_test import BasicAccelPPPTest
 from configparser import ConfigParser
 from vyos.utils.process import cmd
+from vyos.utils.file import read_file
+
+
+swanctl_file = '/etc/swanctl/swanctl.conf'
 
 
 class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
@@ -57,10 +61,15 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
     def test_vpn_l2tp_dependence_ipsec_swanctl(self):
         # Test config vpn for tasks T3843 and T5926
 
+        outside_address = '203.0.113.1'
+
         base_path = ['vpn', 'l2tp', 'remote-access']
         # make precondition
         self.cli_set(['interfaces', 'dummy', 'dum0', 'address', '203.0.113.1/32'])
         self.cli_set(['vpn', 'ipsec', 'interface', 'dum0'])
+
+        # Passing the 'unique = never' for StrongSwan's `connections.<conn>.unique` parameter
+        self.cli_set(['vpn', 'ipsec', 'disable-uniqreqids'])
 
         self.cli_commit()
         # check ipsec apply to swanctl
@@ -76,13 +85,26 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         self.cli_set(base_path + ['ipsec-settings', 'authentication', 'pre-shared-secret', 'SeCret'])
         self.cli_set(base_path + ['ipsec-settings', 'ike-lifetime', '8600'])
         self.cli_set(base_path + ['ipsec-settings', 'lifetime', '3600'])
-        self.cli_set(base_path + ['outside-address', '203.0.113.1'])
+        self.cli_set(base_path + ['outside-address', outside_address])
         self.cli_set(base_path + ['gateway-address', '203.0.113.1'])
 
         self.cli_commit()
 
         # check l2tp apply to swanctl
         self.assertTrue('l2tp_remote_access:' in cmd('echo vyos | sudo -S swanctl -L '))
+
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_lines = [
+            f'local_addrs = {outside_address}',
+            'proposals = aes256-sha1-modp1024,3des-sha1-modp1024',
+            'dpd_delay = 15s',
+            'dpd_timeout = 45s',
+            'rekey_time = 8600s',
+            'reauth_time = 0',
+            'unique = never',
+        ]
+        for line in swanctl_lines:
+            self.assertIn(line, swanctl_conf)
 
         self.cli_delete(['vpn', 'l2tp'])
         self.cli_commit()

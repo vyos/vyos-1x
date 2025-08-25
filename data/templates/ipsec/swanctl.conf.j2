@@ -4,15 +4,17 @@
 {% import 'ipsec/swanctl/peer.j2' as peer_tmpl %}
 {% import 'ipsec/swanctl/remote_access.j2' as remote_access_tmpl %}
 
+{% set uniqreqids = 'never' if disable_uniqreqids is vyos_defined else None %}
+
 connections {
 {% if profile is vyos_defined %}
 {%     for name, profile_conf in profile.items() if profile_conf.disable is not vyos_defined and profile_conf.bind.tunnel is vyos_defined %}
-{{ profile_tmpl.conn(name, profile_conf, ike_group, esp_group) }}
+{{ profile_tmpl.conn(name, profile_conf, ike_group, esp_group, uniqreqids) }}
 {%     endfor %}
 {% endif %}
 {% if site_to_site.peer is vyos_defined %}
 {%     for peer, peer_conf in site_to_site.peer.items() if peer not in dhcp_no_address and peer_conf.disable is not vyos_defined %}
-{{ peer_tmpl.conn(peer, peer_conf, ike_group, esp_group) }}
+{{ peer_tmpl.conn(peer, peer_conf, ike_group, esp_group, uniqreqids) }}
 {%     endfor %}
 {% endif %}
 {% if remote_access.connection is vyos_defined %}
@@ -21,7 +23,7 @@ connections {
 {%     endfor %}
 {% endif %}
 {% if l2tp %}
-{{ l2tp_tmpl.conn(l2tp, l2tp_outside_address, l2tp_ike_default, l2tp_esp_default, ike_group, esp_group) }}
+{{ l2tp_tmpl.conn(l2tp, l2tp_outside_address, l2tp_ike_default, l2tp_esp_default, ike_group, esp_group, uniqreqids) }}
 {% endif %}
 }
 

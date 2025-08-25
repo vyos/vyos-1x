@@ -1,0 +1,1580 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vpp" owner="${vyos_conf_scripts_dir}/vpp.py">
+    <properties>
+      <help>Accelerated data-plane</help>
+      <priority>295</priority>
+    </properties>
+    <children>
+      <node name='interfaces'>
+        <properties>
+          <help>Network interfaces</help>
+          <priority>300</priority>
+        </properties>
+        <children>
+          <tagNode name="bonding" owner="${vyos_conf_scripts_dir}/vpp_interfaces_bonding.py">
+            <properties>
+              <priority>324</priority>
+              <help>Bonding Interface/Link Aggregation</help>
+              <constraint>
+                <regex>bond[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Bonding interface must be named bondN</constraintErrorMessage>
+              <valueHelp>
+                <format>bondN</format>
+                <description>Bonding interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <leafNode name="hash-policy">
+                <properties>
+                  <help>Bonding transmit hash policy</help>
+                  <completionHelp>
+                    <list>layer2 layer2+3 layer3+4</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>layer2</format>
+                    <description>use MAC addresses to generate the hash</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>layer2+3</format>
+                    <description>combine MAC address and IP address to make hash</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>layer3+4</format>
+                    <description>combine IP address and port to make hash</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(layer2\+3|layer3\+4|layer2)</regex>
+                  </constraint>
+                  <constraintErrorMessage>hash-policy must be layer2 layer2+3 layer3+4</constraintErrorMessage>
+                </properties>
+                <defaultValue>layer2</defaultValue>
+              </leafNode>
+              #include <include/interface/mac.xml.i>
+              #include <include/kernel-interface-tun.xml.i>
+              <leafNode name="mode">
+                <properties>
+                  <help>Bonding mode</help>
+                  <completionHelp>
+                    <list>802.3ad active-backup broadcast round-robin xor-hash</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>802.3ad</format>
+                    <description>IEEE 802.3ad Dynamic link aggregation</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>active-backup</format>
+                    <description>Fault tolerant: only one slave in the bond is active</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>broadcast</format>
+                    <description>Fault tolerant: transmits everything on all slave interfaces</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>round-robin</format>
+                    <description>Load balance: transmit packets in sequential order</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>xor-hash</format>
+                    <description>Distribute based on MAC address</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(802.3ad|active-backup|broadcast|round-robin|xor-hash)</regex>
+                  </constraint>
+                  <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, or xor</constraintErrorMessage>
+                </properties>
+                <defaultValue>802.3ad</defaultValue>
+              </leafNode>
+              <node name="member">
+                <properties>
+                  <help>Bonding member interfaces</help>
+                </properties>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Member interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --bondable</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/vpp_interfaces_bridge.py">
+            <properties>
+              <priority>327</priority>
+              <help>Bridge domain</help>
+              <constraint>
+                <!-- Bridge domain 0 is reserved to vpp default -->
+                <regex>br(?!0$)[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Bridge domain must be named brN and br0 is reserved</constraintErrorMessage>
+              <valueHelp>
+                <format>brN</format>
+                <description>Bridge interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <node name="member">
+                <properties>
+                  <help>Bridge member interfaces</help>
+                </properties>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Member interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="bvi">
+                        <properties>
+                          <help>Bridge Virtual Interface (BVI)</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <!-- Disable as geneve interface index in the VPP always 0 and not configured -->
+          <!-- <tagNode name="geneve" owner="${vyos_conf_scripts_dir}/vpp_interfaces_geneve.py">
+            <properties>
+              <priority>325</priority>
+              <help>Generic Network Virtualization Encapsulation (GENEVE) Interface</help>
+              <constraint>
+                <regex>geneve[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>GENEVE interface must be named geneveN</constraintErrorMessage>
+              <valueHelp>
+                <format>geneveN</format>
+                <description>GENEVE interface name</description>
+              </valueHelp>
+            </properties>
+            <children> -->
+              <!-- #include <include/source-address-ipv4-ipv6.xml.i> -->
+              <!-- #include <include/interface/tunnel-remote.xml.i> -->
+              <!-- #include <include/vni.xml.i> -->
+              <!-- #include <include/kernel-interface-tun.xml.i> -->
+            <!-- </children> -->
+          <!-- </tagNode> -->
+          <tagNode name="gre" owner="${vyos_conf_scripts_dir}/vpp_interfaces_gre.py">
+            <properties>
+              <priority>325</priority>
+              <help>Generic Network Encapsulation (GRE) Interface</help>
+              <constraint>
+                <regex>gre[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>GRE interface must be named greN</constraintErrorMessage>
+              <valueHelp>
+                <format>greN</format>
+                <description>GRE interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <leafNode name="mode">
+                <properties>
+                  <help>GRE tunnel mode</help>
+                  <completionHelp>
+                    <list>point-to-point point-to-multipoint</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>point-to-point</format>
+                    <description>Point to point mode</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>point-to-multipoint</format>
+                    <description>Point to multipoint mode</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(point-to-point|point-to-multipoint)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid mode, must be one of: point-to-point or point-to-multipoint</constraintErrorMessage>
+                </properties>
+                <defaultValue>point-to-point</defaultValue>
+              </leafNode>
+              <leafNode name="tunnel-type">
+                <properties>
+                  <help>GRE tunnel type</help>
+                  <completionHelp>
+                    <list>erspan l3 teb</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>erspan</format>
+                    <description>Encapsulated Remote Switched Port Analyzer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>l3</format>
+                    <description>Generic Routing Encapsulation (network layer)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>teb</format>
+                    <description>L2 Transparent Ethernet Bridge</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(erspan|l3|teb)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid encapsulation, must be one of: l3, teb or erspan</constraintErrorMessage>
+                </properties>
+                <defaultValue>l3</defaultValue>
+              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/kernel-interface-tun.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="ipip" owner="${vyos_conf_scripts_dir}/vpp_interfaces_ipip.py">
+            <properties>
+              <priority>325</priority>
+              <help>IP encapsulation tunnel interface</help>
+              <constraint>
+                <regex>ipip[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>IPIP tunnel interface must be named ipipN</constraintErrorMessage>
+              <valueHelp>
+                <format>ipipN</format>
+                <description>IPIP tunnel interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/kernel-interface-tun.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/vpp_interfaces_loopback.py">
+            <properties>
+              <priority>325</priority>
+              <help>Loopback Interface</help>
+              <constraint>
+                <regex>lo[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Loopback interface must be named loN</constraintErrorMessage>
+              <valueHelp>
+                <format>loN</format>
+                <description>Loopback interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/kernel-interface-tun.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="vxlan" owner="${vyos_conf_scripts_dir}/vpp_interfaces_vxlan.py">
+            <properties>
+              <priority>325</priority>
+              <help>Virtual Extensible LAN (VXLAN) Interface</help>
+              <constraint>
+                <regex>vxlan[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>VXLAN interface must be named vxlanN</constraintErrorMessage>
+              <valueHelp>
+                <format>vxlanN</format>
+                <description>VXLAN interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/vni.xml.i>
+              #include <include/kernel-interface-tap.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="xconnect" owner="${vyos_conf_scripts_dir}/vpp_interfaces_xconnect.py">
+            <properties>
+              <help>Layer 2 cross connect</help>
+              <priority>325</priority>
+              <constraint>
+                <regex>xcon[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Cross connect must be named xconN</constraintErrorMessage>
+              <valueHelp>
+                <format>xconN</format>
+                <description>Cross connect interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <node name="member">
+                <properties>
+                  <help>Cross connect pair mamber interfaces</help>
+                </properties>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Member interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="settings">
+        <properties>
+          <help>VPP settings</help>
+        </properties>
+        <children>
+          <node name="buffers">
+            <properties>
+              <help>Buffer settings</help>
+            </properties>
+            <children>
+              <leafNode name="buffers-per-numa">
+                <properties>
+                  <help>Number of buffers per numa node</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Number of buffers</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="data-size">
+                <properties>
+                  <help>Size of buffer data area</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Size of buffer data area</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="page-size">
+                <properties>
+                  <help>Set the page-size for buffer allocation</help>
+                  #include <include/unformat_log2_page_size.xml.i>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="cpu">
+            <properties>
+              <help>CPU settings</help>
+            </properties>
+            <children>
+              <leafNode name="corelist-workers">
+                <properties>
+                  <help>List of cores worker threads</help>
+                  <valueHelp>
+                    <format>&lt;id&gt;</format>
+                    <description>CPU core id</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;idN&gt;-&lt;idM&gt;</format>
+                    <description>CPU core id range (use '-' as delimiter)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--allow-range --range 0-512"/>
+                  </constraint>
+                  <constraintErrorMessage>not a valid CPU core value or range</constraintErrorMessage>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="main-core">
+                <properties>
+                  <help>Main core</help>
+                  <valueHelp>
+                    <format>u32:0-512</format>
+                    <description>Assign main thread to specific core</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-512"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="skip-cores">
+                <properties>
+                  <help>Skip cores</help>
+                  <valueHelp>
+                    <format>u32:1-512</format>
+                    <description>Skip cores</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-512"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="workers">
+                <properties>
+                  <help>Create worker threads</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Worker threads</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-512"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface</help>
+              <valueHelp>
+                <format>ethN</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces --type ethernet</script>
+              </completionHelp>
+              <constraint>
+                <validator name="ethernet-interface"/>
+              </constraint>
+              <constraintErrorMessage>Invalid interface name</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="driver">
+                <properties>
+                  <help>Driver mode</help>
+                  <completionHelp>
+                    <list>dpdk xdp</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>dpdk</format>
+                    <description>Data Plane Development Kit (DPDK)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>xdp</format>
+                    <description>eXpress Data Path (XDP)</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(dpdk|xdp)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/vpp/iface_rx_mode.xml.i>
+              <node name="dpdk-options">
+                <properties>
+                  <help>DPDK settings</help>
+                </properties>
+                <children>
+                  <leafNode name="num-rx-desc">
+                    <properties>
+                      <help>Receive ring descriptors</help>
+                      <valueHelp>
+                        <format>u32:256-8192</format>
+                        <description>Number of descriptors in receive ring</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 256-8192"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="num-tx-desc">
+                    <properties>
+                      <help>Tranceive ring descriptors</help>
+                      <valueHelp>
+                        <format>u32:256-8192</format>
+                        <description>Number of descriptors in tranceive ring</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 256-8192"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="num-rx-queues">
+                    <properties>
+                      <help>Number of receive queues</help>
+                      <valueHelp>
+                        <format>u32:1-8192</format>
+                        <description>Number of receive queues</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-8192"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="num-tx-queues">
+                    <properties>
+                      <help>Number of tranceive queues</help>
+                      <valueHelp>
+                        <format>u32:1-8192</format>
+                        <description>Number of tranceive queues</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-8192"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="promisc">
+                    <properties>
+                      <help>Enable promisc mode on a vpp interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="xdp-options">
+                <properties>
+                  <help>XDP settings</help>
+                </properties>
+                <children>
+                  <leafNode name="no-syscall-lock">
+                    <properties>
+                      <help>Unlock multithreading in interrupt and adaptive modes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="num-rx-queues">
+                    <properties>
+                      <help>Number of receive queues</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Number of receive queues to connect to</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>all</format>
+                        <description>All</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(all)</regex>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>all</defaultValue>
+                  </leafNode>
+                  <leafNode name="promisc">
+                    <properties>
+                      <help>Enable promisc mode on a real interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rx-queue-size">
+                    <properties>
+                      <help>Receive queue size</help>
+                      <valueHelp>
+                        <format>u32:0-65535</format>
+                        <description>Size of receive queue</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>0</defaultValue>
+                  </leafNode>
+                  <leafNode name="tx-queue-size">
+                    <properties>
+                      <help>Tranceive queue size</help>
+                      <valueHelp>
+                        <format>u32:0-65535</format>
+                        <description>Size of tranceive queue</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>0</defaultValue>
+                  </leafNode>
+                  <leafNode name="zero-copy">
+                    <properties>
+                      <help>Enable zero-copy mode</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="ipv6">
+            <properties>
+              <help>IPv6 settings</help>
+            </properties>
+            <children>
+              <leafNode name="heap-size">
+                <properties>
+                  <help>IPv6 heap size</help>
+                  #include <include/unformat_memory_size.xml.i>
+                </properties>
+                <defaultValue>32M</defaultValue>
+              </leafNode>
+              <leafNode name="hash-buckets">
+                <properties>
+                  <help>IPv6 forwarding table hash buckets</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>IPv6 forwarding table hash buckets</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>65536</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="ipsec">
+            <properties>
+              <help>IPsec settings</help>
+            </properties>
+            <children>
+              <leafNode name="interface-type">
+                <properties>
+                  <help>IPsec interface type</help>
+                  <completionHelp>
+                    <list>ipsec ipip</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipsec</format>
+                    <description>IPsec interface type</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipip</format>
+                    <description>IPIP tunnel interface type</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(ipsec|ipip)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>ipsec</defaultValue>
+              </leafNode>
+              #include <include/vpp/netlink.xml.i>
+            </children>
+          </node>
+          <node name="l2learn">
+            <properties>
+              <help>Level 2 MAC address learning settings</help>
+            </properties>
+            <children>
+              <leafNode name="limit">
+                <properties>
+                  <help>Number of MAC addresses in the L2 FIB</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>Number of concurent entries</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>4194304</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="lcp">
+            <properties>
+              <help>Linux control plane setting</help>
+            </properties>
+            <children>
+              #include <include/vpp/netlink.xml.i>
+            <leafNode name="ignore-kernel-routes">
+              <properties>
+                <help>Ignore kernel routes</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="logging">
+          <properties>
+            <help>Logging settings</help>
+          </properties>
+          <children>
+            <leafNode name="default-log-level">
+              <properties>
+                <help>default-log-level</help>
+                <completionHelp>
+                  <list>alert crit debug disabled emerg err info notice warn</list>
+                </completionHelp>
+                <valueHelp>
+                  <format>alert</format>
+                  <description>Alert</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>crit</format>
+                  <description>Critical</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>debug</format>
+                  <description>Debug</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>disabled</format>
+                  <description>Disabled</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>emerg</format>
+                  <description>Emergency</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>err</format>
+                  <description>Error</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>info</format>
+                  <description>Informational</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>notice</format>
+                  <description>Notice</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>warn</format>
+                  <description>Warning</description>
+                </valueHelp>
+                <constraint>
+                  <regex>(alert|crit|debug|disabled|emerg|err|info|notice|warn)</regex>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="memory">
+          <properties>
+            <help>Memory settings</help>
+          </properties>
+          <children>
+            <leafNode name="main-heap-size">
+              <properties>
+                <help>Main heap size</help>
+                #include <include/unformat_memory_size.xml.i>
+              </properties>
+              <defaultValue>3G</defaultValue>
+            </leafNode>
+            <leafNode name="main-heap-page-size">
+              <properties>
+                <help>Main heap page size</help>
+                #include <include/unformat_log2_page_size.xml.i>
+              </properties>
+              <defaultValue>2M</defaultValue>
+            </leafNode>
+            <leafNode name="default-hugepage-size">
+              <properties>
+                <help>Default hugepage size</help>
+                <completionHelp>
+                  <script>sudo ${vyos_completion_dir}/list_mem_page_size.py --hugepage_only True </script>
+                </completionHelp>
+              </properties>
+              <defaultValue>2M</defaultValue>
+            </leafNode>
+          </children>
+        </node>
+        <node name="nat44">
+          <properties>
+            <help>NAT settings</help>
+          </properties>
+          <children>
+            <node name="timeout">
+              <properties>
+                <help>NAT44 session timeouts</help>
+              </properties>
+              <children>
+                <leafNode name="icmp">
+                  <properties>
+                    <help>ICMP timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Timeout in seconds (default: 60)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>60</defaultValue>
+                </leafNode>
+                <leafNode name="tcp-established">
+                  <properties>
+                    <help>TCP established timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>TCP established timeout in seconds (default: 7440)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>7440</defaultValue>
+                </leafNode>
+                <leafNode name="tcp-transitory">
+                  <properties>
+                    <help>TCP transitory timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Timeout in seconds (default: 240)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>240</defaultValue>
+                </leafNode>
+                <leafNode name="udp">
+                  <properties>
+                    <help>UDP timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Timeout in seconds (default: 300)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>300</defaultValue>
+                </leafNode>
+              </children>
+            </node>
+            <leafNode name="session-limit">
+              <properties>
+                <help>Maximum number of sessions per thread</help>
+                <valueHelp>
+                  <format>u32</format>
+                  <description>Number of sessions</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-4294967295"/>
+                </constraint>
+                <constraintErrorMessage>Number of sessions must be between 1 and 4294967295</constraintErrorMessage>
+              </properties>
+              <defaultValue>64512</defaultValue>
+            </leafNode>
+            <leafNode name="workers">
+              <properties>
+                <help>List of NAT workers</help>
+                <valueHelp>
+                  <format>&lt;id&gt;</format>
+                  <description>Worker id</description>
+                </valueHelp>
+                <valueHelp>
+                  <format>&lt;idN&gt;-&lt;idM&gt;</format>
+                  <description>Worker id range (use '-' as delimiter)</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--allow-range --range 0-512"/>
+                </constraint>
+                <constraintErrorMessage>Not a valid value or range</constraintErrorMessage>
+                <multi/>
+              </properties>
+            </leafNode>
+            <leafNode name="no-forwarding">
+              <properties>
+                <help>Do not forward packets which do not match existing NAT translations (static or dynamic)</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="physmem">
+          <properties>
+            <help>Physical memory settings</help>
+          </properties>
+          <children>
+            <leafNode name="max-size">
+              <properties>
+                <help>Set memory size for protectable memory allocator (pmalloc) memory space</help>
+                #include <include/unformat_memory_size.xml.i>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="statseg">
+          <properties>
+            <help>Stats settings</help>
+          </properties>
+          <children>
+            <leafNode name="size">
+              <properties>
+                <help>Size of stats segment</help>
+                #include <include/unformat_memory_size.xml.i>
+              </properties>
+              <defaultValue>128M</defaultValue>
+            </leafNode>
+            <leafNode name="page-size">
+              <properties>
+                <help>Stats page size</help>
+                #include <include/unformat_log2_page_size.xml.i>
+              </properties>
+              <defaultValue>2M</defaultValue>
+            </leafNode>
+          </children>
+        </node>
+        <node name="unix">
+          <properties>
+            <help>Unix settings</help>
+          </properties>
+          <children>
+            <leafNode name="poll-sleep-usec">
+              <properties>
+                <help>Add a fixed-sleep between main loop poll</help>
+                <valueHelp>
+                  <format>u32:0-500000</format>
+                  <description>Sleep interval in microseconds</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-500000"/>
+                </constraint>
+              </properties>
+              <defaultValue>0</defaultValue>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="sflow" owner="${vyos_conf_scripts_dir}/vpp_sflow.py">
+      <properties>
+        <help>VPP data-plane sFlow</help>
+        <priority>322</priority>
+      </properties>
+      <children>
+        <leafNode name="interface">
+          <properties>
+            <help>Interface name</help>
+            <completionHelp>
+              <script>${vyos_completion_dir}/list_interfaces</script>
+            </completionHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Interface name</description>
+            </valueHelp>
+            <multi/>
+          </properties>
+        </leafNode>
+        <leafNode name="sample-rate">
+          <properties>
+            <help>sFlow sample rate</help>
+            <valueHelp>
+              <format>u32</format>
+              <description>sFlow sample rate</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
+    <node name="nat">
+      <properties>
+        <help>Network Address Translation (NAT) settings</help>
+      </properties>
+      <children>
+        <node name="cgnat" owner="${vyos_conf_scripts_dir}/vpp_nat_cgnat.py">
+          <properties>
+            <help>Carrier-grade NAT (CGNAT)</help>
+            <priority>331</priority>
+          </properties>
+          <children>
+            <node name="interface">
+              <properties>
+                <help>CGNAT interface setting</help>
+              </properties>
+              <children>
+                <leafNode name="inside">
+                  <properties>
+                    <help>CGNAT inside interface</help>
+                    <completionHelp>
+                      <script>${vyos_completion_dir}/list_interfaces</script>
+                    </completionHelp>
+                    <multi/>
+                  </properties>
+                </leafNode>
+                <leafNode name="outside">
+                  <properties>
+                    <help>CGNAT outside interface</help>
+                    <completionHelp>
+                      <script>${vyos_completion_dir}/list_interfaces</script>
+                    </completionHelp>
+                    <multi/>
+                  </properties>
+                </leafNode>
+              </children>
+            </node>
+            <tagNode name="rule">
+              <properties>
+                <help>Rule number for CGNAT</help>
+                <valueHelp>
+                  <format>u32</format>
+                  <description>Number of rule</description>
+                </valueHelp>
+              </properties>
+              <children>
+                <leafNode name="inside-prefix">
+                  <properties>
+                    <help>Inside IPv4 prefix</help>
+                    <valueHelp>
+                      <format>ipv4net</format>
+                      <description>IPv4 prefix</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="ipv4-prefix"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+                <leafNode name="outside-prefix">
+                  <properties>
+                    <help>Outside IPv4 prefix</help>
+                    <valueHelp>
+                      <format>ipv4net</format>
+                      <description>IPv4 prefix</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="ipv4-prefix"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+                #include <include/generic-description.xml.i>
+              </children>
+            </tagNode>
+            <node name="timeout">
+              <properties>
+                <help>Timeouts for CGNAT sessions</help>
+              </properties>
+              <children>
+                <leafNode name="icmp">
+                  <properties>
+                    <help>ICMP timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Timeout in seconds (default: 60)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>60</defaultValue>
+                </leafNode>
+                <leafNode name="tcp-established">
+                  <properties>
+                    <help>TCP established timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>TCP established timeout in seconds (default: 7440)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>7440</defaultValue>
+                </leafNode>
+                <leafNode name="tcp-transitory">
+                  <properties>
+                    <help>TCP transitory timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Timeout in seconds (default: 240)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>240</defaultValue>
+                </leafNode>
+                <leafNode name="udp">
+                  <properties>
+                    <help>UDP timeout</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Timeout in seconds (default: 300)</description>
+                    </valueHelp>
+                  </properties>
+                  <defaultValue>300</defaultValue>
+                </leafNode>
+              </children>
+            </node>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="nat44" owner="${vyos_conf_scripts_dir}/vpp_nat.py">
+      <properties>
+        <help>NAT44</help>
+        <priority>330</priority>
+      </properties>
+      <children>
+        <node name="interface">
+          <properties>
+            <help>NAT interface setting</help>
+          </properties>
+          <children>
+            <leafNode name="inside">
+              <properties>
+                <help>NAT inside interface</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces</script>
+                </completionHelp>
+                <multi/>
+              </properties>
+            </leafNode>
+            <leafNode name="outside">
+              <properties>
+                <help>NAT outside interface</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces</script>
+                </completionHelp>
+                <multi/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="address-pool">
+          <properties>
+            <help>NAT address pool</help>
+          </properties>
+          <children>
+            <node name="translation">
+              <properties>
+                <help>NAT translation pool</help>
+              </properties>
+              <children>
+                #include <include/vpp/nat_address_range.xml.i>
+                #include <include/vpp/nat_interface.xml.i>
+              </children>
+            </node>
+            <node name="twice-nat">
+              <properties>
+                <help>NAT twice-nat pool</help>
+              </properties>
+              <children>
+                #include <include/vpp/nat_address_range.xml.i>
+                #include <include/vpp/nat_interface.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
+        <node name="static">
+          <properties>
+            <help>Static NAT rules</help>
+          </properties>
+          <children>
+            <tagNode name="rule">
+              <properties>
+                <help>Rule number for NAT</help>
+                <valueHelp>
+                  <format>u32</format>
+                  <description>Number of NAT rule</description>
+                </valueHelp>
+              </properties>
+              <children>
+                #include <include/generic-description.xml.i>
+                <node name="external">
+                  <properties>
+                    <help>NAT external parameters</help>
+                  </properties>
+                  <children>
+                    <leafNode name="address">
+                      <properties>
+                        <help>IP address</help>
+                        <valueHelp>
+                          <format>ipv4</format>
+                          <description>IPv4 address</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="ipv4-address"/>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                    #include <include/port-number.xml.i>
+                  </children>
+                </node>
+                <node name="local">
+                  <properties>
+                    <help>NAT local parameters</help>
+                  </properties>
+                  <children>
+                    <leafNode name="address">
+                      <properties>
+                        <help>IP address</help>
+                        <valueHelp>
+                          <format>ipv4</format>
+                          <description>IPv4 address</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="ipv4-address"/>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                    #include <include/port-number.xml.i>
+                  </children>
+                </node>
+                <node name="options">
+                  <properties>
+                    <help>NAT static mapping options</help>
+                  </properties>
+                  <children>
+                    <leafNode name="twice-nat">
+                      <properties>
+                        <help>Rewrite source IP addresses on packets sent from outside to inside</help>
+                        <valueless/>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="self-twice-nat">
+                      <properties>
+                        <help>Rewrite source IP addresses on packets sent only from a local address to an external address</help>
+                        <valueless/>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="out-to-in-only">
+                      <properties>
+                        <help>Only apply rule for traffic from outside to inside interfaces</help>
+                        <valueless/>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="twice-nat-address">
+                      <properties>
+                        <help>Force use of specific IP address from twice-nat address pool</help>
+                        <valueHelp>
+                          <format>ipv4</format>
+                          <description>IPv4 address</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="ipv4-address"/>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                  </children>
+                </node>
+                #include <include/vpp/nat_protocol.xml.i>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+        <node name="exclude">
+          <properties>
+            <help>Exclude packets matching these rules from NAT</help>
+          </properties>
+          <children>
+            <tagNode name="rule">
+              <properties>
+                <help>Rule number</help>
+                <valueHelp>
+                  <format>u32</format>
+                  <description>Number of rule</description>
+                </valueHelp>
+              </properties>
+              <children>
+                <leafNode name="local-address">
+                  <properties>
+                    <help>IP address of the internal (local) device</help>
+                    <valueHelp>
+                      <format>ipv4</format>
+                      <description>IPv4 address</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="ipv4-address"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+                <leafNode name="local-port">
+                  <properties>
+                    <help>Port number used by connection on internal device</help>
+                    <valueHelp>
+                      <format>u32:1-65535</format>
+                      <description>Numeric IP port</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-65535"/>
+                    </constraint>
+                    <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+                #include <include/vpp/nat_protocol.xml.i>
+                <leafNode name="external-interface">
+                  <properties>
+                    <help>External interface</help>
+                    <completionHelp>
+                      <script>${vyos_completion_dir}/list_interfaces</script>
+                    </completionHelp>
+                  </properties>
+                </leafNode>
+                #include <include/generic-description.xml.i>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <node name="acl" owner="${vyos_conf_scripts_dir}/vpp_acl.py">
+      <properties>
+        <help>Access Control Lists (ACLs)</help>
+        <priority>332</priority>
+      </properties>
+      <children>
+        <node name="ip">
+          <properties>
+            <help>Access Control List by IPv4/IPv6</help>
+          </properties>
+          <children>
+            <tagNode name="tag-name">
+              <properties>
+                <help>ACL tag name</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>Tag name</description>
+                </valueHelp>
+              </properties>
+              <children>
+                #include <include/generic-description.xml.i>
+                <tagNode name="rule">
+                  <properties>
+                    <help>Rule number for Access control element (ACE)</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Number of ACE</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-4294967295"/>
+                    </constraint>
+                    <constraintErrorMessage>Rule number must be between 1 and 4294967295</constraintErrorMessage>
+                  </properties>
+                  <children>
+                    #include <include/generic-description.xml.i>
+                    <leafNode name="action">
+                      <properties>
+                        <help>Rule action</help>
+                        <completionHelp>
+                          <list>permit deny permit-reflect</list>
+                        </completionHelp>
+                        <valueHelp>
+                          <format>permit</format>
+                          <description>Permit matching traffic</description>
+                        </valueHelp>
+                        <valueHelp>
+                          <format>deny</format>
+                          <description>Deny matching traffic</description>
+                        </valueHelp>
+                        <valueHelp>
+                          <format>permit-reflect</format>
+                          <description>Permit the matching outbound traffic and allow the reverse traffic</description>
+                        </valueHelp>
+                        <constraint>
+                          <regex>(permit|deny|permit-reflect)</regex>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                    <node name="source">
+                      <properties>
+                        <help>Source parameters</help>
+                      </properties>
+                      <children>
+                        #include <include/vpp/acl_prefix.xml.i>
+                        #include <include/vpp/acl_port_range.xml.i>
+                      </children>
+                    </node>
+                    <node name="destination">
+                      <properties>
+                        <help>Destination parameters</help>
+                      </properties>
+                      <children>
+                        #include <include/vpp/acl_prefix.xml.i>
+                        #include <include/vpp/acl_port_range.xml.i>
+                      </children>
+                    </node>
+                    <leafNode name="protocol">
+                      <properties>
+                        <help>Protocol</help>
+                        <completionHelp>
+                          <script>${vyos_completion_dir}/list_protocols.sh</script>
+                          <list>all</list>
+                        </completionHelp>
+                        <valueHelp>
+                          <format>all</format>
+                          <description>All IP protocols</description>
+                        </valueHelp>
+                        <valueHelp>
+                          <format>&lt;protocol&gt;</format>
+                          <description>IP protocol name</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="ip-protocol"/>
+                        </constraint>
+                      </properties>
+                      <defaultValue>all</defaultValue>
+                    </leafNode>
+                    <node name="tcp-flags">
+                      <properties>
+                        <help>TCP flags</help>
+                      </properties>
+                      <children>
+                        #include <include/vpp/acl_tcp_flags.xml.i>
+                        <node name="not">
+                          <properties>
+                            <help>Match flags not set</help>
+                          </properties>
+                          <children>
+                            #include <include/vpp/acl_tcp_flags.xml.i>
+                          </children>
+                        </node>
+                      </children>
+                    </node>
+                  </children>
+                </tagNode>
+              </children>
+            </tagNode>
+            <tagNode name="interface">
+              <properties>
+                <help>Apply an ACL to an interface</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces</script>
+                </completionHelp>
+              </properties>
+              <children>
+                <node name="input">
+                  <properties>
+                    <help>Input direction</help>
+                  </properties>
+                  <children>
+                    #include <include/vpp/acl_common_interface_ip_rule.xml.i>
+                  </children>
+                </node>
+                <node name="output">
+                  <properties>
+                    <help>Output direction</help>
+                  </properties>
+                  <children>
+                    #include <include/vpp/acl_common_interface_ip_rule.xml.i>
+                  </children>
+                </node>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+        <node name="macip">
+          <properties>
+            <help>Access Control List by mac address</help>
+          </properties>
+          <children>
+            <tagNode name="tag-name">
+              <properties>
+                <help>ACL tag name</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>ACL name</description>
+                </valueHelp>
+              </properties>
+              <children>
+                #include <include/generic-description.xml.i>
+                <tagNode name="rule">
+                  <properties>
+                    <help>Rule number for Access control element (ACE)</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Number of ACE</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-4294967295"/>
+                    </constraint>
+                    <constraintErrorMessage>Rule number must be between 1 and 4294967295</constraintErrorMessage>
+                  </properties>
+                  <children>
+                    #include <include/generic-description.xml.i>
+                    <leafNode name="action">
+                      <properties>
+                        <help>Rule action</help>
+                        <completionHelp>
+                          <list>permit deny</list>
+                        </completionHelp>
+                        <valueHelp>
+                          <format>permit</format>
+                          <description>Permit matching traffic</description>
+                        </valueHelp>
+                        <valueHelp>
+                          <format>deny</format>
+                          <description>Deny matching traffic</description>
+                        </valueHelp>
+                        <constraint>
+                          <regex>(permit|deny)</regex>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                    #include <include/vpp/acl_prefix.xml.i>
+                    <leafNode name="prefix">
+                      <properties>
+                        <help>Source IP prefix</help>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="mac-address">
+                      <properties>
+                        <help>Source MAC address</help>
+                        <valueHelp>
+                          <format>macaddr</format>
+                          <description>MAC address</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="mac-address"/>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="mac-mask">
+                      <properties>
+                        <help>Source MAC mask (default ff:ff:ff:ff:ff:ff)</help>
+                        <valueHelp>
+                          <format>macaddr</format>
+                          <description>MAC mask</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="mac-address"/>
+                        </constraint>
+                      </properties>
+                      <defaultValue>ff:ff:ff:ff:ff:ff</defaultValue>
+                    </leafNode>
+                  </children>
+                </tagNode>
+              </children>
+            </tagNode>
+            <tagNode name="interface">
+              <properties>
+                <help>Apply an ACL to an input interface</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_interfaces</script>
+                </completionHelp>
+              </properties>
+              <children>
+                <leafNode name="tag-name">
+                  <properties>
+                    <help>ACL tag name</help>
+                    <completionHelp>
+                      <path>vpp acl macip tag-name</path>
+                    </completionHelp>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+      </children>
+    </node>
+    <tagNode name="kernel-interfaces" owner="${vyos_conf_scripts_dir}/vpp_kernel-interfaces.py">
+      <properties>
+        <help>VPP kernel interface settings</help>
+        <priority>328</priority>
+        <valueHelp>
+          <format>vpptapN</format>
+          <description>Kernel interface name</description>
+        </valueHelp>
+        <valueHelp>
+          <format>vpptunN</format>
+          <description>Kernel interface name</description>
+        </valueHelp>
+        <constraint>
+          <regex>vpp(tun|tap)\d+</regex>
+        </constraint>
+        <constraintErrorMessage>Kernel interface must start with vpp and include tun or tap N</constraintErrorMessage>
+      </properties>
+      <children>
+        #include <include/interface/address-ipv4-ipv6.xml.i>
+        #include <include/generic-description.xml.i>
+        #include <include/interface/disable.xml.i>
+        #include <include/interface/mtu-68-16000.xml.i>
+        #include <include/vpp/vif.xml.i>
+        #include <include/vpp/iface_rx_mode.xml.i>
+      </children>
+    </tagNode>
+  </children>
+</node>
+</interfaceDefinition>

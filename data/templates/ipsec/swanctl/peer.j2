@@ -1,4 +1,4 @@
-{% macro conn(peer, peer_conf, ike_group, esp_group) %}
+{% macro conn(peer, peer_conf, ike_group, esp_group, uniqreqids) %}
 {% set name = peer.replace("@", "") | dot_colon_to_dash %}
 {# peer needs to reference the global IKE configuration for certain values #}
 {% set ike = ike_group[peer_conf.ike_group] %}
@@ -32,6 +32,9 @@
 {% endif %}
 {% if peer_conf.force_udp_encapsulation is vyos_defined %}
         encap = yes
+{% endif %}
+{% if uniqreqids is vyos_defined %}
+        unique = {{ uniqreqids }}
 {% endif %}
         local {
 {% if peer_conf.authentication.local_id is vyos_defined %}

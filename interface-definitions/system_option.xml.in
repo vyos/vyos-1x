@@ -32,6 +32,49 @@
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
            </leafNode>
+           <node name="resource-limits">
+             <properties>
+               <help>Resource limits</help>
+             </properties>
+             <children>
+               <leafNode name="max-map-count">
+                 <properties>
+                   <help>Maximum number of memory map areas a process may have</help>
+                   <valueHelp>
+                     <format>u32:65530-2147483647</format>
+                     <description>Areas count</description>
+                   </valueHelp>
+                   <valueHelp>
+                     <format>auto</format>
+                     <description>Auto calculate areas count based on number of hugepages</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>(auto)</regex>
+                     <validator name="numeric" argument="--range 65530-2147483647"/>
+                   </constraint>
+                 </properties>
+                 <defaultValue>auto</defaultValue>
+               </leafNode>
+               <leafNode name="shmmax">
+                 <properties>
+                   <help>Maximum shared memory segment size that can be created</help>
+                   <valueHelp>
+                     <format>u64:8589934592-18446744073709551615</format>
+                     <description>Size in bytes</description>
+                   </valueHelp>
+                   <valueHelp>
+                     <format>auto</format>
+                     <description>Auto calculate shared memory based on number of hugepages</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>(auto)</regex>
+                     <validator name="numeric" argument="--range 8589934592-18446744073709551615"/>
+                   </constraint>
+                 </properties>
+                 <defaultValue>auto</defaultValue>
+               </leafNode>
+             </children>
+           </node>
            <node name="kernel">
              <properties>
                <help>Kernel boot parameters</help>

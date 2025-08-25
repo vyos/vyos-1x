@@ -32,6 +32,7 @@ from vyos.utils.process import cmd
 from vyos.utils.network import interface_exists
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import call
+from vyos.configquery import op_mode_config_dict
 
 def catch_broken_pipe(func):
     def wrapped(*args, **kwargs):
@@ -626,6 +627,72 @@ def show_counters(raw: bool, intf_name: typing.Optional[str],
     if raw:
         return _show_raw(data, intf_name)
     return _format_show_counters(data)
+
+def show_vlan_to_vni(raw: bool, intf_name: typing.Optional[str], vid: typing.Optional[str], detail: bool):
+    if not interface_exists(intf_name):
+        raise vyos.opmode.UnconfiguredObject(f"Interface {intf_name} does not exist\n")
+
+    if not vid:
+        vid = "all"
+
+    tunnel_data = json.loads(cmd(f"bridge -j vlan tunnelshow dev {intf_name} vid {vid}"))
+
+    if not tunnel_data:
+        if vid == "all":
+            raise vyos.opmode.UnconfiguredObject(f"No VLAN-to-VNI mapping found for interface {intf_name}\n")
+        else:
+            raise vyos.opmode.UnconfiguredObject(f"No VLAN-to-VNI mapping found for VLAN {vid}\n")
+
+    statistics_data = json.loads(cmd(f"bridge -j -s vlan tunnelshow dev {intf_name} vid {vid}"))[0]
+
+    mapping_config = op_mode_config_dict(['interfaces', 'vxlan', intf_name, 'vlan-to-vni'],
+                        get_first_key=True)
+
+    raw_data = {intf_name: {}}
+    output_list = []
+
+    for tunnel in tunnel_data[0].get("tunnels", []):
+        tunnel_id = tunnel.get("tunid")
+        tunnel_dict = raw_data[intf_name][tunnel_id] = {}
+
+        for vlan in statistics_data.get("vlans", []):
+            if vlan.get("vid") == tunnel.get("vlan"):
+                vlan_id = str(vlan.get("vid"))
+                description = mapping_config.get(vlan_id, {}).get("description", "")
+
+                if raw:
+                    tunnel_dict["vlan"] = vlan_id
+                    tunnel_dict["rx_bytes"] = vlan.get("rx_bytes")
+                    tunnel_dict["tx_bytes"] = vlan.get("tx_bytes")
+                    tunnel_dict["rx_packets"] = vlan.get("rx_packets")
+                    tunnel_dict["tx_packets"] = vlan.get("tx_packets")
+                    tunnel_dict["description"] = description
+                else:
+                    #Generate output list; detail adds more fields
+                    output_list.append([
+                        *([intf_name] if not detail else []),
+                        vlan_id,
+                        tunnel_id,
+                        description,
+                        *([vlan.get("rx_bytes")] if detail else []),
+                        *([vlan.get("tx_bytes")] if detail else []),
+                        *([vlan.get("rx_packets")] if detail else []),
+                        *([vlan.get("tx_packets")] if detail else [])
+                    ])
+
+    if raw:
+        return raw_data
+
+    if detail:
+        # Detail headers; ex. show interfaces vxlan vxlan1 vlan-to-vni detail
+        detail_header = ['VLAN', 'VNI', 'Description', 'Rx Bytes', 'Tx Bytes', 'Rx Packets', 'Tx Packets']
+        print('-' * 35)
+        print(f"Interface: {intf_name}\n")
+        detailed_output(output_list, detail_header)
+    else:
+        # Normal headers; ex. show interfaces vxlan vxlan1 vlan-to-vni
+        headers = ['Interface', 'VLAN', 'VNI', 'Description']
+        print(tabulate(output_list, headers))
 
 def clear_counters(intf_name: typing.Optional[str],
                    intf_type: typing.Optional[str],

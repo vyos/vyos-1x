@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <properties>
+          <help>Show VPP information</help>
+        </properties>
+        <children>
+          <node name="interfaces">
+            <properties>
+              <help>Show VPP interface information</help>
+            </properties>
+            <children>
+              <node name="dataplane">
+                <properties>
+                  <help>Show VPP dataplane interfaces</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_vpp_interfaces.py --dataplane</command>
+              </node>
+              <node name="kernel">
+                <properties>
+                  <help>Show VPP kernel interfaces</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_vpp_interfaces.py --kernel</command>
+              </node>
+              <tagNode name="hardware">
+                <properties>
+                  <help>Show detailed statistics for specified VPP interface</help>
+                  <completionHelp>
+                    <script>sudo ${vyos_completion_dir}/list_vpp_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <standalone>
+                  <help>Show VPP interfaces detailed statistics</help>
+                  <command>sudo ${vyos_op_scripts_dir}/show_vpp_interfaces.py --hardware</command>
+                </standalone>
+                <command>sudo ${vyos_op_scripts_dir}/show_vpp_interfaces.py --hardware --intf-name="$5"</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/show_vpp_interfaces.py --summary</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

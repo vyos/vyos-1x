@@ -485,11 +485,25 @@ class BondIf(Interface):
 
             # Add (enslave) interfaces to bond
             value = dict_search('member.interface', config)
+            is_first = True
             for interface in (value or []):
-                # if we've come here we already verified the interface
-                # does not have an addresses configured so just flush
-                # any remaining ones
-                Interface(interface).flush_addrs()
+                # Physical bond member interface instance
+                tmp_if = Interface(interface)
+                # At this point, we've confirmed that the interface has no
+                # configured addresses, so we can safely flush any remaining ones.
+                tmp_if.flush_addrs()
+
+                # T7571: This behavior changed from Linux Kernel 5.4 (used in VyOS 1.3)
+                # to Kernel 6.6 (starting with VyOS 1.4). Previously, the MAC address of
+                # the first member interface in a bond was adopted as the bond's default MAC.
+                # In newer versions, a synthetic MAC address is assigned instead.
+                #
+                # Re-assign first underlay MAC address to the bond
+                if is_first:
+                    self.set_mac(tmp_if.get_mac())
+                    is_first = False
+
+                # Assign underlaying interface to logical bond
                 self.add_port(interface)
 
         # Add system mac address for 802.3ad - default address is all zero

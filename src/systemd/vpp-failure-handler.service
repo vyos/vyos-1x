@@ -1,0 +1,9 @@
+[Unit]
+Description=Restart VPP on failure
+
+[Service]
+Type=oneshot
+User=root
+Group=vyattacfg
+UMask=0002
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/reset_section.py vpp --reload

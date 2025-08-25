@@ -680,7 +680,7 @@
   <children>
     <node name="global-block">
       <properties>
-        <help>Segment Routing Global Block label range</help>
+        <help>Segment-Routing Global Block label range</help>
       </properties>
       <children>
         #include <include/segment-routing-label-value.xml.i>
@@ -688,7 +688,7 @@
     </node>
     <node name="local-block">
       <properties>
-        <help>Segment Routing Local Block label range</help>
+        <help>Segment-Routing Local Block label range</help>
       </properties>
       <children>
         #include <include/segment-routing-label-value.xml.i>

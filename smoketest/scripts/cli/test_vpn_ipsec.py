@@ -233,6 +233,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(peer_base_path + ['tunnel', '2', 'remote', 'prefix', '10.2.0.0/16'])
         self.cli_set(peer_base_path + ['tunnel', '2', 'priority', priority])
 
+        # Passing the 'unique = never' for StrongSwan's `connections.<conn>.unique` parameter
+        self.cli_set(base_path + ['disable-uniqreqids'])
+
         self.cli_commit()
 
         # Verify strongSwan configuration
@@ -259,14 +262,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'priority = {priority}',
             f'mode = tunnel',
             f'replay_window = 32',
+            'unique = never',
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
 
         # if dpd is not specified it should not be enabled (see T6599)
         swanctl_unexpected_lines = [
-            f'dpd_timeout'
-            f'dpd_delay'
+            'dpd_timeout',
+            'dpd_delay',
         ]
 
         for unexpected_line in swanctl_unexpected_lines:
@@ -634,6 +638,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['profile', 'NHRPVPN', 'esp-group', esp_group])
         self.cli_set(base_path + ['profile', 'NHRPVPN', 'ike-group', ike_group])
 
+        # Passing the 'unique = never' for StrongSwan's `connections.<conn>.unique` parameter
+        self.cli_set(base_path + ['disable-uniqreqids'])
+
         self.cli_commit()
 
         swanctl_conf = read_file(swanctl_file)
@@ -646,7 +653,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'local_ts = dynamic[gre]',
             f'remote_ts = dynamic[gre]',
             f'mode = transport',
-            f'secret = {nhrp_secret}'
+            f'secret = {nhrp_secret}',
+            'unique = never',
         ]
         for line in swanctl_lines:
             self.assertIn(line, swanctl_conf)

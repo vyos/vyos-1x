@@ -33,17 +33,17 @@ logs_handler = logging.StreamHandler()
 logger.addHandler(logs_handler)
 
 
-def _get_all_server_leases(inet_suffix='4') -> list:
+def _get_all_server_leases(inet_suffix='4', vrf='') -> list:
     mappings = []
     try:
-        active_config = kea_get_active_config(inet_suffix)
+        active_config = kea_get_active_config(inet_suffix, vrf)
     except Exception:
         raise vyos.opmode.DataUnavailable('Cannot fetch DHCP server configuration')
 
     try:
         pools = kea_get_dhcp_pools(active_config, inet_suffix)
         mappings = kea_get_server_leases(
-            active_config, inet_suffix, pools, state=[], origin=None
+            active_config, inet_suffix, vrf, pools, state=[], origin=None
         )
     except Exception:
         raise vyos.opmode.DataUnavailable('Cannot fetch DHCP server leases')

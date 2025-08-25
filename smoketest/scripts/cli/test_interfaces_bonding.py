@@ -62,6 +62,23 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
             self.assertListEqual(slaves, self._members)
 
+    def test_bonding_keep_mac(self):
+        # T7571: A bond interface should always run from the physical interfaces
+        # MAC address and not a synthetic one.
+        base_mac = Interface(self._members[0]).get_mac()
+
+        # configure member interfaces
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+        self.cli_commit()
+
+        # Verify bond interface MAC address matches the address of it's first member
+        for interface in self._interfaces:
+            mac = Interface(interface).get_mac()
+            self.assertEqual(mac, base_mac)
+
     def test_bonding_remove_member(self):
         # T2515: when removing a bond member the previously enslaved/member
         # interface must be in its former admin-up/down state. Here we ensure

@@ -418,5 +418,25 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' net {net}', tmp)
             self.assertIn(f' topology {topology}', tmp)
 
+    def test_isis_11_srv6(self):
+        locator = "TEST"
+        interface = 'lo'
+
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['segment-routing', 'srv6', 'locator', locator])
+
+        # Commit main ISIS changes
+        self.cli_commit()
+
+        # Verify main ISIS changes
+        tmp = self.getFRRconfig(f'router isis {domain}', endsection='^exit')
+        self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' segment-routing srv6', tmp)
+        self.assertIn(f'  locator {locator}', tmp)
+
+        # Commit for isis
+        self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
