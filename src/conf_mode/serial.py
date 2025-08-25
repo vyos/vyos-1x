@@ -434,7 +434,7 @@ def apply(proxy):
                         changed_modbus_gateway_id = generate_config_id(proxy['global']['modbus_gateway'], digits=8)
                 elif 'serial-tunnel-server' in serial_config['service']:
                     require_systemd = 1
-                elif 'ssh-reverse' in serial_config['service']:
+                elif 'ssh-reverse' in serial_config['service'] or 'telnet-reverse' in serial_config['service']:
                     require_systemd = 1
                     if 'reverse' in serial_config['service_setting']:
                         if 'ip_aliasing' in serial_config['service_setting']['reverse'] and 'inet' in serial_config:
