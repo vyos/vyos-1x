@@ -57,6 +57,9 @@ airbag.enable()
 vyos_certbot_dir = directories['certbot']
 vyos_ca_certificates_dir = directories['ca_certificates']
 
+IOLAN_ALL_CA_PATH = '/etc/vyos_pki'
+IOLAN_ALL_CA_FILE = '/etc/vyos_pki/ssl_cacerts.pem'
+
 # keys to recursively search for under specified path
 sync_search = [
     {
@@ -472,6 +475,12 @@ def cleanup_system_ca():
             if os.path.isfile(full_path):
                 os.unlink(full_path)
 
+    if not os.path.exists(IOLAN_ALL_CA_PATH):
+        os.mkdir(IOLAN_ALL_CA_PATH)
+    else:
+        if os.path.isfile(IOLAN_ALL_CA_FILE):
+            os.unlink(IOLAN_ALL_CA_FILE)
+
 def generate(pki):
     if not pki:
         cleanup_system_ca()
@@ -482,13 +491,15 @@ def generate(pki):
         cleanup_system_ca()
 
         if 'ca' in pki:
-            for ca, ca_conf in pki['ca'].items():
-                if 'system_install' in ca_conf:
-                    ca_obj = load_certificate(ca_conf['certificate'])
-                    ca_path = os.path.join(vyos_ca_certificates_dir, f'{ca}.crt')
+            with open(IOLAN_ALL_CA_FILE, "a") as file:
+                for ca, ca_conf in pki['ca'].items():
+                    if 'system_install' in ca_conf:
+                        ca_obj = load_certificate(ca_conf['certificate'])
+                        ca_path = os.path.join(vyos_ca_certificates_dir, f'{ca}.crt')
 
-                    with open(ca_path, 'w') as f:
-                        f.write(encode_certificate(ca_obj))
+                        with open(ca_path, 'w') as f:
+                            f.write(encode_certificate(ca_obj))
+                        file.write(encode_certificate(ca_obj))
 
     # Certbot renewal only needs to re-trigger the services to load up the
     # new PEM file
