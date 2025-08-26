@@ -33,6 +33,7 @@
           </node>
           #include <include/serial/general/modbus-gateway.xml.i>
           #include <include/serial/general/vmodem-phonebook.xml.i>
+          #include <include/serial/general/tls-global.xml.i>
         </children>
       </node>
       <tagNode name="device">
@@ -64,7 +65,6 @@
           #include <include/generic-description.xml.i>
           #include <include/serial/general/hardware.xml.i>
           #include <include/serial/general/packet-forwarding.xml.i>
-          #include <include/serial/general/tls-global.xml.i>
           <leafNode name="service">
             <properties>
               <help>Active serial service</help>
