@@ -328,6 +328,9 @@ def generate(proxy):
             if 'tls' in port_config:
                 if 'disable' in port_config['tls']:
                     port_config['tls']['enabled'] = 0
+                elif 'use_global' in port_config['tls']:
+                    port_config['tls'] = port_config['global'].pop('tls')
+                    port_config['tls']['enabled'] = 1
                 else:
                     if 'peer_verification' in port_config['tls']:
                         port_config['tls']['verify_peer'] = 1
