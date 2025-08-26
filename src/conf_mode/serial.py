@@ -66,11 +66,6 @@ def get_config(config=None):
                                      with_recursive_defaults=True,
                                      with_pki=True)
 
-    if 'pki' in proxy:
-        print(f"proxy['pki'] {proxy['pki']}")
-    else:
-        print('No pki configured')
-
     tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
     print(f'is modbus gateway changed {tmp}')
     if tmp: proxy.update({'smodbusd_restart': tmp})
