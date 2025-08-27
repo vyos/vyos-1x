@@ -1,13 +1,13 @@
 (*
  *)
-let intf_type = ref ""
+let intf_types = ref []
 let broadcast = ref false
 let bridgeable = ref false
 let bondable = ref false
 let no_vlan = ref false
 
 let args = [
-    ("--type", Arg.String (fun s -> intf_type := s), "List interfaces of specified type");
+    ("--type", Arg.String (fun s -> intf_types := (s :: !intf_types)), "List interfaces of specified type");
     ("--broadcast", Arg.Unit (fun () -> broadcast := true), "List broadcast interfaces");
     ("--bridgeable", Arg.Unit (fun () -> bridgeable := true), "List bridgeable interfaces");
     ("--bondable", Arg.Unit (fun () -> bondable := true), "List bondable interfaces");
@@ -99,8 +99,7 @@ let filter_no_vlan s =
         false
     with Not_found -> true
 
-let get_interfaces =
-    let intf_type = !intf_type in
+let get_interfaces_by_type out intf_type =
     let fltr =
     if String.length(intf_type) > 0 then
         filter_from_type intf_type
@@ -124,10 +123,16 @@ let get_interfaces =
         if !no_vlan then List.filter filter_no_vlan res
         else res
     in
-    let res = List.filter filter_section res in
-    match fltr with
-    | Some f -> List.filter f res
-    | None -> res
+    let add_out =
+        let res = List.filter filter_section res in
+        match fltr with
+        | Some f -> List.filter f res
+        | None -> res
+    in List.append out add_out
+
+let get_interfaces =
+    let types = List.rev !intf_types in
+    List.fold_left get_interfaces_by_type [] types
 
 let () =
   let res = get_interfaces in
