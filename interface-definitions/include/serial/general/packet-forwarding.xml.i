@@ -27,7 +27,7 @@
           <validator name="numeric" argument="--range 0-65535"/>
         </constraint>
       </properties>
-      <defaultValue>0</defaultValue>
+      <defaultValue>250</defaultValue>
     </leafNode>
     <leafNode name="forwarding-rule">
       <properties>
@@ -52,7 +52,7 @@
           <description>Trigger+2—Includes the EOF1, EOF1/EOF2, Trigger1, or Trigger1/Trigger2, depending on your settings, plus the next two bytes received after the trigger</description>
         </valueHelp>
         <constraint>
-          <regex>(strip-trigger|trigger|trigger+1|trigger+2)</regex>
+          <regex>(strip-trigger|trigger|trigger\+1|trigger\+2)</regex>
         </constraint>
       </properties>
       <defaultValue>trigger</defaultValue>
