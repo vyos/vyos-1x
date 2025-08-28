@@ -132,7 +132,10 @@ let get_interfaces_by_type out intf_type =
 
 let get_interfaces =
     let types = List.rev !intf_types in
-    List.fold_left get_interfaces_by_type [] types
+    if types <> [] then
+        List.fold_left get_interfaces_by_type [] types
+    else
+        get_interfaces_by_type [] ""
 
 let () =
   let res = get_interfaces in
