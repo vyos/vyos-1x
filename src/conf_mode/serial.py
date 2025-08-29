@@ -290,6 +290,17 @@ def generate(proxy):
                     if 'ipv6_global_network_prefix' in port_config['service_setting']['ppp']:
                         port_config['service_setting']['ppp']['v6_local_prefix'], port_config['service_setting']['ppp']['prefix_length'] = port_config['service_setting']['ppp']['ipv6_global_network_prefix'].split('/')
 
+                # slip
+                if 'slip' in service:
+                    if 'local_address' in port_config['service_setting']['slip']:
+                        inet = ipaddress.IPv4Interface(port_config['service_setting']['slip']['local_address'])
+                        port_config['service_setting']['slip']['local_inet'] = str(inet.ip)
+                        port_config['service_setting']['slip']['subnet_mask'] = str(inet.network.netmask)
+                    if 'remote_address' in port_config['service_setting']['slip']:
+                        inet = ipaddress.IPv4Interface(port_config['service_setting']['slip']['remote_address'])
+                        port_config['service_setting']['slip']['remote_inet'] = str(inet.ip)
+                        port_config['service_setting']['slip']['subnet_mask'] = str(inet.network.netmask)
+
             # multihost
             if port_config['service'] == 'multihost' and 'outbound' in port_config:
                 if 'multihost_list' in port_config:
