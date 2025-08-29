@@ -306,6 +306,17 @@ echo "$ifname - $state" > {hook_output_path}
         self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp1_iface])
         self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp1_iface, 'weight', '10'])
         self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp2_iface])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'inbound-interface', lan_iface])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'protocol', 'udp'])
+        self.cli_set(
+            base_path + ['wan', 'rule', '20', 'source', 'address', '198.51.100.0/24']
+        )
+        self.cli_set(base_path + ['wan', 'rule', '20', 'source', 'port', '80,443'])
+        self.cli_set(
+            base_path + ['wan', 'rule', '20', 'destination', 'address', '192.0.2.0/24']
+        )
+        self.cli_set(base_path + ['wan', 'rule', '20', 'destination', 'port', '80,443'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', isp2_iface])
 
         # commit changes
         self.cli_commit()
@@ -316,7 +327,22 @@ echo "$ifname - $state" > {hook_output_path}
 
         nftables_search = [
             [f'iifname "eth*"', 'ip daddr 10.0.0.0/8', 'return'],
-            [f'iifname "{lan_iface}"', 'ip saddr 198.51.100.0/24', 'udp sport 53', 'ip daddr 192.0.2.0/24', 'udp dport 53', f'jump wlb_mangle_isp_{isp1_iface}']
+            [
+                f'iifname "{lan_iface}"',
+                'ip saddr 198.51.100.0/24',
+                'udp sport 53',
+                'ip daddr 192.0.2.0/24',
+                'udp dport 53',
+                f'jump wlb_mangle_isp_{isp1_iface}',
+            ],
+            [
+                f'iifname "{lan_iface}"',
+                'ip saddr 198.51.100.0/24',
+                'udp sport { 80, 443 }',
+                'ip daddr 192.0.2.0/24',
+                'udp dport { 80, 443 }',
+                f'jump wlb_mangle_isp_{isp2_iface}',
+            ],
         ]
 
         self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')

@@ -34,7 +34,7 @@
                     <properties>
                       <help>Visually identify specified ethernet interface</help>
                     </properties>
-                    <command>echo "Blinking interface $4 for 30 seconds."; ethtool --identify "$4" 30</command>
+                    <command>bash -c "echo \"Blinking interface $4 for 30 seconds.\"; ethtool --identify \"$4\" 30"</command>
                   </leafNode>
                   <node name="physical">
                     <properties>

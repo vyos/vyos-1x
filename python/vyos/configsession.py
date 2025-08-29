@@ -17,6 +17,9 @@ import os
 import re
 import sys
 import subprocess
+from tempfile import NamedTemporaryFile
+from typing import TypeAlias
+from typing import Union
 
 from vyos.defaults import directories
 from vyos.utils.process import is_systemd_service_running
@@ -26,6 +29,10 @@ from vyos.utils.backend import vyconf_backend
 from vyos.vyconf_session import VyconfSession
 from vyos.base import Warning as Warn
 from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
+from vyos.configtree import ConfigTree
+
+# type of config file path or configtree
+ConfigObj: TypeAlias = Union[str, ConfigTree]
 
 
 CLI_SHELL_API = '/bin/cli-shell-api'
@@ -238,6 +245,9 @@ class ConfigSession(object):
     def get_session_env(self):
         return self.__session_env
 
+    def vyconf_backend(self) -> bool:
+        return bool(self._vyconf_session)
+
     def set(self, path, value=None):
         if not value:
             value = []
@@ -309,18 +319,12 @@ class ConfigSession(object):
         return out
 
     def commit_confirm(self, minutes: int = DEFAULT_COMMIT_CONFIRM_MINUTES):
-        if self._vyconf_session is None:
-            out = self.__run_command(COMMIT_CONFIRM + [f'-t {minutes}'])
-        else:
-            out = 'unimplemented'
+        out = self.__run_command(COMMIT_CONFIRM + [f'-t {minutes}'])
 
         return out
 
     def confirm(self):
-        if self._vyconf_session is None:
-            out = self.__run_command(CONFIRM)
-        else:
-            out = 'unimplemented'
+        out = self.__run_command(CONFIRM)
 
         return out
 
@@ -339,11 +343,13 @@ class ConfigSession(object):
         if format == 'raw':
             return config_data
 
-    def load_config(self, file_path):
+    def load_config(self, file_path, cached: bool = False):
         if self._vyconf_session is None:
             out = self.__run_command(LOAD_CONFIG + [file_path])
         else:
-            out, _ = self._vyconf_session.load_config(file_name=file_path)
+            out, _ = self._vyconf_session.load_config(
+                file_name=file_path, cached=cached
+            )
 
         return out
 
@@ -355,6 +361,14 @@ class ConfigSession(object):
             load(file_path, switch='explicit')
         except LoadConfigError as e:
             raise ConfigSessionError(e) from e
+
+    def load_config_obj(self, config_obj: ConfigObj):
+        if isinstance(config_obj, ConfigTree):
+            with NamedTemporaryFile() as f:
+                config_obj.write_cache(f.name)
+                self.load_config(f.name, cached=True)
+        else:
+            self.load_config(config_obj)
 
     def migrate_and_load_config(self, file_path):
         if self._vyconf_session is None:

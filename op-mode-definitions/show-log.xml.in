@@ -18,7 +18,7 @@
                 <list>&lt;1-9999&gt;</list>
               </completionHelp>
             </properties>
-            <command>if ${vyos_validators_dir}/numeric --range 1-9999 "$3"; then journalctl --no-hostname --boot --lines "$3"; fi</command>
+            <command>bash -c "if ${vyos_validators_dir}/numeric --range 1-9999 '$3'; then journalctl --no-hostname --boot --lines $3; fi"</command>
           </virtualTagNode>
           <leafNode name="audit">
             <properties>
@@ -105,6 +105,14 @@
                   <help>Show log for DHCP server</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --unit kea-dhcp4-server.service</command>
+                <children>
+                  <tagNode name="vrf">
+                    <properties>
+                      <help>Monitor last lines of DHCP server log on specific vrf</help>
+                    </properties>
+                    <command>journalctl --no-hostname --follow --boot --unit "kea-dhcp4-server@$6.service"</command>
+                  </tagNode>
+                </children>
               </node>
               <node name="client">
                 <properties>
@@ -135,6 +143,14 @@
                   <help>Show log for DHCPv6 server</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --unit kea-dhcp6-server.service</command>
+                <children>
+                  <tagNode name="vrf">
+                    <properties>
+                      <help>Monitor last lines of DHCPv6 server log on specific vrf</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot --unit "kea-dhcp6-server@$6.service"</command>
+                  </tagNode>
+                </children>
               </node>
               <node name="client">
                 <properties>
@@ -944,7 +960,7 @@
                 <properties>
                   <help>Show log for WPA supplicant</help>
                 </properties>
-                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --unit "wpa_supplicant@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <command>bash -c "if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --unit \"wpa_supplicant@*.service\"; else echo \"No wireless interface configured!\"; fi"</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -953,7 +969,7 @@
                         <path>interfaces wireless</path>
                       </completionHelp>
                     </properties>
-                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "station" ]]; then journalctl --no-hostname --boot --unit "wpa_supplicant@$6.service"; else echo "Wireless interface $6 not configured as station!"; fi</command>
+                    <command>bash -c "if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == \"station\" ]]; then journalctl --no-hostname --boot --unit \"wpa_supplicant@$6.service\"; else echo \"Wireless interface $6 not configured as station!\"; fi"</command>
                   </tagNode>
                 </children>
               </node>
@@ -961,7 +977,7 @@
                 <properties>
                   <help>Show log for host access point daemon</help>
                 </properties>
-                <command>if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --unit "hostapd@*.service"; else echo "No wireless interface configured!"; fi</command>
+                <command>bash -c 'if cli-shell-api existsActive interfaces wireless; then journalctl --no-hostname --boot --unit "hostapd@*.service"; else echo "No wireless interface configured!"; fi'</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -970,7 +986,7 @@
                         <path>interfaces wireless</path>
                       </completionHelp>
                     </properties>
-                    <command>if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == "access-point" ]]; then journalctl --no-hostname --boot --unit "hostapd@$6.service"; else echo "Wireless interface $6 not configured as access-point!"; fi</command>
+                    <command>bash -c "if [[ $(cli-shell-api returnActiveValue interfaces wireless $6 type) == \"access-point\" ]]; then journalctl --no-hostname --boot --unit \"hostapd@$6.service\"; else echo \"Wireless interface $6 not configured as access-point!\"; fi"</command>
                   </tagNode>
                 </children>
               </node>

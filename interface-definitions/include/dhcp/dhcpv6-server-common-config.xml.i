@@ -1,0 +1,276 @@
+<!-- include start from dhcp/dhcpv6-server-common-config.xml.i -->
+#include <include/generic-disable-node.xml.i>
+#include <include/listen-interface-multi-broadcast.xml.i>
+<leafNode name="disable-route-autoinstall">
+  <properties>
+    <help>Do not install routes for delegated prefixes</help>
+    <valueless/>
+  </properties>
+</leafNode>
+<node name="global-parameters">
+  <properties>
+    <help>Additional global parameters for DHCPv6 server</help>
+  </properties>
+  <children>
+    #include <include/name-server-ipv6.xml.i>
+  </children>
+</node>
+<leafNode name="preference">
+  <properties>
+    <help>Preference of this DHCPv6 server compared with others</help>
+    <valueHelp>
+      <format>u32:0-255</format>
+      <description>DHCPv6 server preference (0-255)</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 0-255"/>
+    </constraint>
+    <constraintErrorMessage>Preference must be between 0 and 255</constraintErrorMessage>
+  </properties>
+</leafNode>
+<tagNode name="shared-network-name">
+  <properties>
+    <help>DHCPv6 shared network name</help>
+    <constraint>
+      #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+    </constraint>
+    <constraintErrorMessage>Invalid DHCPv6 shared network name. May only contain letters, numbers and .-_</constraintErrorMessage>
+  </properties>
+  <children>
+    #include <include/generic-disable-node.xml.i>
+    #include <include/generic-description.xml.i>
+    #include <include/generic-interface.xml.i>
+    #include <include/dhcp/option-v6.xml.i>
+    <tagNode name="subnet">
+      <properties>
+        <help>IPv6 DHCP subnet for this shared network</help>
+        <valueHelp>
+          <format>ipv6net</format>
+          <description>IPv6 address and prefix length</description>
+        </valueHelp>
+        <constraint>
+          <validator name="ipv6-prefix"/>
+        </constraint>
+      </properties>
+      <children>
+        #include <include/dhcp/option-v6.xml.i>
+        #include <include/generic-interface.xml.i>
+        <tagNode name="range">
+          <properties>
+            <help>Parameters setting ranges for assigning IPv6 addresses</help>
+            <constraint>
+              #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+            </constraint>
+            <constraintErrorMessage>Invalid range name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
+          </properties>
+          <children>
+            #include <include/dhcp/option-v6.xml.i>
+            <leafNode name="prefix">
+              <properties>
+                <help>IPv6 prefix defining range of addresses to assign</help>
+                <valueHelp>
+                  <format>ipv6net</format>
+                  <description>IPv6 address and prefix length</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-prefix"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="start">
+              <properties>
+                <help>First in range of consecutive IPv6 addresses to assign</help>
+                <valueHelp>
+                  <format>ipv6</format>
+                  <description>IPv6 address</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-address"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="stop">
+              <properties>
+                <help>Last in range of consecutive IPv6 addresses</help>
+                <valueHelp>
+                  <format>ipv6</format>
+                  <description>IPv6 address</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-address"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
+        <node name="lease-time">
+          <properties>
+            <help>Parameters relating to the lease time</help>
+          </properties>
+          <children>
+            <leafNode name="default">
+              <properties>
+                <help>Default time (in seconds) that will be assigned to a lease</help>
+                <valueHelp>
+                  <format>u32:1-4294967295</format>
+                  <description>DHCPv6 valid lifetime</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-4294967295"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="maximum">
+              <properties>
+                <help>Maximum time (in seconds) that will be assigned to a lease</help>
+                <valueHelp>
+                  <format>u32:1-4294967295</format>
+                  <description>Maximum lease time in seconds</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-4294967295"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="minimum">
+              <properties>
+                <help>Minimum time (in seconds) that will be assigned to a lease</help>
+                <valueHelp>
+                  <format>u32:1-4294967295</format>
+                  <description>Minimum lease time in seconds</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-4294967295"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="prefix-delegation">
+          <properties>
+            <help>Parameters relating to IPv6 prefix delegation</help>
+          </properties>
+          <children>
+            <tagNode name="prefix">
+              <properties>
+                <help>IPv6 prefix to be used in prefix delegation</help>
+                <valueHelp>
+                  <format>ipv6</format>
+                  <description>IPv6 prefix used in prefix delegation</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-address"/>
+                </constraint>
+              </properties>
+              <children>
+                <leafNode name="prefix-length">
+                  <properties>
+                    <help>Length in bits of prefix</help>
+                    <valueHelp>
+                      <format>u32:32-64</format>
+                      <description>Prefix length (32-64)</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 32-64"/>
+                    </constraint>
+                    <constraintErrorMessage>Prefix length must be between 32 and 64</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+                <leafNode name="delegated-length">
+                  <properties>
+                    <help>Length in bits of prefixes to be delegated</help>
+                    <valueHelp>
+                      <format>u32:32-64</format>
+                      <description>Delegated prefix length (32-64)</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 32-96"/>
+                    </constraint>
+                    <constraintErrorMessage>Delegated prefix length must be between 32 and 96</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+                <leafNode name="excluded-prefix">
+                  <properties>
+                    <help>IPv6 prefix to be excluded from prefix delegation</help>
+                    <valueHelp>
+                      <format>ipv6</format>
+                      <description>IPv6 prefix excluded from prefix delegation</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="ipv6-address"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+                <leafNode name="excluded-prefix-length">
+                  <properties>
+                    <help>Length in bits of excluded prefix</help>
+                    <valueHelp>
+                      <format>u32:33-64</format>
+                      <description>Excluded prefix length (33-128)</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 33-128"/>
+                    </constraint>
+                    <constraintErrorMessage>Prefix length must be between 33 and 128</constraintErrorMessage>
+                  </properties>
+                </leafNode>
+              </children>
+            </tagNode>
+          </children>
+        </node>
+        <tagNode name="static-mapping">
+          <properties>
+            <help>Hostname for static mapping reservation</help>
+            <constraint>
+              <validator name="fqdn"/>
+            </constraint>
+            <constraintErrorMessage>Invalid static mapping hostname</constraintErrorMessage>
+          </properties>
+          <children>
+            #include <include/dhcp/option-v6.xml.i>
+            #include <include/generic-disable-node.xml.i>
+            #include <include/interface/mac.xml.i>
+            #include <include/interface/duid.xml.i>
+            <leafNode name="ipv6-address">
+              <properties>
+                <help>Client IPv6 address for this static mapping</help>
+                <valueHelp>
+                  <format>ipv6</format>
+                  <description>IPv6 address for this static mapping</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-address"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="ipv6-prefix">
+              <properties>
+                <help>Client IPv6 prefix for this static mapping</help>
+                <valueHelp>
+                  <format>ipv6net</format>
+                  <description>IPv6 prefix for this static mapping</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="ipv6-prefix"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </tagNode>
+        <leafNode name="subnet-id">
+          <properties>
+            <help>Unique ID mapped to leases in the lease file</help>
+            <valueHelp>
+              <format>u32</format>
+              <description>Unique subnet ID</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-4294967295"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </tagNode>
+  </children>
+</tagNode>
+<!-- include end -->

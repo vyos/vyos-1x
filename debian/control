@@ -146,7 +146,7 @@ Depends:
   iputils-ping,
   isc-dhcp-client,
 # For "vpn pptp", "vpn l2tp", "vpn sstp", "service ipoe-server"
-  accel-ppp,
+  accel-ppp-ng,
 # End "vpn pptp", "vpn l2tp", "vpn sstp", "service ipoe-server"
   avahi-daemon,
   conntrack,
@@ -200,8 +200,6 @@ Depends:
   console-data,
   dropbear,
 # End "service console-server"
-# For "service aws glb"
-  aws-gwlbtun,
 # For "service dns dynamic"
   ddclient (>= 3.11.1),
 # End "service dns dynamic"
@@ -341,6 +339,7 @@ Depends:
   libvppinfra,
   python3-vpp-api,
   vpp,
+  vpp-crypto-engines,
   vpp-dev,
   vpp-plugin-core,
   vpp-plugin-dpdk,
@@ -389,18 +388,21 @@ Depends:
   mtr-tiny,
   telnet,
   stunnel4,
-  uidmap
+  uidmap,
+  saml-sso
 ## End optional utilities
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
-Package: vyos-1x-vmware
+Package: vyos-1x-aws
 Architecture: all
 Depends:
  vyos-1x,
- open-vm-tools
-Description: VyOS configuration scripts and data for VMware
- Adds configuration files required for VyOS running on VMware hosts.
+# For "service aws glb"
+ aws-gwlbtun,
+Description: VyOS configuration scripts and data for AWS Gateway Load Balancer
+ Adds configuration files required for AWS Gateway Load Balancer service
+ running on top of VyOS.
 
 Package: vyos-1x-smoketest
 Architecture: all
@@ -409,3 +411,11 @@ Depends:
  snmp,
  vyos-1x
 Description: VyOS build sanity checking toolkit
+
+Package: vyos-1x-vmware
+Architecture: all
+Depends:
+ vyos-1x,
+ open-vm-tools
+Description: VyOS configuration scripts and data for VMware
+ Adds configuration files required for VyOS running on VMware hosts.

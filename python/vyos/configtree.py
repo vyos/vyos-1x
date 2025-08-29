@@ -614,6 +614,44 @@ def reference_tree_cache_to_json(cache_path, render_file, libpath=LIBPATH):
         raise ConfigTreeError(msg)
 
 
+# validate_tree_filter c_ptr rt_cache validator_dir
+def validate_tree_filter(
+    config_tree,
+    cache_path='/usr/share/vyos/reftree.cache',
+    validator_dir='/usr/libexec/vyos/validators',
+    libpath=LIBPATH,
+):
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __validate_tree_filter = __lib.validate_tree_filter
+        __validate_tree_filter.argtypes = [c_void_p, c_char_p, c_char_p]
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+        res = __validate_tree_filter(
+            config_tree._get_config(), cache_path.encode(), validator_dir.encode()
+        )
+    except Exception as e:
+        raise ConfigTreeError(e)
+
+    msg = __get_error().decode()
+    tree = ConfigTree(address=res)
+
+    return tree, msg
+
+
+def validate_tree(
+    config_tree,
+    cache_path='/usr/share/vyos/reftree.cache',
+    validator_dir='/usr/libexec/vyos/validators',
+):
+    _, out = validate_tree_filter(
+        config_tree, cache_path=cache_path, validator_dir=validator_dir
+    )
+
+    return out
+
+
 class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
         if left is None:

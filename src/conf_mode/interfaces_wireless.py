@@ -40,6 +40,7 @@ from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
+import vyos.utils.nxpwifiutils as nxpwifiutils
 airbag.enable()
 
 # XXX: wpa_supplicant works on the source interface
@@ -153,7 +154,7 @@ def verify(wifi):
     if 'ssid' not in wifi and wifi['type'] != 'monitor':
         raise ConfigError('SSID must be configured unless type is set to "monitor"!')
 
-    if os.access('/sys/module/moal', os.F_OK):
+    if '9098' in nxpwifiutils.pcie_wifi_nxp_model():
         # PSL: NXP 88W9098 wifi restrictions
         ifname = wifi.get('ifname', '')
         mode = wifi.get('mode', '')
@@ -259,6 +260,7 @@ def verify(wifi):
 
     return None
 
+
 def generate(wifi):
     check_kmod('mac80211')
 
@@ -280,24 +282,26 @@ def generate(wifi):
     if 'mac' not in wifi:
         # http://wiki.stocksy.co.uk/wiki/Multiple_SSIDs_with_hostapd
         # generate locally administered MAC address from used phy interface
-        with open('/sys/class/ieee80211/{physical_device}/addresses'.format(**wifi), 'r') as f:
-            # some PHYs tend to have multiple interfaces and thus supply multiple MAC
-            # addresses - we only need the first one for our calculation
-            tmp = f.readline().rstrip()
-            tmp = EUI(tmp).value
-            # mask last nibble from the MAC address
-            tmp &= 0xfffffffffff0
-            # set locally administered bit in MAC address
-            tmp |= 0x020000000000
-            # we now need to add an offset to our MAC address indicating this
-            # subinterfaces index
-            tmp += int(findall(r'\d+', interface)[0])
+        tmp = nxpwifiutils.getphymac(wifi)  # PSL: get preferred MAC
+        if not tmp:
+            with open('/sys/class/ieee80211/{physical_device}/addresses'.format(**wifi), 'r') as f:
+                # some PHYs tend to have multiple interfaces and thus supply multiple MAC
+                # addresses - we only need the first one for our calculation
+                tmp = f.readline().rstrip()
+        tmp = EUI(tmp).value
+        # mask last nibble from the MAC address
+        tmp &= 0xfffffffffff0
+        # set locally administered bit in MAC address
+        tmp |= 0x020000000000
+        # we now need to add an offset to our MAC address indicating this
+        # subinterfaces index
+        tmp += int(findall(r'\d+', interface)[0])
 
-            # convert integer to "real" MAC address representation
-            mac = EUI(hex(tmp).split('x')[-1])
-            # change dialect to use : as delimiter instead of -
-            mac.dialect = mac_unix_expanded
-            wifi['mac'] = str(mac)
+        # convert integer to "real" MAC address representation
+        mac = EUI(hex(tmp).split('x')[-1])
+        # change dialect to use : as delimiter instead of -
+        mac.dialect = mac_unix_expanded
+        wifi['mac'] = str(mac)
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['type'] == 'access-point':

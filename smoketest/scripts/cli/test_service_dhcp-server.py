@@ -99,7 +99,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(base_obj[key], value)
 
     def verify_service_running(self):
-        tmp = cmd('tail -n 100 /var/log/messages | grep kea')
+        try:
+            tmp = cmd('grep -i kea /var/log/messages | tail -n 100')
+        except OSError:
+            tmp = "No relevant log entries"
         self.assertTrue(process_named_running(PROCESS_NAME), msg=f'Service not running, log: {tmp}')
 
     def test_dhcp_single_pool_range(self):
@@ -1415,7 +1418,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             client = f'client{seq}'
             mac = f'00:50:00:00:00:{seq:02}'
             ip = inc_ip(subnet, seq)
-            kea_add_lease(4, ip, host_name=client, mac_address=mac)
+            kea_add_lease(4, '', ip, host_name=client, mac_address=mac)
 
         # 2. Verify that leases are not available in vyos-hostsd
         tag_regex = re.escape(f'dhcp-server-{subnet.rsplit(".", 1)[0]}')

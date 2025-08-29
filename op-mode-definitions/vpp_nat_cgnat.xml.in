@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="nat">
+            <properties>
+              <help>Show VPP NAT information</help>
+            </properties>
+            <children>
+              <node name="cgnat">
+                <properties>
+                  <help>Show VPP CGNAT information</help>
+                </properties>
+                <children>
+                  <node name="mappings">
+                    <properties>
+                      <help>Show VPP CGNAT mappings</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_cgnat.py show_mappings</command>
+                  </node>
+                  <node name="sessions">
+                    <properties>
+                      <help>Show VPP CGNAT sessions</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_cgnat.py show_sessions</command>
+                  </node>
+                  <node name="interfaces">
+                    <properties>
+                      <help>Show VPP CGNAT interfaces</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_cgnat.py show_interfaces</command>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="clear">
+    <children>
+      <node name="vpp">
+        <properties>
+          <help>Terminate VPP NAT sessions</help>
+        </properties>
+        <children>
+          <node name="cgnat">
+            <properties>
+              <help>Terminate VPP CGNAT sessions</help>
+            </properties>
+            <children>
+              <tagNode name="inside-address">
+                <properties>
+                  <help>Inside IP address</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="port">
+                    <properties>
+                      <help>Port</help>
+                      <completionHelp>
+                        <list>0-65535</list>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="external-address">
+                        <properties>
+                          <help>External IP address</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <children>
+                          <tagNode name="port">
+                            <properties>
+                              <help>Port</help>
+                              <completionHelp>
+                                <list>0-65535</list>
+                              </completionHelp>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/vpp_nat_cgnat.py clear_session --address $5 --port $7 --ext-address $9 --ext-port ${11}</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

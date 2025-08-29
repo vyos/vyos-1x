@@ -34,6 +34,8 @@ from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmd
 from vyos.utils.system import sysctl_read
+from vyos.template import inc_ip
+from vyos.utils.process import process_named_running
 
 base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
@@ -71,6 +73,42 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         for vrf in vrfs:
             self.assertFalse(interface_exists(vrf))
+
+    def walk_path(self, obj, path):
+        current = obj
+
+        for i, key in enumerate(path):
+            if isinstance(key, str):
+                self.assertTrue(isinstance(current, dict), msg=f'Failed path: {path}')
+                self.assertTrue(key in current, msg=f'Failed path: {path}')
+            elif isinstance(key, int):
+                self.assertTrue(isinstance(current, list), msg=f'Failed path: {path}')
+                self.assertTrue(0 <= key < len(current), msg=f'Failed path: {path}')
+            else:
+                assert False, 'Invalid type'
+
+            current = current[key]
+
+        return current
+
+    def verify_config_object(self, obj, path, value):
+        base_obj = self.walk_path(obj, path)
+        self.assertTrue(isinstance(base_obj, list))
+        self.assertTrue(any(True for v in base_obj if v == value))
+
+    def verify_config_value(self, obj, path, key, value):
+        base_obj = self.walk_path(obj, path)
+        if isinstance(base_obj, list):
+            self.assertTrue(any(True for v in base_obj if key in v and v[key] == value))
+        elif isinstance(base_obj, dict):
+            self.assertTrue(key in base_obj)
+            self.assertEqual(base_obj[key], value)
+
+    def verify_kea_service_running(self, process_name):
+        tmp = cmd('tail -n 100 /var/log/messages')
+        self.assertTrue(
+            process_named_running(process_name), msg=f'Service not running, log: {tmp}'
+        )
 
     def test_vrf_vni_and_table_id(self):
         base_table = '1000'
@@ -600,6 +638,361 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(num_rules, 2)
 
         self.cli_delete(['nat'])
+
+    def test_dhcp_single_pool(self):
+        # Prepare the vrf and options
+        table = '100'
+        vrf = 'dhcp_smoke'
+        interface = 'dum8888'
+        subnet = '192.0.2.0/25'
+        router = inc_ip(subnet, 1)
+        dns_1 = inc_ip(subnet, 2)
+        dns_2 = inc_ip(subnet, 3)
+        domain_name = 'vyos.net'
+
+        # declare fiels
+        process_name = 'kea-dhcp4'
+        kea4_conf = f'/run/kea/kea-{vrf}-dhcp4.conf'
+
+        # create interface
+        cidr_mask = subnet.split('/')[-1]
+        self.cli_set(
+            ['interfaces', 'dummy', interface, 'address', f'{router}/{cidr_mask}']
+        )
+        self.cli_set(['interfaces', 'dummy', interface, 'vrf', f'{vrf}'])
+
+        # create the vrf with table
+        base = base_path + ['name', vrf]
+        self.cli_set(base + ['table', table])
+
+        # set the dhcp scope
+        base = base_path + ['name', vrf, 'service', 'dhcp-server']
+        shared_net_name = 'SMOKE-1'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+        range_1_start = inc_ip(subnet, 40)
+        range_1_stop = inc_ip(subnet, 50)
+
+        self.cli_set(base + ['listen-interface', interface])
+
+        self.cli_set(base + ['shared-network-name', shared_net_name, 'ping-check'])
+
+        pool = base + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['ignore-client-id'])
+        self.cli_set(pool + ['ping-check'])
+        # we use the first subnet IP address as default gateway
+        self.cli_set(pool + ['option', 'default-router', router])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'domain-name', domain_name])
+
+        # check validate() - No DHCP address range or active static-mapping set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+        self.cli_set(pool + ['range', '1', 'start', range_1_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_1_stop])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(kea4_conf)
+        obj = loads(config)
+
+        self.verify_config_value(
+            obj, ['Dhcp4', 'interfaces-config'], 'interfaces', [interface]
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'match-client-id', False
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'valid-lifetime', 86400
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'max-valid-lifetime', 86400
+        )
+
+        # Verify ping-check
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'user-context'],
+            'enable-ping-check',
+            True,
+        )
+
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'user-context'],
+            'enable-ping-check',
+            True,
+        )
+
+        # Verify options
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'domain-name', 'data': domain_name},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'domain-name-servers', 'data': f'{dns_1}, {dns_2}'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'routers', 'data': router},
+        )
+
+        # Verify pools
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'],
+            {'pool': f'{range_0_start} - {range_0_stop}'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools'],
+            {'pool': f'{range_1_start} - {range_1_stop}'},
+        )
+
+        # Check for running process
+        self.verify_kea_service_running(process_name)
+
+        # perform cleanup
+        self.cli_delete(['interfaces', 'dummy', interface, 'address'])
+        self.cli_delete(['interfaces', 'dummy', interface, 'vrf'])
+        self.cli_delete(base)
+        self.cli_commit()
+
+    def test_dhcpv6_single_pool(self):
+        # Prepare the vrf and other options
+        table = '100'
+        vrf = 'dhcp_smoke'
+        subnet = '2001:db8:f00::/64'
+        dns_1 = '2001:db8::1'
+        dns_2 = '2001:db8::2'
+        domain = 'vyos.net'
+        nis_servers = ['2001:db8:ffff::1', '2001:db8:ffff::2']
+        interface = 'dum8888'
+        interface_addr = inc_ip(subnet, 1) + '/64'
+
+        # declare fiels
+        process_name = 'kea-dhcp6'
+        kea6_conf = f'/run/kea/kea-{vrf}-dhcp6.conf'
+
+        # create interface
+        self.cli_set(['interfaces', 'dummy', interface, 'address', f'{interface_addr}'])
+        self.cli_set(['interfaces', 'dummy', interface, 'vrf', f'{vrf}'])
+
+        # create the vrf with table
+        base = base_path + ['name', vrf]
+        self.cli_set(base + ['table', table])
+
+        # set the dhcp scope
+        base = base_path + ['name', vrf, 'service', 'dhcpv6-server']
+
+        shared_net_name = 'SMOKE-1'
+        search_domains = ['foo.vyos.net', 'bar.vyos.net']
+        lease_time = '1200'
+        max_lease_time = '72000'
+        min_lease_time = '600'
+        preference = '10'
+        sip_server = 'sip.vyos.net'
+        sntp_server = inc_ip(subnet, 100)
+        range_start = inc_ip(subnet, 256)  # ::100
+        range_stop = inc_ip(subnet, 65535)  # ::ffff
+
+        pool = base + ['shared-network-name', shared_net_name, 'subnet', subnet]
+
+        self.cli_set(base + ['preference', preference])
+        self.cli_set(pool + ['interface', interface])
+        self.cli_set(pool + ['subnet-id', '1'])
+        # we use the first subnet IP address as default gateway
+        self.cli_set(pool + ['lease-time', 'default', lease_time])
+        self.cli_set(pool + ['lease-time', 'maximum', max_lease_time])
+        self.cli_set(pool + ['lease-time', 'minimum', min_lease_time])
+        self.cli_set(pool + ['option', 'capwap-controller', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_1])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'name-server', dns_2])
+        self.cli_set(pool + ['option', 'nis-domain', domain])
+        self.cli_set(pool + ['option', 'nisplus-domain', domain])
+        self.cli_set(pool + ['option', 'sip-server', sip_server])
+        self.cli_set(pool + ['option', 'sntp-server', sntp_server])
+        self.cli_set(pool + ['range', '1', 'start', range_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_stop])
+
+        for server in nis_servers:
+            self.cli_set(pool + ['option', 'nis-server', server])
+            self.cli_set(pool + ['option', 'nisplus-server', server])
+
+        for search_domain in search_domains:
+            self.cli_set(pool + ['option', 'domain-search', search_domain])
+
+        client_base = 1
+        for client in ['client1', 'client2', 'client3']:
+            duid = f'00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{client_base:02}'
+            self.cli_set(pool + ['static-mapping', client, 'duid', duid])
+            self.cli_set(
+                pool
+                + [
+                    'static-mapping',
+                    client,
+                    'ipv6-address',
+                    inc_ip(subnet, client_base),
+                ]
+            )
+            self.cli_set(
+                pool
+                + [
+                    'static-mapping',
+                    client,
+                    'ipv6-prefix',
+                    inc_ip(subnet, client_base << 64) + '/64',
+                ]
+            )
+            client_base += 1
+
+        # cannot have both mac-address and duid set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_set(
+                pool + ['static-mapping', 'client1', 'mac', '00:50:00:00:00:11']
+            )
+            self.cli_commit()
+        self.cli_delete(pool + ['static-mapping', 'client1', 'mac'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(kea6_conf)
+        obj = loads(config)
+
+        self.verify_config_value(
+            obj, ['Dhcp6', 'shared-networks'], 'name', shared_net_name
+        )
+        self.verify_config_value(
+            obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'subnet', subnet
+        )
+        self.verify_config_value(
+            obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'interface', interface
+        )
+        self.verify_config_value(
+            obj, ['Dhcp6', 'shared-networks', 0, 'subnet6'], 'id', 1
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6'],
+            'valid-lifetime',
+            int(lease_time),
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6'],
+            'min-valid-lifetime',
+            int(min_lease_time),
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6'],
+            'max-valid-lifetime',
+            int(max_lease_time),
+        )
+
+        # Verify options
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'capwap-ac-v6', 'data': dns_1},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'dns-servers', 'data': f'{dns_1}, {dns_2}'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'domain-search', 'data': ', '.join(search_domains)},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'nis-domain-name', 'data': domain},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'nis-servers', 'data': ', '.join(nis_servers)},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'nisp-domain-name', 'data': domain},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'nisp-servers', 'data': ', '.join(nis_servers)},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'sntp-servers', 'data': sntp_server},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'sip-server-dns', 'data': sip_server},
+        )
+
+        # Verify pools
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'pools'],
+            {'pool': f'{range_start} - {range_stop}'},
+        )
+
+        client_base = 1
+        for client in ['client1', 'client2', 'client3']:
+            duid = f'00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{client_base:02}'
+            ip = inc_ip(subnet, client_base)
+            prefix = inc_ip(subnet, client_base << 64) + '/64'
+
+            self.verify_config_object(
+                obj,
+                ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'reservations'],
+                {
+                    'hostname': client,
+                    'duid': duid,
+                    'ip-addresses': [ip],
+                    'prefixes': [prefix],
+                },
+            )
+
+            client_base += 1
+
+        # Check for running process
+        self.verify_kea_service_running(process_name)
+
+        # perform cleanup
+        self.cli_delete(['interfaces', 'dummy', interface, 'address'])
+        self.cli_delete(['interfaces', 'dummy', interface, 'vrf'])
+        self.cli_delete(base)
+        self.cli_commit()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

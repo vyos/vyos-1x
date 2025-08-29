@@ -47,6 +47,8 @@ Cmnd_Alias DIAGNOSTICS = /bin/ip vrf exec * /bin/ping *,       \
                          /usr/libexec/vyos/op_mode/*
 Cmnd_Alias KEA_IP6_ROUTES = /sbin/ip -6 route replace *,\
                            /sbin/ip -6 route del *
+Cmnd_Alias KEA_DHCP = /bin/ip vrf exec * /usr/sbin/kea-dhcp*,\
+                      /usr/bin/chown * /run/kea/*
 %operator ALL=NOPASSWD: DATE, IPTABLES, ETHTOOL, IPFLUSH, HWINFO, \
 			PPPOE_CMDS, PCAPTURE, /usr/sbin/wanpipemon, \
                         DMIDECODE, DISK, CONNTRACK, IP6TABLES,  \
@@ -62,3 +64,4 @@ Cmnd_Alias KEA_IP6_ROUTES = /sbin/ip -6 route replace *,\
 %sudo ALL=NOPASSWD: /usr/bin/mokutil
 
 _kea ALL=NOPASSWD: KEA_IP6_ROUTES
+_kea ALL=NOPASSWD: KEA_DHCP

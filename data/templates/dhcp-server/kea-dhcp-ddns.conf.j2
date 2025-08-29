@@ -3,8 +3,13 @@
         "ip-address": "127.0.0.1",
         "port": 53001,
         "control-socket": {
+{% if vrf_context is vyos_defined %}
+            "socket-type": "unix",
+            "socket-name": "/run/kea/kea-ddns-{{ vrf_context }}-ctrl-socket"
+{% else %}
             "socket-type": "unix",
             "socket-name": "/run/kea/kea-ddns-ctrl-socket"
+{% endif %}
         },
         "tsig-keys": {{ dynamic_dns_update | kea_dynamic_dns_update_tsig_key_json }},
         "forward-ddns" : {

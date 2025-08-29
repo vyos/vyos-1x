@@ -95,7 +95,38 @@ jobs:
         shell: bash
         run: |
           set -e
-          sudo make test-no-interfaces
+          sudo make test-no-interfaces-no-vpp
+          if [[ $? == 0 ]]; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+          fi
+
+  test_smoketest_cli_vpp:
+    needs: build_iso
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    outputs:
+      exit_code: ${{ steps.test.outputs.exit_code }}
+    steps:
+      # We need the test script from vyos-build repo
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyos-${{ needs.build_iso.outputs.build_version }}
+          path: build
+      - name: VyOS CLI smoketests VPP
+        id: test
+        shell: bash
+        run: |
+          set -e
+          sudo make test-vpp
           if [[ $? == 0 ]]; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
@@ -158,6 +189,37 @@ jobs:
         run: |
           set -e
           sudo make testc
+          if [[ $? == 0 ]]; then
+            echo "exit_code=success" >> $GITHUB_OUTPUT
+          else
+            echo "exit_code=fail" >> $GITHUB_OUTPUT
+          fi
+
+  test_config_load_vpp:
+    needs: build_iso
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: vyos/vyos-build:current
+      options: --sysctl net.ipv6.conf.lo.disable_ipv6=0 --privileged
+    outputs:
+      exit_code: ${{ steps.test.outputs.exit_code }}
+    steps:
+      # We need the test script from vyos-build repo
+      - name: Clone vyos-build source code
+        uses: actions/checkout@v4
+        with:
+          repository: vyos/vyos-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: vyos-${{ needs.build_iso.outputs.build_version }}
+          path: build
+      - name: VyOS config load tests VPP
+        id: test
+        shell: bash
+        run: |
+          set -e
+          sudo make testcvpp
           if [[ $? == 0 ]]; then
             echo "exit_code=success" >> $GITHUB_OUTPUT
           else
@@ -229,8 +291,10 @@ jobs:
   result:
     needs:
       - test_smoketest_cli
+      - test_smoketest_cli_vpp
       - test_interfaces_cli
       - test_config_load
+      - test_config_load_vpp
       - test_raid1_install
       - test_encrypted_config_tpm
     runs-on: ubuntu-24.04
@@ -249,8 +313,10 @@ jobs:
             [CI logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             * CLI Smoketests (no interfaces) ${{ needs.test_smoketest_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+            * CLI Smoketests VPP ${{ needs.test_smoketest_cli_vpp.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
             * CLI Smoketests (interfaces only) ${{ needs.test_interfaces_cli.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
             * Config tests ${{ needs.test_config_load.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
+            * Config tests VPP ${{ needs.test_config_load_vpp.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
             * RAID1 tests ${{ needs.test_raid1_install.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
             * TPM tests ${{ needs.test_encrypted_config_tpm.outputs.exit_code == 'success' && '👍 passed' || '❌ failed' }}
 

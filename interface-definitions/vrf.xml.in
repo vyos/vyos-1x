@@ -116,6 +116,31 @@
               </node>
             </children>
           </node>
+          <node name="service">
+            <properties>
+              <help>Enable services in the vrf itself</help>
+            </properties>
+            <children>
+              <node name="dhcp-server" owner="${vyos_conf_scripts_dir}/service_dhcp-server.py $VAR(../../@)">
+                <properties>
+                  <help>Dynamic Host Configuration Protocol (DHCP) for DHCP server</help>
+                  <priority>912</priority>
+                </properties>
+                <children>
+                  #include <include/dhcp/dhcp-server-common-config.xml.i>
+                </children>
+              </node>
+              <node name="dhcpv6-server" owner="${vyos_conf_scripts_dir}/service_dhcpv6-server.py $VAR(../../@)">
+                <properties>
+                  <help>DHCP for IPv6 (DHCPv6) server</help>
+                  <priority>901</priority>
+                </properties>
+                <children>
+                  #include <include/dhcp/dhcpv6-server-common-config.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
           <leafNode name="table">
             <properties>
               <help>Routing table associated with this instance</help>

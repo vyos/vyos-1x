@@ -1,4 +1,4 @@
-{% macro conn(l2tp, l2tp_outside_address, l2tp_ike_default, l2tp_esp_default, ike_group, esp_group) %}
+{% macro conn(l2tp, l2tp_outside_address, l2tp_ike_default, l2tp_esp_default, ike_group, esp_group, uniqreqids) %}
 {% set l2tp_ike = ike_group[l2tp.ike_group] if l2tp.ike_group is vyos_defined else None %}
 {% set l2tp_esp = esp_group[l2tp.esp_group] if l2tp.esp_group is vyos_defined else None %}
     l2tp_remote_access {
@@ -8,6 +8,9 @@
         dpd_timeout = 45s
         rekey_time = {{ l2tp_ike.lifetime if l2tp_ike else l2tp.ike_lifetime }}s
         reauth_time = 0
+{% if uniqreqids is vyos_defined %}
+        unique = {{ uniqreqids }}
+{% endif %}
         local {
             auth = {{ 'psk' if l2tp.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
 {% if l2tp.authentication.mode == 'x509' %}

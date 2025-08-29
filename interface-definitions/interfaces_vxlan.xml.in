@@ -128,6 +128,7 @@
               <constraintErrorMessage>Not a valid VLAN ID or range, VLAN ID must be between 0 and 4094</constraintErrorMessage>
             </properties>
             <children>
+              #include <include/generic-description.xml.i>
               <leafNode name="vni">
                 <properties>
                   <help>Virtual Network Identifier</help>

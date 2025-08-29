@@ -16,10 +16,12 @@
 
 import os
 
+from sys import exit
+from sys import argv
+
 from glob import glob
 from ipaddress import ip_address
 from ipaddress import ip_network
-from sys import exit
 
 from vyos.config import Config
 from vyos.template import render
@@ -32,26 +34,71 @@ from vyos.utils.network import is_subnet_connected
 from vyos.utils.permission import chown
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
-config_file = '/run/kea/kea-dhcp6.conf'
-ctrl_socket = '/run/kea/dhcp6-ctrl-socket'
-lease_file = '/config/dhcp/dhcp6-leases.csv'
-lease_file_glob = '/config/dhcp/dhcp6-leases*'
+
+config_file = ''
+ctrl_socket = ''
+lease_file = ''
+lease_file_glob = ''
+
 user_group = '_kea'
+
+
+def _override_for_vrf(vrf_name):
+    """
+    This function is intended to override some of the global vars
+    """
+    global ctrl_socket, config_file, lease_file, lease_file_glob
+
+    config_file = f'/run/kea/kea-{vrf_name}-dhcp6.conf'
+    ctrl_socket = f'/run/kea/dhcp6-{vrf_name}-ctrl-socket'
+    lease_file = f'/config/dhcp/dhcp6-{vrf_name}-leases.csv'
+    lease_file_glob = f'/config/dhcp/dhcp6-{vrf_name}-leases*'
+
+
+def _reset_vars():
+    """
+    This function is intended to reset global vars when vrf is not enabled
+    """
+    global ctrl_socket, config_file, lease_file, lease_file_glob
+
+    config_file = '/run/kea/kea-dhcp6.conf'
+    ctrl_socket = '/run/kea/dhcp6-ctrl-socket'
+    lease_file = '/config/dhcp/dhcp6-leases.csv'
+    lease_file_glob = '/config/dhcp/dhcp6-leases*'
+
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    base = ['service', 'dhcpv6-server']
+
+    # if running in vrf, set base diffrently
+    if argv and len(argv) > 1:
+        vrf_name = argv[1]
+        base = ['vrf', 'name', vrf_name, 'service', 'dhcpv6-server']
+
+        # vrf is defined, override other vars aswell
+        _override_for_vrf(vrf_name)
+    else:
+        base = ['service', 'dhcpv6-server']
+
+        # vrf is not defined reset vars
+        _reset_vars()
     if not conf.exists(base):
         return None
 
-    dhcpv6 = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                  get_first_key=True,
-                                  no_tag_node_value_mangle=True)
+    dhcpv6 = conf.get_config_dict(
+        base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True
+    )
+
+    # add vrf context if present
+    if argv and len(argv) > 1:
+        dhcpv6['vrf_context'] = argv[1]
+
     return dhcpv6
 
 def verify(dhcpv6):
@@ -239,8 +286,14 @@ def generate(dhcpv6):
     return None
 
 def apply(dhcpv6):
+    # if running in vrf, set base diffrently
+    if argv and len(argv) > 1:
+        vrf_name = argv[1]
+        service_name = f'kea-dhcp6-server@{vrf_name}.service'
+    else:
+        service_name = 'kea-dhcp6-server.service'
+
     # bail out early - looks like removal from running config
-    service_name = 'kea-dhcp6-server.service'
     if not dhcpv6 or 'disable' in dhcpv6:
         # DHCP server is removed in the commit
         call(f'systemctl stop {service_name}')

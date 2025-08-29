@@ -14,13 +14,13 @@
                 <properties>
                   <help>Monitor the last lines of the Webproxy access log</help>
                 </properties>
-                <command>if [ -f /var/log/squid/access.log ]; then tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
+                <command>bash -c 'if [ -f /var/log/squid/access.log ]; then tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi'</command>
               </leafNode>
               <leafNode name="cache-log">
                 <properties>
                   <help>Monitor the last lines of the Webproxy cache log</help>
                 </properties>
-                <command>if [ -f /var/log/squid/cache.log ]; then tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
+                <command>bash -c 'if [ -f /var/log/squid/cache.log ]; then tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi'</command>
               </leafNode>
             </children>
           </node>
@@ -63,13 +63,13 @@
             <properties>
               <help>Show contents of WebProxy access log</help>
             </properties>
-            <command>if [ -e /var/log/squid/access.log ]; then less $_vyatta_less_options --prompt="file %i of %m, page %dt of %D" -- `printf "%s\n" /var/log/squid/access.log* | sort -nr`; else echo "No WebProxy log"; fi</command>
+            <command>bash -c 'if [ -e /var/log/squid/access.log ]; then less $_vyatta_less_options --prompt="file %i of %m, page %dt of %D" -- `printf "%s\n" /var/log/squid/access.log* | sort -nr`; else echo "No WebProxy log"; fi'</command>
           </node>
           <node name="update-log">
             <properties>
               <help>Show update log for url-filter database</help>
             </properties>
-            <command>if [ -e /opt/vyatta/etc/config/url-filtering/squidguard/updatestatus ]; then cat /opt/vyatta/etc/config/url-filtering/squidguard/updatestatus; else echo "Update log not found"; fi</command>
+            <command>bash -c 'if [ -e /opt/vyatta/etc/config/url-filtering/squidguard/updatestatus ]; then cat /opt/vyatta/etc/config/url-filtering/squidguard/updatestatus; else echo "Update log not found"; fi'</command>
           </node>
         </children>
       </node>

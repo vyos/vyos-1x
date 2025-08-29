@@ -23,6 +23,7 @@ from cryptography.fernet import Fernet
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 
+from vyos.system.image import is_live_boot
 from vyos.tpm import clear_tpm_key
 from vyos.tpm import read_tpm_key
 from vyos.tpm import write_tpm_key
@@ -75,16 +76,17 @@ def load_config(key):
 
     return True
 
-def encrypt_config(key, recovery_key):
+def encrypt_config(key, recovery_key=None, is_tpm=True):
     if is_opened():
         raise Exception('An encrypted config volume is already mapped')
 
     # Clear and write key to TPM
-    try:
-        clear_tpm_key()
-    except:
-        pass
-    write_tpm_key(key)
+    if is_tpm:
+        try:
+            clear_tpm_key()
+        except:
+            pass
+        write_tpm_key(key)
 
     persist_path = cmd(persistpath_cmd).strip()
     size = ask_input('Enter size of encrypted config partition (MB): ', numeric_only=True, default=512)
@@ -199,6 +201,10 @@ if __name__ == '__main__':
         print("Must specify action.")
         sys.exit(1)
 
+    if is_live_boot():
+        print("Config encryption not available on live-ISO environment")
+        sys.exit(1)
+
     parser = ArgumentParser(description='Config encryption')
     parser.add_argument('--disable', help='Disable encryption', action="store_true")
     parser.add_argument('--enable', help='Enable encryption', action="store_true")
@@ -263,7 +269,7 @@ if __name__ == '__main__':
             print('Backup the recovery key in a safe place!')
             print('Recovery key: ' + recovery_key.decode())
         elif args.enable:
-            encrypt_config(recovery_key)
+            encrypt_config(recovery_key, is_tpm=False)
 
             print('Encrypted config volume has been enabled without TPM')
             print('Backup the key in a safe place!')

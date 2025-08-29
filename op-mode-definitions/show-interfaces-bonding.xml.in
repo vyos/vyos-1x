@@ -8,32 +8,13 @@
             <properties>
               <help>Show specified bonding interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=bonding</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=bonding</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed bonding interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=bonding</command>
-              </leafNode>
-              <node name="lacp">
-                <properties>
-                  <help>Show LACP related info</help>
-                </properties>
-                <children>
-                  <leafNode name="detail">
-                    <properties>
-                      <help>Show LACP details</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/bonding.py show_lacp_detail</command>
-                  </leafNode>
-                </children>
-              </node>
-              <leafNode name="slaves">
-                <properties>
-                  <help>Show specified bonding interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/show-bond.py --slaves</command>
               </leafNode>
               <virtualTagNode>
                 <properties>
@@ -100,7 +81,27 @@
                   #include <include/show-interface-type-event-log.xml.i>
                 </children>
               </virtualTagNode>
-            </children>
+ 
+              <node name="lacp">
+                <properties>
+                  <help>Show LACP related info</help>
+                </properties>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show LACP details</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/bonding.py show_lacp_detail</command>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="slaves">
+                <properties>
+                  <help>Show specified bonding interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show-bond.py --slaves</command>
+              </leafNode>
+           </children>
           </node>
         </children>
       </node>

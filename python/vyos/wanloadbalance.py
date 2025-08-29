@@ -65,7 +65,7 @@ def nft_rule(rule_conf, rule_id, local=False, exclude=False, limit=False, weight
             if port[:1] == '!':
                 operator = '!='
                 port = port[1:]
-            output.append(f'th {prefix}port {operator} {port}')
+            output.append(f'th {prefix}port {operator} {{ {port} }}')
 
     if 'source_based_routing' not in rule_conf and not restore_mark:
         output.append('ct state new')

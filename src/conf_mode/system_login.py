@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import ipaddress
+import json
 import os
+import re
+from urllib.parse import urlparse
 
 from passlib.hosts import linux_context
 from psutil import users
@@ -69,7 +73,7 @@ MIN_TACACS_UID = 900
 SYSTEM_USER_SKIP_LIST: list = ['nobody', 'radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
                               'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
                               'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10','tacacs11',
-                              'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
+                              'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15', 'sso_user']
 
 def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
@@ -171,8 +175,8 @@ def verify(login):
                 if 'key' not in pubkey_options:
                     raise ConfigError(f'Missing key for public-key "{pubkey}"!')
 
-    if {'radius', 'tacacs'} <= set(login):
-        raise ConfigError('Using both RADIUS and TACACS at the same time is not supported!')
+    if {'radius', 'tacacs'} <= set(login) or {'radius', 'saml'} <= set(login) or {'saml', 'tacacs'} <= set(login):
+        raise ConfigError('Using RADIUS and TACACS and SAML at the same time is not supported!')
 
     # At lease one RADIUS server must not be disabled
     if 'radius' in login:
@@ -231,6 +235,59 @@ def verify(login):
 
         verify_vrf(login['tacacs'])
 
+    if 'saml' in login:
+        # Verify name
+        if not 'name' in login['saml']:
+            raise ConfigError("SAML provider name must be set")
+
+        # Verify metadata-url
+        if not 'metadata_url' in login['saml']:
+            raise ConfigError("SAML metadata-url must be set")
+        metadata_url = login['saml']['metadata_url']
+        try:
+            url_res = urlparse(metadata_url)
+            if not url_res.scheme in ("https", "http") or not url_res.netloc:
+                raise ConfigError("SAML metadata-url must be a valid http/https url")
+        except ValueError:
+            raise ConfigError("SAML metadata-url must be a valid http/https url [ValueError]")
+
+        if not 'entityID' in login['saml']:
+            login['saml']['entityID'] = r'https://perle.com/sso/saml'
+            print(f"Warning: No entityID set using default entityID '{login['saml']['entityID']}'")
+        entityID = login['saml']['entityID']
+        try:
+            url_res = urlparse(entityID)
+            if not url_res.scheme in ("https", "http") or not url_res.netloc:
+                raise ConfigError("SAML entityID must be a valid http/https uri")
+        except ValueError:
+            raise ConfigError("SAML entityID must be a valid http/https uri [ValueError]")
+
+        # Verify default sso level
+        if not 'default_sso_level' in login['saml']:
+            raise ConfigError("Default sso level must be set")
+
+        saml_config = login['saml']
+        user_levels = ("admin", "operator")
+
+        if not any(level in saml_config for level in user_levels):
+            sso_level = saml_config['default_sso_level']
+            print(f"Warning: No user/attribute config set for saml, All users will be set to '{sso_level}'.")
+
+        for level in user_levels:
+            level_config = saml_config.get(level, {})
+            attr_types = ("req", "suff")
+
+            for attr_type in attr_types:
+                attrs = level_config.get(attr_type, {})
+                for attr_name, attr_config in attrs.items():
+                    values = attr_config.get('value', [])
+                    if not values:
+                        raise ConfigError(f"SAML attribute '{attr_name}' under '{level}/{attr_type}' must have values")
+            EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+            for username in level_config.get("user", []):
+                if not EMAIL_REGEX.match(username):
+                    raise ConfigError("SAML usernames must be emails")
+
     if 'max_login_session' in login and 'timeout' not in login:
         raise ConfigError('"login timeout" must be configured!')
 
@@ -286,6 +343,22 @@ def generate(login):
             os.unlink(tacacs_pam_config_file)
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
+
+    SAML_CONFIG_DIR = r'/etc/saml-sp'
+    SAML_CONFIG_FILE = r'saml.conf'
+    if 'saml' in login:
+        try:
+            if not os.path.exists(SAML_CONFIG_DIR):
+                os.makedirs(SAML_CONFIG_DIR, exist_ok=True)
+            with open(f"{SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}", 'w') as saml_conf_file:
+                json.dump(login.get("saml"), saml_conf_file, indent=4)
+        except Exception:
+            raise ConfigError("SAML: Could not generate config file")
+    elif os.path.isfile(f"{SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}"):
+        try:
+            os.unlink(f"{SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}")
+        except Exception as e:
+            print(f"Warning: could not remove {SAML_CONFIG_DIR}/{SAML_CONFIG_FILE}, error: {str(e)}")
 
     # NSS must always be present on the system
     render(nss_config_file, 'login/nsswitch.conf.j2', login,
@@ -450,6 +523,17 @@ def apply(login):
         else:
             pam_profile = 'tacplus-optional'
         cmd(f'pam-auth-update --enable {pam_profile}')
+
+    try:
+        cmd('systemctl stop saml-sp')
+        cmd('systemctl disable saml-sp')
+        cmd('pam-auth-update --disable saml_auth')
+        if 'saml' in login:
+            cmd('pam-auth-update --enable saml_auth')
+            cmd('systemctl start saml-sp')
+            cmd('systemctl enable saml-sp')
+    except Exception as e:
+        print(f"WARNING SAML: could not toggle SAML services: '{str(e)}'")
 
     # Enable/disable Google authenticator
     cmd('pam-auth-update --disable mfa-google-authenticator')

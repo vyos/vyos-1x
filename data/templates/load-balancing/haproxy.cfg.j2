@@ -121,12 +121,16 @@ frontend {{ front }}
     # rule {{ rule }}
 {%                 if rule_config.domain_name is vyos_defined %}
 {%                     set rule_options = 'hdr(host)' %}
+{%                     set domain_prefix = '' %}
 {%                     if rule_config.ssl is vyos_defined %}
 {%                         set ssl_rule_translate = {'req-ssl-sni': 'req_ssl_sni', 'ssl-fc-sni': 'ssl_fc_sni', 'ssl-fc-sni-end': 'ssl_fc_sni_end'} %}
 {%                         set rule_options = ssl_rule_translate[rule_config.ssl] %}
 {%                     endif %}
+{%                     if rule_config.wildcard_domain is vyos_defined %}
+{%                         set domain_prefix = '-m end .' %}
+{%                     endif %}
 {%                     for domain in rule_config.domain_name %}
-    acl {{ rule }} {{ rule_options }} -i {{ domain }}
+    acl {{ rule }} {{ rule_options }} -i {{ domain_prefix }}{{ domain }}
 {%                     endfor %}
 {%                 endif %}
 {# path url #}
@@ -217,12 +221,16 @@ backend {{ back }}
 {%             for rule, rule_config in back_config.rule.items() %}
 {%                 if rule_config.domain_name is vyos_defined and rule_config.set.server is vyos_defined %}
 {%                     set rule_options = 'hdr(host)' %}
+{%                     set domain_prefix = '' %}
 {%                     if rule_config.ssl is vyos_defined %}
 {%                         set ssl_rule_translate = {'req-ssl-sni': 'req_ssl_sni', 'ssl-fc-sni': 'ssl_fc_sni', 'ssl-fc-sni-end': 'ssl_fc_sni_end'} %}
 {%                         set rule_options = ssl_rule_translate[rule_config.ssl] %}
 {%                     endif %}
+{%                     if rule_config.wildcard_domain is vyos_defined %}
+{%                         set domain_prefix = '-m end .' %}
+{%                     endif %}
 {%                     for domain in rule_config.domain_name %}
-    acl {{ rule }} {{ rule_options }} -i {{ domain }}
+    acl {{ rule }} {{ rule_options }} -i {{ domain_prefix }}{{ domain }}
 {%                     endfor %}
     use-server {{ rule_config.set.server }} if {{ rule }}
 {%                 endif %}

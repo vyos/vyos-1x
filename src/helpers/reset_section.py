@@ -84,7 +84,7 @@ else:
 del test
 
 
-session_id = int(pid) if pid else os.getppid()
+session_id = int(pid) if pid else os.getpid()
 
 if in_session:
     # check hint left by vyshim when ConfigError is from apply stage
