@@ -87,11 +87,11 @@
       <properties>
         <help>Interface MTU</help>
         <valueHelp>
-          <format>u16:1200-9000</format>
+          <format>u16:576-9000</format>
           <description>Client interface MTU</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 1200-9000"/>
+          <validator name="numeric" argument="--range 576-9000"/>
         </constraint>
       </properties>
     </leafNode>
