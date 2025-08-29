@@ -261,13 +261,12 @@
       <properties>
         <help>Determines the routing mode (RIP, Routing Information Protocol) used on the PPP interface</help>
         <completionHelp>
-          <list>listen send none both</list>
+          <list>listen send both</list>
         </completionHelp>
         <constraint>
-          <regex>(listen|send|none)</regex>
+          <regex>(listen|send|both)</regex>
         </constraint>
       </properties>
-      <defaultValue>none</defaultValue>
     </leafNode>
     <leafNode name="terminate-request-retry">
       <properties>
