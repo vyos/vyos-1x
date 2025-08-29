@@ -87,7 +87,7 @@
       <properties>
         <help>Interface MTU</help>
         <valueHelp>
-          <format>u32:1-16</format>
+          <format>u16:1200-9000</format>
           <description>Client interface MTU</description>
         </valueHelp>
         <constraint>
