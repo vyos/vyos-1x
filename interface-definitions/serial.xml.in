@@ -69,10 +69,10 @@
             <properties>
               <help>Active serial service</help>
               <completionHelp>
-                <list>trueport-server trueport-client modbus-master modbus-slave vmodem udp tcp-reverse tcp-direct serial-tunnel ppp ssh-reverse telnet-reverse</list>
+                <list>trueport-server trueport-client modbus-master modbus-slave vmodem udp tcp-reverse tcp-direct serial-tunnel ppp ssh-reverse telnet-reverse slip</list>
               </completionHelp>
               <constraint>
-                <regex>(trueport-server|trueport-client|modbus-master|modbus-slave|vmodem|udp|tcp-reverse|tcp-direct|serial-tunnel|ppp|ssh-reverse|telnet-reverse)</regex>
+                <regex>(trueport-server|trueport-client|modbus-master|modbus-slave|vmodem|udp|tcp-reverse|tcp-direct|serial-tunnel|ppp|ssh-reverse|telnet-reverse|slip)</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -89,6 +89,7 @@
               #include <include/serial/service/udp.xml.i>
               #include <include/serial/service/serial-tunnel.xml.i>
               #include <include/serial/service/ppp.xml.i>
+              #include <include/serial/service/slip.xml.i>
             </children>
           </node>
           #include <include/serial/service/utils/tls-port.xml.i>
