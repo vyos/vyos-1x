@@ -1,5 +1,5 @@
 <!-- include start from serial/service/utils/session-timeout.xml.i -->
-<leafNode name="sess-timeout">
+<leafNode name="session-timeout">
   <properties>
     <help>Close the session/connection when the Session Timeout expires (in s)</help>
     <valueHelp>
