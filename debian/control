@@ -389,8 +389,11 @@ Depends:
   telnet,
   stunnel4,
   uidmap,
-  saml-sso
+  saml-sso,
 ## End optional utilities
+## Serial telnet server
+  telnetd
+## End serial telnet server
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
