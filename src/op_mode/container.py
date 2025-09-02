@@ -21,6 +21,7 @@ import sys
 import subprocess
 
 from pathlib import Path
+from vyos.defaults import directories
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
@@ -43,9 +44,9 @@ def clean_layer(name: str) -> int:
 
         # Remove the overlay ID directory
         shutil.rmtree(layer_dir, ignore_errors=True)
-
-    overlay_root = Path("/usr/lib/live/mount/persistence/container/storage/overlay")
-    containers = Path("/usr/lib/live/mount/persistence/container/storage/overlay-containers/containers.json")
+    storage_dir = Path(directories['podman_storage'])
+    overlay_root = storage_dir / "overlay"
+    containers = storage_dir / "overlay-containers/containers.json"
     unit = f"vyos-container-{name}.service"
     layer_id = layer_id_from_containers(name)
     if not layer_id:
