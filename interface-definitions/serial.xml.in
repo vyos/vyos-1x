@@ -104,6 +104,8 @@
           #include <include/serial/service/utils/aliasing-address.xml.i>
           #include <include/serial/service/utils/banner.xml.i>
           #include <include/serial/service/utils/motd.xml.i>
+          #include <include/serial/service/utils/idle-timeout.xml.i>
+          #include <include/serial/service/utils/session-timeout.xml.i>
         </children>
       </tagNode>
     </children>
