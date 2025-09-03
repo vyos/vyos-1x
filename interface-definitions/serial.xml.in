@@ -34,6 +34,7 @@
           #include <include/serial/general/modbus-gateway.xml.i>
           #include <include/serial/general/vmodem-phonebook.xml.i>
           #include <include/serial/general/tls-global.xml.i>
+          #include <include/serial/general/trueport-remap.xml.i>
         </children>
       </node>
       <tagNode name="device">
