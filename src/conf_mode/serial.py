@@ -70,10 +70,11 @@ def get_config(config=None):
     print(f'is modbus gateway changed {tmp}')
     if tmp: proxy.update({'smodbusd_restart': tmp})
 
-    if 'port_buffering' in proxy_no_default['global']:
-        if 'syslog' in proxy_no_default['global']['port_buffering']:
-            if 'level' in proxy_no_default['global']['port_buffering']:
-                proxy['global']['port_buffering']['syslog_enable'] = '1'
+    if 'global' in proxy_no_default:
+        if 'port_buffering' in proxy_no_default['global']:
+            if 'syslog' in proxy_no_default['global']['port_buffering']:
+                if 'level' in proxy_no_default['global']['port_buffering']:
+                    proxy['global']['port_buffering']['syslog_enable'] = '1'
 
     changed_tty_list = []
     for device in proxy.get('device', []):
