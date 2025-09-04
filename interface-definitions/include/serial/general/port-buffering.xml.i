@@ -13,9 +13,9 @@
           <properties>
             <help>Local port buffering escape view string, must start with '~~'</help>
             <constraint>
-              <regex>.{0,127}</regex>
+              <regex>.{0,8}</regex>
             </constraint>
-            <constraintErrorMessage>View string too long (limit 127 characters)</constraintErrorMessage>
+            <constraintErrorMessage>View string too long (limit 8 characters)</constraintErrorMessage>
           </properties>
         </leafNode>
       </children>
@@ -50,9 +50,9 @@
           <properties>
             <help>Path to file</help>
             <constraint>
-              <regex>.{0,127}</regex>
+              <regex>.{0,40}</regex>
             </constraint>
-            <constraintErrorMessage>Path string too long (limit 127 characters)</constraintErrorMessage>
+            <constraintErrorMessage>Path string too long (limit 40 characters)</constraintErrorMessage>
           </properties>
         </leafNode>
       </children>
