@@ -327,8 +327,9 @@ def verify_vpp_settings_cpu_workers(cpu_settings: dict) -> int:
 
     if workers > available_cores:
         raise ConfigError(
-            f'Not enough free CPU cores for {workers} VPP workers '
-            f'(reduce to {available_cores} or less)'
+            f'Not enough free physical CPU cores for {workers} VPP workers. '
+            f'Only {available_cores} cores are available (2 cores are reserved for system use). '
+            f'Please reduce the number of workers to {available_cores} or fewer.'
         )
 
     return workers
@@ -363,8 +364,13 @@ def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict) -> int:
             f'{error_msg}: CPU# {",".join(invalid_cores)} are not available.'
         )
 
-    if len(all_core_nums) > cpu_checks.available_cores_count(cpu_settings):
-        raise ConfigError(f'{error_msg}: Not enough free CPUs in the system.')
+    available_cores_count = cpu_checks.available_cores_count(cpu_settings)
+    if len(all_core_nums) > available_cores_count:
+        raise ConfigError(
+            f'{error_msg}: Not enough free physical CPUs in the system. '
+            f'Only {available_cores_count} cores are available '
+            f'(2 cores are reserved for system use).'
+        )
 
     return len(all_core_nums)
 
