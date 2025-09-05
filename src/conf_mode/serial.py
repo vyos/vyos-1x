@@ -75,6 +75,8 @@ def get_config(config=None):
             if 'syslog' in proxy_no_default['global']['port_buffering']:
                 if 'level' in proxy_no_default['global']['port_buffering']:
                     proxy['global']['port_buffering']['syslog_enable'] = '1'
+            if 'local' in proxy_no_default['global']['port_buffering']:
+                proxy['global']['port_buffering']['port_buffer_local'] = 1
 
     changed_tty_list = []
     for device in proxy.get('device', []):
@@ -189,20 +191,9 @@ def generate(proxy):
             if 'global' in proxy:
                 port_config['global'] = proxy['global']
                 if 'port_buffering' in port_config['global']:
-                    local_enabled = 0
-                    remote_enabled = 0
-                    if 'local' in port_config['global']['port_buffering']:
-                        if 'view_string' in port_config['global']['port_buffering']['local']:
-                            local_enabled = 1
                     if 'nfs' in port_config['global']['port_buffering']:
                         if 'hostname' in port_config['global']['port_buffering']['nfs']:
-                            remote_enabled = 1
-                    if local_enabled == 1 and remote_enabled == 1:
-                        port_config['global']['port_buffering']['mode'] = 'both'
-                    elif local_enabled == 1 and remote_enabled == 0:
-                        port_config['global']['port_buffering']['mode'] = 'local'
-                    elif local_enabled == 0 and remote_enabled == 1:
-                        port_config['global']['port_buffering']['mode'] = 'remote'
+                            port_config['global']['port_buffering']['port_buffer_remote'] = 1
 
 
             if 'service' in port_config:
@@ -420,7 +411,17 @@ def apply(proxy):
 
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
-            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0, 0)
+            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0, 0, 0, 0)
+
+    port_buffer_local_id = 0
+    port_buffer_remote_id = 0
+
+    if 'global' in proxy:
+        if 'port_buffering' in proxy['global']:
+            if 'port_buffer_local' in proxy['global']['port_buffering']:
+                port_buffer_local_id = generate_config_id(proxy['global']['port_buffering'], digits=8)
+            if 'port_buffer_remote' in proxy['global']['port_buffering']:
+                port_buffer_remote_id = generate_config_id(proxy['global']['port_buffering'], digits=8)
 
     if 'device' in proxy:
         if not is_systemd_service_active(service_name):
@@ -471,9 +472,9 @@ def apply(proxy):
                         if 'ip_aliasing' in serial_config['service_setting']['reverse'] and 'inet' in serial_config:
                             alias_ip = serial_config['inet']
 
-                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd, changed_modbus_gateway_id)
+                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd, changed_modbus_gateway_id, port_buffer_local_id, port_buffer_remote_id)
             else:
-                send_command_to_iolan('stop', device, '', int(ttynum), 0, '', 0, 0, changed_modbus_gateway_id)
+                send_command_to_iolan('stop', device, '', int(ttynum), 0, '', 0, 0, changed_modbus_gateway_id, port_buffer_local_id, port_buffer_remote_id)
 
     return None
 
