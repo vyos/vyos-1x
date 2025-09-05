@@ -11,12 +11,13 @@
       <children>
         <leafNode name="view-string">
           <properties>
-            <help>Local port buffering escape view string, must start with '~~'</help>
+            <help>Local port buffering escape view string</help>
             <constraint>
               <regex>.{0,8}</regex>
             </constraint>
             <constraintErrorMessage>View string too long (limit 8 characters)</constraintErrorMessage>
           </properties>
+          <defaultValue>~show</defaultValue>
         </leafNode>
       </children>
     </node>
@@ -54,6 +55,7 @@
             </constraint>
             <constraintErrorMessage>Path string too long (limit 40 characters)</constraintErrorMessage>
           </properties>
+          <defaultValue>/device_server/portlogs</defaultValue>
         </leafNode>
       </children>
     </node>
