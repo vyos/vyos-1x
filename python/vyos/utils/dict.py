@@ -147,7 +147,16 @@ def get_sub_dict(source, lpath, get_first_key=False):
 
 def dict_search(path, dict_object, default=None):
     """ Traverse Python dictionary (dict_object) delimited by dot (.).
-    Return value of key if found, None otherwise.
+
+    Args:
+        path (str): Dot-delimited key path, e.g. "foo.bar.baz".
+        dict_object (dict): The dictionary to search.
+        default (Any, optional): Value to return if the path is not found
+            or if dict_object is not a dict. Defaults to None.
+
+    Returns:
+        Any: The value found at the given path, or None if not found. Optionally,
+            a default value can be provided to be returned.
 
     This is faster implementation then jmespath.search('foo.bar', dict_object)"""
     if not isinstance(dict_object, dict) or not path:
