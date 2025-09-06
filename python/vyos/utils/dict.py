@@ -145,24 +145,24 @@ def get_sub_dict(source, lpath, get_first_key=False):
 
     return ret
 
-def dict_search(path, dict_object):
+def dict_search(path, dict_object, default=None):
     """ Traverse Python dictionary (dict_object) delimited by dot (.).
     Return value of key if found, None otherwise.
 
     This is faster implementation then jmespath.search('foo.bar', dict_object)"""
     if not isinstance(dict_object, dict) or not path:
-        return None
+        return default
 
     parts = path.split('.')
     inside = parts[:-1]
     if not inside:
         if path not in dict_object:
-            return None
+            return default
         return dict_object[path]
     c = dict_object
     for p in parts[:-1]:
         c = c.get(p, {})
-    return c.get(parts[-1], None)
+    return c.get(parts[-1], default)
 
 def dict_search_args(dict_object, *path):
     # Traverse dictionary using variable arguments
