@@ -196,6 +196,42 @@ def verify_jump_target(firewall, hook, jump_target, family, recursive=False):
 
         targets_seen.append(target)
 
+def is_node_empty(rule_conf):
+    is_empty_list = []
+    is_empty_list.append([
+                        ['add_address_to_group'],
+                        ['connection_status'],
+                        ['destination'],
+                        ['destination', 'group'],
+                        ['destination', 'geoip'],
+                        ['fragment'],
+                        ['gre'],
+                        ['gre', 'flags'],
+                        ['hop_limit'],
+                        ['icmp'],
+                        ['icmpv6'],
+                        ['inbound_interface'],
+                        ['ipsec'],
+                        ['limit'],
+                        ['log_options'],
+                        ['outbound_interface'],
+                        ['set'],
+                        ['source'],
+                        ['source', 'group'],
+                        ['source', 'geoip'],
+                        ['tcp'],
+                        ['tcp', 'flags'],
+                        ['time'],
+                        ['ttl'],
+                        ['vlan']
+                        ])
+
+    for node in is_empty_list[0]:
+        if dict_search_args(rule_conf, *node) == {}:
+            return True, node
+
+    return False, None
+
 def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
     if 'action' not in rule_conf:
         raise ConfigError('Rule action must be defined')
@@ -243,6 +279,11 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
     if 'fragment' in rule_conf:
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
             raise ConfigError('Cannot specify both "match-frag" and "match-non-frag"')
+
+    node_empty, node_name = is_node_empty(rule_conf)
+    if node_empty:
+        tmp = ' '.join(node_name).replace('_', '-')
+        raise ConfigError(f'Configuration node {tmp} may not be empty')
 
     if 'limit' in rule_conf:
         if 'rate' in rule_conf['limit']:

@@ -8,6 +8,38 @@
           <priority>400</priority>
         </properties>
         <children>
+          <tagNode name="operator-group">
+            <properties>
+              <help>Operator group</help>
+              <constraint>
+                #include <include/constraint/login-username.xml.i>
+              </constraint>
+              <constraintErrorMessage>Operator group name contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
+            </properties>
+            <children>
+              <node name="command-policy">
+                <properties>
+                  <help>Command policy</help>
+                </properties>
+                <children>
+                  <leafNode name="allow">
+                    <properties>
+                      <multi/>
+                      <help>Command subtree allowed to execute</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Exact command (e.g., 'show interfaces')</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Command wildcard (e.g., '* vpn')</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
           <tagNode name="user">
             <properties>
               <help>Local user account information</help>
@@ -17,6 +49,26 @@
               <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
             </properties>
             <children>
+              <node name="operator">
+                <properties>
+                  <help>Restrict the user to operational mode</help>
+                </properties>
+                <children>
+                  <leafNode name="group">
+                    <properties>
+                      <multi/>
+                      <help>Operator group</help>
+                      <completionHelp>
+                        <path>system login operator-group</path>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Operator group name</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="authentication">
                 <properties>
                   <help>Authentication settings</help>

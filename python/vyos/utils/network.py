@@ -81,7 +81,10 @@ def get_interface_vrf(interface):
     """ Returns VRF of given interface """
     from vyos.utils.dict import dict_search
     from vyos.utils.network import get_interface_config
-    tmp = get_interface_config(interface)
+    if isinstance(interface, str):
+        tmp = get_interface_config(interface)
+    elif isinstance(interface, dict):
+        tmp = interface
     if dict_search('linkinfo.info_slave_kind', tmp) == 'vrf':
         return tmp['master']
     return 'default'

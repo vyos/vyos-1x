@@ -119,6 +119,8 @@ check_migration_scripts_executable:
 pylint: interface_definitions
 	@echo Running "pylint --errors-only ..."
 	@PYTHONPATH=python/ pylint --errors-only $(shell git ls-files python/vyos/ifconfig/*.py python/vyos/utils/*.py src/conf_mode/*.py src/op_mode/*.py src/migration-scripts src/services/vyos*)
+	@echo Running "pylint to check for unused imports ..."
+	@PYTHONPATH=python/ pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
 
 .PHONY: j2lint
 j2lint:
@@ -130,10 +132,6 @@ endif
 .PHONY: sonar
 sonar:
 	sonar-scanner -X -Dsonar.login=${SONAR_TOKEN}
-
-.PHONY: unused-imports
-unused-imports:
-	@pylint --disable=all --enable=W0611 $(shell git ls-files *.py src/migration-scripts src/services)
 
 deb:
 	dpkg-buildpackage -uc -us -tc -b
