@@ -23,18 +23,15 @@ from argparse import ArgumentParser
 
 from vyos.config import Config
 from vyos.remote import urlc
-from vyos.component_version import add_system_version_string
+from vyos.component_version import add_system_version
 from vyos.defaults import directories
-from vyos.utils.file import write_file_atomic
 
 DEFAULT_CONFIG_PATH = os.path.join(directories['config'], 'config.boot')
 remote_save = None
 
 parser = ArgumentParser(description='Save configuration')
 parser.add_argument('file', type=str, nargs='?', help='Save configuration to file')
-parser.add_argument(
-    '--write-json-file', type=str, help='Save JSON of configuration to file'
-)
+parser.add_argument('--write-json-file', type=str, help='Save JSON of configuration to file')
 args = parser.parse_args()
 file = args.file
 json_file = args.write_json_file
@@ -59,14 +56,7 @@ write_file = save_file if remote_save is None else NamedTemporaryFile(delete=Fal
 # config_tree is None before boot configuration is complete;
 # automated saves should check boot_configuration_complete
 config_str = None if ct is None else ct.to_string()
-versioned_config_str = add_system_version_string(config_str)
-
-try:
-    with write_file_atomic(write_file) as f:
-        f.write(versioned_config_str)
-except OSError as e:
-    print(f'failed to write config file: {e}')
-    sys.exit(1)
+add_system_version(config_str, write_file)
 
 if json_file is not None and ct is not None:
     try:

@@ -68,7 +68,7 @@ def verify(config_dict):
     if 'interface' not in isis:
         raise ConfigError('Interface used for routing updates is mandatory!')
 
-    for interface in isis['interface']:
+    for interface, interface_config in isis['interface'].items():
         verify_interface_exists(isis, interface)
         # Interface MTU must be >= configured lsp-mtu
         mtu = Interface(interface).get_mtu()
@@ -89,6 +89,27 @@ def verify(config_dict):
             tmp = get_interface_config(interface)
             if 'master' not in tmp or tmp['master'] != vrf:
                 raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
+
+        # Fast reroute validation
+        # LFA and TI-LFA of the same level can not be configured on the same interface
+        # To configure Remote LFA, LFA of the same level should be configured on this interface.
+        if 'fast_reroute' in interface_config:
+            isis_frr_config = interface_config['fast_reroute']
+            levels = ['level_1', 'level_2']
+            if 'lfa' and 'ti_lfa' in isis_frr_config:
+                for isis_level in levels:
+                    if ((dict_search(f'lfa.{isis_level}.enable', isis_frr_config) is not None)
+                            and (dict_search(f'ti_lfa.{isis_level}', isis_frr_config) is not None)):
+                        raise ConfigError(
+                            f'LFA and TI-LFA at the "{str(isis_level).replace("_","-")}" '
+                            f'can not be configured on the same interface "{interface}"!')
+            if 'remote_lfa' in isis_frr_config:
+                for isis_level in levels:
+                    if ((dict_search(f'remote_lfa.{isis_level}', isis_frr_config) is not None)
+                            and (dict_search(f'lfa.{isis_level}.enable', isis_frr_config) is None)):
+                        raise ConfigError(
+                            f'To configure Remote LFA, LFA at the same level '
+                            f'should be configured on interface "{interface}"!')
 
     # If md5 and plaintext-password set at the same time
     for password in ['area_password', 'domain_password']:

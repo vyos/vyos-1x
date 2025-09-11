@@ -11,7 +11,7 @@ User=node_exporter
 ExecStart={{ vrf_command }}/usr/sbin/blackbox_exporter \
 {% if listen_address is vyos_defined %}
 {%     for address in listen_address %}
-        --web.listen-address={{ address }}:{{ port }} \
+        --web.listen-address={{ address | bracketize_ipv6 }}:{{ port }} \
 {%     endfor %}
 {% else %}
         --web.listen-address=:{{ port }} \

@@ -14,9 +14,6 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import tempfile
-from contextlib import contextmanager
-
 from vyos.utils.permission import chown
 
 def makedir(path, user=None, group=None):
@@ -188,36 +185,3 @@ def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_i
     """ Waits for a process to close a file after opening it in write mode. """
     wait_for_inotify(file_path,
       event_type='IN_CLOSE_WRITE', pre_hook=pre_hook, timeout=timeout, sleep_interval=sleep_interval)
-
-def copy_chown(source, target):
-    import shutil
-    import stat
-
-    shutil.copy2(source, target)
-    st = os.stat(source)
-    os.chown(target, st[stat.ST_UID], st[stat.ST_GID])
-
-
-@contextmanager
-def write_file_atomic(file_path, mode='w'):
-    with open(file_path, mode) as _:
-        pass
-    temp_file = tempfile.NamedTemporaryFile(
-        delete=False, dir=os.path.dirname(file_path)
-    )
-    if os.path.exists(file_path):
-        copy_chown(file_path, temp_file.name)
-
-    file = open(temp_file.name, mode)
-    try:
-        yield file
-    finally:
-        file.flush()
-        os.fsync(file.fileno())
-        file.close()
-        os.replace(temp_file.name, file_path)
-        if os.path.exists(temp_file.name):
-            try:
-                os.unlink(temp_file.name)
-            except Exception:
-                pass

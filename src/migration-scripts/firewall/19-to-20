@@ -1,0 +1,100 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7366: Firewall rules allow empty nodes
+# When configuring the firewall, many nodes are accepted with empty values,
+# which are not parsed into rules.
+
+# Very few of these have subsequent error handling. Some should be obvious
+# to the user that a value is required, like 'inbound-interface' (though
+# an error should still be thrown if they're configured without children).
+
+# But some could be misunderstood and lead to an outage or wide open firewall.
+# For instance, let's say someone wanted to block all icmp. They may incorrectly
+# configure:
+
+# set firewall ipv4 input filter rule 10 action drop
+# set firewall ipv4 input filter rule 10 icmp
+
+# And this would create this rule in nftables, dropping all traffic in subsequent rules:
+
+# counter packets 0 bytes 0 drop comment "ipv4-INP-filter-10"
+
+# They could also unintentionally allow all traffic by attempting to only allow icmp in a rule.
+
+import json
+
+from vyos.configtree import ConfigTree
+from vyos.utils.dict import dict_search_args
+
+firewall_base = ['firewall']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(firewall_base):
+        # Nothing to do
+        return
+
+    firewall_dict = json.loads(config.to_json()).get('firewall')
+
+    is_empty_list = []
+    is_empty_list.append([
+                        ['add-address-to-group'],
+                        ['connection-status'],
+                        ['destination', 'group'],
+                        ['destination', 'geoip'],
+                        ['destination'],
+                        ['fragment'],
+                        ['gre', 'flags'],
+                        ['gre'],
+                        ['hop-limit'],
+                        ['icmp'],
+                        ['icmpv6'],
+                        ['inbound-interface'],
+                        ['ipsec'],
+                        ['limit'],
+                        ['log-options'],
+                        ['outbound-interface'],
+                        ['set'],
+                        ['source', 'group'],
+                        ['source', 'geoip'],
+                        ['source'],
+                        ['tcp', 'flags'],
+                        ['tcp'],
+                        ['time'],
+                        ['ttl'],
+                        ['vlan']
+                        ])
+
+    for family in ['ipv4', 'ipv6', 'bridge']:
+        if family in firewall_dict:
+            for chain in ['name','forward','input','output', 'prerouting']:
+                if chain in firewall_dict[family]:
+                    for priority, priority_conf in firewall_dict[family][chain].items():
+                        if 'rule' in priority_conf:
+                            for rule_id, rule_conf in priority_conf['rule'].items():
+                                node_deleted_list = []
+                                for node in is_empty_list[0]:
+                                    if dict_search_args(rule_conf, *node) == {}:
+                                        if len(node) == 1:
+                                            if node not in node_deleted_list:
+                                                config.delete(firewall_base + [family, chain, priority, 'rule', rule_id, node[0]])
+                                        else:
+                                            del firewall_dict[family][chain][priority]['rule'][rule_id][node[0]][node[1]]
+
+                                            if dict_search_args(rule_conf, node[0]) == {}:
+                                                config.delete(firewall_base + [family, chain, priority, 'rule', rule_id, node[0]])
+                                                node_deleted_list.append([node[0]])
+                                            else:
+                                                config.delete(firewall_base + [family, chain, priority, 'rule', rule_id, node[0], node[1]])

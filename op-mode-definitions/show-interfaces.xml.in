@@ -42,7 +42,7 @@
                 <children>
                   <leafNode name="detail">
                     <properties>
-                      <help>Show system interface in JSON format</help>
+                      <help>Show system interface details</help>
                     </properties>
                     <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --intf-name=$4 --detail</command>
                   </leafNode>
@@ -52,11 +52,17 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --intf-name=$4 --raw</command>
                   </leafNode>
+                  <leafNode name="statistics">
+                    <properties>
+                      <help>Show system interface statistics</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --intf-name=$4 --statistics</command>
+                  </leafNode>
                 </children>
               </virtualTagNode>
               <leafNode name="detail">
                 <properties>
-                  <help>Show system interface in JSON format</help>
+                  <help>Show system interface details</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --detail</command>
               </leafNode>
@@ -65,6 +71,12 @@
                   <help>Show all interfaces in JSON format</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --raw</command>
+              </leafNode>
+              <leafNode name="statistics">
+                <properties>
+                  <help>Show system interface statistics</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_kernel --statistics</command>
               </leafNode>
             </children>
           </node>

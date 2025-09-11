@@ -1,0 +1,31 @@
+set firewall bridge forward filter rule 1 action 'accept'
+set firewall ipv4 forward filter rule 1 action 'accept'
+set firewall ipv4 forward filter rule 2 action 'accept'
+set firewall ipv4 forward filter rule 3 action 'accept'
+set firewall ipv4 forward filter rule 5 action 'accept'
+set firewall ipv4 forward filter rule 6 action 'accept'
+set firewall ipv4 forward filter rule 7 action 'accept'
+set firewall ipv4 forward filter rule 8 action 'accept'
+set firewall ipv4 forward filter rule 9 action 'accept'
+set firewall ipv4 forward filter rule 10 action 'accept'
+set firewall ipv4 forward filter rule 10 log
+set firewall ipv4 forward filter rule 11 action 'accept'
+set firewall ipv4 forward filter rule 13 action 'accept'
+set firewall ipv4 forward filter rule 14 action 'accept'
+set firewall ipv4 forward filter rule 15 action 'accept'
+set firewall ipv4 forward filter rule 16 action 'accept'
+set firewall ipv4 forward filter rule 17 action 'accept'
+set firewall ipv4 forward filter rule 18 action 'accept'
+set firewall ipv4 forward filter rule 19 action 'accept'
+set firewall ipv4 forward filter rule 20 action 'accept'
+set firewall ipv4 forward filter rule 21 action 'accept'
+set firewall ipv6 forward filter rule 1 action 'accept'
+set firewall ipv6 forward filter rule 2 action 'accept'
+set interfaces ethernet eth0
+set interfaces ethernet eth1
+set interfaces ethernet eth2
+set interfaces loopback lo
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'
+set system login user vyos authentication plaintext-password ''

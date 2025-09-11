@@ -1438,17 +1438,64 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  neighbor {pg_ipv6} maximum-prefix {ipv6_max_prefix}', afiv6_config)
 
     def test_bgp_27_route_reflector_client(self):
-        self.cli_set(base_path + ['peer-group', 'peer1', 'address-family', 'l2vpn-evpn', 'route-reflector-client'])
-        with self.assertRaises(ConfigSessionError) as e:
-            self.cli_commit()
-
-        self.cli_set(base_path + ['peer-group', 'peer1', 'remote-as', 'internal'])
+        int_neighbors = ['192.0.2.2', '192.0.2.3', '192.0.2.4', '192.0.2.5']
+        int_interfaces = ['dum0', 'dum1', 'dum2', 'dum3']
+        int_pg_names = ['SMOKETESTINT0', 'SMOKETESTINT1', 'SMOKETESTINT2']
+        remote_as_types = ['external', 'internal']
+        for int_interface in int_interfaces:
+            self.cli_set(['interfaces', 'dummy', int_interface])
         self.cli_commit()
 
-        conf = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit',
-                                 substring=' address-family l2vpn evpn', endsubsection='^ exit-address-family')
+        def _set_neighbor_0(neighbor, remote_as_type):
+            # set route-reflector-client in neighbor and set remote-as in peer_group
+            interface_cmd = ['interface'] if neighbor.startswith('dum') else []
+            self.cli_set(base_path + ['peer-group', int_pg_names[0], 'remote-as', remote_as_type])
+            self.cli_set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-reflector-client'])
+            self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['peer-group', int_pg_names[0]])
 
-        self.assertIn('neighbor peer1 route-reflector-client', conf)
+        def _set_neighbor_1(neighbor, remote_as_type):
+            # set route-reflector-client in peer_group and set remote-as in neighbor
+            interface_cmd = ['interface'] if neighbor.startswith('dum') else []
+            self.cli_set(base_path + ['peer-group', int_pg_names[1], 'address-family', 'ipv4-unicast', 'route-reflector-client'])
+            self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['remote-as', remote_as_type])
+            self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['peer-group', int_pg_names[1]])
+
+        def _set_neighbor_2(neighbor, remote_as_type):
+            # set route-reflector-client and remote-as in peer_group
+            interface_cmd = ['interface'] if neighbor.startswith('dum') else []
+            self.cli_set(base_path + ['peer-group', int_pg_names[2], 'remote-as', remote_as_type])
+            self.cli_set(base_path + ['peer-group', int_pg_names[2], 'address-family', 'ipv4-unicast', 'route-reflector-client'])
+            self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['peer-group', int_pg_names[2]])
+
+        def _set_neighbor_3(neighbor, remote_as_type):
+            # set route-reflector-client and remote-as in neighbor
+            interface_cmd = ['interface'] if neighbor.startswith('dum') else []
+            self.cli_set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-reflector-client'])
+            self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['remote-as', remote_as_type])
+            
+        set_neighbor_funcs = [_set_neighbor_0, _set_neighbor_1, _set_neighbor_2, _set_neighbor_3]
+        for remote_as_type in remote_as_types:
+            for func_count, set_neighbor_func in enumerate(set_neighbor_funcs):
+                for neighbors in [int_neighbors, int_interfaces]:
+                    set_neighbor_func(neighbors[func_count], remote_as_type)
+                    if remote_as_type == 'external':
+                        with self.assertRaises(ConfigSessionError) as e:
+                            self.cli_commit()
+                        self.cli_discard()
+                    else:
+                        self.cli_commit()
+        
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit', substring=' address-family ipv4 unicast', endsubsection='^ exit-address-family')
+        neighbor_has_rr_client = [
+            int_neighbors[0], int_neighbors[3],
+            int_interfaces[0], int_interfaces[3],
+            int_pg_names[1], int_pg_names[2],
+        ]
+        [self.assertIn(f'neighbor {neighbor} route-reflector-client', frrconfig) for neighbor in neighbor_has_rr_client]
+
+        # tearDown dummy interfaces
+        self.cli_delete(['interfaces', 'dummy'])
+        self.cli_commit()
 
     def test_bgp_28_peer_group_member_all_internal_or_external(self):
         def _common_config_check(conf, include_ras=True):

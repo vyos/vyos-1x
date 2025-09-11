@@ -16,6 +16,33 @@ interface {{ iface }}
 {%         if iface_config.circuit_type is vyos_defined %}
  isis circuit-type {{ iface_config.circuit_type }}
 {%         endif %}
+{%         if iface_config.fast_reroute.lfa is vyos_defined %}
+{%             for level, level_config in iface_config.fast_reroute.lfa.items() %}
+{%                 if level_config.enable is vyos_defined %}
+isis fast-reroute lfa {{ level | replace('_', '-') }}
+{%                 endif %}
+{%                 if level_config.exclude.interface is vyos_defined %}
+{%                     for excl_if in level_config.exclude.interface %}
+isis fast-reroute lfa {{ level | replace('_', '-') }} exclude interface {{ excl_if }}
+{%                     endfor %}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if iface_config.fast_reroute.remote_lfa is vyos_defined %}
+{%             for level, level_config in iface_config.fast_reroute.remote_lfa.items() %}
+{%                 if level_config.maximum_metric is vyos_defined %}
+isis fast-reroute remote-lfa maximum-metric {{ level_config.maximum_metric }} {{ level | replace('_', '-') }}
+{%                 endif %}
+{%                 if level_config.tunnel.mpls_ldp is vyos_defined %}
+isis fast-reroute remote-lfa tunnel mpls-ldp {{ level | replace('_', '-') }}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if iface_config.fast_reroute.ti_lfa is vyos_defined %}
+{%             for level, level_config in iface_config.fast_reroute.ti_lfa.items() %}
+isis fast-reroute ti-lfa {{ level | replace('_', '-') }} {{ 'node-protection' if level_config.node_protection is vyos_defined }} {{ 'link-fallback' if level_config.node_protection.link_fallback is vyos_defined }}
+{%             endfor %}
+{%         endif %}
 {%         if iface_config.hello_interval is vyos_defined %}
  isis hello-interval {{ iface_config.hello_interval }}
 {%         endif %}

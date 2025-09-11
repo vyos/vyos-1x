@@ -211,9 +211,9 @@ def verify_vpp_minimum_memory():
         )
 
 
-def verify_vpp_memory(config: dict):
-    main_heap_size = mem_checks.memory_main_heap(config['settings'])
-    main_heap_page_size = mem_checks.main_heap_page_size(config['settings'])
+def verify_vpp_main_heap_size(settings: dict):
+    main_heap_size = mem_checks.memory_main_heap(settings)
+    main_heap_page_size = mem_checks.main_heap_page_size(settings)
 
     if main_heap_size < 1 << 30:
         raise ConfigError('The main heap size must be greater than or equal to 1G')
@@ -225,28 +225,54 @@ def verify_vpp_memory(config: dict):
             f'The main heap size must be greater than or equal to page-size ({readable_heap_page})'
         )
 
-    available_memory = mem_checks.get_total_hugepages_memory()
-    memory_required = mem_checks.total_memory_required(config['settings'])
 
-    if main_heap_size > available_memory:
-        available_memory_in_mb = bytes_to_human_memory(available_memory, 'M')
-        raise ConfigError(
-            f'"memory main-heap-size" must not be greater than hugepages memory. Reduce to {available_memory_in_mb} or less'
+def verify_vpp_memory(config: dict):
+    memory_required = mem_checks.total_memory_required(config['settings'])
+    memory_available = mem_checks.get_available_memory()
+
+    # Check if there is a config currently active
+    # If yes, calculate how much memory it consumes (only for 4k pages)
+    # and exclude it from required memory
+    if config.get('effective'):
+        memory_effective = mem_checks.total_memory_required(
+            config['effective']['settings']
         )
 
-    memory_required = round(memory_required / 1024**3, 1)
-    available_memory = round(available_memory / 1024**3, 1)
+        # If we want to reduce memory configs then we don't need
+        # to check 4K memory type
+        if memory_effective['4K'] >= memory_required['4K']:
+            del memory_required['4K']
+        else:
+            # Get memory currently used by VPP and add it to available memory
+            memory_used = mem_checks.get_vpp_used_memory()
+            memory_available['4K'] += memory_used
 
-    # Allow 10% error margin
-    allowed_margin = memory_required * 0.1
+    memory_required_gb = {k: round(v / 1024**3, 1) for k, v in memory_required.items()}
+    memory_available_gb = {
+        k: round(v / 1024**3, 1) for k, v in memory_available.items()
+    }
 
-    # Compare HugePage memory with required memory for VPP
-    if memory_required > available_memory + allowed_margin:
+    errors = {}
+    for page_size, req_gb in memory_required_gb.items():
+        avail_gb = memory_available_gb.get(page_size, 0)
+
+        if req_gb > avail_gb:
+            label = 'System' if page_size == '4K' else f'{page_size} HugePages'
+            errors[page_size] = (
+                f'{label} memory: available {avail_gb} GB, '
+                f'required {memory_required_gb[page_size]} GB'
+            )
+
+    if errors:
         raise ConfigError(
-            f'Not enough free hugepage memory to start VPP: '
-            f'available: {available_memory} GB, required: {memory_required} GB. '
-            'Please add kernel memory options for HugePages '
-            '"set system option kernel memory hugepage-size ..." and reboot'
+            'Not enough free memory to start VPP! '.ljust(72)
+            + '. '.join([line.ljust(72) for line in errors.values()])
+            + (
+                'To add HugePages memory please use command '.ljust(72)
+                + '"set system option kernel memory hugepage-size ..." and reboot!'
+                if any(k in errors for k in ('2M', '1G'))
+                else ''
+            )
         )
 
 
@@ -291,7 +317,7 @@ def verify_vpp_cpu_main_core(cpu_settings: dict) -> None:
         )
 
 
-def verify_vpp_settings_cpu_workers(cpu_settings: dict) -> int:
+def verify_vpp_settings_cpu_workers(cpu_settings: dict):
     """
     Verify that the system has enough available CPU cores
     to run a given amount of worker processes (1 worker/core)
@@ -305,10 +331,8 @@ def verify_vpp_settings_cpu_workers(cpu_settings: dict) -> int:
             f'(reduce to {available_cores} or less)'
         )
 
-    return workers
 
-
-def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict) -> int:
+def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict):
     """
     Verify that the CPU cores provided to the config are free and can be used by VPP
     """
@@ -339,8 +363,6 @@ def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict) -> int:
 
     if len(all_core_nums) > cpu_checks.available_cores_count(cpu_settings):
         raise ConfigError(f'{error_msg}: Not enough free CPUs in the system.')
-
-    return len(all_core_nums)
 
 
 def verify_vpp_nat44_workers(workers: int, nat44_workers: list):
@@ -416,3 +438,15 @@ def verify_routes_count(settings: dict, workers: int):
         'Extensive use of features like ACLs, NAT and others may reduce the numbers above. '
         'Please read the documentation for details: https://docs.vyos.io/'
     )
+
+
+def verify_vpp_buffers(settings: dict, workers: int):
+    buffers_configured = int(settings['buffers']['buffers_per_numa'])
+
+    buffers_required = mem_checks.buffers_required(settings, workers)
+
+    if buffers_required > buffers_configured:
+        raise ConfigError(
+            'Not enough buffers to initialize RX/TX queues for interfaces. '
+            f'Set "vpp settings buffers buffers-per-numa" to {buffers_required} or higher'
+        )

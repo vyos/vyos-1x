@@ -14,10 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import ipaddress
-import json
-import os
 import re
+import os
+import json
 from urllib.parse import urlparse
 
 from passlib.hosts import linux_context
@@ -175,8 +174,18 @@ def verify(login):
                 if 'key' not in pubkey_options:
                     raise ConfigError(f'Missing key for public-key "{pubkey}"!')
 
-    if {'radius', 'tacacs'} <= set(login) or {'radius', 'saml'} <= set(login) or {'saml', 'tacacs'} <= set(login):
-        raise ConfigError('Using RADIUS and TACACS and SAML at the same time is not supported!')
+            if 'operator' in user_config:
+                op_groups = dict_search('operator.group', user_config)
+                if op_groups:
+                    for og in op_groups:
+                        if dict_search(f'operator_group.{og}', login) is None:
+                            raise ConfigError(f'Operator group {og} does not exist')
+                else:
+                    raise ConfigError(f'User {user} is configured as an operator but is not assigned to any operator groups')
+
+    # No more than 1 authentication methods
+    if len({'radius', 'tacacs', 'saml'}.intersection(set(login))) > 1:
+        raise ConfigError('Only one of RADIUS, TACACS and SAML can be used at the same time!')
 
     # At lease one RADIUS server must not be disabled
     if 'radius' in login:
@@ -379,6 +388,28 @@ def generate(login):
         if os.path.isfile(autologout_file):
             os.unlink(autologout_file)
 
+    # Operator groups and group membership
+    operator_config = {'users': {}, 'groups': {}}
+    if 'user' in login:
+        for user, user_config in login['user'].items():
+            op_groups = dict_search('operator.group', user_config)
+            if op_groups:
+                operator_config['users'][user] = op_groups
+
+    if 'operator_group' in login:
+        operator_config['groups'] = login['operator_group']
+
+        # Convert permissions strings to list
+        # so that the operational command runner doesn't have to
+        for g in operator_config['groups']:
+            policy = dict_search(f'command_policy.allow', operator_config['groups'][g])
+            if policy is not None:
+                policy = list(map(lambda s: re.split(r'\s+', s), policy))
+                operator_config['groups'][g]['command_policy']['allow'] = policy
+
+    with open('/etc/vyos/operators.json', 'w') as of:
+        json.dump(operator_config, of)
+
     return None
 
 
@@ -408,10 +439,11 @@ def apply(login):
             if tmp: command += f" --home '{tmp}'"
             else: command += f" --home '/home/{user}'"
 
-            tmp = dict_search('type', user_config)
-            # PERLE - for now, if the config is empty (ie config.boot.default) for user type, assume adminstrator
-            if tmp == 'operator' or tmp == 'operator+': command += f' --groups frr,frrvty,vyattaop,sudo,adm,dip,disk,_kea {user}'
-            else: command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea {user}'
+            if 'operator' not in user_config:
+                command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea'
+
+            command += f' {user}'
+
             try:
                 cmd(command)
                 # we should not rely on the value stored in user_config['home_directory'], as a

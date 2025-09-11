@@ -55,14 +55,15 @@ verbose=1
 ac-name={{ access_concentrator }}
 {% if interface is vyos_defined %}
 {%     for iface, iface_config in interface.items() %}
+{%         set vpp_cp_opt = ',vpp-cp=true' if iface_config.vpp_cp is vyos_defined else '' %}
 {%         if iface_config.vlan is not vyos_defined %}
-interface={{ iface }}
+interface={{ iface }}{{ vpp_cp_opt }}
 {%         else %}
 {%             for vlan in iface_config.vlan %}
 interface=re:^{{ iface }}\.{{ vlan | range_to_regex }}$
 {%             endfor %}
 {%             if iface_config.combined is vyos_defined %}
-interface={{ iface }}
+interface={{ iface }}{{ vpp_cp_opt }}
 {%             endif %}
 {%             if iface_config.vlan_mon is vyos_defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}

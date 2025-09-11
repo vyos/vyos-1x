@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+
 import os
 import unittest
 
@@ -22,6 +24,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.firewall import find_nftables_rule
 from vyos.utils.file import read_file
 from vyos.utils.file import read_json
+from vyos.utils.process import cmd
 from vyos.utils.system import sysctl_read
 from vyos.xml_ref import default_value
 
@@ -33,6 +36,28 @@ def get_sysctl(parameter):
 
 def get_logger_config():
     return read_json('/run/vyos-conntrack-logger.conf')
+
+
+def chain_priority_conntrack_compatible(table, chain, chain_type, hook):
+    # Conntrack hooks into nftables at priority -200
+    # Verify that base chain priority is a number greater than -200 (lower priority)
+    # Priority must be lower than conntrack in order to read or update conntrack entries
+
+    chain_contents = cmd(f'sudo nft list chain {table} {chain}')
+    chain_search = re.search(
+        rf'type {chain_type} hook {hook} priority (-*\d+)\;',
+        chain_contents,
+    )
+
+    if chain_search is None:
+        return False
+
+    chain_priority = int(chain_search.group(1))
+
+    if chain_priority <= -200:
+        return False
+
+    return True
 
 class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -256,6 +281,43 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['firewall'])
 
     def test_conntrack_timeout_custom(self):
+        # No timeout rules configured yet, so there should be no VYOS_CT_TIMEOUT chain or timeout base chains
+        # Timeout base chains MUST have priority higher than -200 because conntrack hooks at -200
+        prerouting_timeout_chain = [
+            ['chain PREROUTING_CT_TIMEOUT {'],
+            ['type filter hook prerouting priority'],
+            ['jump VYOS_CT_TIMEOUT'],
+        ]
+        output_timeout_chain = [
+            ['chain OUTPUT_CT_TIMEOUT {'],
+            ['type filter hook output priority'],
+            ['jump VYOS_CT_TIMEOUT'],
+        ]
+
+        # None of these chains should exist yet
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'VYOS_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'VYOS_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT', inverse=True
+        )
 
         self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'source', 'address', '192.0.2.1'])
         self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'destination', 'address', '192.0.2.2'])
@@ -268,6 +330,50 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '2', 'source', 'address', '198.51.100.1'])
         self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '2', 'protocol', 'udp', 'unreplied', '55'])
 
+        self.cli_commit()
+
+        # We now have IPv4 custom timeout rules, so only the IPv4 table should contain the chains
+        self.verify_nftables_chain_exists('ip vyos_conntrack', 'VYOS_CT_TIMEOUT')
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'VYOS_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists('ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT')
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists('ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT')
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain(
+            prerouting_timeout_chain, 'ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT'
+        )
+
+        self.verify_nftables_chain(
+            output_timeout_chain, 'ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT'
+        )
+
+        # Verify that IPv4 base chain priority is a number greater than -200
+        if not chain_priority_conntrack_compatible(
+            'ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT', 'filter', 'prerouting'
+        ):
+            self.fail(
+                'PREROUTING_CT_TIMEOUT base chain must have priority > -200 to read and update conntrack entries'
+            )
+
+        if not chain_priority_conntrack_compatible(
+            'ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT', 'filter', 'output'
+        ):
+            self.fail(
+                'OUTPUT_CT_TIMEOUT base chain must have priority > -200 to read and update conntrack entries'
+            )
+
         self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'source', 'address', '2001:db8::1'])
         self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'inbound-interface', 'eth2'])
         self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'protocol', 'tcp', 'time-wait', '22'])
@@ -275,6 +381,47 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        # Now we have both IPv4 and IPv6 custom timeout rules
+        # The chains should exist in both the IPv4 and IPv6 tables
+        self.verify_nftables_chain_exists('ip vyos_conntrack', 'VYOS_CT_TIMEOUT')
+        self.verify_nftables_chain_exists('ip6 vyos_conntrack', 'VYOS_CT_TIMEOUT')
+        self.verify_nftables_chain_exists('ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT')
+        self.verify_nftables_chain_exists('ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT')
+        self.verify_nftables_chain_exists('ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT')
+        self.verify_nftables_chain_exists('ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT')
+
+        self.verify_nftables_chain(
+            prerouting_timeout_chain, 'ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT'
+        )
+
+        self.verify_nftables_chain(
+            prerouting_timeout_chain, 'ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT'
+        )
+
+        self.verify_nftables_chain(
+            output_timeout_chain, 'ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT'
+        )
+
+        self.verify_nftables_chain(
+            output_timeout_chain, 'ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT'
+        )
+
+        # Verify that IPv6 base chain priority is a number greater than -200
+        if not chain_priority_conntrack_compatible(
+            'ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT', 'filter', 'prerouting'
+        ):
+            self.fail(
+                'PREROUTING_CT_TIMEOUT base chain must have priority > -200 to read and update conntrack entries'
+            )
+
+        if not chain_priority_conntrack_compatible(
+            'ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT', 'filter', 'output'
+        ):
+            self.fail(
+                'OUTPUT_CT_TIMEOUT base chain must have priority > -200 to read and update conntrack entries'
+            )
+
+        # Verify rules are correctly output in nftables
         nftables_search = [
             ['ct timeout ct-timeout-1 {'],
             ['protocol tcp'],
@@ -297,6 +444,65 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_conntrack')
         self.verify_nftables(nftables6_search, 'ip6 vyos_conntrack')
+
+        # remove IPv4 custom timeout rules and verify only the IPv6 chains still exist
+        self.cli_delete(base_path + ['timeout', 'custom', 'ipv4'])
+        self.cli_commit()
+
+        # only the IPv6 chains should remain
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'VYOS_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists('ip6 vyos_conntrack', 'VYOS_CT_TIMEOUT')
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists('ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT')
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists('ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT')
+
+        self.verify_nftables_chain(
+            prerouting_timeout_chain, 'ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT'
+        )
+
+        self.verify_nftables_chain(
+            output_timeout_chain, 'ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT'
+        )
+
+        # remove custom timeout config and verify all chains are gone once again
+        self.cli_delete(base_path + ['timeout'])
+        self.cli_commit()
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'VYOS_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'VYOS_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'PREROUTING_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'PREROUTING_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip vyos_conntrack', 'OUTPUT_CT_TIMEOUT', inverse=True
+        )
+
+        self.verify_nftables_chain_exists(
+            'ip6 vyos_conntrack', 'OUTPUT_CT_TIMEOUT', inverse=True
+        )
 
         self.cli_delete(['firewall'])
 
