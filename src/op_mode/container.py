@@ -55,7 +55,7 @@ def clean_layer(name: str) -> int:
 
     purge_layer_by_id(layer_id)
 
-    # Reinitate the container's overlay layer
+    # Reinitiate the container's overlay layer
     cmd(f"rm -f /run/{unit}.cid /run/{unit}.pid")
     cmd(f"systemctl reset-failed {unit}")
     result = run(f"systemctl start {unit}")
