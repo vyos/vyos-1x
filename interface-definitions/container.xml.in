@@ -566,6 +566,24 @@
         <children>
           #include <include/generic-description.xml.i>
           #include <include/interface/mtu-68-16000.xml.i>
+          <leafNode name="gateway">
+            <properties>
+              <help>Gateway address to use for this network</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 gateway address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 gateway address</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
           <leafNode name="prefix">
             <properties>
               <help>Prefix which allocated to that network</help>
@@ -590,6 +608,62 @@
               <valueless/>
             </properties>
           </leafNode>
+          <node name="type">
+            <properties>
+              <help>Network type (default: bridge)</help>
+            </properties>
+            <children>
+              <leafNode name="bridge">
+                <properties>
+                  <help>Bridge network</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="macvlan">
+                <properties>
+                  <help>MACVLAN network</help>
+                </properties>
+                <children>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>MACVLAN mode</help>
+                      <completionHelp>
+                        <list>bridge private vepa</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>bridge</format>
+                        <description>Containers act as separate hosts on the parent network</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>private</format>
+                        <description>Containers are isolated from the host and each other</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>vepa</format>
+                        <description>Containers send all traffic through the parent switch for forwarding</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>bridge|private|vepa</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid mode</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="parent">
+                    <properties>
+                      <help>Parent network interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --type ethernet --type bonding --type bridge</script>
+                      </completionHelp>
+                      <constraint>
+                        <regex>((bond|br|eth)[0-9]+(\.[0-9]+)?)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid parent interface</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>

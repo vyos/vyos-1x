@@ -17,6 +17,7 @@
 import os
 import re
 
+from ipaddress import ip_interface
 from sys import exit
 
 from vyos.config import Config
@@ -24,119 +25,19 @@ from vyos.config import config_dict_merge
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
-from vyos.utils.process import call
-from vyos.utils.process import cmd
-from vyos.utils.process import run
+from vyos.utils.file import read_file
 from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
+from vyos import ipt_netflow
 airbag.enable()
 
-uacctd_conf_path = '/run/pmacct/uacctd.conf'
-systemd_service = 'uacctd.service'
-systemd_override = f'/run/systemd/system/{systemd_service}.d/override.conf'
-nftables_nflog_table = 'raw'
-nftables_nflog_chain = 'VYOS_PREROUTING_HOOK'
-egress_nftables_nflog_table = 'inet mangle'
-egress_nftables_nflog_chain = 'FORWARD'
+ipt_netflow_conf_path = '/etc/modprobe.d/ipt_NETFLOW.conf'
 
-# get nftables rule dict for chain in table
-def _nftables_get_nflog(chain, table):
-    # define list with rules
-    rules = []
-
-    # prepare regex for parsing rules
-    rule_pattern = '[io]ifname "(?P<interface>[\w\.\*\-]+)".*handle (?P<handle>[\d]+)'
-    rule_re = re.compile(rule_pattern)
-
-    # run nftables, save output and split it by lines
-    nftables_command = f'nft -a list chain {table} {chain}'
-    tmp = cmd(nftables_command, message='Failed to get flows list')
-    # parse each line and add information to list
-    for current_rule in tmp.splitlines():
-        if 'FLOW_ACCOUNTING_RULE' not in current_rule:
-            continue
-        current_rule_parsed = rule_re.search(current_rule)
-        if current_rule_parsed:
-            groups = current_rule_parsed.groupdict()
-            rules.append({ 'interface': groups["interface"], 'table': table, 'handle': groups["handle"] })
-
-    # return list with rules
-    return rules
-
-def _nftables_config(configured_ifaces, direction, length=None):
-    # define list of nftables commands to modify settings
-    nftable_commands = []
-    nftables_chain = nftables_nflog_chain
-    nftables_table = nftables_nflog_table
-
-    if direction == "egress":
-        nftables_chain = egress_nftables_nflog_chain
-        nftables_table = egress_nftables_nflog_table
-
-    # prepare extended list with configured interfaces
-    configured_ifaces_extended = []
-    for iface in configured_ifaces:
-        configured_ifaces_extended.append({ 'iface': iface })
-
-    # get currently configured interfaces with nftables rules
-    active_nflog_rules = _nftables_get_nflog(nftables_chain, nftables_table)
-
-    # compare current active list with configured one and delete excessive interfaces, add missed
-    active_nflog_ifaces = []
-    for rule in active_nflog_rules:
-        interface = rule['interface']
-        if interface not in configured_ifaces:
-            table = rule['table']
-            handle = rule['handle']
-            nftable_commands.append(f'nft delete rule {table} {nftables_chain} handle {handle}')
-        else:
-            active_nflog_ifaces.append({
-                'iface': interface,
-            })
-
-    # do not create new rules for already configured interfaces
-    for iface in active_nflog_ifaces:
-        if iface in active_nflog_ifaces and iface in configured_ifaces_extended:
-            configured_ifaces_extended.remove(iface)
-
-    # create missed rules
-    for iface_extended in configured_ifaces_extended:
-        iface = iface_extended['iface']
-        iface_prefix = "o" if direction == "egress" else "i"
-        rule_definition = f'{iface_prefix}ifname "{iface}" counter log group 2 snaplen {length} queue-threshold 100 comment "FLOW_ACCOUNTING_RULE"'
-        nftable_commands.append(f'nft insert rule {nftables_table} {nftables_chain} {rule_definition}')
-        # Also add IPv6 ingres logging
-        if nftables_table == nftables_nflog_table:
-            nftable_commands.append(f'nft insert rule ip6 {nftables_table} {nftables_chain} {rule_definition}')
-
-    # change nftables
-    for command in nftable_commands:
-        cmd(command, raising=ConfigError)
-
-
-def _nftables_trigger_setup(operation: str) -> None:
-    """Add a dummy rule to unlock the main pmacct loop with a packet-trigger
-
-    Args:
-        operation (str): 'add' or 'delete' a trigger
-    """
-    # check if a chain exists
-    table_exists = False
-    if run('nft -snj list table ip pmacct') == 0:
-        table_exists = True
-
-    if operation == 'delete' and table_exists:
-        nft_cmd: str = 'nft delete table ip pmacct'
-        cmd(nft_cmd, raising=ConfigError)
-    if operation == 'add' and not table_exists:
-        nft_cmds: list[str] = [
-            'nft add table ip pmacct',
-            'nft add chain ip pmacct pmacct_out { type filter hook output priority raw - 50 \\; policy accept \\; }',
-            'nft add rule ip pmacct pmacct_out oif lo ip daddr 127.0.254.0 counter log group 2 snaplen 1 queue-threshold 0 comment NFLOG_TRIGGER'
-        ]
-        for nft_cmd in nft_cmds:
-            cmd(nft_cmd, raising=ConfigError)
+# Variable to store between generate and apply
+# whether module configuration was changed
+# and module reload is needed
+need_reload = True
 
 
 def get_config(config=None):
@@ -166,104 +67,128 @@ def get_config(config=None):
 
     return flow_accounting
 
+
 def verify(flow_config):
     if not flow_config:
         return None
 
-    # check if collector is enabled
-    if 'netflow' not in flow_config and 'disable_imt' in flow_config:
-        raise ConfigError('You need to configure NetFlow, ' \
-                          'or not set "disable-imt" for flow-accounting!')
-
     # Check if at least one interface is configured
-    if 'interface' not in flow_config:
+    if 'netflow' not in flow_config or 'interface' not in flow_config['netflow']:
         raise ConfigError('Flow accounting requires at least one interface to ' \
                           'be configured!')
 
     # check that all configured interfaces exists in the system
-    for interface in flow_config['interface']:
+    for interface in flow_config['netflow']['interface']:
         verify_interface_exists(flow_config, interface, warning_only=True)
 
+    # check if at least one NetFlow collector is configured
+    if 'server' not in flow_config['netflow']:
+        raise ConfigError('You need to configure at least one NetFlow server!')
     verify_vrf(flow_config)
 
-    # check NetFlow configuration
-    if 'netflow' in flow_config:
-        # check if vrf is defined for netflow
-        netflow_vrf = None
-        if 'vrf' in flow_config:
-            netflow_vrf = flow_config['vrf']
+    # check if vrf is defined for netflow
+    netflow_vrf = None
+    if 'vrf' in flow_config:
+        netflow_vrf = flow_config['vrf']
 
-        # check if at least one NetFlow collector is configured if NetFlow configuration is presented
-        if 'server' not in flow_config['netflow']:
-            raise ConfigError('You need to configure at least one NetFlow server!')
+    # Check if configured netflow server source-address exist in the system
+    # Check if configured netflow server source-address matches protocol of server
+    # Check if configured netflow server source-interface exists
+    for server, data in flow_config['netflow']['server'].items():
+        if 'source_address' in data and 'source_interface' in data:
+            raise ConfigError(
+                f'Configured "netflow server {server}" cannot have both "source-address" and "source-interface" fields'
+            )
 
-        # Check if configured netflow source-address exist in the system
-        if 'source_address' in flow_config['netflow']:
-            if not is_addr_assigned(flow_config['netflow']['source_address'], netflow_vrf):
-                tmp = flow_config['netflow']['source_address']
-                raise ConfigError(f'Configured "netflow source-address {tmp}" does not exist on the system!')
+        if 'source_address' in data:
+            if not is_addr_assigned(data['source_address'], netflow_vrf):
+                raise ConfigError(
+                    f'Configured "netflow server {server} source-address {data["source_address"]}" does not exist on the system!'
+                )
+            if (
+                ip_interface(server).version
+                != ip_interface(data['source_address']).version
+            ):
+                raise ConfigError(
+                    f'Configured "netflow server {server} source-address {data["source_address"]}" protocol doesn\'t match server protocol'
+                )
 
-        # Check if engine-id compatible with selected protocol version
-        if 'engine_id' in flow_config['netflow']:
-            v5_filter = '^(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5]):(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])$'
-            v9v10_filter = '^(\d|[1-9]\d{1,8}|[1-3]\d{9}|4[01]\d{8}|42[0-8]\d{7}|429[0-3]\d{6}|4294[0-8]\d{5}|42949[0-5]\d{4}|429496[0-6]\d{3}|4294967[01]\d{2}|42949672[0-8]\d|429496729[0-5])$'
-            engine_id = flow_config['netflow']['engine_id']
-            version = flow_config['netflow']['version']
+        if 'source_interface' in data:
+            verify_interface_exists(
+                flow_config, data['source_interface'], warning_only=True
+            )
 
-            if flow_config['netflow']['version'] == '5':
-                regex_filter = re.compile(v5_filter)
-                if not regex_filter.search(engine_id):
-                    raise ConfigError(f'You cannot use NetFlow engine-id "{engine_id}" '\
-                                      f'together with NetFlow protocol version "{version}"!')
-            else:
-                regex_filter = re.compile(v9v10_filter)
-                if not regex_filter.search(flow_config['netflow']['engine_id']):
-                    raise ConfigError(f'Can not use NetFlow engine-id "{engine_id}" together '\
-                                      f'with NetFlow protocol version "{version}"!')
+    # Check if engine-id compatible with selected protocol version
+    if 'engine_id' in flow_config['netflow']:
+        v5_filter = '^(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5]):(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])$'
+        v9v10_filter = '^(\d|[1-9]\d{1,8}|[1-3]\d{9}|4[01]\d{8}|42[0-8]\d{7}|429[0-3]\d{6}|4294[0-8]\d{5}|42949[0-5]\d{4}|429496[0-6]\d{3}|4294967[01]\d{2}|42949672[0-8]\d|429496729[0-5])$'
+        engine_id = flow_config['netflow']['engine_id']
+        version = flow_config['netflow']['version']
+
+        if flow_config['netflow']['version'] == '5':
+            regex_filter = re.compile(v5_filter)
+            if not regex_filter.search(engine_id):
+                raise ConfigError(
+                    f'You cannot use NetFlow engine-id "{engine_id}" '
+                    f'together with NetFlow protocol version "{version}"!'
+                )
+        else:
+            regex_filter = re.compile(v9v10_filter)
+            if not regex_filter.search(flow_config['netflow']['engine_id']):
+                raise ConfigError(
+                    f'Can not use NetFlow engine-id "{engine_id}" together '
+                    f'with NetFlow protocol version "{version}"!'
+                )
 
     # return True if all checks were passed
     return True
 
+
 def generate(flow_config):
     if not flow_config:
+        if os.path.exists(ipt_netflow_conf_path):
+            os.unlink(ipt_netflow_conf_path)
         return None
 
-    render(uacctd_conf_path, 'pmacct/uacctd.conf.j2', flow_config)
-    render(systemd_override, 'pmacct/override.conf.j2', flow_config)
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
+    prev_config = read_file(ipt_netflow_conf_path, defaultonfailure='')
+
+    render(ipt_netflow_conf_path, 'ipt-netflow/ipt_NETFLOW.conf.j2', flow_config)
+
+    new_config = read_file(ipt_netflow_conf_path, defaultonfailure='')
+
+    global need_reload
+    need_reload = prev_config != new_config
+
 
 def apply(flow_config):
-    # Check if flow-accounting was removed and define command
+    # When reloading module we need to first remove
+    # all iptables usage of ipt_NETFLOW
+    # When flow_config is disabled everything should be cleaned-up too
+    if need_reload or not flow_config:
+        ipt_netflow.stop()
+
     if not flow_config:
-        _nftables_config([], 'ingress')
-        _nftables_config([], 'egress')
-
-        # Stop flow-accounting daemon and remove configuration file
-        call(f'systemctl stop {systemd_service}')
-        if os.path.exists(uacctd_conf_path):
-            os.unlink(uacctd_conf_path)
-
-        # must be done after systemctl
-        _nftables_trigger_setup('delete')
-
+        if os.path.exists(ipt_netflow_conf_path):
+            os.unlink(ipt_netflow_conf_path)
         return
 
-    # Start/reload flow-accounting daemon
-    call(f'systemctl restart {systemd_service}')
+    ingress_interfaces = []
+    egress_interfaces = []
 
-    # configure nftables rules for defined interfaces
-    if 'interface' in flow_config:
-        _nftables_config(flow_config['interface'], 'ingress', flow_config['packet_length'])
+    # configure iptables for defined interfaces
+    if 'interface' in flow_config['netflow']:
+        ingress_interfaces = flow_config['netflow']['interface']
 
         # configure egress the same way if configured otherwise remove it
         if 'enable_egress' in flow_config:
-            _nftables_config(flow_config['interface'], 'egress', flow_config['packet_length'])
-        else:
-            _nftables_config([], 'egress')
+            egress_interfaces = ingress_interfaces
 
-    # add a trigger for signal processing
-    _nftables_trigger_setup('add')
+    if need_reload:
+        ipt_netflow.start(ingress_interfaces, egress_interfaces)
+    else:
+        ipt_netflow.set_watched_iptables_interfaces(
+            ingress_interfaces, egress_interfaces
+        )
 
 
 if __name__ == '__main__':

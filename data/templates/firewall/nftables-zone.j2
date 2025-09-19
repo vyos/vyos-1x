@@ -12,9 +12,7 @@
         oifname { {{ zone_conf.member.interface | quoted_join(',') }} } counter jump VZONE_{{ zone_name }}
 {%         endif %}
 {%         if 'vrf' in zone_conf.member %}
-{%             for vrf_name in zone_conf.member.vrf %}
-        oifname { "{{ zone_conf['vrf_interfaces'][vrf_name] }}" } counter jump VZONE_{{ zone_name }}
-{%             endfor %}
+        oifname { {{ zone_conf.member.vrf | quoted_join(",") }} } counter jump VZONE_{{ zone_name }}
 {%         endif %}
 {%     endif %}
 {% endfor %}
@@ -69,10 +67,8 @@
         oifname { {{ zone[from_zone].member.interface | quoted_join(",") }} } counter return
 {%                 endif %}
 {%                 if 'vrf' in zone[from_zone].member %}
-{%                     for vrf_name in zone[from_zone].member.vrf %}
-        oifname { "{{ zone[from_zone]['vrf_interfaces'][vrf_name] }}" } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
-        oifname { "{{ zone[from_zone]['vrf_interfaces'][vrf_name] }}" } counter return
-{%                     endfor %}
+        oifname { {{ zone[from_zone].member.vrf | quoted_join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
+        oifname { {{ zone[from_zone].member.vrf | quoted_join(",") }} } counter return
 {%                 endif %}
 {%             endfor %}
 {%         endif %}

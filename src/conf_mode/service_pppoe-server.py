@@ -21,6 +21,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
 from vyos.configdict import is_node_changed
+from vyos.configdiff import get_config_diff, Diff
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
@@ -32,6 +33,7 @@ from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
 from vyos import airbag
+from vyos.vpp.control_vpp import VPPControl
 
 airbag.enable()
 
@@ -54,11 +56,39 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['service', 'pppoe-server']
-    if not conf.exists(base):
-        return None
 
     # retrieve common dictionary keys
     pppoe = get_accel_dict(conf, base, pppoe_chap_secrets)
+
+    if conf.exists(['vpp']):
+        pppoe['vpp_config'] = conf.get_config_dict(
+            ['vpp'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+        )
+
+    diff = get_config_diff(conf)
+    node_diff = diff.get_child_nodes_diff(
+        base + ['interface'], expand_nodes=Diff.DELETE, recursive=True
+    )
+
+    pppoe['vpp_cp_interfaces'] = {
+        'add': [
+            ifname
+            for ifname, iface_conf in pppoe.get('interface', {}).items()
+            if 'vpp_cp' in iface_conf
+        ],
+        'delete': [
+            iface
+            for iface, iface_config in node_diff.get('delete').items()
+            if 'vpp-cp' in iface_config
+        ],
+    }
+
+    if not conf.exists(base):
+        pppoe['remove'] = True
+        return pppoe
 
     if dict_search('client_ip_pool', pppoe):
         # Multiple named pools require ordered values T5099
@@ -110,7 +140,7 @@ def verify_pado_delay(pppoe):
                 )
 
 def verify(pppoe):
-    if not pppoe:
+    if 'remove' in pppoe:
         return None
 
     verify_accel_ppp_authentication(pppoe)
@@ -129,11 +159,28 @@ def verify(pppoe):
         if 'vlan_mon' in interface_config and not 'vlan' in interface_config:
             raise ConfigError('Option "vlan-mon" requires "vlan" to be set!')
 
+    vpp_cp_interfaces = pppoe.get('vpp_cp_interfaces', {}).get('add', [])
+    if vpp_cp_interfaces:
+        try:
+            vpp = VPPControl()
+        except Exception:
+            raise ConfigError(
+                'PPPoE control-plane integration with VPP is enabled on '
+                f'interface(s) {", ".join(vpp_cp_interfaces)} '
+                'but VPP service was not started'
+            )
+
+        for iface in vpp_cp_interfaces:
+            if vpp.get_sw_if_index(iface) is None:
+                raise ConfigError(
+                    f'{iface} should be a VPP interface for control-plane integration'
+                )
+
     return None
 
 
 def generate(pppoe):
-    if not pppoe:
+    if 'remove' in pppoe:
         return None
 
     render(pppoe_conf, 'accel-ppp/pppoe.config.j2', pppoe)
@@ -146,7 +193,15 @@ def generate(pppoe):
 
 def apply(pppoe):
     systemd_service = 'accel-ppp@pppoe.service'
-    if not pppoe:
+
+    # delete pppoe mapping in vpp
+    vpp_cp_ifaces_delete = pppoe.get('vpp_cp_interfaces', {}).get('delete', [])
+    if 'vpp_config' in pppoe and vpp_cp_ifaces_delete:
+        vpp = VPPControl()
+        for iface in vpp_cp_ifaces_delete:
+            vpp.map_pppoe_interface(iface, is_add=False)
+
+    if 'remove' in pppoe:
         call(f'systemctl stop {systemd_service}')
         for file in [pppoe_conf, pppoe_chap_secrets]:
             if os.path.exists(file):
@@ -157,6 +212,14 @@ def apply(pppoe):
         call(f'systemctl restart {systemd_service}')
     else:
         call(f'systemctl reload-or-restart {systemd_service}')
+
+    # add pppoe mapping in vpp
+    vpp_cp_ifaces_add = pppoe.get('vpp_cp_interfaces', {}).get('add', [])
+    if vpp_cp_ifaces_add:
+        vpp = VPPControl()
+        for iface in vpp_cp_ifaces_add:
+            vpp.map_pppoe_interface(iface, is_add=True)
+
 
 if __name__ == '__main__':
     try:

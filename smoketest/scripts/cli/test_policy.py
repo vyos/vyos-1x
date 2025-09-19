@@ -938,12 +938,24 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'tag': tag,
                         },
                     },
+                    '7' : {
+                        'action' : 'deny',
+                        'match' : {
+                            'rpki-comm-invalid': '',
+                        },
+                    },
                     '10' : {
                         'action' : 'permit',
                         'match' : {
                             'community' : community_list,
                             'interface' : test_interface,
                             'rpki-not-found': '',
+                        },
+                    },
+                    '12' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'rpki-comm-not-found': '',
                         },
                     },
                     '15' : {
@@ -954,6 +966,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         },
                         'on-match' : {
                             'next' : '',
+                        },
+                    },
+                    '17' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'rpki-comm-valid': '',
                         },
                     },
                     '20' : {
@@ -1268,6 +1286,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'rpki', 'notfound'])
                     if 'rpki-valid' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'rpki', 'valid'])
+                    if 'rpki-comm-invalid' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'rpki-extcommunity', 'invalid'])
+                    if 'rpki-comm-not-found' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'rpki-extcommunity', 'notfound'])
+                    if 'rpki-comm-valid' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'rpki-extcommunity', 'valid'])
                     if 'protocol' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'protocol', rule_config['match']['protocol']])
                     if 'source-vrf' in rule_config['match']:
@@ -1449,6 +1473,15 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'rpki-valid' in rule_config['match']:
                         tmp = f'match rpki valid'
+                        self.assertIn(tmp, config)
+                    if 'rpki-comm-invalid' in rule_config['match']:
+                        tmp = f'match rpki-extcommunity invalid'
+                        self.assertIn(tmp, config)
+                    if 'rpki-comm-not-found' in rule_config['match']:
+                        tmp = f'match rpki-extcommunity notfound'
+                        self.assertIn(tmp, config)
+                    if 'rpki-comm-valid' in rule_config['match']:
+                        tmp = f'match rpki-extcommunity valid'
                         self.assertIn(tmp, config)
                     if 'source-vrf' in rule_config['match']:
                         tmp = f'match source-vrf {rule_config["match"]["source-vrf"]}'

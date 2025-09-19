@@ -255,12 +255,26 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def test_ospf_07_redistribute(self):
         metric = '15'
         metric_type = '1'
-        redistribute = ['babel', 'bgp', 'connected', 'isis', 'kernel', 'nhrp', 'rip', 'static']
+        table_id = '21'
+        redistribute = [
+            'babel',
+            'bgp',
+            'connected',
+            'isis',
+            'kernel',
+            'nhrp',
+            'rip',
+            'static',
+            'table',
+        ]
 
         for protocol in redistribute:
-            self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])
-            self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
-            self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
+            redistr_base = base_path + ['redistribute', protocol]
+            if protocol == 'table':
+                redistr_base += [table_id]
+            self.cli_set(redistr_base + ['metric', metric])
+            self.cli_set(redistr_base + ['route-map', route_map])
+            self.cli_set(redistr_base + ['metric-type', metric_type])
 
         # commit changes
         self.cli_commit()
@@ -269,7 +283,14 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('router ospf', endsection='^exit')
         self.assertIn(f'router ospf', frrconfig)
         for protocol in redistribute:
-            self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+            if protocol == 'table':
+                protocolstr = f'table-direct {table_id}'
+            else:
+                protocolstr = protocol
+            self.assertIn(
+                f' redistribute {protocolstr} metric {metric} metric-type {metric_type} route-map {route_map}',
+                frrconfig,
+            )
 
     def test_ospf_08_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']

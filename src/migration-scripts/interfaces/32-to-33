@@ -13,28 +13,41 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# T6318: WiFi country-code should be set system-wide instead of per-device
+
+# T7646: restore behavior of IPv6 default route if only dhcpv6 was defined but
+#        not "ipv6 address autoconf"
 
 from vyos.configtree import ConfigTree
 
-base = ['interfaces', 'wireless']
-
 def migrate(config: ConfigTree) -> None:
-    if not config.exists(base):
-        # Nothing to do
-        return
+    for type in config.list_nodes(['interfaces']):
+        for interface in config.list_nodes(['interfaces', type]):
+            iface_base_path = ['interfaces', type, interface]
+            dhcpv6_addr_path = iface_base_path + ['address', 'dhcpv6']
+            autoconf_path = iface_base_path + ['ipv6', 'address', 'autoconf']
+            if config.exists(dhcpv6_addr_path) and not config.exists(autoconf_path):
+                config.set(autoconf_path)
 
-    installed = False
-    for interface in config.list_nodes(base):
-        cc_path = base + [interface, 'country-code']
-        if config.exists(cc_path):
-            tmp = config.return_value(cc_path)
-            config.delete(cc_path)
+            vif_path = iface_base_path + ['vif']
+            if config.exists(vif_path):
+                for vif in config.list_nodes(vif_path):
+                    vif_dhcpv6_addr_path = vif_path + [vif, 'address']
+                    vif_autoconf_path = vif_path + [vif, 'ipv6', 'address', 'autoconf']
+                    if config.exists(vif_dhcpv6_addr_path) and not config.exists(vif_autoconf_path):
+                        config.set(vif_autoconf_path)
 
-            # There can be only ONE wireless country-code per device, everything
-            # else makes no sense as a WIFI router can not operate in two
-            # different countries
-            if not installed:
-                config.set(['system', 'wireless', 'country-code'], value=tmp)
-                installed = True
+            vif_s_path = iface_base_path + ['vif-s']
+            if config.exists(vif_s_path):
+                for vif_s in config.list_nodes(vif_s_path):
+                    vif_s_dhcpv6_addr_path = vif_s_path + [vif_s, 'address']
+                    vif_s_autoconf_path = vif_s_path + [vif_s, 'ipv6', 'address', 'autoconf']
+                    if config.exists(vif_s_dhcpv6_addr_path) and not config.exists(vif_s_autoconf_path):
+                        config.set(vif_s_autoconf_path)
+
+                    vif_c_path = iface_base_path + ['vif-s', vif_s, 'vif-c']
+                    if config.exists(vif_c_path):
+                        for vif_c in config.list_nodes(vif_c_path):
+                            vif_c_dhcpv6_addr_path = vif_c_path + [vif_c, 'address']
+                            vif_c_autoconf_path = vif_c_path + [vif_c, 'ipv6', 'address', 'autoconf']
+                            if config.exists(vif_c_dhcpv6_addr_path) and not config.exists(vif_c_autoconf_path):
+                                config.set(vif_c_autoconf_path)

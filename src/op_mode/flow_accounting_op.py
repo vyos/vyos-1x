@@ -18,18 +18,16 @@ import sys
 import argparse
 import re
 import ipaddress
-import os.path
 
 from tabulate import tabulate
-from json import loads
-from vyos.utils.commit import commit_in_progress
+from vyos.utils.kernel import is_module_loaded
 from vyos.utils.process import cmd
-from vyos.utils.process import run
 from vyos.logger import syslog
+from vyos.configquery import ConfigTreeQuery
+from vyos import ipt_netflow
 
 # some default values
-uacctd_pidfile = '/var/run/uacctd.pid'
-uacctd_pipefile = '/tmp/uacctd.pipe'
+flows_dump_path = '/proc/net/stat/ipt_netflow_flows'
 
 def parse_port(port):
     try:
@@ -45,7 +43,7 @@ def parse_ports(arg):
     if re.match(r'^\d+$', arg):
         # Single port
         port = parse_port(arg)
-        return {"type": "single", "value": port}
+        return {"type": "single", "values": (port,)}
     elif re.match(r'^\d+\-\d+$', arg):
         # Port range
         ports = arg.split("-")
@@ -53,12 +51,12 @@ def parse_ports(arg):
         if ports[0] > ports[1]:
             raise ValueError("Malformed port range \'{0}\': lower end is greater than the higher".format(arg))
         else:
-            return {"type": "range", "value": (ports[0], ports[1])}
+            return {"type": "range", "values": range(ports[0], ports[1] + 1)}
     elif re.match(r'^\d+,.*\d$', arg):
         # Port list
-        ports = re.split(r',+', arg) # This allows duplicate commad like '1,,2,3,4'
+        ports = re.split(r',+', arg)  # This allows duplicate commas like '1,,2,3,4'
         ports = list(map(parse_port, ports))
-        return {"type": "list", "value": ports}
+        return {"type": "list", "values": ports}
     else:
         raise ValueError("Malformed port spec \'{0}\'".format(arg))
 
@@ -69,9 +67,8 @@ def check_host(host):
         raise ValueError("Invalid host \'{}\', must be a valid IP or IPv6 address".format(host))
 
 # check if flow-accounting running
-def _uacctd_running():
-    command = 'systemctl status uacctd.service > /dev/null'
-    return run(command) == 0
+def _netflow_running():
+    return is_module_loaded(ipt_netflow.module_name)
 
 
 # get list of interfaces
@@ -95,20 +92,56 @@ def _get_ifaces_dict():
 
 # get list of flows
 def _get_flows_list():
-    # run command to get flows list
-    out = cmd(f'/usr/bin/pmacct -s -O json -T flows -p {uacctd_pipefile}',
-              message='Failed to get flows list')
+    # File format:
+    # When MAC disabled:
+    # # hash a dev:i,o proto src:ip,port dst:ip,port nexthop tos,tcpflags,options,tcpoptions packets bytes ts:first,last
+    # 1 c06c 0 4,-1 1 10.2.0.7,0 10.1.0.5,0 0.0.0.0 0,0,0,0 186 15624 92261,131
+    # 2 1e3ca 0 3,-1 1 10.1.0.5,0 10.2.0.7,2048 0.0.0.0 0,0,0,0 186 15624 92261,132
 
-    # read output
-    flows_out = out.splitlines()
+    # When MAC enabled + VLAN fix:
+    # hash a dev:i,o mac:src,dst vlan type proto src:ip,port dst:ip,port nexthop tos,tcpflags,options,tcpoptions packets bytes ts:first,last
+    # 1 11a41 0 4,-1 0c:27:1f:55:00:00,0c:e8:b1:71:00:02 - 0800 1 10.2.0.7,0 10.1.0.5,0 0.0.0.0 0,0,0,0 1182 99288 591502,529
+    # 2 13bc5 0 4,-1 0c:27:1f:55:00:00,0c:e8:b1:71:00:02 - 0800 1 10.2.0.7,0 10.2.0.1,2048 0.0.0.0 0,0,0,0 577 48468 590831,1006
+    # 3 166dd 0 3,-1 0c:f1:0a:d5:00:00,0c:e8:b1:71:00:01 - 0800 1 10.1.0.5,0 10.2.0.7,2048 0.0.0.0 0,0,0,0 1182 99288 591502,529
 
-    # make a list with flows
+
     flows_list = []
-    for flow_line in flows_out:
-        try:
-            flows_list.append(loads(flow_line))
-        except Exception as err:
-            syslog.error('Unable to read flow info: {}'.format(err))
+    with open(flows_dump_path) as f:
+        headers = f.readline()
+        headers = headers.split()
+        for i, h in enumerate(headers):
+
+            if ',' in h and ':' not in h:
+                h = 'extra:' + h
+
+            if ':' in h:
+                key, subkeys = h.split(':', 1)
+                headers[i] = {'key': key, 'subkeys': subkeys.split(',')}
+
+        linenum = 1
+        for flow_line in f:
+            linenum += 1
+            flow_dict = {}
+            flow_line = flow_line.split()
+            if len(flow_line) != len(headers):
+                syslog.error(
+                    f'Unexpected number of elements in {flows_dump_path}, line {linenum}'
+                )
+                continue
+            for i, val in enumerate(flow_line):
+                if isinstance(headers[i], str):
+                    flow_dict[headers[i]] = val
+                elif isinstance(headers[i], dict):
+                    val = val.split(',')
+                    if len(val) != len(headers[i]['subkeys']):
+                        syslog.error(
+                            f"Unexpected number of elements in {flows_dump_path} in column {headers[i]['key']} in line {linenum}"
+                        )
+                        continue
+                    flow_dict[headers[i]['key']] = dict(zip(headers[i]['subkeys'], val))
+                else:
+                    assert False, "Unexpected type of header"
+            flows_list.append(flow_dict)
 
     # return list of flows
     return flows_list
@@ -119,12 +152,15 @@ def _flows_filter(flows, ifaces):
     # predefine filtered flows list
     flows_filtered = []
 
+    def _iface_to_str(iface):
+        if int(iface) in ifaces:
+            return ifaces[int(iface)]
+        return 'unknown'
+
     # add interface names to flows
     for flow in flows:
-        if flow['iface_in'] in ifaces:
-            flow['iface_in_name'] = ifaces[flow['iface_in']]
-        else:
-            flow['iface_in_name'] = 'unknown'
+        flow['iface_in_name'] = _iface_to_str(flow['dev']['i'])
+        flow['iface_out_name'] = _iface_to_str(flow['dev']['o'])
 
     # iterate through flows list
     for flow in flows:
@@ -134,16 +170,19 @@ def _flows_filter(flows, ifaces):
                 continue
         # filter by host
         if cmd_args.host:
-            if flow['ip_src'] != cmd_args.host and flow['ip_dst'] != cmd_args.host:
+            if (
+                flow['src']['ip'] != cmd_args.host
+                and flow['dst']['ip'] != cmd_args.host
+            ):
                 continue
         # filter by ports
         if cmd_args.ports:
-            if cmd_args.ports['type'] == 'single':
-                if flow['port_src'] != cmd_args.ports['value'] and flow['port_dst'] != cmd_args.ports['value']:
-                    continue
-            else:
-                if flow['port_src'] not in cmd_args.ports['value'] and flow['port_dst'] not in cmd_args.ports['value']:
-                    continue
+            # for 'single' it is a tuple with one value, for 'list' - list of ports, for range - range of ports
+            if (
+                int(flow['src']['port']) not in cmd_args.ports['values']
+                and int(flow['dst']['port']) not in cmd_args.ports['values']
+            ):
+                continue
         # add filtered flows to new list
         flows_filtered.append(flow)
 
@@ -159,23 +198,36 @@ def _flows_filter(flows, ifaces):
 # print flow table
 def _flows_table_print(flows):
     # define headers and body
-    table_headers = ['IN_IFACE', 'SRC_MAC', 'DST_MAC', 'SRC_IP', 'DST_IP', 'SRC_PORT', 'DST_PORT', 'PROTOCOL', 'TOS', 'PACKETS', 'FLOWS', 'BYTES']
+    table_headers = [
+        'IN_IFACE',
+        'SRC_MAC',
+        'DST_MAC',
+        'SRC_IP',
+        'DST_IP',
+        'SRC_PORT',
+        'DST_PORT',
+        'PROTOCOL',
+        'TOS',
+        'PACKETS',
+        # 'FLOWS', # What was here in pmacct?
+        'BYTES',
+    ]
     table_body = []
     # convert flows to list
     for flow in flows:
         table_line = [
             flow.get('iface_in_name'),
-            flow.get('mac_src'),
-            flow.get('mac_dst'),
-            flow.get('ip_src'),
-            flow.get('ip_dst'),
-            flow.get('port_src'),
-            flow.get('port_dst'),
-            flow.get('ip_proto'),
-            flow.get('tos'),
+            flow.get('mac', {}).get('src'),
+            flow.get('mac', {}).get('dst'),
+            flow.get('src', {}).get('ip'),
+            flow.get('dst', {}).get('ip'),
+            flow.get('src', {}).get('port'),
+            flow.get('dst', {}).get('port'),
+            flow.get('proto'),
+            flow.get('extra', {}).get('tos'),
             flow.get('packets'),
-            flow.get('flows'),
-            flow.get('bytes')
+            # flow.get('flows'),
+            flow.get('bytes'),
         ]
         table_body.append(table_line)
     # configure and fill table
@@ -190,21 +242,37 @@ def _flows_table_print(flows):
         sys.exit(0)
 
 
-# check if in-memory table is active
-def _check_imt():
-    if not os.path.exists(uacctd_pipefile):
-        print("In-memory table is not available")
-        sys.exit(1)
-
-
 # define program arguments
 cmd_args_parser = argparse.ArgumentParser(description='show flow-accounting')
-cmd_args_parser.add_argument('--action', choices=['show', 'clear', 'restart'], required=True, help='command to flow-accounting daemon')
-cmd_args_parser.add_argument('--filter', choices=['interface', 'host', 'ports', 'top'], required=False,  nargs='*', help='filter flows to display')
-cmd_args_parser.add_argument('--interface', required=False, help='interface name for output filtration')
-cmd_args_parser.add_argument('--host', type=str, required=False, help='host address for output filtering')
-cmd_args_parser.add_argument('--ports', type=str, required=False, help='port number, range or list for output filtering')
-cmd_args_parser.add_argument('--top', type=int, required=False, help='top records for output filtering')
+# 'clear' and 'restart' are not implemented
+cmd_args_parser.add_argument(
+    '--action',
+    choices=['show', 'restart'],
+    default='show',
+    help='show stat or restart module',
+)
+cmd_args_parser.add_argument(
+    '--filter',
+    choices=['interface', 'host', 'ports', 'top'],
+    required=False,
+    nargs='*',
+    help='filter flows to display',
+)
+cmd_args_parser.add_argument(
+    '--interface', required=False, help='interface name for output filtration'
+)
+cmd_args_parser.add_argument(
+    '--host', type=str, required=False, help='host address for output filtering'
+)
+cmd_args_parser.add_argument(
+    '--ports',
+    type=str,
+    required=False,
+    help='port number, range or list for output filtering',
+)
+cmd_args_parser.add_argument(
+    '--top', type=int, required=False, help='top records for output filtering'
+)
 # parse arguments
 cmd_args = cmd_args_parser.parse_args()
 
@@ -219,30 +287,13 @@ except ValueError as e:
     sys.exit(1)
 
 # main logic
-# do nothing if uacctd daemon is not running
-if not _uacctd_running():
+# do nothing if ipt_NETFLOW is not active
+if not _netflow_running():
     print("flow-accounting is not active")
     sys.exit(1)
 
-# restart pmacct daemon
-if cmd_args.action == 'restart':
-    if commit_in_progress():
-        print('Cannot restart flow-accounting while a commit is in progress')
-        exit(1)
-    # run command to restart flow-accounting
-    cmd('systemctl restart uacctd.service',
-        message='Failed to restart flow-accounting')
-
-# clear in-memory collected flows
-if cmd_args.action == 'clear':
-    _check_imt()
-    # run command to clear flows
-    cmd(f'/usr/bin/pmacct -e -p {uacctd_pipefile}',
-        message='Failed to clear flows')
-
 # show table with flows
 if cmd_args.action == 'show':
-    _check_imt()
     # get interfaces index and names
     ifaces_dict = _get_ifaces_dict()
     # get flows
@@ -253,5 +304,23 @@ if cmd_args.action == 'show':
 
     # print flows
     _flows_table_print(tabledata)
+
+if cmd_args.action == 'restart':
+    ipt_netflow.stop()
+
+    # get needed interfaces
+    conf = ConfigTreeQuery()
+    config_path = ['system', 'flow-accounting']
+    if not conf.exists(config_path + ['netflow', 'interface']):
+        print("Flow accounting not configured, exiting")
+        sys.exit(1)
+
+    ingress_interfaces = conf.values(config_path + ['netflow', 'interface'])
+    if conf.exists(config_path + ['enable-egress']):
+        egress_interfaces = ingress_interfaces
+    else:
+        egress_interfaces = []
+
+    ipt_netflow.start(ingress_interfaces, egress_interfaces)
 
 sys.exit(0)

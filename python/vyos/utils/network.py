@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import hashlib
 from socket import AF_INET
 from socket import AF_INET6
+from vyos.utils.process import cmd
 
 def _are_same_ip(one, two):
     from socket import inet_pton
@@ -47,6 +49,49 @@ def is_netns_interface(interface, netns):
     if rc == 0:
         return True
     return False
+
+def get_host_identity() -> str:
+    """
+    Build a stable host identity string for deterministic MAC generation.
+
+    Combines:
+      • The system's HardwareUUID (from /sys/class/dmi/id/product_uuid)
+      • The system hostname
+
+    Both are normalized (lowercase, dashes removed in UUID) and joined with a colon.
+
+    Returns:
+        str: A string "<uuid>:<hostname>", used as part of the host-specific seed when
+             generating deterministic MAC addresses.
+    """
+    uuid = cmd(f"cat /sys/class/dmi/id/product_uuid").strip().replace("-", "").lower()
+    host = cmd("hostname").strip().lower()
+    return f"{uuid}:{host}"
+
+def gen_mac(name: str, addr: str, ident: str) -> str:
+    """
+    Generate a deterministic locally-administered MAC address.
+
+    The MAC is derived from:
+      • Host identity (UUID + hostname)
+      • Container name
+      • Concatenated address string (IPv4 and/or IPv6 addresses)
+
+    A SHA-256 digest is computed from the combined string. The first 5 bytes
+    of the digest are used, prefixed with 0x02 to mark the address as
+    locally-administered and unicast.
+
+    Args:
+        name (str): Container name to differentiate MACs.
+        addr (str): Concatenated list of container addresses (IPv4/IPv6).
+
+    Returns:
+        str: Deterministic MAC address in standard "xx:xx:xx:xx:xx:xx" format.
+    """
+    h = hashlib.sha256(f"{ident}:{name}:{addr}".encode()).hexdigest()
+    # 0x02 = locally-administered, unicast
+    b = [0x02] + [int(h[i:i+2], 16) for i in range(0, 10, 2)]  # 5 bytes = 40 bits
+    return ":".join(f"{x:02x}" for x in b)
 
 def get_netns_all() -> list:
     from json import loads

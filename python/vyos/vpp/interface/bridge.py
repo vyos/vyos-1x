@@ -123,6 +123,7 @@ class BridgeInterface:
         else:
             member_if_index = self.vpp.get_sw_if_index(member)
 
+        # enable=0, 0 = Enable L3 mode
         return self.vpp.api.sw_interface_set_l2_bridge(
-            rx_sw_if_index=member_if_index, bd_id=0, port_type=0
+            rx_sw_if_index=member_if_index, bd_id=0, port_type=0, enable=0
         )

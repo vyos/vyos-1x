@@ -830,13 +830,11 @@ set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
 set system console device ttyS0 speed '115200'
-set system flow-accounting disable-imt
-set system flow-accounting interface 'eth0.4088'
-set system flow-accounting interface 'eth0.4089'
+set system flow-accounting netflow interface 'eth0.4088'
+set system flow-accounting netflow interface 'eth0.4089'
 set system flow-accounting netflow engine-id '1'
 set system flow-accounting netflow server 192.0.2.55 port '2055'
 set system flow-accounting netflow version '9'
-set system flow-accounting syslog-facility 'daemon'
 set system host-name 'vyos'
 set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
 set system login user vyos authentication plaintext-password ''

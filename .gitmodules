@@ -1,4 +1,0 @@
-[submodule "libvyosconfig"]
-	path = libvyosconfig
-	url = ../libvyosconfig
-	branch = psl-master

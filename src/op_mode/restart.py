@@ -26,11 +26,11 @@ config = ConfigTreeQuery()
 
 service_map = {
     'dhcp': {
-        'systemd_service': 'kea-dhcp4-server',
+        'systemd_service': 'kea-dhcp4',
         'path': ['service', 'dhcp-server'],
     },
     'dhcpv6': {
-        'systemd_service': 'kea-dhcp6-server',
+        'systemd_service': 'kea-dhcp6',
         'path': ['service', 'dhcpv6-server'],
     },
     'dns_dynamic': {

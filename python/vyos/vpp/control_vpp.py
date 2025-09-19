@@ -486,3 +486,20 @@ class VPPControl:
             Callable[AnyParam, AnyType]: API functions
         """
         return self.__vpp_api_client.api
+
+    @_Decorators.api_call
+    def map_pppoe_interface(self, ifname: str, is_add: bool) -> None:
+        """Create or delete PPPoE mapping between data-plain and control-plane interfaces
+
+        Args:
+            ifname (str): name of an interface in kernel
+            is_add (bool): create or delete mapping
+        """
+        vpp_pair = self.lcp_pair_find(kernel_name=ifname)
+        if vpp_pair:
+            vpp_pair_name = vpp_pair['vpp_name_kernel']
+            self.__vpp_api_client.api.pppoe_add_del_cp(
+                dp_sw_if_index=self.get_sw_if_index(ifname),
+                cp_sw_if_index=self.get_sw_if_index(vpp_pair_name),
+                is_add=is_add,
+            )

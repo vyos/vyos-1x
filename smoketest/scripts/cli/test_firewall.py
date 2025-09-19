@@ -401,9 +401,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            [f'daddr & 0.0.255.255 == 0.0.1.2'],
-            [f'saddr & 0.0.255.255 != 0.0.3.4'],
-            [f'saddr & 0.0.255.255 == @A_mask_group']
+            ['daddr & 0.0.255.255 == 0.0.1.2'],
+            ['saddr & 0.0.255.255 != 0.0.3.4'],
+            ['saddr & 0.0.255.255 == @A_mask_group']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -1021,9 +1021,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_ZONE_FORWARD'],
             ['type filter hook forward priority filter + 1'],
             ['oifname { "eth1", "eth2" }', 'counter packets', 'jump VZONE_ZONE1'],
-            ['oifname "eth0"', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname "VRF-1"', 'counter packets', 'jump VZONE_ZONE1'],
             ['oifname "vtun66"', 'counter packets', 'jump VZONE_ZONE2'],
-            ['oifname "vti1"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['oifname "VRF-2"', 'counter packets', 'jump VZONE_ZONE2'],
             ['chain VYOS_ZONE_LOCAL'],
             ['type filter hook input priority filter + 1'],
             ['counter packets', 'jump VZONE_LOCAL_IN'],
@@ -1056,9 +1056,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_ZONE_FORWARD'],
             ['type filter hook forward priority filter + 1'],
             ['oifname { "eth1", "eth2" }', 'counter packets', 'jump VZONE_ZONE1'],
-            ['oifname "eth0"', 'counter packets', 'jump VZONE_ZONE1'],
+            ['oifname "VRF-1"', 'counter packets', 'jump VZONE_ZONE1'],
             ['oifname "vtun66"', 'counter packets', 'jump VZONE_ZONE2'],
-            ['oifname "vti1"', 'counter packets', 'jump VZONE_ZONE2'],
+            ['oifname "VRF-2"', 'counter packets', 'jump VZONE_ZONE2'],
             ['chain VYOS_ZONE_LOCAL'],
             ['type filter hook input priority filter + 1'],
             ['counter packets', 'jump VZONE_LOCAL_IN'],
@@ -1069,7 +1069,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
             ['chain VZONE_LOCAL_OUT'],
             ['oifname "vtun66"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
-            ['oifname "vti1"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
+            ['oifname "VRF-2"', 'counter packets', 'jump NAME6_LOCAL_to_ZONE2_v6'],
             ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
             ['chain VZONE_ZONE1'],
             ['iifname { "eth1", "eth2" }', 'counter packets', 'return'],

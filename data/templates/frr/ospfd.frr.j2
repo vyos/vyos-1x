@@ -220,7 +220,7 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%     for protocol, options in redistribute.items() %}
 {%         if protocol == 'table' %}
 {%             for table, table_options in options.items() %}
- redistribute {{ protocol }} {{ table }} {{ 'metric ' ~ table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' ~ table_options.metric_type if table_options.metric_type is vyos_defined }} {{ 'route-map ' ~ table_options.route_map if table_options.route_map is vyos_defined }}
+ redistribute table-direct {{ table }} {{ 'metric ' ~ table_options.metric if table_options.metric is vyos_defined }} {{ 'metric-type ' ~ table_options.metric_type if table_options.metric_type is vyos_defined }} {{ 'route-map ' ~ table_options.route_map if table_options.route_map is vyos_defined }}
 {%             endfor %}
 {%         else %}
  redistribute {{ protocol }} {{ 'metric ' ~ options.metric if options.metric is vyos_defined }} {{ 'metric-type ' ~ options.metric_type if options.metric_type is vyos_defined }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
