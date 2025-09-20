@@ -1,0 +1,16 @@
+pull_request_rules:
+  - name: add label when PR has conflict
+    conditions:
+      - conflict
+    actions:
+      label:
+        add:
+          - "needs-rebase"
+
+  - name: remove label when PR no longer has conflict
+    conditions:
+      - -conflict
+    actions:
+      label:
+        remove:
+          - "needs-rebase"
