@@ -1366,7 +1366,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         def internal_cleanup():
             for seq in client_range:
                 ip_addr = inc_ip(subnet, seq)
-                kea_delete_lease(4, '', ip_addr)
+                kea_delete_lease(4, None, ip_addr)
                 cmd(
                     f'{HOSTSD_CLIENT} --delete-hosts --tag dhcp-server-{ip_addr} --apply'
                 )
