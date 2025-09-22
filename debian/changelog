@@ -1,4 +1,4 @@
-vyos-1x (1.5dev0) unstable; urgency=medium
+vyos-1x (999.0) unstable; urgency=medium
 
   * Dummy changelog entry for vyos-1x repository
     This is a internal VyOS package and the VyOS package process does not use

@@ -19,6 +19,12 @@ SERVICES_DIR := usr/libexec/vyos/services
 
 DEB_TARGET_ARCH := $(shell dpkg-architecture -qDEB_TARGET_ARCH)
 
+# Base version prefix from debian/changelog
+BASE_VERSION := 999.0
+COMMIT_ID := $(shell echo -n g && git rev-parse --short HEAD)
+COMMIT_COUNT := $(shell git rev-list HEAD --count)
+DIRTY_FLAG := $(shell ! git diff --quiet || ! git diff --cached --quiet && echo -dirty || echo)
+
 %:
 	dh $@ --with python3, --with quilt
 
@@ -27,8 +33,7 @@ DEB_TARGET_ARCH := $(shell dpkg-architecture -qDEB_TARGET_ARCH)
 override_dh_strip_nondeterminism:
 
 override_dh_gencontrol:
-	dh_gencontrol -- -v$(shell (git describe --tags --long --match 'vyos/*' --match '1.4.*' --dirty 2>/dev/null || echo 0.0-no.git.tag) | sed -E 's%vyos/%%' | sed -E 's%-dirty%+dirty%')
-# PERLE	dh_gencontrol -- -v$(shell (git describe --tags --long --match 'vyos/*' --match '1.4.*' 2>/dev/null || echo 0.0-no.git.tag) | sed -E 's%vyos/%%' | sed -E 's%-dirty%+dirty%')
+	dh_gencontrol -- -v$(BASE_VERSION)-$(COMMIT_COUNT)-$(COMMIT_ID)$(DIRTY_FLAG)
 
 override_dh_auto_build:
 	make all

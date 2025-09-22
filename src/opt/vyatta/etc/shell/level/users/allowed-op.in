@@ -7,7 +7,10 @@ exit
 force
 monitor
 ping
+poweroff
+reboot
 reset
+restart
 release
 renew
 set

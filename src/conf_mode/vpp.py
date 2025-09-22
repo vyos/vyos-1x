@@ -57,7 +57,10 @@ from vyos.vpp.config_verify import (
     verify_vpp_statseg_size,
     verify_vpp_interfaces_dpdk_num_queues,
     verify_routes_count,
+    verify_vpp_main_heap_size,
+    verify_vpp_buffers,
 )
+from vyos.vpp.config_resource_checks import memory
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
 from vyos.vpp.configdb import JSONStorage
@@ -146,6 +149,28 @@ def _unload_module(module_name: str):
         raise
 
 
+def _get_workers_count(cpu_settings: dict) -> int:
+    if 'corelist_workers' in cpu_settings:
+        corelist_workers = []
+        for worker_range in cpu_settings['corelist_workers']:
+            core_numbers = worker_range.split('-')
+            corelist_workers.extend(
+                range(int(core_numbers[0]), int(core_numbers[-1]) + 1)
+            )
+
+        return len(corelist_workers)
+
+    return int(cpu_settings.get('workers', 0))
+
+
+def _normalize_buffers(config: dict):
+    """Replace 'auto' buffers_per_numa with calculated value"""
+    if config['settings']['buffers']['buffers_per_numa'] == 'auto':
+        workers = _get_workers_count(config['settings'].get('cpu', {}))
+        buffers = memory.buffers_required(config['settings'], workers)
+        config['settings']['buffers']['buffers_per_numa'] = str(buffers)
+
+
 def get_config(config=None):
     # use persistent config to store interfaces data between executions
     # this is required because some interfaces after they are connected
@@ -222,10 +247,12 @@ def get_config(config=None):
     # dictionary retrieved.
     default_values = conf.get_config_defaults(**config.kwargs, recursive=True)
 
-    # delete 'xdp-options' from defaults if driver is DPDK
+    # delete driver-incompatible defaults
     for iface, iface_config in config.get('settings', {}).get('interface', {}).items():
         if iface_config.get('driver') == 'dpdk':
             del default_values['settings']['interface'][iface]['xdp_options']
+        elif iface_config.get('driver') == 'xdp':
+            del default_values['settings']['interface'][iface]['dpdk_options']
 
     config = config_dict_merge(default_values, config)
 
@@ -235,6 +262,12 @@ def get_config(config=None):
 
     # add running config
     if effective_config:
+        default_values_effective = conf.get_config_defaults(
+            **effective_config.kwargs, recursive=True
+        )
+        effective_config = config_dict_merge(default_values_effective, effective_config)
+        # Buffer normalization (auto → computed)
+        _normalize_buffers(effective_config)
         config['effective'] = effective_config
 
     if 'settings' in config:
@@ -308,6 +341,9 @@ def get_config(config=None):
                         xdp_api_params['flags'] = 'no_syscall_lock'
                     iface_config['xdp_api_params'] = xdp_api_params
 
+        # Buffer normalization (auto → computed)
+        _normalize_buffers(config)
+
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
         config['xconn_members'] = xconn_members
@@ -335,15 +371,6 @@ def get_config(config=None):
             }
             eth_ifaces_persist[iface]['bus_id'] = control_host.get_bus_name(iface)
             eth_ifaces_persist[iface]['dev_id'] = control_host.get_dev_id(iface)
-
-    # Get kernel settings for hugepages
-    kernel_memory_settings = conf.get_config_dict(
-        ['system', 'option', 'kernel', 'memory'],
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-    config['kernel_memory_settings'] = kernel_memory_settings
 
     # Return to config dictionary
     config['persist_config'] = eth_ifaces_persist
@@ -373,8 +400,6 @@ def verify(config):
             raise ConfigError(f'Interface {iface} does not exist or is not Ethernet!')
 
     # Resource usage checks
-    workers = 0
-
     if 'cpu' in config['settings']:
         cpu_settings = config['settings']['cpu']
 
@@ -388,25 +413,30 @@ def verify(config):
 
         # Check if there are enough CPU cores to add workers
         if 'workers' in cpu_settings:
-            workers = verify_vpp_settings_cpu_workers(cpu_settings)
+            verify_vpp_settings_cpu_workers(cpu_settings)
 
         if 'main_core' in cpu_settings:
             verify_vpp_cpu_main_core(cpu_settings)
 
         # Check the CPU main core not falling to the corelist-workers
         if 'corelist_workers' in cpu_settings:
-            workers = verify_vpp_settings_cpu_corelist_workers(cpu_settings)
+            verify_vpp_settings_cpu_corelist_workers(cpu_settings)
+
+    workers = _get_workers_count(config['settings'].get('cpu', {}))
 
     if 'workers' in config['settings']['nat44']:
         verify_vpp_nat44_workers(
             workers=workers, nat44_workers=config['settings']['nat44']['workers']
         )
 
+    verify_vpp_main_heap_size(config['settings'])
+    verify_vpp_statseg_size(config['settings'])
+
+    # Check buffers
+    verify_vpp_buffers(config['settings'], workers)
+
     # Check if available memory is enough for current VPP config
     verify_vpp_memory(config)
-
-    if 'statseg' in config['settings']:
-        verify_vpp_statseg_size(config['settings'])
 
     # ensure DPDK/XDP settings are properly configured
     for iface, iface_config in config['settings']['interface'].items():

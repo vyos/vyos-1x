@@ -23,7 +23,7 @@ from pathlib import Path
 from struct import pack
 
 
-mem_shift = {'K': 10, 'k': 10, 'M': 20, 'm': 20, 'G': 30, 'g': 30}
+mem_shift = {'K': 10, 'KB': 10, 'M': 20, 'MB': 20, 'G': 30, 'GB': 30}
 
 
 def iftunnel_transform(iface: str) -> str:
@@ -302,15 +302,19 @@ def get_hugepage_sizes() -> list[int]:
 
 def human_memory_to_bytes(value: str) -> int:
     """
-    Convert a human-readable vpp memory format (K, M, G) to a byte value.
+    Convert a human-readable vpp memory format (K, M, G, xB) to a byte value.
 
     :param value: The string memory size in vpp human-readable format.
     :return: A int representing the value.
     """
+    value = value.strip().upper()
     try:
         return int(value)
     except ValueError:
-        return int(value[:-1]) << mem_shift[value[-1]]
+        for unit in sorted(mem_shift.keys(), key=len, reverse=True):
+            if value.endswith(unit):
+                num = value[: -len(unit)]
+                return int(num) << mem_shift[unit]
 
 
 def bytes_to_human_memory(value: int, unit: str) -> str | None:
@@ -321,6 +325,7 @@ def bytes_to_human_memory(value: int, unit: str) -> str | None:
     :param unit: The unit to convert to ('K', 'M', 'G').
     :return: A string representing the value in the specified unit, or None if zero.
     """
+    unit = unit.upper()
     val = value >> mem_shift[unit]
     return f'{val}{unit}' if val else None
 

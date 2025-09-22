@@ -52,6 +52,12 @@
                             </properties>
                             <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --vid="$7" --detail</command>
                           </leafNode>
+                          <leafNode name="statistics">
+                            <properties>
+                              <help>Show VLAN to VNI statistics for the specified VLAN</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --vid="$7" --statistics</command>
+                          </leafNode>
                         </children>
                       </tagNode>
                       <leafNode name="detail">
@@ -59,6 +65,12 @@
                           <help>Show detailed VLAN to VNI mapping for the specified VXLAN interface</help>
                         </properties>
                         <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --detail</command>
+                      </leafNode>
+                      <leafNode name="statistics">
+                        <properties>
+                          <help>Show VLAN to VNI statistics for the specified VXLAN interface</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/interfaces.py show_vlan_to_vni --intf-name="$4" --statistics</command>
                       </leafNode>
                     </children>
                   </node>

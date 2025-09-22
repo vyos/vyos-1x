@@ -667,6 +667,96 @@
         </constraint>
       </properties>
     </leafNode>
+    <node name="fast-reroute">
+      <properties>
+        <help>IS-IS fast reroute</help>
+      </properties>
+      <children>
+        <node name="lfa">
+          <properties>
+            <help>Enable LFA computation</help>
+          </properties>
+          <children>
+            <node name="level-1">
+              <properties>
+                <help> Enable LFA computation for Level 1 only</help>
+              </properties>
+              <children>
+                <leafNode name="enable">
+                  <properties>
+                    <help>Enable LFA</help>
+                    <valueless/>
+                  </properties>
+                </leafNode>
+                #include <include/isis/exclude-interface.xml.i>
+              </children>
+            </node>
+            <node name="level-2">
+              <properties>
+                <help>Enable LFA computation for Level 2 only</help>
+              </properties>
+              <children>
+                <leafNode name="enable">
+                  <properties>
+                    <help>Enable LFA</help>
+                    <valueless/>
+                  </properties>
+                </leafNode>
+                #include <include/isis/exclude-interface.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
+        <node name="remote-lfa">
+          <properties>
+            <help>Enable remote LFA computation</help>
+          </properties>
+          <children>
+            <node name="level-1">
+              <properties>
+                <help> Enable remote LFA computation for Level 1 only</help>
+              </properties>
+              <children>
+                #include <include/isis/frr-maxmetric.xml.i>
+                #include <include/isis/remote_lfa_tunnel.xml.i>
+              </children>
+            </node>
+            <node name="level-2">
+              <properties>
+                <help>Enable remote LFA computation for Level 2 only</help>
+              </properties>
+              <children>
+                #include <include/isis/frr-maxmetric.xml.i>
+                #include <include/isis/remote_lfa_tunnel.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
+        <node name="ti-lfa">
+          <properties>
+            <help> Enable TI-LFA computation</help>
+          </properties>
+          <children>
+            <node name="level-1">
+              <properties>
+                <help>Enable TI-LFA computation for Level 1 only</help>
+              </properties>
+              <children>
+                #include <include/isis/node-protection.xml.i>
+              </children>
+            </node>
+            <node name="level-2">
+              <properties>
+                <help>Enable TI-LFA computation for Level 2 only</help>
+              </properties>
+              <children>
+                #include <include/isis/node-protection.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
+      </children>
+    </node>
     <leafNode name="hello-padding">
       <properties>
         <help>Add padding to IS-IS hello packets</help>

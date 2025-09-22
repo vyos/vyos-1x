@@ -316,6 +316,7 @@ def verify(config_dict):
                     Warning(f'BGP neighbor "{peer}" requires address-family!')
 
                 # Peer-group member cannot override remote-as of peer-group
+                peer_group = None
                 if 'peer_group' in peer_config:
                     peer_group = peer_config['peer_group']
                     if 'remote_as' in peer_config and 'remote_as' in bgp['peer_group'][peer_group]:
@@ -330,6 +331,27 @@ def verify(config_dict):
                             peer_group = peer_config['interface']['v6only']['peer_group']
                             if 'remote_as' in peer_config['interface']['v6only'] and 'remote_as' in bgp['peer_group'][peer_group]:
                                 raise ConfigError(f'Peer-group member "{peer}" cannot override remote-as of peer-group "{peer_group}"!')
+                            
+                for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
+                            'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
+                            'l2vpn_evpn']:
+                    if dict_search(
+                        f'address_family.{afi}.route_reflector_client',
+                        peer_config,
+                    ) == {} or (
+                        peer_group
+                        and dict_search(
+                            f'peer_group.{peer_group}.address_family.{afi}.route_reflector_client',
+                            bgp,
+                        )
+                        == {}
+                    ):
+                        peer_as = verify_remote_as(peer_config, bgp)
+                        if peer_as != 'internal' and peer_as != bgp['system_as']:
+                            raise ConfigError('route-reflector-client only supported for iBGP peers')
+                    else:
+                        # It doesn’t make sense to check the remote-as of a peer group.
+                        pass
 
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
@@ -412,20 +434,7 @@ def verify(config_dict):
                         if tmp in afi_config['route_map']:
                             verify_route_map(afi_config['route_map'][tmp], bgp)
 
-                if 'route_reflector_client' in afi_config:
-                    peer_as = peer_config.get('remote_as')
-
-                    if peer_as is not None and (peer_as != 'internal' and peer_as != bgp['system_as']):
-                        raise ConfigError('route-reflector-client only supported for iBGP peers')
-                    else:
-                        # Check into the peer group for the remote as, if we are in a peer group, check in peer itself
-                        if 'peer_group' in peer_config:
-                            peer_group_as = dict_search(f'peer_group.{peer_group}.remote_as', bgp)
-                        elif neighbor == 'peer_group':
-                            peer_group_as = peer_config.get('remote_as')
-                        
-                        if peer_group_as is None or (peer_group_as != 'internal' and peer_group_as != bgp['system_as']):
-                            raise ConfigError('route-reflector-client only supported for iBGP peers')
+                # route-reflector-client verification has been moved to neighbor-only part
 
             # T5833 not all AFIs are supported for VRF
             if 'vrf' in bgp and 'address_family' in peer_config:
