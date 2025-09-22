@@ -16,23 +16,23 @@
 
 import os
 import re
-import sys
+# import sys
 import json
-import signal
-import socket
+# import signal
+# import socket
 import hashlib
 import ipaddress
 
 from sys import exit
 from time import sleep
-from psutil import process_iter
-from collections import defaultdict
+# from psutil import process_iter
+# from collections import defaultdict
 
 from vyos.config import Config
-from vyos.template import render
+# from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
-from vyos.utils.process import call
+# from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.serial import send_command_to_iolan
