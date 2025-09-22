@@ -191,9 +191,22 @@ def generate(proxy):
             if 'global' in proxy:
                 port_config['global'] = proxy['global']
                 if 'port_buffering' in port_config['global']:
+                    local_enabled = 0
+                    remote_enabled = 0
+                    if 'port_buffer_local' in proxy['global']['port_buffering']:
+                        local_enabled = 1
                     if 'nfs' in port_config['global']['port_buffering']:
                         if 'hostname' in port_config['global']['port_buffering']['nfs']:
                             port_config['global']['port_buffering']['port_buffer_remote'] = 1
+                            remote_enabled = 1
+
+                    if local_enabled == 1 and remote_enabled == 1:
+                        port_config['global']['port_buffering']['mode'] = 'both'
+                    elif local_enabled == 1 and remote_enabled == 0:
+                        port_config['global']['port_buffering']['mode'] = 'local'
+                    elif local_enabled == 0 and remote_enabled == 1:
+                        port_config['global']['port_buffering']['mode'] = 'remote'
+
 
 
             if 'service' in port_config:
@@ -421,7 +434,7 @@ def apply(proxy):
             if 'port_buffer_local' in proxy['global']['port_buffering']:
                 port_buffer_local_id = generate_config_id(proxy['global']['port_buffering'], digits=8)
             if 'port_buffer_remote' in proxy['global']['port_buffering']:
-                port_buffer_remote_id = generate_config_id(proxy['global']['port_buffering'], digits=8)
+                port_buffer_remote_id = generate_config_id(proxy['global']['port_buffering']['nfs'], digits=8)
 
     if 'device' in proxy:
         if not is_systemd_service_active(service_name):
