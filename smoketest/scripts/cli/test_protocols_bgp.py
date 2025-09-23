@@ -135,6 +135,7 @@ peer_group_config = {
         'passive'          : '',
         'password'         : 'VyOS-Secure123',
         'shutdown'         : '',
+        'solo'             : '',
         'cap_over'         : '',
         'ttl_security'     : '5',
         'disable_conn_chk' : '',
@@ -572,6 +573,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'port', config["port"]])
             if 'remote_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', config["remote_as"]])
+            if 'solo' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'solo'])
             if 'shutdown' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'shutdown'])
             if 'ttl_security' in config:
@@ -1472,7 +1475,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             interface_cmd = ['interface'] if neighbor.startswith('dum') else []
             self.cli_set(base_path + ['neighbor', neighbor, 'address-family', 'ipv4-unicast', 'route-reflector-client'])
             self.cli_set(base_path + ['neighbor', neighbor] + interface_cmd + ['remote-as', remote_as_type])
-            
+
         set_neighbor_funcs = [_set_neighbor_0, _set_neighbor_1, _set_neighbor_2, _set_neighbor_3]
         for remote_as_type in remote_as_types:
             for func_count, set_neighbor_func in enumerate(set_neighbor_funcs):
@@ -1484,7 +1487,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                         self.cli_discard()
                     else:
                         self.cli_commit()
-        
+
         frrconfig = self.getFRRconfig(f'router bgp {ASN}', endsection='^exit', substring=' address-family ipv4 unicast', endsubsection='^ exit-address-family')
         neighbor_has_rr_client = [
             int_neighbors[0], int_neighbors[3],

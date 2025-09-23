@@ -18,12 +18,20 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 service = 'vyos-wan-load-balance.service'
+
+valid_groups = [
+    'address_group',
+    'domain_group',
+    'network_group',
+    'port_group'
+]
 
 def get_config(config=None):
     if config:
@@ -37,6 +45,10 @@ def get_config(config=None):
                               no_tag_node_value_mangle=True,
                               get_first_key=True,
                               with_recursive_defaults=True)
+
+    if lb:
+        lb['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
+                                        no_tag_node_value_mangle=True)
 
     # prune limit key if not set by user
     for rule in lb.get('rule', []):
@@ -89,6 +101,43 @@ def verify(lb):
 
             for direction in ['source', 'destination']:
                 if direction in rule_conf:
+                    side_conf = rule_conf[direction]
+
+                    if 'group' in side_conf:
+                        if len({'address_group', 'network_group', 'domain_group'} & set(side_conf['group'])) > 1:
+                            raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+
+                        for group in valid_groups:
+                            if group in side_conf['group']:
+                                group_name = side_conf['group'][group]
+                                error_group = group.replace("_", "-")
+
+                                if group in ['address_group', 'network_group', 'domain_group']:
+                                    if 'address' in side_conf:
+                                        raise ConfigError(f'{error_group} and address cannot both be defined')
+
+                                if group in ['port_group']:
+                                    if 'port' in side_conf:
+                                        raise ConfigError(f'{error_group} and port cannot both be defined')
+
+                                if group_name and group_name[0] == '!':
+                                    group_name = group_name[1:]
+
+                                group_obj = dict_search_args(lb['firewall_group'], group, group_name)
+
+                                if group_obj is None:
+                                    raise ConfigError(f'Invalid {error_group} "{group_name}" on load-balancing wan rule')
+
+                                if not group_obj:
+                                    Warning(f'{error_group} "{group_name}" has no members!')
+
+                    if dict_search_args(side_conf, 'group', 'port_group'):
+                        if 'protocol' not in rule_conf:
+                            raise ConfigError('Protocol must be defined if specifying a port-group')
+
+                        if rule_conf['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
+                            raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port-group')
+
                     if 'port' in rule_conf[direction]:
                         if 'protocol' not in rule_conf:
                             raise ConfigError(f'Protocol required to specify port on load-balancing wan rule {rule_id}')

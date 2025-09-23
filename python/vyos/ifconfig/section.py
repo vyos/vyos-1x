@@ -144,8 +144,16 @@ class Section:
         if no section is provided, then it returns all configured interfaces.
         If vlan is True, also Vlan subinterfaces will be returned
         """
-
         return cls._sort_interfaces(cls._intf_under_section(section, vlan))
+
+    @classmethod
+    def sub_interfaces(cls, interface : str) -> list:
+        """
+        return a list of subinterfaces (e.g. VLAN) derived from a given interface
+        """
+        if_type = cls.section(interface)
+        res = [x for x in cls.interfaces(if_type) if x.startswith(f'{interface}.')]
+        return res
 
     @classmethod
     def _intf_with_feature(cls, feature=''):

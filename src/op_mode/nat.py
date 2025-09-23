@@ -144,6 +144,8 @@ def _get_formatted_output_rules(data, direction, family):
         if 'expr' in rule['rule']:
             interface = rule.get('rule').get('expr')[0].get('match').get('right') \
                 if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
+            if interface[0] == '@':
+                interface = interface[3:]
         for index, match in enumerate(jmespath.search('rule.expr[*].match', rule)):
             if 'payload' in match['left']:
                 # Handle NAT rule containing comma-seperated list of ports
@@ -154,7 +156,10 @@ def _get_formatted_output_rules(data, direction, family):
                     my_dict = {**match['left']['payload'], **match['right']}
                     my_dict['op'] = match['op']
                     op = '!' if my_dict.get('op') == '!=' else ''
-                    proto = my_dict.get('protocol').upper()
+                    if my_dict['field'] in ['sport', 'dport']:
+                        proto = my_dict.get('protocol').upper()
+                        if proto == 'TH':
+                            proto = 'TCP, UDP'
                     if my_dict['field'] == 'saddr':
                         saddr = f'{op}{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
                     elif my_dict['field'] == 'daddr':
@@ -166,6 +171,10 @@ def _get_formatted_output_rules(data, direction, family):
                 # Handle NAT rule containing a single port
                 else:
                     field = jmespath.search('left.payload.field', match)
+                    if field in ['sport', 'dport']:
+                        proto = jmespath.search('left.payload.protocol', match).upper()
+                        if proto == 'TH':
+                            proto = 'TCP, UDP'
                     if field == 'saddr':
                         saddr = match.get('right')
                     elif field == 'daddr':
@@ -186,8 +195,12 @@ sport {sport}'''
             destination = f'''{daddr}
 dport {dport}'''
 
-            if jmespath.search('left.payload.field', match) == 'protocol':
-                field_proto = match.get('right').upper()
+            if jmespath.search('left.meta.key', match) == 'l4proto':
+                right = match.get('right')
+                if isinstance(right, dict) and 'set' in right:
+                    proto = ', '.join(right['set'])
+                elif isinstance(right, str):
+                    proto = right.upper()
 
             for expr in rule.get('rule').get('expr'):
                 if 'snat' in expr:

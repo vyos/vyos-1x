@@ -19,7 +19,6 @@
 
 import os
 import re
-import sys
 import unittest
 from collections import defaultdict
 
@@ -32,10 +31,6 @@ from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
-from vyos.vpp.utils import human_page_memory_to_bytes
-
-sys.path.append(os.getenv('vyos_completion_dir'))
-from list_mem_page_size import list_mem_page_size
 
 PROCESS_NAME = 'vpp_main'
 VPP_CONF = '/run/vpp/vpp.conf'
@@ -1201,10 +1196,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(config_entry, config)
 
     def test_13_1_buffer_page_size(self):
-        sizes = ['default', 'default-hugepage'] + list_mem_page_size()
+        sizes = ['4K', '2M']
         for size in sizes:
-            if human_page_memory_to_bytes(size) >= 1 << 30:
-                continue
             self.cli_set(base_path + ['settings', 'buffers', 'page-size', size])
             self.cli_commit()
 
@@ -1212,10 +1205,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(conf['buffers']['page-size'], size)
 
     def test_13_2_statseg_page_size(self):
-        sizes = ['default', 'default-hugepage'] + list_mem_page_size()
+        sizes = ['4K', '2M']
         for size in sizes:
-            if human_page_memory_to_bytes(size) >= 1 << 30:
-                continue
             self.cli_set(base_path + ['settings', 'statseg', 'page-size', size])
             self.cli_commit()
 
@@ -1223,10 +1214,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(conf['statseg']['page-size'], size)
 
     def test_13_3_mem_page_size(self):
-        sizes = ['default', 'default-hugepage'] + list_mem_page_size()
+        sizes = ['4K', '2M']
         for size in sizes:
-            if human_page_memory_to_bytes(size) >= 1 << 30:
-                continue
             self.cli_set(
                 base_path + ['settings', 'memory', 'main-heap-page-size', size]
             )
@@ -1235,20 +1224,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
 
-    def test_14_mem_default_hugepage(self):
-        sizes = list_mem_page_size(hugepage_only=True)
-        for size in sizes:
-            if human_page_memory_to_bytes(size) >= 1 << 30:
-                continue
-            self.cli_set(
-                base_path + ['settings', 'memory', 'default-hugepage-size', size]
-            )
-            self.cli_commit()
-
-            conf = get_vpp_config()
-            self.assertEqual(conf['memory']['default-hugepage-size'], size)
-
-    def test_15_vpp_ipsec_xfrm_nl(self):
+    def test_14_vpp_ipsec_xfrm_nl(self):
         base_ipsec = base_path + ['settings', 'ipsec']
         batch_delay = '250'
         batch_size = '150'
@@ -1280,7 +1256,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         config = read_file(VPP_CONF)
         self.assertIn('interface ipip', config)
 
-    def test_16_vpp_cgnat(self):
+    def test_15_vpp_cgnat(self):
         base_cgnat = base_path + ['nat', 'cgnat']
         iface_out = 'eth0'
         iface_inside = 'eth1'
@@ -1319,7 +1295,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'tcp transitory timeout: {timeout_tcp_trans}sec', out)
         self.assertIn(f'icmp timeout: {timeout_icmp}sec', out)
 
-    def test_17_vpp_nat(self):
+    def test_16_vpp_nat(self):
         base_nat = base_path + ['nat44']
         base_nat_settings = base_path + ['settings', 'nat44']
         exclude_local_addr = '100.64.0.52'
@@ -1394,7 +1370,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show nat44 summary')
         self.assertIn(f'max translations per thread: {sess_limit} fib 0', out)
 
-    def test_18_vpp_sflow(self):
+    def test_17_vpp_sflow(self):
         base_sflow = ['system', 'sflow']
 
         self.cli_set(base_path + ['sflow', 'interface', interface])
@@ -1418,7 +1394,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_sflow)
         self.cli_commit()
 
-    def test_19_resource_limits(self):
+    def test_18_resource_limits(self):
         max_map_count = '100000'
         shmmax = '55555555555555'
         hr_path = ['system', 'option', 'resource-limits']
@@ -1444,6 +1420,56 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
         self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
+
+    def test_19_vpp_pppoe_mapping(self):
+        config_file = '/run/accel-pppd/pppoe.conf'
+        pool = "TEST-POOL"
+        vni = '23'
+        pppoe_base = ['service', 'pppoe-server']
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vni])
+
+        # Basic pppoe-server config
+        self.cli_set(pppoe_base + ['authentication', 'mode', 'noauth'])
+        self.cli_set(pppoe_base + ['gateway-address', '192.0.2.1'])
+        self.cli_set(pppoe_base + ['client-ip-pool', pool, 'range', '192.0.2.0/24'])
+        self.cli_set(pppoe_base + ['default-pool', pool])
+
+        # Enable PPPoE control-plane integration with VPP
+        self.cli_set(pppoe_base + ['interface', interface, 'vpp-cp'])
+        self.cli_set(pppoe_base + ['interface', f'{interface}.{vni}', 'vpp-cp'])
+
+        self.cli_commit()
+
+        # Validate configuration values
+        config = read_file(config_file)
+
+        # Validate configuration
+        self.assertIn(f'interface={interface},vpp-cp=true', config)
+        self.assertIn(f'interface={interface}.{vni},vpp-cp=true', config)
+
+        # Check pppoe mapping
+        _, out = rc_cmd('sudo vppctl show pppoe control-plane binding')
+        self.assertRegex(out, rf'{interface}\s+tap4096')
+        self.assertRegex(out, rf'{interface}.{vni}\s+tap4096.23')
+
+        # check if dependency is called and mapping is correct after changes in vpp script
+        self.cli_set(
+            base_path + ['settings', 'interface', interface, 'dpdk-options', 'promisc']
+        )
+        self.cli_commit()
+
+        # Check pppoe mapping
+        _, out = rc_cmd('sudo vppctl show pppoe control-plane binding')
+        self.assertRegex(out, rf'{interface}\s+tap4096')
+        self.assertRegex(out, rf'{interface}.{vni}\s+tap4096.23')
+
+        # delete PPPoE config
+        self.cli_delete(pppoe_base)
+
+        # delete vif Ethernet interface
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
+        self.cli_commit()
 
 
 if __name__ == '__main__':

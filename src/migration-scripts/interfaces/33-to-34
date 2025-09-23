@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T6318: WiFi country-code should be set system-wide instead of per-device
+
+from vyos.configtree import ConfigTree
+
+base = ['interfaces', 'wireless']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    installed = False
+    for interface in config.list_nodes(base):
+        cc_path = base + [interface, 'country-code']
+        if config.exists(cc_path):
+            tmp = config.return_value(cc_path)
+            config.delete(cc_path)
+
+            # There can be only ONE wireless country-code per device, everything
+            # else makes no sense as a WIFI router can not operate in two
+            # different countries
+            if not installed:
+                config.set(['system', 'wireless', 'country-code'], value=tmp)
+                installed = True

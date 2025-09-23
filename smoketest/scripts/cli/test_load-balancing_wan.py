@@ -369,5 +369,62 @@ echo "$ifname - $state" > {hook_output_path}
         with open(hook_output_path, 'r') as f:
             self.assertIn('eth0 - FAILED', f.read())
 
+    def test_firewall_groups(self):
+        isp1_iface = 'eth0'
+        isp2_iface = 'eth1'
+        lan_iface = 'eth2'
+
+        network_group1 = 'NET1'
+        network_group2 = 'NET2'
+        port_group = 'PORT1'
+
+        self.cli_set(['interfaces', 'ethernet', isp1_iface, 'address', '203.0.113.2/30'])
+        self.cli_set(['interfaces', 'ethernet', isp2_iface, 'address', '192.0.2.2/30'])
+        self.cli_set(['interfaces', 'ethernet', lan_iface, 'address', '198.51.100.2/30'])
+
+        self.cli_set(['firewall', 'group', 'network-group', network_group1, 'network', '10.0.0.0/8'])
+        self.cli_set(['firewall', 'group', 'network-group', network_group2, 'network', '198.51.100.0/24'])
+        self.cli_set(['firewall', 'group', 'port-group', port_group, 'port', '53'])
+
+        self.cli_set(base_path + ['wan', 'interface-health', isp1_iface, 'failure-count', '1'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp1_iface, 'nexthop', '203.0.113.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp1_iface, 'success-count', '1'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'failure-count', '1'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'nexthop', '192.0.2.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', isp2_iface, 'success-count', '1'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'exclude'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'inbound-interface', 'eth*'])
+        self.cli_set(base_path + ['wan', 'rule', '5', 'destination', 'group', 'network-group', network_group1])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'failover'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', lan_iface])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'protocol', 'udp'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'source', 'group', 'network-group', network_group2])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'source', 'group', 'port-group', port_group])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'destination', 'address', '192.0.2.0/24'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'destination', 'group', 'port-group', port_group])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp1_iface])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp1_iface, 'weight', '10'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', isp2_iface])
+
+        # commit changes
+        self.cli_commit()
+
+        time.sleep(5)
+
+        nftables_search = [
+            ['iifname "eth*"', f'ip daddr @N_{network_group1}', 'return'],
+            [
+                f'iifname "{lan_iface}"',
+                f'ip saddr @N_{network_group2}',
+                f'udp sport @P_{port_group}',
+                'ip daddr 192.0.2.0/24',
+                f'udp dport @P_{port_group}',
+                f'jump wlb_mangle_isp_{isp1_iface}',
+            ],
+        ]
+
+        self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

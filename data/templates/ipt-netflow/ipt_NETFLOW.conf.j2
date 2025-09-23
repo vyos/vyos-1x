@@ -1,0 +1,29 @@
+{% if netflow.engine_id is vyos_defined %}
+options ipt_NETFLOW engine-id={{ netflow.engine_id }}
+{% endif %}
+{% if netflow.max_flows is vyos_defined %}
+options ipt_NETFLOW maxflows={{ netflow.max_flows }}
+{% endif %}
+{% if netflow.sampling_rate is vyos_defined %}
+options ipt_NETFLOW sampler=random:{{ netflow.sampling_rate }}
+{% endif %}
+{% if netflow.server is vyos_defined %}
+{%     set servers_list = [] %}
+{%     for server in netflow.server %}
+{%         set d = netflow.server[server] %}
+{%         set s = (server | bracketize_ipv6) ~ ':' ~ d['port'] %}
+{%         set s = s ~ ('%' ~ d['source_interface'] if d['source_interface'] is vyos_defined else '') %}
+{%         set s = s ~ ('@' ~ d['source_address'] if d['source_address'] is vyos_defined else '') %}
+{%         set _ = servers_list.append(s) %}
+{%     endfor %}
+options ipt_NETFLOW destination={{ servers_list | join(",") }}
+{% endif %}
+{% if netflow.version is vyos_defined %}
+options ipt_NETFLOW protocol={{ netflow.version }}
+{% endif %}
+{% if netflow.inactive_timeout is vyos_defined %}
+options ipt_NETFLOW inactive_timeout={{ netflow.inactive_timeout }}
+{% endif %}
+{% if netflow.active_timeout is vyos_defined %}
+options ipt_NETFLOW active_timeout={{ netflow.active_timeout }}
+{% endif %}

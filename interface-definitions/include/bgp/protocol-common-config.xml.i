@@ -1103,12 +1103,7 @@
     #include <include/bgp/peer-group.xml.i>
     #include <include/bgp/remote-as.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
-    <leafNode name="solo">
-      <properties>
-        <help>Do not send back prefixes learned from the neighbor</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/bgp/solo.xml.i>
     <leafNode name="enforce-first-as">
       <properties>
         <help>Ensure the first AS in the AS path matches the peer AS</help>
@@ -1713,6 +1708,7 @@
     #include <include/bgp/neighbor-update-source.xml.i>
     #include <include/bgp/remote-as.xml.i>
     #include <include/port-number.xml.i>
+    #include <include/bgp/solo.xml.i>
   </children>
 </tagNode>
 <node name="srv6">

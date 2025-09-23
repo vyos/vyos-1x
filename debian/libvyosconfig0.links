@@ -1,0 +1,5 @@
+/usr/libexec/vyos/vyconf/vyconf_cli /usr/libexec/vyos/vyconf/bin/vy_set
+/usr/libexec/vyos/vyconf/vyconf_cli /usr/libexec/vyos/vyconf/bin/vy_delete
+/usr/libexec/vyos/vyconf/vyconf_cli /usr/libexec/vyos/vyconf/bin/vy_discard
+/usr/libexec/vyos/vyconf/vyconf_cli /usr/libexec/vyos/vyconf/bin/vy_show
+/usr/libexec/vyos/vyconf/vyconf_cli /usr/libexec/vyos/vyconf/bin/vy_session_changed

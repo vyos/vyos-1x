@@ -16,12 +16,50 @@
 
 import typing
 import json
+import shutil
 import sys
 import subprocess
 
+from pathlib import Path
+from vyos.defaults import directories
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
+from vyos.utils.process import run
 import vyos.opmode
+
+def clean_layer(name: str) -> int:
+    def layer_id_from_containers(name: str) -> str | None:
+        if containers.is_file():
+            try:
+                index = json.loads(containers.read_text())
+            except Exception:
+                return None
+            for item in index:
+                if name in item.get("names", []):
+                    return item.get("layer")
+        return None
+
+    def purge_layer_by_id(layer_id: str):
+        layer_dir = overlay_root / layer_id
+
+        # Remove the overlay ID directory
+        shutil.rmtree(layer_dir, ignore_errors=True)
+    storage_dir = Path(directories['podman_storage'])
+    overlay_root = storage_dir / "overlay"
+    containers = storage_dir / "overlay-containers/containers.json"
+    unit = f"vyos-container-{name}.service"
+    layer_id = layer_id_from_containers(name)
+    if not layer_id:
+        # No mapping found; nothing to do
+        return 2
+
+    purge_layer_by_id(layer_id)
+
+    # Reinitiate the container's overlay layer
+    cmd(f"rm -f /run/{unit}.cid /run/{unit}.pid")
+    cmd(f"systemctl reset-failed {unit}")
+    result = run(f"systemctl start {unit}")
+    return result
 
 def _get_json_data(command: str) -> list:
     """
@@ -131,8 +169,10 @@ def restart(name: str):
 
     rc, output = rc_cmd(f'systemctl restart vyos-container-{name}.service')
     if rc != 0:
-        print(output)
-        return None
+        rc2 = clean_layer(name)
+        if rc2 != 0:
+            print(output)
+            return None
     print(f'Container "{name}" restarted!')
     return output
 

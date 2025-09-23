@@ -24,6 +24,8 @@ from vyos.defaults import airbag_noteworthy_size
 
 
 def enable(log=True):
+    if 'nose2' in sys.modules:
+        return
     if log:
         _intercepting_logger()
     _intercepting_exceptions()

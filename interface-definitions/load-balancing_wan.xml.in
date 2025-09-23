@@ -203,6 +203,7 @@
                   <help>Destination</help>
                 </properties>
                 <children>
+                  #include <include/firewall/source-destination-group-ipv4.xml.i>
                   #include <include/ipv4-address-prefix-range.xml.i>
                   #include <include/port-port-range.xml.i>
                 </children>
@@ -373,6 +374,7 @@
                   <help>Source information</help>
                 </properties>
                 <children>
+                  #include <include/firewall/source-destination-group-ipv4.xml.i>
                   #include <include/ipv4-address-prefix-range.xml.i>
                   #include <include/port-port-range.xml.i>
                 </children>

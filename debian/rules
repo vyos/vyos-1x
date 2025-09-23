@@ -2,15 +2,25 @@
 
 DIR := debian/tmp
 DIR_AWS := $(DIR)/vyos-1x-aws
+DIR_LIBVYOSCONFIG := $(DIR)/libvyosconfig
 VYOS_SBIN_DIR := usr/sbin
 VYOS_BIN_DIR := usr/bin
+VYOS_LIB_DIR := usr/lib
 VYOS_LIBEXEC_DIR := usr/libexec/vyos
 VYOS_DATA_DIR := usr/share/vyos
 VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := opt/vyatta/share/vyatta-op/templates
 VYOS_MIBS_DIR := usr/share/snmp/mibs
 VYOS_LOCALUI_DIR := srv/localui
+
+VYCONF := usr/libexec/vyos/vyconf
+VYCONF_CONF := $(VYCONF)/config
+VYCONF_SESSION := $(VYCONF)/session
+VYCONF_DATA := usr/share/vyos/vyconf
+VYCONF_DEF := etc/vyos
 VYCONF_REFTREE_DIR := $(VYOS_LIBEXEC_DIR)/vyconf/reftree
+
+OCAML_DIR := /opt/opam/${OCAML_VERSION}
 
 MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 ACTIVATION_SCRIPTS_DIR := usr/libexec/vyos/activate
@@ -158,9 +168,9 @@ override_dh_auto_install: /usr/share/vyos/vyconf
 	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
 	cp -r smoketest/bin/* $(DIR)/$(VYOS_BIN_DIR)
 
-	# Install udev script
+	# Install udev scripts
 	mkdir -p $(DIR)/usr/lib/udev
-	cp src/helpers/vyos_net_name $(DIR)/usr/lib/udev
+	cp -r src/udev/* $(DIR)/usr/lib/udev
 
 	# vyos-1x-aws package
 	# Move some files to dedicated DEB packages
@@ -176,6 +186,19 @@ override_dh_auto_install: /usr/share/vyos/vyconf
 
 	mkdir -p $(DIR_AWS)/usr/share/vyos/templates
 	mv $(DIR)/usr/share/vyos/templates/aws/ $(DIR_AWS)/usr/share/vyos/templates
+
+	# libvyosconfig package
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_CONF)
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_SESSION)
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_DATA)
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_DEF)
+
+	cp $(OCAML_DIR)/share/vyconf/vyconf.proto $(DIR_LIBVYOSCONFIG)/$(VYCONF_DATA)
+	cp $(OCAML_DIR)/share/vyconf/vyconfd.conf $(DIR_LIBVYOSCONFIG)/$(VYCONF_DEF)
+	cp $(OCAML_DIR)/bin/vyconfd $(DIR_LIBVYOSCONFIG)/$(VYCONF)
+	cp $(OCAML_DIR)/bin/vyconf_cli $(DIR_LIBVYOSCONFIG)/$(VYCONF)
+	cp libvyosconfig/_build/libvyosconfig.so $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)/libvyosconfig.so.0
 
 override_dh_installsystemd:
 	dh_installsystemd -pvyos-1x --name vyos-router vyos-router.service

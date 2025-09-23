@@ -104,13 +104,13 @@
                 <properties>
                   <help>Show log for DHCP server</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --unit kea-dhcp4-server.service</command>
+                <command>journalctl --no-hostname --boot --unit kea-dhcp4.service</command>
                 <children>
                   <tagNode name="vrf">
                     <properties>
                       <help>Monitor last lines of DHCP server log on specific vrf</help>
                     </properties>
-                    <command>journalctl --no-hostname --follow --boot --unit "kea-dhcp4-server@$6.service"</command>
+                    <command>journalctl --no-hostname --follow --boot --unit "kea-dhcp4@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -142,13 +142,13 @@
                 <properties>
                   <help>Show log for DHCPv6 server</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --unit kea-dhcp6-server.service</command>
+                <command>journalctl --no-hostname --boot --unit kea-dhcp6.service</command>
                 <children>
                   <tagNode name="vrf">
                     <properties>
                       <help>Monitor last lines of DHCPv6 server log on specific vrf</help>
                     </properties>
-                    <command>journalctl --no-hostname --boot --unit "kea-dhcp6-server@$6.service"</command>
+                    <command>journalctl --no-hostname --boot --unit "kea-dhcp6@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -567,7 +567,7 @@
             <properties>
               <help>Show log for flow-accounting</help>
             </properties>
-            <command>journalctl --no-hostname --boot --unit uacctd.service</command>
+            <command>journalctl --no-hostname --boot --dmesg -g '^(ipt_NETFLOW|netflow): '</command>
           </leafNode>
           <leafNode name="frr">
             <properties>

@@ -38,6 +38,7 @@ directories = {
   'vyos_configdir' : '/opt/vyatta/config',
   'completion_dir' : f'{base_dir}/completion',
   'ca_certificates' : '/usr/local/share/ca-certificates/vyos',
+  'podman_storage' : '/usr/lib/live/mount/persistence/container/storage',
   'ppp_nexthop_dir' : '/run/ppp_nexthop',
   'proto_path' : '/usr/share/vyos/vyconf',
   'vyconf_session_dir' : f'{base_dir}/vyconf/session'
@@ -90,3 +91,8 @@ commit_hooks = {'pre': '/etc/commit/pre-hooks.d',
                }
 
 airbag_noteworthy_size = 20
+
+SSH_DSA_DEPRECATION_WARNING: str = \
+'Support for SSH-DSA keys is deprecated and will be removed in VyOS 1.6. ' \
+'Please update affected keys to a supported algorithm (e.g., RSA, ECDSA or ' \
+'ED25519) to avoid authentication failures after the upgrade.'

@@ -30,7 +30,9 @@ table ip vyos_conntrack {
         l3proto ip;
 {%         for protocol, protocol_config in rule_config.protocol.items() %}
         protocol {{ protocol }};
+{%             if protocol_config | count > 0 %}
         policy = { {{ protocol_config | conntrack_ct_policy() }} }
+{%             endif %}
 {%         endfor %}
     }
 {%     endfor %}
@@ -126,7 +128,9 @@ table ip6 vyos_conntrack {
         l3proto ip;
 {%         for protocol, protocol_config in rule_config.protocol.items() %}
         protocol {{ protocol }};
+{%             if protocol_config | count > 0 %}
         policy = { {{ protocol_config | conntrack_ct_policy() }} }
+{%             endif %}
 {%         endfor %}
     }
 {%     endfor %}

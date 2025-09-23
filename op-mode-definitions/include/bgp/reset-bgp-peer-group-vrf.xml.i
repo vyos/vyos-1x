@@ -6,7 +6,7 @@
       <path>vrf name ${COMP_WORDS[4]} protocols bgp peer-group</path>
     </completionHelp>
   </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
   <children>
     #include <include/bgp/reset-bgp-neighbor-options.xml.i>
   </children>

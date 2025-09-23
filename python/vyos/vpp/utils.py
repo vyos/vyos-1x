@@ -330,23 +330,6 @@ def bytes_to_human_memory(value: int, unit: str) -> str | None:
     return f'{val}{unit}' if val else None
 
 
-def human_page_memory_to_bytes(value: str) -> int:
-    """
-    Convert a human-readable vpp page size format to a byte value.
-
-    :param value: The string memory size in vpp human-readable format.
-    :return: A int representing the value.
-    """
-    default = {
-        'default': get_default_page_size,
-        'default-hugepage': get_default_hugepage_size,
-    }
-    try:
-        return default[value]()
-    except KeyError:
-        return human_memory_to_bytes(value)
-
-
 class EthtoolGDrvinfo:
     """Return interface details like `ethtol -i` does"""
 
