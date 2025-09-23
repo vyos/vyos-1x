@@ -431,9 +431,15 @@ def apply(proxy):
     if 'global' in proxy:
         if 'port_buffering' in proxy['global']:
             if 'port_buffer_local' in proxy['global']['port_buffering']:
-                port_buffer_local_id = generate_config_id(proxy['global']['port_buffering'], digits=8)
+                port_buffer_local_id = generate_config_id(proxy['global']['port_buffering']['local'], digits=8)
+
+            sub_pb = []
+            if 'syslog_enable' in proxy['global']['port_buffering']:
+                sub_pb += proxy['global']['port_buffering']['syslog']
             if 'port_buffer_remote' in proxy['global']['port_buffering']:
-                port_buffer_remote_id = generate_config_id(proxy['global']['port_buffering']['nfs'], digits=8)
+                sub_pb += proxy['global']['port_buffering']['nfs']
+            if sub_pb:
+                port_buffer_remote_id = generate_config_id(sub_pb, digits=8)
 
     if 'device' in proxy:
         if not is_systemd_service_active(service_name):
