@@ -73,8 +73,7 @@ def get_config(config=None):
     if 'global' in proxy_no_default:
         if 'port_buffering' in proxy_no_default['global']:
             if 'syslog' in proxy_no_default['global']['port_buffering']:
-                if 'level' in proxy_no_default['global']['port_buffering']:
-                    proxy['global']['port_buffering']['syslog_enable'] = '1'
+                proxy['global']['port_buffering']['syslog_enable'] = '1'
             if 'local' in proxy_no_default['global']['port_buffering']:
                 proxy['global']['port_buffering']['port_buffer_local'] = 1
 
