@@ -278,7 +278,7 @@ def generate(proxy):
                             if port_config['service'] != 'multihost':
                                 if (dict_search('service_setting.direct.initiate_any_char', port_config) == None
                                     and dict_search('service_setting.direct.initiate_specific_char', port_config) == None):
-                                    port_config['service'] = service.rsplit("-", 1)[0] + "-" + "slient"
+                                    port_config['service'] = service.rsplit('-', 1)[0] + '-' + 'slient'
                                 else:
                                     if 'initiate_any_char' in port_config['service_setting']['direct']:
                                         port_config['raw_option'] = 'initiate-any-char'
