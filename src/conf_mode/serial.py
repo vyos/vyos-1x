@@ -262,22 +262,23 @@ def generate(proxy):
                             if 'allow_multiple_connection' in port_config['service_setting'].get('reverse', ''):
                                 port_config['service'] = 'multihost'
 
-                # direct & slient raw
-                if 'tcp-direct' in service:
+                # direct & slient raw/ssh/telnet
+                if 'tcp-direct' in service or 'ssh-direct' in service or 'telnet-direct' in service:
                     config_service = 'direct'
                     if 'service_setting' in port_config:
                         if 'direct' in port_config['service_setting']:
-                            if 'multihost'in port_config['service_setting']['direct']:
-                                multihost_mode = port_config['service_setting']['direct']['multihost'].get('mode', '')
-                                if 'disable' not in multihost_mode:
-                                    port_config['outbound'] = '1'
-                                    port_config['service'] = 'multihost'
-                                    if 'backup' in multihost_mode:
-                                        set_nested(port_config, ['multihost', 'mode'], 'backup-failover')
+                            if 'tcp'in port_config['service_setting']['direct'] and 'tcp-direct' in service:
+                                if 'multihost'in port_config['service_setting']['direct']['tcp']:
+                                    multihost_mode = port_config['service_setting']['direct']['tcp']['multihost'].get('mode', '')
+                                    if 'disable' not in multihost_mode:
+                                        port_config['outbound'] = '1'
+                                        port_config['service'] = 'multihost'
+                                        if 'backup' in multihost_mode:
+                                            set_nested(port_config, ['multihost', 'mode'], 'backup-failover')
                             if port_config['service'] != 'multihost':
                                 if (dict_search('service_setting.direct.initiate_any_char', port_config) == None
                                     and dict_search('service_setting.direct.initiate_specific_char', port_config) == None):
-                                    port_config['service'] = 'tcp-slient'
+                                    port_config['service'] = service.rsplit("-", 1)[0] + "-" + "slient"
                                 else:
                                     if 'initiate_any_char' in port_config['service_setting']['direct']:
                                         port_config['raw_option'] = 'initiate-any-char'
