@@ -5,7 +5,7 @@
     <constraint>
       <regex>.{0,127}</regex>
     </constraint>
-    <constraintErrorMessage>Session termination tring too long (limit 127 characters)</constraintErrorMessage>
+    <constraintErrorMessage>Session termination string too long (limit 127 characters)</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
