@@ -430,16 +430,25 @@ def apply(proxy):
 
     if 'global' in proxy:
         if 'port_buffering' in proxy['global']:
-            if 'port_buffer_local' in proxy['global']['port_buffering']:
-                port_buffer_local_id = generate_config_id(proxy['global']['port_buffering']['local'], digits=8)
+            sub_pb_base = []
+            if 'add_timestamp' in proxy['global']['port_buffering']:
+                sub_pb_base.append(proxy['global']['port_buffering']['add_timestamp'])
+            if 'keystroke_buffering' in proxy['global']['port_buffering']:
+                sub_pb_base.append(proxy['global']['port_buffering']['keystroke_buffering'])
 
-            sub_pb = []
+            sub_pb_local = sub_pb_base.copy()
+            sub_pb_remote = sub_pb_base.copy()
+            if 'port_buffer_local' in proxy['global']['port_buffering']:
+                sub_pb_local.append(proxy['global']['port_buffering']['local'])
+            if sub_pb_local:
+                port_buffer_local_id = generate_config_id(sub_pb_local, digits=8)
+
             if 'syslog_enable' in proxy['global']['port_buffering']:
-                sub_pb += proxy['global']['port_buffering']['syslog']
+                sub_pb_remote.append(proxy['global']['port_buffering']['syslog'])
             if 'port_buffer_remote' in proxy['global']['port_buffering']:
-                sub_pb += proxy['global']['port_buffering']['nfs']
-            if sub_pb:
-                port_buffer_remote_id = generate_config_id(sub_pb, digits=8)
+                sub_pb_remote.append(proxy['global']['port_buffering']['nfs'])
+            if sub_pb_remote:
+                port_buffer_remote_id = generate_config_id(sub_pb_remote, digits=8)
 
     if 'device' in proxy:
         if not is_systemd_service_active(service_name):
