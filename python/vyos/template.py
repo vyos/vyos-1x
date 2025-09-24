@@ -124,6 +124,47 @@ def register_clever_function(name, func=None):
     _CLEVER_FUNCTIONS[name] = func
     return func
 
+def rm_json_trail_comma(json_string: str) -> str:
+    """
+    Remove trailing commas from otherwise valid JSON text.
+
+    This function operates line-by-line and strips a trailing comma from
+    any line if the next non-empty line begins with '}' or ']'. It is a
+    lightweight fix intended for JSON that is already structurally valid
+    except for illegal trailing commas (e.g. after the last element in
+    an object or array).
+
+    Important:
+    ----------
+    - The input must already be valid JSON apart from trailing commas.
+    - It assumes braces/brackets are on their own lines (e.g. no `,]`).
+    - It does not attempt full JSON validation or handle commas inside strings.
+
+    Parameters
+    ----------
+    json_string : str
+        JSON text with potential trailing commas.
+
+    Returns
+    -------
+    str
+        Cleaned JSON text with trailing commas removed, suitable for
+        correcting JSON created from a Jinja template.
+    """
+
+    string_to_lines = [line for line in json_string.split('\n') if line.strip()]
+
+    for line in range(len(string_to_lines) - 1):
+        # Strip trailing spaces/tabs/newlines before checking
+        if string_to_lines[line].rstrip().endswith(','):
+            # If the next line (ignoring indentation) starts with } or ],
+            # then the comma at the end of this line is invalid → remove it.
+            if string_to_lines[line + 1].lstrip().startswith(('}', ']')):
+                string_to_lines[line] = string_to_lines[line].rstrip().rstrip(',')
+
+    return '\n'.join(string_to_lines)
+
+
 def render_to_string(template, content, formater=None, location=None):
     """Render a template from the template directory, raise on any errors.
 
@@ -155,6 +196,7 @@ def render(
     user=None,
     group=None,
     location=None,
+    rm_trail_comma=False,
 ):
     """Render a template from the template directory to a file, raise on any errors.
 
@@ -174,6 +216,10 @@ def render(
     rendered = render_to_string(template, content, formater, location)
     # Remove any trailing character and always add a new line at the end
     rendered = rendered.rstrip() + "\n"
+
+    # Remove trailing commas from otherwise valid JSON text
+    if rm_trail_comma:
+        rendered = rm_json_trail_comma(rendered)
 
     # Write to file
     with open(destination, "w") as file:

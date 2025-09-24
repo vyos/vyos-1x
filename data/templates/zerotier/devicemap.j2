@@ -1,0 +1,3 @@
+{% for net in network_id %}
+{{ net }}={{ interface }}.{{ net[:5] }}
+{% endfor %}

@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# This script validates that a '/' separated IP/Port contains a valid IP and Port.
+
+import sys
+import ipaddress
+
+def validate_ip_port(ip_port: str) -> None:
+    """
+    Validate an input string in the form "IP/Port".
+
+    - Splits the string into an IP address and port number.
+    - Verifies the IP is a valid IPv4 or IPv6 address.
+    - Verifies the port is an integer between 1 and 65535.
+    - Exits with code 0 if valid, otherwise prints an error message
+      to stderr and terminates the program.
+    """
+    # Ensure format is correct: must be "ip/port"
+    parts = ip_port.split('/')
+    if len(parts) != 2:
+        sys.exit("Error: Input must be in the form IP/Port")
+    ip, port_str = parts
+
+    # Validate IP
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        sys.exit(f"Error: '{ip}' is not a valid IPv4/IPv6 address")
+
+    # Validate Port
+    try:
+        port = int(port_str)
+    except ValueError:
+        sys.exit(f"Error: '{port_str}' is not a valid integer port")
+
+    if not (1 <= port <= 65535):
+        sys.exit(f"Error: Port '{port}' must be between 1 and 65535")
+
+    # If we reach here, everything is valid
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        validate_ip_port(sys.argv[1])
+    else:
+        sys.exit("Error: No IP/Port string provided")

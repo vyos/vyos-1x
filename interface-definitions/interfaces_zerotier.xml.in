@@ -1,0 +1,625 @@
+<?xml version="1.0" ?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="zerotier" owner="${vyos_conf_scripts_dir}/interfaces_zerotier.py">
+        <properties>
+          <help>ZeroTier Interface</help>
+          <priority>305</priority>
+          <constraint>
+            <regex>zt.{1,8}</regex>
+          </constraint>
+          <constraintErrorMessage>ZeroTier interface must be named ztN; cannot exceed 9 characters</constraintErrorMessage>
+          <valueHelp>
+            <format>ztN</format>
+            <description>Zerotier interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/generic-disable-node.xml.i>
+          #include <include/listen-address.xml.i>
+          <leafNode name="allow-mgmt-from">
+            <properties>
+              <help>Allow management from specified subnets</help>
+              <constraint>
+                  <validator name="ip-prefix"/>
+              </constraint>
+              <constraintErrorMessage>Value must be valid IPv4 network</constraintErrorMessage>
+              <valueHelp>
+                  <format>ipv4net</format>
+                  <description>IPv4 Network</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>ipv6net</format>
+                  <description>IPv6 Network</description>
+              </valueHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="bonding-policy">
+            <properties>
+              <help>Bonding policy to be applied</help>
+              <completionHelp>
+                <list>active-backup broadcast balance-rr balance-xor balance-aware</list>
+                <path>${COMP_WORDS[@]:1:${#COMP_WORDS[@]}-3} custom-policy</path>
+              </completionHelp>
+              <valueHelp>
+                  <format>active-backup</format>
+                  <description>Use only one primary link at a time and failover to another designated link</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>broadcast</format>
+                  <description>Duplicate traffic across all available links at all times</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>balance-rr</format>
+                  <description>Stripe packets across multiple links (not for use with TCP.)</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>balance-xor</format>
+                  <description>Hash flows to specific links</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>balance-aware</format>
+                  <description>Auto-balance flows across links</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          <leafNode name="controller-api-key">
+            <properties>
+              <help>ZeroTier controller API key</help>
+              <valueHelp>
+                  <format>u32:api key</format>
+                  <description>ZeroTier controller API key</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          <leafNode name="controller-api-url">
+            <properties>
+              <help>Zerotier controller URL to use for API calls</help>
+              <valueHelp>
+                  <format>u32:api url</format>
+                  <description>ZeroTier controller API URL</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          <tagNode name="custom-policy">
+            <properties>
+              <help>User created ZeroTier bonding policy</help>
+              <valueHelp>
+                  <format>u32:policy name</format>
+                  <description>ZeroTier bonding policy name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="base-policy">
+                <properties>
+                  <help>Base bonding policy</help>
+                  <completionHelp>
+                    <list>active-backup broadcast balance-rr balance-xor balance-aware</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(active-backup|broadcast|balance-rr|balance-xor|balance-aware)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Value must be a pre-defined policy (e.g. active-backup)</constraintErrorMessage>
+                  <valueHelp>
+                      <format>active-backup</format>
+                      <description>Use only one primary link at a time and failover to another designated link</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>broadcast</format>
+                      <description>Duplicate traffic across all available links at all times</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>balance-rr</format>
+                      <description>Stripe packets across multiple links (not for use with TCP.)</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>balance-xor</format>
+                      <description>Hash flows to specific links</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>balance-aware</format>
+                      <description>Auto-balance flows across links</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="down-delay">
+                <properties>
+                  <help>Time for path to become unavailable (ms)</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Value must be between 0-65535</constraintErrorMessage>
+                  <valueHelp>
+                      <format>u32:0-65535</format>
+                      <description>Time in ms</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="failover-interval">
+                <properties>
+                  <help>Time for link failover after failure detection (ms)</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Value must be between 0-65535</constraintErrorMessage>
+                  <valueHelp>
+                      <format>u32:0-65535</format>
+                      <description>Time in ms</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <node name="link-quality">
+                <properties>
+                  <help>Criteria for link failover</help>
+                </properties>
+                <children>
+                  <leafNode name="latency-weight">
+                    <properties>
+                      <help>Importance of latency vs variance</help>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0.0-1.0 --float"/>
+                      </constraint>
+                      <constraintErrorMessage>Value must be between 0.0-1.0 (leading 0 is required if &lt; 1; e.g. 0.5)</constraintErrorMessage>
+                      <valueHelp>
+                        <format>u32:0.0-1.0</format>
+                        <description>Latency and variance weight must equal 1</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-latency">
+                    <properties>
+                      <help>Max latency before failing over (ms)</help>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-10000"/>
+                      </constraint>
+                      <constraintErrorMessage>Value must be between 0-10000</constraintErrorMessage>
+                      <valueHelp>
+                        <format>u32:0-10000</format>
+                        <description>Maximum latency in milliseconds</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-variance">
+                    <properties>
+                      <help>Max variance before failing over</help>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-10000"/>
+                      </constraint>
+                      <constraintErrorMessage>Value must be between 0-10000</constraintErrorMessage>
+                      <valueHelp>
+                        <format>u32:0-10000</format>
+                        <description>Maximum variance (similar to jitter)</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="variance-weight">
+                    <properties>
+                      <help>Importance of variance vs latency</help>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0.0-1.0 --float"/>
+                      </constraint>
+                      <constraintErrorMessage>Value must be between 0.0-1.0 (leading 0 is required if &lt; 1; e.g. 0.5)</constraintErrorMessage>
+                      <valueHelp>
+                        <format>u32:0.0-1</format>
+                        <description>Latency and variance weight must equal 1</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="link-select-method">
+                <properties>
+                  <help>Determine when links are failed over</help>
+                  <completionHelp>
+                    <list>always better failure optimize</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(always|better|failure|optimize)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Value must be always, better, failure, or optimize</constraintErrorMessage>
+                  <valueHelp>
+                      <format>always</format>
+                      <description>Primary link recovers if available</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>better</format>
+                      <description>Primary link recovers if it is best</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>failure</format>
+                      <description>Primary link recovers if active link fails</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>optimize</format>
+                      <description>Primary like can change if better link exists</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <tagNode name="links">
+                <properties>
+                  <help>Link specific bonding configuration</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                  </completionHelp>
+                  <valueHelp>
+                      <format>u32:interface</format>
+                      <description>Interface to apply bonding configuration</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="capacity">
+                    <properties>
+                      <help>Weigh the amount of traffic sent across this link</help>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                      <constraintErrorMessage>Value must be between 0-4294967295</constraintErrorMessage>
+                      <valueHelp>
+                        <format>u32:1-4294967295</format>
+                        <description>Arbitrary bandwidth value</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="failover-to">
+                    <properties>
+                      <help>Determine which link should be used next</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>Interface Name</format>
+                        <description>Interface to failover to</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ip-pref">
+                    <properties>
+                      <help>IP version preference for paths on a link</help>
+                      <constraint>
+                        <regex>(0|4|6|46|64)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Value must be between 0-1000000</constraintErrorMessage>
+                      <valueHelp>
+                        <format>0</format>
+                        <description>No version preference</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>4</format>
+                        <description>Use only IPv4</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>6</format>
+                        <description>Use only IPv6</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>46</format>
+                        <description>Prefer IPv4 over IPv6</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>64</format>
+                        <description>Prefer IPv6 over IPv4</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Determine when a link should be used</help>
+                      <completionHelp>
+                        <list>primary spare</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(primary|spare)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Value must be either primary or spare</constraintErrorMessage>
+                      <valueHelp>
+                        <format>primary</format>
+                        <description>Interface will be used by default</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>spare</format>
+                        <description>Interface will only be used when other links fail</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="up-delay">
+                <properties>
+                  <help>Time for path to become available (ms)</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Value must be between 0-65535</constraintErrorMessage>
+                  <valueHelp>
+                      <format>u32:0-65535</format>
+                      <description>Time in ms</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="disable-port-mapping">
+            <properties>
+              <help>Enable uPnP and NAT-PMP port mapping</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-secondary-port">
+            <properties>
+              <help>Allow secondary port for ZeroTier service</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-tcp-fallback">
+            <properties>
+              <help>Allow falling back to TCP Relay if UDP fails</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="force-tcp-relay">
+            <properties>
+              <help>Force the use of a TCP Relay</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="interface-blacklist">
+            <properties>
+              <help>Prevent binding of ZeroTier service to interfaces</help>
+              <valueHelp>
+                  <format>u32:interface prefix</format>
+                  <description>Interface prefix (e.g. eth,br,wg,vxlan,etc...)</description>
+              </valueHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="low-bandwidth-mode">
+            <properties>
+              <help>Enable low-bandwidth-mode (limits control traffic)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <node name="multicore-options">
+            <properties>
+              <help>Enable multicore processing</help>
+            </properties>
+            <children>
+                <leafNode name="enabled">
+                  <properties>
+                    <help>Enable/Disable multicore processing</help>
+                    <valueless/>
+                  </properties>
+                </leafNode>
+                <leafNode name="core-count">
+                  <properties>
+                    <help>Number of cores to use</help>
+                    <constraint>
+                      <validator name="numeric" argument="--range 2-$(nproc)"/>
+                    </constraint>
+                    <constraintErrorMessage>Value must be between 2-(max cores)</constraintErrorMessage>
+                    <valueHelp>
+                      <format>u32:2-(max cores)</format>
+                      <description>Number of cores to use</description>
+                    </valueHelp>
+                  </properties>
+                </leafNode>
+                <leafNode name="cpu-pinning">
+                  <properties>
+                    <help>Enable/Disable CPU pinning</help>
+                    <valueless/>
+                  </properties>
+                </leafNode>
+            </children>
+          </node>
+          <leafNode name="multipath-mode">
+            <properties>
+              <help>Multipath load-balancing mode</help>
+              <constraint>
+                  <regex>(0|1|2)</regex>
+              </constraint>
+              <constraintErrorMessage>Value must be 0, 1, or 2</constraintErrorMessage>
+              <valueHelp>
+                  <format>0</format>
+                  <description>Disable multipath</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>1</format>
+                  <description>Multipah random mode</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>2</format>
+                  <description>Multipath proportional mode</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          <tagNode name="network-config">
+            <properties>
+              <help>Network specific ZeroTier config</help>
+              <constraint>
+                  <validator name="ip-prefix"/>
+              </constraint>
+              <valueHelp>
+                  <format>ipv4net</format>
+                  <description>IPv4 Network</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>ipv6net</format>
+                  <description>IPv6 Network</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="blacklist">
+                <properties>
+                  <help>Prevent ZeroTier service from binding to specified subnet</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="mtu">
+                <properties>
+                  <help>Set ZeroTier MTU for specified network path</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1000-9000"/>
+                  </constraint>
+                  <constraintErrorMessage>MTU must be between 1000 and 9000</constraintErrorMessage>
+                  <valueHelp>
+                    <format>u32:1000-9000</format>
+                    <description>Maximum Transmission Unit in bytes</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="network-id">
+            <properties>
+              <help>ZeroTier Network ID to join (required)</help>
+              <constraint>
+                  <regex>^[a-f0-9]{16}$</regex>
+              </constraint>
+              <constraintErrorMessage>Network ID must be a 16-digit hexadecimal value</constraintErrorMessage>
+              <valueHelp>
+                  <format>u32:16-digit hex</format>
+                  <description>Zerotier network-id</description>
+              </valueHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <tagNode name="peer-specific-bonds">
+            <properties>
+              <help>Apply bonding policies per peer</help>
+              <constraint>
+                <regex>^[A-Fa-f0-9]{10}$</regex>
+              </constraint>
+              <constraintErrorMessage>Peer address must be 10-digit hexadecimal value</constraintErrorMessage>
+              <valueHelp>
+                <format>u32:10-digit hex</format>
+                <description>ZeroTier peer ID</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="bonding-policy">
+                <properties>
+                  <help>Policy to be applied to specified peer</help>
+                  <completionHelp>
+                    <list>active-backup broadcast balance-rr balance-xor balance-aware</list>
+                    <path>${COMP_WORDS[@]:1:${#COMP_WORDS[@]}-5} custom-policy</path>
+                  </completionHelp>
+                  <valueHelp>
+                      <format>active-backup</format>
+                      <description>Use only one primary link at a time and failover to another designated link</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>broadcast</format>
+                      <description>Duplicate traffic across all available links at all times</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>balance-rr</format>
+                      <description>Stripe packets across multiple links (not for use with TCP.)</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>balance-xor</format>
+                      <description>Hash flows to specific links</description>
+                  </valueHelp>
+                  <valueHelp>
+                      <format>balance-aware</format>
+                      <description>Auto-balance flows across links</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="peer-config">
+            <properties>
+              <help>Peer specific ZeroTier config</help>
+              <constraint>
+                  <regex>^[a-f0-9]{10}$</regex>
+              </constraint>
+              <constraintErrorMessage>Node address must be a 10-digit hexadecimal value</constraintErrorMessage>
+              <valueHelp>
+                  <format>u32:10-digit hex</format>
+                  <description>ZeroTier peer node ID</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="blacklist">
+                <properties>
+                  <help>Blacklist path for specific peer</help>
+                  <constraint>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 Network</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 Network</description>
+                  </valueHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="try">
+                <properties>
+                  <help>Static peer config for reachablity when upstream service is not available</help>
+                  <constraint>
+                    <validator name="ip-port"/>
+                  </constraint>
+                  <valueHelp>
+                    <format>u32:x.x.x.x/p</format>
+                    <description>IPv4/Port of peer (e.g. 10.0.0.1/9993)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:x:x:x:x:x:x:x/p</format>
+                    <description>IPv6/Port of peer (e.g. 2001:db8::1/9993)</description>
+                  </valueHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="primary">
+            <properties>
+              <help>Primary port for ZeroTier service (required)</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+            </children>
+          </node>
+          <node name="secondary">
+            <properties>
+              <help>Secondary port for ZeroTier service</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+            </children>
+          </node>
+          <node name="tertiary">
+            <properties>
+              <help>Tertiary port for ZeroTier service</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+            </children>
+          </node>
+          <leafNode name="tcp-relay">
+            <properties>
+              <help>Define the IP/Port of a TCP Relay</help>
+              <constraint>
+                  <validator name="ip-port"/>
+              </constraint>
+              <valueHelp>
+                  <format>u32:x.x.x.x/p</format>
+                  <description>IPv4/Port of TCP Relay (e.g. 10.0.0.1/443)</description>
+              </valueHelp>
+              <valueHelp>
+                  <format>u32:x:x:x:x:x:x:x/p</format>
+                  <description>IPv6/Port of TCP Relay (e.g. 2001:db8::1/443)</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

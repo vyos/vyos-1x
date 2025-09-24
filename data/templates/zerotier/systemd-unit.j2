@@ -1,0 +1,14 @@
+[Unit]
+Description=ZeroTier interface {{ name }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/config/vyos-generated-zerotier/{{ name }}/zerotier-one.pid
+ExecStart=/usr/sbin/zerotier-one -d /config/vyos-generated-zerotier/{{ name }}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

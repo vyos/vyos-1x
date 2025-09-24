@@ -184,6 +184,9 @@ Depends:
 # For "interfaces sstpc"
   sstp-client,
 # End "interfaces sstpc"
+# For "interfaces zerotier"
+  zerotier-one,
+# End "interfaces zerotier"
 # For "protocols *"
   frr (>= 10.2),
   frr-pythontools,

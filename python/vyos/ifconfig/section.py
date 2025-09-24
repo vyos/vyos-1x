@@ -52,6 +52,10 @@ class Section:
         name: name of the interface
         vlan: if vlan is True, do not stop at the vlan number
         """
+        # ZeroTier interfaces special handling; interfaces follow <interface>.<network-id first 5 chars> (e.g. zt0.a1b2c)
+        if name.startswith('zt'):
+            name = re.sub(r'\d+.*$', '', name)
+
         if vrrp:
             name = re.sub(r'\d(\d|v|\.)*$', '', name)
         elif vlan:

@@ -1,0 +1,167 @@
+{
+  "physical": {
+{% if network_config is vyos_defined %}
+{%     for network, network_conf in network_config.items() %}
+    "{{ network }}": {
+{%         if network_conf.mtu is vyos_defined %}
+        "mtu": {{ network_conf.mtu }},
+{%         endif %}
+{%         if network_conf.blacklist is vyos_defined %}
+        "blacklist": {{ 'true' if network_conf.blacklist is vyos_defined }},
+{%         endif %}
+    },
+{%     endfor %}
+{% endif %}
+  },
+  "virtual": {
+{% if peer_config is vyos_defined %}
+{%     for peer, peer_conf in peer_config.items() %}
+    "{{ peer }}": {
+{%         if peer_conf.try is vyos_defined %}
+        "try": {{ peer_conf.try | tojson }},
+{%         endif %}
+{%         if peer_conf.blacklist is vyos_defined %}
+        "blacklist": {{ peer_conf.blacklist | tojson }},
+{%         endif %}
+    },
+{%     endfor %}
+{% endif %}
+  },
+  "settings": {
+{% if allow_mgmt_from is vyos_defined %}
+    "allowManagementFrom": {{ allow_mgmt_from | tojson }},
+{% endif %}
+
+{% if bonding_policy is vyos_defined %}
+    "defaultBondingPolicy": {{ bonding_policy | tojson }},
+{% endif %}
+
+{% if custom_policy is vyos_defined %}
+    "policies": {
+{%     for policy, policy_config in custom_policy.items() %}
+        "{{ policy }}": {
+{%         if policy_config.base_policy is vyos_defined %}
+            "basePolicy": {{ policy_config.base_policy | tojson }},
+{%         endif %}
+{%         if policy_config.failover_interval is vyos_defined %}
+            "failoverInterval": {{ policy_config.failover_interval }},
+{%         endif %}
+{%         if policy_config.down_delay is vyos_defined %}
+            "downDelay": {{ policy_config.down_delay }},
+{%         endif %}
+{%         if policy_config.up_delay is vyos_defined %}
+            "upDelay": {{ policy_config.up_delay }},
+{%         endif %}
+{%         if policy_config.link_select_method is vyos_defined %}
+            "linkSelectMethod": {{ policy_config.link_select_method | tojson }},
+{%         endif %}
+{%         if policy_config.links is vyos_defined %}
+            "links": {
+{%             for link, link_config in policy_config.links.items() %}
+                "{{ link }}": {
+{%                 if link_config.mode is vyos_defined %}
+                    "mode": {{ link_config.mode | tojson }},
+{%                 endif %}
+{%                 if link_config.capacity is vyos_defined %}
+                    "capacity": {{ link_config.capacity }},
+{%                 endif %}
+{%                 if link_config.ip_pref is vyos_defined %}
+                    "ipvPref": {{ link_config.ip_pref }},
+{%                 endif %}
+{%                 if link_config.failover_to is vyos_defined %}
+                    "failoverTo": {{ link_config.failover_to | tojson }},
+{%                 endif %}
+                },
+{%             endfor %}
+            },
+{%         endif %}
+{%         if policy_config.link_quality is vyos_defined %}
+            "linkQuality": {
+{%             if policy_config.link_quality.latency_weight is vyos_defined %}
+             "lat_weight": {{ (policy_config.link_quality.latency_weight | float) }},
+{%             endif %}
+{%             if policy_config.link_quality.variance_weight is vyos_defined %}
+             "pdv_weight": {{ (policy_config.link_quality.variance_weight | float) }},
+{%             endif %}
+{%             if policy_config.link_quality.max_latency is vyos_defined %}
+             "lat_max": {{ (policy_config.link_quality.max_latency | float) }},
+{%             endif %}
+{%             if policy_config.link_quality.max_variance is vyos_defined %}
+             "pdv_max": {{ (policy_config.link_quality.max_variance | float) }},
+{%             endif %}
+            },
+{%         endif %}
+        },
+{%     endfor %}
+    },
+{% endif %}
+
+{% if disable_port_mapping is vyos_defined %}
+    "portMappingEnabled": {{ 'false' if disable_port_mapping is vyos_defined }},
+{% endif %}
+
+{% if disable_secondary_port is vyos_defined %}
+    "allowSecondaryPort": {{ 'false' if disable_secondary_port is vyos_defined }},
+{% endif %}
+
+{% if disable_tcp_fallback is vyos_defined %}
+    "allowTcpFallbackRelay": {{ 'false' if disable_tcp_fallback is vyos_defined }},
+{% endif %}
+
+{% if force_tcp_relay is vyos_defined %}
+    "forceTcpRelay": {{ 'true' if force_tcp_relay is vyos_defined }},
+{% endif %}
+
+{% if interface_blacklist is vyos_defined %}
+    "interfacePrefixBlacklist": {{ interface_blacklist | tojson }},
+{% endif %}
+
+{% if listen_address is vyos_defined %}
+    "bind": {{ listen_address | tojson }},
+{% endif %}
+
+{% if low_bandwidth_mode is vyos_defined %}
+    "lowBandwidthMode": {{ 'true' if low_bandwidth_mode is vyos_defined }},
+{% endif %}
+
+{% if multicore_options.enabled is vyos_defined %}
+    "multicoreEnabled": {{ 'true' if multicore_options.enabled is vyos_defined }},
+{% endif %}
+
+{% if multicore_options.core_count is vyos_defined %}
+    "concurrency": {{ multicore_options.core_count }},
+{% endif %}
+
+{% if multicore_options.cpu_pinning is vyos_defined %}
+    "cpuPinningEnabled": {{ 'true' if multicore_options.cpu_pinning is vyos_defined }},
+{% endif %}
+
+{% if multipath_mode is vyos_defined %}
+    "multipathMode": {{ multipath_mode }},
+{% endif %}
+
+{% if peer_specific_bonds is vyos_defined %}
+    "peerSpecificBonds": {
+{%     for peer, peer_specific_conf in peer_specific_bonds.items() %}
+        "{{ peer }}": {{ peer_specific_conf.bonding_policy | tojson }},
+{%     endfor %}
+    },
+{% endif %}
+
+{% if tcp_relay is vyos_defined %}
+    "tcpFallbackRelay": {{ tcp_relay | tojson }},
+{% endif %}
+
+{% if primary.port is vyos_defined %}
+    "primaryPort": {{ primary.port }},
+{% endif %}
+
+{% if secondary.port is vyos_defined %}
+    "secondaryPort": {{ secondary.port }},
+{% endif %}
+
+{% if tertiary.port is vyos_defined %}
+    "tertiaryPort": {{ tertiary.port }},
+{% endif %}
+  }
+}
