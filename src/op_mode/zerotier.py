@@ -103,7 +103,7 @@ def show(raw: bool,
     if raw:
         return {'zerotier': cli_data}
     elif return_json:
-        return cli_data
+        return json.dumps(cli_data, indent=4)
     else:
         return cli_data
 
