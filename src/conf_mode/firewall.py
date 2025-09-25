@@ -539,11 +539,11 @@ def verify(firewall):
             for chain in ['name','forward','input','output', 'prerouting']:
                 if chain in firewall[family]:
                     for priority, priority_conf in firewall[family][chain].items():
-                        if 'jump' in priority_conf['default_action'] and 'default_jump_target' not in priority_conf:
+                        if 'jump' in priority_conf.get('default_action', []) and 'default_jump_target' not in priority_conf:
                             raise ConfigError('default-action set to jump, but no default-jump-target specified')
                         if 'default_jump_target' in priority_conf:
                             target = priority_conf['default_jump_target']
-                            if 'jump' not in priority_conf['default_action']:
+                            if 'jump' not in priority_conf.get('default_action', []):
                                 raise ConfigError('default-jump-target defined, but default-action jump needed and it is not defined')
                             if priority_conf['default_jump_target'] == priority:
                                 raise ConfigError(f'Loop detected on default-jump-target.')

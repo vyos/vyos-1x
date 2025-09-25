@@ -600,7 +600,7 @@ def nft_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name='ip'):
 @register_filter('nft_default_rule')
 def nft_default_rule(fw_conf, fw_name, family):
     output = ['counter']
-    default_action = fw_conf['default_action']
+    default_action = fw_conf.get('default_action', 'accept')
     #family = 'ipv6' if ipv6 else 'ipv4'
 
     if 'default_log' in fw_conf:

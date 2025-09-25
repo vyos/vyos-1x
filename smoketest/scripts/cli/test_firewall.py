@@ -650,6 +650,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
 
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '1', 'destination', 'port', '22'])
+
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'destination', 'port', '22'])
+
         self.cli_commit()
 
         nftables_search = [
@@ -766,6 +774,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '2', 'ethernet-type', 'arp'])
         self.cli_set(['firewall', 'bridge', 'prerouting', 'filter', 'rule', '2', 'action', 'accept'])
 
+        self.cli_set(['firewall', 'bridge', 'output', 'filter', 'rule', '1', 'action', 'accept'])
 
         self.cli_commit()
 
