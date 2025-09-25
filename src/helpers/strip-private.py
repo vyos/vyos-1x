@@ -35,8 +35,8 @@ parser.add_argument('--domain', action='store_true', help='strip off domain name
 parser.add_argument('--asn', action='store_true', help='strip off BGP ASNs')
 parser.add_argument('--snmp', action='store_true', help='strip off SNMP location information')
 parser.add_argument('--lldp', action='store_true', help='strip off LLDP location information')
-parser.add_argument('--zt_node', action='store_true', help='strip off SNMP location information')
-parser.add_argument('--zt_network', action='store_true', help='strip off LLDP location information')
+parser.add_argument('--zt_node', action='store_true', help='strip off all but the first 3 characters of the node ID')
+parser.add_argument('--zt_network', action='store_true', help='strip off all but the first 5 characters of the network ID')
 
 address_preserval = parser.add_mutually_exclusive_group()
 address_preserval.add_argument('--address', action='store_true', help='strip off all IPv4 and IPv6 addresses')

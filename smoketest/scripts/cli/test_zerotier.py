@@ -281,17 +281,17 @@ class TestInterfacesZerotier(VyOSUnitTestSHIM.TestCase):
     def test_peer_specific_bonds(self):
         self.cli_set(base_path + ['zt1', 'network-id', '0123456789abcdef'])
         self.cli_set(base_path + ['zt1', 'primary', 'port', '9993'])
-        self.cli_set(base_path + ['zt1', 'custom-policy', 'custome_policy1', 'base-policy', 'active-backup'])
-        self.cli_set(base_path + ['zt1', 'custom-policy', 'custome_policy1', 'link-select-method', 'always'])
+        self.cli_set(base_path + ['zt1', 'custom-policy', 'custom_policy1', 'base-policy', 'active-backup'])
+        self.cli_set(base_path + ['zt1', 'custom-policy', 'custom_policy1', 'link-select-method', 'always'])
         self.cli_set(base_path + ['zt1', 'peer-specific-bonds', '0123456789', 'bonding-policy', 'balance-rr'])
-        self.cli_set(base_path + ['zt1', 'peer-specific-bonds', '1234567890', 'bonding-policy', 'custome_policy1'])
+        self.cli_set(base_path + ['zt1', 'peer-specific-bonds', '1234567890', 'bonding-policy', 'custom_policy1'])
         self.cli_commit()
 
         # Load and check local.conf; ensure valid JSON
         local_conf = self.load_json()
 
         self.validate_zt(local_conf, ['peerSpecificBonds', '0123456789'], 'balance-rr')
-        self.validate_zt(local_conf, ['peerSpecificBonds', '1234567890'], 'custome_policy1')
+        self.validate_zt(local_conf, ['peerSpecificBonds', '1234567890'], 'custom_policy1')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

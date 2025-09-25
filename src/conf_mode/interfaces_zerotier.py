@@ -335,7 +335,7 @@ def apply(config):
     for interface in interfaces_changed:
         end = time.monotonic() + timeout
         while time.monotonic() < end:
-            int_exists = cmd(f'sudo ip link show')
+            int_exists = cmd(f'ip link show')
             if f'{interface}.' in int_exists:
                 break
             time.sleep(interval)
