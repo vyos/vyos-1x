@@ -47,6 +47,10 @@ sshguard_whitelist = '/etc/sshguard/whitelist'
 key_rsa = '/etc/ssh/ssh_host_rsa_key'
 key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
+# PERLE added tpm backed keys
+key_ecdsa = '/etc/ssh/ssh_host_ecdsa_key'
+tpm_key_rsa = '/etc/ssh/ssh_tpm_host_rsa_key.tpm'
+tpm_key_ecdsa = '/etc/ssh/ssh_tpm_host_ecdsa_key.tpm'
 
 trusted_user_ca = config_files['sshd_user_ca']
 
@@ -129,15 +133,30 @@ def generate(ssh):
 
     # This usually happens only once on a fresh system, SSH keys need to be
     # freshly generted, one per every system!
-    if not os.path.isfile(key_rsa):
-        syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
-        call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')
+    # PERLE removed generating RSA server host key text files
+    # PERLE if not os.path.isfile(key_rsa):
+        # PERLE modified syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
+        # PERLE modified call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')
     if not os.path.isfile(key_dsa):
         syslog(LOG_INFO, 'SSH DSA host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t dsa -f {key_dsa}')
     if not os.path.isfile(key_ed25519):
         syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
+    # PERLE added - sudo to remove old rsa/ecdsa files, then create tpm backed rsa  ecdsa keys
+    if os.path.isfile(key_rsa):
+        syslog(LOG_INFO, 'SSH RSA host key found, removing text key file')
+        call(f'sudo rm {key_rsa}*')
+    if os.path.isfile(key_ecdsa):
+        syslog(LOG_INFO, 'SSH ECDSA host key found, removing text key file!')
+        call(f'sudo rm {key_ecdsa}*')
+    if not os.path.isfile(tpm_key_rsa):
+        syslog(LOG_INFO, 'SSH tpm backed RSA host key not found, generating new key!')
+        call(f'ssh-tpm-keygen -A')
+        call(f'ssh-tpm-hostkeys --install-system-units')
+    if not os.path.isfile(tpm_key_ecdsa):
+        syslog(LOG_INFO, 'SSH tpm backed ECDSA host key not found, generating new key!')
+        call(f'ssh-tpm-keygen -A')
 
     if 'trusted_user_ca' in ssh:
         key_name = ssh['trusted_user_ca']
@@ -173,6 +192,9 @@ def apply(ssh):
         # SSH access is removed in the commit
         call('systemctl stop ssh@*.service')
         call(f'systemctl stop {systemd_service_sshguard}')
+        # PERLE added
+        call(f'systemctl stop ssh-tpm-service')
+        call(f'systemctl stop ssh-tpm-service.socket')
         return None
 
     if 'dynamic_protection' not in ssh:
@@ -187,6 +209,11 @@ def apply(ssh):
         # stop all VRF services and only restart then new ones
         call('systemctl stop ssh@*.service')
         systemd_action = 'restart'
+
+    # PERLE added
+    # call(f'systemctl enable --now ssh-tpm-agent.socket')
+    call(f'systemctl {systemd_action} ssh-tpm-agent')
+    call(f'systemctl {systemd_action} ssh-tpm-agent.socket')
 
     for vrf in ssh['vrf']:
         call(f'systemctl {systemd_action} ssh@{vrf}.service')

@@ -236,6 +236,7 @@ Depends:
 # For "service ssh"
   openssh-server,
   sshguard,
+  ssh-tpm-agent,
 # End "service ssh"
 # For "service salt-minion"
   salt-minion,

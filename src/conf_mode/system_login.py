@@ -465,7 +465,8 @@ def apply(login):
             else: command += f" --home '/home/{user}'"
 
             if 'operator' not in user_config:
-                command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea'
+            # PERLE - support for TPM - add tss group 
+                command += f' --groups frr,frrvty,tss,vyattacfg,sudo,adm,dip,disk,_kea'
 
             command += f' {user}'
 
