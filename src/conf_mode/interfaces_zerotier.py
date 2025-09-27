@@ -19,19 +19,21 @@ import time
 
 from pathlib import Path
 
+from vyos import ConfigError
 from vyos.base import Warning
 from vyos.config import Config
-from vyos import ConfigError
+from vyos.configdiff import Diff
+from vyos.configdiff import get_config_diff
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.dict import dict_set_nested
 from vyos.configdict import node_changed
+from vyos.utils.network import get_bridge_master
 from vyos.utils.network import interface_exists
-from vyos.configdiff import Diff
-from vyos.configdiff import get_config_diff
 
 zerotier_config = Path('/config/vyos-generated-zerotier')
 systemd_unit_path = Path('/run/systemd/system')
@@ -306,7 +308,7 @@ def apply(config):
                 network_local_conf_path.unlink(missing_ok=True)
 
     call('systemctl daemon-reload')
-    interfaces_changed = []
+    interfaces_changed = {}
     for interface, interface_config in config['interfaces'].items():
         # If an interface was removed, this was handled above.
         if removed_interfaces and interface in removed_interfaces:
@@ -316,7 +318,11 @@ def apply(config):
         if interface not in config['interface_changed']:
             continue
 
-        interfaces_changed.append(interface)
+        interfaces_changed[interface] = {}
+
+        # Check if the interface is a bridge member
+        for network in interface_config['network_id']:
+            interfaces_changed[interface][f'{interface}.{network[:5]}'] = get_bridge_master(f'{interface}.{network[:5]}')
 
         # Restart the interface if a restart is required. Enable and start
         # the interface if it's a new interface or was disabled.
@@ -330,15 +336,22 @@ def apply(config):
             call(f'systemctl --no-block --quiet start vyos-zerotier-{interface}.service')
 
     # Give the interfaces time to start
-    timeout = 15
+    timeout = 10
     interval = 1
-    for interface in interfaces_changed:
-        end = time.monotonic() + timeout
-        while time.monotonic() < end:
-            int_exists = cmd(f'ip link show')
-            if f'{interface}.' in int_exists:
+    for _, int_config in interfaces_changed.items():
+        for interface, is_member in int_config.items():
+            end = time.monotonic() + timeout
+            while time.monotonic() < end:
+                rc, output = rc_cmd(f'ip link show dev {interface}')
+                if rc != 0:
+                    time.sleep(interval)
+                    continue
                 break
-            time.sleep(interval)
+
+            # After a restart, the interface would be removed as a bridge member.
+            # Re-add the interface as a bridge member
+            if is_member:
+                cmd(f'ip link set {interface} master {is_member}')
 
 try:
     c = get_config()

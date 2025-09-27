@@ -19,6 +19,7 @@ import requests
 import sys
 import typing
 import shutil
+import time
 
 from datetime import datetime
 from tabulate import tabulate
@@ -30,6 +31,7 @@ from vyos.utils.process import rc_cmd
 from vyos.configquery import op_mode_config_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_set_nested
+from vyos.utils.network import get_bridge_master
 
 zt_config_path = Path('/config/vyos-generated-zerotier')
 
@@ -220,11 +222,35 @@ def set(raw: bool,
 
 
 def restart(interface: str):
+    networks = op_mode_config_dict(['interfaces', 'zerotier', interface], key_mangling=('-', '_'), get_first_key=True).get('network_id', [])
+    sub_int_list = {}
+
+    # Check if the interface is a bridge member
+    for network in networks:
+        sub_int_list[f'{interface}.{network[:5]}'] = get_bridge_master(f'{interface}.{network[:5]}')
+
     rc, output = rc_cmd(f'systemctl --no-block status vyos-zerotier-{interface}')
     if rc != 0:
         raise vyos.opmode.Error(f"Failed to restart {interface}. Does {interface} exist?")
 
     cmd(f'systemctl --no-block restart vyos-zerotier-{interface}')
+
+    # Give the interfaces time to start
+    timeout = 10
+    interval = 1
+    for restart_int, is_member in sub_int_list.items():
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            rc, output = rc_cmd(f'ip link show dev {restart_int}')
+            if rc != 0:
+                time.sleep(interval)
+                continue
+            break
+        # After a restart, the interface would be removed as a bridge member.
+        # Re-add the interface as a bridge member
+        if is_member:
+            cmd(f'ip link set {restart_int} master {is_member}')
+
 
 def delete_config(interface: str):
     rc, output = rc_cmd(f'systemctl --no-block status vyos-zerotier-{interface}')

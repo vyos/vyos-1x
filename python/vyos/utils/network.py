@@ -252,6 +252,19 @@ def get_bridge_fdb(interface):
     tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
     return tmp
 
+def get_bridge_master(ifname: str) -> str:
+    """
+    Return the bridge master for a given network interface.
+
+    Args:
+        ifname (str): The name of the interface to check (e.g., "zt1.abcde").
+
+    Returns:
+        str: The name of the bridge this interface belongs to (e.g., "br0"),
+             or an empty string if the interface is not part of any bridge.
+    """
+    return cmd(f'basename "$(readlink -f /sys/class/net/{ifname}/brport/bridge 2>/dev/null)"').strip()
+
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
     from json import loads
