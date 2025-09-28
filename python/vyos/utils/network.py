@@ -14,9 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import hashlib
+import time
+
 from socket import AF_INET
 from socket import AF_INET6
 from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 
 def _are_same_ip(one, two):
     from socket import inet_pton
@@ -270,11 +273,26 @@ def is_mpls_enabled(interface: str) -> bool:
     Check if MPLS is enabled on a given interface.
     Returns True if /proc/sys/net/mpls/conf/<iface>/input == 1, else False.
     """
-    try:
-        value = cmd(f'cat /proc/sys/net/mpls/conf/{interface}/input').strip()
-        return value == '1'
-    except:
-        return False
+    from vyos.utils.system import sysctl_read
+
+    interface = interface.replace('.', '/')
+
+    timeout = 10
+    interval = 1
+    end = time.monotonic() + timeout
+
+    # The interface may not be up yet, so we need to wait for it to be up.
+    while time.monotonic() < end:
+        try:
+            rc, out = rc_cmd(f'sysctl -n net.mpls.conf.{interface}.input 2>/dev/null')
+            if rc != 0:
+                continue
+            value = sysctl_read(f'net.mpls.conf.{interface}.input')
+            return value == "1"
+        except:
+            pass
+        time.sleep(interval)
+    return False
 
 
 def get_all_vrfs():
