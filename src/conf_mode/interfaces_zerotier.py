@@ -33,7 +33,9 @@ from vyos.utils.dict import dict_search_recursive
 from vyos.utils.dict import dict_set_nested
 from vyos.configdict import node_changed
 from vyos.utils.network import get_bridge_master
+from vyos.utils.network import is_mpls_enabled
 from vyos.utils.network import interface_exists
+from vyos.utils.system import sysctl_write
 
 zerotier_config = Path('/config/vyos-generated-zerotier')
 systemd_unit_path = Path('/run/systemd/system')
@@ -322,24 +324,30 @@ def apply(config):
 
         # Check if the interface is a bridge member
         for network in interface_config['network_id']:
-            interfaces_changed[interface][f'{interface}.{network[:5]}'] = get_bridge_master(f'{interface}.{network[:5]}')
+            sub_int = f'{interface}.{network[:5]}'
+            interfaces_changed[interface][sub_int] = {}
+            interfaces_changed[interface][sub_int]['bridges'] = get_bridge_master(sub_int)
+            interfaces_changed[interface][sub_int]['mpls'] = is_mpls_enabled(sub_int)
 
         # Restart the interface if a restart is required. Enable and start
         # the interface if it's a new interface or was disabled.
         if restart_required and interface in restart_required:
-            call(f'systemctl --no-block --quiet restart vyos-zerotier-{interface}.service')
+            call(f'systemctl --quiet restart vyos-zerotier-{interface}.service')
         # If an interface wasn't changed, don't restart it.
         elif no_restart_required and interface in no_restart_required:
             continue
         else:
             call(f'systemctl --quiet enable vyos-zerotier-{interface}.service')
-            call(f'systemctl --no-block --quiet start vyos-zerotier-{interface}.service')
+            call(f'systemctl --quiet start vyos-zerotier-{interface}.service')
 
     # Give the interfaces time to start
     timeout = 10
     interval = 1
     for _, int_config in interfaces_changed.items():
-        for interface, is_member in int_config.items():
+        for interface, int_config in int_config.items():
+            is_member = dict_search('bridges', int_config)
+            is_mpls = dict_search('mpls', int_config)
+
             end = time.monotonic() + timeout
             while time.monotonic() < end:
                 rc, output = rc_cmd(f'ip link show dev {interface}')
@@ -352,6 +360,12 @@ def apply(config):
             # Re-add the interface as a bridge member
             if is_member:
                 cmd(f'ip link set {interface} master {is_member}')
+
+            # After a restart, the interface would be removed as a MPLS interface.
+            # Re-add the interface as a MPLS interface
+            if is_mpls:
+                sys_interface = interface.replace(".", "/")
+                sysctl_write(f'net.mpls.conf.{sys_interface}.input', 1)
 
 try:
     c = get_config()

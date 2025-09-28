@@ -265,6 +265,18 @@ def get_bridge_master(ifname: str) -> str:
     """
     return cmd(f'basename "$(readlink -f /sys/class/net/{ifname}/brport/bridge 2>/dev/null)"').strip()
 
+def is_mpls_enabled(interface: str) -> bool:
+    """
+    Check if MPLS is enabled on a given interface.
+    Returns True if /proc/sys/net/mpls/conf/<iface>/input == 1, else False.
+    """
+    try:
+        value = cmd(f'cat /proc/sys/net/mpls/conf/{interface}/input').strip()
+        return value == '1'
+    except:
+        return False
+
+
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
     from json import loads

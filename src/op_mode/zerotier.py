@@ -32,6 +32,9 @@ from vyos.configquery import op_mode_config_dict
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_set_nested
 from vyos.utils.network import get_bridge_master
+from vyos.utils.network import is_mpls_enabled
+from vyos.utils.system import sysctl_write
+from vyos.utils.system import sysctl_read
 
 zt_config_path = Path('/config/vyos-generated-zerotier')
 
@@ -227,18 +230,24 @@ def restart(interface: str):
 
     # Check if the interface is a bridge member
     for network in networks:
-        sub_int_list[f'{interface}.{network[:5]}'] = get_bridge_master(f'{interface}.{network[:5]}')
+        sub_int = f'{interface}.{network[:5]}'
+        sub_int_list[sub_int] = {}
+        sub_int_list[sub_int]['bridges'] = get_bridge_master(sub_int)
+        sub_int_list[sub_int]['mpls'] = is_mpls_enabled(sub_int)
 
     rc, output = rc_cmd(f'systemctl --no-block status vyos-zerotier-{interface}')
     if rc != 0:
         raise vyos.opmode.Error(f"Failed to restart {interface}. Does {interface} exist?")
 
-    cmd(f'systemctl --no-block restart vyos-zerotier-{interface}')
+    cmd(f'systemctl restart vyos-zerotier-{interface}')
 
     # Give the interfaces time to start
     timeout = 10
     interval = 1
-    for restart_int, is_member in sub_int_list.items():
+    for restart_int, restart_config in sub_int_list.items():
+        is_member = dict_search('bridges', restart_config)
+        is_mpls = dict_search('mpls', restart_config)
+
         end = time.monotonic() + timeout
         while time.monotonic() < end:
             rc, output = rc_cmd(f'ip link show dev {restart_int}')
@@ -246,10 +255,17 @@ def restart(interface: str):
                 time.sleep(interval)
                 continue
             break
+
         # After a restart, the interface would be removed as a bridge member.
         # Re-add the interface as a bridge member
         if is_member:
             cmd(f'ip link set {restart_int} master {is_member}')
+
+        # After a restart, the interface would be removed as a MPLS interface.
+        # Re-add the interface as a MPLS interface
+        if is_mpls:
+            sys_interface = restart_int.replace(".", "/")
+            sysctl_write(f'net.mpls.conf.{sys_interface}.input', 1)
 
 
 def delete_config(interface: str):
