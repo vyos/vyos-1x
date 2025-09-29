@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import time
 import os
 
 from pathlib import Path
@@ -29,16 +28,11 @@ from vyos.ifconfig.zerotier import build_sub_int_list
 from vyos.ifconfig.zerotier import wait_for_interface
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.utils.process import cmd
-from vyos.utils.process import rc_cmd
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.dict import dict_set_nested
 from vyos.configdict import node_changed
-from vyos.utils.network import get_bridge_master
-from vyos.utils.network import is_mpls_enabled
 from vyos.utils.network import interface_exists
-from vyos.utils.system import sysctl_write
 
 zerotier_config = Path('/config/vyos-generated-zerotier')
 systemd_unit_path = Path('/run/systemd/system')

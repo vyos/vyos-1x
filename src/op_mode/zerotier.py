@@ -19,7 +19,6 @@ import requests
 import sys
 import typing
 import shutil
-import time
 
 from datetime import datetime
 from tabulate import tabulate
