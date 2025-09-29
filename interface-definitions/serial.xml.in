@@ -71,10 +71,10 @@
             <properties>
               <help>Active serial service</help>
               <completionHelp>
-                <list>trueport-server trueport-client modbus-master modbus-slave vmodem udp tcp-reverse tcp-direct serial-tunnel ppp ssh-reverse telnet-reverse slip ssh-direct telnet-direct</list>
+                <list>trueport-server trueport-client modbus-master modbus-slave vmodem udp tcp-reverse tcp-direct serial-tunnel ppp ssh-reverse telnet-reverse slip ssh-direct telnet-direct login</list>
               </completionHelp>
               <constraint>
-                <regex>(trueport-server|trueport-client|modbus-master|modbus-slave|vmodem|udp|tcp-reverse|tcp-direct|serial-tunnel|ppp|ssh-reverse|telnet-reverse|slip|ssh-direct|telnet-direct)</regex>
+                <regex>(trueport-server|trueport-client|modbus-master|modbus-slave|vmodem|udp|tcp-reverse|tcp-direct|serial-tunnel|ppp|ssh-reverse|telnet-reverse|slip|ssh-direct|telnet-direct|login)</regex>
               </constraint>
             </properties>
           </leafNode>
