@@ -39,12 +39,10 @@ id-assoc na 0 {
 id-assoc pd {{ pd }} {
 {#   length got a default value #}
     prefix ::/{{ pd_config.length }} infinity;
-{%         set sla_len = 64 - pd_config.length | int %}
 {%         set count = namespace(value=0) %}
 {%         if pd_config.interface is vyos_defined %}
 {%             for interface, interface_config in pd_config.interface.items() if pd_config.interface is vyos_defined %}
     prefix-interface {{ interface }} {
-        sla-len {{ sla_len }};
 {%                 if interface_config.sla_id is vyos_defined %}
         sla-id {{ interface_config.sla_id }};
 {%                 else %}

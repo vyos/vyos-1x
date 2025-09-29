@@ -18,6 +18,7 @@ import re
 import os
 import json
 
+from copy import deepcopy
 from passlib.hosts import linux_context
 from psutil import users
 from pwd import getpwall
@@ -27,10 +28,12 @@ from sys import exit
 from time import sleep
 
 from vyos.base import Warning
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.configverify import verify_vrf
+from vyos.defaults import SSH_DSA_DEPRECATION_WARNING
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.auth import EPasswdStrength
@@ -54,12 +57,13 @@ radius_config_file = "/etc/pam_radius_auth.conf"
 tacacs_pam_config_file = "/etc/tacplus_servers"
 tacacs_nss_config_file = "/etc/tacplus_nss.conf"
 nss_config_file = "/etc/nsswitch.conf"
+login_motd_dsa_warning = r'/run/motd.d/92-vyos-user-dsa-deprecation-warning'
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
 # Maximim UID used when adding system users
 MAX_USER_UID: int = 59999
-# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
+# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec0
 MAX_RADIUS_TIMEOUT: int = 50
 # MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
 MAX_RADIUS_COUNT: int = 8
@@ -72,6 +76,10 @@ SYSTEM_USER_SKIP_LIST: list = ['radius_user', 'radius_priv_user', 'tacacs0', 'ta
                               'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
                               'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10',' tacacs11',
                               'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
+
+# As of OpenSSH 9.8p1 in Debian trixie, DSA keys are no longer supported
+SSH_DSA_DEPRECATION_WARNING: str = f'{SSH_DSA_DEPRECATION_WARNING} '\
+'The following users are using SSH-DSS keys for authentication.'
 
 def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
@@ -181,6 +189,17 @@ def verify(login):
                             raise ConfigError(f'Operator group {og} does not exist')
                 else:
                     raise ConfigError(f'User {user} is configured as an operator but is not assigned to any operator groups')
+
+    # Deprecation Warning for SSH DSS keys.
+    gen_header = True
+    if 'user' in login:
+        for user, user_config in login['user'].items():
+            for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
+                if 'type' in pubkey_options and pubkey_options['type'] == 'ssh-dss':
+                    if gen_header:
+                        gen_header = False
+                        DeprecationWarning(SSH_DSA_DEPRECATION_WARNING)
+                    print(f'User "{user}" with deprecated public-key named: {pubkey}')
 
     if {'radius', 'tacacs'} <= set(login):
         raise ConfigError('Using both RADIUS and TACACS at the same time is not supported!')
@@ -335,6 +354,12 @@ def generate(login):
             if policy is not None:
                 policy = list(map(lambda s: re.split(r'\s+', s), policy))
                 operator_config['groups'][g]['command_policy']['allow'] = policy
+
+    # Generate MOTD informing the user(s) for possible deprecated SSH keys
+    tmp = deepcopy(login)
+    tmp['ssh_dsa_deprecation_warning'] = f'DEPRECATION WARNING: {SSH_DSA_DEPRECATION_WARNING}'
+    render(login_motd_dsa_warning, 'login/motd_user_dsa_warning.j2', tmp,
+        permission=0o644, user='root', group='root')
 
     with open('/etc/vyos/operators.json', 'w') as of:
         json.dump(operator_config, of)

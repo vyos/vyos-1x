@@ -14,17 +14,20 @@
                 <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
             <children>
               #include <include/bgp/reset-bgp-neighbor-options.xml.i>
             </children>
           </virtualTagNode>
-          <leafNode name="all">
+          <node name="all">
             <properties>
               <help>Clear all peers</help>
             </properties>
-            <command>vtysh -c "clear bgp *"</command>
-          </leafNode>
+            <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+            <children>
+              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+            </children>
+          </node>
           #include <include/bgp/reset-bgp-afi-common.xml.i>
           #include <include/bgp/reset-bgp-peer-group.xml.i>
           <tagNode name="prefix">
@@ -34,19 +37,22 @@
                 <list>&lt;x.x.x.x/x&gt;</list>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
           </tagNode>
           <node name="ipv4">
             <properties>
               <help>IPv4 Address Family</help>
             </properties>
             <children>
-              <leafNode name="all">
+              <node name="all">
                 <properties>
                   <help>Clear all peers</help>
                 </properties>
-                <command>vtysh -c "clear bgp ipv4 *"</command>
-              </leafNode>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </node>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
               #include <include/bgp/reset-bgp-peer-group.xml.i>
               <virtualTagNode>
@@ -56,7 +62,7 @@
                     <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 <children>
                   #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                 </children>
@@ -68,12 +74,15 @@
               <help>IPv6 Address Family</help>
             </properties>
             <children>
-              <leafNode name="all">
+              <node name="all">
                 <properties>
                   <help>Clear all peers</help>
                 </properties>
-                <command>vtysh -c "clear bgp ipv6 *"</command>
-              </leafNode>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </node>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
               #include <include/bgp/reset-bgp-peer-group.xml.i>
               <virtualTagNode>
@@ -83,7 +92,7 @@
                     <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 <children>
                   #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                 </children>
@@ -100,12 +109,15 @@
                   <help>Ethernet Virtual Private Network</help>
                 </properties>
                 <children>
-                  <leafNode name="all">
+                  <node name="all">
                     <properties>
                       <help>Clear all peers</help>
                     </properties>
-                    <command>vtysh -c "clear bgp l2vpn evpn *"</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </node>
                   #include <include/bgp/reset-bgp-afi-common.xml.i>
                   #include <include/bgp/reset-bgp-peer-group.xml.i>
                   <virtualTagNode>
@@ -115,7 +127,7 @@
                         <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both</script>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                     <children>
                       #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                     </children>
@@ -139,17 +151,20 @@
                     <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both --vrf ${COMP_WORDS[3]}</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 <children>
                   #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                 </children>
               </virtualTagNode>
-              <leafNode name="all">
+              <node name="all">
                 <properties>
                   <help>Clear all peers</help>
                 </properties>
-                <command>vtysh -c "clear bgp vrf $4 *"</command>
-              </leafNode>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </node>
               #include <include/bgp/reset-bgp-afi-common.xml.i>
               #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
               <tagNode name="prefix">
@@ -159,19 +174,22 @@
                     <list>&lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
               </tagNode>
               <node name="ipv4">
                 <properties>
                   <help>IPv4 Address Family</help>
                 </properties>
                 <children>
-                  <leafNode name="all">
+                  <node name="all">
                     <properties>
                       <help>Clear all peers</help>
                     </properties>
-                    <command>vtysh -c "clear bgp vrf $4 ipv4 *"</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </node>
                   #include <include/bgp/reset-bgp-afi-common.xml.i>
                   #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
                   <virtualTagNode>
@@ -181,7 +199,7 @@
                         <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4 --vrf ${COMP_WORDS[3]}</script>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                     <children>
                       #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                     </children>
@@ -193,12 +211,15 @@
                   <help>IPv6 Address Family</help>
                 </properties>
                 <children>
-                  <leafNode name="all">
+                  <node name="all">
                     <properties>
                       <help>Clear all peers</help>
                     </properties>
-                    <command>vtysh -c "clear bgp vrf $4 ipv6 *"</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </node>
                   #include <include/bgp/reset-bgp-afi-common.xml.i>
                   #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
                   <virtualTagNode>
@@ -208,7 +229,7 @@
                         <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv6 --vrf ${COMP_WORDS[3]}</script>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                     <children>
                       #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                     </children>
@@ -225,12 +246,15 @@
                       <help>Ethernet Virtual Private Network</help>
                     </properties>
                     <children>
-                      <leafNode name="all">
+                      <node name="all">
                         <properties>
                           <help>Clear all peers</help>
                         </properties>
-                        <command>vtysh -c "clear bgp vrf $4 l2vpn evpn *"</command>
-                      </leafNode>
+                        <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                        <children>
+                          #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                        </children>
+                      </node>
                       #include <include/bgp/reset-bgp-afi-common.xml.i>
                       #include <include/bgp/reset-bgp-peer-group-vrf.xml.i>
                       <virtualTagNode>
@@ -240,7 +264,7 @@
                             <script>${vyos_completion_dir}/list_bgp_neighbors.sh --both --vrf ${COMP_WORDS[3]}</script>
                           </completionHelp>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                        <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                         <children>
                           #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                         </children>

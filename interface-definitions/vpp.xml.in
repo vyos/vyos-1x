@@ -392,7 +392,7 @@
                   <help>Set the page-size for buffer allocation</help>
                   #include <include/unformat_log2_page_size.xml.i>
                 </properties>
-                <defaultValue>default</defaultValue>
+                <defaultValue>2M</defaultValue>
               </leafNode>
             </children>
           </node>
@@ -786,15 +786,6 @@
               <properties>
                 <help>Main heap page size</help>
                 #include <include/unformat_log2_page_size.xml.i>
-              </properties>
-              <defaultValue>2M</defaultValue>
-            </leafNode>
-            <leafNode name="default-hugepage-size">
-              <properties>
-                <help>Default hugepage size</help>
-                <completionHelp>
-                  <script>sudo ${vyos_completion_dir}/list_mem_page_size.py --hugepage_only True </script>
-                </completionHelp>
               </properties>
               <defaultValue>2M</defaultValue>
             </leafNode>

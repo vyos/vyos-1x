@@ -80,6 +80,29 @@ show bgp
 ArgFamily = typing.Literal['inet', 'inet6', 'l2vpn']
 ArgFamilyModifier = typing.Literal['unicast', 'labeled_unicast', 'multicast', 'vpn', 'flowspec']
 
+def reset(command: str):
+    from vyos.utils.process import cmd
+
+    tokens = command.split()
+
+    # reset -> clear (only if it's the first token)
+    if tokens and tokens[0] == "reset":
+        tokens[0] = "clear"
+
+    # peer-group and vrf may have 'all' in their names; don't replace 'all' with '*'
+    skip_indexes = []
+    for index, word in enumerate(tokens[:-1]):
+        if word in ("peer-group", "vrf"):
+            skip_indexes.append(index + 1)
+
+    # replace standalone "all" with "*" unless it's in the skip list
+    for index, word in enumerate(tokens):
+        if word == "all" and index not in skip_indexes:
+            tokens[index] = "*"
+
+    command = " ".join(tokens)
+    cmd(f'vtysh -c "{command}"')
+
 def show_summary(raw: bool):
     from vyos.utils.process import cmd
 

@@ -214,7 +214,7 @@ def output_firewall_name(family, hook, priority, firewall_conf, single_rule_id=N
                 row.append(rule_details['conditions'])
             rows.append(row)
 
-    if hook in ['input', 'forward', 'output']:
+    if hook in ['input', 'forward', 'output', 'prerouting']:
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'accept'
     else:
         def_action = firewall_conf['default_action'] if 'default_action' in firewall_conf else 'drop'
@@ -352,7 +352,7 @@ def output_firewall_name_statistics(family, hook, prior, prior_conf, single_rule
             rows.append(row)
 
 
-    if hook in ['input', 'forward', 'output']:
+    if hook in ['input', 'forward', 'output', 'prerouting']:
         row = ['default', '']
         rule_details = details['default-action']
         row.append(rule_details.get('packets', 0))

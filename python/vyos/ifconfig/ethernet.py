@@ -131,18 +131,16 @@ class EthernetIf(Interface):
         >>> i.remove()
         """
 
+        # T7813: we do need to remove the VLAN subinterfaces first so we can
+        # properly stop the DHCP client and inform the DHCP server that we are
+        # returning the lease.
+        for vlan in Section.sub_interfaces(self.ifname):
+            Interface(vlan).remove()
+
         if self.exists(self.ifname):
             # interface is placed in A/D state when removed from config! It
             # will remain visible for the operating system.
             self.set_admin_state('down')
-
-        # Remove all VLAN subinterfaces - filter with the VLAN dot
-        for vlan in [
-            x
-            for x in Section.interfaces('ethernet')
-            if x.startswith(f'{self.ifname}.')
-        ]:
-            Interface(vlan).remove()
 
         super().remove()
 

@@ -1,0 +1,8 @@
+{% if hostkey_algorithm is vyos_defined %}
+{%     set tmp = hostkey_algorithm | select("in", deprecated_algos) %}
+{%     if tmp %}
+{%         set tmp = ssh_dsa_deprecation_warning ~ ' ' ~  tmp | join(', ') %}
+---
+{{ tmp | wordwrap(72) }}
+{%     endif %}
+{% endif %}

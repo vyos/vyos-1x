@@ -33,7 +33,6 @@ from vyos.template import dec_ip
 
 PROCESS_NAME = 'kea-dhcp4'
 D2_PROCESS_NAME = 'kea-dhcp-ddns'
-CTRL_PROCESS_NAME = 'kea-ctrl-agent'
 KEA4_CONF = '/run/kea/kea-dhcp4.conf'
 KEA4_D2_CONF = '/run/kea/kea-dhcp-ddns.conf'
 KEA4_CTRL = '/run/kea/dhcp4-ctrl-socket'

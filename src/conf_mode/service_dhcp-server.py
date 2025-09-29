@@ -582,9 +582,9 @@ def apply(dhcp):
     # if running in vrf, set base diffrently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
-        services = [f'kea-dhcp4-server@{vrf_name}', f'kea-dhcp-ddns-server@{vrf_name}']
+        services = [f'kea-dhcp4@{vrf_name}', f'kea-dhcp-ddns@{vrf_name}']
     else:
-        services = ['kea-dhcp4-server', 'kea-dhcp-ddns-server']
+        services = ['kea-dhcp4', 'kea-dhcp-ddns']
 
     if not dhcp or 'disable' in dhcp:
         for service in services:

@@ -117,13 +117,14 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
     def test_name_server(self):
         cont_name = 'dns-test'
         net_name = 'net-test'
-        name_server = '192.168.0.1'
+        name_servers = ['192.168.0.1', '192.168.0.2']
         prefix = '192.0.2.0/24'
 
         self.cli_set(base_path + ['network', net_name, 'prefix', prefix])
 
         self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
-        self.cli_set(base_path + ['name', cont_name, 'name-server', name_server])
+        for name_server in name_servers:
+            self.cli_set(base_path + ['name', cont_name, 'name-server', name_server])
         self.cli_set(
             base_path
             + [
@@ -144,7 +145,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         n = cmd_to_json(f'sudo podman inspect {cont_name}')
-        self.assertEqual(n['HostConfig']['Dns'][0], name_server)
+        self.assertEqual(n['HostConfig']['Dns'], name_servers)
 
         tmp = cmd(f'sudo podman exec -it {cont_name} cat /etc/resolv.conf')
         self.assertIn(name_server, tmp)
@@ -164,6 +165,64 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertEqual(process_named_running(PROCESS_NAME), pid)
+
+    def test_network_types(self):
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '100'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '101'])
+
+        # MACVLAN Networks
+        self.cli_set(base_path + ['network', 'macvlan1', 'prefix', '10.0.0.0/24'])
+        self.cli_set(base_path + ['network', 'macvlan1', 'type', 'macvlan', 'parent', 'eth0'])
+        self.cli_set(base_path + ['network', 'macvlan1', 'type', 'macvlan', 'mode', 'bridge'])
+        self.cli_set(base_path + ['network', 'macvlan2', 'prefix', '10.0.100.0/24'])
+        self.cli_set(base_path + ['network', 'macvlan2', 'gateway', '10.0.100.5'])
+        self.cli_set(base_path + ['network', 'macvlan2', 'type', 'macvlan', 'parent', 'eth0.100'])
+        self.cli_set(base_path + ['network', 'macvlan2', 'type', 'macvlan', 'mode', 'private'])
+        self.cli_set(base_path + ['network', 'macvlan3', 'prefix', '2001::/64'])
+        self.cli_set(base_path + ['network', 'macvlan3', 'type', 'macvlan', 'parent', 'eth0.101'])
+        self.cli_set(base_path + ['network', 'macvlan3', 'type', 'macvlan', 'mode', 'vepa'])
+
+        # Bridge Network
+        self.cli_set(base_path + ['network', 'bridge1', 'prefix', '10.0.1.0/24'])
+        self.cli_set(base_path + ['network', 'bridge1', 'type', 'bridge'])
+
+        # Bridge Network before T7186; default network type is bridge
+        self.cli_set(base_path + ['network', 'bridge2', 'prefix', '10.0.2.0/24'])
+
+        self.cli_commit()
+
+        n = cmd_to_json(f'sudo podman network inspect macvlan1')
+        self.assertEqual(n['driver'], 'macvlan')
+        self.assertEqual(n['network_interface'], 'eth0')
+        self.assertEqual(n['options']['mode'], 'bridge')
+        self.assertEqual(n['subnets'][0]['subnet'], '10.0.0.0/24')
+        self.assertEqual(n['subnets'][0]['gateway'], '10.0.0.1')
+
+        n = cmd_to_json(f'sudo podman network inspect macvlan2')
+        self.assertEqual(n['driver'], 'macvlan')
+        self.assertEqual(n['network_interface'], 'eth0.100')
+        self.assertEqual(n['options']['mode'], 'private')
+        self.assertEqual(n['subnets'][0]['subnet'], '10.0.100.0/24')
+        self.assertEqual(n['subnets'][0]['gateway'], '10.0.100.5')
+
+        n = cmd_to_json(f'sudo podman network inspect macvlan3')
+        self.assertEqual(n['driver'], 'macvlan')
+        self.assertEqual(n['network_interface'], 'eth0.101')
+        self.assertEqual(n['options']['mode'], 'vepa')
+        self.assertEqual(n['subnets'][0]['subnet'], '2001::/64')
+        self.assertEqual(n['subnets'][0]['gateway'], '2001::1')
+
+        n = cmd_to_json(f'sudo podman network inspect bridge1')
+        self.assertEqual(n['driver'], 'bridge')
+        self.assertEqual(n['network_interface'], 'pod-bridge1')
+        self.assertEqual(n['subnets'][0]['subnet'], '10.0.1.0/24')
+        self.assertEqual(n['subnets'][0]['gateway'], '10.0.1.1')
+
+        n = cmd_to_json(f'sudo podman network inspect bridge2')
+        self.assertEqual(n['driver'], 'bridge')
+        self.assertEqual(n['network_interface'], 'pod-bridge2')
+        self.assertEqual(n['subnets'][0]['subnet'], '10.0.2.0/24')
+        self.assertEqual(n['subnets'][0]['gateway'], '10.0.2.1')
 
     def test_ipv4_network(self):
         prefix = '192.0.2.0/24'

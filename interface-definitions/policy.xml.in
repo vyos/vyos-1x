@@ -1092,6 +1092,29 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="rpki-extcommunity">
+                    <properties>
+                      <help>Match RPKI (Origin Validation State) extended community</help>
+                      <completionHelp>
+                        <list>invalid notfound valid</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>invalid</format>
+                        <description>Match invalid entries</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>notfound</format>
+                        <description>Match notfound entries</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>valid</format>
+                        <description>Match valid entries</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(invalid|notfound|valid)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <leafNode name="source-vrf">
                     <properties>
                       <help>Source vrf</help>

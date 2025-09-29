@@ -1228,7 +1228,6 @@ class BasicInterfaceTest:
                     self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
                     self.assertIn(f'ifid {address};', dhcpc6_config)
                     self.assertIn(f'sla-id {sla_id};', dhcpc6_config)
-                    self.assertIn(f'sla-len {sla_len};', dhcpc6_config)
 
                     # increment sla-id
                     sla_id = str(int(sla_id) + 1)
@@ -1294,7 +1293,6 @@ class BasicInterfaceTest:
                     self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
                     self.assertIn(f'ifid {address};', dhcpc6_config)
                     self.assertIn(f'sla-id {sla_id};', dhcpc6_config)
-                    self.assertIn(f'sla-len {sla_len};', dhcpc6_config)
 
                     # increment sla-id
                     sla_id = str(int(sla_id) + 1)

@@ -134,6 +134,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
     if family == 'inet6':
         for lease in raw_data:
             ipaddr = lease.get('ip')
+            hw_addr = lease.get('mac')
             state = lease.get('state')
             start = datetime.fromtimestamp(
                 lease.get('last_communication'), timezone.utc
@@ -146,19 +147,22 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             remain = lease.get('remaining')
             lease_type = lease.get('type')
             pool = lease.get('pool')
+            hostname = lease.get('hostname')
             host_identifier = lease.get('duid')
             data_entries.append(
-                [ipaddr, state, start, end, remain, lease_type, pool, host_identifier]
+                [ipaddr, hw_addr, state, start, end, remain, pool, hostname, lease_type, host_identifier]
             )
 
         headers = [
             'IPv6 address',
+            'MAC address',
             'State',
             'Last communication',
             'Lease expiration',
             'Remaining',
-            'Type',
             'Pool',
+            'Hostname',
+            'Type',
             'DUID',
         ]
 
@@ -316,15 +320,15 @@ def _verify_client(func):
 
 @_verify_server
 def show_server_pool_statistics(
-    raw: bool, family: ArgFamily, vrf: str, pool: typing.Optional[str]
+    raw: bool, family: ArgFamily, vrf: typing.Optional[str], pool: typing.Optional[str]
 ):
     v = 'v6' if family == 'inet6' else ''
     inet_suffix = '6' if family == 'inet6' else '4'
 
     if vrf:
-        service = f'kea-dhcp{inet_suffix}-server@{vrf}.service'
+        service = f'kea-dhcp{inet_suffix}@{vrf}.service'
     else:
-        service = f'kea-dhcp{inet_suffix}-server.service'
+        service = f'kea-dhcp{inet_suffix}.service'
 
     if not is_systemd_service_running(service):
         Warning(stale_warn_msg)
@@ -362,7 +366,7 @@ def show_server_pool_statistics(
 def show_server_leases(
     raw: bool,
     family: ArgFamily,
-    vrf: str,
+    vrf: typing.Optional[str],
     pool: typing.Optional[str],
     sorted: typing.Optional[str],
     state: typing.Optional[ArgState],
@@ -372,9 +376,9 @@ def show_server_leases(
     inet_suffix = '6' if family == 'inet6' else '4'
 
     if vrf:
-        service = f'kea-dhcp{inet_suffix}-server@{vrf}.service'
+        service = f'kea-dhcp{inet_suffix}@{vrf}.service'
     else:
-        service = f'kea-dhcp{inet_suffix}-server.service'
+        service = f'kea-dhcp{inet_suffix}.service'
 
     if not is_systemd_service_running(service):
         Warning(stale_warn_msg)
@@ -425,7 +429,7 @@ def show_server_leases(
 def show_server_static_mappings(
     raw: bool,
     family: ArgFamily,
-    vrf: str,
+    vrf: typing.Optional[str],
     pool: typing.Optional[str],
     sorted: typing.Optional[str],
 ):
@@ -433,9 +437,9 @@ def show_server_static_mappings(
     inet_suffix = '6' if family == 'inet6' else '4'
 
     if vrf:
-        service = f'kea-dhcp{inet_suffix}-server@{vrf}.service'
+        service = f'kea-dhcp{inet_suffix}@{vrf}.service'
     else:
-        service = f'kea-dhcp{inet_suffix}-server.service'
+        service = f'kea-dhcp{inet_suffix}.service'
 
     if not is_systemd_service_running(service):
         Warning(stale_warn_msg)
@@ -478,7 +482,7 @@ def _lease_valid(inet, vrf, address):
 
 
 @_verify_server
-def clear_dhcp_server_lease(family: ArgFamily, vrf: str, address: str):
+def clear_dhcp_server_lease(family: ArgFamily, address: str, vrf: typing.Optional[str]):
     v = 'v6' if family == 'inet6' else ''
     inet = '6' if family == 'inet6' else '4'
 

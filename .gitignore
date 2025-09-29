@@ -115,6 +115,7 @@ debian/files
 debian/tmp
 debian/debhelper-build-stamp
 debian/.debhelper/
+debian/libvyosconfig0
 debian/vyos-1x
 debian/vyos-1x-vmware
 debian/vyos-1x-smoketest

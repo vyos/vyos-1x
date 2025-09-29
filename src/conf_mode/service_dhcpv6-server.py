@@ -289,9 +289,9 @@ def apply(dhcpv6):
     # if running in vrf, set base diffrently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
-        service_name = f'kea-dhcp6-server@{vrf_name}.service'
+        service_name = f'kea-dhcp6@{vrf_name}.service'
     else:
-        service_name = 'kea-dhcp6-server.service'
+        service_name = 'kea-dhcp6.service'
 
     # bail out early - looks like removal from running config
     if not dhcpv6 or 'disable' in dhcpv6:

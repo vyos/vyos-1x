@@ -48,6 +48,7 @@ ipv4_tables = {
     'ip vyos_mangle',
     'ip vyos_filter',
     'ip vyos_nat',
+    'ip vyos_wanloadbalance',
     'ip raw'
 }
 

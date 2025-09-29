@@ -212,18 +212,17 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertIn('accept-blank-service=1', config)
 
     def test_accel_vpp_cp(self):
-        interface_vpp = f'{interface},vpp-cp=true'
-
         self.basic_config()
-        self.set(['interface', interface, 'vpp-cp'])
         self.cli_commit()
 
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True, delimiters='=')
-        conf.read(self._config_file)
+        self.set(['interface', interface, 'vpp-cp'])
 
-        # Validate configuration
-        self.assertEqual(conf['pppoe']['interface'], interface_vpp)
+        # vpp-cp require VPP service to be started and interface is configured in VPP
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # All other checks for PPPoE control-plane integration
+        # with VPP are verified in test_vpp.py
 
 
 if __name__ == '__main__':

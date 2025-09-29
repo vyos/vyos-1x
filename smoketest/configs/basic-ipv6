@@ -1,0 +1,142 @@
+interfaces {
+    ethernet eth0 {
+        duplex auto
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+        speed auto
+        vif 5 {
+            address dhcpv6
+        }
+        vif-s 10 {
+            address dhcpv6
+            vif-c 20 {
+                address dhcpv6
+            }
+        }
+    }
+    ethernet eth1 {
+        duplex auto
+        speed auto
+        vif 50 {
+        }
+        vif-s 60 {
+            vif-c 70 {
+            }
+        }
+    }
+    ethernet eth2 {
+        duplex auto
+        speed auto
+    }
+    loopback lo {
+    }
+    pppoe pppoe0 {
+        authentication {
+            password vyos
+            user vyos
+        }
+        default-route force
+        dhcpv6-options {
+            pd 0 {
+                interface eth1.50 {
+                    address 1
+                    sla-id 0
+                }
+                interface eth1.60 {
+                    address 1
+                    sla-id 1
+                }
+                interface eth1.60.70 {
+                    address 1
+                    sla-id 1
+                }
+                length 56
+            }
+        }
+        ipv6 {
+            address {
+                autoconf
+            }
+        }
+        no-peer-dns
+        source-interface eth2
+    }
+}
+service {
+    router-advert {
+        interface eth1.50 {
+            prefix ::/64 {
+                preferred-lifetime 2700
+                valid-lifetime 5400
+            }
+        }
+        interface eth1.60 {
+            prefix ::/64 {
+            }
+        }
+        interface eth1.60.70 {
+            prefix ::/64 {
+            }
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions 15
+    }
+    conntrack {
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sqlnet
+            tftp
+        }
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name ipv6-r1
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 2001:db8::1
+    name-server 2001:db8::2
+    ntp {
+        allow-clients {
+            address 2001:db8::/32
+        }
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level debug
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@22:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.4

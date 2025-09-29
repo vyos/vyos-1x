@@ -160,6 +160,9 @@ def get_config():
     lb = conf.get_config_dict(base, key_mangling=('-', '_'),
                             get_first_key=True, with_recursive_defaults=True)
 
+    lb['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+
     # prune limit key if not set by user
     for rule in lb.get('rule', []):
         if lb.from_defaults(['rule', rule, 'limit']):
@@ -279,7 +282,7 @@ if __name__ == '__main__':
                         if state_changed and state['failure_count'] >= int(health_conf['failure_count']):
                             state['state'] = False
                             state['state_changed'] = True
-                    
+
                     #Force state changed to trigger the first write
                     if init == True:
                         state['state_changed'] = True

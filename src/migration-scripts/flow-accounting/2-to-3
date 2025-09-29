@@ -1,0 +1,65 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# migrate from pmacct to ipt-NETFLOW:
+# Remove 'timeout' subtree, 'buffer-size', 'disable-imt', 'packet-length' and
+# 'syslog-facility' from 'system flow-accounting'
+#
+# Move "system flow-accounting interface" to "system flow-accounting netflow interface"
+#
+# Remove "system flow-accounting source" and add it to each server
+#   under "system flow-accounting netflow server SERVER source-address"
+
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'flow-accounting']
+remove_keys = [
+    ['buffer-size'],
+    ['disable-imt'],
+    ['netflow', 'timeout'],
+    ['packet-length'],
+    ['syslog-facility'],
+]
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    # Remove not needed pmacct fields
+    for k in remove_keys:
+        p = base + k
+        if config.exists(p):
+            config.delete(p)
+
+    # Move "system flow-accounting interface" -> "system flow-accounting netflow interface"
+    if config.exists(base + ['interface']):
+        config.copy(base + ['interface'], base + ['netflow', 'interface'])
+        config.delete(base + ['interface'])
+
+    # Remove old "source-address", add it to each server as "source-address"
+    source_prev_path = base + ['netflow', 'source-address']
+    if config.exists(source_prev_path):
+        source_value = config.return_value(source_prev_path)
+        config.delete(source_prev_path)
+
+        # So we loose 'source-address' value if there are no servers
+        # configured, but it is not valid configuration if there
+        # is no server, so it shouldn't be a problem
+        if config.exists(base + ['netflow', 'server']):
+            path = base + ['netflow', 'server']
+            for server in config.list_nodes(path):
+                config.set(path + [server, 'source-address'], source_value)

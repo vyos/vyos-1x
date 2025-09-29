@@ -416,7 +416,7 @@ class Interface(Control):
 
     def _nft_check_and_run(self, nft_command):
         # Check if deleting is possible first to avoid raising errors
-        _, err = self._popen(f'nft --check {nft_command}')
+        _, err = self._popen(f'nft --check {nft_command} 2>/dev/null')
         if not err:
             # Remove map element
             self._cmd(f'nft {nft_command}')

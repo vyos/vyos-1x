@@ -10,6 +10,9 @@ Build-Depends:
   iproute2,
   libzmq3-dev,
   python3 (>= 3.10),
+# For libvyosconfig
+  libpcre2-dev,
+  libffi-dev,
 # For QA/Lint
   pylint,
   python3-vici (>= 5.7.2),
@@ -31,7 +34,7 @@ Build-Depends:
   python3-hurry.filesize,
   python3-netaddr,
   python3-netifaces,
-  python3-nose,
+  python3-nose2,
   python3-jinja2,
   python3-paramiko,
   python3-passlib,
@@ -218,7 +221,10 @@ Depends:
 # For "service dhcp-relay"
   isc-dhcp-relay,
 # For "service dhcp-server"
-  kea,
+  isc-kea-dhcp4,
+  isc-kea-dhcp6,
+  isc-kea-dhcp-ddns,
+  isc-kea-hooks,
 # End "service dhcp-server"
 # For "service lldp"
   lldpd,
@@ -318,9 +324,6 @@ Depends:
 # For "vpn openconnect"
   ocserv,
 # End "vpn openconnect"
-# For "system flow-accounting"
-  pmacct (>= 1.6.0),
-# End "system flow-accounting"
 # For "system syslog"
   rsyslog,
 # End "system syslog"
@@ -391,6 +394,13 @@ Depends:
 ## End optional utilities
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
+
+Package: libvyosconfig0
+Architecture: any
+Depends: ${shlibs:Depends},
+  ${misc:Depends}
+Description: VyConf config tree manipulation library
+  VyConf config tree parsing and manipulation library
 
 Package: vyos-1x-aws
 Architecture: all

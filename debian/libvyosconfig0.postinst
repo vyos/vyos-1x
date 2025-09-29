@@ -1,0 +1,3 @@
+ldconfig
+chown -R root:vyattacfg /usr/libexec/vyos/vyconf/session
+chmod -R 775 /usr/libexec/vyos/vyconf/session

@@ -19,7 +19,7 @@
 import psutil
 
 from vyos import ConfigError
-from vyos.utils.cpu import get_core_count as total_core_count
+from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
 
 from vyos.vpp.control_host import get_eth_driver
 from vyos.vpp.config_resource_checks import cpu as cpu_checks, memory as mem_checks
@@ -179,6 +179,46 @@ def verify_dev_driver(iface_name: str, driver_type: str) -> bool:
     return False
 
 
+def create_cpu_error_message(
+    cpus_required: int, cpus_available: int = None, skip_cores: int = 0
+) -> str:
+    cpu_info = get_cpus()
+    logical_cores = sum(
+        [int(s.get('siblings')) if 'siblings' in s else 1 for s in cpu_info]
+    )
+
+    reserved_cpus = default_resource_map.get('reserved_cpu_cores')
+    if skip_cores > reserved_cpus:
+        reserved_cpus = skip_cores
+
+    available_str = (
+        (
+            '---'.ljust(72)
+            + 'Reserved:'.ljust(72)
+            + f'For system: {reserved_cpus}'.ljust(72)
+            + f'VPP main thread: 1'.ljust(72)
+            + '---'.ljust(72)
+            + 'Available:'.ljust(72)
+            + f'Physical cores: {max(cpus_available, 0)}'
+        )
+        if cpus_available is not None
+        else ''
+    )
+
+    message = (
+        '---'.ljust(72)
+        + 'Total in the system:'.ljust(72)
+        + f'Physical cores: {total_core_count()}'.ljust(72)
+        + f'Logical cores: {logical_cores}'.ljust(72)
+        + '---'.ljust(72)
+        + 'Required:'.ljust(72)
+        + f'Physical cores: {cpus_required}'.ljust(72)
+        + available_str
+    )
+
+    return message
+
+
 def verify_vpp_minimum_cpus():
     """
     Verify that the host system has enough physical CPU cores
@@ -187,8 +227,8 @@ def verify_vpp_minimum_cpus():
     min_cpus = default_resource_map.get('min_cpus')
     if total_core_count() < min_cpus:
         raise ConfigError(
-            'This system does not meet minimal requirements for VPP. '
-            f'Minimum {min_cpus} CPU cores are required.'
+            'This system does not meet minimal requirements for VPP. '.ljust(72)
+            + create_cpu_error_message(min_cpus)
         )
 
 
@@ -288,14 +328,15 @@ def verify_vpp_settings_cpu_skip_cores(skip_cores: int):
         )
 
 
-def verify_vpp_settings_cpu_and_corelist_workers(settings: dict):
+def verify_vpp_settings_cpu(settings: dict):
     """
+    Verify 'cpu main-core' is set if worker-related settings are used.
     `set vpp settings cpu workers` and `set vpp settings cpu corelist-workers`
     are mutually exclusive!
     """
-    if (
-        'corelist_workers' in settings or 'workers' in settings
-    ) and 'main_core' not in settings:
+    worker_related = ('corelist_workers', 'workers', 'skip_cores')
+
+    if any(key in settings for key in worker_related) and 'main_core' not in settings:
         raise ConfigError('"cpu main-core" is required but not set!')
 
     if 'corelist_workers' in settings and 'workers' in settings:
@@ -327,8 +368,10 @@ def verify_vpp_settings_cpu_workers(cpu_settings: dict):
 
     if workers > available_cores:
         raise ConfigError(
-            f'Not enough free CPU cores for {workers} VPP workers '
-            f'(reduce to {available_cores} or less)'
+            f'Not enough free physical CPU cores for {workers} VPP workers '.ljust(72)
+            + create_cpu_error_message(
+                workers, available_cores, cpu_settings.get('skip_cores', 0)
+            )
         )
 
 
@@ -347,7 +390,7 @@ def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict):
     except ValueError as e:
         raise ConfigError(str(e))
 
-    error_msg = 'Cannot set VPP "cpu corelist-workers"'
+    error_msg = 'Cannot set VPP "cpu corelist-workers": '.ljust(72)
 
     if main_core in all_core_nums:
         raise ConfigError(
@@ -357,12 +400,17 @@ def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict):
 
     invalid_cores = [str(el) for el in all_core_nums if el not in available_cores]
     if invalid_cores:
-        raise ConfigError(
-            f'{error_msg}: CPU# {",".join(invalid_cores)} are not available.'
-        )
+        raise ConfigError(error_msg + f'CPU# {",".join(invalid_cores)} not available.')
 
-    if len(all_core_nums) > cpu_checks.available_cores_count(cpu_settings):
-        raise ConfigError(f'{error_msg}: Not enough free CPUs in the system.')
+    available_cores_count = cpu_checks.available_cores_count(cpu_settings)
+    if len(all_core_nums) > available_cores_count:
+        raise ConfigError(
+            error_msg
+            + 'Not enough free physical CPUs in the system.'.ljust(72)
+            + create_cpu_error_message(
+                len(all_core_nums), available_cores_count, skip_cores
+            )
+        )
 
 
 def verify_vpp_nat44_workers(workers: int, nat44_workers: list):

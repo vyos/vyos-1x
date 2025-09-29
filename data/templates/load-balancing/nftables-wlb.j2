@@ -1,5 +1,7 @@
 #!/usr/sbin/nft -f
 
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
+
 {% if first_install is not vyos_defined %}
 delete table ip vyos_wanloadbalance
 {% endif %}
@@ -61,4 +63,6 @@ table ip vyos_wanloadbalance {
         meta mark set {{ state.mark }} ct mark set {{ state.mark }} counter accept
     }
 {% endfor %}
+
+{{ group_tmpl.groups(firewall_group, False, True) }}
 }

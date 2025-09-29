@@ -1,6 +1,6 @@
 python/
 lxml
 pylint
-nose
+nose2
 coverage
 jinja2

@@ -1,0 +1,18 @@
+{% if user is vyos_defined %}
+{%     set ns = namespace (gen_header = True) %}
+{%     for user, user_config in user.items() %}
+{%         if user_config.authentication.public_keys is vyos_defined %}
+{%             for key, key_options in user_config.authentication.public_keys.items() %}
+{%                 if key_options.type is vyos_defined('ssh-dss') %}
+{%                     if ns.gen_header %}
+{%                         set ns.gen_header = False %}
+---
+{{ ssh_dsa_deprecation_warning | wordwrap(72) }}
+
+{%                     endif %}
+User "{{ user }}" with deprecated public-key named: {{ key }}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%     endfor %}
+{% endif %}

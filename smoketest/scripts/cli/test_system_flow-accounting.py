@@ -20,17 +20,53 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.template import bracketize_ipv6
+from vyos.utils.kernel import is_module_loaded
+from vyos.utils.kernel import get_module_data
 from vyos.utils.process import cmd
-from vyos.utils.process import process_named_running
-from vyos.utils.file import read_file
 
-PROCESS_NAME = 'uacctd'
+module_name = 'ipt_NETFLOW'
 base_path = ['system', 'flow-accounting']
 
-uacctd_conf = '/run/pmacct/uacctd.conf'
 
 class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
+
+    def _get_iptables_watched_interfaces(self, command, table, chain, column_name):
+        iptables_command = f'{command} -vn -t {table} -L {chain}'
+        data = cmd(iptables_command, message='Failed to get flows list')
+        data = data.splitlines()
+        self.assertGreaterEqual(
+            len(data), 2, "Unexpected output of {command}, should be at least two lines"
+        )
+        column_index = data[1].split().index(column_name)
+        interfaces = [
+            line.split()[column_index] for line in data[2:] if 'NETFLOW' in line
+        ]
+        return interfaces
+
+    def _get_iptables_watched_ingress_interfaces(self, command):
+        return self._get_iptables_watched_interfaces(command, 'raw', 'PREROUTING', 'in')
+
+    def _get_iptables_watched_egress_interfaces(self, command):
+        return self._get_iptables_watched_interfaces(
+            command, 'mangle', 'POSTROUTING', 'out'
+        )
+
+    def _assert_ingress_interfaces(self, interfaces):
+        for command in 'iptables', 'ip6tables':
+            self.assertEqual(
+                set(self._get_iptables_watched_ingress_interfaces(command)),
+                set(interfaces),
+                command,
+            )
+
+    def _assert_egress_interfaces(self, interfaces):
+        for command in 'iptables', 'ip6tables':
+            self.assertEqual(
+                set(self._get_iptables_watched_egress_interfaces(command)),
+                set(interfaces),
+                command,
+            )
+
     @classmethod
     def setUpClass(cls):
         super(TestSystemFlowAccounting, cls).setUpClass()
@@ -41,106 +77,83 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # after service removal process must no longer run
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(is_module_loaded(module_name))
 
         self.cli_delete(base_path)
         self.cli_commit()
 
         # after service removal process must no longer run
-        self.assertFalse(process_named_running(PROCESS_NAME))
+        self.assertFalse(is_module_loaded(module_name))
+        self._assert_ingress_interfaces([])
+        self._assert_egress_interfaces([])
 
     def test_basic(self):
-        buffer_size = '5' # MiB
-        syslog = 'all'
-
-        self.cli_set(base_path + ['buffer-size', buffer_size])
-        self.cli_set(base_path + ['syslog-facility', syslog])
+        engine_id = '33'
+        self.cli_set(base_path + ['netflow', 'engine-id', engine_id])
 
         # You need to configure at least one interface for flow-accounting
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         for interface in Section.interfaces('ethernet'):
-            self.cli_set(base_path + ['interface', interface])
+            self.cli_set(base_path + ['netflow', 'interface', interface])
 
-        # commit changes
+        # You need to configure at least one NetFlow server
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        netflow_server = '11.22.33.44'
+        self.cli_set(base_path + ['netflow', 'server', netflow_server])
+
+        # commit changes, this time should work
         self.cli_commit()
 
         # verify configuration
-        nftables_output = cmd('sudo nft list chain raw VYOS_PREROUTING_HOOK').splitlines()
-        for interface in Section.interfaces('ethernet'):
-            rule_found = False
-            ifname_search = f'iifname "{interface}"'
+        self._assert_ingress_interfaces(Section.interfaces('ethernet'))
+        self._assert_egress_interfaces([])
 
-            for nftables_line in nftables_output:
-                if 'FLOW_ACCOUNTING_RULE' in nftables_line and ifname_search in nftables_line:
-                    self.assertIn('group 2', nftables_line)
-                    self.assertIn('snaplen 128', nftables_line)
-                    self.assertIn('queue-threshold 100', nftables_line)
-                    rule_found = True
-                    break
+        module_data = get_module_data(module_name)
+        self.assertEqual(engine_id, module_data['parameters']['engine_id'])
 
-            self.assertTrue(rule_found)
-
-        uacctd = read_file(uacctd_conf)
-        # circular queue size - buffer_size
-        tmp = int(buffer_size) *1024 *1024
-        self.assertIn(f'plugin_pipe_size: {tmp}', uacctd)
-        # transfer buffer size - recommended value from pmacct developers 1/1000 of pipe size
-        tmp = int(buffer_size) *1024 *1024
-        # do an integer division
-        tmp //= 1000
-        self.assertIn(f'plugin_buffer_size: {tmp}', uacctd)
-
-        # when 'disable-imt' is not configured on the CLI it must be present
-        self.assertIn(f'imt_path: /tmp/uacctd.pipe', uacctd)
-        self.assertIn(f'imt_mem_pools_number: 169', uacctd)
-        self.assertIn(f'syslog: {syslog}', uacctd)
-        self.assertIn(f'plugins: memory', uacctd)
 
     def test_netflow(self):
         engine_id = '33'
         max_flows = '667'
-        sampling_rate = '100'
-        source_address = '192.0.2.1'
         dummy_if = 'dum3842'
         agent_address = '192.0.2.10'
         version = '10'
-        tmo_expiry = '120'
-        tmo_flow = '1200'
-        tmo_icmp = '60'
-        tmo_max = '50000'
-        tmo_tcp_fin = '100'
-        tmo_tcp_generic = '120'
-        tmo_tcp_rst = '99'
-        tmo_udp = '10'
+        active_timeout = '900'
+        inactive_timeout = '30'
 
+        source_ipv4_address = '192.0.2.1'
+        source_ipv6_address = '2001:db8::ab'
         netflow_server = {
-            '11.22.33.44' : { },
-            '55.66.77.88' : { 'port' : '6000' },
-            '2001:db8::1' : { },
+            '11.22.33.44': {},
+            '55.66.77.88': {'port': '6000'},
+            '100.12.14.1': {'source-interface': dummy_if},
+            '203.0.113.21': {'port': '3000', 'source-address': source_ipv4_address},
+            '2001:db8::1': {'source-address': source_ipv6_address},
         }
+        # ipt_NETFLOW sorts destinations by IP
+        expected_destination = '11.22.33.44:2055,55.66.77.88:6000,100.12.14.1:2055%dum3842,203.0.113.21:3000@192.0.2.1,[2001:db8::1]:2055@2001:db8::ab'
 
-        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', agent_address + '/32'])
-        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', source_address + '/32'])
+        self.cli_set(
+            ['interfaces', 'dummy', dummy_if, 'address', agent_address + '/32']
+        )
+        self.cli_set(
+            ['interfaces', 'dummy', dummy_if, 'address', source_ipv4_address + '/32']
+        )
+        self.cli_set(
+            ['interfaces', 'dummy', dummy_if, 'address', source_ipv6_address + '/128']
+        )
 
         for interface in Section.interfaces('ethernet'):
-            self.cli_set(base_path + ['interface', interface])
+            self.cli_set(base_path + ['netflow', 'interface', interface])
 
         self.cli_set(base_path + ['netflow', 'engine-id', engine_id])
         self.cli_set(base_path + ['netflow', 'max-flows', max_flows])
-        self.cli_set(base_path + ['netflow', 'sampling-rate', sampling_rate])
-        self.cli_set(base_path + ['netflow', 'source-address', source_address])
         self.cli_set(base_path + ['netflow', 'version', version])
-
-        # timeouts
-        self.cli_set(base_path + ['netflow', 'timeout', 'expiry-interval', tmo_expiry])
-        self.cli_set(base_path + ['netflow', 'timeout', 'flow-generic', tmo_flow])
-        self.cli_set(base_path + ['netflow', 'timeout', 'icmp', tmo_icmp])
-        self.cli_set(base_path + ['netflow', 'timeout', 'max-active-life', tmo_max])
-        self.cli_set(base_path + ['netflow', 'timeout', 'tcp-fin', tmo_tcp_fin])
-        self.cli_set(base_path + ['netflow', 'timeout', 'tcp-generic', tmo_tcp_generic])
-        self.cli_set(base_path + ['netflow', 'timeout', 'tcp-rst', tmo_tcp_rst])
-        self.cli_set(base_path + ['netflow', 'timeout', 'udp', tmo_udp])
+        self.cli_set(base_path + ['netflow', 'active-timeout', active_timeout])
+        self.cli_set(base_path + ['netflow', 'inactive-timeout', inactive_timeout])
 
         # You need to configure at least one netflow server
         with self.assertRaises(ConfigSessionError):
@@ -150,40 +163,119 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['netflow', 'server', server])
             if 'port' in server_config:
                 self.cli_set(base_path + ['netflow', 'server', server, 'port', server_config['port']])
+            if 'source-address' in server_config:
+                self.cli_set(
+                    base_path
+                    + [
+                        'netflow',
+                        'server',
+                        server,
+                        'source-address',
+                        server_config['source-address'],
+                    ]
+                )
+            if 'source-interface' in server_config:
+                self.cli_set(
+                    base_path
+                    + [
+                        'netflow',
+                        'server',
+                        server,
+                        'source-interface',
+                        server_config['source-interface'],
+                    ]
+                )
 
         # commit changes
         self.cli_commit()
 
-        uacctd = read_file(uacctd_conf)
+        module_data = get_module_data(module_name)
 
-        tmp = []
-        for server, server_config in netflow_server.items():
-            tmp_srv = server
-            tmp_srv = tmp_srv.replace('.', '-')
-            tmp_srv = tmp_srv.replace(':', '-')
-            tmp.append(f'nfprobe[nf_{tmp_srv}]')
-        tmp.append('memory')
-        self.assertIn('plugins: ' + ','.join(tmp), uacctd)
+        self.assertEqual(engine_id, module_data['parameters']['engine_id'])
+        self.assertEqual(max_flows, module_data['parameters']['maxflows'])
+        self.assertEqual(expected_destination, module_data['parameters']['destination'])
+        self.assertEqual(version, module_data['parameters']['protocol'])
+        self.assertEqual(active_timeout, module_data['parameters']['active_timeout'])
+        self.assertEqual(
+            inactive_timeout, module_data['parameters']['inactive_timeout']
+        )
 
-        for server, server_config in netflow_server.items():
-            tmp_srv = server
-            tmp_srv = tmp_srv.replace('.', '-')
-            tmp_srv = tmp_srv.replace(':', '-')
+        # Test module reload with new parameters
+        engine_id = '73'
+        self.cli_set(base_path + ['netflow', 'engine-id', engine_id])
+        self.cli_commit()
 
-            self.assertIn(f'nfprobe_engine[nf_{tmp_srv}]: {engine_id}', uacctd)
-            self.assertIn(f'nfprobe_maxflows[nf_{tmp_srv}]: {max_flows}', uacctd)
-            self.assertIn(f'sampling_rate[nf_{tmp_srv}]: {sampling_rate}', uacctd)
-            self.assertIn(f'nfprobe_source_ip[nf_{tmp_srv}]: {source_address}', uacctd)
-            self.assertIn(f'nfprobe_version[nf_{tmp_srv}]: {version}', uacctd)
+        module_data = get_module_data(module_name)
 
-            if 'port' in server_config:
-                self.assertIn(f'nfprobe_receiver[nf_{tmp_srv}]: {bracketize_ipv6(server)}', uacctd)
-            else:
-                self.assertIn(f'nfprobe_receiver[nf_{tmp_srv}]: {bracketize_ipv6(server)}:2055', uacctd)
-
-            self.assertIn(f'nfprobe_timeouts[nf_{tmp_srv}]: expint={tmo_expiry}:general={tmo_flow}:icmp={tmo_icmp}:maxlife={tmo_max}:tcp.fin={tmo_tcp_fin}:tcp={tmo_tcp_generic}:tcp.rst={tmo_tcp_rst}:udp={tmo_udp}', uacctd)
+        self.assertEqual(engine_id, module_data['parameters']['engine_id'])
 
         self.cli_delete(['interfaces', 'dummy', dummy_if])
+
+
+    def test_iptables(self):
+        netflow_server = '11.22.33.44'
+        self.cli_set(base_path + ['netflow', 'server', netflow_server])
+
+        dummy_ifs = [
+            'dum4000',
+            'dum4001',
+            'dum4002',
+            'dum4003',
+        ]
+
+        self.cli_set(['interfaces', 'dummy', dummy_ifs[0], 'address', '192.0.2.100/32'])
+        self.cli_set(['interfaces', 'dummy', dummy_ifs[1], 'address', '192.0.2.101/32'])
+        self.cli_set(['interfaces', 'dummy', dummy_ifs[2], 'address', '192.0.2.102/32'])
+        self.cli_set(['interfaces', 'dummy', dummy_ifs[3], 'address', '192.0.2.103/32'])
+
+        # * three interfaces
+        for i in range(3):
+            self.cli_set(base_path + ['netflow', 'interface', dummy_ifs[i]])
+        self.cli_commit()
+        self._assert_ingress_interfaces(dummy_ifs[0:3])
+        self._assert_egress_interfaces([])
+
+        # * Then delete one
+        self.cli_delete(base_path + ['netflow', 'interface', dummy_ifs[1]])
+        self.cli_commit()
+        self._assert_ingress_interfaces([dummy_ifs[0], dummy_ifs[2]])
+        self._assert_egress_interfaces([])
+
+        # * Then add one
+        self.cli_set(base_path + ['netflow', 'interface', dummy_ifs[3]])
+        self.cli_commit()
+        self._assert_ingress_interfaces([dummy_ifs[0], dummy_ifs[2], dummy_ifs[3]])
+        self._assert_egress_interfaces([])
+
+        # * enable egress
+        self.cli_set(base_path + ['enable-egress'])
+        self.cli_commit()
+        self._assert_ingress_interfaces([dummy_ifs[0], dummy_ifs[2], dummy_ifs[3]])
+        self._assert_egress_interfaces([dummy_ifs[0], dummy_ifs[2], dummy_ifs[3]])
+
+    def test_sampler(self):
+        # Separate test because if --enable-sampler is not given to configure of
+        # ipt_NETFLOW this parameter is not available
+        sampling_rate = '100'
+        self.cli_set(base_path + ['netflow', 'sampling-rate', sampling_rate])
+
+        for interface in Section.interfaces('ethernet'):
+            self.cli_set(base_path + ['netflow', 'interface', interface])
+
+        netflow_server = '11.22.33.44'
+        self.cli_set(base_path + ['netflow', 'server', netflow_server])
+
+        # commit changes, this time should work
+        self.cli_commit()
+
+        module_data = get_module_data(module_name)
+
+        if 'sampler' not in module_data['parameters']:
+            self.skipTest("ipt_NETFLOW has no sampler parameter")
+
+        self.assertEqual(
+            f'random:{sampling_rate}', module_data['parameters']['sampler']
+        )
 
 
 if __name__ == '__main__':

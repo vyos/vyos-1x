@@ -18,26 +18,12 @@
 
 
 default_resource_map = {
-    # Default amount of buffers per NUMA (populated CPU socket)
-    'buffers_per_numa': 16384,
-    # Default size of buffer (in bytes)
-    'data_size': 2048,
-    # Default hugepage size for VPP
-    'hugepage_size': '2M',
-    # Default amount of memory allocated for VPP exclusive usage
-    'main_heap_size': '3G',
-    # Default main heap page size
-    'main_heap_page_size': '2M',
     # Default size of buffers transferred via netlink
     'netlink_rx_buffer_size': 212992,
-    # Default amount of memory allocated for VPP stats segment usage
-    'statseg_heap_size': '128M',
     # Minimal amount of memory required to start VPP
     'min_memory': '8G',
     # Minimal number of physical CPU cores required to start VPP
     'min_cpus': 4,
     # Reserve at least 2 physical cores
     'reserved_cpu_cores': 2,
-    # Default heap size for IPv6
-    'ipv6_heap_size': '32M',
 }

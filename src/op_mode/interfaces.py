@@ -126,6 +126,7 @@ def _split_text(text, used=0):
             continue
         if line:
             yield line[1:]
+            line = f' {word}'
         else:
             line = f'{line} {word}'
 
