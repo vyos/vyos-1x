@@ -162,14 +162,12 @@ def verify(container):
                     raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
 
                 mac = dict_search(f'network.{network_name}.mac', container_config)
-                mac_auto = dict_search(f'network.{network_name}.mac_auto', container_config)
-                if all((mac, mac_auto is not None)):
-                    raise ConfigError(f'Cannot set both "mac" and "mac-auto" for container "{name}"!')
                 
                 if mac:
                     if mac in net_dict['mac'].keys():
                         raise ConfigError(f'MAC address "{mac}" is already used by container "{net_dict["mac"][mac]}"!')
-                    net_dict['mac'][mac] = name
+                    if mac != 'auto':
+                        net_dict['mac'][mac] = name
 
                 if 'address' in container_config['network'][network_name]:
                     cnt_ipv4 = 0
@@ -509,20 +507,19 @@ def generate_run_arguments(name, container_config, host_ident):
         addr_info = ''.join(container_config['network'][network]['address'])
 
     get_mac = dict_search(f'network.{network_name}.mac', container_config)
-    if get_mac:
-        mac_add = get_mac
-    else:
+    if get_mac == 'auto':
         mac_add = gen_mac(name, addr_info, host_ident)
+    else:
+        mac_add = get_mac
 
     mac_address = f'--mac-address {mac_add}'
 
     # Replace mac-auto with the generated mac address
-    if dict_search(f'network.{network_name}.mac_auto', container_config) is not None:
-        del_mac_auto = ['container', 'name', name, 'network', network_name, 'mac-auto']
-        add_static_mac = ['container', 'name', name, 'network', network_name, 'mac']
+    if dict_search(f'network.{network_name}.mac', container_config) == 'auto':
+        mac_config_path = ['container', 'name', name, 'network', network_name, 'mac']
 
-        delete_cli_node(del_mac_auto)
-        add_cli_node(add_static_mac, value=mac_add)
+        delete_cli_node(mac_config_path)
+        add_cli_node(mac_config_path, value=mac_add)
 
     return f'{container_base_cmd} --no-healthcheck --net {networks} {ip_param} {mac_address} {entrypoint} {image} {command} {command_arguments}'.strip()
 
