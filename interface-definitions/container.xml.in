@@ -312,6 +312,13 @@
                   <multi/>
                 </properties>
               </leafNode>
+              #include <include/interface/mac.xml.i>
+              <leafNode name="mac-auto">
+                <properties>
+                  <help>Generate a random MAC address for the container</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
           <tagNode name="port">
