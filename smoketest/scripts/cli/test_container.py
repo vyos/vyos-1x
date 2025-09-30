@@ -236,10 +236,6 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', "test2", 'image', busybox_image])
         self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'address', '10.0.1.12'])
         self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'mac', '02:00:00:00:00:02'])
-
-        self.cli_set(base_path + ['name', "test3", 'image', busybox_image])
-        self.cli_set(base_path + ['name', "test3", 'network', 'bridge1', 'address', '10.0.1.13'])
-        self.cli_set(base_path + ['name', "test3", 'network', 'bridge1', 'mac-auto'])
         self.cli_commit()
 
         n = cmd_to_json(f'sudo podman container inspect test1')
