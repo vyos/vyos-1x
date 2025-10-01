@@ -109,7 +109,7 @@ def reset(family: ArgFamily, interface: typing.Optional[str], address: typing.Op
         run(f"""ip --family {family} neighbor flush dev {interface}""")
     else:
         # Flush an entire neighbor table
-        run(f"""ip --family {family} neighbor flush""")
+        run(f"""ip --family {family} neighbor flush all""")
 
 if __name__ == '__main__':
     try:
