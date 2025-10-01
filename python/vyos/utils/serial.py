@@ -56,6 +56,9 @@ def send_command_to_iolan(action, name, service, ttynum, mtsport, alias_ip, moni
     finally:
         sock.close()
 
+def print_global_change_warning():
+    Warning('Global configuration changes have been made. To activate the new settings, run the "restart serial ..." command to restart the serial port!')
+
 def find_all_ttyS_devices():
     tty_devices = []
     for entry in os.listdir('/dev'):

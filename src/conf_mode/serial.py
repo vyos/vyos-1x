@@ -36,6 +36,8 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.serial import send_command_to_iolan
+from vyos.utils.serial import find_all_ttyS_devices
+from vyos.utils.serial import print_global_change_warning
 from vyos import ConfigError
 
 from vyos.pki import wrap_certificate
@@ -81,7 +83,7 @@ def get_config(config=None):
     for device in proxy.get('device', []):
         # Want to restart serial if its config changed
         tmp = is_node_changed(conf, base + ['device', device])
-        print(tmp)
+        print(f'is_node_changed for {device}: {tmp}')
         if tmp:
             changed_tty_list.append(device)
             if 'tls' in proxy_no_default['device'][device]:
@@ -90,9 +92,16 @@ def get_config(config=None):
     if changed_tty_list:
         proxy['serial_restart'] = changed_tty_list
 
+    print(f'changed_tty_list {changed_tty_list}')
+
+    tmp = is_node_changed(conf, base + ['global'])
+    if tmp:
+        print(f'global changed')
+        proxy.update({'global_changed': tmp})
+
     # Delete serial port if was deleted from config tree
     tmp = node_changed(conf, base + ['device'])
-    print(tmp)
+    print(f'serial_remove {tmp}')
     if tmp: proxy.update({'serial_remove': tmp})
 
     # print('--------------------------------------- Use to validate ------------------------------- \n ')
@@ -143,9 +152,6 @@ def verify(proxy):
 def ensure_folder_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
-    #     print(f'Folder created: {path}')
-    # else:
-    #     print(f'Folder already exists: {path}')
 
 def replace_empty_dicts(d):
     if isinstance(d, dict):
@@ -455,10 +461,18 @@ def apply(proxy):
         if not is_systemd_service_active(service_name):
             cmd(f'systemctl start {service_name}')
 
+        displayed_warning = 0
         for device, serial_config in proxy['device'].items():
             if 'serial_restart' in proxy:
+                all_devices = find_all_ttyS_devices()
+                for item in all_devices:
+                    if item not in proxy['serial_restart'] and displayed_warning == 0:
+                        print_global_change_warning()
+                        displayed_warning = 1
                 if device not in proxy['serial_restart']:
                     continue
+            else:
+                break
 
             ttynum = int(re.findall(r'\d+', device)[0])
             mtsport = 0
