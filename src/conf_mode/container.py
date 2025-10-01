@@ -161,8 +161,7 @@ def verify(container):
                 if 'name_server' in container_config and 'no_name_server' not in container['network'][network_name]:
                     raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
 
-                mac = dict_search(f'network.{network_name}.mac', container_config)
-                
+                mac = dict_search(f'network.{network_name}.mac', container_config)                
                 if mac:
                     if mac in net_dict['mac'].keys():
                         raise ConfigError(f'MAC address "{mac}" is already used by container "{net_dict["mac"][mac]}"!')
@@ -507,7 +506,7 @@ def generate_run_arguments(name, container_config, host_ident):
         addr_info = ''.join(container_config['network'][network]['address'])
 
     get_mac = dict_search(f'network.{network_name}.mac', container_config)
-    if get_mac == 'auto':
+    if get_mac == 'auto' or get_mac is None:
         mac_add = gen_mac(name, addr_info, host_ident)
     else:
         mac_add = get_mac
@@ -515,7 +514,7 @@ def generate_run_arguments(name, container_config, host_ident):
     mac_address = f'--mac-address {mac_add}'
 
     # Replace mac-auto with the generated mac address
-    if dict_search(f'network.{network_name}.mac', container_config) == 'auto':
+    if get_mac == 'auto':
         mac_config_path = ['container', 'name', name, 'network', network_name, 'mac']
 
         delete_cli_node(mac_config_path)
