@@ -473,6 +473,8 @@ def apply(proxy):
                 if device not in proxy['serial_restart']:
                     continue
             else:
+                if 'global_changed' in proxy:
+                    print_global_change_warning()
                 break
 
             ttynum = int(re.findall(r'\d+', device)[0])
