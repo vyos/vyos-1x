@@ -461,14 +461,15 @@ def apply(proxy):
         if not is_systemd_service_active(service_name):
             cmd(f'systemctl start {service_name}')
 
-        displayed_warning = 0
         for device, serial_config in proxy['device'].items():
             if 'serial_restart' in proxy:
-                all_devices = find_all_ttyS_devices()
-                for item in all_devices:
-                    if item not in proxy['serial_restart'] and displayed_warning == 0:
-                        print_global_change_warning()
-                        displayed_warning = 1
+                if 'global_changed' in proxy:
+                    displayed_warning = 0
+                    all_devices = find_all_ttyS_devices()
+                    for item in all_devices:
+                        if item not in proxy['serial_restart'] and displayed_warning == 0:
+                            print_global_change_warning()
+                            displayed_warning = 1
                 if device not in proxy['serial_restart']:
                     continue
             else:
