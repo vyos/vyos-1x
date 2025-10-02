@@ -22,13 +22,13 @@ from glob import glob
 from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import is_node_changed
-from vyos.configdiff import get_config_diff, Diff
+from vyos.configdict import is_node_changed, node_changed
+from vyos.configdiff import Diff
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
 from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
-from vyos.firewall import geoip_update
+from vyos.geoip import geoip_refresh, geoip_update
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
@@ -80,42 +80,29 @@ snmp_event_source = 1
 snmp_trap_mib = 'VYATTA-TRAP-MIB'
 snmp_trap_name = 'mgmtEventTrap'
 
-def geoip_updated(conf, firewall):
-    diff = get_config_diff(conf)
-    node_diff = diff.get_child_nodes_diff(['firewall'], expand_nodes=Diff.DELETE, recursive=True)
+def geoip_sets(firewall):
+    out = {'name': [], 'ipv6_name': []}
 
-    out = {
-        'name': [],
-        'ipv6_name': [],
-        'deleted_name': [],
-        'deleted_ipv6_name': []
-    }
+    for _, path in dict_search_recursive(firewall, 'geoip'):
+        if (path[0] == 'ipv4'):
+            out['name'].append(f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}')
+        elif (path[0] == 'ipv6'):
+            out['ipv6_name'].append(f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}')
+
+    return out
+
+def geoip_updated(conf):
+    changes = node_changed(conf, ['firewall'],
+                                 key_mangling=('-', '_'),
+                                 recursive=True,
+                                 expand_nodes=Diff.ADD | Diff.DELETE)
     updated = False
 
-    for key, path in dict_search_recursive(firewall, 'geoip'):
-        set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
-        if (path[0] == 'ipv4'):
-            out['name'].append(set_name)
-        elif (path[0] == 'ipv6'):
-            set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
-            out['ipv6_name'].append(set_name)
-
+    for _, path in dict_search_recursive(changes, 'geoip'):
         updated = True
+        break
 
-    if 'delete' in node_diff:
-        for key, path in dict_search_recursive(node_diff['delete'], 'geoip'):
-            set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
-            if (path[0] == 'ipv4'):
-                out['deleted_name'].append(set_name)
-            elif (path[0] == 'ipv6'):
-                set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
-                out['deleted_ipv6_name'].append(set_name)
-            updated = True
-
-    if updated:
-        return out
-
-    return False
+    return updated
 
 def get_config(config=None):
     if config:
@@ -135,7 +122,8 @@ def get_config(config=None):
         # Update nat and policy-route as firewall groups were updated
         set_dependents('group_resync', conf)
 
-    firewall['geoip_updated'] = geoip_updated(conf, firewall)
+    firewall['geoip_sets'] = geoip_sets(firewall)
+    firewall['geoip_updated'] = geoip_updated(conf)
 
     fqdn_config_parse(firewall, 'firewall')
 
@@ -725,11 +713,12 @@ def apply(firewall):
             domain_action = 'stop'
     call(f'systemctl {domain_action} vyos-domain-resolver.service')
 
-    if firewall['geoip_updated']:
+    if firewall['geoip_sets']:
         # Call helper script to Update set contents
-        if 'name' in firewall['geoip_updated'] or 'ipv6_name' in firewall['geoip_updated']:
-            print('Updating GeoIP. Please wait...')
-            geoip_update(firewall=firewall)
+        if 'name' in firewall['geoip_sets'] or 'ipv6_name' in firewall['geoip_sets']:
+            if firewall['geoip_updated'] or not geoip_refresh():
+                print('Updating GeoIP. Please wait...')
+                geoip_update(firewall)
 
     return None
 

@@ -1,12 +1,12 @@
 #!/usr/sbin/nft -f
 
-{% if ipv4_sets is vyos_defined %}
-{%     for setname, ip_list in ipv4_sets.items() %}
+{% if firewall_sets.v4 is vyos_defined %}
+{%     for setname, ip_list in firewall_sets.v4.items() %}
 flush set ip vyos_filter {{ setname }}
 {%     endfor %}
 
 table ip vyos_filter {
-{%     for setname, ip_list in ipv4_sets.items() %}
+{%     for setname, ip_list in firewall_sets.v4.items() %}
     set {{ setname }} {
         type ipv4_addr
         flags interval
@@ -16,13 +16,13 @@ table ip vyos_filter {
 }
 {% endif %}
 
-{% if ipv6_sets is vyos_defined %}
-{%     for setname, ip_list in ipv6_sets.items() %}
+{% if firewall_sets.v6 is vyos_defined %}
+{%     for setname, ip_list in firewall_sets.v6.items() %}
 flush set ip6 vyos_filter {{ setname }}
 {%     endfor %}
 
 table ip6 vyos_filter {
-{%     for setname, ip_list in ipv6_sets.items() %}
+{%     for setname, ip_list in firewall_sets.v6.items() %}
     set {{ setname }} {
         type ipv6_addr
         flags interval
@@ -33,13 +33,13 @@ table ip6 vyos_filter {
 {% endif %}
 
 
-{% if ipv4_sets_policy is vyos_defined %}
-{%     for setname, ip_list in ipv4_sets_policy.items() %}
+{% if policy_sets.v4 is vyos_defined %}
+{%     for setname, ip_list in policy_sets.v4.items() %}
 flush set ip vyos_mangle {{ setname }}
 {%     endfor %}
 
 table ip vyos_mangle {
-{%     for setname, ip_list in ipv4_sets_policy.items() %}
+{%     for setname, ip_list in policy_sets.v4.items() %}
     set {{ setname }} {
         type ipv4_addr
         flags interval
@@ -49,13 +49,13 @@ table ip vyos_mangle {
 }
 {% endif %}
 
-{% if ipv6_sets_policy is vyos_defined %}
-{%     for setname, ip_list in ipv6_sets_policy.items() %}
+{% if policy_sets.v6 is vyos_defined %}
+{%     for setname, ip_list in policy_sets.v6.items() %}
 flush set ip6 vyos_mangle {{ setname }}
 {%     endfor %}
 
 table ip6 vyos_mangle {
-{%     for setname, ip_list in ipv6_sets_policy.items() %}
+{%     for setname, ip_list in policy_sets.v6.items() %}
     set {{ setname }} {
         type ipv6_addr
         flags interval
