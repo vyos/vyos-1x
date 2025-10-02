@@ -16,6 +16,7 @@
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_vrf
@@ -23,6 +24,8 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import DummyIf
+from vyos.utils.depverify import verify_interface_dependencies
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -38,11 +41,24 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'dummy']
     _, dummy = get_interface_dict(conf, base)
+
+    dummy['int_dependencies'] = verify_interface_dependencies(conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True),
+                                                           dummy['ifname'],
+                                                           ignore=f"interfaces dummy {dummy['ifname']}")
     return dummy
 
 def verify(dummy):
     if 'deleted' in dummy:
         verify_bridge_delete(dummy)
+
+        # Check for interface dependencies
+        dependency_errors = dict_search('int_dependencies.errors', dummy)
+        dependency_warnings = dict_search('int_dependencies.warnings', dummy)
+        if dependency_errors:
+            raise ConfigError(dummy['int_dependencies']['errors_msg'])
+        if dependency_warnings:
+            Warning(dummy['int_dependencies']['warnings_msg'])
+
         return None
 
     verify_vrf(dummy)

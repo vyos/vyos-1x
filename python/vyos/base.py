@@ -65,7 +65,7 @@ class DeprecationWarning():
 class ConfigError(Exception):
     def __init__(self, message):
         # Reformat the message and trim it to 72 characters in length
-        message = fill(message, width=72)
+        message = fill(message, width=72, replace_whitespace=False)
         # Call the base class constructor with the parameters it needs
         super().__init__(message)
 

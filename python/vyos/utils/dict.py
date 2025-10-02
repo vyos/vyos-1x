@@ -208,6 +208,39 @@ def dict_search_recursive(dict_object, key, path=[]):
             for x in dict_search_recursive(j, key, new_path):
                 yield x
 
+def dict_search_recursive_values(d: dict, target, path=None, results=None):
+    """
+    Recursively search for all occurrences of a value inside a nested dictionary (and lists).
+    Collects the full path to each match, ignoring list indexes, and appends
+    the target value at the end of the path.
+
+    Args:
+        d (dict | list | any): Dictionary or list to search.
+        target: Value to look for.
+        path (list): Internal, current traversal path.
+        results (list): Internal, accumulator for found paths.
+
+    Returns:
+        list[list]: A list of key paths where the target was found,
+                    each ending with the target value itself.
+    """
+    if path is None:
+        path = []
+    if results is None:
+        results = []
+
+    if isinstance(d, dict):
+        for k, v in d.items():
+            dict_search_recursive_values(v, target, path + [k], results)
+    elif isinstance(d, list):
+        for item in d:
+            # recurse without recording index
+            dict_search_recursive_values(item, target, path, results)
+    else:
+        if d == target:
+            results.append(path + [target])  # append the target value
+
+    return results
 
 def dict_set(key_path, value, dict_object):
     """ Set value to Python dictionary (dict_object) using path to key delimited by dot (.).
