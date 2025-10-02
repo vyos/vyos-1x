@@ -92,6 +92,7 @@ if prifilt("{{ tmp | join(',') }}") then {
 {%                 set _ = tmp.append(facility.replace('all', '*') ~ "." ~ facility_options.level.replace('all', 'debug')) %}
 {%             endfor %}
 {%             set _ = tmp.sort() %}
+{%             set tls = remote_options.tls %}
 # Remote syslog to {{ remote_name }}
 if prifilt("{{ tmp | join(',') }}") then {
     action(
@@ -100,7 +101,7 @@ if prifilt("{{ tmp | join(',') }}") then {
         target="{{ remote_name }}"
         # Port on the remote syslog server
         port="{{ remote_options.port }}"
-        protocol="{{ remote_options.protocol }}"
+        protocol="{{ 'tcp' if tls.enable is vyos_defined else remote_options.protocol }}"
 {%             if remote_options.format.include_timezone is vyos_defined %}
         template="RSYSLOG_SyslogProtocol23Format"
 {%             endif %}
@@ -110,6 +111,31 @@ if prifilt("{{ tmp | join(',') }}") then {
 {%             endif %}
 {%             if remote_options.vrf is vyos_defined %}
         Device="{{ remote_options.vrf }}"
+{%             endif %}
+{%             if tls.enable is vyos_defined %}
+{%                 set auth_mode = tls.auth_mode %}
+        # Specify the use of the OpenSSL TLS driver for this action
+        StreamDriver="ossl"
+        # Set mode to TLS-only connections (do not accept plain TCP)
+        StreamDriverMode="1"
+        # Select the authentication mode
+        StreamDriverAuthMode="{{ auth_mode if auth_mode == 'anon' else 'x509/' + auth_mode }}"
+{%                 if tls.permitted_peers is vyos_defined and auth_mode in ('fingerprint', 'name') %}
+        # Only include permitted peers (list of allowed fingerprints or names)
+        StreamDriverPermittedPeers="{{ tls.permitted_peers }}"
+{%                 endif %}
+{%                 if tls.ca_certificate_path is vyos_defined %}
+        # Include the path to the CA certificate file
+        StreamDriver.CAFile="{{ tls.ca_certificate_path }}"
+{%                 endif %}
+{%                 if tls.certificate_path is vyos_defined %}
+        # Include the path to the client's certificate
+        StreamDriver.CertFile="{{ tls.certificate_path }}"
+{%                 endif %}
+{%                 if tls.certificate_key_path is vyos_defined %}
+        # Include the path to the client's private key
+        StreamDriver.KeyFile="{{ tls.certificate_key_path }}"
+{%                 endif %}
 {%             endif %}
     )
 }

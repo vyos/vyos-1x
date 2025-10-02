@@ -27,10 +27,42 @@ from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'rsyslogd'
 RSYSLOG_CONF = '/run/rsyslog/rsyslog.conf'
+CERT_DIR = '/etc/rsyslog.d/certs'
 
 base_path = ['system', 'syslog']
+pki_base = ['pki']
 
 dummy_interface = 'dum372874'
+
+ca_cert_name = "syslog_ca_certificate"
+ca_cert = """
+MIIBrTCCAV+gAwIBAgIUdTEOleLyGTteZC+yEi252lRUq8EwBQYDK2VwMEsxCzAJ
+BgNVBAYTAlVTMQ4wDAYDVQQIDAVTdGF0ZTENMAsGA1UEBwwEQ2l0eTEMMAoGA1UE
+CgwDT3JnMQ8wDQYDVQQDDAZSb290Q0EwIBcNMjUwOTE1MTQxNDI4WhgPMjEyNTA4
+MjIxNDE0MjhaMEsxCzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVTdGF0ZTENMAsGA1UE
+BwwEQ2l0eTEMMAoGA1UECgwDT3JnMQ8wDQYDVQQDDAZSb290Q0EwKjAFBgMrZXAD
+IQCtTlgU+aqU/i6k6b318vebALk0zs9RvE96vw7taIt2iqNTMFEwHQYDVR0OBBYE
+FHl8GywRMCWSotNGmyjuvRbPqCq8MB8GA1UdIwQYMBaAFHl8GywRMCWSotNGmyju
+vRbPqCq8MA8GA1UdEwEB/wQFMAMBAf8wBQYDK2VwA0EAouZ4s+/ZeZxZxOZ7yFG0
+RQ9BfPWySrX4kgavyJJeg8LNCYUIRIP6iC41MTyHUVsWwar91xBT0DKBkpwrOQ0n
+Dg==
+"""
+
+client_cert_name = "syslog_client_certificate"
+client_cert = """
+MIIBVjCCAQgCFArrkIM+zg8luHbXwsS8cUB5xrh/MAUGAytlcDBLMQswCQYDVQQG
+EwJVUzEOMAwGA1UECAwFU3RhdGUxDTALBgNVBAcMBENpdHkxDDAKBgNVBAoMA09y
+ZzEPMA0GA1UEAwwGUm9vdENBMB4XDTI1MDkxNTE0MTUwN1oXDTM1MDkxMzE0MTUw
+N1owUDELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVN0YXRlMQ0wCwYDVQQHDARDaXR5
+MQwwCgYDVQQKDANPcmcxFDASBgNVBAMMC2V4YW1wbGUuY29tMCowBQYDK2VwAyEA
+eZZRz7yVQ+exm6vyh/GdGZrTSEmtbvfafG0digqpfnUwBQYDK2VwA0EAU8/kw1i0
+s4j2fPQmU1q6Qql3xaxUlDyzhRPSIeH7ZhOlNg8R7gR1QnA7Rel6oU4EqJJHvz9l
+83HQAy7ZcNIoBw==
+"""
+
+client_cert_key = """
+MC4CAQAwBQYDK2VwBCIEIG59XPVZoMCxBVD/eJVqJSmV+Uc0bUHjHS4bkfkjM6Jj
+"""
 
 def get_config(string=''):
     """
@@ -51,10 +83,14 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
+        cls.cli_delete(cls, pki_base)
 
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # delete test certificates for syslog
+        self.cli_delete(pki_base)
 
         # delete testing SYSLOG config
         self.cli_delete(base_path)
@@ -67,6 +103,30 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertFalse(process_named_running(PROCESS_NAME))
+
+    def _set_tls_certificates(self):
+        self.cli_set(
+            pki_base + ['ca', ca_cert_name, 'certificate', ca_cert.replace('\n', '')]
+        )
+        self.cli_set(
+            pki_base
+            + [
+                'certificate',
+                client_cert_name,
+                'certificate',
+                client_cert.replace('\n', ''),
+            ]
+        )
+        self.cli_set(
+            pki_base
+            + [
+                'certificate',
+                client_cert_name,
+                'private',
+                'key',
+                client_cert_key.replace('\n', ''),
+            ]
+        )
 
     def test_console(self):
         level = 'warning'
@@ -238,6 +298,119 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
 
         # cleanup dummy interface
         self.cli_delete(dummy_if_path)
+
+    def test_remote_tls(self):
+        self._set_tls_certificates()
+
+        rhosts = {
+            '172.10.0.2': {
+                'facility': {'all': {'level': 'debug'}},
+                'port': '6514',
+                'protocol': 'udp',
+                'tls': {
+                    'enable': True,
+                    'auth-mode': 'anon',
+                },
+            },
+            '172.10.0.3': {
+                'facility': {'all': {'level': 'debug'}},
+                'port': '6514',
+                'protocol': 'tcp',
+                'tls': {
+                    'enable': True,
+                    'ca-certificate': ca_cert_name,
+                    'auth-mode': 'certvalid',
+                },
+            },
+            '172.10.0.4': {
+                'facility': {'all': {'level': 'debug'}},
+                'port': '6514',
+                'protocol': 'tcp',
+                'tls': {
+                    'enable': True,
+                    'ca-certificate': ca_cert_name,
+                    'certificate': client_cert_name,
+                    'auth-mode': 'fingerprint',
+                    'permitted-peers': 'SHA1:E1:DB:C4:FF:83:54:85:40:2D:56:E7:1A:C3:FF:70:22:0F:21:74:ED',
+                },
+            },
+            '172.10.0.5': {
+                'facility': {'all': {'level': 'debug'}},
+                'port': '6514',
+                'protocol': 'tcp',
+                'tls': {
+                    'enable': True,
+                    'ca-certificate': ca_cert_name,
+                    'certificate': client_cert_name,
+                    'auth-mode': 'name',
+                    'permitted-peers': 'logs.example.com',
+                },
+            },
+        }
+
+        for remote, remote_options in rhosts.items():
+            remote_base = base_path + ['remote', remote]
+
+            if 'port' in remote_options:
+                self.cli_set(remote_base + ['port'], value=remote_options['port'])
+
+            if 'facility' in remote_options:
+                for facility, facility_options in remote_options['facility'].items():
+                    level = facility_options['level']
+                    self.cli_set(
+                        remote_base + ['facility', facility, 'level'], value=level
+                    )
+
+            if 'protocol' in remote_options:
+                protocol = remote_options['protocol']
+                self.cli_set(remote_base + ['protocol'], value=protocol)
+
+            tls = remote_options['tls']
+            for key, value in tls.items():
+                if key == 'enable':
+                    self.cli_set(remote_base + ['tls', 'enable'])
+                else:
+                    self.cli_set(remote_base + ['tls', key], value=value)
+
+        self.cli_commit()
+
+        read_file(RSYSLOG_CONF)
+        for remote, remote_options in rhosts.items():
+            with self.subTest(remote=remote):
+                config = get_config(f'# Remote syslog to {remote}')
+
+                if 'port' in remote_options:
+                    port = remote_options['port']
+                    self.assertIn(f'port="{port}"', config)
+
+                self.assertIn('protocol="tcp"', config)
+                self.assertIn('StreamDriver="ossl"', config)
+                self.assertIn('StreamDriverMode="1"', config)
+
+                tls = remote_options['tls']
+                if 'ca-certificate' in tls:
+                    self.assertIn(
+                        f'StreamDriver.CAFile="{CERT_DIR}/{ca_cert_name}.pem"', config
+                    )
+
+                if 'certificate' in tls:
+                    self.assertIn(
+                        f'StreamDriver.CertFile="{CERT_DIR}/{client_cert_name}.pem"',
+                        config,
+                    )
+                    self.assertIn(
+                        f'StreamDriver.KeyFile="{CERT_DIR}/{client_cert_name}.key"',
+                        config,
+                    )
+
+                if 'auth-mode' in tls:
+                    value = tls['auth-mode']
+                    auth_mode = value if value == 'anon' else f'x509/{value}'
+                    self.assertIn(f'StreamDriverAuthMode="{auth_mode}"', config)
+
+                if 'permitted-peers' in tls:
+                    value = tls['permitted-peers']
+                    self.assertIn(f'StreamDriverPermittedPeers="{value}"', config)
 
     def test_vrf_source_address(self):
         rhosts = {
