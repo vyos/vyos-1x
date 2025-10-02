@@ -57,8 +57,8 @@ airbag.enable()
 vyos_certbot_dir = directories['certbot']
 vyos_ca_certificates_dir = directories['ca_certificates']
 
-IOLAN_ALL_CA_PATH = '/etc/vyos_pki'
-IOLAN_ALL_CA_FILE = '/etc/vyos_pki/ssl_cacerts.pem'
+IOLAN_ALL_CA_PATH = '/run/vyos_pki'
+IOLAN_ALL_CA_FILE = '/run/vyos_pki/ssl_cacerts.pem'
 
 # keys to recursively search for under specified path
 sync_search = [

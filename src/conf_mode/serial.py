@@ -47,7 +47,7 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 # from vyos.configdiff import get_config_diff, Diff
 
-CERT_PATH = '/etc/vyos_pki/'
+CERT_PATH = '/run/vyos_pki/'
 service_name = 'iolan.service'
 
 def get_config(config=None):
