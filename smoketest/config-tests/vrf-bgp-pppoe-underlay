@@ -107,7 +107,6 @@ set policy prefix-list6 AS100-origin-v6 rule 10 action 'permit'
 set policy prefix-list6 AS100-origin-v6 rule 10 prefix '2001:db8:200::/40'
 set policy prefix-list6 AS200-origin-v6 rule 10 action 'permit'
 set policy prefix-list6 AS200-origin-v6 rule 10 prefix '2001:db8:100::/40'
-set protocols bgp system-as '100'
 set protocols static route 100.64.50.0/23 next-hop 100.64.51.221
 set protocols static route 192.0.2.255/32 interface pppoe7
 set protocols static route6 2001:db8:ffff:ffff:ffff:ffff:ffff:ffff/128 interface pppoe7
@@ -179,6 +178,7 @@ set vrf name vyos-test-01 protocols bgp peer-group AS100v6 address-family ipv6-u
 set vrf name vyos-test-01 protocols bgp peer-group AS100v6 capability dynamic
 set vrf name vyos-test-01 protocols bgp peer-group AS100v6 remote-as 'internal'
 set vrf name vyos-test-01 protocols bgp peer-group AS100v6 update-source 'dum0'
+set vrf name vyos-test-01 protocols bgp system-as '100'
 set vrf name vyos-test-01 protocols static route 100.64.50.0/23 blackhole
 set vrf name vyos-test-01 protocols static route 100.64.51.32/27 next-hop 100.64.51.5
 set vrf name vyos-test-01 protocols static route 192.168.0.0/24 next-hop 100.64.51.220

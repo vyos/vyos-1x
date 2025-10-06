@@ -1005,6 +1005,18 @@
     </tagNode>
   </children>
 </node>
+<leafNode name="system-as">
+  <properties>
+    <help>Autonomous System Number (ASN)</help>
+    <valueHelp>
+      <format>u32:1-4294967294</format>
+      <description>Autonomous System Number</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-4294967294"/>
+    </constraint>
+  </properties>
+</leafNode>
 <tagNode name="neighbor">
   <properties>
     <help>BGP neighbor</help>

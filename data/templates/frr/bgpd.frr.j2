@@ -259,11 +259,7 @@
 {# j2lint: disable=jinja-statements-delimeter #}
 {%- endmacro -%}
 !
-{% if vrf is vyos_defined %}
- router bgp {{ dependent_vrfs.default.protocols.bgp.system_as }} vrf {{ vrf }}
-{% else %}
- router bgp {{ system_as }}
-{% endif %}
+router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.ebgp_requires_policy is vyos_defined %}
  bgp ebgp-requires-policy
 {% else %}

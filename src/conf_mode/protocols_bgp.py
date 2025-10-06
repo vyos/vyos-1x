@@ -18,7 +18,6 @@ from sys import exit
 from sys import argv
 
 from vyos.base import Warning
-from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_prefix_list
@@ -211,27 +210,8 @@ def verify(config_dict):
 
         return None
 
-    ERR_MSG_GLOBAL_VRF_AS_MISSING = 'BGP "system-as" number must be defined! Use "set protocols ' \
-                                    'bgp system-as <asn>" to define a global BGP instance AS number.'
-    system_as = None
-    if vrf:
-        system_as = dict_search('dependent_vrfs.default.protocols.bgp.system_as', bgp)
-        if not system_as:
-            raise ConfigError(ERR_MSG_GLOBAL_VRF_AS_MISSING)
-
-        if 'system_as' in bgp:
-            tmp_as = bgp['system_as']
-            DeprecationWarning(f'CLI command "vrf name {vrf} protocols bgp system-as ' \
-                               f'{tmp_as}" is ignored and will be removed in VyOS 1.5! ' \
-                               f'\n\nGlobal "protocols bgp system-as {system_as}" option ' \
-                                'applies, use per neighbor "local-as" option to override.')
-
-    elif 'system_as' not in bgp:
-        raise ConfigError(ERR_MSG_GLOBAL_VRF_AS_MISSING)
-
-    # Cache global defined system AS number used in further checks
-    if not system_as:
-        system_as = bgp['system_as']
+    if 'system_as' not in bgp:
+        raise ConfigError('BGP system-as number must be defined!')
 
     # Verify BMP
     if 'bmp' in bgp:
@@ -277,7 +257,7 @@ def verify(config_dict):
                 if 'remote_as' in peer_config:
                     is_ibgp = True
                     if peer_config['remote_as'] != 'internal' and \
-                            peer_config['remote_as'] != system_as:
+                            peer_config['remote_as'] != bgp['system_as']:
                         is_ibgp = False
 
                     if peer_group not in peer_groups_context:
@@ -298,7 +278,7 @@ def verify(config_dict):
                 # Neighbor local-as override can not be the same as the local-as
                 # we use for this BGP instane!
                 asn = list(peer_config['local_as'].keys())[0]
-                if asn == system_as:
+                if asn == bgp['system_as']:
                     raise ConfigError('Cannot have local-as same as system-as number')
 
                 # Neighbor AS specified for local-as and remote-as can not be the same
@@ -388,6 +368,12 @@ def verify(config_dict):
                         raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
                     if 'source_interface' in peer_config['interface']:
                         raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
+
+            # Local-AS allowed only for EBGP peers
+            if 'local_as' in peer_config:
+                remote_as = verify_remote_as(peer_config, bgp)
+                if remote_as == bgp['system_as']:
+                    raise ConfigError(f'local-as configured for "{peer}", allowed only for eBGP peers!')
 
             for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                         'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',

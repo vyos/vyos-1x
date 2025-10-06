@@ -105,10 +105,12 @@ set system syslog local facility all level 'info'
 set system syslog local facility local7 level 'debug'
 set vrf name blue protocols bgp address-family ipv4-unicast redistribute connected
 set vrf name blue protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set vrf name blue protocols bgp system-as '100'
 set vrf name blue table '2000'
 set vrf name blue vni '2000'
 set vrf name green protocols bgp address-family ipv4-unicast redistribute connected
 set vrf name green protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set vrf name green protocols bgp system-as '100'
 set vrf name green table '4000'
 set vrf name green vni '4000'
 set vrf name mgmt protocols static route 0.0.0.0/0 next-hop 192.0.2.62
@@ -116,5 +118,6 @@ set vrf name mgmt protocols static route6 ::/0 next-hop 2001:db8:ffff::1
 set vrf name mgmt table '1000'
 set vrf name red protocols bgp address-family ipv4-unicast redistribute connected
 set vrf name red protocols bgp address-family l2vpn-evpn advertise ipv4 unicast
+set vrf name red protocols bgp system-as '100'
 set vrf name red table '3000'
 set vrf name red vni '3000'
