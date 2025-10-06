@@ -18,6 +18,7 @@ from sys import exit
 from sys import argv
 
 from vyos.base import Warning
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configverify import has_frr_protocol_in_dict
 from vyos.configverify import verify_prefix_list
@@ -217,6 +218,13 @@ def verify(config_dict):
         system_as = dict_search('dependent_vrfs.default.protocols.bgp.system_as', bgp)
         if not system_as:
             raise ConfigError(ERR_MSG_GLOBAL_VRF_AS_MISSING)
+
+        if 'system_as' in bgp:
+            tmp_as = bgp['system_as']
+            DeprecationWarning(f'CLI command "vrf name {vrf} protocols bgp system-as ' \
+                               f'{tmp_as}" is ignored and will be removed in VyOS 1.5! ' \
+                               f'\n\nGlobal "protocols bgp system-as {system_as}" option ' \
+                                'applies, use per neighbor "local-as" option to override.')
 
     elif 'system_as' not in bgp:
         raise ConfigError(ERR_MSG_GLOBAL_VRF_AS_MISSING)
