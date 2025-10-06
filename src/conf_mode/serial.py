@@ -36,7 +36,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.serial import send_command_to_iolan
-from vyos.utils.serial import find_all_ttyS_devices
+from vyos.utils.serial import find_active_ttyS_devices
 from vyos.utils.serial import print_global_change_warning
 from vyos import ConfigError
 
@@ -466,7 +466,7 @@ def apply(proxy):
         for device, serial_config in proxy['device'].items():
             if 'serial_restart' in proxy:
                 if 'global_changed' in proxy:
-                    all_devices = find_all_ttyS_devices()
+                    all_devices = find_active_ttyS_devices()
                     for item in all_devices:
                         if item not in proxy['serial_restart'] and displayed_warning == 0:
                             print_global_change_warning()
