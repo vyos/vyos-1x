@@ -68,7 +68,7 @@ let filter_from_type it =
     | _ -> Some (filter_from_prefix pre)
 
 let filter_broadcast s =
-    let pattern = {|^(bond|br|tun|vtun|eth|gnv|peth|macsec|vxlan|wwan|wlan)(.*)$|}
+    let pattern = {|^(bond|br|tun|vtun|eth|gnv|peth|macsec|veth|vxlan|wwan|wlan)(.*)$|}
     in
     try
         let _ = Pcre2.exec ~pat:pattern s in
