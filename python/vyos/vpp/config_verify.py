@@ -19,6 +19,7 @@
 import psutil
 
 from vyos import ConfigError
+from vyos.base import Warning
 from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
 
 from vyos.vpp.control_host import get_eth_driver
