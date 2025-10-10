@@ -21,7 +21,7 @@ from vyos.utils.serial import find_all_ttyS_devices
 def trim_list_from_match(full_tty_list, start_tty):
     try:
         index = next(i for i, item in enumerate(full_tty_list) if start_tty in item)
-        return full_tty_list[index:]
+        return full_tty_list[index+1:]
     except StopIteration:
         return full_tty_list
 
