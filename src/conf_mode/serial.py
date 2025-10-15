@@ -364,23 +364,23 @@ def generate(proxy):
                     port_config['hardware']['rts_toggle']['enabled'] = '1'
 
             if 'tls' in port_config:
-                if 'disable' in port_config['tls']:
-                    port_config['tls']['enabled'] = 0
-                elif 'use_global' in port_config['tls']:
-                    port_config['tls'] = port_config['global'].pop('tls')
+                if 'enabled' in port_config['tls']:
                     port_config['tls']['enabled'] = 1
+                else:
+                    port_config['tls']['enabled'] = 0
+
+                if 'use_global' in port_config['tls']:
+                    port_config['tls'] = port_config['global'].pop('tls')
 
                 if 'peer_verification' in port_config['tls']:
                     if 'disable' not in port_config['tls']['peer_verification']:
                         port_config['tls']['verify_peer'] = 1
-                        port_config['tls']['enabled'] = 1
+
                 if 'cipher_options' in port_config['tls']:
                     port_config['tls']['cipher_options'] = subtract_from_key(port_config['tls']['cipher_options'])
-                    port_config['tls']['enabled'] = 1
 
                 cert_name = ''
                 if 'certificate' in port_config['tls']:
-                    port_config['tls']['enabled'] = 1
                     cert_name = port_config['tls']['certificate']
 
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
