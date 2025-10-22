@@ -1107,6 +1107,8 @@ def import_ssh_hostkey(name, path):
         return
 
     conf_mode_dir = directories['conf_mode']
+    destination = f"/etc/ssh/{name}"
+    destination2 = destination + ".pub" 
 
     if name == 'ssh_host_rsa_key':
         if os.system(f"grep -q 'ssh-rsa' '{path2}'") != 0:
@@ -1128,8 +1130,6 @@ def import_ssh_hostkey(name, path):
         if os.system(f"grep -q 'ssh-dss' '{path2}'") != 0:
             print(f'Error: SSH server host public key file: {path2} is not ssh-dsa format')
             return
-        destination = f"/etc/ssh/{name}"
-        destination2 = destination + ".pub" 
         print(f'Warning: DSA TSS2 format is not supported.')
         print(f'Copying SSH DSA server host key: {path} to {destination}')
         os.system(f"sudo cp '{path}' '{destination}'")
@@ -1139,8 +1139,6 @@ def import_ssh_hostkey(name, path):
         if os.system(f"grep -q 'ssh-ed25519' '{path2}'") != 0:
             print(f'Error: SSH server host public key file: {path2} is not ssh-ed25519 format')
             return
-        destination = f"/etc/ssh/{name}"
-        destination2 = destination + ".pub" 
         print(f'Warning: ED25519 TSS2 format is not supported.')
         print(f'Copying SSH ED25519 server host key: {path} to {destination}')
         os.system(f"sudo cp '{path}' '{destination}'")
