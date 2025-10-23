@@ -1,7 +1,7 @@
 <!-- include start from serial/service/utils/sess-string-term.xml.i -->
-<leafNode name="term-string">
+<leafNode name="terminate-string">
   <properties>
-    <help>Terminate Session String</help>
+    <help>Session termination String</help>
     <constraint>
       <regex>.{0,127}</regex>
     </constraint>
