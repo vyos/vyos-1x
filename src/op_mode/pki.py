@@ -1108,7 +1108,7 @@ def import_ssh_hostkey(name, path):
 
     conf_mode_dir = directories['conf_mode']
     destination = f"/etc/ssh/{name}"
-    destination2 = destination + ".pub" 
+    destination2 = destination + ".pub"
 
     if name == 'ssh_host_rsa_key':
         if os.system(f"grep -q 'ssh-rsa' '{path2}'") != 0:
@@ -1117,7 +1117,7 @@ def import_ssh_hostkey(name, path):
         print(f'Importing SSH RSA server host key: {path} to tpm TSS2 format: /etc/ssh/ssh_tpm_host_rsa.tpm')
         os.system(f"sudo cp '{path2}' /etc/ssh/ssh_tpm_host_rsa_key.pub")
         os.system(f"sudo ssh-tpm-keygen --import '{path}' -t rsa -f /etc/ssh/ssh_tpm_host_rsa_key")
-        os.system(f"sudo systemctl restart ssh-tpm-agent")
+        os.system("sudo systemctl restart ssh-tpm-agent")
     elif name == 'ssh_host_ecdsa_key':
         if os.system(f"grep -q 'ecdsa-sha' '{path2}'") != 0:
             print(f'Error: SSH server host public key file: {path2} is not ssh-ecdsa format')
@@ -1125,12 +1125,12 @@ def import_ssh_hostkey(name, path):
         print(f'Importing SSH ECDSA server host key: {path} to tpm TSS2 format: /etc/ssh/ssh_tpm_host_ecdsa.tpm')
         os.system(f"sudo cp '{path2}' /etc/ssh/ssh_tpm_host_ecdsa_key.pub")
         os.system(f"sudo ssh-tpm-keygen --import '{path}' -t ecdsa -f /etc/ssh/ssh_tpm_host_ecdsa_key")
-        os.system(f"sudo systemctl restart ssh-tpm-agent")
+        os.system("sudo systemctl restart ssh-tpm-agent")
     elif name == 'ssh_host_dsa_key':
         if os.system(f"grep -q 'ssh-dss' '{path2}'") != 0:
             print(f'Error: SSH server host public key file: {path2} is not ssh-dsa format')
             return
-        print(f'Warning: DSA TSS2 format is not supported.')
+        print('Warning: DSA TSS2 format is not supported.')
         print(f'Copying SSH DSA server host key: {path} to {destination}')
         os.system(f"sudo cp '{path}' '{destination}'")
         os.system(f"sudo cp '{path2}' '{destination2}'")
@@ -1139,7 +1139,7 @@ def import_ssh_hostkey(name, path):
         if os.system(f"grep -q 'ssh-ed25519' '{path2}'") != 0:
             print(f'Error: SSH server host public key file: {path2} is not ssh-ed25519 format')
             return
-        print(f'Warning: ED25519 TSS2 format is not supported.')
+        print('Warning: ED25519 TSS2 format is not supported.')
         print(f'Copying SSH ED25519 server host key: {path} to {destination}')
         os.system(f"sudo cp '{path}' '{destination}'")
         os.system(f"sudo cp '{path2}' '{destination2}'")
