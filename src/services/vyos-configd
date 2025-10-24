@@ -33,6 +33,7 @@ from enum import Enum
 import zmq
 
 from vyos.defaults import directories
+from vyos.defaults import vyos_configd_socket_path
 from vyos.utils.boot import boot_configuration_complete
 from vyos.configsource import ConfigSourceString
 from vyos.configsource import ConfigSourceError
@@ -57,7 +58,7 @@ if debug:
 else:
     logger.setLevel(logging.INFO)
 
-SOCKET_PATH = 'ipc:///run/vyos-configd.sock'
+SOCKET_PATH = vyos_configd_socket_path
 MAX_MSG_SIZE = 65535
 PAD_MSG_SIZE = 6
 
@@ -273,6 +274,39 @@ def process_node_data(config, data, _last: bool = False) -> tuple[Response, str]
 
     out = amb_out + err_out
 
+    logger.info(f'[{script_name}] {out}')
+
+    return result, out
+
+
+def call_frr_render(frr, config):
+    def _call_frr_render(frr, config):
+        # pylint: disable=broad-exception-caught
+        try:
+            tmp = get_frrender_dict(config)
+            if frr.generate(tmp):
+                # only apply a new FRR configuration if anything changed
+                # in comparison to the previous applied configuration
+                frr.apply()
+
+        except ConfigError as e:
+            logger.error(e)
+            return Response.ERROR_COMMIT_APPLY, str(e)
+        except Exception:
+            tb = traceback.format_exc()
+            logger.error(tb)
+            return Response.ERROR_COMMIT_APPLY, tb
+
+        return Response.SUCCESS, ''
+
+    with redirect_stdout(io.StringIO()) as o:
+        result, err_out = _call_frr_render(frr, config)
+    amb_out = o.getvalue()
+    o.close()
+
+    out = amb_out + err_out
+    logger.info(out)
+
     return result, out
 
 
@@ -345,17 +379,16 @@ if __name__ == '__main__':
             config = initialization(socket)
         elif message['type'] == 'node':
             res, out = process_node_data(config, message['data'], message['last'])
-            send_result(socket, res, out)
 
             if message['last'] and config:
                 scripts_called = getattr(config, 'scripts_called', [])
                 logger.debug(f'scripts_called: {scripts_called}')
 
                 if res == Response.SUCCESS:
-                    tmp = get_frrender_dict(config)
-                    if frr.generate(tmp):
-                        # only apply a new FRR configuration if anything changed
-                        # in comparison to the previous applied configuration
-                        frr.apply()
+                    r, o = call_frr_render(frr, config)
+                    res = r
+                    out = out + o
+
+            send_result(socket, res, out)
         else:
             logger.critical(f'Unexpected message: {message}')

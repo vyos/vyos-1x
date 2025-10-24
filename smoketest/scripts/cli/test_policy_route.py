@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 mark = '100'
 conn_mark = '555'
@@ -37,8 +36,6 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # Clear out current configuration to allow running this test on a live system
         cls.cli_delete(cls, ['policy', 'route'])
         cls.cli_delete(cls, ['policy', 'route6'])
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
         cls.cli_set(cls, ['protocols', 'static', 'table', table_id, 'route', '0.0.0.0/0', 'interface', interface])
@@ -73,6 +70,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_rules(ip_rule_search, inverse=True)
+        # always forward to base class
+        super().tearDown()
 
     def test_pbr_group(self):
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])
@@ -342,4 +341,4 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip6 vyos_mangle', args='-t')
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

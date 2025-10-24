@@ -50,6 +50,8 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
         # Process must be terminated after deleting the config
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_01_default_values(self):
         for group in groups:
@@ -317,4 +319,4 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

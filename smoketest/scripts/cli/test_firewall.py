@@ -71,6 +71,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter', inverse=True)
+        # always forward to base class
+        super().tearDown()
 
     def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
         # Resolver no longer blocks commit, need to wait for daemon to populate set
@@ -1404,5 +1406,55 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_v6_search, 'ip6 vyos_filter')
 
 
+    def test_disable_conntrack_per_chain(self):
+        # If conntrack is disabled in either the input or output chain,
+        # state cannot be matched in either the input or outchain
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '1', 'state', 'established'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_discard()
+
+        # If conntrack is disabled in the forward chain,
+        # state cannot be matched in the forward chain
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'established'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_discard()
+
+        # Disable conntrack in all chains for both ipv4 and ipv6
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'disable-conntrack'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'disable-conntrack'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['VYOS_DISABLE_CONNTRACK_INP_FWD'],
+            ['VYOS_DISABLE_CONNTRACK_OUT'],
+            ['fib daddr . iif type unicast notrack counter'],
+            ['fib daddr . iif type local notrack counter ']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+        nftables_search = [
+            ['VYOS_DISABLE_CONNTRACK_INP_FWD_V6'],
+            ['VYOS_DISABLE_CONNTRACK_OUT_V6'],
+            ['fib daddr . iif type unicast notrack counter'],
+            ['fib daddr . iif type local notrack counter ']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

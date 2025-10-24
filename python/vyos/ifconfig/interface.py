@@ -1354,6 +1354,9 @@ class Interface(Control):
         self.set_dhcp(False)
         self.set_dhcpv6(False)
 
+        if not self.exists(self.ifname):
+            return
+
         netns = get_interface_namespace(self.ifname)
         netns_cmd = f'ip netns exec {netns}' if netns else ''
         cmd = f'{netns_cmd} ip addr flush dev {self.ifname}'

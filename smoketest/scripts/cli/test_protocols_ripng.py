@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.ifconfig import Section
 from vyos.frrender import ripng_daemon
@@ -41,8 +40,6 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         cls.cli_set(cls, ['policy', 'access-list6', acl_in, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'access-list6', acl_in, 'rule', '10', 'source', 'any'])
@@ -69,11 +66,13 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router ripng', endsection='^exit')
+        frrconfig = self.getFRRconfig('router ripng', stop_section='^exit')
         self.assertNotIn(f'router ripng', frrconfig)
 
         # check process health and continuity
         self.assertEqual(self.daemon_pid, process_named_running(ripng_daemon))
+        # always forward to base class
+        super().tearDown()
 
     def test_ripng_01_parameters(self):
         metric = '8'
@@ -116,7 +115,7 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ripng', endsection='^exit')
+        frrconfig = self.getFRRconfig('router ripng', stop_section='^exit')
         self.assertIn(f'router ripng', frrconfig)
         self.assertIn(f' default-information originate', frrconfig)
         self.assertIn(f' default-metric {metric}', frrconfig)
@@ -163,4 +162,4 @@ class TestProtocolsRIPng(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(zebra_route_map, frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

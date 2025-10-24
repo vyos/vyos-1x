@@ -10,3 +10,4 @@ dpkg-divert --package vyos-1x --add --no-rename /etc/netplug/netplugd.conf
 dpkg-divert --package vyos-1x --add --no-rename /etc/netplug/netplug
 dpkg-divert --package vyos-1x --add --no-rename /etc/rsyslog.d/45-frr.conf
 dpkg-divert --package vyos-1x --add --no-rename /lib/udev/rules.d/99-systemd.rules
+dpkg-divert --package vyos-1x --add --no-rename /etc/cron.d/certbot

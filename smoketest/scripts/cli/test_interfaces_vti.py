@@ -17,6 +17,7 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.ifconfig import Interface
 from vyos.utils.network import is_intf_addr_assigned
@@ -46,4 +47,4 @@ class VTIInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(Interface(intf).get_admin_state(), 'down')
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

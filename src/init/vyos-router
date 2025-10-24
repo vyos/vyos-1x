@@ -120,7 +120,6 @@ mount_encrypted_config() {
                 return 1
             fi
 
-            mount /dev/mapper/vyos_config /config
             mount /dev/mapper/vyos_config $vyatta_sysconfdir/config
 
             echo "Mounted encrypted config volume"
@@ -143,7 +142,6 @@ unmount_encrypted_config() {
                 return
             fi
 
-            umount /config
             umount $vyatta_sysconfdir/config
 
             cryptsetup close vyos_config
@@ -311,6 +309,17 @@ bind_mount_boot ()
                 fi
             fi
         fi
+    fi
+}
+
+bind_mount_slash_config ()
+{
+    if [ -d /opt/vyatta/etc/config ]
+    then
+        if [ ! -d /config ] ; then
+            mkdir /config
+        fi
+        mount --bind /opt/vyatta/etc/config /config
     fi
 }
 
@@ -495,6 +504,18 @@ start ()
     nfct helper add tns inet6 tcp
     nft --file /usr/share/vyos/vyos-firewall-init.conf || log_failure_msg "could not initiate firewall rules"
 
+    # Create needed kea directories
+    mkdir -p /var/run/kea /run/lock/kea
+    chmod 750 /var/run/kea /run/lock/kea
+    chown _kea:_kea /var/run/kea /run/lock/kea
+    if [ -d /opt/vyatta/etc/config ]; then
+        if [ ! -d /opt/vyatta/etc/config/dhcp ]; then
+            mkdir /opt/vyatta/etc/config/dhcp
+            chmod 750 /opt/vyatta/etc/config/dhcp
+            chown _kea:vyattacfg /opt/vyatta/etc/config/dhcp
+        fi
+    fi
+
     # Ensure rsyslog is the default syslog daemon
     SYSTEMD_SYSLOG="/etc/systemd/system/syslog.service"
     SYSTEMD_RSYSLOG="/lib/systemd/system/rsyslog.service"
@@ -586,6 +607,8 @@ start ()
     done
 
     bind_mount_boot
+
+    disabled bind_mount_slash_config || bind_mount_slash_config
 
     disabled configure || load_bootfile || overall_status=1
     log_end_msg $?

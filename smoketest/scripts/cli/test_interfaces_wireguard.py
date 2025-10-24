@@ -18,6 +18,8 @@ import os
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_interfaces_test import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
@@ -252,4 +254,4 @@ class WireGuardInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertFalse(is_systemd_service_running(domain_resolver))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

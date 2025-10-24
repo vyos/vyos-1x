@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 interface = 'eth0'
 mark = '100'
@@ -33,8 +32,6 @@ class TestPolicyLocalRoute(VyOSUnitTestSHIM.TestCase):
         # Clear out current configuration to allow running this test on a live system
         cls.cli_delete(cls, ['policy', 'local-route'])
         cls.cli_delete(cls, ['policy', 'local-route6'])
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
         cls.cli_set(cls, ['vrf', 'name', vrf_name, 'table', vrf_rt_id])
 
@@ -55,6 +52,8 @@ class TestPolicyLocalRoute(VyOSUnitTestSHIM.TestCase):
 
         self.verify_rules(ip_rule_search, inverse=True)
         self.verify_rules(ip_rule_search, inverse=True, addr_family='inet6')
+        # always forward to base class
+        super().tearDown()
 
     def test_local_pbr_matching_criteria(self):
         self.cli_set(['policy', 'local-route', 'rule', '4', 'inbound-interface', interface])
@@ -171,4 +170,4 @@ class TestPolicyLocalRoute(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

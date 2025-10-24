@@ -55,12 +55,12 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
-
         self.cli_delete(base_path)
         self.cli_commit()
-
         # Check for no longer running process
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_common(self):
         self.cli_set(base_path + ['prefix', prefix, 'no-on-link-flag'])
@@ -265,7 +265,7 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
 
         for ula_prefix in ula_prefixes:
             self.cli_set(base_path + ['auto-ignore', ula_prefix])
-        
+
         # commit and reload config
         self.cli_commit()
         config = read_file(RADVD_CONF)
@@ -278,10 +278,10 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'        {isp_prefix};', config)
         for ula_prefix in ula_prefixes:
             self.assertIn(f'        {ula_prefix};', config)
-        
+
         # remove a prefix and verify it's gone
         self.cli_delete(base_path + ['auto-ignore', ula_prefixes[1]])
-        
+
         # commit and reload config
         self.cli_commit()
         config = read_file(RADVD_CONF)
@@ -366,4 +366,4 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(tmp, config)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

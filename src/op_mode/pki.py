@@ -26,6 +26,7 @@ from cryptography.x509.oid import ExtendedKeyUsageOID
 
 import vyos.opmode
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.config import config_dict_mangle_acme
 from vyos.pki import encode_certificate
@@ -1378,6 +1379,17 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
 
     certbot_config = directories['certbot']
     hook_dir = directories['base']
+
+    if force and not os.path.isdir(f'{certbot_config}'):
+        # Assume someone deleted the certbot_config folder, renew alone will not
+        # work as there are no configuration files left to know what to renew.
+        # Re-run CLI PKI helper to initially request certificates via ACME
+        # again. This should never be the case - but sometimes the universe has
+        # a bad time
+        Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI ' \
+                'subsystem...\n\n')
+        vyos_conf_scripts_dir = directories['conf_mode']
+        cmd(f'sudo sg vyattacfg -c {vyos_conf_scripts_dir}/pki.py')
 
     tmp = f'/usr/bin/certbot renew --no-random-sleep-on-renew ' \
           f'--config-dir "{certbot_config}" ' \

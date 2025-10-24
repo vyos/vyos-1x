@@ -195,7 +195,7 @@ def apply(config):
         for member in members:
             i.detach_member(interface=member)
 
-        if 'kernel_interface' in config['effective']:
+        if 'kernel_interface' in config['effective'] and i.lcp_pair_exists():
             i.kernel_delete()
         # Delete bonding interface
         i.delete()

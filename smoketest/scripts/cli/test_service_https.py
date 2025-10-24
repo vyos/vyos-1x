@@ -113,6 +113,8 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
         # Check for stopped  process
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_listen_address(self):
         test_prefix = ['192.0.2.1/26', '2001:db8:1::ffff/64']

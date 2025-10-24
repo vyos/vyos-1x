@@ -17,6 +17,7 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 class DummyInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -27,4 +28,4 @@ class DummyInterfaceTest(BasicInterfaceTest.TestCase):
         super(DummyInterfaceTest, cls).setUpClass()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

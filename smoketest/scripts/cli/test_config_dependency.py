@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import unittest
 from time import sleep
 
@@ -23,7 +22,6 @@ from vyos.utils.process import cmd
 from vyos.configsession import ConfigSessionError
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-
 
 class TestConfigDep(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -127,4 +125,4 @@ class TestConfigDep(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

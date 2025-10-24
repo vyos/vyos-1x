@@ -30,6 +30,7 @@ from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
 from vyos.template import render
+from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.file import write_file
@@ -267,6 +268,24 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
         if rule_conf.get('protocol', {}) != 'tcp':
             raise ConfigError('For action "synproxy" the protocol must be set to TCP')
 
+    if 'state' in rule_conf:
+        disable_conntrack = dict_search(f'{family}.{hook}.{priority}.disable_conntrack', firewall)
+        conntrack_disabled_list = []
+
+        # Check if conntrack is disabled in the input or output chain
+        for nft_chain in ['input', 'output']:
+            if dict_search(f'{family}.{nft_chain}.filter.disable_conntrack', firewall) == {}:
+                conntrack_disabled_list.append(nft_chain)
+
+        # If conntrack is disabled in the input or output chain,
+        # state cannot be matched in the input or output chain
+        if hook in ['input', 'output'] and conntrack_disabled_list:
+            raise ConfigError(f'state cannot be matched in {hook} when conntrack is disabled in input or output chains')
+        # If conntrack is disabled in the forward chain,
+        # state cannot be matched in the forward chain
+        if hook == 'forward' and disable_conntrack == {}:
+            raise ConfigError(f'state cannot be matched in {hook} when conntrack is disabled in {hook} chain')
+
     if 'queue_options' in rule_conf:
         if 'queue' not in rule_conf['action']:
             raise ConfigError('queue-options defined, but action queue needed and it is not defined')
@@ -479,6 +498,19 @@ def verify(firewall):
 
                 for ifname in interfaces:
                     verify_hardware_offload(ifname)
+
+    if dict_search('global_options.state_policy', firewall) is not None:
+        # Generate list of chains where conntrack is disabled
+        conntrack_disabled_list = []
+        for inet_family in ['ipv4', 'ipv6']:
+            for nft_chain in ['input', 'forward', 'output']:
+                if dict_search(f'{inet_family}.{nft_chain}.filter.disable_conntrack', firewall) == {}:
+                    conntrack_disabled_list.append(f'{inet_family}-{nft_chain}')
+
+        # If conntrack is disabled in any chain,
+        # print a warning message
+        if conntrack_disabled_list:
+            Warning(f'global-state: conntrack is disabled in the following chains: {", ".join(conntrack_disabled_list)}')
 
     if 'offload' in firewall.get('global_options', {}).get('state_policy', {}):
         offload_path = firewall['global_options']['state_policy']['offload']

@@ -49,6 +49,14 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
 
+    def setUp(self):
+        # always forward to base class
+        super().setUp()
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -59,14 +67,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertFalse(process_named_running(PROCESS_NAME))
-
-    def setUp(self):
-        # forward to base class
-        super().setUp()
-        for network in allow_from:
-            self.cli_set(base_path + ['allow-from', network])
-        for address in listen_adress:
-            self.cli_set(base_path + ['listen-address', address])
+        # always forward to base class
+        super().tearDown()
 
     def test_basic_forwarding(self):
         # Check basic DNS forwarding settings
@@ -341,4 +343,4 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

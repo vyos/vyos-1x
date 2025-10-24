@@ -17,8 +17,10 @@
 import re
 import unittest
 
-from collections import OrderedDict
 from base_accel_ppp_test import BasicAccelPPPTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+from collections import OrderedDict
+
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
 from vyos.template import range_to_regex
@@ -326,4 +328,4 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         pass
 
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -24,6 +24,7 @@ from ipaddress import ip_address
 from ipaddress import ip_network
 
 from vyos.config import Config
+from vyos.kea import kea_test_config
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.file import chmod_775
@@ -191,15 +192,20 @@ def verify(dhcpv6):
                     if 'prefix_length' not in prefix_config:
                         raise ConfigError('Length of delegated IPv6 prefix must be configured')
 
-                    if prefix_config['prefix_length'] > prefix_config['delegated_length']:
+                    prefix_len = prefix_config['prefix_length']
+                    prefix_obj = None
+
+                    if prefix_len > prefix_config['delegated_length']:
                         raise ConfigError('Length of delegated IPv6 prefix must be within parent prefix')
+
+                    try:
+                        prefix_obj = ip_network(f'{prefix}/{prefix_len}')
+                    except ValueError:
+                        raise ConfigError('Invalid prefix-length for delegated prefix')
 
                     if 'excluded_prefix' in prefix_config:
                         if 'excluded_prefix_length' not in prefix_config:
                             raise ConfigError('Length of excluded IPv6 prefix must be configured')
-
-                        prefix_len = prefix_config['prefix_length']
-                        prefix_obj = ip_network(f'{prefix}/{prefix_len}')
 
                         excluded_prefix = prefix_config['excluded_prefix']
                         excluded_len = prefix_config['excluded_prefix_length']
@@ -289,9 +295,9 @@ def apply(dhcpv6):
     # if running in vrf, set base diffrently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
-        service_name = f'kea-dhcp6@{vrf_name}.service'
+        service_name = f'isc-kea-dhcp6-server@{vrf_name}.service'
     else:
-        service_name = 'kea-dhcp6.service'
+        service_name = 'isc-kea-dhcp6-server.service'
 
     # bail out early - looks like removal from running config
     if not dhcpv6 or 'disable' in dhcpv6:
@@ -300,6 +306,10 @@ def apply(dhcpv6):
         if os.path.exists(config_file):
             os.unlink(config_file)
         return None
+
+    result, output = kea_test_config('kea-dhcp6', config_file)
+    if not result:
+        raise ConfigError(f'Unexpected error with Kea configuration:\n{output}')
 
     call(f'systemctl restart {service_name}')
 

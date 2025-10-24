@@ -181,7 +181,9 @@ class ConfigSession(object):
         for k, v in env_list:
             session_env[k] = v
 
-        session_env['CONFIGSESSION_PID'] = str(session_id)
+        # replaces ambient instance of SESSION_PID,
+        # for use when running from a non-shared configsession
+        session_env['SESSION_PID'] = str(session_id)
 
         self.__session_env = session_env
         self.__session_env['COMMIT_VIA'] = app
@@ -390,13 +392,7 @@ class ConfigSession(object):
         return out
 
     def save_config(self, file_path):
-        if self._vyconf_session is None:
-            out = self.__run_command(SAVE_CONFIG + [file_path])
-        else:
-            out, _ = self._vyconf_session.save_config(
-                file=file_path, append_version=True
-            )
-
+        out = self.__run_command(SAVE_CONFIG + [file_path])
         return out
 
     def install_image(self, url):

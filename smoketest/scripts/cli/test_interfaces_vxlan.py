@@ -16,6 +16,9 @@
 
 import unittest
 
+from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
@@ -25,7 +28,6 @@ from vyos.utils.network import interface_exists
 from vyos.utils.network import get_vxlan_vlan_tunnels
 from vyos.utils.network import get_vxlan_vni_filter
 from vyos.template import is_ipv6
-from base_interfaces_test import BasicInterfaceTest
 
 def convert_to_list(ranges_to_convert):
     result_list = []
@@ -387,4 +389,4 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(['interfaces', 'bridge', bridge])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

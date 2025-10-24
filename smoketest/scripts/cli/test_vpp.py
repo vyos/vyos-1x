@@ -16,7 +16,6 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-
 import os
 import re
 import unittest
@@ -31,13 +30,13 @@ from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
+from vyos.system import image
 
 PROCESS_NAME = 'vpp_main'
 VPP_CONF = '/run/vpp/vpp.conf'
 base_path = ['vpp']
 driver = 'dpdk'
 interface = 'eth1'
-
 
 def get_vpp_config():
     config = defaultdict(dict)
@@ -90,6 +89,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
 
     def setUp(self):
+        # always forward to base class
+        super().setUp()
+
         self.cli_set(base_path + ['settings', 'interface', interface, 'driver', driver])
         self.cli_set(base_path + ['settings', 'unix', 'poll-sleep-usec', '10'])
 
@@ -108,6 +110,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         self.assertFalse(os.path.exists(VPP_CONF))
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_01_vpp_basic(self):
         main_core = '0'
@@ -613,7 +617,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['interfaces', 'loopback', interface_loopback])
         self.cli_commit()
 
-    @unittest.skip('Skipping temporary bonding, sometimes get recursion T7117')
     def test_06_vpp_bonding(self):
         interface_bond = 'bond23'
         interface_kernel = 'vpptun23'
@@ -1101,7 +1104,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # DPDK driver expect only dpdk-options and not xdp-options to be set
         # expect raise ConfigError
-        self.cli_set(base_interface_path + ['xdp-options', 'no-syscall-lock'])
+        self.cli_set(base_interface_path + ['xdp-options', 'zero-copy'])
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
@@ -1256,7 +1259,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         config = read_file(VPP_CONF)
         self.assertIn('interface ipip', config)
 
-    def test_15_vpp_cgnat(self):
+    def test_15_1_vpp_cgnat(self):
         base_cgnat = base_path + ['nat', 'cgnat']
         iface_out = 'eth0'
         iface_inside = 'eth1'
@@ -1295,6 +1298,50 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'tcp transitory timeout: {timeout_tcp_trans}sec', out)
         self.assertIn(f'icmp timeout: {timeout_icmp}sec', out)
 
+    def test_15_2_vpp_cgnat_bond_with_vifs(self):
+        base_cgnat = base_path + ['nat', 'cgnat']
+        base_kernel = base_path + ['kernel-interfaces']
+        base_bond = base_path + ['interfaces', 'bonding']
+        iface_kernel = 'vpptun0'
+        iface_bond = 'bond0'
+        vif_1 = '23'
+        vif_2 = '24'
+        iface_out = f'{iface_bond}.{vif_1}'
+        iface_inside = f'{iface_bond}.{vif_2}'
+        address_1 = '100.64.0.23/32'
+        address_2 = '192.0.2.1/32'
+
+        self.cli_set(base_bond + [iface_bond, 'kernel-interface', iface_kernel])
+        self.cli_set(base_bond + [iface_bond, 'member', 'interface', interface])
+
+        self.cli_set(base_kernel + [iface_kernel, 'vif', vif_1, 'address', address_1])
+        self.cli_set(base_kernel + [iface_kernel, 'vif', vif_2, 'address', address_2])
+
+        self.cli_set(base_cgnat + ['interface', 'inside', iface_inside])
+        self.cli_set(base_cgnat + ['interface', 'outside', iface_out])
+        self.cli_set(base_cgnat + ['rule', '100', 'inside-prefix', address_1])
+        self.cli_set(base_cgnat + ['rule', '100', 'outside-prefix', address_2])
+        self.cli_commit()
+
+        # Check interfaces
+        _, out = rc_cmd('sudo vppctl show det44 interfaces')
+        self.assertIn(f'BondEthernet0.{vif_2} in', out)
+        self.assertIn(f'BondEthernet0.{vif_1} out', out)
+
+        # Change bonding interface configuration
+        self.cli_set(base_bond + [iface_bond, 'mode', '802.3ad'])
+        self.cli_commit()
+
+        # Check interfaces
+        _, out = rc_cmd('sudo vppctl show det44 interfaces')
+        self.assertIn(f'BondEthernet0.{vif_2} in', out)
+        self.assertIn(f'BondEthernet0.{vif_1} out', out)
+
+        # Verify only expected interfaces are shown:
+        # header + inside + outside = 3 lines total
+        lines = out.split('\n')
+        self.assertTrue(len(lines) == 3)
+
     def test_16_vpp_nat(self):
         base_nat = base_path + ['nat44']
         base_nat_settings = base_path + ['settings', 'nat44']
@@ -1323,6 +1370,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(
             base_nat + ['exclude', 'rule', '100', 'local-port', exclude_local_port]
         )
+
+        # cannot set local-port without specifying protocol
+        # expect raise ConfigError
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_nat + ['exclude', 'rule', '100', 'protocol', 'tcp'])
         self.cli_set(
             base_nat + ['static', 'rule', '100', 'external', 'address', static_ext_addr]
         )
@@ -1471,6 +1525,39 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
         self.cli_commit()
 
+    def test_20_kernel_options_hugepages(self):
+        default_hp_size = '2M'
+        hp_size_1g = '1G'
+        hp_size_2m = '2M'
+        hp_count_1g = '2'
+        hp_count_2m = '512'
+        memory_path = ['system', 'option', 'kernel', 'memory']
+
+        self.cli_set(memory_path + ['default-hugepage-size', default_hp_size])
+        self.cli_set(
+            memory_path + ['hugepage-size', hp_size_2m, 'hugepage-count', hp_count_2m]
+        )
+        self.cli_set(
+            memory_path + ['hugepage-size', hp_size_1g, 'hugepage-count', '2000']
+        )
+        # very big number of 1G hugepages, not enough memory for configuring them
+        # expect raise ConfigError
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(
+            memory_path + ['hugepage-size', hp_size_1g, 'hugepage-count', hp_count_1g]
+        )
+        self.cli_commit()
+
+        # Read GRUB config file for current running image
+        tmp = read_file(
+            f'{image.grub.GRUB_DIR_VYOS_VERS}/{image.get_running_image()}.cfg'
+        )
+        self.assertIn(f' default_hugepagesz={default_hp_size}', tmp)
+        self.assertIn(f' hugepagesz={hp_size_1g} hugepages={hp_count_1g}', tmp)
+        self.assertIn(f' hugepagesz={hp_size_2m} hugepages={hp_count_2m}', tmp)
+
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

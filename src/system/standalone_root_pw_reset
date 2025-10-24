@@ -54,7 +54,7 @@ change_password() {
 
     # set the password for the user then store it in the config
     # so the user is recreated on the next full system boot.
-    local epwd=$(mkpasswd --method=sha-512 "$pwd1")
+    local epwd=$(mkpasswd --method=yescrypt "$pwd1")
     # escape any slashes in resulting password
     local eepwd=$(sed 's:/:\\/:g' <<< $epwd)
     set_encrypted_password $user $eepwd $CF
@@ -90,7 +90,7 @@ fi
 echo -n "Do you wish to reset the admin password? (y or n) "
 read -t $TIME_TO_WAIT response
 if [ "$?" != "0" ]; then
-    echo 
+    echo
     echo "Response not received in time."
     echo "The admin password will not be reset."
     echo "Rebooting in 5 seconds..."
@@ -127,7 +127,7 @@ fi
 
 # Leftover from V3.0
 if grep -q /opt/vyatta/etc/config /etc/fstab
-then 
+then
     echo "Mounting the config filesystem..."
     mount /opt/vyatta/etc/config/
 fi

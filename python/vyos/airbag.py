@@ -23,7 +23,7 @@ from vyos.version import get_full_version_data
 from vyos.defaults import airbag_noteworthy_size
 
 
-def enable(log=True):
+def enable(log=False):
     if 'nose2' in sys.modules:
         return
     if log:

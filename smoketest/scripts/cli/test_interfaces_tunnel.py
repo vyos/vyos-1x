@@ -17,6 +17,7 @@
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.network import get_interface_config
@@ -410,4 +411,4 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_commit()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

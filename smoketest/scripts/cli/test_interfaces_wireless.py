@@ -17,9 +17,10 @@
 import os
 import re
 import unittest
+from glob import glob
 
 from base_interfaces_test import BasicInterfaceTest
-from glob import glob
+from base_interfaces_test import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
@@ -637,4 +638,4 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -140,6 +140,25 @@ table ip vyos_filter {
 {%         endfor %}
 {%     endif %}
 
+{%     if ipv4.forward.filter.disable_conntrack is vyos_defined or ipv4.input.filter.disable_conntrack is vyos_defined %}
+    chain VYOS_DISABLE_CONNTRACK_INP_FWD {
+        type filter hook prerouting priority -320; policy accept;
+{%         if ipv4.forward.filter.disable_conntrack is vyos_defined %}
+               fib daddr . iif type unicast notrack counter comment "DISABLE-CT-FWD"
+{%         endif %}
+{%         if ipv4.input.filter.disable_conntrack is vyos_defined %}
+               fib daddr . iif type local notrack counter comment "DISABLE-CT-INP"
+{%         endif %}
+    }
+{%     endif %}
+
+{%     if ipv4.output.filter.disable_conntrack is vyos_defined %}
+    chain VYOS_DISABLE_CONNTRACK_OUT {
+        type filter hook output priority -320; policy accept;
+        notrack counter comment "DISABLE-CT-OUT"
+    }
+{%     endif %}
+
 {%     for set_name in ns.sets %}
     set RECENT_{{ set_name }} {
         type ipv4_addr
@@ -306,6 +325,25 @@ table ip6 vyos_filter {
         {{ conf | nft_default_rule('NAM-' + name_text, 'ipv6') }}
     }
 {%         endfor %}
+{%     endif %}
+
+{%     if ipv6.forward.filter.disable_conntrack is vyos_defined or ipv6.input.filter.disable_conntrack is vyos_defined %}
+    chain VYOS_DISABLE_CONNTRACK_INP_FWD_V6 {
+        type filter hook prerouting priority -320; policy accept;
+{%         if ipv6.forward.filter.disable_conntrack is vyos_defined %}
+               fib daddr . iif type unicast notrack counter comment "DISABLE-CT-FWD-V6"
+{%         endif %}
+{%         if ipv6.input.filter.disable_conntrack is vyos_defined %}
+               fib daddr . iif type local notrack counter comment "DISABLE-CT-INP-V6"
+{%         endif %}
+    }
+{%     endif %}
+
+{%     if ipv6.output.filter.disable_conntrack is vyos_defined %}
+    chain VYOS_DISABLE_CONNTRACK_OUT_V6 {
+        type filter hook output priority -320; policy accept;
+        notrack counter comment "DISABLE-CT-OUT-V6"
+    }
 {%     endif %}
 
 {%     for set_name in ns.sets %}

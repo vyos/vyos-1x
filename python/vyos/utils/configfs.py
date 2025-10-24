@@ -13,25 +13,57 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+# pylint: disable=import-outside-toplevel
+
 import os
 
+from vyos.utils.backend import vyconf_backend
+from vyos.utils.boot import boot_configuration_complete
+
+
 def delete_cli_node(cli_path: list):
-    from shutil import rmtree
-    for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
-        tmp = os.path.join(os.environ[config_dir], '/'.join(cli_path))
-        # delete CLI node
-        if os.path.exists(tmp):
-            rmtree(tmp)
+    if vyconf_backend() and boot_configuration_complete():
+        # pylint: disable=redefined-outer-name
+        from vyos.utils.session import delete_cli_node
 
-def add_cli_node(cli_path: list, value: str=None):
-    from vyos.utils.auth import get_current_user
-    from vyos.utils.file import write_file
+        delete_cli_node(cli_path)
+    else:
+        from shutil import rmtree
 
-    current_user = get_current_user()
-    for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
-        # store new value
-        tmp = os.path.join(os.environ[config_dir], '/'.join(cli_path))
-        write_file(f'{tmp}/node.val', value, user=current_user, group='vyattacfg', mode=0o664)
-        # mark CLI node as modified
-        if config_dir == 'VYATTA_CHANGES_ONLY_DIR':
-            write_file(f'{tmp}/.modified', '', user=current_user, group='vyattacfg', mode=0o664)
+        for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
+            tmp = os.path.join(os.environ[config_dir], '/'.join(cli_path))
+            # delete CLI node
+            if os.path.exists(tmp):
+                rmtree(tmp)
+
+
+def add_cli_node(cli_path: list, value: str = None):
+    if vyconf_backend() and boot_configuration_complete():
+        # pylint: disable=redefined-outer-name
+        from vyos.utils.session import add_cli_node
+
+        add_cli_node(cli_path, value)
+    else:
+        from vyos.utils.auth import get_current_user
+        from vyos.utils.file import write_file
+
+        current_user = get_current_user()
+        for config_dir in ['VYATTA_TEMP_CONFIG_DIR', 'VYATTA_CHANGES_ONLY_DIR']:
+            # store new value
+            tmp = os.path.join(os.environ[config_dir], '/'.join(cli_path))
+            write_file(
+                f'{tmp}/node.val',
+                value,
+                user=current_user,
+                group='vyattacfg',
+                mode=0o664,
+            )
+            # mark CLI node as modified
+            if config_dir == 'VYATTA_CHANGES_ONLY_DIR':
+                write_file(
+                    f'{tmp}/.modified',
+                    '',
+                    user=current_user,
+                    group='vyattacfg',
+                    mode=0o664,
+                )

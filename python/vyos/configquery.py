@@ -39,6 +39,7 @@ from vyos.xml_ref import is_tag
 from vyos.base import Warning
 from vyos.utils.backend import vyconf_backend
 from vyos.configsource import ConfigSourceVyconfSession
+from vyos.utils.list import list_strip
 
 config_file = os.path.join(directories['config'], 'config.boot')
 
@@ -199,9 +200,19 @@ def op_mode_config_dict(
 ):
     if path is None:
         path = []
+
     command = ['/bin/cli-shell-api', '--show-active-only', 'showConfig']
 
-    rc, out = op_mode_run(command + path)
+    edit_level = os.environ.get('VYATTA_EDIT_LEVEL', '')
+    if edit_level:
+        tmp = edit_level.split('/')
+        edit_path = [el for el in tmp if el]
+        relative_path = list_strip(path, edit_path)
+    else:
+        relative_path = path
+
+    rc, out = op_mode_run(command + relative_path)
+
     if rc == cli_shell_api_err.VYOS_EMPTY_CONFIG:
         out = ''
     if rc == cli_shell_api_err.VYOS_INVALID_PATH:

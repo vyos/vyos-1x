@@ -60,6 +60,8 @@ class TestSystemResolvConf(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path_domainname)
         self.cli_delete(base_path_domainsearch)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_nameserver(self):
         # Check if server is added to resolv.conf
@@ -109,4 +111,4 @@ class TestSystemResolvConf(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(s not in domain_search)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

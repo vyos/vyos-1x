@@ -32,6 +32,8 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_ctrl_alt_delete(self):
         self.cli_set(base_path + ['ctrl-alt-delete', 'reboot'])
@@ -105,11 +107,6 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         isolate_cpus = '1,2,3'
         nohz_full = '2'
         rcu_no_cbs = '1,2,4-5'
-        default_hp_size = '2M'
-        hp_size_1g = '1G'
-        hp_size_2m = '2M'
-        hp_count_1g = '2'
-        hp_count_2m = '512'
 
         self.cli_set(['system', 'option', 'kernel', 'cpu', 'disable-nmi-watchdog'])
         self.cli_set(['system', 'option', 'kernel', 'cpu', 'isolate-cpus', isolate_cpus])
@@ -121,9 +118,6 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['system', 'option', 'kernel', 'disable-power-saving'])
         self.cli_set(['system', 'option', 'kernel', 'disable-softlockup'])
         self.cli_set(['system', 'option', 'kernel', 'memory', 'disable-numa-balancing'])
-        self.cli_set(['system', 'option', 'kernel', 'memory', 'default-hugepage-size', default_hp_size])
-        self.cli_set(['system', 'option', 'kernel', 'memory', 'hugepage-size', hp_size_1g, 'hugepage-count', hp_count_1g])
-        self.cli_set(['system', 'option', 'kernel', 'memory', 'hugepage-size', hp_size_2m, 'hugepage-count', hp_count_2m])
         self.cli_set(['system', 'option', 'kernel', 'quiet'])
 
         self.cli_set(['system', 'option', 'kernel', 'amd-pstate-driver', amd_pstate_mode])
@@ -147,13 +141,10 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' isolcpus={isolate_cpus}', tmp)
         self.assertIn(f' nohz_full={nohz_full}', tmp)
         self.assertIn(f' rcu_nocbs={rcu_no_cbs}', tmp)
-        self.assertIn(f' default_hugepagesz={default_hp_size}', tmp)
-        self.assertIn(f' hugepagesz={hp_size_1g} hugepages={hp_count_1g}', tmp)
-        self.assertIn(f' hugepagesz={hp_size_2m} hugepages={hp_count_2m}', tmp)
         self.assertIn(' numa_balancing=disable', tmp)
 
         if cpu_vendor == 'AuthenticAMD':
             self.assertIn(f' initcall_blacklist=acpi_cpufreq_init amd_pstate={amd_pstate_mode}', tmp)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

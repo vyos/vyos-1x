@@ -22,7 +22,6 @@ from copy import deepcopy
 from passlib.hosts import linux_context
 from psutil import users
 from pwd import getpwall
-from pwd import getpwnam
 from pwd import getpwuid
 from sys import exit
 from time import sleep
@@ -39,9 +38,13 @@ from vyos.template import is_ipv4
 from vyos.utils.auth import EPasswdStrength
 from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_current_user
+from vyos.utils.auth import get_local_users
+from vyos.utils.auth import get_user_home_dir
+from vyos.utils.auth import MIN_USER_UID
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.dict import dict_search
+from vyos.utils.file import move_recursive
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import call
@@ -59,11 +62,7 @@ tacacs_nss_config_file = "/etc/tacplus_nss.conf"
 nss_config_file = "/etc/nsswitch.conf"
 login_motd_dsa_warning = r'/run/motd.d/92-vyos-user-dsa-deprecation-warning'
 
-# Minimum UID used when adding system users
-MIN_USER_UID: int = 1000
-# Maximim UID used when adding system users
-MAX_USER_UID: int = 59999
-# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec0
+# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
 MAX_RADIUS_TIMEOUT: int = 50
 # MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
 MAX_RADIUS_COUNT: int = 8
@@ -71,29 +70,11 @@ MAX_RADIUS_COUNT: int = 8
 MAX_TACACS_COUNT: int = 8
 # Minimum USER id for TACACS users
 MIN_TACACS_UID = 900
-# List of local user accounts that must be preserved
-SYSTEM_USER_SKIP_LIST: list = ['radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
-                              'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
-                              'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10',' tacacs11',
-                              'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
 
 # As of OpenSSH 9.8p1 in Debian trixie, DSA keys are no longer supported
 SSH_DSA_DEPRECATION_WARNING: str = f'{SSH_DSA_DEPRECATION_WARNING} '\
 'The following users are using SSH-DSS keys for authentication.'
 
-def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID):
-    """Return list of dynamically allocated users (see Debian Policy Manual)"""
-    local_users = []
-    for s_user in getpwall():
-        if getpwnam(s_user.pw_name).pw_uid < min_uid:
-            continue
-        if getpwnam(s_user.pw_name).pw_uid > max_uid:
-            continue
-        if s_user.pw_name in SYSTEM_USER_SKIP_LIST:
-            continue
-        local_users.append(s_user.pw_name)
-
-    return local_users
 
 def get_shadow_password(username):
     with open('/etc/shadow') as f:
@@ -389,9 +370,10 @@ def apply(login):
             tmp = dict_search('full_name', user_config)
             if tmp: command += f" --comment '{tmp}'"
 
-            tmp = dict_search('home_directory', user_config)
-            if tmp: command += f" --home '{tmp}'"
-            else: command += f" --home '/home/{user}'"
+            home_directory = dict_search('home_directory', user_config)
+            if not home_directory:
+                home_directory = f'/home/{user}'
+            command += f" --home '{home_directory}'"
 
             if 'operator' not in user_config:
                 command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk,_kea'
@@ -404,7 +386,7 @@ def apply(login):
                 # crazy user will choose username root or any other system user which will fail.
                 #
                 # XXX: Should we deny using root at all?
-                home_dir = getpwnam(user).pw_dir
+                home_dir = get_user_home_dir(user)
                 # always re-render SSH keys with appropriate permissions
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
@@ -423,6 +405,17 @@ def apply(login):
 
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
+
+            # After invoking 'useradd' for each user, if /var/.users_backups/{user} exists, restore the
+            # backed up files to the newly created home directory. This reinstates the user's
+            # SSH environment and avoids loss of access or trust relationships due to the user
+            # creation process, which does not copy such custom files by default.
+            #
+            # More details: https://github.com/vyos/vyos-1x/pull/4678#pullrequestreview-3169648265
+            backup_directory = f"/var/.users_backups/{user}"
+            if command.startswith('useradd') and os.path.exists(backup_directory):
+                move_recursive(backup_directory, home_dir)
+                chown(home_dir, user=user, group='users', recursive=True)
 
             # T5875: ensure UID is properly set on home directory if user is re-added
             # the home directory will always exist, as it's created above by --create-home,
@@ -459,7 +452,7 @@ def apply(login):
                 # Disable user to prevent re-login
                 call(f'usermod -s /sbin/nologin {user}')
 
-                home_dir = getpwnam(user).pw_dir
+                home_dir = get_user_home_dir(user)
                 # Remove SSH authorized keys file
                 authorized_keys_file = f'{home_dir}/.ssh/authorized_keys'
                 if os.path.exists(authorized_keys_file):

@@ -33,12 +33,10 @@ PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
 busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
 
-
 def cmd_to_json(command):
     c = cmd(command + ' --format=json')
     data = json.loads(c)[0]
     return data
-
 
 class TestContainer(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -70,6 +68,8 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         # Ensure systemd units are removed
         units = glob.glob('/run/systemd/system/vyos-container-*')
         self.assertEqual(units, [])
+        # always forward to base class
+        super().tearDown()
 
     def test_basic(self):
         cont_name = 'c1'
@@ -223,6 +223,25 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(n['network_interface'], 'pod-bridge2')
         self.assertEqual(n['subnets'][0]['subnet'], '10.0.2.0/24')
         self.assertEqual(n['subnets'][0]['gateway'], '10.0.2.1')
+
+    def test_user_defined_mac(self):
+        # Bridge Network
+        self.cli_set(base_path + ['network', 'bridge1', 'prefix', '10.0.1.0/24'])
+        self.cli_set(base_path + ['network', 'bridge1', 'type', 'bridge'])
+
+        self.cli_set(base_path + ['name', "test1", 'image', busybox_image])
+        self.cli_set(base_path + ['name', "test1", 'network', 'bridge1', 'address', '10.0.1.11'])
+        self.cli_set(base_path + ['name', "test1", 'network', 'bridge1', 'mac', '02:00:00:00:00:01'])
+
+        self.cli_set(base_path + ['name', "test2", 'image', busybox_image])
+        self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'address', '10.0.1.12'])
+        self.cli_set(base_path + ['name', "test2", 'network', 'bridge1', 'mac', '02:00:00:00:00:02'])
+        self.cli_commit()
+
+        n = cmd_to_json(f'sudo podman container inspect test1')
+        self.assertEqual(n['NetworkSettings']['Networks']['bridge1']['MacAddress'], '02:00:00:00:00:01')
+        n = cmd_to_json(f'sudo podman container inspect test2')
+        self.assertEqual(n['NetworkSettings']['Networks']['bridge1']['MacAddress'], '02:00:00:00:00:02')
 
     def test_ipv4_network(self):
         prefix = '192.0.2.0/24'
@@ -480,4 +499,4 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
