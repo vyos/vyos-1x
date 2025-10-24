@@ -26,6 +26,8 @@ from cryptography.x509.oid import ExtendedKeyUsageOID
 
 import vyos.opmode
 
+# PERLE - add access to config directory for invoking service_ssh.py
+from vyos.defaults import directories
 from vyos.config import Config
 from vyos.config import config_dict_mangle_acme
 from vyos.pki import encode_certificate
@@ -53,7 +55,8 @@ from vyos.utils.process import cmd
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
 
-ArgsPkiType = typing.Literal['ca', 'certificate', 'dh', 'key-pair', 'openvpn', 'crl']
+# PERLE add ssh hostkey option
+ArgsPkiType = typing.Literal['ca', 'certificate', 'dh', 'key-pair', 'openvpn', 'crl', 'ssh-hostkey']
 ArgsPkiTypeGen = typing.Literal[ArgsPkiType, typing.Literal['ssh', 'wireguard']]
 ArgsFingerprint = typing.Literal['sha256', 'sha384', 'sha512']
 
@@ -1088,6 +1091,62 @@ def import_openvpn_secret(name, path):
 
     install_openvpn_key(name, key_data, key_version)
 
+# PERLE - add support for importing ssh host keys from existing ssh private and public key files
+#         into the standard /etc/ssh/ssh_tpm_host_xxx_key.tpm/pub. Valid only for RSA and ECDSA
+
+def import_ssh_hostkey(name, path):
+
+    if not os.path.exists(path):
+        print(f'SSH server host private key file not found: {path}')
+        return
+
+    path2 = path + ".pub"
+
+    if not os.path.exists(path2):
+        print(f'Corresponding SSH server host public key file not found: {path2}')
+        return
+
+    conf_mode_dir = directories['conf_mode']
+    destination = f"/etc/ssh/{name}"
+    destination2 = destination + ".pub"
+
+    if name == 'ssh_host_rsa_key':
+        if os.system(f"grep -q 'ssh-rsa' '{path2}'") != 0:
+            print(f'Error: SSH server host public key file: {path2} is not ssh-rsa format')
+            return
+        print(f'Importing SSH RSA server host key: {path} to tpm TSS2 format: /etc/ssh/ssh_tpm_host_rsa.tpm')
+        os.system(f"sudo cp '{path2}' /etc/ssh/ssh_tpm_host_rsa_key.pub")
+        os.system(f"sudo ssh-tpm-keygen --import '{path}' -t rsa -f /etc/ssh/ssh_tpm_host_rsa_key")
+        os.system("sudo systemctl restart ssh-tpm-agent")
+    elif name == 'ssh_host_ecdsa_key':
+        if os.system(f"grep -q 'ecdsa-sha' '{path2}'") != 0:
+            print(f'Error: SSH server host public key file: {path2} is not ssh-ecdsa format')
+            return
+        print(f'Importing SSH ECDSA server host key: {path} to tpm TSS2 format: /etc/ssh/ssh_tpm_host_ecdsa.tpm')
+        os.system(f"sudo cp '{path2}' /etc/ssh/ssh_tpm_host_ecdsa_key.pub")
+        os.system(f"sudo ssh-tpm-keygen --import '{path}' -t ecdsa -f /etc/ssh/ssh_tpm_host_ecdsa_key")
+        os.system("sudo systemctl restart ssh-tpm-agent")
+    elif name == 'ssh_host_dsa_key':
+        if os.system(f"grep -q 'ssh-dss' '{path2}'") != 0:
+            print(f'Error: SSH server host public key file: {path2} is not ssh-dsa format')
+            return
+        print('Warning: DSA TSS2 format is not supported.')
+        print(f'Copying SSH DSA server host key: {path} to {destination}')
+        os.system(f"sudo cp '{path}' '{destination}'")
+        os.system(f"sudo cp '{path2}' '{destination2}'")
+        cmd(f'{conf_mode_dir}/service_ssh.py')
+    elif name == 'ssh_host_ed25519_key':
+        if os.system(f"grep -q 'ssh-ed25519' '{path2}'") != 0:
+            print(f'Error: SSH server host public key file: {path2} is not ssh-ed25519 format')
+            return
+        print('Warning: ED25519 TSS2 format is not supported.')
+        print(f'Copying SSH ED25519 server host key: {path} to {destination}')
+        os.system(f"sudo cp '{path}' '{destination}'")
+        os.system(f"sudo cp '{path2}' '{destination2}'")
+        cmd(f'{conf_mode_dir}/service_ssh.py')
+    else:
+        print('Error: invalid ssh server key type')
+
 
 def generate_pki(
     raw: bool,
@@ -1184,6 +1243,8 @@ def import_pki(
             )
         elif pki_type == 'openvpn':
             import_openvpn_secret(name, filename)
+        elif pki_type == 'ssh-hostkey':
+            import_ssh_hostkey(name, filename)
     except KeyboardInterrupt:
         print('Aborted')
         sys.exit(0)
