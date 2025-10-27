@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.frrender import bgp_daemon
@@ -25,11 +24,11 @@ from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
 base_path = ['protocols', 'rpki']
-base_frr_config_args = {'string': 'rpki', 'endsection': '^exit'}
+base_frr_config_args = {'start_section': 'rpki', 'stop_section': '^exit'}
 vrf = 'blue'
 vrf_path = ['vrf', 'name', vrf]
-vrf_frr_config_args = {'string': f'vrf {vrf}', 'endsection':'^exit-vrf',
-                'substring': ' rpki', 'endsubsection': '^ exit'}
+vrf_frr_config_args = {'start_section': f'vrf {vrf}', 'stop_section':'^exit-vrf',
+                'start_subsection': ' rpki', 'stop_subsection': '^ exit'}
 rpki_key_name = 'rpki-smoketest'
 rpki_key_type = 'ssh-rsa'
 
@@ -118,8 +117,6 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, vrf_path)
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -134,6 +131,8 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
 
         # check process health and continuity
         self.assertEqual(self.daemon_pid, process_named_running(bgp_daemon))
+        # always forward to base class
+        super().tearDown()
 
     def test_rpki(self):
         expire_interval = '3600'
@@ -324,4 +323,4 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

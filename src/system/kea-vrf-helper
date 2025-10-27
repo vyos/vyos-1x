@@ -1,0 +1,14 @@
+#!/bin/bash
+
+VRF=$1
+shift
+
+export KEA_DHCP_DATA_DIR=/config/dhcp
+export KEA_HOOK_SCRIPTS_PATH=/usr/libexec/vyos/system
+export KEA_LOCKFILE_DIR=/run/lock/kea
+
+ip vrf exec $VRF \
+    setpriv --reuid=_kea --regid=_kea --init-groups \
+        --inh-caps +net_bind_service,+net_raw \
+        --ambient-caps +net_bind_service,+net_raw \
+        $@

@@ -2,19 +2,19 @@
 <grammar xmlns="http://relaxng.org/ns/structure/1.0">
   <!--
        interface_definition.rnc: VyConf reference tree XML grammar
-
+    
        Copyright VyOS maintainers and contributors <maintainers@vyos.io>
-
+    
        This library is free software; you can redistribute it and/or
        modify it under the terms of the GNU Lesser General Public
        License as published by the Free Software Foundation; either
        version 2.1 of the License, or (at your option) any later version.
-
+    
        This library is distributed in the hope that it will be useful,
        but WITHOUT ANY WARRANTY; without even the implied warranty of
        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
        Lesser General Public License for more details.
-
+    
        You should have received a copy of the GNU Lesser General Public
        License along with this library; if not, write to the Free Software
        Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -178,12 +178,49 @@
         <zeroOrMore>
           <ref name="completionHelp"/>
         </zeroOrMore>
+        <optional>
+          <ref name="constraint"/>
+        </optional>
+        <optional>
+          <element name="constraintErrorMessage">
+            <text/>
+          </element>
+        </optional>
       </interleave>
     </element>
   </define>
   <!-- All nodes must have "name" attribute -->
   <define name="nodeNameAttr">
     <attribute name="name"/>
+  </define>
+  <!--
+    Tag and leaf nodes may have constraints on their names and values
+    (respectively).
+    When multiple constraints are listed, they work as logical OR
+  -->
+  <define name="constraint">
+    <element name="constraint">
+      <oneOrMore>
+        <choice>
+          <element name="regex">
+            <text/>
+          </element>
+          <ref name="validator"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <!-- A constraint may also use an external validator rather than regex -->
+  <define name="validator">
+    <element name="validator">
+      <interleave>
+        <attribute name="name"/>
+        <optional>
+          <attribute name="argument"/>
+        </optional>
+      </interleave>
+      <empty/>
+    </element>
   </define>
   <!-- help tags contains brief description of the purpose of the node -->
   <define name="help">

@@ -44,10 +44,10 @@ class Det44:
             is_add=True,
         )
 
-    def delete_det44_interface_outside(self, interface_out):
+    def delete_det44_interface_outside(self, interface_out_index):
         """Delete DET44 outside interface"""
         self.vpp.api.det44_interface_add_del_feature(
-            sw_if_index=self.vpp.get_sw_if_index(interface_out),
+            sw_if_index=interface_out_index,
             is_inside=False,
             is_add=False,
         )
@@ -60,10 +60,10 @@ class Det44:
             is_add=True,
         )
 
-    def delete_det44_interface_inside(self, interface_in):
+    def delete_det44_interface_inside(self, interface_in_index):
         """Delete DET44 inside interface"""
         self.vpp.api.det44_interface_add_del_feature(
-            sw_if_index=self.vpp.get_sw_if_index(interface_in),
+            sw_if_index=interface_in_index,
             is_inside=True,
             is_add=False,
         )
@@ -104,3 +104,17 @@ class Det44:
             tcp_established=tcp_established,
             tcp_transitory=tcp_transitory,
         )
+
+    def get_det44_interfaces_outside(self):
+        ifaces_outside = []
+        for iface in self.vpp.api.det44_interface_dump():
+            if iface.is_outside:
+                ifaces_outside.append(iface.sw_if_index)
+        return ifaces_outside
+
+    def get_det44_interfaces_inside(self):
+        ifaces_inside = []
+        for iface in self.vpp.api.det44_interface_dump():
+            if iface.is_inside:
+                ifaces_inside.append(iface.sw_if_index)
+        return ifaces_inside

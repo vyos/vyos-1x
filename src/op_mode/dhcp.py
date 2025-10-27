@@ -326,9 +326,9 @@ def show_server_pool_statistics(
     inet_suffix = '6' if family == 'inet6' else '4'
 
     if vrf:
-        service = f'kea-dhcp{inet_suffix}@{vrf}.service'
+        service = f'isc-kea-dhcp{inet_suffix}-server@{vrf}.service'
     else:
-        service = f'kea-dhcp{inet_suffix}.service'
+        service = f'isc-kea-dhcp{inet_suffix}-server.service'
 
     if not is_systemd_service_running(service):
         Warning(stale_warn_msg)
@@ -376,9 +376,9 @@ def show_server_leases(
     inet_suffix = '6' if family == 'inet6' else '4'
 
     if vrf:
-        service = f'kea-dhcp{inet_suffix}@{vrf}.service'
+        service = f'isc-kea-dhcp{inet_suffix}-server@{vrf}.service'
     else:
-        service = f'kea-dhcp{inet_suffix}.service'
+        service = f'isc-kea-dhcp{inet_suffix}-server.service'
 
     if not is_systemd_service_running(service):
         Warning(stale_warn_msg)
@@ -437,9 +437,9 @@ def show_server_static_mappings(
     inet_suffix = '6' if family == 'inet6' else '4'
 
     if vrf:
-        service = f'kea-dhcp{inet_suffix}@{vrf}.service'
+        service = f'isc-kea-dhcp{inet_suffix}-server@{vrf}.service'
     else:
-        service = f'kea-dhcp{inet_suffix}.service'
+        service = f'isc-kea-dhcp{inet_suffix}-server.service'
 
     if not is_systemd_service_running(service):
         Warning(stale_warn_msg)
@@ -576,7 +576,7 @@ def _get_formatted_client_leases(lease_data):
         if 'new_dhcp_server_identifier' in lease:
             data_entries.append(['DHCP Server', lease['new_dhcp_server_identifier']])
         if 'new_dhcp_lease_time' in lease:
-            data_entries.append(['DHCP Server', lease['new_dhcp_lease_time']])
+            data_entries.append(['Lease Time', lease['new_dhcp_lease_time']])
         if 'vrf' in lease:
             data_entries.append(['VRF', lease['vrf']])
         if 'last_update' in lease:

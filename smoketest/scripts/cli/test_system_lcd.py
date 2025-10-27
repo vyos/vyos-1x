@@ -28,6 +28,8 @@ class TestSystemLCD(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_system_display(self):
         # configure some system display
@@ -48,4 +50,4 @@ class TestSystemLCD(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running('LCDd'))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

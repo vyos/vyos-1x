@@ -33,7 +33,7 @@
             </properties>
             <command>dmidecode</command>
           </node>
-          <node name="mem">
+          <node name="memory">
             <properties>
               <help>Show system RAM details</help>
             </properties>

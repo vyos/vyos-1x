@@ -42,13 +42,13 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # after service removal process must no longer run
         self.assertTrue(process_named_running(PROCESS_NAME))
-
         self.cli_delete(base_path)
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_commit()
-
         # after service removal process must no longer run
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_sflow(self):
         agent_address = '192.0.2.5'
@@ -152,4 +152,4 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertIn(PROCESS_NAME, tmp)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

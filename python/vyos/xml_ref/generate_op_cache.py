@@ -139,6 +139,39 @@ def sort_op_data(obj):
     key_func = cmp_to_key(compare_keys)
     return sort_func(obj, key_func)
 
+def get_constraints(props):
+    if props is None:
+        return None
+
+    # Put regexes and validators into separate dict fields.
+    # Since multiple constraints work like logical OR,
+    # it's better for the runner can evaluate regexes internally first,
+    # which is much faster than calling external validators.
+    constraints = {
+      'regexes': [],
+      'validators': []
+    }
+
+    constraint_elem = props.find('constraint')
+
+    if constraint_elem is not None:
+        constraint_elems = list(constraint_elem)
+        if constraint_elems:
+            for ce in constraint_elems:
+                if ce.tag == 'regex':
+                    constraints['regexes'].append(ce.text)
+                elif ce.tag == 'validator':
+                    name = ce.get('name')
+                    arg = ce.get('argument')
+                    validator = {'name': name, 'argument': arg}
+                    constraints['validators'].append(validator)
+                else:
+                    print(f"Ignoring unknown validator type {ce.tag}")
+
+    if constraints['regexes'] or constraints['validators']:
+        return constraints
+    else:
+        return None
 
 def insert_node(
     n: Element, d: dict, path: list[str] = None, parent: NodeData = None, file: str = ''
@@ -148,6 +181,8 @@ def insert_node(
     children: OptElement = n.find('children')
     command: OptElement = n.find('command')
     standalone: OptElement = n.find('standalone')
+    constraints: OptElement = get_constraints(prop)
+    constraint_error_message: OptElement = n.find('constraintErrorMessage')
     node_type: str = n.tag
 
     if node_type == 'virtualTagNode':
@@ -224,6 +259,8 @@ def insert_node(
     new_node_data.command = command_text
     new_node_data.standalone_help_text = standalone_help_text
     new_node_data.standalone_command = standalone_command
+    new_node_data.constraints = constraints
+    new_node_data.constraint_error_message = constraint_error_message
     new_node_data.path = path
     new_node_data.files = [file]
 

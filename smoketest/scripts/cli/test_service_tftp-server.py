@@ -52,12 +52,12 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
-
         self.cli_delete(base_path)
         self.cli_commit()
-
         # Check for no longer running process
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_01_tftpd_single(self):
         directory = '/tmp'
@@ -148,4 +148,4 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', vrf])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

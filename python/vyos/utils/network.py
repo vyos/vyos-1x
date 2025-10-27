@@ -55,7 +55,8 @@ def get_host_identity() -> str:
     Build a stable host identity string for deterministic MAC generation.
 
     Combines:
-      • The system's HardwareUUID (from /sys/class/dmi/id/product_uuid)
+      • The system's hardware UUID (from /sys/class/dmi/id/product_uuid),
+        if available
       • The system hostname
 
     Both are normalized (lowercase, dashes removed in UUID) and joined with a colon.
@@ -64,9 +65,21 @@ def get_host_identity() -> str:
         str: A string "<uuid>:<hostname>", used as part of the host-specific seed when
              generating deterministic MAC addresses.
     """
-    uuid = cmd(f"cat /sys/class/dmi/id/product_uuid").strip().replace("-", "").lower()
+    import os.path
+
+    uuid_file = '/sys/class/dmi/id/product_uuid'
+
+    if os.path.exists(uuid_file):
+        uuid = cmd(f"sudo cat {uuid_file}").strip().replace("-", "").lower()
+    else:
+        uuid = None
+
     host = cmd("hostname").strip().lower()
-    return f"{uuid}:{host}"
+
+    if uuid is not None:
+        return f"{uuid}:{host}"
+    else:
+        return host
 
 def gen_mac(name: str, addr: str, ident: str) -> str:
     """

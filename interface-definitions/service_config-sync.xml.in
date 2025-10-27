@@ -476,6 +476,12 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="login">
+                    <properties>
+                      <help>System User Login</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="option">
                     <properties>
                       <help>System Options</help>

@@ -6,8 +6,12 @@ interface {{ ifname }} {
     send client-id {{ dhcpv6_options.duid }};
 {% endif %}
 {% if address is vyos_defined and 'dhcpv6' in address %}
+{%     if dhcpv6_options.no_request_dns is not vyos_defined %}
     request domain-name-servers;
+{%     endif %}
+{%     if dhcpv6_options.no_request_domain_name is not vyos_defined %}
     request domain-name;
+{%     endif %}
 {%     if dhcpv6_options.parameters_only is vyos_defined %}
     information-only;
 {%     endif %}

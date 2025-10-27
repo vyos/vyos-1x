@@ -20,9 +20,36 @@ import string
 
 from enum import StrEnum
 from decimal import Decimal
+from pwd import getpwall
+from pwd import getpwnam
 from vyos.utils.process import cmd
 
-
+# Minimum UID used when adding system users
+MIN_USER_UID: int = 1000
+# Maximim UID used when adding system users
+MAX_USER_UID: int = 59999
+# List of local user accounts that must be preserved
+SYSTEM_USER_SKIP_LIST: frozenset = {
+    'nobody', 'sso_user', # PERLE 7c8683c5ee in vyos-1x
+    'radius_user',
+    'radius_priv_user',
+    'tacacs0',
+    'tacacs1',
+    'tacacs2',
+    'tacacs3',
+    'tacacs4',
+    'tacacs5',
+    'tacacs6',
+    'tacacs7',
+    'tacacs8',
+    'tacacs9',
+    'tacacs10',
+    'tacacs11',
+    'tacacs12',
+    'tacacs13',
+    'tacacs14',
+    'tacacs15',
+}
 DEFAULT_PASSWORD: str = 'vyos'
 LOW_ENTROPY_MSG: str = 'should be at least 8 characters long;'
 WEAK_PASSWORD_MSG: str = 'The password complexity is too low - @MSG@'
@@ -90,7 +117,7 @@ def evaluate_strength(passwd: str) -> dict[str, str]:
 def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
 
-    mkpassword = 'mkpasswd --method=sha-512 --stdin'
+    mkpassword = 'mkpasswd --method=yescrypt --stdin'
     return cmd(mkpassword, input=password, timeout=5)
 
 def split_ssh_public_key(key_string, defaultname=""):
@@ -119,3 +146,24 @@ def get_current_user() -> str:
     elif 'USER' in os.environ:
         current_user = os.environ['USER']
     return current_user
+
+
+def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID) -> list:
+    """Return list of dynamically allocated users (see Debian Policy Manual)"""
+    local_users = []
+
+    for s_user in getpwall():
+        if s_user.pw_uid < min_uid:
+            continue
+        if s_user.pw_uid > max_uid:
+            continue
+        if s_user.pw_name in SYSTEM_USER_SKIP_LIST:
+            continue
+        local_users.append(s_user.pw_name)
+
+    return local_users
+
+
+def get_user_home_dir(user: str) -> str:
+    """Return user's home directory"""
+    return getpwnam(user).pw_dir

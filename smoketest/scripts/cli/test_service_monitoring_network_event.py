@@ -38,6 +38,8 @@ class TestMonitoringNetworkEvent(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_network_event_log(self):
         expected_config = {
@@ -62,4 +64,4 @@ class TestMonitoringNetworkEvent(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

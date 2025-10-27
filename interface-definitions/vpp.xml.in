@@ -561,12 +561,6 @@
                   <help>XDP settings</help>
                 </properties>
                 <children>
-                  <leafNode name="no-syscall-lock">
-                    <properties>
-                      <help>Unlock multithreading in interrupt and adaptive modes</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
                   <leafNode name="num-rx-queues">
                     <properties>
                       <help>Number of receive queues</help>
@@ -725,7 +719,7 @@
               <properties>
                 <help>default-log-level</help>
                 <completionHelp>
-                  <list>alert crit debug disabled emerg err info notice warn</list>
+                  <list>alert crit debug disabled emerg error info notice warn</list>
                 </completionHelp>
                 <valueHelp>
                   <format>alert</format>
@@ -748,7 +742,7 @@
                   <description>Emergency</description>
                 </valueHelp>
                 <valueHelp>
-                  <format>err</format>
+                  <format>error</format>
                   <description>Error</description>
                 </valueHelp>
                 <valueHelp>
@@ -764,7 +758,7 @@
                   <description>Warning</description>
                 </valueHelp>
                 <constraint>
-                  <regex>(alert|crit|debug|disabled|emerg|err|info|notice|warn)</regex>
+                  <regex>(alert|crit|debug|disabled|emerg|error|info|notice|warn)</regex>
                 </constraint>
               </properties>
             </leafNode>

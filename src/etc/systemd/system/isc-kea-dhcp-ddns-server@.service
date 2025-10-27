@@ -1,0 +1,15 @@
+[Unit]
+Description=Kea DDNS Service
+Documentation=man:kea-dhcp-ddns(8)
+Wants=network-online.target
+After=vyos-router.service
+
+[Service]
+User=root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+Environment="KEA_LOCKFILE_DIR=/run/lock/kea"
+ExecStart=/usr/libexec/vyos/system/kea-vrf-helper %i  /usr/sbin/kea-dhcp-ddns -c /var/run/kea/kea-%i-dhcp-ddns.conf
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

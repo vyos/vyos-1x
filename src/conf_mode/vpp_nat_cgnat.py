@@ -23,6 +23,15 @@ from vyos.configdiff import Diff
 from vyos.vpp.utils import cli_ifaces_list
 
 from vyos.vpp.nat.det44 import Det44
+from vyos.vpp.control_vpp import VPPControl
+
+
+def _vpp_iface_name_transform(iface_name):
+    vpp_iface_name = iface_name
+    if vpp_iface_name.startswith('bond'):
+        # interface name in VPP is BondEthernetX
+        vpp_iface_name = vpp_iface_name.replace('bond', 'BondEthernet')
+    return vpp_iface_name
 
 
 def get_config(config=None) -> dict:
@@ -120,16 +129,14 @@ def verify(config):
             f'Please choose a side for: {", ".join(conflict_ifaces)} '
         )
 
-    for interface in config['interface']['inside']:
-        if interface not in config['vpp_ifaces']:
-            raise ConfigError(
-                f'{interface} must be a VPP interface for inside CGNAT interface'
-            )
-    for interface in config['interface']['outside']:
-        if interface not in config['vpp_ifaces']:
-            raise ConfigError(
-                f'{interface} must be a VPP interface for outside CGNAT interface'
-            )
+    vpp = VPPControl()
+    for direction in ['inside', 'outside']:
+        for interface in config['interface'][direction]:
+            vpp_iface_name = _vpp_iface_name_transform(interface)
+            if vpp.get_sw_if_index(vpp_iface_name) is None:
+                raise ConfigError(
+                    f'{interface} must be a VPP interface for {direction} CGNAT interface'
+                )
 
     required_keys = {'outside_prefix', 'inside_prefix'}
     for rule in config['rule']:
@@ -158,13 +165,11 @@ def apply(config):
     if 'effective' in config:
         remove_config = config.get('effective')
         # Delete inside interfaces
-        for interface in remove_config['interface']['inside']:
-            if interface not in config.get('interface', {}).get('inside', []):
-                cgnat.delete_det44_interface_inside(interface)
+        for interface in cgnat.get_det44_interfaces_inside():
+            cgnat.delete_det44_interface_inside(interface)
         # Delete outside interfaces
-        for interface in remove_config['interface']['outside']:
-            if interface not in config.get('interface', {}).get('outside', []):
-                cgnat.delete_det44_interface_outside(interface)
+        for interface in cgnat.get_det44_interfaces_outside():
+            cgnat.delete_det44_interface_outside(interface)
         # Delete CGNAT rules
         for rule in config['changed_rules']:
             if rule in remove_config.get('rule', {}):
@@ -182,10 +187,12 @@ def apply(config):
     cgnat.enable_det44_plugin()
     # Add inside interfaces
     for interface in config['interface']['inside']:
-        cgnat.add_det44_interface_inside(interface)
+        vpp_iface_name = _vpp_iface_name_transform(interface)
+        cgnat.add_det44_interface_inside(vpp_iface_name)
     # Add outside interfaces
     for interface in config['interface']['outside']:
-        cgnat.add_det44_interface_outside(interface)
+        vpp_iface_name = _vpp_iface_name_transform(interface)
+        cgnat.add_det44_interface_outside(vpp_iface_name)
     # Add CGNAT rules
     for rule in config['changed_rules']:
         if rule in config.get('rule', {}):

@@ -17,8 +17,10 @@
 import os
 import unittest
 
-from vyos.ifconfig import Section
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.ifconfig import Section
 
 class PEthInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -43,4 +45,4 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
         super(PEthInterfaceTest, cls).setUpClass()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

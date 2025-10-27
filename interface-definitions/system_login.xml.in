@@ -83,6 +83,7 @@
                         <regex>\$1\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{22}</regex>
                         <regex>\$5\$(rounds=[0-9]+\$)?[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{43}</regex>
                         <regex>\$6\$(rounds=[0-9]+\$)?[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{86}</regex>
+                        <regex>\$y\$[./A-Za-z0-9]+\$[./A-Za-z0-9]{,86}\$[./A-Za-z0-9]{43}</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid encrypted password for $VAR(../../@).</constraintErrorMessage>
                     </properties>

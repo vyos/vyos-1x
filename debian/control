@@ -328,6 +328,7 @@ Depends:
 # End "vpn openconnect"
 # For "system syslog"
   rsyslog,
+  rsyslog-openssl,
 # End "system syslog"
 # For "system option keyboard-layout"
   kbd,
@@ -359,6 +360,8 @@ Depends:
 # End "run monitor traffic"
 # For "show hardware dmi"
   dmidecode,
+# For "show protocols static arp"
+  net-tools,
 # For "run show hardware storage smart"
   smartmontools,
 # For "run show hardware scsi"
@@ -420,7 +423,8 @@ Architecture: all
 Depends:
  skopeo,
  snmp,
- vyos-1x
+ vyos-1x,
+ vmtouch
 Description: VyOS build sanity checking toolkit
 
 Package: vyos-1x-vmware

@@ -20,17 +20,21 @@ import unittest
 from glob import glob
 from json import loads
 
-from netifaces import AF_INET
-from netifaces import AF_INET6
-from netifaces import ifaddresses
+from socket import AF_INET
+from socket import AF_INET6
+from netifaces import ifaddresses # pylint: disable = no-name-in-module
 
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.configsession import ConfigSessionError
+from vyos.frrender import mgmt_daemon
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
 from vyos.utils.process import popen
 
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
@@ -84,6 +88,9 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 if x.startswith(f'{interface}.')
             ]
             self.assertListEqual(tmp, [])
+
+        # check process health and continuity
+        self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
 
     def test_offloading_rps(self):
         # enable RPS on all available CPUs, RPS works with a CPU bitmask,
@@ -227,7 +234,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_commit()
 
         for interface in self._interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+            frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(' evpn mh uplink', frrconfig)
 
     def test_switchdev(self):
@@ -240,4 +247,4 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(self._base_path + [interface, 'switchdev'])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

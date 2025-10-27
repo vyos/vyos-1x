@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
@@ -38,8 +37,6 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -47,6 +44,8 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
 
         # check process health and continuity
         self.assertEqual(self.daemon_pid, process_named_running(zebra_daemon))
+        # always forward to base class
+        super().tearDown()
 
     def test_srv6(self):
         interfaces = Section.interfaces('ethernet', vlan=False)
@@ -126,7 +125,7 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
                 sysctl_read(f'net.ipv6.conf.{interface}.seg6_require_hmac'), '0'
             )  # default
 
-        frrconfig = self.getFRRconfig('segment-routing', endsection='^exit')
+        frrconfig = self.getFRRconfig('segment-routing', stop_section='^exit')
         self.assertIn('segment-routing', frrconfig)
         self.assertIn(' srv6', frrconfig)
         self.assertIn('  locators', frrconfig)
@@ -187,4 +186,4 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

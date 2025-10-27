@@ -1,0 +1,34 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Delete 'vpp settings interface ethX xdp-options no-syscall-lock'
+# since it is set automatically
+
+from vyos.configtree import ConfigTree
+
+base = ['vpp', 'settings', 'interface']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    for iface_name in config.list_nodes(base):
+        xdp_options_base = base + [iface_name, 'xdp-options']
+        if config.exists(xdp_options_base + ['no-syscall-lock']):
+            # Delete no-syscall-lock option from configuration
+            config.delete(xdp_options_base + ['no-syscall-lock'])
+        if config.exists(xdp_options_base) and len(config.list_nodes(xdp_options_base)) == 0:
+            config.delete(xdp_options_base)

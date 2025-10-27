@@ -9,6 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  check-pr-conflict-call:
+  check-pr-conflict:
+    if: github.repository_owner == 'vyos'
     uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@current
     secrets: inherit

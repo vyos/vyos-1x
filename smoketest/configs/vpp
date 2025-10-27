@@ -45,7 +45,7 @@ system {
         kernel {
             memory {
                 hugepage-size 2M {
-                    hugepage-count "2048"
+                    hugepage-count "1800"
                 }
             }
         }
@@ -112,7 +112,10 @@ vpp {
             driver "dpdk"
         }
         interface eth3 {
-            driver "dpdk"
+            driver "xdp"
+            xdp-options {
+                no-syscall-lock
+            }
         }
         interface eth4 {
             driver "dpdk"

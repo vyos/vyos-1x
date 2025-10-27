@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DHCP_HOOK_IFLIST="/tmp/static_dhcp_interfaces"
+
+# Only run if there are static routes with dhcp-interface configured
+if ! { [ -f $DHCP_HOOK_IFLIST ] && grep -qw $interface $DHCP_HOOK_IFLIST; }; then
+    return 0
+fi
+
+# Re-generate the config on the following events:
+# - BOUND: always re-generate
+# - RENEW: re-generate if the IP address changed
+# - REBIND: re-generate if the IP address changed
+# - EXPIRE: always re-generate (route should be removed)
+# - RELEASE: always re-generate (route should be removed)
+if [ "$reason" == "RENEW" ] || [ "$reason" == "REBIND" ]; then
+    if [ "$old_routers" == "$new_routers" ]; then
+        return 0
+    fi
+elif [ "$reason" != "BOUND" ] && [ "$reason" != "EXPIRE" ] && [ "$reason" != "RELEASE" ]; then
+    return 0
+fi
+
+# Re-generate the static routes config
+sudo /usr/libexec/vyos/vyos-request-configd-update.py

@@ -58,13 +58,13 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
-
         # delete testing SNMP config
         self.cli_delete(base_path)
         self.cli_commit()
-
         # Check for running process
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_snmp_basic(self):
         dummy_if = 'dum7312'
@@ -261,4 +261,4 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

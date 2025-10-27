@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import os
 import sys
@@ -23,10 +21,13 @@ import grp
 import traceback
 from datetime import datetime
 
-from vyos.defaults import directories, config_status
-from vyos.configsession import ConfigSession, ConfigSessionError
+from vyos.defaults import directories
+from vyos.defaults import config_status
+from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.configtree import ConfigTree
 from vyos.utils.process import cmd
+from vyos.utils.file import write_file
 
 STATUS_FILE = config_status
 TRACE_FILE = '/tmp/boot-config-trace'
@@ -68,16 +69,16 @@ def trace_to_file(trace_file_name):
         print('{0}'.format(e))
 
 def failsafe(config_file_name):
-    fail_msg = """
+    fail_msg = f"""
     !!!!!
     There were errors loading the configuration
-    Please examine the errors in
-    {0}
-    and correct
+    Please examine the errors in:
+    {TRACE_FILE}
     !!!!!
-    """.format(TRACE_FILE)
+    """
 
     print(fail_msg, file=sys.stderr)
+    write_file('/run/motd.d/9999-boot-config-error', fail_msg)
 
     users = [x[0] for x in pwd.getpwall()]
     if 'vyos' in users:

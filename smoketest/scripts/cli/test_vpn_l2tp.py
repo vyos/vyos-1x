@@ -17,13 +17,13 @@
 import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from configparser import ConfigParser
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 
-
 swanctl_file = '/etc/swanctl/swanctl.conf'
-
 
 class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
     @classmethod
@@ -142,4 +142,4 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

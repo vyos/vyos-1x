@@ -16,9 +16,10 @@
 
 import unittest
 
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.utils.file import read_file
 from vyos.ifconfig import Interface
-from base_vyostest_shim import VyOSUnitTestSHIM
 
 base_path = ['interfaces', 'input']
 
@@ -32,6 +33,8 @@ class InputInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_01_description(self):
         # Check if PPPoE dialer can be configured and runs
@@ -48,4 +51,4 @@ class InputInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(Interface(interface).get_alias(), f'foo-{interface}')
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -18,7 +18,10 @@ import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from time import sleep
+
 from vyos.configsession import ConfigSessionError
+from vyos.utils.process import run
 
 base_path = ['nat']
 src_path = base_path + ['source']
@@ -42,6 +45,8 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.assertFalse(os.path.exists(nftables_nat_config))
         self.assertFalse(os.path.exists(nftables_static_nat_conf))
+        # always forward to base class
+        super().tearDown()
 
     def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
         # Resolver no longer blocks commit, need to wait for daemon to populate set
@@ -331,4 +336,4 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

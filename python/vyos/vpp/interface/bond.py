@@ -116,3 +116,7 @@ class BondInterface(Interface):
             a.kernel_delete()
         """
         self.vpp.lcp_pair_del(self.ifname, self.kernel_interface)
+
+    def lcp_pair_exists(self):
+        """Check if LCP pair exists"""
+        return bool(self.vpp.lcp_pair_find(self.kernel_interface))

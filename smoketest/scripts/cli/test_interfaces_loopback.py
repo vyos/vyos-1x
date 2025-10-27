@@ -15,12 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+from netifaces import interfaces # pylint: disable = no-name-in-module
 
 from base_interfaces_test import BasicInterfaceTest
 from base_interfaces_test import MSG_TESTCASE_UNSUPPORTED
-from netifaces import interfaces
+from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.frrender import mgmt_daemon
 from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.process import process_named_running
 
 loopbacks = ['127.0.0.1', '::1']
 
@@ -43,6 +46,9 @@ class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
         for intf in self._interfaces:
             self.assertIn(intf, interfaces())
 
+        # check process health and continuity
+        self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
+
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
         for addr in loopbacks:
@@ -57,4 +63,4 @@ class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
         self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

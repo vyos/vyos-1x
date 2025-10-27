@@ -34,6 +34,8 @@ class NodeData:
     command: str = ''
     standalone_help_text: Optional[str] = None
     standalone_command: Optional[str] = None
+    constraints: Optional[dict] = None
+    constraint_error_message: Optional[str] = None
     path: list[str] = field(default_factory=list)
     files: list[str] = field(default_factory=list)
     children: list[tuple] = field(default_factory=list)

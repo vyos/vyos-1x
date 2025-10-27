@@ -82,7 +82,6 @@ physmem {
 {% endif %}
 
 plugins {
-    path /usr/lib/x86_64-linux-gnu/vpp_plugins/
     plugin default { disable }
     plugin af_xdp_plugin.so { enable }
     plugin avf_plugin.so { enable }
@@ -109,15 +108,21 @@ plugins {
     # Secure
     # plugin ikev2_plugin.so { enable }
     # plugin dns_plugin.so { enable } # Probably required for FQDN peers
-{% if ipsec is vyos_defined %}
-    plugin crypto_ipsecmb_plugin.so { enable }
-    plugin crypto_native_plugin.so { enable }
-    plugin crypto_openssl_plugin.so { enable }
-{% endif %}
     # plugin wireguard_plugin.so { enable }
     # ACL
     plugin acl_plugin.so { enable }
 }
+
+
+crypto-engines {
+    default { disable }
+{% if ipsec is vyos_defined %}
+    ipsecmb { enable }
+    native { enable }
+    openssl { enable }
+{% endif %}
+}
+
 
 linux-cp {
     lcp-sync
@@ -204,3 +209,7 @@ linux-xfrm-nl {
 {%     endif %}
 }
 {% endif %}
+
+pppoe {
+    enable-pass-nd-and-dhcpv6
+}

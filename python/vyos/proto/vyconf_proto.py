@@ -28,17 +28,19 @@ class Prompt:
 
 @dataclass
 class SetupSession:
-    ClientPid: int = 0
-    ClientApplication: str = None
-    OnBehalfOf: int = None
+    client_pid: int = 0
+    client_application: str = None
+    on_behalf_of: int = None
+    client_user: str = None
+    client_sudo_user: str = None
 
 @dataclass
 class SessionOfPid:
-    ClientPid: int = 0
+    client_pid: int = 0
 
 @dataclass
-class SessionUpdatePid:
-    ClientPid: int = 0
+class SessionExists:
+    dummy: int = None
 
 @dataclass
 class GetConfig:
@@ -46,7 +48,7 @@ class GetConfig:
 
 @dataclass
 class Teardown:
-    OnBehalfOf: int = None
+    on_behalf_of: int = None
 
 @dataclass
 class Validate:
@@ -55,11 +57,23 @@ class Validate:
 
 @dataclass
 class Set:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
 
 @dataclass
 class Delete:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
+
+@dataclass
+class AuxSet:
+    path: list[str] = field(default_factory=list)
+    script_name: str = ""
+    tag_value: str = None
+
+@dataclass
+class AuxDelete:
+    path: list[str] = field(default_factory=list)
+    script_name: str = ""
+    tag_value: str = None
 
 @dataclass
 class Discard:
@@ -71,76 +85,76 @@ class SessionChanged:
 
 @dataclass
 class Rename:
-    EditLevel: list[str] = field(default_factory=list)
-    From: str = ""
-    To: str = ""
+    edit_level: list[str] = field(default_factory=list)
+    source: str = ""
+    destination: str = ""
 
 @dataclass
 class Copy:
-    EditLevel: list[str] = field(default_factory=list)
-    From: str = ""
-    To: str = ""
+    edit_level: list[str] = field(default_factory=list)
+    source: str = ""
+    destination: str = ""
 
 @dataclass
 class Comment:
-    Path: list[str] = field(default_factory=list)
-    Comment: str = ""
+    path: list[str] = field(default_factory=list)
+    comment: str = ""
 
 @dataclass
 class Commit:
-    Confirm: bool = None
-    ConfirmTimeout: int = None
-    Comment: str = None
-    DryRun: bool = None
+    confirm: bool = None
+    confirm_timeout: int = None
+    comment: str = None
+    dry_run: bool = None
 
 @dataclass
 class Rollback:
-    Revision: int = 0
+    revision: int = 0
 
 @dataclass
 class Load:
-    Location: str = ""
+    location: str = ""
     cached: bool = False
     format: ConfigFormat = None
 
 @dataclass
 class Merge:
-    Location: str = ""
+    location: str = ""
     destructive: bool = False
     format: ConfigFormat = None
 
 @dataclass
 class Save:
-    Location: str = ""
+    location: str = ""
     format: ConfigFormat = None
 
 @dataclass
 class ShowConfig:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
     format: ConfigFormat = None
 
 @dataclass
 class Exists:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
 
 @dataclass
 class GetValue:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
     output_format: OutputFormat = None
 
 @dataclass
 class GetValues:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
     output_format: OutputFormat = None
 
 @dataclass
 class ListChildren:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
     output_format: OutputFormat = None
 
 @dataclass
 class RunOpMode:
-    Path: list[str] = field(default_factory=list)
+    path: list[str] = field(default_factory=list)
     output_format: OutputFormat = None
 
 @dataclass
@@ -149,8 +163,8 @@ class Confirm:
 
 @dataclass
 class EnterConfigurationMode:
-    Exclusive: bool = False
-    OverrideExclusive: bool = False
+    exclusive: bool = False
+    override_exclusive: bool = False
 
 @dataclass
 class ExitConfigurationMode:
@@ -158,7 +172,7 @@ class ExitConfigurationMode:
 
 @dataclass
 class ReloadReftree:
-    OnBehalfOf: int = None
+    on_behalf_of: int = None
 
 @dataclass
 class Request:
@@ -189,8 +203,10 @@ class Request:
     discard: Discard = None
     session_changed: SessionChanged = None
     session_of_pid: SessionOfPid = None
-    session_update_pid: SessionUpdatePid = None
+    session_exists: SessionExists = None
     get_config: GetConfig = None
+    aux_set: AuxSet = None
+    aux_delete: AuxDelete = None
 
 @dataclass
 class RequestEnvelope:
@@ -210,8 +226,8 @@ def set_request_prompt(token: str = None):
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_setup_session(token: str = None, client_pid: int = 0, client_application: str = None, on_behalf_of: int = None):
-    reqi = SetupSession (client_pid, client_application, on_behalf_of)
+def set_request_setup_session(token: str = None, client_pid: int = 0, client_application: str = None, on_behalf_of: int = None, client_user: str = None, client_sudo_user: str = None):
+    reqi = SetupSession (client_pid, client_application, on_behalf_of, client_user, client_sudo_user)
     req = Request(setup_session=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env
@@ -222,9 +238,9 @@ def set_request_session_of_pid(token: str = None, client_pid: int = 0):
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_session_update_pid(token: str = None, client_pid: int = 0):
-    reqi = SessionUpdatePid (client_pid)
-    req = Request(session_update_pid=reqi)
+def set_request_session_exists(token: str = None, dummy: int = None):
+    reqi = SessionExists (dummy)
+    req = Request(session_exists=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env
 
@@ -258,6 +274,18 @@ def set_request_delete(token: str = None, path: list[str] = []):
     req_env = RequestEnvelope(token, req)
     return req_env
 
+def set_request_aux_set(token: str = None, path: list[str] = [], script_name: str = "", tag_value: str = None):
+    reqi = AuxSet (path, script_name, tag_value)
+    req = Request(aux_set=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
+def set_request_aux_delete(token: str = None, path: list[str] = [], script_name: str = "", tag_value: str = None):
+    reqi = AuxDelete (path, script_name, tag_value)
+    req = Request(aux_delete=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
 def set_request_discard(token: str = None, dummy: int = None):
     reqi = Discard (dummy)
     req = Request(discard=reqi)
@@ -270,14 +298,14 @@ def set_request_session_changed(token: str = None, dummy: int = None):
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_rename(token: str = None, edit_level: list[str] = [], from_: str = "", to: str = ""):
-    reqi = Rename (edit_level, from_, to)
+def set_request_rename(token: str = None, edit_level: list[str] = [], source: str = "", destination: str = ""):
+    reqi = Rename (edit_level, source, destination)
     req = Request(rename=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_copy(token: str = None, edit_level: list[str] = [], from_: str = "", to: str = ""):
-    reqi = Copy (edit_level, from_, to)
+def set_request_copy(token: str = None, edit_level: list[str] = [], source: str = "", destination: str = ""):
+    reqi = Copy (edit_level, source, destination)
     req = Request(copy=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env

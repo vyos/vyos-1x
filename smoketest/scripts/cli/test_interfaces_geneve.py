@@ -20,6 +20,7 @@ from vyos.ifconfig import Interface
 from vyos.utils.network import get_interface_config
 
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -81,4 +82,4 @@ class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
             ttl += 10
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

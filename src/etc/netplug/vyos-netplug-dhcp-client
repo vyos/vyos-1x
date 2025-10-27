@@ -56,6 +56,8 @@ if in_out == 'out':
     if is_systemd_service_active(systemdV6_service):
         cmd(f'systemctl stop {systemdV6_service}')
 elif in_out == 'in':
+    v6_restart = False
+
     if config.exists_effective(interface_path + ['address']):
         tmp = config.return_effective_values(interface_path + ['address'])
         # Always (re-)start the DHCP(v6) client service. If the DHCP(v6) client
@@ -68,4 +70,10 @@ elif in_out == 'in':
         if 'dhcp' in tmp:
             cmd(f'systemctl restart {systemdV4_service}')
         if 'dhcpv6' in tmp:
-            cmd(f'systemctl restart {systemdV6_service}')
+            v6_restart = True
+
+    if config.exists_effective(interface_path + ['dhcpv6-options', 'pd']):
+        v6_restart = True
+
+    if v6_restart:
+        cmd(f'systemctl restart {systemdV6_service}')

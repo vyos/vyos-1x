@@ -108,13 +108,12 @@ def get_config(config=None) -> dict:
         }
     )
 
-    if conf.exists(['vpp', 'settings', 'nat44', 'timeout']):
-        timeouts = conf.get_config_dict(
-            ['vpp', 'settings', 'nat44', 'timeout'],
-            key_mangling=('-', '_'),
-            with_defaults=True,
-        )
-        config.update(timeouts)
+    settings = conf.get_config_dict(
+        ['vpp', 'settings', 'nat44'],
+        key_mangling=('-', '_'),
+        with_recursive_defaults=True,
+    )
+    config.update(settings.get('nat44'))
 
     if effective_config:
         config.update({'effective': effective_config})
@@ -198,11 +197,12 @@ def verify(config):
                     raise ConfigError(
                         f'{interface} must be a VPP interface for "address-pool translation interface"'
                     )
-                iface_address = (
-                    get_interface_address(interface)
-                    .get('addr_info', [])[0]
-                    .get('local')
-                )
+                address_info = get_interface_address(interface).get('addr_info')
+                if not address_info:
+                    raise ConfigError(
+                        f'{interface} should have an address to be used for "address-pool translation interface"'
+                    )
+                iface_address = address_info[0].get('local')
                 addresses_translation.append(iface_address)
 
         if 'twice_nat' in address_pool:
@@ -227,11 +227,12 @@ def verify(config):
                     raise ConfigError(
                         f'{interface} must be a VPP interface for "address-pool twice-nat interface"'
                     )
-                iface_address = (
-                    get_interface_address(interface)
-                    .get('addr_info', [])[0]
-                    .get('local')
-                )
+                address_info = get_interface_address(interface).get('addr_info')
+                if not address_info:
+                    raise ConfigError(
+                        f'{interface} should have an address to be used for "address-pool twice-nat interface"'
+                    )
+                iface_address = address_info[0].get('local')
                 addresses_twice_nat.append(iface_address)
 
     if 'static' in config:
@@ -257,6 +258,12 @@ def verify(config):
                     'both be specified, or neither must be specified'
                 )
 
+            # Either both protocol and ports are set, or both no protocol and no ports
+            if (rule_config['protocol'] != 'all') != has_local_port:
+                raise ConfigError(
+                    f'{error_msg} protocol and ports must either both be specified or both omitted'
+                )
+
             ext_address = rule_config['external']['address']
             port = rule_config['external'].get('port')
             local_address = rule_config['local']['address']
@@ -271,10 +278,6 @@ def verify(config):
                         f'{error_msg} external address/port is already in use!'
                     )
                 addresses_with_ports.add(pair)
-                if ext_address not in addresses_translation:
-                    raise ConfigError(
-                        f'{error_msg} external address {ext_address} is not in "address-pool translation"'
-                    )
 
             else:
                 if ext_address in addresses_without_ports or any(
@@ -292,6 +295,13 @@ def verify(config):
                 local_addresses.add(local_address)
 
             options = rule_config.get('options', {})
+
+            if 'self_twice_nat' in options and ext_address not in addresses_translation:
+                raise ConfigError(
+                    f'{error_msg} external address {ext_address} must be part of '
+                    '"address-pool translation" when using self-twice-nat'
+                )
+
             if all(key in options for key in ('twice_nat', 'self_twice_nat')):
                 raise ConfigError(
                     f'{error_msg} cannot set both options "twice-nat" and "self-twice-nat"'
@@ -333,6 +343,12 @@ def verify(config):
             ):
                 raise ConfigError(
                     f'{rule_config["external_interface"]} must be a VPP interface for exclude rule {rule}'
+                )
+
+            # Either both protocol and local-port are set, or both no protocol and no port
+            if (rule_config['protocol'] != 'all') != ('local_port' in rule_config):
+                raise ConfigError(
+                    f'Protocol and local-port must either both be specified or both omitted for exclude rule {rule}'
                 )
 
 
@@ -420,6 +436,13 @@ def apply(config):
 
     # Add NAT44
     n.enable_nat44_ed()
+
+    # Enable/disable forwarding
+    enable_forwarding = True
+    if 'no_forwarding' in config:
+        enable_forwarding = False
+    n.enable_disable_nat44_forwarding(enable_forwarding)
+
     # Add inside interfaces
     for interface in config['interface']['inside']:
         n.add_nat44_interface_inside(interface)

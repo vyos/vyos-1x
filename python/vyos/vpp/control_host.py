@@ -23,6 +23,7 @@ from time import sleep
 
 from pyroute2 import IPRoute
 
+from vyos.ethtool import Ethtool
 from vyos.vpp.utils import EthtoolGDrvinfo
 
 
@@ -266,14 +267,16 @@ def get_eth_driver(iface: str) -> str:
     Returns:
         str: kernel module name
     """
-    iface_driver: str = ''
     driver_dir = Path(f'/sys/class/net/{iface}/device/driver/module')
-    if not driver_dir.exists():
-        # raise error if device was not found
-        raise FileNotFoundError(f'PCI device {iface} not found in ethernet interfaces')
+    # Try to detect via sysfs (works for PCI devices)
+    if driver_dir.exists():
+        return driver_dir.resolve().name
 
-    iface_driver: str = driver_dir.resolve().name
-    return iface_driver
+    # Fallback: use ethtool (works for veth, tun, etc.)
+    try:
+        return Ethtool(iface).get_driver_name()
+    except Exception as error:
+        raise Exception(f'Could not determine driver for "{iface}": {error}') from error
 
 
 def unsafe_noiommu_mode(status: bool) -> None:

@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import psutil
 
 from sys import exit
 from time import sleep
@@ -39,6 +40,8 @@ from vyos.configdep import call_dependents
 from vyos import ConfigError
 from vyos import airbag
 
+from vyos.vpp.config_resource_checks import memory as mem_check
+
 airbag.enable()
 
 curlrc_config = r'/etc/curlrc'
@@ -54,6 +57,21 @@ tuned_profiles = {
     'virtual-guest': 'virtual-guest',
     'virtual-host': 'virtual-host',
 }
+
+
+def _get_total_hugepages_and_memory(config):
+    unit_map = {'M': 1 << 20, 'G': 1 << 30}
+
+    total_pages = 0
+    total_bytes = 0
+
+    hp_sizes = config.get('hugepage_size', {})
+    for size_str, hp_config in hp_sizes.items():
+        pages = int(hp_config.get('hugepage_count', 0))
+        total_pages += pages
+        total_bytes += pages * int(size_str[:-1]) * unit_map[size_str[-1]]
+
+    return total_pages, total_bytes
 
 
 def get_config(config=None):
@@ -109,11 +127,46 @@ def verify(options):
                     )
 
     if 'kernel' in options:
-        cpu_vendor = get_cpus()[0]['vendor_id']
+        _cpu_info = get_cpus()[0]
+        cpu_vendor = _cpu_info.get('vendor_id', 'unknown')
         if 'amd_pstate_driver' in options['kernel'] and cpu_vendor != 'AuthenticAMD':
             raise ConfigError(
                 f'AMD pstate driver cannot be used with "{cpu_vendor}" CPU!'
             )
+
+        _, hp_memory_bytes = _get_total_hugepages_and_memory(
+            options['kernel'].get('memory', {})
+        )
+        if hp_memory_bytes:
+            memory = psutil.virtual_memory()
+            memory_total_bytes = memory.total
+
+            # Exclude hugepage usage from system "used" memory
+            hp_memory_used = sum(
+                p['memory'] for p in mem_check.get_hugepages_info().values()
+            )
+            memory_used_bytes = memory.used - hp_memory_used
+
+            # TODO: need to calculate how much memory is consumed for other services, tmpfs etc.
+            # for now we should leave at least 4 GB for system usage and other processes
+            min_system_reserved_gd = 4
+            memory_margin_gb = 1
+            reserved_bytes = max(
+                min_system_reserved_gd * 1024**3,
+                memory_used_bytes + memory_margin_gb * 1024**3,
+            )
+
+            available_for_hp_bytes = memory_total_bytes - reserved_bytes
+            if available_for_hp_bytes < hp_memory_bytes:
+                # For the error message, convert to GB and round to 1 decimal
+                hp_memory_gb = round(hp_memory_bytes / 1024**3, 1)
+                available_for_hp_gb = max(0, round(available_for_hp_bytes / 1024**3, 1))
+                reserved_gb = round(reserved_bytes / 1024**3, 1)
+                raise ConfigError(
+                    f'Configured hugepages require {hp_memory_gb} GB of memory, but only '
+                    f'{available_for_hp_gb:.1f} GB is available '
+                    f'({reserved_gb} GB is reserved for system usage and services)'
+                )
 
     return None
 
@@ -268,16 +321,9 @@ def apply(options):
             write_file(kernel_dynamic_debug, f'module {module} -p')
 
     if 'resource_limits' in options:
-        unit_map = {'M': 1 << 20, 'G': 1 << 30}
-
-        total_pages = 0
-        total_bytes = 0
-
-        hp_sizes = options.get('kernel', {}).get('memory', {}).get('hugepage_size', {})
-        for size_str, hp_config in hp_sizes.items():
-            pages = int(hp_config.get('hugepage_count', 0))
-            total_pages += pages
-            total_bytes += pages * int(size_str[:-1]) * unit_map[size_str[-1]]
+        total_pages, total_bytes = _get_total_hugepages_and_memory(
+            options.get('kernel', {}).get('memory', {})
+        )
 
         # Minimum recommended system values
         max_map_count_min = 65530  # ensures large workload compatibility

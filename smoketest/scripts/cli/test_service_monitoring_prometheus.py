@@ -53,6 +53,8 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.assertFalse(process_named_running(NODE_EXPORTER_PROCESS_NAME))
         self.assertFalse(process_named_running(FRR_EXPORTER_PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_01_node_exporter(self):
         self.cli_set(base_path + ['node-exporter', 'listen-address', listen_ip])
@@ -158,4 +160,4 @@ class TestMonitoringPrometheus(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
