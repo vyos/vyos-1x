@@ -19,7 +19,6 @@ import unittest
 
 from time import sleep
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
@@ -171,8 +170,6 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         super(TestProtocolsStatic, cls).setUpClass()
         cls.cli_delete(cls, base_path)
         cls.cli_delete(cls, ['vrf'])
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     @classmethod
     def tearDownClass(cls):
@@ -185,10 +182,13 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf'])
         self.cli_commit()
 
-        v4route = self.getFRRconfig('ip route', end='')
+        v4route = self.getFRRconfig('ip route')
         self.assertFalse(v4route)
-        v6route = self.getFRRconfig('ipv6 route', end='')
+        v6route = self.getFRRconfig('ipv6 route')
         self.assertFalse(v6route)
+
+        # always forward to base class
+        super().tearDown()
 
     def test_01_static(self):
         self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
@@ -254,7 +254,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip route', end='')
+        frrconfig = self.getFRRconfig('ip route')
 
         # Verify routes
         for route, route_config in routes.items():
@@ -368,7 +368,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip route', end='')
+        frrconfig = self.getFRRconfig('ip route')
 
         for table in tables:
             # Verify routes
@@ -485,7 +485,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp['linkinfo']['info_kind'],          'vrf')
 
             # Verify FRR bgpd configuration
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f'vrf {vrf}', frrconfig)
 
             # Verify routes
@@ -558,7 +558,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = self.getFRRconfig('ip mroute', end='')
+        frrconfig = self.getFRRconfig('ip mroute')
         for route, route_config in multicast_routes.items():
             if 'next_hop' in route_config:
                 for next_hop, next_hop_config in route_config['next_hop'].items():
@@ -597,7 +597,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         sleep(5)
 
         router = get_dhcp_router(interface)
-        frrconfig = self.getFRRconfig('')
+        frrconfig = self.getFRRconfig()
         self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
 
         # T6991: Default route is missing when there is no "protocols static"
@@ -609,7 +609,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Re-check FRR configuration that default route is still present
-        frrconfig = self.getFRRconfig('')
+        frrconfig = self.getFRRconfig()
         self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
 
         self.cli_delete(interface_path + ['address'])
@@ -640,7 +640,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         sleep(5)
 
         router = get_dhcp_router(interface)
-        frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+        frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
         self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
 
         self.cli_delete(interface_path + ['address'])
@@ -651,5 +651,112 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         while process_named_running('dhclient', cmdline=interface, timeout=10):
             sleep(0.250)
 
+    def test_07_dhcp_interface_static_routes(self):
+        # Test static routes using dhcp-interface option
+        # When running via vyos-build under the QEMU environment a local DHCP
+        # server is available. This test verifies that static routes with
+        # dhcp-interface are configured correctly.
+        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        dhcp_interface = 'eth0'
+        interface_path = ['interfaces', 'ethernet', dhcp_interface]
+
+        # Configure DHCP on the interface
+        self.cli_set(interface_path + ['address', 'dhcp'])
+
+        # Commit configuration
+        self.cli_commit()
+
+        # Wait for dhclient to receive IP address
+        sleep(5)
+
+        # Configure static routes with dhcp-interface
+        dhcp_routes = {
+            '10.10.0.0/16': {
+                'dhcp_interface': [dhcp_interface],
+            },
+            '192.168.100.0/24': {
+                'dhcp_interface': [dhcp_interface],
+            },
+        }
+
+        # Configure the static routes
+        for route, route_config in dhcp_routes.items():
+            base = base_path + ['route', route]
+            if 'dhcp_interface' in route_config:
+                for dhcp_if in route_config['dhcp_interface']:
+                    self.cli_set(base + ['dhcp-interface', dhcp_if])
+
+        # Commit configuration
+        self.cli_commit()
+
+        # Verify that the DHCP hook interface list file is created
+        dhcp_hook_iflist = '/tmp/static_dhcp_interfaces'
+        self.assertTrue(
+            os.path.exists(dhcp_hook_iflist),
+            'DHCP hook interface list file should be created',
+        )
+
+        # Read the interface list file and verify it contains our interface
+        with open(dhcp_hook_iflist, 'r') as f:
+            interface_list = f.read().strip()
+        self.assertIn(
+            dhcp_interface,
+            interface_list,
+            f'Interface {dhcp_interface} should be in hook interface list',
+        )
+
+        # Get the DHCP router for verification
+        router = get_dhcp_router(dhcp_interface)
+        self.assertIsNotNone(router, 'DHCP router should be available')
+
+        # Verify FRR configuration contains the static routes with DHCP router
+        frrconfig = self.getFRRconfig('ip route')
+
+        for route in dhcp_routes.keys():
+            expected_route = f'ip route {route} {router} {dhcp_interface}'
+            self.assertIn(
+                expected_route,
+                frrconfig,
+                f'Static route {route} with dhcp-interface should be in FRR config',
+            )
+
+        # Test table-based routes with dhcp-interface
+        table_id = '100'
+        table_route = '10.20.0.0/16'
+        table_base = base_path + ['table', table_id, 'route', table_route]
+        self.cli_set(table_base + ['dhcp-interface', dhcp_interface])
+        self.cli_commit()
+
+        # Verify table route in FRR config
+        frrconfig = self.getFRRconfig('ip route')
+        expected_table_route = (
+            f'ip route {table_route} {router} {dhcp_interface} table {table_id}'
+        )
+        self.assertIn(
+            expected_table_route,
+            frrconfig,
+            f'Table static route {table_route} with dhcp-interface should be in FRR config',
+        )
+
+        # Clean up - remove DHCP configuration
+        self.cli_delete(interface_path + ['address'])
+        self.cli_commit()
+
+        # Wait for dhclient to stop
+        while process_named_running('dhclient', cmdline=dhcp_interface, timeout=10):
+            sleep(0.250)
+
+        # Verify that the hook interface list file is cleaned up when no dhcp-interface routes exist
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # The interface list file should be removed when no dhcp-interface routes are configured
+        self.assertFalse(
+            os.path.exists(dhcp_hook_iflist),
+            'DHCP hook interface list file should be removed when no dhcp-interface routes exist',
+        )
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

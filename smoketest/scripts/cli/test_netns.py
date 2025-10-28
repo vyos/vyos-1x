@@ -35,7 +35,8 @@ class NetNSTest(VyOSUnitTestSHIM.TestCase):
         tmp = cmd('ip netns ls')
         self.assertFalse(tmp)
 
-        super(NetNSTest, self).tearDown()
+        # always forward to base class
+        super().tearDown()
 
     def test_netns_create(self):
         namespaces = ['mgmt', 'front', 'back']
@@ -76,4 +77,4 @@ class NetNSTest(VyOSUnitTestSHIM.TestCase):
             self.assertFalse(is_netns_interface(interface, netns))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

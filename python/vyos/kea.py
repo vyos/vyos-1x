@@ -15,6 +15,7 @@
 
 import json
 import os
+import re
 import socket
 
 from datetime import datetime
@@ -25,7 +26,7 @@ from vyos.template import is_ipv6
 from vyos.template import netmask_from_cidr
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import file_permissions
-from vyos.utils.process import run
+from vyos.utils.process import run, rc_cmd
 
 kea4_options = {
     'name_server': 'domain-name-servers',
@@ -45,6 +46,7 @@ kea4_options = {
     'ipv6_only_preferred': 'v6-only-preferred',
     'captive_portal': 'v4-captive-portal',
     'capwap_controller': 'capwap-ac-v4',
+    'interface_mtu': 'interface-mtu',
 }
 
 kea6_options = {
@@ -60,7 +62,7 @@ kea6_options = {
     'capwap_controller': 'capwap-ac-v6',
 }
 
-kea_ctrl_socket = '/run/kea/dhcp{inet}{vrf_append}-ctrl-socket'
+kea_ctrl_socket = '/var/run/kea/dhcp{inet}{vrf_append}-ctrl-socket'
 
 
 def _format_hex_string(in_str):
@@ -85,6 +87,14 @@ def _find_list_of_dict_index(lst, key='ip', value=''):
     idx = next((index for (index, d) in enumerate(lst) if d[key] == value), None)
     return idx
 
+def kea_test_config(process: str, config_path: str) -> tuple[bool, str]:
+    result, output = rc_cmd(f'{process} -t {config_path}')
+
+    if result == 0:
+        return (True, None)
+
+    find = re.search(r'Error encountered:\s([^\n$]+)', output)
+    return (False, find[1] if find else None)
 
 def kea_parse_options(config):
     options = []
@@ -480,7 +490,7 @@ def kea_add_lease(
     return False
 
 
-def kea_delete_lease(inet, ip_address, vrf_name=''):
+def kea_delete_lease(inet, vrf_name, ip_address):
     args = {'ip-address': ip_address}
 
     result = _ctrl_socket_command(inet, vrf_name, f'lease{inet}-del', args)

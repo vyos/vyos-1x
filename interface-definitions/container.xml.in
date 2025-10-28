@@ -312,6 +312,24 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="mac">
+                <properties>
+                  <help>Media Access Control (MAC) address</help>
+                  <valueHelp>
+                    <format>macaddr</format>
+                    <description>Hardware (MAC) address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>auto</format>
+                    <description>Generate a random MAC address for the container</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                    <regex>(auto)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>auto</defaultValue>
+              </leafNode>
             </children>
           </tagNode>
           <tagNode name="port">

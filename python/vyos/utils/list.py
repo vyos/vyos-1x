@@ -18,3 +18,26 @@ def is_list_equal(first: list, second: list) -> bool:
     if len(first) != len(second) or len(first) == 0:
         return False
     return sorted(first) == sorted(second)
+
+
+def list_strip(lst: list, sub: list, right: bool = False) -> list:
+    """Remove list 'sub' from beginning (right=False), resp., end of list 'lst'"""
+
+    if not right:
+        while sub:
+            if lst[:1] == sub[:1]:
+                lst = lst[1:]
+                sub = sub[1:]
+            else:
+                lst = []
+                sub = []
+    else:
+        while sub:
+            if lst[-1:] == sub[-1:]:
+                lst = lst[:-1]
+                sub = sub[:-1]
+            else:
+                lst = []
+                sub = []
+
+    return lst

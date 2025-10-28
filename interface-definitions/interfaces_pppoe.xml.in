@@ -16,6 +16,21 @@
           </valueHelp>
         </properties>
         <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help>
+              <completionHelp>
+                <list>dhcpv6</list>
+              </completionHelp>
+              <valueHelp>
+                <format>dhcpv6</format>
+                <description>Dynamic Host Configuration Protocol for IPv6</description>
+              </valueHelp>
+              <constraint>
+                <regex>(dhcpv6)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
           #include <include/pppoe-access-concentrator.xml.i>
           #include <include/interface/authentication.xml.i>
           #include <include/interface/dial-on-demand.xml.i>

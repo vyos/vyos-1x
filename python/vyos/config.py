@@ -67,6 +67,7 @@ import json
 from typing import Union
 
 import vyos.configtree
+from vyos.base import Warning
 from vyos.xml_ref import multi_to_list
 from vyos.xml_ref import from_source
 from vyos.xml_ref import ext_dict_merge
@@ -121,7 +122,7 @@ def config_dict_mangle_acme(name, cli_dict):
             # install ACME based PEM keys into "regular" CLI config keys
             cli_dict.update({'certificate' : cert_base64, 'private' : {'key' : key_base64}})
     except:
-        raise ConfigError(f'Unable to load ACME certificates for "{name}"!')
+        Warning(f'Unable to load ACME certificates for "{name}"!')
 
     return cli_dict
 

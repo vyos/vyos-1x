@@ -15,13 +15,12 @@
 import re
 
 from json import loads
-from netifaces import AF_INET
-from netifaces import AF_INET6
-from netifaces import ifaddresses
+from netifaces import ifaddresses # pylint: disable = no-name-in-module
+from socket import AF_INET
+from socket import AF_INET6
 from systemd import journal
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.defaults import directories
@@ -188,9 +187,6 @@ class BasicInterfaceTest:
                 section = Section.section(span)
                 cls.cli_set(cls, ['interfaces', section, span])
 
-            # Enable CSTORE guard time required by FRR related tests
-            cls._commit_guard_time = CSTORE_GUARD_TIME
-
         @classmethod
         def tearDownClass(cls):
             # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
@@ -220,6 +216,9 @@ class BasicInterfaceTest:
                         self.assertFalse(process_named_running(daemon, tmp))
                 else:
                     self.assertFalse(process_named_running(daemon))
+
+            # always forward to base class
+            super().tearDown()
 
         def test_dhcp_disable_interface(self):
             if not self._test_dhcp:

@@ -12,10 +12,10 @@
         "control-socket": {
 {% if vrf_context is vyos_defined %}
             "socket-type": "unix",
-            "socket-name": "/run/kea/dhcp6-{{ vrf_context }}-ctrl-socket"
+            "socket-name": "/var/run/kea/dhcp6-{{ vrf_context }}-ctrl-socket"
 {% else %}
             "socket-type": "unix",
-            "socket-name": "/run/kea/dhcp6-ctrl-socket"
+            "socket-name": "/var/run/kea/dhcp6-ctrl-socket"
 {% endif %}
         },
         "lease-database": {

@@ -30,6 +30,19 @@ if commit_in_progress():
 
 conf_mode_dir = directories['conf_mode']
 
-cmd('rm -v /etc/ssh/ssh_host_*')
-cmd('dpkg-reconfigure openssh-server')
+# PERLE - vyos changed to call service_ssh.py, but we need to still remove the .tpm tss2 files
+# cmd('rm -v /etc/ssh/ssh_host_*')
+# cmd('dpkg-reconfigure openssh-server')
+
+cmd('sudo rm -v /etc/ssh/ssh_host_* || true')
+cmd('sudo rm -v /etc/ssh/ssh_tpm_host_* || true')
+
+# cmd('ssh-tpm-keygen -A')
+# cmd('ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key')
+# cmd('ssh-keygen -q -N "" -t ed25519 -f /etc/ssh/ssh_host_ed25519_key')
+
 cmd(f'{conf_mode_dir}/service_ssh.py')
+
+# PERLE - restart of the tpm key agent now called from logic in service_ssh.py 
+# cmd('systemctl restart ssh-tpm-agent')
+# cmd('systemctl restart ssh-tpm-agent.socket')

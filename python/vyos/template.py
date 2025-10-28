@@ -422,21 +422,25 @@ def is_file(filename):
 
 @register_filter('get_dhcp_router')
 def get_dhcp_router(interface):
-    """ Static routes can point to a router received by a DHCP reply. This
+    """Static routes can point to a router received by a DHCP reply. This
     helper is used to get the current default router from the DHCP reply.
 
-    Returns False of no router is found, returns the IP address as string if
+    Returns None if no router is found, returns the IP address as string if
     a router is found.
     """
-    lease_file = directories['isc_dhclient_dir'] + f'/dhclient_{interface}.leases'
+    lease_file = directories['isc_dhclient_dir'] + f'/dhclient_{interface}.lease'
     if not os.path.exists(lease_file):
         return None
 
     from vyos.utils.file import read_file
     for line in read_file(lease_file).splitlines():
-        if 'option routers' in line:
-            (_, _, address) = line.split()
-            return address.rstrip(';')
+        if 'new_routers' in line:
+            (_, address, _) = line.split("'")
+            if not address:
+                return None
+            # Take first one if there are several
+            address = address.split()[0]
+            return address
 
 @register_filter('natural_sort')
 def natural_sort(iterable):

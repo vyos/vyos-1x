@@ -174,7 +174,7 @@ service {
         }
     }
     dhcpv6-server {
-        shared-network-name LAN6 {
+        shared-network-name LAN6-1 {
             subnet fe88::/56 {
                 address-range {
                     prefix fe88::/60 {
@@ -193,6 +193,8 @@ service {
                     }
                 }
             }
+        }
+        shared-network-name LAN6-2 {
             subnet fe89::/56 {
                 address-range {
                     prefix fe89::/60 {

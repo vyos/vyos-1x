@@ -163,6 +163,8 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # We can not use process_named_running here - we rather need to check
         # that the systemd service is no longer running
         self.assertFalse(is_systemd_service_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_ssh_default(self):
         # Check if SSH service runs with default settings - used for checking
@@ -494,4 +496,4 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(os.path.exists(f'/home/{test_user}/.ssh/authorized_principals'))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

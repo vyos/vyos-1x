@@ -30,6 +30,8 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Interface
+from vyos.utils.configfs import delete_cli_node
+from vyos.utils.configfs import add_cli_node
 from vyos.utils.cpu import get_core_count
 from vyos.utils.file import write_file
 from vyos.utils.dict import dict_search
@@ -117,6 +119,10 @@ def verify(container):
 
     # Add new container
     if 'name' in container:
+        net_dict = {}
+        net_dict['mac'] = {}
+        net_dict['address'] = {}
+
         for name, container_config in container['name'].items():
             # Container image is a mandatory option
             if 'image' not in container_config:
@@ -155,6 +161,13 @@ def verify(container):
                 if 'name_server' in container_config and 'no_name_server' not in container['network'][network_name]:
                     raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
 
+                mac = dict_search(f'network.{network_name}.mac', container_config)                
+                if mac:
+                    if mac in net_dict['mac'].keys():
+                        raise ConfigError(f'MAC address "{mac}" is already used by container "{net_dict["mac"][mac]}"!')
+                    if mac != 'auto':
+                        net_dict['mac'][mac] = name
+
                 if 'address' in container_config['network'][network_name]:
                     cnt_ipv4 = 0
                     cnt_ipv6 = 0
@@ -181,6 +194,10 @@ def verify(container):
                         if ip_address(address) == ip_network(network)[1]:
                             raise ConfigError(f'IP address "{address}" can not be used for a container, ' \
                                               'reserved for the container engine!')
+                        
+                        if address in net_dict['address'].keys():
+                            raise ConfigError(f'IP address "{address}" is already used by container "{net_dict["address"][address]}"!')
+                        net_dict['address'][address] = name
 
                     if cnt_ipv4 > 1 or cnt_ipv6 > 1:
                         raise ConfigError(f'Only one IP address per address family can be used for ' \
@@ -477,6 +494,7 @@ def generate_run_arguments(name, container_config, host_ident):
     addr_info = ''
     networks = ",".join(container_config['network'])
     for network in container_config['network']:
+        network_name = network
         if 'address' not in container_config['network'][network]:
             continue
         for address in container_config['network'][network]['address']:
@@ -487,7 +505,20 @@ def generate_run_arguments(name, container_config, host_ident):
 
         addr_info = ''.join(container_config['network'][network]['address'])
 
-    mac_address = f'--mac-address {gen_mac(name, addr_info, host_ident)}'
+    get_mac = dict_search(f'network.{network_name}.mac', container_config)
+    if get_mac == 'auto' or get_mac is None:
+        mac_add = gen_mac(name, addr_info, host_ident)
+    else:
+        mac_add = get_mac
+
+    mac_address = f'--mac-address {mac_add}'
+
+    # Replace mac-auto with the generated mac address
+    if get_mac == 'auto':
+        mac_config_path = ['container', 'name', name, 'network', network_name, 'mac']
+
+        delete_cli_node(mac_config_path)
+        add_cli_node(mac_config_path, value=mac_add)
 
     return f'{container_base_cmd} --no-healthcheck --net {networks} {ip_param} {mac_address} {entrypoint} {image} {command} {command_arguments}'.strip()
 

@@ -480,6 +480,81 @@
               </tagNode>
             </children>
           </node>
+          <node name="ssh-server-key">
+            <properties>
+              <help>Import ssh server host key files into TPM backed TSS2 format</help>
+            </properties>
+            <children>
+              <node name="type">
+                <properties>
+                   <help>SSH server hostkey type</help>
+                </properties>
+                <children>
+                  <node name="ssh-rsa">
+                    <properties>
+                       <help>SSH server hostkey type RSA</help>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                           <help>Path to SSH server hostkey files: key-filename and key-filename.pub</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ssh-hostkey --name "ssh_host_rsa_key" --filename "$7"</command>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="ssh-ecdsa">
+                    <properties>
+                       <help>SSH server hostkey type ECDSA</help>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                           <help>Path to SSH server hostkey files: name and name.pub</help>
+                           <completionHelp>
+                             <list>&lt;name&gt;</list>
+                           </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ssh-hostkey --name "ssh_host_ecdsa_key" --filename "$7"</command>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="ssh-dsa">
+                    <properties>
+                       <help>SSH server hostkey type DSA</help>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                           <help>Path to SSH server hostkey files: name and name.pub</help>
+                           <completionHelp>
+                             <list>&lt;name&gt;</list>
+                           </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ssh-hostkey --name "ssh_host_dsa_key" --filename "$7"</command>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="ssh-ed25519">
+                    <properties>
+                       <help>SSH server hostkey type ED25519</help>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                           <help>Path to SSH server hostkey files: name and name.pub</help>
+                           <completionHelp>
+                             <list>&lt;name&gt;</list>
+                           </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/pki.py import_pki --pki-type ssh-hostkey --name "ssh_host_ed25519_key" --filename "$7"</command>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
         </children>
       </node>
     </children>

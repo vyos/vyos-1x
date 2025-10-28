@@ -20,9 +20,9 @@ import unittest
 
 from json import loads
 from jmespath import search
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
@@ -36,6 +36,7 @@ from vyos.utils.process import cmd
 from vyos.utils.system import sysctl_read
 from vyos.template import inc_ip
 from vyos.utils.process import process_named_running
+from vyos.xml_ref import default_value
 
 base_path = ['vrf']
 vrfs = ['red', 'green', 'blue', 'foo-bar', 'baz_foo']
@@ -56,13 +57,13 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             for tmp in Section.interfaces('ethernet', vlan=False):
                 cls._interfaces.append(tmp)
 
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
-
         # call base-classes classmethod
         super(VRFTest, cls).setUpClass()
 
     def setUp(self):
+        # always forward to base class
+        super().setUp()
+
         # VRF strict_most ist always enabled
         tmp = read_file('/proc/sys/net/vrf/strict_mode')
         self.assertEqual(tmp, '1')
@@ -73,6 +74,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         for vrf in vrfs:
             self.assertFalse(interface_exists(vrf))
+        # always forward to base class
+        super().tearDown()
 
     def walk_path(self, obj, path):
         current = obj
@@ -156,7 +159,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             regex = f'{table}\s+{vrf}\s+#\s+{description}'
             self.assertTrue(re.findall(regex, iproute2_config))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f' vni {table}', frrconfig)
 
             self.assertEqual(int(table), get_vrf_tableid(vrf))
@@ -277,7 +280,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
             self.assertTrue(interface_exists(vrf))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f' vni {table}', frrconfig)
             self.assertIn(f' ip route {prefix} {next_hop}', frrconfig)
 
@@ -361,7 +364,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify route-map properly applied to FRR
         for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f'vrf {vrf}', frrconfig)
             for protocol in v4_protocols:
                 self.assertIn(f' ip protocol {protocol} route-map route-map-{vrf}-{protocol}', frrconfig)
@@ -376,7 +379,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify route-map properly is removed from FRR
         for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertNotIn(f' ip protocol', frrconfig)
 
     def test_vrf_ip_ipv6_protocol_non_existing_route_map(self):
@@ -424,7 +427,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify route-map properly applied to FRR
         for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f'vrf {vrf}', frrconfig)
             for protocol in v6_protocols:
                 # VyOS and FRR use a different name for OSPFv3 (IPv6)
@@ -443,7 +446,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify route-map properly is removed from FRR
         for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertNotIn(f' ipv6 protocol', frrconfig)
 
     def test_vrf_vni_duplicates(self):
@@ -473,7 +476,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             self.assertTrue(interface_exists(vrf))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f' vni {table}', frrconfig)
             # Increment table ID for the next run
             table = str(int(table) + 1)
@@ -495,7 +498,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             self.assertTrue(interface_exists(vrf))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f' vni {table}', frrconfig)
             # Increment table ID for the next run
             table = str(int(table) + 1)
@@ -518,7 +521,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             self.assertTrue(interface_exists(vrf))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f' vni {table}', frrconfig)
             # Increment table ID for the next run
             table = str(int(table) + 2)
@@ -538,7 +541,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             self.assertTrue(interface_exists(vrf))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f' vni {table}', frrconfig)
             # Increment table ID for the next run
             table = str(int(table) + 2)
@@ -546,7 +549,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Verify purple VRF/VNI
         self.assertTrue(interface_exists(purple))
         table = str(int(table) + 10)
-        frrconfig = self.getFRRconfig(f'vrf {purple}', endsection='^exit-vrf')
+        frrconfig = self.getFRRconfig(f'vrf {purple}', stop_section='^exit-vrf')
         self.assertIn(f' vni {table}', frrconfig)
 
         # Now delete all the VNIs
@@ -561,12 +564,12 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             self.assertTrue(interface_exists(vrf))
 
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertNotIn('vni', frrconfig)
 
         # Verify purple VNI remains
         self.assertTrue(interface_exists(purple))
-        frrconfig = self.getFRRconfig(f'vrf {purple}', endsection='^exit-vrf')
+        frrconfig = self.getFRRconfig(f'vrf {purple}', stop_section='^exit-vrf')
         self.assertIn(f' vni {table}', frrconfig)
 
     def test_vrf_ip_ipv6_nht(self):
@@ -584,7 +587,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify route-map properly applied to FRR
         for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertIn(f'vrf {vrf}', frrconfig)
             self.assertIn(f' no ip nht resolve-via-default', frrconfig)
             self.assertIn(f' no ipv6 nht resolve-via-default', frrconfig)
@@ -599,7 +602,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # Verify route-map properly is removed from FRR
         for vrf in vrfs:
-            frrconfig = self.getFRRconfig(f'vrf {vrf}', endsection='^exit-vrf')
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
             self.assertNotIn(f' no ip nht resolve-via-default', frrconfig)
             self.assertNotIn(f' no ipv6 nht resolve-via-default', frrconfig)
 
@@ -652,7 +655,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # declare fiels
         process_name = 'kea-dhcp4'
-        kea4_conf = f'/run/kea/kea-{vrf}-dhcp4.conf'
+        kea4_conf = f'/var/run/kea/kea-{vrf}-dhcp4.conf'
 
         # create interface
         cidr_mask = subnet.split('/')[-1]
@@ -777,6 +780,62 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base)
         self.cli_commit()
 
+    def test_dhcp_vrf_default_route(self):
+        # T7927 - when retrieving a default route via DHCP, check that additional
+        # calls into FRRender() keep the DHCP route in place
+
+        vrf_name = 'red15'
+        default_gateway = '192.0.2.1'
+        dhcp_if_server = 'veth0'
+        dhcp_if_client = 'veth1'
+
+        default_distance = default_value(['interfaces', 'virtual-ethernet',
+                                          dhcp_if_client, 'dhcp-options',
+                                          'default-route-distance'])
+
+        dhcp_pool_base = ['service', 'dhcp-server', 'shared-network-name',
+                          'FOO-4', 'subnet', '192.0.2.0/24']
+        veth_base = ['interfaces', 'virtual-ethernet']
+
+        # Start DHCP Server in VRF connected via veth pair to default VRF
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '48752'])
+        self.cli_set(veth_base + [dhcp_if_server, 'address', '192.0.2.1/24'])
+        self.cli_set(veth_base + [dhcp_if_server, 'peer-name', dhcp_if_client])
+        self.cli_set(veth_base + [dhcp_if_client, 'peer-name', dhcp_if_server])
+        self.cli_set(veth_base + [dhcp_if_client, 'vrf', vrf_name])
+
+        self.cli_set(['service', 'dhcp-server', 'listen-interface', dhcp_if_server])
+        self.cli_set(dhcp_pool_base + ['option', 'default-router', default_gateway])
+        self.cli_set(dhcp_pool_base + ['range', 'uno', 'start', '192.0.2.10'])
+        self.cli_set(dhcp_pool_base + ['range', 'uno', 'stop', '192.0.2.30'])
+        self.cli_set(dhcp_pool_base + ['subnet-id', '1'])
+
+        self.cli_commit()
+
+        # Start DHCP client in VRF
+        self.cli_set(['interfaces', 'virtual-ethernet', dhcp_if_client, 'address', 'dhcp'])
+        self.cli_commit()
+
+        # We need to wait until DHCP client has started and an IP address has been received
+        sleep(8)
+
+        frrconfig = self.getFRRconfig('^vrf red', stop_section='^exit-vrf')
+        self.assertIn(f' ip route 0.0.0.0/0 {default_gateway} {dhcp_if_client} '\
+                      f'tag 210 {default_distance}', frrconfig)
+
+        # Change anything in FRR to re-trigger config generation. DHCP route
+        # must still be present
+        self.cli_set(['protocols', 'static', 'route', '10.0.0.0/24', 'blackhole'])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('^vrf red', stop_section='^exit-vrf')
+        self.assertIn(f' ip route 0.0.0.0/0 {default_gateway} {dhcp_if_client} '\
+                      f'tag 210 {default_distance}', frrconfig)
+
+        self.cli_delete(['interfaces', 'virtual-ethernet'])
+        self.cli_delete(['service', 'dhcp-server'])
+        self.cli_delete(['vrf', 'name', vrf_name])
+
     def test_dhcpv6_single_pool(self):
         # Prepare the vrf and other options
         table = '100'
@@ -791,7 +850,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
         # declare fiels
         process_name = 'kea-dhcp6'
-        kea6_conf = f'/run/kea/kea-{vrf}-dhcp6.conf'
+        kea6_conf = f'/var/run/kea/kea-{vrf}-dhcp6.conf'
 
         # create interface
         self.cli_set(['interfaces', 'dummy', interface, 'address', f'{interface_addr}'])
@@ -995,4 +1054,4 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -17,6 +17,7 @@
 import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
+from base_vyostest_shim import VyOSUnitTestSHIM
 
 class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
     @classmethod
@@ -36,4 +37,4 @@ class TestVPNPPTPServer(BasicAccelPPPTest.TestCase):
         pass
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

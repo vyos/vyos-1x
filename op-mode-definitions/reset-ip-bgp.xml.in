@@ -16,7 +16,7 @@
                     <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 <children>
                   #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                 </children>
@@ -25,7 +25,7 @@
                 <properties>
                   <help>Clear all BGP peering sessions</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 <children>
                   #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                 </children>
@@ -39,9 +39,9 @@
                 </properties>
                 <standalone>
                   <help>Clear BGP route flap dampening information</help>
-                  <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                  <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 </standalone>
-                <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                 <children>
                   <virtualTagNode>
                     <properties>
@@ -50,7 +50,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                   </virtualTagNode>
                 </children>
               </tagNode>
@@ -68,7 +68,7 @@
                     <properties>
                       <help>Clear all BGP peering sessions for vrf</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                     <children>
                       #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                     </children>
@@ -80,7 +80,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/reset_bgp.py --command="$*"</command>
+                    <command>${vyos_op_scripts_dir}/bgp.py reset --command="$*"</command>
                     <children>
                       #include <include/bgp/reset-bgp-neighbor-options.xml.i>
                     </children>

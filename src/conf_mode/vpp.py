@@ -215,20 +215,6 @@ def get_config(config=None):
             # to be reinitialized after the commit
             set_dependents('ethernet', conf, removed_iface)
 
-    # NAT dependency
-    if conf.exists(['vpp', 'nat44']):
-        set_dependents('vpp_nat', conf)
-    if conf.exists(['vpp', 'nat', 'cgnat']):
-        set_dependents('vpp_nat_cgnat', conf)
-
-    # sFlow dependency
-    if conf.exists(['vpp', 'sflow']):
-        set_dependents('vpp_sflow', conf)
-
-    # ACL dependency
-    if conf.exists(['vpp', 'acl']):
-        set_dependents('vpp_acl', conf)
-
     # Get interfaces that are used in PPPoe for control-plane integration
     pppoe_conf = conf.get_config_dict(
         ['service', 'pppoe-server'],
@@ -351,7 +337,10 @@ def get_config(config=None):
                         )
                     if 'zero-copy' in iface_config['xdp_options']:
                         xdp_api_params['mode'] = 'zero-copy'
-                    if 'zero-copy' in iface_config['xdp_options']:
+                    if iface_config.get('rx_mode') in ('interrupt', 'adaptive') and any(
+                        key in config['settings'].get('cpu', {})
+                        for key in ('workers', 'corelist_workers')
+                    ):
                         xdp_api_params['flags'] = 'no_syscall_lock'
                     iface_config['xdp_api_params'] = xdp_api_params
 
@@ -385,6 +374,25 @@ def get_config(config=None):
             }
             eth_ifaces_persist[iface]['bus_id'] = control_host.get_bus_name(iface)
             eth_ifaces_persist[iface]['dev_id'] = control_host.get_dev_id(iface)
+
+    # kernel-interfaces dependency
+    if effective_config.get('kernel_interfaces'):
+        for iface in config.get('kernel_interfaces', {}):
+            set_dependents('vpp_kernel_interface', conf, iface)
+
+    # NAT dependency
+    if conf.exists(['vpp', 'nat44']):
+        set_dependents('vpp_nat', conf)
+    if conf.exists(['vpp', 'nat', 'cgnat']):
+        set_dependents('vpp_nat_cgnat', conf)
+
+    # sFlow dependency
+    if conf.exists(['vpp', 'sflow']):
+        set_dependents('vpp_sflow', conf)
+
+    # ACL dependency
+    if conf.exists(['vpp', 'acl']):
+        set_dependents('vpp_acl', conf)
 
     # PPPoE dependency
     if pppoe_map_ifaces:
@@ -603,7 +611,7 @@ def initialize_interface(iface, driver, iface_config) -> None:
     try:
         if control_host.get_eth_driver(f'defunct_{iface}') == 'mlx5_core':
             control_host.rename_iface(f'defunct_{iface}', iface)
-    except FileNotFoundError:
+    except Exception:
         pass
 
     # Replace a driver with original for VMBus interfaces and rename it
@@ -740,11 +748,6 @@ def apply(config):
 
             # NAT44 settings
             nat44_settings = config['settings'].get('nat44', {})
-
-            enable_forwarding = True
-            if 'no_forwarding' in nat44_settings:
-                enable_forwarding = False
-            vpp_control.enable_disable_nat44_forwarding(enable_forwarding)
 
             vpp_control.set_nat44_session_limit(
                 int(nat44_settings.get('session_limit'))

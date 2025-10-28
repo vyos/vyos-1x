@@ -19,6 +19,7 @@
 import os
 
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import node_changed
 from vyos import ConfigError
@@ -78,6 +79,9 @@ def get_config(config=None) -> dict:
     vlans_removed = node_changed(conf, base + [ifname, 'vif'])
     if vlans_removed:
         config['vlans_removed'] = vlans_removed
+
+    if conf.exists(['vpp', 'nat', 'cgnat']):
+        set_dependents('vpp_nat_cgnat', conf)
 
     config['ifname'] = ifname
 
@@ -184,6 +188,8 @@ def apply(config):
         vpp_control = VPPControl()
         lcp_name = vpp_control.lcp_pair_find(kernel_name=ifname).get('vpp_name_kernel')
         vpp_control.iface_rxmode(lcp_name, rx_mode)
+
+    call_dependents()
 
     return None
 

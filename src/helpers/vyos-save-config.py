@@ -23,15 +23,22 @@ from argparse import ArgumentParser
 
 from vyos.config import Config
 from vyos.remote import urlc
-from vyos.component_version import add_system_version
+from vyos.component_version import add_system_version_string
 from vyos.defaults import directories
+from vyos.utils.file import write_file
+from vyos.utils.file import write_file_sync
+from vyos.utils.file import write_file_atomic
+from vyos.utils.file import file_is_persistent
 
 DEFAULT_CONFIG_PATH = os.path.join(directories['config'], 'config.boot')
 remote_save = None
 
 parser = ArgumentParser(description='Save configuration')
 parser.add_argument('file', type=str, nargs='?', help='Save configuration to file')
-parser.add_argument('--write-json-file', type=str, help='Save JSON of configuration to file')
+parser.add_argument(
+    '--write-json-file', type=str, help='Save JSON of configuration to file'
+)
+
 args = parser.parse_args()
 file = args.file
 json_file = args.write_json_file
@@ -47,16 +54,43 @@ if re.match(r'\w+:/', save_file):
     except ValueError as e:
         sys.exit(e)
 
+
 config = Config()
 ct = config.get_config_tree(effective=True)
 
-# pylint: disable=consider-using-with
-write_file = save_file if remote_save is None else NamedTemporaryFile(delete=False).name
+# The effective config is None before boot configuration is complete.
+# Nothing to write, nor do we want to invite saving an empty string:
+# exit gracefully.
+if ct is None:
+    sys.exit()
 
-# config_tree is None before boot configuration is complete;
-# automated saves should check boot_configuration_complete
-config_str = None if ct is None else ct.to_string()
-add_system_version(config_str, write_file)
+config_str = ct.to_string()
+versioned_config_str = add_system_version_string(config_str)
+
+# pylint: disable=consider-using-with
+file_to_write = (
+    save_file if remote_save is None else NamedTemporaryFile(delete=False).name
+)
+
+if file_is_persistent(file_to_write):
+    if os.geteuid() == 0:
+        try:
+            write_file_atomic(file_to_write, versioned_config_str)
+        except OSError as e:
+            print(f'failed to write config file, write_file_atomic: {e}')
+            sys.exit(1)
+    else:
+        try:
+            write_file_sync(file_to_write, versioned_config_str)
+        except OSError as e:
+            print(f'failed to write config file, write_file_sync: {e}')
+            sys.exit(1)
+else:
+    try:
+        write_file(file_to_write, versioned_config_str)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f'failed to write config file, write_file: {e}')
+        sys.exit(1)
 
 if json_file is not None and ct is not None:
     try:
@@ -67,6 +101,6 @@ if json_file is not None and ct is not None:
 
 if remote_save is not None:
     try:
-        remote_save.upload(write_file)
+        remote_save.upload(file_to_write)
     finally:
-        os.remove(write_file)
+        os.remove(file_to_write)

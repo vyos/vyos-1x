@@ -20,43 +20,31 @@ import sys
 
 from argparse import ArgumentParser
 from cryptography.fernet import Fernet
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-from vyos.system.image import is_live_boot
-from vyos.tpm import clear_tpm_key
-from vyos.tpm import read_tpm_key
-from vyos.tpm import write_tpm_key
+from vyos.system.image import is_live_boot, get_running_image
+from vyos.tpm import clear_tpm_key, read_tpm_key, write_tpm_key
 from vyos.utils.io import ask_input, ask_yes_no
-from vyos.utils.process import cmd
+from vyos.utils.process import cmd, run
+from vyos.defaults import directories
 
 persistpath_cmd = '/opt/vyatta/sbin/vyos-persistpath'
-mount_paths = ['/config', '/opt/vyatta/etc/config']
+# mount_path is /opt/vyatta/etc/config as of this writing
+mount_path = directories['config']
+mount_path_old = f'{mount_path}.old'
 dm_device = '/dev/mapper/vyos_config'
+
 
 def is_opened():
     return os.path.exists(dm_device)
-
-def get_current_image():
-    with open('/proc/cmdline', 'r') as f:
-        args = f.read().split(" ")
-        for arg in args:
-            if 'vyos-union' in arg:
-                k, v = arg.split("=")
-                path_split = v.split("/")
-                return path_split[-1]
-    return None
 
 def load_config(key):
     if not key:
         return
 
     persist_path = cmd(persistpath_cmd).strip()
-    image_name = get_current_image()
+    image_name = get_running_image()
     image_path = os.path.join(persist_path, 'luks', image_name)
-
-    if not os.path.exists(image_path):
-        raise Exception("Encrypted config volume doesn't exist")
 
     if is_opened():
         print('Encrypted config volume is already mounted')
@@ -68,18 +56,15 @@ def load_config(key):
 
     cmd(f'cryptsetup -q open {image_path} vyos_config --key-file={key_file}')
 
-    for path in mount_paths:
-        cmd(f'mount /dev/mapper/vyos_config {path}')
-        cmd(f'chgrp -R vyattacfg {path}')
+    run(f'umount -l {mount_path}')
+    cmd(f'mount /dev/mapper/vyos_config {mount_path}')
+    cmd(f'chgrp -R vyattacfg {mount_path}')
 
     os.unlink(key_file)
 
     return True
 
 def encrypt_config(key, recovery_key=None, is_tpm=True):
-    if is_opened():
-        raise Exception('An encrypted config volume is already mapped')
-
     # Clear and write key to TPM
     if is_tpm:
         try:
@@ -96,38 +81,49 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
     if not os.path.isdir(luks_folder):
         os.mkdir(luks_folder)
 
-    image_name = get_current_image()
+    image_name = get_running_image()
     image_path = os.path.join(luks_folder, image_name)
 
-    # Create file for encrypted config
-    cmd(f'fallocate -l {size}M {image_path}')
+    try:
+        # Create file for encrypted config
+        cmd(f'fallocate -l {size}M {image_path}')
 
-    # Write TPM key for slot #1
-    with NamedTemporaryFile(dir='/dev/shm', delete=False) as f:
-        f.write(key)
-        key_file = f.name
-
-    # Format and add main key to volume
-    cmd(f'cryptsetup -q luksFormat {image_path} {key_file}')
-
-    if recovery_key:
-        # Write recovery key for slot 2
+        # Write TPM key for slot #1
         with NamedTemporaryFile(dir='/dev/shm', delete=False) as f:
-            f.write(recovery_key)
-            recovery_key_file = f.name
+            f.write(key)
+            key_file = f.name
 
-        cmd(f'cryptsetup -q luksAddKey {image_path} {recovery_key_file} --key-file={key_file}')
+        # Format and add main key to volume
+        cmd(f'cryptsetup -q luksFormat {image_path} {key_file}')
 
-    # Open encrypted volume and format with ext4
-    cmd(f'cryptsetup -q open {image_path} vyos_config --key-file={key_file}')
-    cmd('mkfs.ext4 /dev/mapper/vyos_config')
+        if recovery_key:
+            # Write recovery key for slot 2
+            with NamedTemporaryFile(dir='/dev/shm', delete=False) as f:
+                f.write(recovery_key)
+                recovery_key_file = f.name
+
+            cmd(f'cryptsetup -q luksAddKey {image_path} {recovery_key_file} --key-file={key_file}')
+
+        # Open encrypted volume and format with ext4
+        cmd(f'cryptsetup -q open {image_path} vyos_config --key-file={key_file}')
+        cmd('mkfs.ext4 /dev/mapper/vyos_config')
+    except Exception as e:
+        print('An error occurred while creating the encrypted config volume, aborting.')
+
+        if os.path.exists('/dev/mapper/vyos_config'):
+            run('cryptsetup -q close vyos_config')
+
+        if os.path.exists(image_path):
+            os.unlink(image_path)
+
+        raise e
 
     with TemporaryDirectory() as d:
         cmd(f'mount /dev/mapper/vyos_config {d}')
 
-        # Move /config to encrypted volume
-        shutil.copytree('/config', d, copy_function=shutil.move, dirs_exist_ok=True)
-
+        # Move mount_path to encrypted volume
+        shutil.copytree(mount_path, d, copy_function=shutil.move, dirs_exist_ok=True)
+        cmd(f'chgrp -R vyattacfg {d}')
         cmd(f'umount {d}')
 
     os.unlink(key_file)
@@ -135,22 +131,53 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
     if recovery_key:
         os.unlink(recovery_key_file)
 
-    for path in mount_paths:
-        cmd(f'mount /dev/mapper/vyos_config {path}')
-        cmd(f'chgrp vyattacfg {path}')
+    run(f'umount -l {mount_path}')
+    cmd(f'mount /dev/mapper/vyos_config {mount_path}')
+    cmd(f'chgrp vyattacfg {mount_path}')
 
     return True
+
+def config_backup_folder(base):
+    # Get next available backup folder
+    if not os.path.exists(base):
+        return base
+
+    idx = 1
+    while os.path.exists(f'{base}.{idx}'):
+        idx += 1
+    return f'{base}.{idx}'
+
+def test_decrypt(key):
+    if not key:
+        return
+
+    persist_path = cmd(persistpath_cmd).strip()
+    image_name = get_running_image()
+    image_path = os.path.join(persist_path, 'luks', image_name)
+
+    key_file = None
+
+    if not is_opened():
+        with NamedTemporaryFile(dir='/dev/shm', delete=False) as f:
+            f.write(key)
+            key_file = f.name
+
+        try:
+            cmd(f'cryptsetup -q open {image_path} vyos_config --key-file={key_file}')
+            os.unlink(key_file)
+            return True
+        except:
+            return False
+    return False
 
 def decrypt_config(key):
     if not key:
         return
 
     persist_path = cmd(persistpath_cmd).strip()
-    image_name = get_current_image()
+    image_name = get_running_image()
     image_path = os.path.join(persist_path, 'luks', image_name)
-
-    if not os.path.exists(image_path):
-        raise Exception("Encrypted config volume doesn't exist")
+    original_config_path = os.path.join(persist_path, 'boot', image_name, 'rw', 'opt', 'vyatta', 'etc', 'config')
 
     key_file = None
 
@@ -162,22 +189,26 @@ def decrypt_config(key):
         cmd(f'cryptsetup -q open {image_path} vyos_config --key-file={key_file}')
 
     # unmount encrypted volume mount points
-    for path in mount_paths:
-        if os.path.ismount(path):
-            cmd(f'umount {path}')
+    run(f'umount -Alq /dev/mapper/vyos_config')
 
-    # If /config is populated, move to /config.old
-    if len(os.listdir('/config')) > 0:
-        print('Moving existing /config folder to /config.old')
-        shutil.move('/config', '/config.old')
+    # If /opt/vyatta/etc/config is populated, move to /opt/vyatta/etc/config.old
+    if len(os.listdir(mount_path)) > 0:
+        backup_path = config_backup_folder(mount_path_old)
+        print(f'Moving existing {mount_path} folder to {backup_path}')
+        shutil.move(mount_path, backup_path)
+
+    # Mount original persistence config path
+    if not os.path.exists(mount_path):
+        os.mkdir(mount_path)
+    cmd(f'mount --bind {original_config_path} {mount_path}')
 
     # Temporarily mount encrypted volume and migrate files to /config on rootfs
     with TemporaryDirectory() as d:
         cmd(f'mount /dev/mapper/vyos_config {d}')
 
-        # Move encrypted volume to /config
-        shutil.copytree(d, '/config', copy_function=shutil.move, dirs_exist_ok=True)
-        cmd(f'chgrp -R vyattacfg /config')
+        # Move encrypted volume to /opt/vyatta/etc/config
+        shutil.copytree(d, mount_path, copy_function=shutil.move, dirs_exist_ok=True)
+        cmd(f'chgrp -R vyattacfg {mount_path}')
 
         cmd(f'umount {d}')
 
@@ -190,7 +221,8 @@ def decrypt_config(key):
     os.unlink(image_path)
 
     try:
-        clear_tpm_key()
+        if ask_yes_no('Do you want to clear the TPM? This will cause issues if other system images use the key'):
+            clear_tpm_key()
     except:
         pass
 
@@ -211,6 +243,18 @@ if __name__ == '__main__':
     parser.add_argument('--load', help='Load encrypted config volume', action="store_true")
     args = parser.parse_args()
 
+    if args.disable or args.load:
+        persist_path = cmd(persistpath_cmd).strip()
+        image_name = get_running_image()
+        image_path = os.path.join(persist_path, 'luks', image_name)
+
+        if not os.path.exists(image_path):
+            print('Encrypted config volume does not exist, aborting.')
+            sys.exit(0)
+    elif args.enable and is_opened():
+        print('An encrypted config volume is already mapped, aborting.')
+        sys.exit(0)
+
     tpm_exists = os.path.exists('/sys/class/tpm/tpm0')
 
     key = None
@@ -219,23 +263,36 @@ if __name__ == '__main__':
 
     question_key_str = 'recovery key' if tpm_exists else 'key'
 
-    if tpm_exists:
-        if args.enable:
-            key = Fernet.generate_key()
-        elif args.disable or args.load:
+    if not is_opened():
+        if tpm_exists:
+            existing_key = None
+
             try:
-                key = read_tpm_key()
-                need_recovery = False
-            except:
-                print('Failed to read key from TPM, recovery key required')
-                need_recovery = True
-    else:
-        need_recovery = True
+                existing_key = read_tpm_key()
+            except: pass
+
+            if args.enable:
+                if existing_key:
+                    print('WARNING: An encryption key already exists in the TPM.')
+                    print('If you choose not to use the existing key, any system image')
+                    print('using the old key will need the recovery key.')
+                if existing_key and ask_yes_no('Do you want to use the existing TPM key?'):
+                    key = existing_key
+                else:
+                    key = Fernet.generate_key()
+            elif args.disable or args.load:
+                if existing_key and test_decrypt(existing_key):
+                    need_recovery = False
+                else:
+                    print('TPM key invalid or not found, recovery key required')
+                    need_recovery = True
+        else:
+            need_recovery = True
 
     if args.enable and not tpm_exists:
         print('WARNING: VyOS will boot into a default config when encrypted without a TPM')
         print('You will need to manually login with default credentials and use "encryption load"')
-        print('to mount the encrypted volume and use "load /config/config.boot"')
+        print(f'to mount the encrypted volume and use "load {mount_path}/config.boot"')
 
         if not ask_yes_no('Are you sure you want to proceed?'):
             sys.exit(0)
@@ -256,12 +313,12 @@ if __name__ == '__main__':
             decrypt_config(key or recovery_key)
 
             print('Encrypted config volume has been disabled')
-            print('Contents have been migrated to /config on rootfs')
+            print(f'Contents have been migrated to {mount_path} on rootfs')
         elif args.load:
             load_config(key or recovery_key)
 
             print('Encrypted config volume has been mounted')
-            print('Use "load /config/config.boot" to load configuration')
+            print(f'Use "load {mount_path}/config.boot" to load configuration')
         elif args.enable and tpm_exists:
             encrypt_config(key, recovery_key)
 

@@ -257,18 +257,7 @@
             </leafNode>
           </children>
         </tagNode>
-        <leafNode name="subnet-id">
-          <properties>
-            <help>Unique ID mapped to leases in the lease file</help>
-            <valueHelp>
-              <format>u32</format>
-              <description>Unique subnet ID</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-4294967295"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/dhcp/subnet-id.xml.i>
       </children>
     </tagNode>
   </children>

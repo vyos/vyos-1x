@@ -11,6 +11,18 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="no-request-domain-name">
+      <properties>
+        <help>Do not request domain name</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="no-request-dns">
+      <properties>
+        <help>Do not request DNS servers</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <tagNode name="pd">
       <properties>
         <help>DHCPv6 prefix delegation interface statement</help>

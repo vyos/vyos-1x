@@ -114,6 +114,15 @@
                   #include <include/static/static-route6.xml.i>
                 </children>
               </node>
+              <node name="failover" owner="${vyos_conf_scripts_dir}/protocols_failover.py $VAR(../../@)">
+                <properties>
+                  <help>Failover Routing</help>
+                  <priority>491</priority>
+                </properties>
+                <children>
+                  #include <include/failover/protocol-common-config.xml.i>
+                </children>
+              </node>
             </children>
           </node>
           <node name="service">

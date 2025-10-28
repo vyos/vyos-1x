@@ -41,18 +41,24 @@ class VyconfSession:
         self, token: str = None, pid: int = None, on_error: Type[Exception] = None
     ):
         self.pid = os.getpid() if pid is None else pid
+        self.sudo_user = os.environ.get('SUDO_USER', None)
+        self.user = os.environ.get('USER', None)
+
         if token is None:
             # CLI applications with arg pid=getppid() allow coordination
             # with the ambient session; other uses (such as ConfigSession)
             # may default to self pid
             out = vyconf_client.send_request('session_of_pid', client_pid=self.pid)
             if out.output is None:
-                out = vyconf_client.send_request('setup_session', client_pid=self.pid)
+                out = vyconf_client.send_request(
+                    'setup_session',
+                    client_pid=self.pid,
+                    client_sudo_user=self.sudo_user,
+                    client_user=self.user,
+                )
             self.__token = out.output
         else:
-            out = vyconf_client.send_request(
-                'session_update_pid', token=token, client_pid=self.pid
-            )
+            out = vyconf_client.send_request('session_exists', token=token)
             if out.status:
                 raise ValueError(f'No existing session for token: {token}')
             self.__token = token
@@ -133,6 +139,32 @@ class VyconfSession:
     @config_mode
     def delete(self, path: list[str]) -> tuple[str, int]:
         out = vyconf_client.send_request('delete', token=self.__token, path=path)
+        return self.output(out), out.status
+
+    @raise_exception
+    def aux_set(
+        self, path: list[str], script_name: str, tag_value: str = None
+    ) -> tuple[str, int]:
+        out = vyconf_client.send_request(
+            'aux_set',
+            token=self.__token,
+            path=path,
+            script_name=script_name,
+            tag_value=tag_value,
+        )
+        return self.output(out), out.status
+
+    @raise_exception
+    def aux_delete(
+        self, path: list[str], script_name: str, tag_value: str = None
+    ) -> tuple[str, int]:
+        out = vyconf_client.send_request(
+            'aux_delete',
+            token=self.__token,
+            path=path,
+            script_name=script_name,
+            tag_value=tag_value,
+        )
         return self.output(out), out.status
 
     @raise_exception

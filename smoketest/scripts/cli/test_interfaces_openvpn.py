@@ -19,7 +19,7 @@ import unittest
 
 from glob import glob
 from ipaddress import IPv4Network
-from netifaces import interfaces
+from netifaces import interfaces # pylint: disable = no-name-in-module
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -117,6 +117,9 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+
+        # always forward to base class
+        super().tearDown()
 
     def test_openvpn_client_verify(self):
         # Create OpenVPN client interface and test verify() steps.
@@ -868,4 +871,4 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

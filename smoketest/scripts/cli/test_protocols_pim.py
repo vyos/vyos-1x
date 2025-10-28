@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.frrender import pim_daemon
@@ -34,8 +33,6 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
 
     def tearDown(self):
         # pimd process must be running
@@ -46,6 +43,8 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
 
         # pimd process must be stopped by now
         self.assertFalse(process_named_running(pim_daemon))
+        # always forward to base class
+        super().tearDown()
 
     def test_01_pim_basic(self):
         rp = '127.0.0.1'
@@ -68,11 +67,11 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pimd configuration
-        frrconfig = self.getFRRconfig('router pim', endsection='^exit')
+        frrconfig = self.getFRRconfig('router pim', stop_section='^exit')
         self.assertIn(f' rp {rp} {group}', frrconfig)
 
         for interface in interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+            frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' ip pim', frrconfig)
             self.assertIn(f' ip pim bfd', frrconfig)
@@ -119,7 +118,7 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR pimd configuration
-        frrconfig = self.getFRRconfig('router pim', endsection='^exit')
+        frrconfig = self.getFRRconfig('router pim', stop_section='^exit')
         self.assertIn(f' no send-v6-secondary', frrconfig)
         self.assertIn(f' rp {rp} {group}', frrconfig)
         self.assertIn(f' register-suppress-time {register_suppress_time}', frrconfig)
@@ -185,7 +184,7 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'ip igmp watermark-warn {watermark_warning}', frrconfig)
 
         for interface in interfaces:
-            frrconfig = self.getFRRconfig(f'interface {interface}', endsection='^exit')
+            frrconfig = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' ip igmp', frrconfig)
             self.assertIn(f' ip igmp version {version}', frrconfig)
@@ -200,4 +199,4 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
                     self.assertIn(f' ip igmp join-group {join}', frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

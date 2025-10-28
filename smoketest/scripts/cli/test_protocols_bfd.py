@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from base_vyostest_shim import CSTORE_GUARD_TIME
 
 from vyos.configsession import ConfigSessionError
 from vyos.frrender import bfd_daemon
@@ -88,9 +87,6 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
         cls.daemon_pid = process_named_running(bfd_daemon)
 
-        # Enable CSTORE guard time required by FRR related tests
-        cls._commit_guard_time = CSTORE_GUARD_TIME
-
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -101,6 +97,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # check process health and continuity
         self.assertEqual(self.daemon_pid, process_named_running(bfd_daemon))
+        # always forward to base class
+        super().tearDown()
 
     def test_bfd_peer(self):
         self.cli_set(['vrf', 'name', vrf_name, 'table', '1000'])
@@ -135,7 +133,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('bfd', endsection='^exit')
+        frrconfig = self.getFRRconfig('bfd', stop_section='^exit')
         for peer, peer_config in peers.items():
             tmp = f'peer {peer}'
             if 'multihop' in peer_config:
@@ -148,8 +146,9 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
-            peerconfig = self.getFRRconfig('bfd', endsection='^exit', substring=f' peer {peer}',
-                                           endsubsection='^ exit')
+            peerconfig = self.getFRRconfig('bfd', stop_section='^exit',
+                                           start_subsection=f' peer {peer}',
+                                           stop_subsection='^ exit')
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
             if 'intv_echo' in peer_config:
@@ -211,8 +210,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR bgpd configuration
         for profile, profile_config in profiles.items():
-            config = self.getFRRconfig('bfd', endsection='^exit',
-                                       substring=f' profile {profile}', endsubsection='^ exit',)
+            config = self.getFRRconfig('bfd', stop_section='^exit',
+                                       start_subsection=f' profile {profile}', stop_subsection='^ exit',)
             if 'echo_mode' in profile_config:
                 self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
@@ -234,10 +233,10 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertNotIn(f'shutdown', config)
 
         for peer, peer_config in peers.items():
-            peerconfig = self.getFRRconfig('bfd', endsection='^exit',
-                                           substring=f' peer {peer}', endsubsection='^ exit')
+            peerconfig = self.getFRRconfig('bfd', stop_section='^exit',
+                                           start_subsection=f' peer {peer}', stop_subsection='^ exit')
             if 'profile' in peer_config:
                 self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

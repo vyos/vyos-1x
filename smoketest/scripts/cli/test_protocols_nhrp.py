@@ -38,6 +38,8 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_01_nhrp_config(self):
         tunnel_if = "tun100"
@@ -103,7 +105,7 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig(f'interface {tunnel_if}', endsection='^exit')
+        frrconfig = self.getFRRconfig(f'interface {tunnel_if}', stop_section='^exit')
         self.assertIn(f'interface {tunnel_if}', frrconfig)
         self.assertIn(f' ip nhrp authentication {nhrp_secret}', frrconfig)
         self.assertIn(f' ip nhrp holdtime {nhrp_holdtime}', frrconfig)
@@ -139,4 +141,4 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

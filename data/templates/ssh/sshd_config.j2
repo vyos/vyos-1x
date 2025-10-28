@@ -6,9 +6,11 @@
 # Non-configurable defaults
 #
 Protocol 2
-HostKey /etc/ssh/ssh_host_rsa_key
+# PERLE - added
+Include /etc/ssh/sshd_config.d/*.conf
+# PERLE - removed HostKey /etc/ssh/ssh_host_rsa_key
 HostKey /etc/ssh/ssh_host_dsa_key
-HostKey /etc/ssh/ssh_host_ecdsa_key
+# PERLE - removed HostKey /etc/ssh/ssh_host_ecdsa_key
 HostKey /etc/ssh/ssh_host_ed25519_key
 SyslogFacility AUTH
 LoginGraceTime 120

@@ -18,8 +18,11 @@ import json
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
+from base_vyostest_shim import VyOSUnitTestSHIM
+
 from vyos.utils.process import cmd
 from vyos.utils.kernel import unload_kmod
+
 class L2TPv3InterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -63,4 +66,4 @@ if __name__ == '__main__':
                    'l2tp_netlink', 'l2tp_core']:
         unload_kmod(module)
 
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

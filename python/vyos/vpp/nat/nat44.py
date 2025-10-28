@@ -224,6 +224,10 @@ class Nat44:
             tcp_transitory=tcp_transitory,
         )
 
+    def enable_disable_nat44_forwarding(self, enable):
+        """Enable/disable NAT44 forwarding"""
+        self.vpp.api.nat44_forwarding_enable_disable(enable=enable)
+
     def enable_ipfix(self):
         """Enable NAT44 IPFIX logging"""
         self.vpp.api.nat44_ei_ipfix_enable_disable(enable=True)

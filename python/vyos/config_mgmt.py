@@ -47,6 +47,7 @@ from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
 from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
+from vyos.component_version import append_system_version
 
 SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
 config_json = '/run/vyatta/config/config.json'
@@ -609,14 +610,16 @@ Proceed ?"""
         conf_file.chmod(0o644)
 
     def _archive_active_config(self) -> bool:
-        save_to_tmp = boot_configuration_complete() or not os.path.isfile(
-            archive_config_file
-        )
+        # on first boot/fresh install, add baseline archive_config_file
+        if not os.path.exists(archive_config_file):
+            append_system_version(archive_config_file)
+
         mask = os.umask(0o113)
 
         ext = os.getpid()
         cmp_saved = f'/tmp/config.boot.{ext}'
-        if save_to_tmp:
+
+        if boot_configuration_complete():
             save_config(cmp_saved, json_out=config_json)
         else:
             copy(config_file, cmp_saved)

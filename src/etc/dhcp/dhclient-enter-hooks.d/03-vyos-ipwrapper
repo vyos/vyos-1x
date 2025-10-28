@@ -4,7 +4,7 @@
 IF_METRIC=${IF_METRIC:-210}
 
 # Check if interface is inside a VRF
-VRF_OPTION=$(/usr/sbin/ip -j -d link show ${interface} | awk '{if(match($0, /.*"master":"(\w+)".*"info_slave_kind":"vrf"/, IFACE_DETAILS)) printf("vrf %s", IFACE_DETAILS[1])}')
+VRF_OPTION=$(/usr/sbin/ip --json --detail link show ${interface} | jq -r '.[0] | select(.linkinfo.info_slave_kind == "vrf") | "vrf \(.master)"')
 
 # get status of FRR
 function frr_alive () {

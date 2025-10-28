@@ -150,9 +150,9 @@ def generate(lb):
 
 def apply(lb):
     if not lb:
-        cmd(f'sudo systemctl stop {service}')
+        cmd(f'systemctl stop {service}')
     else:
-        cmd(f'sudo systemctl restart {service}')
+        cmd(f'systemctl restart {service}')
 
     call_dependents()
 

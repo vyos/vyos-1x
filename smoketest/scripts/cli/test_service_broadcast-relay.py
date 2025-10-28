@@ -27,15 +27,26 @@ class TestServiceBroadcastRelay(VyOSUnitTestSHIM.TestCase):
     _address1 = '192.0.2.1/24'
     _address2 = '192.0.2.1/24'
 
-    def setUp(self):
-        self.cli_set(['interfaces', 'dummy', 'dum1001', 'address', self._address1])
-        self.cli_set(['interfaces', 'dummy', 'dum1002', 'address', self._address2])
+    @classmethod
+    def setUpClass(cls):
+        # always forward to base class
+        super(TestServiceBroadcastRelay, cls).setUpClass()
 
-    def tearDown(self):
-        self.cli_delete(['interfaces', 'dummy', 'dum1001'])
-        self.cli_delete(['interfaces', 'dummy', 'dum1002'])
-        self.cli_delete(base_path)
-        self.cli_commit()
+        cls.cli_set(cls, ['interfaces', 'dummy', 'dum1001', 'address', cls._address1])
+        cls.cli_set(cls, ['interfaces', 'dummy', 'dum1002', 'address', cls._address2])
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'dummy', 'dum1001'])
+        cls.cli_delete(cls, ['interfaces', 'dummy', 'dum1002'])
+        cls.cli_delete(cls, base_path)
+        cls.cli_commit(cls)
+
+        # always forward to base class
+        super(TestServiceBroadcastRelay, cls).tearDownClass()
 
     def test_broadcast_relay_service(self):
         ids = range(1, 5)
@@ -65,4 +76,4 @@ class TestServiceBroadcastRelay(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(running)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

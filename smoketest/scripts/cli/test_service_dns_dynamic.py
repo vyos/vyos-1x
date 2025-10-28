@@ -59,6 +59,8 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for process not running anymore
         self.assertFalse(process_named_running(DDCLIENT_PNAME))
+        # always forward to base class
+        super().tearDown()
 
     # IPv4 standard DDNS service configuration
     def test_01_dyndns_service_standard(self):
@@ -360,4 +362,4 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', vrf_name])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

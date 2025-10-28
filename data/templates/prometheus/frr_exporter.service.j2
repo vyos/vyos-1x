@@ -9,6 +9,7 @@ After=network.target
 User=frr
 {% endif %}
 ExecStart={{ vrf_command }}/usr/sbin/frr_exporter \
+          --collector.bgp6 \
 {% if listen_address is vyos_defined %}
 {%     for address in listen_address %}
         --web.listen-address={{ address | bracketize_ipv6 }}:{{ port }}

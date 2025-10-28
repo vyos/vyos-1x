@@ -161,5 +161,10 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=m', self._config_data)
             self.assertTrue(tmp)
 
+    def test_slub(self):
+        for option in ['CONFIG_SLUB_DEBUG']:
+            tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

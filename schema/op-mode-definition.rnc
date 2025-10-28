@@ -89,12 +89,12 @@ children = element children
 # Nodes may have properties
 # For simplicity, any property is allowed in any node,
 # but whether they are used or not is implementation-defined
-
-
 properties = element properties
 {
     help? &
-    completionHelp*
+    completionHelp* &
+    constraint? &
+    (element constraintErrorMessage { text })?
 }
 
 # All nodes must have "name" attribute
@@ -103,9 +103,22 @@ nodeNameAttr = attribute name
     text
 }
 
+# Tag and leaf nodes may have constraints on their names and values
+# (respectively).
+# When multiple constraints are listed, they work as logical OR
+constraint = element constraint
+{
+    ( (element regex { text }) |
+      validator )+
+}
 
-
-
+# A constraint may also use an external validator rather than regex
+validator = element validator
+{
+    ( (attribute name { text })  &
+      (attribute argument { text })? ),
+    empty
+}
 
 # help tags contains brief description of the purpose of the node
 help = element help

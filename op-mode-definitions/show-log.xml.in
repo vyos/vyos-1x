@@ -104,13 +104,13 @@
                 <properties>
                   <help>Show log for DHCP server</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --unit kea-dhcp4.service</command>
+                <command>journalctl --no-hostname --boot --unit isc-kea-dhcp4-server.service</command>
                 <children>
                   <tagNode name="vrf">
                     <properties>
                       <help>Monitor last lines of DHCP server log on specific vrf</help>
                     </properties>
-                    <command>journalctl --no-hostname --follow --boot --unit "kea-dhcp4@$6.service"</command>
+                    <command>journalctl --no-hostname --follow --boot --unit "isc-kea-dhcp4-server@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -142,13 +142,13 @@
                 <properties>
                   <help>Show log for DHCPv6 server</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --unit kea-dhcp6.service</command>
+                <command>journalctl --no-hostname --boot --unit isc-kea-dhcp6-server.service</command>
                 <children>
                   <tagNode name="vrf">
                     <properties>
                       <help>Monitor last lines of DHCPv6 server log on specific vrf</help>
                     </properties>
-                    <command>journalctl --no-hostname --boot --unit "kea-dhcp6@$6.service"</command>
+                    <command>journalctl --no-hostname --boot --unit "isc-kea-dhcp6-server@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -875,10 +875,10 @@
               </completionHelp>
             </properties>
             <standalone>
-              <help>Show last 10 lines of /var/log/messages file</help>
-              <command>tail -n 10 /var/log/messages</command>
+              <help>Show given number of the latest log messages (default: 10)</help>
+              <command>journalctl --reverse --lines 10</command>
             </standalone>
-            <command>tail -n "$4" /var/log/messages | ${VYATTA_PAGER:-cat}</command>
+            <command>journalctl --reverse --lines "$4"</command>
           </tagNode>
           <leafNode name="vpn">
             <properties>

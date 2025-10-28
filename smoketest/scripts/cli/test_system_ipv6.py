@@ -35,6 +35,8 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def test_system_ipv6_forwarding(self):
         # Test if IPv6 forwarding can be disabled globally, default is '1'
@@ -44,13 +46,13 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['disable-forwarding'])
         self.cli_commit()
         self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '0')
-        frrconfig = self.getFRRconfig('', end='')
+        frrconfig = self.getFRRconfig()
         self.assertIn('no ipv6 forwarding', frrconfig)
 
         self.cli_delete(base_path + ['disable-forwarding'])
         self.cli_commit()
         self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '1')
-        frrconfig = self.getFRRconfig('', end='')
+        frrconfig = self.getFRRconfig()
         self.assertNotIn('no ipv6 forwarding', frrconfig)
 
     def test_system_ipv6_strict_dad(self):
@@ -107,7 +109,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify route-map properly applied to FRR
-        frrconfig = self.getFRRconfig('ipv6 protocol', end='')
+        frrconfig = self.getFRRconfig('ipv6 protocol', stop_section='^end')
         for protocol in protocols:
             # VyOS and FRR use a different name for OSPFv3 (IPv6)
             if protocol == 'ospfv3':
@@ -121,7 +123,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify route-map properly applied to FRR
-        frrconfig = self.getFRRconfig('ipv6 protocol', end='')
+        frrconfig = self.getFRRconfig('ipv6 protocol', stop_section='^end')
         self.assertNotIn(f'ipv6 protocol', frrconfig)
 
     def test_system_ipv6_protocol_non_existing_route_map(self):
@@ -140,14 +142,14 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['nht', 'no-resolve-via-default'])
         self.cli_commit()
         # Verify CLI config applied to FRR
-        frrconfig = self.getFRRconfig('', end='')
+        frrconfig = self.getFRRconfig()
         self.assertIn(f'no ipv6 nht resolve-via-default', frrconfig)
 
         self.cli_delete(base_path + ['nht', 'no-resolve-via-default'])
         self.cli_commit()
         # Verify CLI config removed to FRR
-        frrconfig = self.getFRRconfig('', end='')
+        frrconfig = self.getFRRconfig()
         self.assertNotIn(f'no ipv6 nht resolve-via-default', frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

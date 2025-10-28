@@ -9,6 +9,7 @@
         <help>IPv4 firewall forward filter</help>
       </properties>
       <children>
+        #include <include/firewall/disable-conntrack.xml.i>
         #include <include/firewall/default-action-base-chains.xml.i>
         #include <include/firewall/default-log.xml.i>
         #include <include/generic-description.xml.i>

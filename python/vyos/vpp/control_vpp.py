@@ -378,7 +378,7 @@ class VPPControl:
         if mode != 'auto':
             mode_resolve: dict[str, int] = {'auto': 0, 'copy': 1, 'zero-copy': 2}
             api_call_args['mode'] = mode_resolve[mode]
-        if flags == 'no_systcall_lock':
+        if flags == 'no_syscall_lock':
             api_call_args['flags'] = 1
         return self.__vpp_api_client.api.af_xdp_create_v3(**api_call_args)
 
@@ -438,15 +438,6 @@ class VPPControl:
             if iface.interface_name == ifname:
                 return iface.interface_dev_type
         return None
-
-    @_Decorators.api_call
-    def enable_disable_nat44_forwarding(self, enable: bool) -> None:
-        """Enable/disable NAT44 forwarding
-
-        Args:
-            enable (bool): True if enable, False if disable
-        """
-        self.__vpp_api_client.api.nat44_forwarding_enable_disable(enable=enable)
 
     @_Decorators.api_call
     def set_nat44_session_limit(self, session_limit: int) -> None:

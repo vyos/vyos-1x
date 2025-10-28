@@ -33,9 +33,9 @@ from vyos.template import dec_ip
 
 PROCESS_NAME = 'kea-dhcp4'
 D2_PROCESS_NAME = 'kea-dhcp-ddns'
-KEA4_CONF = '/run/kea/kea-dhcp4.conf'
-KEA4_D2_CONF = '/run/kea/kea-dhcp-ddns.conf'
-KEA4_CTRL = '/run/kea/dhcp4-ctrl-socket'
+KEA4_CONF = '/var/run/kea/kea-dhcp4.conf'
+KEA4_D2_CONF = '/var/run/kea/kea-dhcp-ddns.conf'
+KEA4_CTRL = '/var/run/kea/dhcp4-ctrl-socket'
 HOSTSD_CLIENT = '/usr/bin/vyos-hostsd-client'
 base_path = ['service', 'dhcp-server']
 interface = 'dum8765'
@@ -66,6 +66,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        # always forward to base class
+        super().tearDown()
 
     def walk_path(self, obj, path):
         current = obj
@@ -224,6 +226,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         server_identifier = bootfile_server
         ipv6_only_preferred = '300'
         capwap_access_controller = '192.168.2.125'
+        interface_mtu = '1420'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         self.cli_set(pool + ['subnet-id', '1'])
@@ -232,6 +235,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['option', 'name-server', dns_1])
         self.cli_set(pool + ['option', 'name-server', dns_2])
         self.cli_set(pool + ['option', 'domain-name', domain_name])
+        self.cli_set(pool + ['option', 'interface-mtu', interface_mtu])
         self.cli_set(pool + ['option', 'ip-forwarding'])
         self.cli_set(pool + ['option', 'smtp-server', smtp_server])
         self.cli_set(pool + ['option', 'pop-server', smtp_server])
@@ -363,6 +367,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
             {'name': 'ip-forwarding', 'data': 'true'},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'interface-mtu', 'data': interface_mtu},
         )
 
         # Time zone
@@ -1366,7 +1375,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         def internal_cleanup():
             for seq in client_range:
                 ip_addr = inc_ip(subnet, seq)
-                kea_delete_lease(4, ip_addr)
+                kea_delete_lease(4, None, ip_addr)
                 cmd(
                     f'{HOSTSD_CLIENT} --delete-hosts --tag dhcp-server-{ip_addr} --apply'
                 )
@@ -1434,4 +1443,4 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

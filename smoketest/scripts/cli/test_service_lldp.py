@@ -59,6 +59,8 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
 
         # service is no longer allowed to run after it was removed
         self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
 
     def test_01_lldp_basic(self):
         self.cli_set(base_path)
@@ -182,4 +184,4 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'configure ports {interface} lldp status rx-and-tx', config)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

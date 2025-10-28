@@ -12,30 +12,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import importlib.util
 import os
-import unittest
 import paramiko
 import pprint
+import re
+import sys
+import unittest
 
 from time import sleep
 from typing import Type
 
+from vyos import ConfigError
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos import ConfigError
 from vyos.defaults import commit_lock
+from vyos.frrender import mgmt_daemon
 from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
 from vyos.utils.process import run
 
 save_config = '/tmp/vyos-smoketest-save'
-
-# The commit process is not finished until all pending files from
-# VYATTA_CHANGES_ONLY_DIR are copied to VYATTA_ACTIVE_CONFIGURATION_DIR. This
-# is done inside libvyatta-cfg1 and the FUSE UnionFS part. On large non-
-# interactive commits FUSE UnionFS might not replicate the real state in time,
-# leading to errors when querying the working and effective configuration.
-# TO BE DELETED AFTER SWITCH TO IN MEMORY CONFIG
-CSTORE_GUARD_TIME = 4
 
 # This class acts as shim between individual Smoketests developed for VyOS and
 # the Python UnitTest framework. Before every test is loaded, we dump the current
@@ -44,23 +41,39 @@ CSTORE_GUARD_TIME = 4
 # Using this approach we can not render a live system useless while running any
 # kind of smoketest. In addition it adds debug capabilities like printing the
 # command used to execute the test.
+
 class VyOSUnitTestSHIM:
     class TestCase(unittest.TestCase):
-        # if enabled in derived class, print out each and every set/del command
-        # on the CLI. This is usefull to grap all the commands required to
-        # trigger the certain failure condition.
-        # Use "self.debug = True" in derived classes setUp() method
+        # If enabled, print out each and every set/del command on stdout.
+        # This is usefull to grap all the commands required to trigger the
+        # certain failure condition.
         debug = False
-        # Time to wait after a commit to ensure the CStore is up to date
-        # only required for testcases using FRR
-        _commit_guard_time = 0
+        mgmt_daemon_pid = 0
+
+        @staticmethod
+        def debug_on():
+            return os.path.exists('/tmp/vyos.smoketest.debug')
+
         @classmethod
         def setUpClass(cls):
+            # Import frr-reload.py functionality
+            file_path = '/usr/lib/frr/frr-reload.py'
+            module_name = 'frr_reload'
+
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            Vtysh = getattr(module, 'Vtysh')
+            cls._vtysh = Vtysh(bindir='/usr/bin', confdir='/etc/frr')
+
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
-            if os.path.exists('/tmp/vyos.smoketest.debug'):
-                cls.debug = True
-            pass
+            cls.debug = cls.debug_on()
+
+            # Retrieve FRR mgmtd daemon PID - it is not allowed to crash, thus
+            # PID must remain the same
+            cls.mgmt_daemon_pid = process_named_running(mgmt_daemon)
 
         @classmethod
         def tearDownClass(cls):
@@ -74,6 +87,13 @@ class VyOSUnitTestSHIM:
             except (ConfigError, ConfigSessionError):
                 cls._session.discard()
                 cls.fail(cls)
+
+        def setUp(self):
+            pass
+
+        def tearDown(self):
+            # check process health and continuity
+            self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
 
         def cli_set(self, path, value=None):
             if self.debug:
@@ -100,11 +120,12 @@ class VyOSUnitTestSHIM:
                 sleep(0.250)
             # Return the output of commit
             # Necessary for testing Warning cases
-            out = self._session.commit()
-            # Wait for CStore completion for fast non-interactive commits
-            sleep(self._commit_guard_time)
+            return self._session.commit()
 
-            return out
+        def cli_save(self, file):
+            if self.debug:
+                print('save')
+            self._session.save_config(file)
 
         def op_mode(self, path : list) -> None:
             """
@@ -119,36 +140,62 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
-        def getFRRconfig(self, string=None, end='$', endsection='^!',
-                         substring=None, endsubsection=None, empty_retry=0):
+        def getFRRconfig(self, start_section:str=None, stop_section='^!',
+                         start_subsection:str=None, stop_subsection='^ exit') -> str:
             """
             Retrieve current "running configuration" from FRR
 
-            string:        search for a specific start string in the configuration
-            end:           end of the section to search for (line ending)
-            endsection:    end of the configuration
-            substring:     search section under the result found by string
-            endsubsection: end of the subsection (usually something with "exit")
+            start_section:    search for a specific start string in the configuration
+            stop_section:     end of the configuration
+            start_subsection: search section under the result found by string
+            stop_subsection:  end of the subsection (usually something with "exit")
             """
-            command = f'vtysh -c "show run no-header"'
-            if string:
-                command += f' | sed -n "/^{string}{end}/,/{endsection}/p"'
-                if substring and endsubsection:
-                    command += f' | sed -n "/^{substring}/,/{endsubsection}/p"'
-            out = cmd(command)
+            frr_config = self._vtysh.mark_show_run()
+            if not start_section:
+                return frr_config
+
+            extracted = []
+            in_section = False
+            for line in frr_config.splitlines():
+                if not in_section:
+                    if re.match(start_section, line):
+                        in_section = True
+                        extracted.append(line)
+                else:
+                    extracted.append(line)
+                    if re.match(stop_section, line):
+                        break
+            output = '\n'.join(extracted)
+
+            # Use extracted list when searching for optional subsection
+            # used by e.g. BGP address-family check
+            if start_subsection:
+                extracted_subsection = []
+                in_subsection = False
+                for line in extracted:
+                    if not in_subsection:
+                        if re.match(start_subsection, line):
+                            in_subsection = True
+                            extracted_subsection.append(line)
+                    else:
+                        extracted_subsection.append(line)
+                        if re.match(stop_subsection, line):
+                            break
+                output = '\n'.join(extracted_subsection)
+
+            if self.debug:
+                print(output)
+            return output
+
+        def getFRRopmode(self, command : str, json : bool=False):
+            from json import loads
+            if json: command += f' json'
+            out = cmd(f'vtysh -c "{command}"')
+            if json:
+                out = loads(out)
             if self.debug:
                 print(f'\n\ncommand "{command}" returned:\n')
                 pprint.pprint(out)
-            if empty_retry > 0:
-                retry_count = 0
-                while not out and retry_count < empty_retry:
-                    if self.debug and retry_count % 10 == 0:
-                        print(f"Attempt {retry_count}: FRR config is still empty. Retrying...")
-                    retry_count += 1
-                    sleep(1)
-                    out = cmd(command)
-                if not out:
-                    print(f'FRR configuration still empty after {empty_retry} retires!')
             return out
 
         @staticmethod
