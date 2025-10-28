@@ -309,10 +309,7 @@ def verify(dhcp):
                     # If a client class has been specified then it must exist
                     if 'client_class' in range_config:
                         client_class = range_config['client_class']
-                        if 'client_class' not in dhcp:
-                            raise ConfigError(f'Client class "{client_class}" set in range "{range}" but does not exist')
-
-                        if client_class not in dhcp['client_class'].keys():
+                       if client_class not in dhcp.get('client_class', {}):
                             raise ConfigError(f'Client class "{client_class}" set in range "{range}" but does not exist')
 
                     # Start/Stop address must be inside network
