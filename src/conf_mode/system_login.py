@@ -121,7 +121,7 @@ def get_config(config=None):
     # Build TACACS user mapping
     if 'tacacs' in login:
         login['exclude_users'] = get_local_users(min_uid=0,
-                                                 max_uid=MIN_USER_UID) + SYSTEM_USER_SKIP_LIST + cli_users
+                                                 max_uid=MIN_USER_UID) + list(SYSTEM_USER_SKIP_LIST) + cli_users
         login['tacacs_min_uid'] = MIN_TACACS_UID
 
     set_dependents('ssh', conf)
