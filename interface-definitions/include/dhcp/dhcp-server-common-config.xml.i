@@ -29,7 +29,7 @@
         </leafNode>
         <leafNode name="remote-id">
           <properties>
-            <help>Filters on the contents of the remote-id sub option.</help>
+            <help>Filters on the contents of the remote-id sub option</help>
             <valueHelp>
               <format>hex</format>
               <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
