@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+
+# Dynamic interfaces may lose QoS config on reconnect.
+# This script reapplies the QoS policy when the interface comes up.
+
+from sys import argv
+from sys import exit
+from vyos.utils.process import call
+from vyos.configquery import ConfigTreeQuery
+
+# When the ppp link comes up, this script is called with the following
+# parameters
+#       $1      the interface name used by pppd (e.g., pppoe0, l2tpc0, sstpc0)
+#       $2      the tty device name
+#       $3      the tty device speed
+#       $4      the local IP address for the interface
+#       $5      the remote IP address
+#       $6      the parameter specified by the 'ipparam' option to pppd
+
+if len(argv) < 7:
+    exit(1)
+
+interface = argv[6]
+
+conf = ConfigTreeQuery()
+
+try:
+    # Check if QoS is configured for the interface
+    qos_path = ['qos', 'interface', interface]
+    if conf.exists(qos_path):
+        call('/usr/libexec/vyos/conf_mode/qos.py')
+except Exception:
+    exit(1)
