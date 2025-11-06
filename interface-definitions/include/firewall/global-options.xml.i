@@ -130,6 +130,49 @@
       </properties>
       <defaultValue>enable</defaultValue>
     </leafNode>
+    <node name="geoip">
+      <properties>
+        <help>GeoIP options</help>
+      </properties>
+      <children>
+        <leafNode name="provider">
+          <properties>
+            <help>GeoIP database provider</help>
+            <completionHelp>
+              <list>db-ip maxmind</list>
+            </completionHelp>
+            <valueHelp>
+              <format>db-ip</format>
+              <description>Use GeoIP database by DB-IP.com</description>
+            </valueHelp>
+            <valueHelp>
+              <format>maxmind</format>
+              <description>Use GeoIP database by MaxMind (Requires API key)</description>
+            </valueHelp>
+            <constraint>
+              <regex>(db-ip|maxmind)</regex>
+            </constraint>
+          </properties>
+          <defaultValue>db-ip</defaultValue>
+        </leafNode>
+        <leafNode name="maxmind-account-id">
+          <properties>
+            <help>Account ID for MaxMind GeoIP database</help>
+          </properties>
+        </leafNode>
+        <leafNode name="maxmind-license-key">
+          <properties>
+            <help>License key for MaxMind GeoIP database</help>
+          </properties>
+        </leafNode>
+        <leafNode name="maxmind-lite">
+          <properties>
+            <help>Use MaxMind GeoLite2 database</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
     <leafNode name="ip-src-route">
       <properties>
         <help>Policy for handling IPv4 packets with source route option</help>

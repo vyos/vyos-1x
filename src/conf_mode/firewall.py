@@ -491,6 +491,12 @@ def verify(firewall):
                 for ifname in interfaces:
                     verify_hardware_offload(ifname)
 
+    if dict_search_args(firewall, 'global_options', 'geoip', 'provider') == 'maxmind':
+        geoip_options = dict_search_args(firewall, 'global_options', 'geoip')
+        required_keys = ['maxmind_account_id', 'maxmind_license_key']
+        if not all(key in geoip_options for key in required_keys):
+            raise ConfigError('MaxMind GeoIP provider requires maxmind-account-id and maxmind-license-key')
+
     if dict_search('global_options.state_policy', firewall) is not None:
         # Generate list of chains where conntrack is disabled
         conntrack_disabled_list = []
