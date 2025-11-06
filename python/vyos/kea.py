@@ -179,6 +179,9 @@ def kea_parse_subnet(subnet, config):
     if 'ping_check' in config:
         out['user-context']['enable-ping-check'] = True
 
+    if 'client_class' in config:
+        out['client-class'] = config['client_class']
+
     if 'range' in config:
         pools = []
         for num, range_config in config['range'].items():
@@ -193,6 +196,9 @@ def kea_parse_subnet(subnet, config):
 
                 if 'bootfile_server' in range_config['option']:
                     pool['next-server'] = range_config['option']['bootfile_server']
+
+            if 'client_class' in range_config:
+                pool['client-class'] = range_config['client_class']
 
             pools.append(pool)
         out['pools'] = pools
@@ -677,3 +683,22 @@ def kea_get_server_leases(config, inet, vrf_name, pools=[], state=[], origin=Non
                     data.pop(idx)
 
     return data
+
+def _build_relay_hex_condition(sub_option_index, value):
+    if value.startswith("0x"):
+        return f"relay4[{sub_option_index}].hex == {value}"
+    else:
+        return f"relay4[{sub_option_index}].hex == 0x{value.encode().hex().lower()}"
+
+def kea_build_client_class_test(config):
+    conditions = []
+
+    if "relay_agent_information" in config:
+        if "circuit_id" in config["relay_agent_information"]:
+            conditions.append(_build_relay_hex_condition(1, config["relay_agent_information"]["circuit_id"]))
+        if "remote_id" in config["relay_agent_information"]:
+            conditions.append(_build_relay_hex_condition(2, config["relay_agent_information"]["remote_id"]))
+
+    test = " and ".join(conditions)
+
+    return test

@@ -59,6 +59,7 @@ class Ethtool:
     _ring_buffer = None
     _driver_name = None
     _flow_control = None
+    _channels = ''
 
     def __init__(self, ifname):
         # Get driver used for interface
@@ -110,6 +111,11 @@ class Ethtool:
         out, err = popen(f'ethtool --json --show-pause {ifname}')
         if not bool(err):
             self._flow_control = loads(out)[0]
+
+        # Get information about NIC channels
+        out, err = popen(f'ethtool --show-channels {ifname}')
+        if not bool(err):
+            self._channels = out.lower()
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
@@ -199,3 +205,20 @@ class Ethtool:
                              'flow-control settings!')
 
         return 'on' if bool(self._flow_control['autonegotiate']) else 'off'
+
+    def get_channels(self, rx_tx_comb):
+        """
+        Get both the pre-set maximum and current value for a given channel type.
+
+        Args:
+            rx_tx_comb (str): Channel type, one of "rx", "tx", or "combined".
+
+        Returns:
+            list[int]: [maximum, current] values for the channel,
+                       or an empty list if not supported.
+        """
+        if rx_tx_comb not in ['rx', 'tx', 'combined']:
+            raise ValueError('Channel type must be either "rx", "tx" or "combined"')
+        matches = re.findall(rf'{rx_tx_comb}:\s+(\d+)', self._channels)
+
+        return [int(value) for value in matches]

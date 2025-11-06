@@ -48,6 +48,22 @@ def iftunnel_transform(iface: str) -> str:
     return f'{iface_type}_tunnel{iface_num}'
 
 
+def vpp_iface_name_transform(iface: str) -> str:
+    """Convert a CLI interface name to its corresponding VPP interface name format
+
+    Args:
+        iface (str): Interface name as used in VyOS configuration (e.g., "bond0").
+
+    Returns:
+        str: Interface name formatted as recognized by VPP (e.g., "BondEthernet0").
+    """
+    vpp_iface_name = iface
+    if vpp_iface_name.startswith('bond'):
+        # interface name in VPP is BondEthernetX
+        vpp_iface_name = vpp_iface_name.replace('bond', 'BondEthernet')
+    return vpp_iface_name
+
+
 def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
     """List of all VPP interfaces (CLI names)
 

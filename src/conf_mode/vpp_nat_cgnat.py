@@ -21,17 +21,10 @@ from vyos.config import Config, config_dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import Diff
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import vpp_iface_name_transform
 
 from vyos.vpp.nat.det44 import Det44
 from vyos.vpp.control_vpp import VPPControl
-
-
-def _vpp_iface_name_transform(iface_name):
-    vpp_iface_name = iface_name
-    if vpp_iface_name.startswith('bond'):
-        # interface name in VPP is BondEthernetX
-        vpp_iface_name = vpp_iface_name.replace('bond', 'BondEthernet')
-    return vpp_iface_name
 
 
 def get_config(config=None) -> dict:
@@ -132,7 +125,7 @@ def verify(config):
     vpp = VPPControl()
     for direction in ['inside', 'outside']:
         for interface in config['interface'][direction]:
-            vpp_iface_name = _vpp_iface_name_transform(interface)
+            vpp_iface_name = vpp_iface_name_transform(interface)
             if vpp.get_sw_if_index(vpp_iface_name) is None:
                 raise ConfigError(
                     f'{interface} must be a VPP interface for {direction} CGNAT interface'
@@ -187,11 +180,11 @@ def apply(config):
     cgnat.enable_det44_plugin()
     # Add inside interfaces
     for interface in config['interface']['inside']:
-        vpp_iface_name = _vpp_iface_name_transform(interface)
+        vpp_iface_name = vpp_iface_name_transform(interface)
         cgnat.add_det44_interface_inside(vpp_iface_name)
     # Add outside interfaces
     for interface in config['interface']['outside']:
-        vpp_iface_name = _vpp_iface_name_transform(interface)
+        vpp_iface_name = vpp_iface_name_transform(interface)
         cgnat.add_det44_interface_outside(vpp_iface_name)
     # Add CGNAT rules
     for rule in config['changed_rules']:

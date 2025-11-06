@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="sflow">
+            <properties>
+              <help>Show VPP sFlow information</help>
+            </properties>
+            <command>bash -c 'if cli-shell-api existsActive vpp sflow; then sudo vppctl show sflow; else echo "vpp sflow is not configured"; fi'</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

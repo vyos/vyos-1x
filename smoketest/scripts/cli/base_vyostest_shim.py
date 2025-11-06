@@ -214,7 +214,64 @@ class VyOSUnitTestSHIM:
             return output, error
 
         # Verify nftables output
-        def verify_nftables(self, nftables_search, table, inverse=False, args=''):
+        def verify_nftables(self, nftables_search: list[list[str]], table: str, inverse: bool=False, args: str='') -> None:
+            """
+            Assert presence or absence of lines in `nft list table` output.
+
+            This helper inspects the output of `sudo nft {args} list table {table}`
+            and, for each entry in `nftables_search`, checks whether there exists
+            a single line that contains all specified substrings.
+
+            #### Usage:
+                nftables output excerpt:
+                    ```text
+                    chain VYOS_STATE_POLICY {
+                            ct state established counter packets 0 bytes 0 accept
+                            ct state invalid counter packets 0 bytes 0 drop
+                            ct state related counter packets 0 bytes 0 accept
+                    }
+                    ```
+
+            ##### Example 1:
+                Verify that the chain VYOS_STATE_POLICY exists and contains the specified fragments
+
+                Code usage:
+                    ```python
+                    nftables_search = [
+                        ["chain VYOS_STATE_POLICY"],
+                        ["ct state established", "accept"],
+                    ]
+                    self.verify_nftables(nftables_search, "ip vyos_filter")
+                    ```
+
+            ##### Example 2 (inverse matching):
+                Verify that the ct state established does not have a verdict of drop
+
+                Code usage:
+                    ```python
+                    nftables_search = [
+                        ["ct state established", "drop"]
+                    ]
+                    self.verify_nftables(nftables_search, "ip vyos_filter", inverse=True)
+                    ```
+
+            Parameters:
+                nftables_search: list[list[str]]
+                    A list of search groups. Each inner list contains substrings
+                    that must all appear within the same output line to count as
+                    a match.
+                table: str
+                        Table spec accepted by nft (e.g. "ip vyos_filter" or
+                        "ip6 vyos_filter").
+                inverse: bool
+                    If True, assert that no output line matches any search group.
+                    If False, assert that each search group is matched at least once.
+                args: str
+                    Extra flags for `nft` (e.g. "-a" to show rule handles or "-s" to omit counter hits).
+
+            Raises:
+                AssertionError: If expectations are not met.
+            """
             nftables_output = cmd(f'sudo nft {args} list table {table}')
 
             for search in nftables_search:
@@ -225,7 +282,69 @@ class VyOSUnitTestSHIM:
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
 
-        def verify_nftables_chain(self, nftables_search, table, chain, inverse=False, args=''):
+        def verify_nftables_chain(self, nftables_search: list[list[str]], table: str, chain: str, inverse: bool=False, args: str='') -> None:
+            """
+            Assert presence or absence of lines in `nft list chain` output.
+
+            This behaves like `verify_nftables` but focuses on a specific chain within a table using
+            `sudo nft {args} list chain {table} {chain}`. For each entry in `nftables_search`, it
+            checks whether there exists a single line that contains all specified substrings.
+
+            #### Usage:
+                nftables output excerpt:
+                    ```text
+                    chain VYOS_INPUT_filter {
+                            tcp dport 22 counter packets 0 bytes 0 accept
+                            tcp dport 23 counter packets 0 bytes 0 drop
+                    }
+                    ```
+
+            ##### Example 1:
+                Verify the chain contains the specified fragments
+
+                Code usage:
+                    ```python
+                    nftables_search = [
+                        ["tcp dport 22", "accept"],
+                        ["tcp dport 23", "drop"]
+                    ]
+                    self.verify_nftables_chain(
+                        nftables_search, table="ip vyos_filter", chain="VYOS_INPUT_filter"
+                    )
+                    ```
+
+            ##### Example 2 (inverse matching):
+                Verify that a drop rule for tcp dport 22 is not present
+
+                Code usage:
+                    ```python
+                    nftables_search = [
+                        ["tcp dport 22", "drop"]
+                    ]
+                    self.verify_nftables_chain(
+                        nftables_search, table="ip vyos_filter", chain="VYOS_INPUT_filter", inverse=True
+                    )
+                    ```
+
+            Parameters:
+                nftables_search: list[list[str]]
+                    A list of search groups. Each inner list contains substrings
+                    that must all appear within the same output line to count as
+                    a match.
+                table: str
+                        Table spec accepted by nft (e.g. "ip vyos_filter" or
+                        "ip6 vyos_filter").
+                chain: str
+                    Chain name within the specified table.
+                inverse: bool
+                    If True, assert that no output line matches any search group.
+                    If False, assert that each search group is matched at least once.
+                args: str
+                    Extra flags for `nft` (e.g. "-a" to show rule handles or "-s" to omit counter hits).
+
+            Raises:
+                AssertionError: If expectations are not met.
+            """
             nftables_output = cmd(f'sudo nft {args} list chain {table} {chain}')
 
             for search in nftables_search:
@@ -236,7 +355,53 @@ class VyOSUnitTestSHIM:
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
 
-        def verify_nftables_chain_exists(self, table, chain, inverse=False):
+        def verify_nftables_chain_exists(self, table: str, chain: str, inverse: bool=False) -> None:
+            """
+            Assert existence or non-existence of an nftables chain.
+
+            Calls `sudo nft list chain {table} {chain}` and verifies whether the
+            chain does or does not exist.
+
+            Usage:
+                nftables output excerpt:
+                    ```text
+                    chain VYOS_INPUT_filter {
+                            ct state established accept
+                    }
+                    ```
+
+            ##### Example 1:
+                Verify a chain exists
+
+                Code usage:
+                    ```python
+                    self.verify_nftables_chain_exists(
+                        table="ip vyos_filter", chain="VYOS_INPUT_filter"
+                    )
+                    ```
+
+            ##### Example 2 (inverse matching):
+                Verify a deprecated chain is not present
+
+                Code usage:
+                    ```python
+                    self.verify_nftables_chain_exists(
+                        table="ip VYOS_INPUT_filter", chain="deprecated_chain", inverse=True
+                    )
+                    ```
+
+            Parameters:
+                table: str
+                    Table spec accepted by nft (e.g. "ip vyos_filter" or
+                    "ip6 vyos_filter").
+                chain: str
+                    Chain name within the specified table.
+                inverse: bool
+                    If True, assert the chain does not exist. If False, assert it exists.
+
+            Raises:
+                AssertionError: If expectations are not met.
+            """
             try:
                 cmd(f'sudo nft list chain {table} {chain}')
                 if inverse:

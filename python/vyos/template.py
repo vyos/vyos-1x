@@ -914,6 +914,25 @@ def kea_high_availability_json(config):
 
     return dumps(data)
 
+@register_filter('kea_client_class_json')
+def kea_client_class_json(client_classes):
+    from vyos.kea import kea_build_client_class_test
+    from json import dumps
+    out = []
+
+    for name, config in client_classes.items():
+        if 'disable' in config:
+            continue
+
+        client_class = {
+            'name': name,
+            'test': kea_build_client_class_test(config)
+        }
+
+        out.append(client_class)
+
+    return dumps(out, indent=4)
+
 @register_filter('kea_dynamic_dns_update_main_json')
 def kea_dynamic_dns_update_main_json(config):
     from vyos.kea import kea_parse_ddns_settings

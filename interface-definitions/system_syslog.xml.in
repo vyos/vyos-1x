@@ -70,12 +70,6 @@
                   <help>Transport Layer Security (TLS) options for secure syslog</help>
                 </properties>
                 <children>
-                  <leafNode name="enable">
-                    <properties>
-                      <help>Enable TLS encryption for log transmission to this remote syslog server</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
                   <!-- CA cert help should describe trust anchor for server/client validation -->
                   #include <include/pki/ca-certificate.xml.i>
                   <!-- Certificate help should specify identity for mutual authentication -->

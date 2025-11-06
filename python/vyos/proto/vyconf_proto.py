@@ -175,6 +175,11 @@ class ReloadReftree:
     on_behalf_of: int = None
 
 @dataclass
+class ShowSessions:
+    exclude_self: bool = False
+    exclude_other: bool = False
+
+@dataclass
 class Request:
     prompt: Prompt = None
     setup_session: SetupSession = None
@@ -207,6 +212,7 @@ class Request:
     get_config: GetConfig = None
     aux_set: AuxSet = None
     aux_delete: AuxDelete = None
+    show_sessions: ShowSessions = None
 
 @dataclass
 class RequestEnvelope:
@@ -403,5 +409,11 @@ def set_request_exit_configuration_mode(token: str = None):
 def set_request_reload_reftree(token: str = None, on_behalf_of: int = None):
     reqi = ReloadReftree (on_behalf_of)
     req = Request(reload_reftree=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
+def set_request_show_sessions(token: str = None, exclude_self: bool = False, exclude_other: bool = False):
+    reqi = ShowSessions (exclude_self, exclude_other)
+    req = Request(show_sessions=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env

@@ -19,12 +19,14 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 hsflowd_conf_path = '/run/sflow/hsflowd.conf'
@@ -38,17 +40,37 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['system', 'sflow']
-    if not conf.exists(base):
-        return None
 
-    sflow = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                 get_first_key=True,
-                                 with_recursive_defaults=True)
+    vpp_sflow = conf.exists(['vpp', 'sflow'])
+
+    if not conf.exists(base):
+        return {
+            'remove': True,
+            'vpp_sflow': vpp_sflow,
+        }
+
+    sflow = conf.get_config_dict(
+        base, key_mangling=('-', '_'), get_first_key=True, with_recursive_defaults=True
+    )
+
+    sflow.update({'vpp_sflow': vpp_sflow})
+
+    if vpp_sflow:
+        set_dependents('vpp_sflow', conf)
 
     return sflow
 
+
 def verify(sflow):
-    if not sflow:
+    # Check if "vpp" flag could be deleted from configuration
+    if sflow.get('vpp_sflow'):
+        if 'vpp' not in sflow or 'remove' in sflow:
+            raise ConfigError(
+                'sFlow is still configured in VPP. '
+                'Please remove sFlow configuration from VPP before proceeding.'
+            )
+
+    if 'remove' in sflow:
         return None
 
     # Check if configured sflow agent-address exist in the system
@@ -62,8 +84,7 @@ def verify(sflow):
     # Check if at least one interface is configured
     # Skip this check if VPP is enabled
     if 'interface' not in sflow and 'vpp' not in sflow:
-        raise ConfigError(
-            'sFlow requires at least one interface to be configured!')
+        raise ConfigError('sFlow requires at least one interface to be configured!')
 
     # Check if at least one server is configured
     if 'server' not in sflow:
@@ -72,8 +93,9 @@ def verify(sflow):
     verify_vrf(sflow)
     return None
 
+
 def generate(sflow):
-    if not sflow:
+    if 'remove' in sflow:
         return None
 
     render(hsflowd_conf_path, 'sflow/hsflowd.conf.j2', sflow)
@@ -81,8 +103,9 @@ def generate(sflow):
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 
+
 def apply(sflow):
-    if not sflow:
+    if 'remove' in sflow:
         # Stop flow-accounting daemon and remove configuration file
         call(f'systemctl stop {systemd_service}')
         if os.path.exists(hsflowd_conf_path):
@@ -91,6 +114,9 @@ def apply(sflow):
 
     # Start/reload flow-accounting daemon
     call(f'systemctl restart {systemd_service}')
+
+    call_dependents()
+
 
 if __name__ == '__main__':
     try:

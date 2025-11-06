@@ -19,6 +19,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.utils.file import read_file
+from vyos.xml_ref import default_value
 
 config_file = '/etc/frr/daemons'
 base_path = ['system', 'frr']
@@ -150,7 +151,34 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(bmp_enabled)
         self.assertTrue(snmp_enabled)
 
+    def test_frr_profile_add_remove(self):
+        default_profile = default_value(base_path + ['profile'])
+
+        # test add profile
+        frr_profiles = ['traditional', 'datacenter']
+        for profile in frr_profiles:
+            # set the profile
+            self.cli_set(base_path + ['profile', profile])
+            self.cli_commit()
+            # read the config file and check content
+            self.assertIn(f'frr_profile="{profile}"', read_file(config_file))
+            # read the frr.conf file and check content
+            frrconfig = self.getFRRconfig()
+            self.assertIn(f'frr defaults {profile}', frrconfig)
+
+        # test remove profile
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # read the config file and check content
+        self.assertIn(f'frr_profile="{default_profile}"', read_file(config_file))
+
+        # read the frr.conf file and check content
+        frrconfig = self.getFRRconfig()
+        self.assertIn(f'frr defaults {default_profile}', frrconfig)
+
     def test_frr_file_descriptors(self):
+        default_descriptors = default_value(base_path + ['descriptors'])
         file_descriptors = '4096'
 
         self.cli_set(base_path + ['descriptors', file_descriptors])
@@ -159,6 +187,14 @@ class TestSystemFRR(VyOSUnitTestSHIM.TestCase):
         # read the config file and check content
         daemons_config = read_file(config_file)
         self.assertIn(f'MAX_FDS={file_descriptors}', daemons_config)
+
+        # test remove of descriptors
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # read the config file and check content
+        daemons_config = read_file(config_file)
+        self.assertIn(f'MAX_FDS={default_descriptors}', daemons_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

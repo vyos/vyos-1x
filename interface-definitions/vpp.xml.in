@@ -952,14 +952,45 @@
             <multi/>
           </properties>
         </leafNode>
-        <leafNode name="sample-rate">
+        <leafNode name="header-bytes">
           <properties>
-            <help>sFlow sample rate</help>
+            <help>sFlow maximum packet-header length</help>
+            <completionHelp>
+              <list>64 96 128 160 192 224 256</list>
+            </completionHelp>
             <valueHelp>
-              <format>u32</format>
-              <description>sFlow sample rate</description>
+              <format>64</format>
+              <description>64 bytes</description>
             </valueHelp>
+            <valueHelp>
+              <format>96</format>
+              <description>96 bytes</description>
+            </valueHelp>
+            <valueHelp>
+              <format>128</format>
+              <description>128 bytes</description>
+            </valueHelp>
+            <valueHelp>
+              <format>160</format>
+              <description>160 bytes</description>
+            </valueHelp>
+            <valueHelp>
+              <format>192</format>
+              <description>192 bytes</description>
+            </valueHelp>
+            <valueHelp>
+              <format>224</format>
+              <description>224 bytes</description>
+            </valueHelp>
+            <valueHelp>
+              <format>256</format>
+              <description>256 bytes</description>
+            </valueHelp>
+            <constraint>
+              <regex>(64|96|128|160|192|224|256)</regex>
+            </constraint>
           </properties>
+          <defaultValue>128</defaultValue>
         </leafNode>
       </children>
     </node>

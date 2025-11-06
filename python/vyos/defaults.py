@@ -46,6 +46,7 @@ directories = {
 
 systemd_services = {
     'haproxy' : 'haproxy.service',
+    'openconnect': 'ocserv.service',
     'syslog' : 'syslog.service',
     'snmpd' : 'snmpd.service',
 }

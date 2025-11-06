@@ -455,6 +455,23 @@ class EthernetIf(Interface):
             print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
 
+    def set_channels(self, rx_tx_comb, queues):
+        """
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_channels('rx', 2)
+        """
+        ifname = self.config['ifname']
+        cmd = f'ethtool --set-channels {ifname} {rx_tx_comb} {queues}'
+        output, code = self._popen(cmd)
+        # ethtool error codes:
+        #  80 - value already setted
+        #  81 - does not possible to set value
+        if code and code != 80:
+            print(f'could not set "{rx_tx_comb}" channel for {ifname}')
+        return output
+
     def set_switchdev(self, enable):
         ifname = self.config['ifname']
         addr, code = self._popen(

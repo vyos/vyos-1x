@@ -24,6 +24,7 @@ from time import sleep
 from pyroute2 import IPRoute
 
 from vyos.ethtool import Ethtool
+from vyos.ifconfig import EthernetIf
 from vyos.vpp.utils import EthtoolGDrvinfo
 
 
@@ -376,3 +377,40 @@ def flush_ip(iface_name: str) -> None:
     """
     iproute = IPRoute()
     iproute.flush_addr(label=iface_name)
+
+
+def get_eth_channels(iface_name: str) -> dict:
+    """
+    Get the current hardware queue counts for channels of an interface using ethtool.
+
+    Args:
+        iface_name (str): name of an interface
+
+    Returns:
+        dict: Mapping of channel types to their current values:
+              - 'rx' (int | None): RX channel count.
+              - 'tx' (int | None): TX channel count.
+              - 'combined' (int | None): Combined channel count.
+              Returns None if the channel type is not supported.
+    """
+    ethtool = Ethtool(iface_name)
+
+    channels = {}
+    for channel in ['rx', 'tx', 'combined']:
+        queues_list = ethtool.get_channels(channel)
+        channels[channel] = queues_list[-1] if (len(queues_list) == 2) else None
+
+    return channels
+
+
+def set_eth_channels(iface_name: str, channels: dict) -> None:
+    """Configure the number of RX, TX, or combined channels for an interface.
+
+    Args:
+        iface_name (str): name of an interface
+        channels (dict): channels to set
+    """
+    interface = EthernetIf(iface_name)
+    for channel, value in channels.items():
+        if value:
+            interface.set_channels(channel, value)

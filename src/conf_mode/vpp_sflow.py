@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -16,7 +18,7 @@
 from vyos import ConfigError
 from vyos.config import Config
 from vyos.vpp.utils import cli_ifaces_list
-from vyos.vpp import VPPControl
+from vyos.vpp.sflow import SFlow
 
 
 def get_config(config=None) -> dict:
@@ -52,20 +54,21 @@ def get_config(config=None) -> dict:
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
+        with_recursive_defaults=True,
     )
 
     if system_sflow:
         config['system_sflow'] = system_sflow
 
-    if not config:
+    if effective_config:
+        config.update({'effective': effective_config})
+
+    if not conf.exists(base):
         config['remove'] = True
         return config
 
     # Add list of VPP interfaces to the config
     config.update({'vpp_ifaces': cli_ifaces_list(conf)})
-
-    if effective_config:
-        config.update({'effective': effective_config})
 
     return config
 
@@ -76,7 +79,7 @@ def verify(config):
 
     # Check if interface section exists
     if 'interface' not in config:
-        return None
+        raise ConfigError('Interfaces must be configured for sFlow')
 
     # Verify that all interfaces specified exist in VPP
     for interface in config['interface']:
@@ -85,19 +88,10 @@ def verify(config):
                 f'{interface} must be a VPP interface for sFlow monitoring'
             )
 
-    # Verify sample rate is a positive integer
-    if 'sample_rate' in config:
-        try:
-            sample_rate = int(config['sample_rate'])
-            if sample_rate <= 0:
-                raise ConfigError('sFlow sample rate must be a positive integer')
-        except ValueError:
-            raise ConfigError('sFlow sample rate must be a valid integer')
-
     # Verify that system sflow has enable-vpp defined
     if 'system_sflow' not in config or 'vpp' not in config.get('system_sflow', {}):
         raise ConfigError(
-            'sFlow enable-vpp must be defined under system sflow configuration'
+            '"sflow vpp" must be defined under system sflow configuration'
         )
 
 
@@ -107,31 +101,31 @@ def generate(config):
 
 
 def apply(config):
-    # Initialize VPP control API
-    vpp = VPPControl(attempts=20, interval=500)
+    s = SFlow()
+
+    # Disable sFlow on deleted interface
+    for interface in config.get('effective', {}).get('interface', []):
+        if interface not in config.get('interface', []):
+            s.disable_sflow(interface)
 
     if 'remove' in config:
-        # Disable sFlow on all interfaces
-        for interface in config.get('effective', {}).get('interface', []):
-            vpp.cli_cmd(f'sflow enable-disable {interface} disable')
         return None
 
-    # Configure sample rate if specified
-    if 'sample_rate' in config:
-        vpp.cli_cmd(f'sflow sampling-rate {config["sample_rate"]}')
+    # Configure sample rate
+    if 'sampling_rate' in config.get('system_sflow', {}):
+        s.set_sampling_rate(int(config['system_sflow']['sampling_rate']))
+
+    # Configure polling interval
+    if 'polling' in config.get('system_sflow', {}):
+        s.set_polling_interval(int(config['system_sflow']['polling']))
+
+    # Configure header bytes
+    if 'header_bytes' in config:
+        s.set_header_bytes(int(config['header_bytes']))
 
     # Configure interfaces
-    if 'interface' in config:
-        # Enable sFlow on specified interfaces
-        for interface in config['interface']:
-            vpp.cli_cmd(f'sflow enable-disable {interface}')
-
-        # Disable sFlow on interfaces that were removed from config
-        effective_interfaces = config.get('effective', {}).get('interface', [])
-        if effective_interfaces:
-            for interface in effective_interfaces:
-                if interface not in config['interface']:
-                    vpp.cli_cmd(f'sflow enable-disable {interface} disable')
+    for interface in config.get('interface', []):
+        s.enable_sflow(interface)
 
 
 if __name__ == '__main__':

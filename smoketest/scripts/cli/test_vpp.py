@@ -1426,10 +1426,17 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
     def test_17_vpp_sflow(self):
         base_sflow = ['system', 'sflow']
+        sampling_rate = '1500'
+        polling_interval = '55'
+        header_bytes = '256'
+        iface_2 = 'eth0'
 
         self.cli_set(base_path + ['sflow', 'interface', interface])
+        self.cli_set(base_path + ['sflow', 'header-bytes', header_bytes])
         self.cli_set(base_sflow + ['interface', interface])
         self.cli_set(base_sflow + ['server', '127.0.0.1'])
+        self.cli_set(base_sflow + ['sampling-rate', sampling_rate])
+        self.cli_set(base_sflow + ['polling', polling_interval])
         self.cli_set(base_sflow + ['vpp'])
         self.cli_commit()
 
@@ -1437,7 +1444,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show sflow')
 
         expected_entries = (
+            f'sflow sampling-rate {sampling_rate}',
             'sflow sampling-direction ingress',
+            f'sflow polling-interval {polling_interval}',
+            f'sflow header-bytes {header_bytes}',
             f'sflow enable {interface}',
             'interfaces enabled: 1',
         )
@@ -1445,8 +1455,35 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for expected_entry in expected_entries:
             self.assertIn(expected_entry, out)
 
-        self.cli_delete(base_sflow)
+        self.cli_set(base_path + ['settings', 'interface', iface_2, 'driver', driver])
+        self.cli_set(base_path + ['sflow', 'interface', iface_2])
+
         self.cli_commit()
+
+        # Check sFlow
+        _, out = rc_cmd('sudo vppctl show sflow')
+
+        expected_entries = (
+            f'sflow enable {interface}',
+            f'sflow enable {iface_2}',
+            'interfaces enabled: 2',
+        )
+
+        for expected_entry in expected_entries:
+            self.assertIn(expected_entry, out)
+
+        # cannot delete system sFlow configuration if VPP sFlow is configured
+        # expect raise ConfigError
+        self.cli_delete(base_sflow)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path + ['sflow'])
+        self.cli_commit()
+
+        # Check interfaces are deleted from VPP sFlow
+        _, out = rc_cmd('sudo vppctl show sflow')
+        self.assertIn('interfaces enabled: 0', out)
 
     def test_18_resource_limits(self):
         max_map_count = '100000'

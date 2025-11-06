@@ -35,6 +35,26 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="profile">
+            <properties>
+              <help>Select configuration profile to adapt different defaults</help>
+              <completionHelp>
+                <list>traditional datacenter</list>
+              </completionHelp>
+              <valueHelp>
+                <format>traditional</format>
+                <description>Adhere mostly to IETF standards or common practices in wide-area internet routing</description>
+              </valueHelp>
+              <valueHelp>
+                <format>datacenter</format>
+                <description>Single administrative domain using aggressive timers</description>
+              </valueHelp>
+              <constraint>
+                <regex>(datacenter|traditional)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>traditional</defaultValue>
+          </leafNode>
           <node name="snmp">
             <properties>
               <help>Enable SNMP integration for next daemons</help>
