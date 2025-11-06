@@ -253,12 +253,14 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="check">
+                  <node name="check">
                     <properties>
                       <help>Active health check backend server</help>
-                      <valueless/>
                     </properties>
-                  </leafNode>
+                    <children>
+                      #include <include/port-number.xml.i>
+                    </children>
+                  </node>
                   #include <include/port-number.xml.i>
                   <leafNode name="send-proxy">
                     <properties>

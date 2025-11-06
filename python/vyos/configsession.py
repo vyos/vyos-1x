@@ -16,6 +16,7 @@
 import os
 import re
 import sys
+import weakref
 import subprocess
 from tempfile import NamedTemporaryFile
 from typing import TypeAlias
@@ -199,10 +200,15 @@ class ConfigSession(object):
 
         self.shared = shared
 
+        if not self.shared and self._vyconf_session:
+            self._finalizer = weakref.finalize(
+                self, self.finalize_vyconf, self._vyconf_session
+            )
+
     def __del__(self):
         if self.shared:
             return
-        if self._vyconf_session is None:
+        if not vyconf_backend():
             try:
                 output = (
                     subprocess.check_output(
@@ -223,12 +229,14 @@ class ConfigSession(object):
                     'Could not tear down session {0}: {1}'.format(self.__session_id, e),
                     file=sys.stderr,
                 )
-        else:
-            if self._vyconf_session.session_changed():
-                Warn('Exiting with uncommitted changes')
-                self._vyconf_session.discard()
-            self._vyconf_session.exit_config_mode()
-            self._vyconf_session.teardown()
+
+    @classmethod
+    def finalize_vyconf(cls, session: VyconfSession):
+        if session.session_changed():
+            Warn('Exiting with uncommitted changes')
+            session.discard()
+        session.exit_config_mode()
+        session.teardown()
 
     def __run_command(self, cmd_list):
         p = subprocess.Popen(

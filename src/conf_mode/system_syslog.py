@@ -52,7 +52,7 @@ def _cleanup_tls_certs():
 
 
 def _remote_has_tls(remote_options):
-    return 'tls' in remote_options and 'enable' in remote_options['tls']
+    return 'tls' in remote_options
 
 
 def _verify_tls_remote_options(remote, remote_options, syslog):
@@ -137,6 +137,11 @@ def get_config(config=None):
         if conf.exists(['system', 'domain-name']):
             tmp  = conf.return_value(['system', 'domain-name'])
             syslog['preserve_fqdn']['domain_name'] = tmp
+
+    # prune 'remote <remote> tls' if it was not set by user
+    for remote in syslog.get('remote', {}):
+        if syslog.from_defaults(['remote', remote, 'tls']):
+            del syslog['remote'][remote]['tls']
 
     return syslog
 

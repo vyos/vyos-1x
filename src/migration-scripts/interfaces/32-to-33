@@ -23,31 +23,36 @@ def migrate(config: ConfigTree) -> None:
     for type in config.list_nodes(['interfaces']):
         for interface in config.list_nodes(['interfaces', type]):
             iface_base_path = ['interfaces', type, interface]
-            dhcpv6_addr_path = iface_base_path + ['address', 'dhcpv6']
-            autoconf_path = iface_base_path + ['ipv6', 'address', 'autoconf']
-            if config.exists(dhcpv6_addr_path) and not config.exists(autoconf_path):
-                config.set(autoconf_path)
+            dhcpv6_addr_path = iface_base_path + ['address']
+
+            if config.exists(dhcpv6_addr_path) and 'dhcpv6' in config.return_values(dhcpv6_addr_path):
+                autoconf_path = iface_base_path + ['ipv6', 'address', 'autoconf']
+                if not config.exists(autoconf_path):
+                    config.set(autoconf_path)
 
             vif_path = iface_base_path + ['vif']
             if config.exists(vif_path):
                 for vif in config.list_nodes(vif_path):
                     vif_dhcpv6_addr_path = vif_path + [vif, 'address']
-                    vif_autoconf_path = vif_path + [vif, 'ipv6', 'address', 'autoconf']
-                    if config.exists(vif_dhcpv6_addr_path) and not config.exists(vif_autoconf_path):
-                        config.set(vif_autoconf_path)
+                    if config.exists(vif_dhcpv6_addr_path) and 'dhcpv6' in config.return_values(vif_dhcpv6_addr_path):
+                        vif_autoconf_path = vif_path + [vif, 'ipv6', 'address', 'autoconf']
+                        if not config.exists(vif_autoconf_path):
+                            config.set(vif_autoconf_path)
 
             vif_s_path = iface_base_path + ['vif-s']
             if config.exists(vif_s_path):
                 for vif_s in config.list_nodes(vif_s_path):
                     vif_s_dhcpv6_addr_path = vif_s_path + [vif_s, 'address']
-                    vif_s_autoconf_path = vif_s_path + [vif_s, 'ipv6', 'address', 'autoconf']
-                    if config.exists(vif_s_dhcpv6_addr_path) and not config.exists(vif_s_autoconf_path):
-                        config.set(vif_s_autoconf_path)
+                    if config.exists(vif_s_dhcpv6_addr_path) and 'dhcpv6' in config.return_values(vif_s_dhcpv6_addr_path):
+                        vif_s_autoconf_path = vif_s_path + [vif_s, 'ipv6', 'address', 'autoconf']
+                        if not config.exists(vif_s_autoconf_path):
+                            config.set(vif_s_autoconf_path)
 
                     vif_c_path = iface_base_path + ['vif-s', vif_s, 'vif-c']
                     if config.exists(vif_c_path):
                         for vif_c in config.list_nodes(vif_c_path):
                             vif_c_dhcpv6_addr_path = vif_c_path + [vif_c, 'address']
-                            vif_c_autoconf_path = vif_c_path + [vif_c, 'ipv6', 'address', 'autoconf']
-                            if config.exists(vif_c_dhcpv6_addr_path) and not config.exists(vif_c_autoconf_path):
-                                config.set(vif_c_autoconf_path)
+                            if config.exists(vif_c_dhcpv6_addr_path) and 'dhcpv6' in config.return_values(vif_c_dhcpv6_addr_path):
+                                vif_c_autoconf_path = vif_c_path + [vif_c, 'ipv6', 'address', 'autoconf']
+                                if not config.exists(vif_c_autoconf_path):
+                                    config.set(vif_c_autoconf_path)

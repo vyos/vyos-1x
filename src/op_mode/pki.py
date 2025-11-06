@@ -1378,7 +1378,7 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
     from vyos.defaults import directories
 
     certbot_config = directories['certbot']
-    hook_dir = directories['base']
+    vyos_conf_scripts_dir = directories['conf_mode']
 
     if force and not os.path.isdir(f'{certbot_config}'):
         # Assume someone deleted the certbot_config folder, renew alone will not
@@ -1388,18 +1388,13 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
         # a bad time
         Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI ' \
                 'subsystem...\n\n')
-        vyos_conf_scripts_dir = directories['conf_mode']
-        cmd(f'sudo sg vyattacfg -c {vyos_conf_scripts_dir}/pki.py')
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py"')
+    elif force:
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew_force"')
+    else:
+        out = cmd(f'sudo sg vyattacfg -c "{vyos_conf_scripts_dir}/pki.py certbot_renew"')
 
-    tmp = f'/usr/bin/certbot renew --no-random-sleep-on-renew ' \
-          f'--config-dir "{certbot_config}" ' \
-          f'--post-hook "{hook_dir}/vyos-certbot-renew-pki.sh"'
-    if force:
-        tmp += ' --force-renewal'
-
-    out = cmd(tmp)
-    if not raw:
-        print(out)
+    print(out)
 
 if __name__ == '__main__':
     try:

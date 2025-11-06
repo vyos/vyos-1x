@@ -22,13 +22,16 @@ interfaces {
         duplex auto
         speed auto
         vif 50 {
+            address 1.2.3.4/31
         }
         vif-s 60 {
             vif-c 70 {
+                address 2.3.4.5/31
             }
         }
     }
     ethernet eth2 {
+        address dhcpv6
         duplex auto
         speed auto
     }

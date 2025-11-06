@@ -351,7 +351,7 @@ class VPPControl:
         self,
         host_if: str,
         name: str,
-        rxq_num: int = 0,
+        rxq_num: int = 65535,
         rxq_size: int = 0,
         txq_size: int = 0,
         mode: Literal['auto', 'copy', 'zero-copy'] = 'auto',

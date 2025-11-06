@@ -574,6 +574,66 @@
             </properties>
              <defaultValue>journald</defaultValue>
           </leafNode>
+          <node name="health-check">
+            <properties>
+              <help>Configure container health checks</help>
+            </properties>
+            <children>
+              <leafNode name="command">
+                <properties>
+                  <help>Health check command to run for the container</help>
+                </properties>
+              </leafNode>
+              <leafNode name="interval">
+                <properties>
+                  <help>Overwrite related health check configuration from the image</help>
+                  <completionHelp>
+                    <list>disable</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>disable</format>
+                    <description>No automatic timer setup</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-16384</format>
+                    <description>Time in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-16384"/>
+                    <regex>(disable)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Timeout for the health check to complete</help>
+                  <valueHelp>
+                    <format>u32:1-16384</format>
+                    <description>Time in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="retry">
+                <properties>
+                  <help>The number of retries before container is consider unhealthy</help>
+                  <valueHelp>
+                    <format>0</format>
+                    <description>No retry</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-255</format>
+                    <description>Number of retries</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-255"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </tagNode>
       <tagNode name="network">

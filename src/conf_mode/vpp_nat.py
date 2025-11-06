@@ -26,7 +26,9 @@ from vyos.config import Config
 from vyos.utils.network import get_interface_address
 
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.vpp.nat.nat44 import Nat44
+from vyos.vpp.control_vpp import VPPControl
 
 
 protocol_map = {
@@ -155,16 +157,14 @@ def verify(config):
             f'Both inside and outside interfaces must be configured. Please add: {", ".join(missing_keys)}'
         )
 
-    for interface in config['interface']['inside']:
-        if interface not in config['vpp_ifaces']:
-            raise ConfigError(
-                f'{interface} must be a VPP interface for inside NAT interface'
-            )
-    for interface in config['interface']['outside']:
-        if interface not in config['vpp_ifaces']:
-            raise ConfigError(
-                f'{interface} must be a VPP interface for outside NAT interface'
-            )
+    vpp = VPPControl()
+    for direction in ['inside', 'outside']:
+        for interface in config['interface'][direction]:
+            vpp_iface_name = vpp_iface_name_transform(interface)
+            if vpp.get_sw_if_index(vpp_iface_name) is None:
+                raise ConfigError(
+                    f'{interface} must be a VPP interface for {direction} NAT interface'
+                )
 
     if not config.get('address_pool', {}).get('translation') and not config.get(
         'static', {}
@@ -371,11 +371,13 @@ def apply(config):
         # Delete inside interfaces
         for interface in remove_config['interface']['inside']:
             if interface not in config.get('interface', {}).get('inside', []):
-                n.delete_nat44_interface_inside(interface)
+                vpp_iface_name = vpp_iface_name_transform(interface)
+                n.delete_nat44_interface_inside(vpp_iface_name)
         # Delete outside interfaces
         for interface in remove_config['interface']['outside']:
             if interface not in config.get('interface', {}).get('outside', []):
-                n.delete_nat44_interface_outside(interface)
+                vpp_iface_name = vpp_iface_name_transform(interface)
+                n.delete_nat44_interface_outside(vpp_iface_name)
         # Delete address pool
         address_pool = config.get('address_pool', {})
         for address in (
@@ -445,10 +447,12 @@ def apply(config):
 
     # Add inside interfaces
     for interface in config['interface']['inside']:
-        n.add_nat44_interface_inside(interface)
+        vpp_iface_name = vpp_iface_name_transform(interface)
+        n.add_nat44_interface_inside(vpp_iface_name)
     # Add outside interfaces
     for interface in config['interface']['outside']:
-        n.add_nat44_interface_outside(interface)
+        vpp_iface_name = vpp_iface_name_transform(interface)
+        n.add_nat44_interface_outside(vpp_iface_name)
     # Add translation pool
     for address in (
         config.get('address_pool', {}).get('translation', {}).get('address', [])

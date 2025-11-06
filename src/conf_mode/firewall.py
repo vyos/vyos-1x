@@ -146,9 +146,10 @@ def get_config(config=None):
         for local_zone, local_zone_conf in firewall['zone'].items():
             if 'local_zone' not in local_zone_conf:
                 # Get physical interfaces assigned to the zone if vrf is used:
-                if 'vrf' in local_zone_conf['member']:
+                local_zone_member = local_zone_conf.get('member', {})
+                if 'vrf' in local_zone_member:
                     local_zone_conf['vrf_interfaces'] = {}
-                    for vrf_name in local_zone_conf['member']['vrf']:
+                    for vrf_name in local_zone_member['vrf']:
                         local_zone_conf['vrf_interfaces'][vrf_name] = ','.join(get_vrf_members(vrf_name))
                 continue
 

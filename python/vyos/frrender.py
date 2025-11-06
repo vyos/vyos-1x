@@ -233,6 +233,12 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
             ip_dict['afi'] = ip_version
             dict.update({ip_version : ip_dict})
 
+    # Get FRR profile
+    frr_system_cli_path = ['system', 'frr']
+    dict['system_frr'] = conf.get_config_dict(frr_system_cli_path, key_mangling=('-', '_'),
+                                              get_first_key=True,
+                                              with_recursive_defaults=True)
+
     # Enable SNMP agentx support
     # SNMP AgentX support cannot be disabled once enabled
     if conf.exists(['service', 'snmp']):
@@ -732,6 +738,11 @@ class FRRender:
         debug('FRR:        START CONFIGURATION RENDERING')
         # we can not reload an empty file, thus we always embed the marker
         output = '!\n'
+
+        # FRR profile configuration
+        tmp = dict_search('system_frr.profile', config_dict)
+        if tmp:
+            output += f'frr defaults {tmp}\n'
 
         # Enable FRR logging
         output += 'log facility daemon\n'

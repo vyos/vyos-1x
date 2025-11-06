@@ -1,4 +1,49 @@
 <!-- include start from dhcp/dhcp-server-common-config.xml.i -->
+<tagNode name="client-class">
+  <properties>
+    <help>Client class name</help>
+    <constraint>
+      #include <include/constraint/alpha-numeric-hyphen-underscore-dot.xml.i>
+    </constraint>
+    <constraintErrorMessage>Client class name may only contain letters, numbers, dots, underscores, and hyphens</constraintErrorMessage>
+  </properties>
+  <children>
+    #include <include/generic-disable-node.xml.i>
+    <node name="relay-agent-information">
+      <properties>
+        <help>Match DHCP Option 82 (relay agent information)</help>
+      </properties>
+      <children>
+        <leafNode name="circuit-id">
+          <properties>
+            <help>Filters on the contents of the circuit-id sub option</help>
+            <valueHelp>
+              <format>hex</format>
+              <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+            </valueHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Any other text string is interpreted as ASCII text</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+        <leafNode name="remote-id">
+          <properties>
+            <help>Filters on the contents of the remote-id sub option</help>
+            <valueHelp>
+              <format>hex</format>
+              <description>Values that start with 0x are interpreted as raw hex. This must only be hexadecimal characters e.g. 0x1234567890ABCDEF</description>
+            </valueHelp>
+            <valueHelp>
+              <format>txt</format>
+              <description>Any other text string is interpreted as ASCII text</description>
+            </valueHelp>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
+  </children>
+</tagNode>
 #include <include/generic-disable-node.xml.i>
 <node name="dynamic-dns-update">
   <properties>
@@ -229,6 +274,14 @@
         #include <include/dhcp/ping-check.xml.i>
         #include <include/generic-description.xml.i>
         #include <include/generic-disable-node.xml.i>
+        <leafNode name="client-class">
+          <properties>
+            <help>DHCP client class</help>
+              <completionHelp>
+                <path>service dhcp-server client-class</path>
+              </completionHelp>
+          </properties>
+        </leafNode>
         <node name="dynamic-dns-update">
           <properties>
             <help>Dynamically update Domain Name System (RFC4702)</help>
@@ -280,6 +333,14 @@
           </properties>
           <children>
             #include <include/dhcp/option-v4.xml.i>
+            <leafNode name="client-class">
+              <properties>
+                <help>DHCP client class</help>
+                <completionHelp>
+                  <path>service dhcp-server client-class</path>
+                </completionHelp>
+              </properties>
+            </leafNode>
             <leafNode name="start">
               <properties>
                 <help>First IP address for DHCP lease range</help>

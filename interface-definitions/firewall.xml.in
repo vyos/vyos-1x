@@ -466,7 +466,7 @@
               <help>Interface associated with zone</help>
             </properties>
             <children>
-              #include <include/generic-interface-multi.xml.i>
+              #include <include/generic-interface-multi-wildcard.xml.i>
               <leafNode name="vrf">
                 <properties>
                   <help>VRF associated with zone</help>

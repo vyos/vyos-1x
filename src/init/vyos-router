@@ -594,8 +594,6 @@ start ()
 
     disabled system_config || system_config || overall_status=1
 
-    systemctl start vyconfd.service
-
     for s in ${subinit[@]} ; do
         if ! disabled $s; then
             log_progress_msg $s
