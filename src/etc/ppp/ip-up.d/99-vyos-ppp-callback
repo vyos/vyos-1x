@@ -1,0 +1,45 @@
+#!/bin/bash
+
+interface=$6
+if [ -z "$interface" ]; then
+    exit
+fi
+
+# 1. Handle sstpc interface callback
+if [[ "$interface" == sstpc* ]]; then
+    /etc/ppp/ip-up.d/ppp-hook-scripts/96-vyos-sstpc-callback "$@"
+fi
+
+# 2. Configure DNS via vyos-hostsd if active
+hostsd_client="/usr/bin/vyos-hostsd-client"
+hostsd_active=false
+
+if /usr/bin/systemctl -q is-active vyos-hostsd; then
+    hostsd_active=true
+fi
+
+if $hostsd_active; then
+    $hostsd_client --delete-name-servers --tag "dhcp-$interface"
+
+    if [ "$USEPEERDNS" ] && [ -n "$DNS1" ]; then
+        $hostsd_client --add-name-servers "$DNS1" --tag "dhcp-$interface"
+    fi
+
+    if [ "$USEPEERDNS" ] && [ -n "$DNS2" ]; then
+        $hostsd_client --add-name-servers "$DNS2" --tag "dhcp-$interface"
+    fi
+
+    $hostsd_client --apply
+fi
+
+# 3. Handle pppoe interface callbacks
+if [[ "$interface" == pppoe* ]]; then
+    /etc/ppp/ip-up.d/ppp-hook-scripts/99-vyos-pppoe-callback "$@"
+    /etc/ppp/ip-up.d/ppp-hook-scripts/99-vyos-pppoe-qos "$@"
+fi
+
+# 4. Handle WLB callback if wlb daemon is running
+WLB_PID_FILE="/run/wlb_daemon.pid"
+if [ -f "$WLB_PID_FILE" ]; then
+    /etc/ppp/ip-up.d/ppp-hook-scripts/99-vyos-pppoe-wlb "$@"
+fi
