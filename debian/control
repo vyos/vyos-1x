@@ -117,7 +117,6 @@ Depends:
   ethtool (>= 6.10),
   lm-sensors,
   procps,
-  netplug,
   sed,
   ssl-cert,
   tuned,

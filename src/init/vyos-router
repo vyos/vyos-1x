@@ -681,13 +681,18 @@ start ()
     fi
 
     # Start netplug daemon
-    systemctl start netplug.service
+    systemctl start vyos-netlinkd.service
 }
 
 stop()
 {
     local -i status=0
     log_daemon_msg "Stopping VyOS router"
+
+    # As vyos-netlinkd consumes a configuration, we need to stop it prior
+    # unmounting /config
+    systemctl stop vyos-netlinkd.service
+
     for ((i=${#sub_inits[@]} - 1; i >= 0; i--)) ; do
     s=${subinit[$i]}
     log_progress_msg $s
@@ -699,7 +704,6 @@ stop()
     umount ${vyatta_configdir}
     log_action_end_msg $?
 
-    systemctl stop netplug.service
     systemctl stop vyconfd.service
     systemctl stop frr.service
 
