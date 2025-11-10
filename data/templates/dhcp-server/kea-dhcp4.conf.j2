@@ -28,6 +28,9 @@
             "persist": true,
             "name": "{{ lease_file }}"
         },
+{% if client_class is vyos_defined %}
+        "client-classes": {{ client_class | kea_client_class_json }},
+{% endif %}
         "option-def": [
             {
                 "name": "wpad-url",

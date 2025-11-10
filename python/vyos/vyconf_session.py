@@ -16,7 +16,9 @@
 #
 
 import os
+import weakref
 import tempfile
+import json
 from functools import wraps
 from typing import Type
 
@@ -36,45 +38,76 @@ class VyconfSessionError(Exception):
     pass
 
 
+def new_session(pid: int, sudo_user: str, user: str):
+    out = vyconf_client.send_request(
+        'setup_session',
+        client_pid=pid,
+        client_sudo_user=sudo_user,
+        client_user=user,
+    )
+    return out.output
+
+
 class VyconfSession:
     def __init__(
-        self, token: str = None, pid: int = None, on_error: Type[Exception] = None
+        self,
+        pid: int = None,
+        token: str = None,
+        extant=False,
+        on_error: Type[Exception] = None,
     ):
-        self.pid = os.getpid() if pid is None else pid
+        self.pid = pid if pid else os.getpid()
         self.sudo_user = os.environ.get('SUDO_USER', None)
         self.user = os.environ.get('USER', None)
 
-        if token is None:
-            # CLI applications with arg pid=getppid() allow coordination
-            # with the ambient session; other uses (such as ConfigSession)
-            # may default to self pid
-            out = vyconf_client.send_request('session_of_pid', client_pid=self.pid)
-            if out.output is None:
-                out = vyconf_client.send_request(
-                    'setup_session',
-                    client_pid=self.pid,
-                    client_sudo_user=self.sudo_user,
-                    client_user=self.user,
-                )
-            self.__token = out.output
-        else:
-            out = vyconf_client.send_request('session_exists', token=token)
-            if out.status:
-                raise ValueError(f'No existing session for token: {token}')
-            self.__token = token
-
         self.in_config_session = in_config_session()
-        if self.in_config_session:
-            out = vyconf_client.send_request(
-                'enter_configuration_mode', token=self.__token
-            )
-            if out.status:
-                raise VyconfSessionError(self.output(out))
+
+        match token:
+            case None:
+                # config-mode sessions are persistent, and managed by caller (CLI or ConfigSession)
+                #
+                # op-mode sessions are ephemeral, unless forced with extant=True:
+                # --- open a new session on init; teardown in finalizer
+                if self.in_config_session:
+                    out = vyconf_client.send_request(
+                        'session_of_pid', client_pid=self.pid
+                    )
+                    if out.output is None:
+                        self.__token = new_session(self.pid, self.sudo_user, self.user)
+                        out = vyconf_client.send_request(
+                            'enter_configuration_mode', token=self.__token
+                        )
+                        if out.status:
+                            raise VyconfSessionError(self.output(out))
+                    else:
+                        self.__token = out.output
+                else:
+                    if not extant:
+                        self.__token = new_session(self.pid, self.sudo_user, self.user)
+                    else:
+                        out = vyconf_client.send_request(
+                            'session_of_pid', client_pid=self.pid
+                        )
+                        if out.output is None:
+                            raise ValueError(f'No existing session for pid {self.pid}')
+                        self.__token = out.output
+            case _:
+                out = vyconf_client.send_request('session_exists', token=token)
+                if out.status:
+                    raise ValueError(f'No existing session for token: {token}')
+                self.__token = token
+
+        if not self.in_config_session and not extant:
+            self._finalizer = weakref.finalize(self, self._teardown, self.__token)
 
         self.on_error = on_error
 
+    @classmethod
+    def _teardown(cls, token):
+        vyconf_client.send_request('teardown', token)
+
     def teardown(self):
-        vyconf_client.send_request('teardown', token=self.__token)
+        self._teardown(self.__token)
 
     def exit_config_mode(self):
         if self.session_changed():
@@ -94,6 +127,21 @@ class VyconfSession:
         if out.status:
             raise VyconfSessionError(self.output(out))
         return out.output
+
+    def show_sessions(
+        self, exclude_self: bool = False, exclude_other: bool = False
+    ) -> list | dict:
+        out = vyconf_client.send_request(
+            'show_sessions',
+            token=self.__token,
+            exclude_self=exclude_self,
+            exclude_other=exclude_other,
+        )
+
+        lst = json.loads(out.output)
+        if len(lst) == 1:
+            return lst[0]
+        return lst
 
     @staticmethod
     def config_mode(f):
@@ -128,6 +176,11 @@ class VyconfSession:
             if res is not None:
                 out = out + res
         return out
+
+    @config_mode
+    def discard(self) -> tuple[str, int]:
+        out = vyconf_client.send_request('discard', token=self.__token)
+        return self.output(out), out.status
 
     @raise_exception
     @config_mode
@@ -186,12 +239,6 @@ class VyconfSession:
         release_commit_lock_file(lock_fd)
 
         return pre_out + self.output(out) + post_out, out.status
-
-    @raise_exception
-    @config_mode
-    def discard(self) -> tuple[str, int]:
-        out = vyconf_client.send_request('discard', token=self.__token)
-        return self.output(out), out.status
 
     @raise_exception
     @config_mode

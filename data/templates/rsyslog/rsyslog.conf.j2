@@ -101,7 +101,7 @@ if prifilt("{{ tmp | join(',') }}") then {
         target="{{ remote_name }}"
         # Port on the remote syslog server
         port="{{ remote_options.port }}"
-        protocol="{{ 'tcp' if tls.enable is vyos_defined else remote_options.protocol }}"
+        protocol="{{ 'tcp' if tls is vyos_defined else remote_options.protocol }}"
 {%             if remote_options.format.include_timezone is vyos_defined %}
         template="RSYSLOG_SyslogProtocol23Format"
 {%             endif %}
@@ -112,7 +112,7 @@ if prifilt("{{ tmp | join(',') }}") then {
 {%             if remote_options.vrf is vyos_defined %}
         Device="{{ remote_options.vrf }}"
 {%             endif %}
-{%             if tls.enable is vyos_defined %}
+{%             if tls is vyos_defined %}
 {%                 set auth_mode = tls.auth_mode %}
         # Specify the use of the OpenSSL TLS driver for this action
         StreamDriver="ossl"

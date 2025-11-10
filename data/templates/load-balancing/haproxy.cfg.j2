@@ -250,7 +250,30 @@ backend {{ back }}
 {%         if back_config.server is vyos_defined %}
 {%             set ssl_back =  'ssl ca-file /run/haproxy/' ~ back_config.ssl.ca_certificate ~ '.pem' if back_config.ssl.ca_certificate is vyos_defined else ('ssl verify none' if back_config.ssl.no_verify is vyos_defined else '') %}
 {%             for server, server_config in back_config.server.items() %}
-    server {{ server }} {{ server_config.address }}:{{ server_config.port }}{{ ' check' if server_config.check is vyos_defined }}{{ ' backup' if server_config.backup is vyos_defined }}{{ ' send-proxy' if server_config.send_proxy is vyos_defined }}{{ ' send-proxy-v2' if server_config.send_proxy_v2 is vyos_defined }} {{ ssl_back }}
+{%                 set address = server_config.address %}
+{%                 set port = server_config.port %}
+{#                 Build optional flags #}
+{%                 set flags = [] %}
+{%                 if server_config.check is vyos_defined %}
+{%                     set _ = flags.append('check') %}
+{#                     Build nested 'check port' flag like this: '... check port 8080' #}
+{%                     if server_config.check.port is vyos_defined %}
+{%                         set _ = flags.extend(['port', server_config.check.port]) %}
+{%                     endif %}
+{%                 endif %}
+{%                 if server_config.backup is vyos_defined %}
+{%                     set _ = flags.append('backup') %}
+{%                 endif %}
+{%                 if server_config.send_proxy is vyos_defined %}
+{%                     set _ = flags.append('send-proxy') %}
+{%                 endif %}
+{%                 if server_config.send_proxy_v2 is vyos_defined %}
+{%                     set _ = flags.append('send-proxy-v2') %}
+{%                 endif %}
+{%                 if ssl_back %}
+{%                     set _ = flags.append(ssl_back) %}
+{%                 endif %}
+    server {{ server }} {{ address }}:{{ port }} {{ flags | select | join(' ') }}
 {%             endfor %}
 {%         endif %}
 {%         if back_config.timeout.check is vyos_defined %}

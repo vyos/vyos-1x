@@ -120,11 +120,11 @@ def delete_image(name: str, force: typing.Optional[bool] = False):
 
     for image in name:
         # convert the truncated image ID to a full image ID
-        rc, ancestor = rc_cmd(f'podman inspect {image} --format "{{{{.Id}}}}"')
+        rc, ancestor = rc_cmd(f'podman inspect {image} --format "{{{{.Id}}}}"', stderr=None)
         if rc != 0:
             raise vyos.opmode.InternalError(ancestor)
         # check if the image ID is an ancestor of any running container
-        rc, in_use = rc_cmd(f'podman ps --filter ancestor={ancestor} -q')
+        rc, in_use = rc_cmd(f'podman ps --filter ancestor={ancestor} -q', stderr=None)
         if rc != 0:
             raise vyos.opmode.InternalError(in_use)
 
@@ -166,6 +166,8 @@ def show_network(raw: bool):
 
 def restart(name: str):
     from vyos.utils.process import rc_cmd
+    from vyos.config import Config
+    from vyos.container import restart_network
 
     rc, output = rc_cmd(f'systemctl restart vyos-container-{name}.service')
     if rc != 0:
@@ -173,6 +175,13 @@ def restart(name: str):
         if rc2 != 0:
             print(output)
             return None
+    if rc == 0:
+        conf = Config()
+        container = conf.get_config_dict(['container'], key_mangling=('-', '_'),
+                                    no_tag_node_value_mangle=True,
+                                    get_first_key=True,
+                                    with_recursive_defaults=True)
+        restart_network(container)
     print(f'Container "{name}" restarted!')
     return output
 

@@ -23,5 +23,10 @@ if len(sys.argv) < 2:
 
 pid = sys.argv[1]
 
-vc = VyconfSession(pid=pid)
-vc.teardown()
+try:
+    vc = VyconfSession(pid=int(pid), extant=True)
+except ValueError:
+    # as this script is called on any config session exit, ignore non-existent
+    pass
+else:
+    vc.teardown()

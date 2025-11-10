@@ -67,7 +67,8 @@
         "vpp_kernel_interface": ["vpp_kernel-interfaces"]
     },
     "vpp_kernel_interfaces": {
-        "vpp_nat_cgnat": ["vpp_nat_cgnat"]
+        "vpp_nat_cgnat": ["vpp_nat_cgnat"],
+        "vpp_nat": ["vpp_nat"]
     }
 }
 

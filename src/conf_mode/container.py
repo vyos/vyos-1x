@@ -29,7 +29,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
-from vyos.ifconfig import Interface
+from vyos.container import restart_network
 from vyos.utils.configfs import delete_cli_node
 from vyos.utils.configfs import add_cli_node
 from vyos.utils.cpu import get_core_count
@@ -161,7 +161,7 @@ def verify(container):
                 if 'name_server' in container_config and 'no_name_server' not in container['network'][network_name]:
                     raise ConfigError(f'Setting name server has no effect when attached container network has DNS enabled!')
 
-                mac = dict_search(f'network.{network_name}.mac', container_config)                
+                mac = dict_search(f'network.{network_name}.mac', container_config)
                 if mac:
                     if mac in net_dict['mac'].keys():
                         raise ConfigError(f'MAC address "{mac}" is already used by container "{net_dict["mac"][mac]}"!')
@@ -194,7 +194,7 @@ def verify(container):
                         if ip_address(address) == ip_network(network)[1]:
                             raise ConfigError(f'IP address "{address}" can not be used for a container, ' \
                                               'reserved for the container engine!')
-                        
+
                         if address in net_dict['address'].keys():
                             raise ConfigError(f'IP address "{address}" is already used by container "{net_dict["address"][address]}"!')
                         net_dict['address'][address] = name
@@ -479,6 +479,24 @@ def generate_run_arguments(name, container_config, host_ident):
         entrypoint = json_write(container_config['entrypoint'].split()).replace('"', "&quot;")
         entrypoint = f'--entrypoint &apos;{entrypoint}&apos;'
 
+    healthcheck = ' --no-healthcheck'
+    if 'health_check' in container_config:
+        healthcheck = ''
+        if 'command' in container_config['health_check']:
+            health_cmd = container_config['health_check']['command']
+            healthcheck += f' --health-cmd="{health_cmd}"'
+        if 'interval' in container_config['health_check']:
+            health_int = container_config['health_check']['interval']
+            if health_int != 'disable':
+                health_int = f'{health_int}s'
+            healthcheck += f' --health-interval={health_int}'
+        if 'timeout' in container_config['health_check']:
+            health_to = container_config['health_check']['timeout']
+            healthcheck += f' --health-timeout={health_to}s'
+        if 'retry' in container_config['health_check']:
+            health_rt = container_config['health_check']['retry']
+            healthcheck += f' --health-retries={health_rt}'
+
     command = ''
     if 'command' in container_config:
         command = container_config['command'].strip()
@@ -488,7 +506,7 @@ def generate_run_arguments(name, container_config, host_ident):
         command_arguments = container_config['arguments'].strip()
 
     if 'allow_host_networks' in container_config:
-        return f'{container_base_cmd} --net host {entrypoint} {image} {command} {command_arguments}'.strip()
+        return f'{container_base_cmd} {healthcheck} --net host {entrypoint} {image} {command} {command_arguments}'.strip()
 
     ip_param = ''
     addr_info = ''
@@ -520,7 +538,7 @@ def generate_run_arguments(name, container_config, host_ident):
         delete_cli_node(mac_config_path)
         add_cli_node(mac_config_path, value=mac_add)
 
-    return f'{container_base_cmd} --no-healthcheck --net {networks} {ip_param} {mac_address} {entrypoint} {image} {command} {command_arguments}'.strip()
+    return f'{container_base_cmd} {healthcheck} --net {networks} {ip_param} {mac_address} {entrypoint} {image} {command} {command_arguments}'.strip()
 
 
 def generate(container):
@@ -655,23 +673,8 @@ def apply(container):
     if disabled_new:
         call('systemctl daemon-reload')
 
-    # Start network and assign it to given VRF if requested. this can only be done
-    # after the containers got started as the podman network interface will
-    # only be enabled by the first container and yet I do not know how to enable
-    # the network interface in advance
-    if 'network' in container:
-        for network, network_config in container['network'].items():
-            type_config = dict_search('type', network_config)
-            if not dict_search('macvlan', type_config):
-                network_name = f'pod-{network}'
-                # T5147: Networks are started only as soon as there is a consumer.
-                # If only a network is created in the first place, no need to assign
-                # it to a VRF as there's no consumer, yet.
-                if interface_exists(network_name):
-                    tmp = Interface(network_name)
-                    tmp.set_vrf(network_config.get('vrf', ''))
-                    tmp.add_ipv6_eui64_address('fe80::/64')
-
+    # Re-Start network and assign it to given VRF if requested.
+    restart_network(container)
     return None
 
 

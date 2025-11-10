@@ -21,6 +21,7 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_pki_certificate
 from vyos.configverify import verify_pki_ca_certificate
+from vyos.defaults import systemd_services
 from vyos.pki import find_chain
 from vyos.pki import encode_certificate
 from vyos.pki import load_certificate
@@ -386,17 +387,18 @@ def generate(ocserv):
 
 
 def apply(ocserv):
+    service_name = systemd_services['openconnect']
     if not ocserv:
-        call('systemctl stop ocserv.service')
+        call(f'systemctl stop {service_name}')
         for file in [ocserv_conf, ocserv_passwd, ocserv_otp_usr]:
             if os.path.exists(file):
                 os.unlink(file)
     else:
-        call('systemctl reload-or-restart ocserv.service')
+        call(f'systemctl reload-or-restart {service_name}')
         counter = 0
         while True:
             # exit early when service runs
-            if is_systemd_service_running('ocserv.service'):
+            if is_systemd_service_running(service_name):
                 break
             sleep(0.250)
             if counter > 5:
