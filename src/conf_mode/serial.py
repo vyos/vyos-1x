@@ -48,7 +48,7 @@ from vyos.configdict import is_node_changed
 # from vyos.configdiff import get_config_diff, Diff
 
 CERT_PATH = '/run/vyos_pki/'
-service_name = 'iolan.service'
+service_name = 'iolan-monitor.service'
 
 def get_config(config=None):
     if config:
@@ -204,6 +204,10 @@ def generate(proxy):
                         if 'hostname' in port_config['global']['port_buffering']['nfs']:
                             port_config['global']['port_buffering']['port_buffer_remote'] = 1
                             remote_enabled = 1
+
+                    if 'syslog_enable' in proxy['global']['port_buffering']:
+                        local_enabled = 1
+                        remote_enabled = 1
 
                     if local_enabled == 1 and remote_enabled == 1:
                         port_config['global']['port_buffering']['mode'] = 'both'
@@ -400,7 +404,21 @@ def generate(proxy):
                     with open(os.path.join(CERT_PATH, f'ssl_rsa_key_{cert_name}.pem'), 'w') as f:
                         f.write(wrap_private_key(key_data, password_protected))
 
+            #inet
+            if 'inet' in port_config:
+                port_config['inet_configured'] = port_config['inet']
+                port_config['inet'] = ''
+                if 'reverse' in port_config.get('service', ''):
+                    if 'service_setting' in port_config:
+                        if 'reverse' in port_config['service_setting']:
+                            if 'ip_aliasing' in port_config['service_setting'].get('reverse', ''):
+                                port_config['inet'] = inet_addr
 
+                if 'modbus' in port_config.get('service', ''):
+                    if 'global' in port_config:
+                        if 'modbus_gateway' in port_config['global']:
+                            if 'ip_aliasing' in port_config['global'].get('modbus_gateway', ''):
+                                port_config['inet'] = inet_addr
 
             replace_empty_dicts(port_config)
 
