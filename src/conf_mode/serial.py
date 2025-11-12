@@ -412,13 +412,13 @@ def generate(proxy):
                     if 'service_setting' in port_config:
                         if 'reverse' in port_config['service_setting']:
                             if 'ip_aliasing' in port_config['service_setting'].get('reverse', ''):
-                                port_config['inet'] = inet_addr
+                                port_config['inet'] = port_config['inet_configured']
 
                 if 'modbus' in port_config.get('service', ''):
                     if 'global' in port_config:
                         if 'modbus_gateway' in port_config['global']:
                             if 'ip_aliasing' in port_config['global'].get('modbus_gateway', ''):
-                                port_config['inet'] = inet_addr
+                                port_config['inet'] = port_config['inet_configured']
 
             replace_empty_dicts(port_config)
 
