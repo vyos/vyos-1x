@@ -319,7 +319,39 @@ let run_external_command opts env command_tmpl =
   let cmd = render_command opts env command_tmpl in
   if opts.dry_run then Printf.printf "%s\n%!" cmd else
   let () = Logs.debug @@ fun m -> m "Command to be executed %s" cmd in
-  let res = Unix.system cmd in
+  (* Get the user database entry to populate the basic environment from:
+     we cannot trust an unprivileged user to supply $SHELL
+     or allow them to impersonate someone else by setting custom $LOGNAME, etc.
+   *)
+  let user_pw_entry = Unix.getpwuid @@ Unix.getuid () in
+  let make_var name value = Printf.sprintf "%s=%s" name value in
+  let env = [|
+    (* A knowingly safe executable lookup path.
+       Since we do not use /usr/local, we do not need to include that.
+       Executables in VyOS-specific directories are referred to by absolute paths
+       in the operational command JSON cache,
+       so we don't need to include those, either.
+     *)
+    make_var "PATH" "/usr/sbin:/usr/bin:/sbin:/bin";
+    (* Standard UNIX variables *)
+    make_var "HOME" user_pw_entry.pw_dir;
+    make_var "USER" user_pw_entry.pw_name;
+    make_var "LOGNAME" user_pw_entry.pw_name;
+    make_var "SHELL" user_pw_entry.pw_shell;
+    (* VyOS-specific variables *)
+    make_var "vyos_data_dir" "/usr/share/vyos";
+    make_var "vyos_validators_dir" "/usr/libexec/vyos/validators";
+    make_var "vyos_completion_dir" "/usr/libexec/vyos/completion";
+    make_var "vyos_libexec_dir" "/usr/libexec/vyos";
+    make_var "vyos_op_scripts_dir" "/usr/libexec/vyos/op_mode";
+  |]
+  in
+  let shell = "/bin/sh" in
+  (* We use execve with an absolute path to Bourne shell rather than execvpe
+     so that a user trying to do PATH=/bad/place vyos-op-run
+     cannot achieve anything with that trick.
+   *)
+  let res = Unix.execve shell [|shell; "-c"; cmd|] env in
   match res with
   | Unix.WEXITED 0 -> ()
   | _ ->

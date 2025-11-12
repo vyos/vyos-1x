@@ -1,3 +1,9 @@
+vyos-utils (0.0.5) unstable; urgency=medium
+
+  * Sanitize the environment in vyos-op-run to prevent malicious variable injection
+
+ -- Daniil Baturin <daniil@vyos.io>  Tue, 11 Nov 2025 13:46:05 +0000
+
 vyos-utils (0.0.4) unstable; urgency=medium
 
   * Add an operational command runner.
