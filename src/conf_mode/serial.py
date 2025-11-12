@@ -449,32 +449,7 @@ def apply(proxy):
 
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
-            send_command_to_iolan('delete', device, '', int(re.findall(r'\d+', device)[0]), 0, '', 0, 0, 0, 0, 0)
-
-    port_buffer_local_id = 0
-    port_buffer_remote_id = 0
-
-    if 'global' in proxy:
-        if 'port_buffering' in proxy['global']:
-            sub_pb_base = []
-            if 'add_timestamp' in proxy['global']['port_buffering']:
-                sub_pb_base.append(proxy['global']['port_buffering']['add_timestamp'])
-            if 'keystroke_buffering' in proxy['global']['port_buffering']:
-                sub_pb_base.append(proxy['global']['port_buffering']['keystroke_buffering'])
-
-            sub_pb_local = sub_pb_base.copy()
-            sub_pb_remote = sub_pb_base.copy()
-            if 'port_buffer_local' in proxy['global']['port_buffering']:
-                sub_pb_local.append(proxy['global']['port_buffering']['local'])
-            if sub_pb_local:
-                port_buffer_local_id = generate_config_id(sub_pb_local, digits=8)
-
-            if 'syslog_enable' in proxy['global']['port_buffering']:
-                sub_pb_remote.append(proxy['global']['port_buffering']['syslog'])
-            if 'port_buffer_remote' in proxy['global']['port_buffering']:
-                sub_pb_remote.append(proxy['global']['port_buffering']['nfs'])
-            if sub_pb_remote:
-                port_buffer_remote_id = generate_config_id(sub_pb_remote, digits=8)
+            send_command_to_iolan('delete', device)
 
     if 'device' in proxy:
         if not is_systemd_service_active(service_name):
@@ -496,49 +471,14 @@ def apply(proxy):
                     print_global_change_warning()
                 break
 
-            ttynum = int(re.findall(r'\d+', device)[0])
-            mtsport = 0
-            monitor_dcd_or_dsr = 0
-            require_systemd = 0
-            alias_ip = ''
-            changed_modbus_gateway_id = 0
-
             while not is_systemd_service_active(service_name):
                 sleep(0.100)
 
             if 'disable' not in serial_config:
-                if 'hardware' in serial_config:
-                    if 'monitor_dcd' in serial_config['hardware'] or 'monitor_dsr' in serial_config['hardware']:
-                        monitor_dcd_or_dsr = 1
 
-                if 'listen_port' in serial_config:
-                    mtsport = serial_config['listen_port']
-
-                if 'vmodem' in serial_config['service']:
-                    vmodem_mode = serial_config['service_setting']['vmodem'].get('mode', '')
-                    if vmodem_mode == 'auto':
-                        mtsport = 0
-                elif 'tcp-reverse' in serial_config['service']:
-                    require_systemd = 1
-                    if 'reverse' in serial_config['service_setting']:
-                        if 'ip_aliasing' in serial_config['service_setting']['reverse'] and 'inet' in serial_config:
-                            alias_ip = serial_config['inet']
-                elif 'modbus' in serial_config['service']:
-                    if 'ip_aliasing' in serial_config['global']['modbus_gateway'] and 'inet' in serial_config:
-                        alias_ip = serial_config['inet']
-                    if 'smodbusd_restart' in proxy:
-                        changed_modbus_gateway_id = generate_config_id(proxy['global']['modbus_gateway'], digits=8)
-                elif 'serial-tunnel-server' in serial_config['service']:
-                    require_systemd = 1
-                elif 'ssh-reverse' in serial_config['service'] or 'telnet-reverse' in serial_config['service']:
-                    require_systemd = 1
-                    if 'reverse' in serial_config['service_setting']:
-                        if 'ip_aliasing' in serial_config['service_setting']['reverse'] and 'inet' in serial_config:
-                            alias_ip = serial_config['inet']
-
-                send_command_to_iolan('restart', device, serial_config['service'], int(ttynum), mtsport, alias_ip, monitor_dcd_or_dsr, require_systemd, changed_modbus_gateway_id, port_buffer_local_id, port_buffer_remote_id)
+                send_command_to_iolan('restart', device)
             else:
-                send_command_to_iolan('stop', device, '', int(ttynum), 0, '', 0, 0, changed_modbus_gateway_id, port_buffer_local_id, port_buffer_remote_id)
+                send_command_to_iolan('stop', device)
 
     return None
 
