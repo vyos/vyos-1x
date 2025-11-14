@@ -556,6 +556,18 @@ def verify(config):
                 raise ConfigError(
                     f'Driver {iface_config["driver"]} is not compatible with interface {iface}!'
                 )
+            is_community_dpdk_driver = (
+                iface_config['kernel_module'] in community_drivers_dpdk
+            )
+            if is_community_dpdk_driver and 'allow_unsupported_nics' not in config.get(
+                'settings', {}
+            ).get('interfaces', {}):
+                raise ConfigError(
+                    f"Driver '{iface_config['kernel_module']}' on interface '{iface}' is not validated for VPP on VyOS. "
+                    f"Using it is unsafe and unsupported and will void support for the entire system. "
+                    f"To proceed at your own risk, enable: 'set vpp settings interfaces allow-unsupported-nics'"
+                )
+
         if iface_config['driver'] == 'xdp' and 'xdp_options' in iface_config:
             if iface_config['xdp_options']['num_rx_queues'] != 'all':
                 rx_queues = iface_config['xdp_api_params']['rxq_num']

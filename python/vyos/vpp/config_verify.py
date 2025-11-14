@@ -146,6 +146,11 @@ def verify_dev_driver(driver_type: str, driver: str) -> bool:
         'vmxnet3',
     ]
 
+    # Community-tested DPDK drivers / not officially supported by VyOS
+    community_drivers_dpdk: list[str] = [
+        'iavf',
+    ]
+
     drivers_xdp: list[str] = [
         'atlantic',
         'ena',
@@ -168,6 +173,8 @@ def verify_dev_driver(driver_type: str, driver: str) -> bool:
 
     if driver_type == 'dpdk':
         if driver in drivers_dpdk:
+            return True
+        if driver in community_drivers_dpdk:
             return True
     elif driver_type == 'xdp':
         if driver in drivers_xdp:

@@ -527,6 +527,12 @@
           <help>VPP settings</help>
         </properties>
         <children>
+          <leafNode name="allow-unsupported-nics">
+            <properties>
+              <help>Allow VPP to use untested NICs. This disables official support for this system</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <node name="buffers">
             <properties>
               <help>Buffer settings</help>
