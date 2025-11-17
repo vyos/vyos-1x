@@ -29,6 +29,7 @@ from pathlib import Path
 
 from ftplib import FTP
 from ftplib import FTP_TLS
+from typing import Optional
 
 from paramiko import SSHClient, SSHException
 from paramiko import MissingHostKeyPolicy
@@ -350,7 +351,7 @@ class GitC:
         raise NotImplementedError("not supported")
 
     @umask(0o077)
-    def upload(self, location: str):
+    def upload(self, location: str, subdirectory: Optional[str] = None):
         scheme = self.url.scheme
         _, _, scheme = scheme.partition("+")
         netloc = self.url.netloc
@@ -395,10 +396,17 @@ class GitC:
 
             # git add
             filename = Path(Path(self.url.path).name).stem
-            dst = path_repository / filename
+            if subdirectory:
+                subdir_path = Path(subdirectory)
+                os.mkdir(path_repository / subdir_path)
+                dst = path_repository / subdirectory / filename
+                dst_file = subdir_path / filename
+            else:
+                dst = path_repository / filename
+                dst_file = filename
             shutil.copy2(location, dst)
             rc, out = rc_cmd(
-                [self.command, "-C", str(path_repository), "add", filename],
+                [self.command, "-C", str(path_repository), "add", dst_file],
                 env=env,
                 shell=False,
             )
@@ -457,11 +465,27 @@ def download(local_path, urlstring, progressbar=False, check_space=False,
         print_error('\nDownload aborted by user.')
         sys.exit(1)
 
-def upload(local_path, urlstring, progressbar=False,
-           source_host='', source_port=0, timeout=10.0):
+
+def upload(
+    local_path,
+    urlstring,
+    progressbar=False,
+    source_host='',
+    source_port=0,
+    timeout=10.0,
+    subdirectory: Optional[str] = None,
+):
     try:
         progressbar = progressbar and is_interactive()
-        urlc(urlstring, progressbar, False, source_host, source_port, timeout).upload(local_path)
+        urlc(
+            urlstring,
+            progressbar,
+            False,
+            source_host,
+            source_port,
+            timeout,
+            subdirectory,
+        ).upload(local_path)
     except Exception as err:
         print_error(f'Unable to upload "{urlstring}": {err}')
         sys.exit(1)
