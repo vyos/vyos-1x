@@ -351,17 +351,18 @@ def generate(proxy):
 
             # data-logging
             if 'data_logging' in port_config:
-                # trueport inbound and outbound use the same service enum
-                if 'trueport' in service:
-                    set_nested(port_config, ['datalogging', 'init_service'], 'trueport')
-                # direct/slient/reverse raw each has an enum
-                elif 'raw' in service:
-                    set_nested(port_config, ['datalogging', 'init_service'], service)
+                if 'trueport' in service or 'tcp' in service:
+                    # trueport inbound and outbound use the same service enum
+                    if 'trueport' in service:
+                        set_nested(port_config, ['datalogging', 'init_service'], 'trueport')
+                    # direct/slient/reverse raw each has an enum
+                    elif 'tcp' in service:
+                        set_nested(port_config, ['datalogging', 'init_service'], service)
 
-                port_config['service'] = 'data-logging'
-                if 'outbound' in port_config:
-                    set_nested(port_config, ['datalogging', 'hostname'], dict_search('main_hostname', port_config['service_setting'][config_service]))
-                    set_nested(port_config, ['datalogging', 'port'], dict_search('main_hostport', port_config['service_setting'][config_service]))
+                    port_config['service'] = 'data-logging'
+                    if 'outbound' in port_config:
+                        set_nested(port_config, ['datalogging', 'hostname'], dict_search('main_hostname', port_config['service_setting'][config_service]))
+                        set_nested(port_config, ['datalogging', 'port'], dict_search('main_hostport', port_config['service_setting'][config_service]))
 
             if 'hardware' in port_config:
                 if 'rts_toggle' in port_config['hardware']:
