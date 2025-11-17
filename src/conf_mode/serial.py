@@ -390,7 +390,7 @@ def generate(proxy):
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
                     key_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'private', 'key')
 
-                    ensure_folder_exists('/etc/vyos_pki')
+                    ensure_folder_exists('/run/vyos_pki')
                     with open(os.path.join(CERT_PATH, f'ssl_rsa_cert_{cert_name}.pem'), 'w') as f:
                         f.write(wrap_certificate(cert_data))
 
