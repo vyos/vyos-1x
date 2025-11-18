@@ -114,9 +114,4 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
-OPAMROOT='/opt/opam'; export OPAMROOT;
-OPAM_SWITCH_PREFIX='/opt/opam/4.07.0'; export OPAM_SWITCH_PREFIX;
-CAML_LD_LIBRARY_PATH='/opt/opam/4.07.0/lib/stublibs:/opt/opam/4.07.0/lib/ocaml/stublibs:/opt/opam/4.07.0/lib/ocaml'; export CAML_LD_LIBRARY_PATH;
-OCAML_TOPLEVEL_PATH='/opt/opam/4.07.0/lib/toplevel'; export OCAML_TOPLEVEL_PATH;
-MANPATH=':/opt/opam/4.07.0/man'; export MANPATH;
-PATH='/opt/opam/4.07.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; export PATH;
+PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'; export PATH;

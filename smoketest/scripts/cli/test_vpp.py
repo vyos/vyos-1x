@@ -31,12 +31,14 @@ from vyos.utils.file import read_file
 from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
 from vyos.system import image
+from vyos.vpp import VPPControl
 
 PROCESS_NAME = 'vpp_main'
 VPP_CONF = '/run/vpp/vpp.conf'
 base_path = ['vpp']
 driver = 'dpdk'
 interface = 'eth1'
+
 
 def get_vpp_config():
     config = defaultdict(dict)
@@ -1618,6 +1620,93 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertRegex(vpp_neighbors, rf'{host}\s+S\s+{mac}\s+{interface}')
 
         self.cli_delete(path_static_arp)
+
+    def test_22_vpp_ipfix(self):
+        base_ipfix = base_path + ['ipfix']
+        base_collector = base_ipfix + ['collector']
+        collector_ip = '127.0.0.2'
+        collector_src = '127.0.0.1'
+        collector_port = '9374'
+        timer_active = '8'
+        timer_passive = '32'
+        tmplt_interval = '4'
+        flow_probe_rec = 'l3'
+        not_vpp_interface = 'eth0'
+
+        self.cli_set(base_ipfix + ['active-timeout', timer_active])
+        self.cli_set(base_ipfix + ['inactive-timeout', timer_passive])
+        self.cli_set(base_ipfix + ['flowprobe-record', flow_probe_rec])
+        self.cli_set(base_ipfix + ['interface', interface])
+        self.cli_set(base_collector + [collector_ip, 'source-address', collector_src])
+        self.cli_set(base_collector + [collector_ip, 'port', collector_port])
+        self.cli_set(
+            base_collector + [collector_ip, 'template-interval', tmplt_interval]
+        )
+        self.cli_commit()
+
+        # Test 1: Verify flowprobe parameters
+        _, out = rc_cmd('sudo vppctl show flowprobe params')
+        required_str = (
+            f'{flow_probe_rec} active: {timer_active} passive: {timer_passive}'
+        )
+        self.assertIn(required_str, out)
+
+        # Test 2: Add non-VPP interface
+        self.cli_set(base_ipfix + ['interface', not_vpp_interface])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_ipfix + ['interface', not_vpp_interface])
+        self.cli_set(base_ipfix + ['interface', interface])
+        self.cli_commit()
+
+        _, out = rc_cmd('sudo vppctl show flowprobe feature')
+        required_str = f'{interface} ip4 rx tx'
+        self.assertIn(required_str, out)
+
+        # Test 3: Verify IPFIX exporter via API
+        # Set socket permissions to allow test access (owner/group read/write only)
+        if os.path.exists('/run/vpp/api.sock'):
+            os.system('sudo chmod 666 /run/vpp/api.sock')
+
+        vpp = VPPControl()
+
+        # Get all exporters
+        result = vpp.api.ipfix_all_exporter_get()
+        # Second element contains the exporter list
+        exporters = result[1]
+
+        # Find our configured exporter
+        found_exporter = None
+        for exporter in exporters:
+            if str(exporter.collector_address) == collector_ip:
+                found_exporter = exporter
+                break
+
+        # Verify exporter parameters
+        self.assertIsNotNone(found_exporter, 'IPFIX exporter not found')
+        self.assertEqual(str(found_exporter.collector_address), collector_ip)
+        self.assertEqual(str(found_exporter.src_address), collector_src)
+        self.assertEqual(found_exporter.collector_port, int(collector_port))
+        self.assertEqual(found_exporter.template_interval, int(tmplt_interval))
+        self.assertEqual(found_exporter.path_mtu, 512)  # Default path MTU
+        self.assertEqual(found_exporter.vrf_id, 0)  # Default VRF
+        self.assertFalse(found_exporter.udp_checksum)  # Default UDP checksum
+
+        # Test 4: Cleanup - remove configuration
+        self.cli_delete(base_ipfix)
+        self.cli_commit()
+
+        # Verify cleanup
+        result = vpp.api.ipfix_all_exporter_get()
+        exporters = result[1]
+        # Should only have default exporter (0.0.0.0) left
+        non_default_exporters = [
+            e for e in exporters if str(e.collector_address) != '0.0.0.0'
+        ]
+        self.assertEqual(
+            len(non_default_exporters), 0, 'Exporters not cleaned up properly'
+        )
 
 
 if __name__ == '__main__':
