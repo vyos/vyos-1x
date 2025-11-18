@@ -94,3 +94,19 @@ def write_tpm_key(key, index=0, pcrs=default_pcrs):
 
         if code != 0:
             raise Exception('write_tpm_key: Failed to write object to TPM')
+
+# PERLE - added check for tpm support
+
+def tpm_allowed():
+    """
+     Args:
+        none
+
+    Returns:
+        True if tpm allowed (configured or exists), False otherwise.
+
+    Note:
+        For now, it returns True/False based on /sys/class/tpm/tpm0 existing or not.
+    """
+    tpm_path = "/sys/class/tpm/tpm0"
+    return os.path.exists(tpm_path)
