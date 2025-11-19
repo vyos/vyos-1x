@@ -20,7 +20,6 @@ import unittest
 
 from json import loads
 from jmespath import search
-from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -28,6 +27,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
+from vyos.utils.misc import wait_for
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import is_intf_addr_assigned
@@ -325,6 +325,48 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Delete Interface
         self.cli_delete(['interfaces', 'dummy', interface])
         self.cli_commit()
+
+    def test_delete_vrf_protocols_should_not_crash(self):
+        # Testcase for issue T7255:
+        #   - verify that deleting the 'protocols' node under a VRF does not crash.
+
+        table = '3000'
+        vrf = 'purple'
+        interface = 'dum3000'
+        router_id = '10.2.0.2'
+
+        # Configure dummy interface and assign to VRF
+        self.cli_set(['interfaces', 'dummy', interface, 'address', '10.1.0.254/24'])
+        self.cli_set(['interfaces', 'dummy', interface, 'vrf', vrf])
+
+        # Configure OSPF under the VRF
+        base_ospf_path = base_path + ['name', vrf, 'protocols', 'ospf']
+        self.cli_set(base_ospf_path + ['interface', interface, 'area', '0'])
+        self.cli_set(base_ospf_path + ['parameters', 'router-id', router_id])
+        self.cli_set(['protocols', 'ospf'])
+
+        # Assign routing table number to the VRF
+        self.cli_set(base_path + ['name', vrf, 'table', table])
+
+        # Commit configuration and verify VRF was successfully created
+        self.cli_commit()
+        self.assertTrue(interface_exists(vrf))
+        frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}', stop_section='^exit')
+        self.assertIn(f'ospf router-id {router_id}', frrconfig)
+
+        try:
+            # Attempt to delete the entire 'protocols' subtree under VRF
+            self.cli_delete(base_path + ['name', vrf, 'protocols'])
+            self.cli_commit()
+
+            # Verify result of deleting 'protocols' subtree
+            frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}', stop_section='^exit')
+            self.assertNotIn(f'ospf router-id {router_id}', frrconfig)
+        finally:
+            # Clean up dummy interface and VRF and re-commit
+            self.cli_delete(['interfaces', 'dummy', interface])
+            self.cli_delete(base_path + ['name', vrf])
+            self.cli_commit()
 
     def test_vrf_disable_forwarding(self):
         table = '2000'
@@ -783,8 +825,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
     def test_dhcp_vrf_default_route(self):
         # T7927 - when retrieving a default route via DHCP, check that additional
         # calls into FRRender() keep the DHCP route in place
-
-        vrf_name = 'red15'
+        vrf_name = 'red-16'
         default_gateway = '192.0.2.1'
         dhcp_if_server = 'veth0'
         dhcp_if_client = 'veth1'
@@ -816,25 +857,29 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'virtual-ethernet', dhcp_if_client, 'address', 'dhcp'])
         self.cli_commit()
 
-        # We need to wait until DHCP client has started and an IP address has been received
-        sleep(8)
+        # define helper for the string we are looking for in FRR configuration
+        # the leading whitespace is required as this lives under a VRF context!
+        test_ok_string = f' ip route 0.0.0.0/0 {default_gateway} {dhcp_if_client}'\
+                         f' tag 210 {default_distance}'
 
-        frrconfig = self.getFRRconfig('^vrf red', stop_section='^exit-vrf')
-        self.assertIn(f' ip route 0.0.0.0/0 {default_gateway} {dhcp_if_client} '\
-                      f'tag 210 {default_distance}', frrconfig)
+        def test_callback(self, vrf_name, string) -> bool:
+            tmp = self.getFRRconfig(f'^vrf {vrf_name}', stop_section='^exit-vrf')
+            return bool(string in tmp)
+
+        # We need to wait until DHCP client has started and an IP address has been received
+        tmp = wait_for(test_callback, self, vrf_name, test_ok_string, timeout=20.0)
+        self.assertTrue(tmp)
 
         # Change anything in FRR to re-trigger config generation. DHCP route
         # must still be present
         self.cli_set(['protocols', 'static', 'route', '10.0.0.0/24', 'blackhole'])
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('^vrf red', stop_section='^exit-vrf')
-        self.assertIn(f' ip route 0.0.0.0/0 {default_gateway} {dhcp_if_client} '\
-                      f'tag 210 {default_distance}', frrconfig)
+        frrconfig = self.getFRRconfig(f'^vrf {vrf_name}', stop_section='^exit-vrf')
+        self.assertIn(test_ok_string, frrconfig)
 
         self.cli_delete(['interfaces', 'virtual-ethernet'])
         self.cli_delete(['service', 'dhcp-server'])
-        self.cli_delete(['vrf', 'name', vrf_name])
 
     def test_dhcpv6_single_pool(self):
         # Prepare the vrf and other options

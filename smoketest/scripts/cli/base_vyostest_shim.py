@@ -12,12 +12,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import importlib.util
 import os
 import paramiko
 import pprint
 import re
-import sys
 import unittest
 
 from time import sleep
@@ -56,17 +54,6 @@ class VyOSUnitTestSHIM:
 
         @classmethod
         def setUpClass(cls):
-            # Import frr-reload.py functionality
-            file_path = '/usr/lib/frr/frr-reload.py'
-            module_name = 'frr_reload'
-
-            spec = importlib.util.spec_from_file_location(module_name, file_path)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = module
-            spec.loader.exec_module(module)
-            Vtysh = getattr(module, 'Vtysh')
-            cls._vtysh = Vtysh(bindir='/usr/bin', confdir='/etc/frr')
-
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
             cls.debug = cls.debug_on()
@@ -140,17 +127,23 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
-        def getFRRconfig(self, start_section:str=None, stop_section='^!',
+        def getFRRconfig(self, start_section:str=None, end_marker='$', stop_section='^!',
                          start_subsection:str=None, stop_subsection='^ exit') -> str:
             """
             Retrieve current "running configuration" from FRR
 
             start_section:    search for a specific start string in the configuration
+            end_marker:       override default "line end $" marker to match on an
+                              "open end" string
             stop_section:     end of the configuration
             start_subsection: search section under the result found by string
             stop_subsection:  end of the subsection (usually something with "exit")
             """
-            frr_config = self._vtysh.mark_show_run()
+            from vyos.utils.process import rc_cmd
+
+            rc, frr_config = rc_cmd('vtysh -c "show running-config no-header"')
+            self.assertEqual(rc, 0)
+
             if not start_section:
                 return frr_config
 
@@ -158,7 +151,7 @@ class VyOSUnitTestSHIM:
             in_section = False
             for line in frr_config.splitlines():
                 if not in_section:
-                    if re.match(start_section, line):
+                    if re.match(f'^{start_section}{end_marker}', line):
                         in_section = True
                         extracted.append(line)
                 else:

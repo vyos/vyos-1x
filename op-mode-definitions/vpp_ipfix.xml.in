@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="ipfix">
+            <properties>
+              <help>Show VPP IPFIX information</help>
+            </properties>
+            <children>
+              <node name="collectors">
+                <properties>
+                  <help>Show IPFIX collectors</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/vpp.py show_ipfix_collectors</command>
+              </node>
+              <node name="interfaces">
+                <properties>
+                  <help>Show IPFIX interfaces</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/vpp.py show_ipfix_interfaces</command>
+              </node>
+              <node name="table">
+                <properties>
+                  <help>Show IPFIX table</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/vpp.py show_ipfix_table</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

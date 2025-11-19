@@ -17,8 +17,9 @@
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
-from vyos.configdict import is_node_changed
 from vyos.configdict import is_source_interface
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
@@ -61,6 +62,10 @@ def get_config(config=None):
         tmp = is_source_interface(conf, peth['source_interface'], ['macsec'])
         if tmp and tmp != ifname: peth.update({'is_source_interface' : tmp})
 
+    # Protocols static arp dependency
+    if 'static_arp' in peth:
+        set_dependents('static_arp', conf)
+
     return peth
 
 def verify(peth):
@@ -94,6 +99,9 @@ def apply(peth):
     if 'deleted' not in peth:
         p = MACVLANIf(**peth)
         p.update(peth)
+
+    if 'static_arp' in peth:
+        call_dependents()
 
     return None
 

@@ -31,19 +31,6 @@
                 </children>
               </virtualTagNode>
               #include <include/show-route-bgp.xml.i>
-              <tagNode name="cache">
-                <properties>
-                  <help>Show kernel IPv6 route cache for a given route</help>
-                  <completionHelp>
-                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-                  </completionHelp>
-                </properties>
-                <standalone>
-                  <help>Show kernel IPv6 route cache</help>
-                  <command>ip -s -f inet6 route list cache</command>
-                </standalone>
-                <command>ip -s -f inet6 route list cache $5</command>
-              </tagNode>
               #include <include/show-route-connected.xml.i>
               <tagNode name="forward">
                 <properties>

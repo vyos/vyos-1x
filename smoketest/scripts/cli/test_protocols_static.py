@@ -254,7 +254,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip route')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
 
         # Verify routes
         for route, route_config in routes.items():
@@ -368,7 +368,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('ip route')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
 
         for table in tables:
             # Verify routes
@@ -558,7 +558,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR configuration
-        frrconfig = self.getFRRconfig('ip mroute')
+        frrconfig = self.getFRRconfig('ip mroute', end_marker='')
         for route, route_config in multicast_routes.items():
             if 'next_hop' in route_config:
                 for next_hop, next_hop_config in route_config['next_hop'].items():
@@ -712,15 +712,12 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.assertIsNotNone(router, 'DHCP router should be available')
 
         # Verify FRR configuration contains the static routes with DHCP router
-        frrconfig = self.getFRRconfig('ip route')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
 
         for route in dhcp_routes.keys():
             expected_route = f'ip route {route} {router} {dhcp_interface}'
-            self.assertIn(
-                expected_route,
-                frrconfig,
-                f'Static route {route} with dhcp-interface should be in FRR config',
-            )
+            self.assertIn(expected_route, frrconfig, f'Static route {route} '\
+                          'with dhcp-interface should be in FRR config')
 
         # Test table-based routes with dhcp-interface
         table_id = '100'
@@ -730,7 +727,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify table route in FRR config
-        frrconfig = self.getFRRconfig('ip route')
+        frrconfig = self.getFRRconfig('ip route', end_marker='')
         expected_table_route = (
             f'ip route {table_route} {router} {dhcp_interface} table {table_id}'
         )

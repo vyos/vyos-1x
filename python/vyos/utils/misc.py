@@ -12,6 +12,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+import time
+
+from typing import Callable, Any
 
 def begin(*args):
     """
@@ -34,9 +37,13 @@ def install_into_config(conf, config_paths, override_prompt=True):
     if not config_paths:
         return None
 
+    import os
+
     from vyos.config import Config
+    from vyos.defaults import base_dir
     from vyos.utils.io import ask_yes_no
     from vyos.utils.process import cmd
+
     if not Config().in_session():
         print('You are not in configure mode, commands to install manually from configure mode:')
         for path in config_paths:
@@ -46,13 +53,17 @@ def install_into_config(conf, config_paths, override_prompt=True):
     count = 0
     failed = []
 
+    env = os.environ.copy()
+    env['vyos_libexec_dir'] = base_dir
+    env['vyos_validators_dir'] = f'{base_dir}/validators'
+
     for path in config_paths:
         if override_prompt and conf.exists(path) and not conf.is_multi(path):
             if not ask_yes_no(f'Config node "{path}" already exists. Do you want to overwrite it?'):
                 continue
 
         try:
-            cmd(f'/opt/vyatta/sbin/my_set {path}')
+            cmd(f'/opt/vyatta/sbin/my_set {path}', env=env)
             count += 1
         except:
             failed.append(path)
@@ -64,3 +75,29 @@ def install_into_config(conf, config_paths, override_prompt=True):
 
     if count > 0:
         print(f'{count} value(s) installed. Use "compare" to see the pending changes, and "commit" to apply.')
+
+def wait_for(
+    func: Callable[..., Any],
+    *args,
+    interval: float = 1.0,
+    timeout: float = 5.0,
+    **kwargs
+) -> bool:
+    """
+    Repeatedly calls `func()` until it returns True or the timeout expires.
+
+    Args:
+        func: A function with no arguments that returns a truthy value when ready.
+        interval: Seconds to wait between calls (default: 1.0).
+        timeout: Maximum time to wait in seconds (default: 5.0).
+
+    Returns:
+        True if the function returned True within the timeout, otherwise False.
+    """
+    start = time.monotonic()
+    while True:
+        if func(*args, **kwargs):
+            return True
+        if (time.monotonic() - start) >= timeout:
+            return False
+        time.sleep(interval)

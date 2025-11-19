@@ -20,6 +20,8 @@ from sys import exit
 from time import sleep
 
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_authentication
@@ -86,6 +88,10 @@ def get_config(config=None):
         del wwan['other_interfaces'][ifname]
     if len(wwan['other_interfaces']) == 0:
         del wwan['other_interfaces']
+
+    # Protocols static arp dependency
+    if 'static_arp' in wwan:
+        set_dependents('static_arp', conf)
 
     return wwan
 
@@ -179,6 +185,10 @@ def apply(wwan):
         call(command, stdout=DEVNULL)
 
     w.update(wwan)
+
+    if 'static_arp' in wwan:
+        call_dependents()
+
     return None
 
 if __name__ == '__main__':

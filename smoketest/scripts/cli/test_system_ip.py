@@ -86,14 +86,16 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
         protocols = ['any', 'babel', 'bgp', 'connected', 'eigrp', 'isis',
                      'kernel', 'ospf', 'rip', 'static', 'table']
 
+        rule_num = '10'
+
         for protocol in protocols:
-            self.cli_set(['policy', 'route-map', f'route-map-{protocol}', 'rule', '10', 'action', 'permit'])
+            self.cli_set(['policy', 'route-map', f'route-map-{protocol}', 'rule', rule_num, 'action', 'permit'])
             self.cli_set(base_path + ['protocol', protocol, 'route-map', f'route-map-{protocol}'])
 
         self.cli_commit()
 
         # Verify route-map properly applied to FRR
-        frrconfig = self.getFRRconfig('ip protocol', stop_section='^end')
+        frrconfig = self.getFRRconfig('ip protocol', end_marker='', stop_section='^end')
         for protocol in protocols:
             self.assertIn(f'ip protocol {protocol} route-map route-map-{protocol}', frrconfig)
 

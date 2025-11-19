@@ -22,6 +22,8 @@ from netaddr import EUI, mac_unix_expanded
 from time import sleep
 
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_address
@@ -132,6 +134,10 @@ def get_config(config=None):
     # used in hostapd.conf.j2
     wifi['hostapd_accept_station_conf'] = hostapd_accept_station_conf.format(**wifi)
     wifi['hostapd_deny_station_conf'] = hostapd_deny_station_conf.format(**wifi)
+
+    # Protocols static arp dependency
+    if 'static_arp' in wifi:
+        set_dependents('static_arp', conf)
 
     return wifi
 
@@ -330,6 +336,9 @@ def apply(wifi):
 
         elif wifi['type'] == 'station':
             call(f'systemctl start wpa_supplicant@{interface}.service')
+
+    if 'static_arp' in wifi:
+        call_dependents()
 
     return None
 

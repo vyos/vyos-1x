@@ -274,7 +274,7 @@ def search_previous_installation(disks: list[str]) -> None:
             if disk.partition_mount(partition, mnt_tmp):
                 if Path(mnt_tmp + '/boot').exists():
                     for path in Path(mnt_tmp + '/boot').iterdir():
-                        if path.joinpath('rw/config/.vyatta_config').exists():
+                        if path.joinpath('rw/opt/vyatta/etc/config/.vyatta_config').exists():
                             image_data.append((path.name, partition))
                 if Path(mnt_tmp + '/luks').exists():
                     for path in Path(mnt_tmp + '/luks').iterdir():
@@ -327,7 +327,7 @@ def search_previous_installation(disks: list[str]) -> None:
     disk.partition_mount(image_drive, mnt_tmp)
 
     if not encrypted:
-        copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+        copytree(f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config)
     else:
         copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
 
@@ -520,6 +520,10 @@ def get_cli_kernel_options(config_file: str) -> list:
             f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
     if 'quiet' in kernel_options:
         cmdline_options.append('quiet')
+
+    # Early reboot on kernel panic via kernel cmdline (must match system_option.py)
+    if dict_search('system.option.reboot-on-panic', config_dict) is not None:
+        cmdline_options.append('panic=60')
 
     if 'disable-hpet' in kernel_options:
         cmdline_options.append('hpet=disable')
