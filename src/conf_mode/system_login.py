@@ -52,6 +52,7 @@ from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
+from vyos.configdiff import get_config_diff
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -97,11 +98,18 @@ def get_config(config=None):
                                  get_first_key=True,
                                  with_recursive_defaults=True)
 
+    D = get_config_diff(conf)
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
     cli_users = []
     if 'user' in login:
         cli_users = list(login['user'])
+
+        for user, user_config in login['user'].items():
+            if 'serial_access' in user_config:
+                conf_diff = D.get_child_nodes_diff(['system', 'login', 'user', user, 'serial-access'], recursive=True)
+                login['user'][user]['serial_access']['add'] = conf_diff['add']
+                login['user'][user]['serial_access']['stable'] = conf_diff['stable']
 
     # prune TACACS global defaults if not set by user
     if login.from_defaults(['tacacs']):
@@ -126,6 +134,21 @@ def get_config(config=None):
 
     set_dependents('ssh', conf)
     return login
+
+def expand_with_origin(lst):
+    mapping = {}
+    for item in lst:
+        nums = list(map(int, re.findall(r'\d+', item)))
+        if '-' in item and len(nums) == 2:
+            start, end = nums
+            numbers = range(start, end + 1)
+        else:
+            numbers = nums
+        for n in numbers:
+            if n not in mapping:
+                mapping[n] = set()
+            mapping[n].add(item)
+    return mapping
 
 def verify(login):
     if 'rm_users' in login:
@@ -183,6 +206,24 @@ def verify(login):
                         gen_header = False
                         DeprecationWarning(SSH_DSA_DEPRECATION_WARNING)
                     print(f'User "{user}" with deprecated public-key named: {pubkey}')
+
+            if 'serial_access' in user_config:
+                existing = []
+                new = []
+                if 'stable' in user_config['serial_access']:
+                    existing = expand_with_origin(user_config['serial_access']['stable'])
+                if 'add' in user_config['serial_access']:
+                    new = expand_with_origin(user_config['serial_access']['add'])
+
+                common_origins = set()
+                for num, sources in new.items():
+                    if num in existing:
+                        common_origins.update(sources)
+
+                common_origins_list = sorted(common_origins)
+
+                if common_origins:
+                    raise ConfigError(f"serial-access range {common_origins_list} cannot be set with existing {user_config['serial_access']['stable']}")
 
     # No more than 1 authentication methods
     if len({'radius', 'tacacs', 'saml'}.intersection(set(login))) > 1:
