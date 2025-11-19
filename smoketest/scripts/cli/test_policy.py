@@ -123,7 +123,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('access-list')
+        config = self.getFRRconfig('access-list', end_marker='')
         for acl, acl_config in acls.items():
             for rule, rule_config in acl_config['rule'].items():
                 tmp = f'access-list {acl} seq {rule}'
@@ -214,7 +214,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('ipv6 access-list')
+        config = self.getFRRconfig('ipv6 access-list', end_marker='')
         for acl, acl_config in acls.items():
             for rule, rule_config in acl_config['rule'].items():
                 tmp = f'ipv6 access-list {acl} seq {rule}'
@@ -312,7 +312,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('bgp as-path access-list')
+        config = self.getFRRconfig('bgp as-path access-list', end_marker='')
         for as_path, as_path_config in test_data.items():
             if 'rule' not in as_path_config:
                 continue
@@ -370,7 +370,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('bgp community-list')
+        config = self.getFRRconfig('bgp community-list', end_marker='')
         for comm_list, comm_list_config in test_data.items():
             if 'rule' not in comm_list_config:
                 continue
@@ -428,7 +428,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('bgp extcommunity-list')
+        config = self.getFRRconfig('bgp extcommunity-list', end_marker='')
         for comm_list, comm_list_config in test_data.items():
             if 'rule' not in comm_list_config:
                 continue
@@ -493,7 +493,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('bgp large-community-list')
+        config = self.getFRRconfig('bgp large-community-list', end_marker='')
         for comm_list, comm_list_config in test_data.items():
             if 'rule' not in comm_list_config:
                 continue
@@ -571,7 +571,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('ip prefix-list')
+        config = self.getFRRconfig('ip prefix-list', end_marker='')
         for prefix_list, prefix_list_config in test_data.items():
             if 'rule' not in prefix_list_config:
                 continue
@@ -654,7 +654,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('ipv6 prefix-list')
+        config = self.getFRRconfig('ipv6 prefix-list', end_marker='')
         for prefix_list, prefix_list_config in test_data.items():
             if 'rule' not in prefix_list_config:
                 continue
@@ -705,7 +705,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = self.getFRRconfig('ip prefix-list')
+        config = self.getFRRconfig('ip prefix-list', end_marker='')
         for rule in test_range:
             tmp = f'ip prefix-list {prefix_list} seq {rule} permit {prefix} le {rule}'
             self.assertIn(tmp, config)
@@ -842,7 +842,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(name, config)
 
                 if 'set' in rule_config:
-                    #Check community
+                    # Check community
                     if 'community' in rule_config['set']:
                         if 'none' in rule_config['set']['community']:
                             tmp = f'set community none'
@@ -855,7 +855,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             values = ' '.join(rule_config['set']['community']['add'])
                             tmp = f'set community {values} additive'
                             self.assertIn(tmp, config)
-                    #Check large-community
+                    # Check large-community
                     if 'large-community' in rule_config['set']:
                         if 'none' in rule_config['set']['large-community']:
                             tmp = f'set large-community none'
@@ -868,7 +868,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             values = ' '.join(rule_config['set']['large-community']['add'])
                             tmp = f'set large-community {values} additive'
                             self.assertIn(tmp, config)
-                    #Check extcommunity
+                    # Check extcommunity
                     if 'extcommunity' in rule_config['set']:
                         if 'none' in rule_config['set']['extcommunity']:
                             tmp = 'set extcommunity none'

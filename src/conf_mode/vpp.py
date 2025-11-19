@@ -193,6 +193,33 @@ def _get_max_xdp_rx_queues(config: dict):
     return 1
 
 
+def _check_removed_interfaces(config: dict, feature_name: str, interfaces_config: dict):
+    """
+    Check if removed interfaces are used in any feature configuration
+
+    Args:
+        config: The main configuration dictionary
+        feature_name: Human-readable feature name for error messages
+        interfaces_config: The interfaces dictionary from the feature config
+    Example:
+        _check_removed_interfaces(config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {}))
+    """
+    if (
+        'removed_ifaces' not in config
+        or not config['removed_ifaces']
+        or not interfaces_config
+    ):
+        return
+
+    for removed_iface in config['removed_ifaces']:
+        iface_name = removed_iface.get('iface_name')
+        if iface_name and iface_name in interfaces_config:
+            raise ConfigError(
+                f'Cannot remove interface {iface_name} - it is currently configured for {feature_name}. '
+                f'Remove it from {feature_name} configuration first.'
+            )
+
+
 def get_config(config=None):
     # use persistent config to store interfaces data between executions
     # this is required because some interfaces after they are connected
@@ -419,6 +446,10 @@ def get_config(config=None):
     if conf.exists(['vpp', 'acl']):
         set_dependents('vpp_acl', conf)
 
+    # IPFIX dependency
+    if conf.exists(['vpp', 'ipfix']):
+        set_dependents('vpp_ipfix', conf)
+
     # PPPoE dependency
     if pppoe_map_ifaces:
         config['pppoe_ifaces'] = pppoe_map_ifaces
@@ -441,6 +472,11 @@ def verify(config):
             f'{", ".join(pppoe_removed_ifaces)} still in use by the PPPoE server. '
             'Disable PPPoE control-plane integration with VPP before proceeding.'
         )
+
+    # Check remove VPP interface that used in IPFIX
+    _check_removed_interfaces(
+        config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {})
+    )
 
     # bail out early - looks like removal from running config
     if not config or ('removed_ifaces' in config and 'settings' not in config):

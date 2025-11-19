@@ -230,6 +230,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             (user, passwd) = self.u_p_dict[interface]
 
+            self.cli_set(base_path + [interface, 'address', 'dhcpv6'])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
             self.cli_set(base_path + [interface, 'authentication', 'username', user])

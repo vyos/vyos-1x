@@ -124,6 +124,10 @@ def get_config(config=None):
         if len(bridge['member']) == 0:
             del bridge['member']
 
+    # Protocols static arp dependency
+    if 'static_arp' in bridge:
+        set_dependents('static_arp', conf)
+
     return bridge
 
 def verify(bridge):
@@ -213,12 +217,20 @@ def apply(bridge):
         if 'interface' in bridge['member']:
             tmp.extend(bridge['member']['interface'])
 
-    for interface in tmp:
-        if interface.startswith(tuple(['vxlan', 'wlan'])) and interface_exists(interface):
-            try:
-                call_dependents()
-            except ConfigError:
-                raise ConfigError(f'Error updating member interface {interface} configuration after changing bridge!')
+    # collect member interfaces that require dependent updates
+    interfaces_need_update = [
+        iface
+        for iface in tmp
+        if iface.startswith(('vxlan', 'wlan')) and interface_exists(iface)
+    ]
+
+    if interfaces_need_update or 'static_arp' in bridge:
+        try:
+            call_dependents()
+        except ConfigError:
+            raise ConfigError(
+                'Error updating member interface configuration after changing bridge!'
+            )
 
     return None
 

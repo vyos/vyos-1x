@@ -19,6 +19,8 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configdict import is_source_interface
@@ -77,6 +79,10 @@ def get_config(config=None):
     if 'source_interface' in macsec:
         tmp = is_source_interface(conf, macsec['source_interface'], ['macsec', 'pseudo-ethernet'])
         if tmp and tmp != ifname: macsec.update({'is_source_interface' : tmp})
+
+    # Protocols static arp dependency
+    if 'static_arp' in macsec:
+        set_dependents('static_arp', conf)
 
     return macsec
 
@@ -192,6 +198,9 @@ def apply(macsec):
     if dict_search('security.mka.cak', macsec):
         if not is_systemd_service_running(systemd_service) or 'shutdown_required' in macsec:
             call(f'systemctl reload-or-restart {systemd_service}')
+
+    if 'static_arp' in macsec:
+        call_dependents()
 
     return None
 

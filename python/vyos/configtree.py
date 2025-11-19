@@ -145,6 +145,10 @@ class ConfigTree(object):
         self.__exists.argtypes = [c_void_p, c_char_p]
         self.__exists.restype = c_int
 
+        self.__value_exists = self.__lib.value_exists
+        self.__value_exists.argtypes = [c_void_p, c_char_p, c_char_p]
+        self.__value_exists.restype = c_int
+
         self.__list_nodes = self.__lib.list_nodes
         self.__list_nodes.argtypes = [c_void_p, c_char_p]
         self.__list_nodes.restype = c_char_p
@@ -260,7 +264,8 @@ class ConfigTree(object):
 
         res = self.__create_node(self.__config, path_str)
         if res != 0:
-            raise ConfigTreeError(f'Path already exists: {path}')
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(f'{msg}: {path}')
 
     def set(self, path, value=None, replace=True):
         """Set new entry in VyOS configuration.
@@ -275,12 +280,20 @@ class ConfigTree(object):
         path_str = ' '.join(map(str, path)).encode()
 
         if value is None:
-            self.__set_valueless(self.__config, path_str)
+            res = self.__set_valueless(self.__config, path_str)
         else:
             if replace:
-                self.__set_replace_value(self.__config, path_str, str(value).encode())
+                res = self.__set_replace_value(
+                    self.__config, path_str, str(value).encode()
+                )
             else:
-                self.__set_add_value(self.__config, path_str, str(value).encode())
+                res = self.__set_add_value(self.__config, path_str, str(value).encode())
+
+        if res != 0:
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(
+                f'{msg}: path "{path}" value "{value}" replace "{replace}"'
+            )
 
         if self.__migration:
             self.migration_log.info(
@@ -293,7 +306,8 @@ class ConfigTree(object):
 
         res = self.__delete(self.__config, path_str)
         if res != 0:
-            raise ConfigTreeError(f"Path doesn't exist: {path}")
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(f'{msg}: path "{path}"')
 
         if self.__migration:
             self.migration_log.info(f'- op: delete path: {path}')
@@ -304,12 +318,8 @@ class ConfigTree(object):
 
         res = self.__delete_value(self.__config, path_str, value.encode())
         if res != 0:
-            if res == 1:
-                raise ConfigTreeError(f"Path doesn't exist: {path}")
-            elif res == 2:
-                raise ConfigTreeError(f"Value doesn't exist: '{value}'")
-            else:
-                raise ConfigTreeError()
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(f'{msg}: path "{path}" value "{value}"')
 
         if self.__migration:
             self.migration_log.info(f'- op: delete_value path: {path} value: {value}')
@@ -322,10 +332,12 @@ class ConfigTree(object):
         # Check if a node with intended new name already exists
         new_path = path[:-1] + [new_name]
         if self.exists(new_path):
-            raise ConfigTreeError()
+            raise ConfigTreeError(f'Name {new_name} already exists')
+
         res = self.__rename(self.__config, path_str, newname_str)
         if res != 0:
-            raise ConfigTreeError("Path [{}] doesn't exist".format(path))
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(f'{msg}: {path}')
 
         if self.__migration:
             self.migration_log.info(
@@ -356,6 +368,16 @@ class ConfigTree(object):
         path_str = ' '.join(map(str, path)).encode()
 
         res = self.__exists(self.__config, path_str)
+        if res == 0:
+            return False
+        else:
+            return True
+
+    def value_exists(self, path, value):
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        res = self.__value_exists(self.__config, path_str, value.encode())
         if res == 0:
             return False
         else:
@@ -418,13 +440,18 @@ class ConfigTree(object):
         if res == 0:
             return True
         else:
-            raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(f'{msg}: {path}')
 
     def is_leaf(self, path):
         check_path(path)
         path_str = ' '.join(map(str, path)).encode()
 
-        return self.__is_leaf(self.__config, path_str)
+        res = self.__is_leaf(self.__config, path_str)
+        if res >= 1:
+            return True
+        else:
+            return False
 
     def set_leaf(self, path, value):
         check_path(path)
@@ -434,7 +461,8 @@ class ConfigTree(object):
         if res == 0:
             return True
         else:
-            raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(f'{msg}: {path}')
 
     def get_subtree(self, path, with_node=False):
         check_path(path)

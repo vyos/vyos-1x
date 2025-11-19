@@ -17,6 +17,8 @@
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
@@ -50,6 +52,10 @@ def get_config(config=None):
     for cli_option in ['remote', 'vni', 'parameters', 'port']:
         if is_node_changed(conf, base + [ifname, cli_option]):
             geneve.update({'rebuild_required': {}})
+
+    # Protocols static arp dependency
+    if 'static_arp' in geneve:
+        set_dependents('static_arp', conf)
 
     return geneve
 
@@ -89,6 +95,9 @@ def apply(geneve):
         # Finally create the new interface
         g = GeneveIf(**geneve)
         g.update(geneve)
+
+    if 'static_arp' in geneve:
+        call_dependents()
 
     return None
 

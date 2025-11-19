@@ -19,6 +19,8 @@ from sys import exit
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -46,6 +48,10 @@ def get_config(config=None):
     # interfaces configrued on the CLI so we can assign proper IP addresses etc.
     veth['other_interfaces'] = conf.get_config_dict(base, key_mangling=('-', '_'),
                                      get_first_key=True, no_tag_node_value_mangle=True)
+
+    # Protocols static arp dependency
+    if 'static_arp' in veth:
+        set_dependents('static_arp', conf)
 
     return veth
 
@@ -100,6 +106,9 @@ def apply(veth):
     if 'deleted' not in veth:
         p = VethIf(**veth)
         p.update(veth)
+
+    if 'static_arp' in veth:
+        call_dependents()
 
     return None
 

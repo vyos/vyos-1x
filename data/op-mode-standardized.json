@@ -32,5 +32,6 @@
 "system.py",
 "uptime.py",
 "version.py",
+"vpp.py",
 "vrf.py"
 ]

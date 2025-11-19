@@ -17,6 +17,8 @@
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_address
@@ -55,6 +57,10 @@ def get_config(config=None):
 
         tmp = leaf_node_changed(conf, base + [ifname, 'session-id'])
         l2tpv3.update({'session_id': tmp[0]})
+
+    # Protocols static arp dependency
+    if 'static_arp' in l2tpv3:
+        set_dependents('static_arp', conf)
 
     return l2tpv3
 
@@ -99,6 +105,9 @@ def apply(l2tpv3):
         # Finally create the new interface
         l = L2TPv3If(**l2tpv3)
         l.update(l2tpv3)
+
+    if 'static_arp' in l2tpv3:
+        call_dependents()
 
     return None
 

@@ -8,11 +8,40 @@
         "group_resync": ["system_conntrack", "nat", "policy_route", "load-balancing_wan"]
     },
     "interfaces_bonding": {
-        "ethernet": ["interfaces_ethernet"]
+        "ethernet": ["interfaces_ethernet"],
+        "static_arp": ["protocols_static_arp"]
     },
     "interfaces_bridge": {
         "vxlan": ["interfaces_vxlan"],
-        "wlan": ["interfaces_wireless"]
+        "wlan": ["interfaces_wireless"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_ethernet": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_geneve": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_l2tpv3": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_macsec": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_pseudo_ethernet": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_virtual_ethernet": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_vxlan": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_wireless": {
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_wwan": {
+        "static_arp": ["protocols_static_arp"]
     },
     "interfaces_wireguard": {
         "vxlan": ["interfaces_vxlan"]
