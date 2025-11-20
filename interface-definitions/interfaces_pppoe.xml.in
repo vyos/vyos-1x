@@ -29,6 +29,7 @@
               <constraint>
                 <regex>(dhcpv6)</regex>
               </constraint>
+              <multi/>
             </properties>
           </leafNode>
           #include <include/pppoe-access-concentrator.xml.i>

@@ -21,8 +21,10 @@ import time
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.utils.file import chmod_755
 from vyos.utils.file import write_file
+from vyos.utils.misc import wait_for
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 
 base_path = ['load-balancing']
 
@@ -428,6 +430,77 @@ echo "$ifname - $state" > {hook_output_path}
 
         self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
 
+    def test_3_or_more_interfaces_in_rule(self):
+        lan_iface = 'eth1'
+
+        # Interfaces for equal weight test
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '101', 'address', '203.0.113.2/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '102', 'address', '203.0.113.6/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '103', 'address', '203.0.113.10/30'])
+
+        # Interfaces for unequal weight test
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '201', 'address', '203.0.113.14/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '202', 'address', '203.0.113.18/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '203', 'address', '203.0.113.22/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '204', 'address', '203.0.113.26/30'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vif', '205', 'address', '203.0.113.30/30'])
+
+
+        self.cli_set(['interfaces', 'ethernet', lan_iface, 'vif', '100', 'address', '198.51.100.2/30'])
+        self.cli_set(['interfaces', 'ethernet', lan_iface, 'vif', '200', 'address', '198.51.100.6/30'])
+
+        # Health checks for equal weight test
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.101', 'nexthop', '203.0.113.2'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.102', 'nexthop', '203.0.113.6'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.103', 'nexthop', '203.0.113.10'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'inbound-interface', f'{lan_iface}.100'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0.101'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0.102'])
+        self.cli_set(base_path + ['wan', 'rule', '10', 'interface', 'eth0.103'])
+
+        # Health checks for unequal weight test
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.201', 'nexthop', '203.0.113.14'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.202', 'nexthop', '203.0.113.18'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.203', 'nexthop', '203.0.113.22'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.204', 'nexthop', '203.0.113.26'])
+        self.cli_set(base_path + ['wan', 'interface-health', 'eth0.205', 'nexthop', '203.0.113.30'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'inbound-interface', f'{lan_iface}.200'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth0.201', 'weight', '2'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth0.202', 'weight', '4'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth0.203', 'weight', '4'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth0.204', 'weight', '7'])
+        self.cli_set(base_path + ['wan', 'rule', '20', 'interface', 'eth0.205', 'weight', '4'])
+
+        # commit changes
+        self.cli_commit()
+
+        def check_wlb_status():
+            rc, wlb_status = rc_cmd('nft list chain ip vyos_wanloadbalance wlb_mangle_prerouting')
+            if rc != 0:
+                return False
+
+            # get all lines containing 'jump'
+            lines = [l for l in wlb_status.splitlines() if 'jump' in l]
+
+            # check total count of 'jump' across all matching lines
+            total_jumps = sum(l.count('jump') for l in lines)
+
+            return total_jumps == 8
+
+        wait_for(check_wlb_status)
+
+        nftables_search = [
+            ['0 : jump wlb_mangle_isp_eth0.101',
+            '1 : jump wlb_mangle_isp_eth0.102',
+            '2 : jump wlb_mangle_isp_eth0.103'],
+            ['0-1 : jump wlb_mangle_isp_eth0.201',
+            '2-5 : jump wlb_mangle_isp_eth0.202',
+            '6-9 : jump wlb_mangle_isp_eth0.203',
+            '10-13 : jump wlb_mangle_isp_eth0.205',
+            '14-20 : jump wlb_mangle_isp_eth0.204'],
+        ]
+
+        self.verify_nftables_chain(nftables_search, 'ip vyos_wanloadbalance', 'wlb_mangle_prerouting')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

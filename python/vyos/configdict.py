@@ -613,6 +613,16 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, base + [ifname], dict)
+
+    # Checks for the presence of static ARP entries on a given interface or VLAN
+    static_arp = config.get_config_dict(
+        ['protocols', 'static', 'arp', 'interface'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+    )
+    if any(key == ifname or key.startswith(f'{ifname}.') for key in static_arp.keys()):
+        dict.update({'static_arp': {}})
+
     return ifname, dict
 
 def get_vlan_ids(interface):

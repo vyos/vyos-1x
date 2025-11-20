@@ -18,6 +18,8 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_node_changed
@@ -82,6 +84,10 @@ def get_config(config=None):
         del vxlan['other_tunnels'][ifname]
     if len(vxlan['other_tunnels']) == 0:
         del vxlan['other_tunnels']
+
+    # Protocols static arp dependency
+    if 'static_arp' in vxlan:
+        set_dependents('static_arp', conf)
 
     return vxlan
 
@@ -248,6 +254,9 @@ def apply(vxlan):
         # Finally create the new interface
         v = VXLANIf(**vxlan)
         v.update(vxlan)
+
+    if 'static_arp' in vxlan:
+        call_dependents()
 
     return None
 

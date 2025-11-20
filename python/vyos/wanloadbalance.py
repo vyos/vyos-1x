@@ -154,7 +154,7 @@ def wlb_weight_interfaces(rule_conf, health_state):
     for ifname, weight in sorted(interfaces, key=lambda i: i[1]): # build weight ranges
         end = start + weight - 1
         out.append((ifname, f'{start}-{end}' if end > start else start))
-        start = weight
+        start += weight
 
     return out, total_weight
 

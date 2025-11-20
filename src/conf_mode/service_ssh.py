@@ -36,6 +36,8 @@ from vyos.pki import encode_public_key
 from vyos.pki import load_openssh_public_key
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.file import write_file
+# PERLE - access tpm allowed checking
+from vyos.tpm import tpm_allowed
 
 airbag.enable()
 
@@ -51,6 +53,7 @@ key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
 key_ecdsa = '/etc/ssh/ssh_host_ecdsa_key'
 tpm_key_rsa = '/etc/ssh/ssh_tpm_host_rsa_key.tpm'
 tpm_key_ecdsa = '/etc/ssh/ssh_tpm_host_ecdsa_key.tpm'
+tpm_agent_cfile_name = '/etc/ssh/sshd_config.d/10-ssh-tpm-agent'
 
 trusted_user_ca = config_files['sshd_user_ca']
 
@@ -131,30 +134,39 @@ def generate(ssh):
 
     # This usually happens only once on a fresh system, SSH keys need to be
     # freshly generted, one per every system!
-    # PERLE removed generating RSA server host key text files
-    # PERLE if not os.path.isfile(key_rsa):
-        # PERLE modified syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
-        # PERLE modified call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')
+    # PERLE check if tpm allowed before generating RSA server host key text files
+    # PERLE for some reason vyos is not generating ECDSA server host key text files
+    # PERLE else if tpm is allowed, remove old rsa/ecdsa files, then create tpm backed rsa  ecdsa keys
+    if not tpm_allowed():
+        if not os.path.isfile(key_rsa):
+            syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
+            call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')
+        # move the config file that loads tpm socket and tpm back rsa/ecdsa host key
+        call(f'sudo mv {tpm_agent_cfile_name}.conf {tpm_agent_cfile_name}.tpm')
+    else:
+        if os.path.isfile(key_rsa):
+            syslog(LOG_INFO, 'SSH RSA host key found, removing text key file')
+            call(f'sudo rm {key_rsa}*')
+        if os.path.isfile(key_ecdsa):
+            syslog(LOG_INFO, 'SSH ECDSA host key found, removing text key file!')
+            call(f'sudo rm {key_ecdsa}*')
+        if not os.path.isfile(tpm_key_rsa):
+            syslog(LOG_INFO, 'Generating missing SSH tpm backed RSA host key!')
+            call(f'ssh-tpm-keygen -A')
+            call(f'ssh-tpm-hostkeys --install-system-units')
+        if not os.path.isfile(tpm_key_ecdsa):
+            syslog(LOG_INFO, 'Generating missing SSH tpm backed ECDSA host key!')
+            call(f'ssh-tpm-keygen -A')
+            call(f'ssh-tpm-hostkeys --install-system-units')
+        # restore the config file that loads tpm socket and tpm back rsa/ecdsa host key
+        call(f'sudo mv {tpm_agent_cfile_name}.tpm {tpm_agent_cfile_name}.conf')
+
     if not os.path.isfile(key_dsa):
         syslog(LOG_INFO, 'SSH DSA host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t dsa -f {key_dsa}')
     if not os.path.isfile(key_ed25519):
         syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
-    # PERLE added - sudo to remove old rsa/ecdsa files, then create tpm backed rsa  ecdsa keys
-    if os.path.isfile(key_rsa):
-        syslog(LOG_INFO, 'SSH RSA host key found, removing text key file')
-        call(f'sudo rm {key_rsa}*')
-    if os.path.isfile(key_ecdsa):
-        syslog(LOG_INFO, 'SSH ECDSA host key found, removing text key file!')
-        call(f'sudo rm {key_ecdsa}*')
-    if not os.path.isfile(tpm_key_rsa):
-        syslog(LOG_INFO, 'SSH tpm backed RSA host key not found, generating new key!')
-        call(f'ssh-tpm-keygen -A')
-        call(f'ssh-tpm-hostkeys --install-system-units')
-    if not os.path.isfile(tpm_key_ecdsa):
-        syslog(LOG_INFO, 'SSH tpm backed ECDSA host key not found, generating new key!')
-        call(f'ssh-tpm-keygen -A')
 
     if 'trusted_user_ca' in ssh:
         key_name = ssh['trusted_user_ca']
@@ -190,9 +202,10 @@ def apply(ssh):
         # SSH access is removed in the commit
         call('systemctl stop ssh@*.service')
         call(f'systemctl stop {systemd_service_sshguard}')
-        # PERLE added
-        call(f'systemctl stop ssh-tpm-service')
-        call(f'systemctl stop ssh-tpm-service.socket')
+        # PERLE add check to restart ssh-tpm-agent
+        if tpm_allowed():
+            call(f'systemctl stop ssh-tpm-service')
+            call(f'systemctl stop ssh-tpm-service.socket')
         return None
 
     if 'dynamic_protection' not in ssh:
@@ -208,10 +221,11 @@ def apply(ssh):
         call('systemctl stop ssh@*.service')
         systemd_action = 'restart'
 
-    # PERLE added
-    # call(f'systemctl enable --now ssh-tpm-agent.socket')
-    call(f'systemctl {systemd_action} ssh-tpm-agent')
-    call(f'systemctl {systemd_action} ssh-tpm-agent.socket')
+    # PERLE add check to restart ssh-tpm-agent
+    if tpm_allowed():
+        # call(f'systemctl enable --now ssh-tpm-agent.socket')
+        call(f'systemctl {systemd_action} ssh-tpm-agent')
+        call(f'systemctl {systemd_action} ssh-tpm-agent.socket')
 
     for vrf in ssh['vrf']:
         call(f'systemctl {systemd_action} ssh@{vrf}.service')

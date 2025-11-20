@@ -224,10 +224,8 @@ fi
 
 # Remove unwanted daemon files from /etc
 # conntackd
-# pmacct
 # ntp
 DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd
-        /etc/default/pmacctd /etc/pmacct
         /etc/ntp.conf /etc/default/ssh /etc/avahi/avahi-daemon.conf /etc/avahi/hosts
         /etc/powerdns /etc/default/pdns-recursor
         /etc/ppp/ip-up.d/0000usepeerdns /etc/ppp/ip-down.d/0000usepeerdns"

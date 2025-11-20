@@ -109,7 +109,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify route-map properly applied to FRR
-        frrconfig = self.getFRRconfig('ipv6 protocol', stop_section='^end')
+        frrconfig = self.getFRRconfig('ipv6 protocol', end_marker='', stop_section='^end')
         for protocol in protocols:
             # VyOS and FRR use a different name for OSPFv3 (IPv6)
             if protocol == 'ospfv3':

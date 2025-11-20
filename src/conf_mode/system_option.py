@@ -196,6 +196,11 @@ def generate(options):
         if 'quiet' in options['kernel']:
             cmdline_options.append('quiet')
 
+    # Early reboot on kernel panic via kernel cmdline
+    # Keep this in sync with image_installer.py:get_cli_kernel_options()
+    if 'reboot_on_panic' in options:
+        cmdline_options.append('panic=60')
+
     if 'disable_hpet' in kernel_opts:
         cmdline_options.append('hpet=disable')
 

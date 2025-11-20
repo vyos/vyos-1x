@@ -175,6 +175,10 @@ def get_config(config=None):
             tmp = has_vrf_configured(conf, interface)
             if tmp: bond['member']['interface'][interface].update({'has_vrf' : ''})
 
+    # Protocols static arp dependency
+    if 'static_arp' in bond:
+        set_dependents('static_arp', conf)
+
     return bond
 
 
@@ -279,7 +283,7 @@ def apply(bond):
     else:
         b.update(bond)
 
-    if dict_search('member.interface_remove', bond):
+    if dict_search('member.interface_remove', bond) or 'static_arp' in bond:
         try:
             call_dependents()
         except ConfigError:
