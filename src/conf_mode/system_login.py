@@ -216,9 +216,11 @@ def verify(login):
                     new = expand_with_origin(user_config['serial_access']['add'])
 
                 common_origins = set()
-                for num, sources in new.items():
+                for num, new_sources in new.items():
                     if num in existing:
-                        common_origins.update(sources)
+                        existing_sources = existing[num]
+                        if set(new_sources) != set(existing_sources):
+                            common_origins.update(new_sources)
 
                 common_origins_list = sorted(common_origins)
 
