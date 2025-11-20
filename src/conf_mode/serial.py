@@ -418,7 +418,7 @@ def generate(proxy):
             #inet
             if 'inet' in port_config:
                 port_config['inet_configured'] = port_config['inet']
-                port_config['inet'] = ''
+                del port_config['inet']
                 if 'reverse' in port_config.get('service', ''):
                     if 'service_setting' in port_config:
                         if 'reverse' in port_config['service_setting']:
