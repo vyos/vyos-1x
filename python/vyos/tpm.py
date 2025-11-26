@@ -97,16 +97,73 @@ def write_tpm_key(key, index=0, pcrs=default_pcrs):
 
 # PERLE - added check for tpm support
 
+from vyos.utils.process import cmd
+
+tpm_enabled_path = "/etc/vyos/tpm.enabled"
+tpm_dev_path = "/sys/class/tpm/tpm0"
+
+def tpm_exist():
+    """
+     Args:
+        none
+
+    Returns:
+        True if tpm device exists, False otherwise.
+
+    Note:
+        For now, it returns True/False based on /sys/class/tpm/tpm0 existing or not.
+    """
+    return os.path.exists(tpm_dev_path)
+
+def tpm_enabled():
+    """
+     Args:
+        none
+
+    Returns:
+        True if tpm support enabled by user, False otherwise.
+
+    Note:
+        For now, it returns True/False based on file /etc/vyos/tpm.enabled existing or not.
+    """
+    return os.path.exists(tpm_enabled_path)
+
 def tpm_allowed():
     """
      Args:
         none
 
     Returns:
-        True if tpm allowed (configured or exists), False otherwise.
+        True if tpm allowed (configured AND tpm device exists), False otherwise.
 
     Note:
         For now, it returns True/False based on /sys/class/tpm/tpm0 existing or not.
     """
-    tpm_path = "/sys/class/tpm/tpm0"
-    return os.path.exists(tpm_path)
+    return tpm_enabled() and tpm_exist() 
+
+
+def tpm_enable():
+    """
+     Args:
+        none
+
+    Returns:
+        none
+
+    Note:
+        For now, it touches/creates /etc/vyos/tpm.enabled.
+    """
+    cmd(f'sudo touch {tpm_enabled_path}')
+
+def tpm_disable():
+    """
+     Args:
+        none
+
+    Returns:
+        none
+
+    Note:
+        For now, it removes /etc/vyos/tpm.enabled.
+    """
+    cmd(f'sudo rm -f {tpm_enabled_path}')

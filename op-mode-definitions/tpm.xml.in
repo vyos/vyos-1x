@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="tpm">
+    <properties>
+      <help>Enable/disable TPM2 support for key storage and TPM backed keys</help>
+    </properties>
+    <children>
+      <node name="disable">
+        <properties>
+          <help>Disable TPM2 support for key storage and TPM backed keys</help>
+        </properties>
+        <command>${vyos_libexec_dir}/vyos-opmode-tpm.py --disable</command>
+      </node>
+      <node name="enable">
+        <properties>
+          <help>Enable TPM2 support for key storage and TPM backed keys</help>
+        </properties>
+        <command>${vyos_libexec_dir}/vyos-opmode-tpm.py --enable</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
