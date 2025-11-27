@@ -651,8 +651,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
     def test_vrf_conntrack(self):
         table = '8710'
         nftables_rules = {
-            'vrf_zones_ct_in': ['ct original zone set iifname map @ct_iface_map'],
-            'vrf_zones_ct_out': ['ct original zone set oifname map @ct_iface_map']
+            'vrf_zones_ct_in': ['ct zone set iifname map @ct_iface_map'],
+            'vrf_zones_ct_out': ['ct zone set oifname map @ct_iface_map'],
         }
 
         self.cli_set(base_path + ['name', 'randomVRF', 'table', '1000'])

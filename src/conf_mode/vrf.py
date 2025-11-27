@@ -46,8 +46,8 @@ k_mod = ['vrf']
 
 nftables_table = 'inet vrf_zones'
 nftables_rules = {
-    'vrf_zones_ct_in': 'counter ct original zone set iifname map @ct_iface_map',
-    'vrf_zones_ct_out': 'counter ct original zone set oifname map @ct_iface_map'
+    'vrf_zones_ct_in': 'counter ct zone set iifname map @ct_iface_map',
+    'vrf_zones_ct_out': 'counter ct zone set oifname map @ct_iface_map',
 }
 
 def has_rule(af : str, priority : int, table : str=None):
