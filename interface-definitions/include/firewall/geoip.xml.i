@@ -4,6 +4,19 @@
     <help>GeoIP options - Data provided by DB-IP.com</help>
   </properties>
   <children>
+    <leafNode name="asn">
+      <properties>
+        <help>Autonomous system number</help>
+        <valueHelp>
+          <format>u32:1-4294967294</format>
+          <description>Autonomous system number</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-4294967294"/>
+        </constraint>
+        <multi />
+      </properties>
+    </leafNode>
     <leafNode name="country-code">
       <properties>
         <help>GeoIP country code</help>

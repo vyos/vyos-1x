@@ -61,11 +61,17 @@ def geoip_updated(conf):
 def geoip_sets(policy):
     out = {'name': [], 'ipv6_name': []}
 
-    for _, path in dict_search_recursive(policy, 'geoip'):
+    for _, path in dict_search_recursive(policy, 'country_code'):
         if (path[0] == 'route'):
             out['name'].append(f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}')
         elif (path[0] == 'route6'):
             out['ipv6_name'].append(f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}')
+
+    for _, path in dict_search_recursive(policy, 'asn'):
+        if (path[0] == 'route'):
+            out['name'].append(f'GEOIP_ASN_{path[0]}_{path[1]}_{path[3]}')
+        elif (path[0] == 'route6'):
+            out['ipv6_name'].append(f'GEOIP_ASN6_{path[0]}_{path[1]}_{path[3]}')
 
     return out
 
@@ -140,6 +146,10 @@ def verify_rule(policy, name, rule_conf, ipv6, rule_id):
     for side in ['destination', 'source']:
         if side in rule_conf:
             side_conf = rule_conf[side]
+
+            if 'geoip' in side_conf:
+                if len({'asn', 'country_code'} & set(side_conf['geoip'])) > 1:
+                    raise ConfigError('Only one of asn or country-code can be specified')
 
             if 'group' in side_conf:
                 if len({'address_group', 'domain_group', 'network_group'} & set(side_conf['group'])) > 1:

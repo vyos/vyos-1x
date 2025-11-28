@@ -93,12 +93,19 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '2', 'source', 'geoip', 'country-code', 'de'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '2', 'source', 'geoip', 'country-code', 'fr'])
         self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '2', 'source', 'geoip', 'inverse-match'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '3', 'source', 'geoip', 'asn', '13335'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '4', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '4', 'source', 'geoip', 'asn', '15169'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '4', 'source', 'geoip', 'inverse-match'])
 
         self.cli_commit()
 
         nftables_search = [
             ['ip saddr @GEOIP_CC_name_smoketest_1', 'drop'],
-            ['ip saddr != @GEOIP_CC_name_smoketest_2', 'accept']
+            ['ip saddr != @GEOIP_CC_name_smoketest_2', 'accept'],
+            ['ip saddr @GEOIP_ASN_name_smoketest_3', 'drop'],
+            ['ip saddr != @GEOIP_ASN_name_smoketest_4', 'accept']
         ]
 
         # -t prevents 1000+ GeoIP elements being returned
