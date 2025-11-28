@@ -55,7 +55,7 @@ CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
 
 # PERLE add ssh hostkey option
-ArgsPkiType = typing.Literal['ca', 'certificate', 'dh', 'key-pair', 'openvpn', 'crl', 'ssh-hostkey']
+ArgsPkiType = typing.Literal['ca', 'certificate', 'dh', 'key-pair', 'openvpn', 'crl', 'ssh-hostkey', 'ssh-hostkey-txt-pub', 'ssh-hostkey-txt-priv']
 ArgsPkiTypeGen = typing.Literal[ArgsPkiType, typing.Literal['ssh', 'wireguard']]
 ArgsFingerprint = typing.Literal['sha256', 'sha384', 'sha512']
 
@@ -1203,6 +1203,111 @@ def generate_pki(
         print('Aborted')
         sys.exit(0)
 
+TEMP_KEY_PATH = '/tmp'
+
+def save_ssh_hostkey_txt(name: str, key_txt: str, type: str):
+    """Save pasted SSH key text into appropriate temporary filename and format.
+
+    For public keys we expect the OpenSSH single-line public key (e.g. "ssh-rsa AAAAB3Nza..."). or just the base64 part.
+    We write it to {TEMP_KEY_PATH}/{name}.pub either verbatim or prefixed with the appropriate algorithm identifier.
+    For private keys we accept either a PEM-like block or base64 only. We wrap base64-only keys into a PEM-like block and attach header/footer
+    according to the key type, or write it verbatim to the temp file.
+    """
+    temp_filename = f'{TEMP_KEY_PATH}/{name}'
+
+    # Validate supported names
+    supported = (
+        'ssh_host_rsa_key',
+        'ssh_host_ecdsa_key',
+        'ssh_host_dsa_key',
+        'ssh_host_ed25519_key',
+    )
+    if name not in supported:
+        print('Error: invalid ssh server key type for text import')
+        return
+
+    # Public key handling:
+    # - If the pasted text already looks like an OpenSSH public key (starts with "ssh-" or "ecdsa-" etc.),
+    #   write it directly to {TEMP_KEY_PATH}/{name}.pub
+    # - If the pasted text is just the base64 part, attempt to prefix with the conventional algorithm".
+    if type == 'public':
+        pub_path = temp_filename + '.pub'
+        txt = key_txt.strip()
+        # If already contains a space and starts with known prefixes, assume full OpenSSH public key
+        if txt.startswith('ssh-') or txt.startswith('ecdsa-') or txt.startswith('ecdsa-sha') or txt.startswith('ecdsa-sha2') or txt.startswith('ssh-dss') or txt.startswith('ssh-ed25519'):
+            pub_line = txt
+        else:
+            # Only the base64 body was provided. Prefix based on name.
+            if name == 'ssh_host_rsa_key':
+                pub_line = 'ssh-rsa ' + txt
+            elif name == 'ssh_host_ecdsa_key':
+                # Default to nistp256 curve identifier for ecdsa public key storage
+                pub_line = 'ecdsa-sha2-nistp256 ' + txt
+            elif name == 'ssh_host_dsa_key':
+                pub_line = 'ssh-dss ' + txt
+            elif name == 'ssh_host_ed25519_key':
+                pub_line = 'ssh-ed25519 ' + txt
+            else:
+                pub_line = txt
+
+        with open(pub_path, 'w') as temp_file:
+            temp_file.write(pub_line + '\n')
+
+        print(f'Wrote temp public key file: {pub_path}')
+        return
+
+    # Private key handling:
+    if type == 'private':
+        priv_path = temp_filename
+        txt = key_txt.strip()
+        # If the text contains PEM markers assume it's a PEM/private-key block and write as-is
+        if txt.startswith('-----BEGIN'):
+            out_txt = txt + '\n' if not txt.endswith('\n') else txt
+        else:
+            # If the user pasted a single-line OpenSSH public key by mistake, warn
+            if txt.startswith('ssh-'):
+                print('Warning: pasted text looks like a public key, expected private key')
+                out_txt = txt + '\n'
+            else:
+                # If the pasted text looks like base64 only (no headers), try to wrap it into
+                # a PEM-like block based on the key type so import tools can parse it.
+                b64_body = ''.join(txt.split())
+                if re.fullmatch(r'[A-Za-z0-9+/=]+', b64_body):
+                    # Choose header/footer according to key name
+                    if name == 'ssh_host_rsa_key' or name == 'ssh_host_ecdsa_key' or name == 'ssh_host_dsa_key' or name == 'ssh_host_ed25519_key':
+                        # New OpenSSH private keys use the OPENSSH PRIVATE KEY wrapper
+                        header = '-----BEGIN OPENSSH PRIVATE KEY-----'
+                        footer = '-----END OPENSSH PRIVATE KEY-----'
+                    else:
+                        header = '-----BEGIN PRIVATE KEY-----'
+                        footer = '-----END PRIVATE KEY-----'
+
+                    # wrap lines at 70 chars
+                    wrapped = '\n'.join([b64_body[i:i+70] for i in range(0, len(b64_body), 70)])
+                    out_txt = header + '\n' + wrapped + '\n' + footer + '\n'
+                else:
+                    # Fallback: write verbatim
+                    out_txt = txt + '\n'
+
+        with open(priv_path, 'w') as temp_file:
+            temp_file.write(out_txt)
+
+        print(f'Wrote temp private key file: {priv_path}')
+        return
+
+def run_import_ssh_hostkey_from_txt(name: str, type: str):
+    #check if both keys exist in TEMP_KEY_PATH and import them
+    key_path_priv = f'{TEMP_KEY_PATH}/{name}'
+    key_path_pub = f'{TEMP_KEY_PATH}/{name}.pub'
+    if os.path.exists(key_path_priv) and os.path.exists(key_path_pub):
+        import_ssh_hostkey(name, key_path_priv)
+        os.remove(key_path_priv)
+        os.remove(key_path_pub)
+    else:
+        if type == 'private':
+            print('Now add the corresponding public key text to complete the ssh hostkey import.')
+        else:
+            print('Now add the corresponding private key text to complete the ssh hostkey import.')
 
 def import_pki(
     name: str,
@@ -1211,6 +1316,7 @@ def import_pki(
     key_filename: typing.Optional[str],
     no_prompt: typing.Optional[bool],
     passphrase: typing.Optional[str],
+    key_txt: typing.Optional[str],
 ):
     try:
         if pki_type == 'ca':
@@ -1245,6 +1351,13 @@ def import_pki(
             import_openvpn_secret(name, filename)
         elif pki_type == 'ssh-hostkey':
             import_ssh_hostkey(name, filename)
+        elif pki_type == 'ssh-hostkey-txt-pub':
+            save_ssh_hostkey_txt(name, key_txt, "public")
+            run_import_ssh_hostkey_from_txt(name, "public")
+        elif pki_type == 'ssh-hostkey-txt-priv':
+            save_ssh_hostkey_txt(name, key_txt, "private")
+            run_import_ssh_hostkey_from_txt(name, "private")
+
     except KeyboardInterrupt:
         print('Aborted')
         sys.exit(0)
