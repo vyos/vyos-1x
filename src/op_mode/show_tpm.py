@@ -14,16 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import shutil
 import sys
-import subprocess
-import time
 
-from argparse import ArgumentParser
-
-from vyos.tpm import tpm_exist, tpm_enabled 
-from vyos.utils.process import cmd, run
+from vyos.tpm import tpm_exist, tpm_enabled
 
 if __name__ == '__main__':
 

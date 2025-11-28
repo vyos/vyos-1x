@@ -14,20 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import shutil
 import sys
 import subprocess
 import time
 
 from argparse import ArgumentParser
 # from cryptography.fernet import Fernet
-from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-from vyos.tpm import tpm_exist, tpm_enabled, tpm_allowed, tpm_enable, tpm_disable 
-from vyos.utils.io import ask_input, ask_yes_no
-from vyos.utils.process import cmd, run
-from vyos.defaults import directories
+from vyos.tpm import tpm_exist, tpm_enabled, tpm_enable, tpm_disable
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -41,7 +35,8 @@ if __name__ == '__main__':
 
     if args.disable:
         if not tpm_exist():
-            print('TPM hardware not supported on this product, ignoring command')
+            print('TPM hardware not supported on this product; '
+                  'ignoring command')
             sys.exit(0)
         if not tpm_enabled():
             print('TPM support already disabled, ignoring command')
@@ -51,7 +46,8 @@ if __name__ == '__main__':
 
     elif args.enable:
         if not tpm_exist():
-            print('TPM hardware not supported on this product, ignoring command')
+            print('TPM hardware not supported on this product; '
+                  'ignoring command')
             sys.exit(0)
         if tpm_enabled():
             print('TPM support already enabled, ignoring command')
@@ -61,5 +57,6 @@ if __name__ == '__main__':
 
     print('TPM mode changes... rebooting in 5 seconds....')
     time.sleep(5)
-    subprocess.run(["python3", "/usr/libexec/vyos/op_mode/powerctrl.py", "--yes", "--reboot"])
+    subprocess.run(["python3", "/usr/libexec/vyos/op_mode/powerctrl.py",
+                    "--yes", "--reboot"])
     sys.exit(0)
