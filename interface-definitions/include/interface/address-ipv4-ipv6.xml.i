@@ -12,6 +12,7 @@
     </valueHelp>
     <constraint>
       <validator name="ip-host"/>
+      <validator name="ipv6-cidr"/>
     </constraint>
     <multi/>
   </properties>

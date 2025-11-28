@@ -24,6 +24,7 @@
     <constraint>
       <validator name="ip-host"/>
       <regex>(dhcp|dhcpv6)</regex>
+      <validator name="ipv6-cidr"/>
     </constraint>
     <multi/>
   </properties>
