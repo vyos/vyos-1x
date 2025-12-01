@@ -93,7 +93,7 @@
           <children>
             #include <include/serial/general/remap-util.xml.i>
             <leafNode name="remap">
-              <defaultValue>38400</defaultValue>
+              <defaultValue>600</defaultValue>
             </leafNode>
           </children>
         </node>
