@@ -86,6 +86,11 @@ def get_config(config=None):
             if 'local' in proxy_no_default['global']['port_buffering']:
                 proxy['global']['port_buffering']['port_buffer_local'] = 1
 
+        if 'tls' in proxy_no_default['global']:
+            proxy['global']['tls'].update({'enabled': {}})
+            if 'disable' in proxy_no_default['global'].get('tls', []):
+                proxy['global']['tls'].update({'enabled': '0'})
+
     changed_tty_list = []
     for device in proxy.get('device', []):
         # Want to restart serial if its config changed
@@ -94,8 +99,10 @@ def get_config(config=None):
         if tmp:
             changed_tty_list.append(device)
             if 'tls' in proxy_no_default['device'][device]:
-                if 'disable' not in proxy_no_default['device'][device].get('tls', []):
-                    proxy['device'][device]['tls'].update({'enabled': {}})
+                proxy['device'][device]['tls'].update({'enabled': {}})
+                if 'disable' in proxy_no_default['device'][device].get('tls', []):
+                    proxy['device'][device]['tls'].update({'enabled': '0'})
+
     if changed_tty_list:
         proxy['serial_restart'] = changed_tty_list
 
@@ -378,25 +385,23 @@ def generate(proxy):
                 if 'rts_toggle' in port_config['hardware']:
                     port_config['hardware']['rts_toggle']['enabled'] = '1'
 
+            tls_paths = []
             if 'tls' in port_config:
-                if 'enabled' in port_config['tls']:
-                    port_config['tls']['enabled'] = 1
-                else:
-                    port_config['tls']['enabled'] = 0
+                tls_paths.append(port_config['tls'])
+            if 'global' in port_config:
+                if 'tls' in port_config['global']:
+                    tls_paths.append(port_config['global']['tls'])
+            for path in tls_paths:
+                if 'peer_verification' in path:
+                    if 'disable' not in path['peer_verification']:
+                        path['verify_peer'] = 1
 
-                if 'use_global' in port_config['tls']:
-                    port_config['tls'] = port_config['global'].pop('tls')
-
-                if 'peer_verification' in port_config['tls']:
-                    if 'disable' not in port_config['tls']['peer_verification']:
-                        port_config['tls']['verify_peer'] = 1
-
-                if 'cipher_options' in port_config['tls']:
-                    port_config['tls']['cipher_options'] = subtract_from_key(port_config['tls']['cipher_options'])
+                if 'cipher_options' in path:
+                    path['cipher_options'] = subtract_from_key(path['cipher_options'])
 
                 cert_name = ''
-                if 'certificate' in port_config['tls']:
-                    cert_name = port_config['tls']['certificate']
+                if 'certificate' in path:
+                    cert_name = path['certificate']
 
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
                     key_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'private', 'key')
@@ -406,9 +411,9 @@ def generate(proxy):
                         f.write(wrap_certificate(cert_data))
 
                     password_protected = 0
-                    if 'passphrase' in port_config['tls']:
+                    if 'passphrase' in path:
                         if 'password_protected' not in proxy['pki']['certificate'][cert_name]['private']:
-                            port_config['tls']['passphrase'] = ''
+                            path['passphrase'] = ''
                         else:
                             password_protected = 1
 
