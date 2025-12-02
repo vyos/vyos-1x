@@ -56,7 +56,6 @@ high-availability {
 interfaces {
     ethernet eth0 {
         duplex auto
-        mtu 9000
         offload-options {
             generic-receive on
             generic-segmentation on
@@ -65,7 +64,7 @@ interfaces {
         }
         pppoe 0 {
             default-route auto
-            mtu 1500
+            mtu 1400
             name-server auto
             password password
             user-id vyos
@@ -80,7 +79,6 @@ interfaces {
         ip {
             source-validation strict
         }
-        mtu 9000
         offload-options {
             generic-receive on
             generic-segmentation on

@@ -71,15 +71,15 @@ def _verify_tls_remote_options(remote, remote_options, syslog):
     if ca_certificate:
         verify_pki_ca_certificate(syslog, ca_certificate)
 
-    permitted_peers = dict_search('tls.permitted_peers', remote_options)
+    permitted_peers = dict_search('tls.permitted_peer', remote_options)
     if not permitted_peers:
         if auth_mode == "fingerprint":
             raise ConfigError(
-                f'Auth mode "fingerprint" for remote "{remote}" requires "permitted-peers" to be configured!'
+                f'Auth mode "fingerprint" for remote "{remote}" requires "permitted-peer" to be configured!'
             )
         elif auth_mode == "name":
             raise ConfigError(
-                f'Auth mode "name" for remote "{remote}" requires "permitted-peers" to specify allowed subject names!'
+                f'Auth mode "name" for remote "{remote}" requires "permitted-peer" to specify allowed subject names!'
             )
 
 
@@ -181,7 +181,7 @@ def verify(syslog):
                 _verify_tls_remote_options(remote, remote_options, syslog)
 
                 if 'protocol' in remote_options and remote_options['protocol'] == 'udp':
-                    Warning(
+                    raise ConfigError(
                         f'TLS is enabled for remote "{remote}", but protocol is set to UDP. TLS is only supported with protocol TCP!'
                     )
 

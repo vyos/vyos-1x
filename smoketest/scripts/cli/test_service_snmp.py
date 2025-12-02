@@ -20,13 +20,16 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.template import is_ipv4
 from vyos.template import address_from_cidr
+from vyos.template import bracketize_ipv6
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.utils.process import call
 from vyos.utils.process import DEVNULL
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 from vyos.version import get_version_data
+from vyos.xml_ref import default_value
 
 PROCESS_NAME = 'snmpd'
 SNMPD_CONF = '/etc/snmp/snmpd.conf'
@@ -245,6 +248,36 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'view {snmpv3_view} included .{snmpv3_view_oid}', tmp)
         for excluded in snmpv3_view_oid_exclude:
             self.assertIn(f'view {snmpv3_view} excluded .{excluded}', tmp)
+
+    def test_snmpv3_trap(self):
+        trap_targets = ['192.0.2.55', '2001:db8::1']
+
+        self.cli_set(base_path + ['v3', 'engineid', snmpv3_engine_id])
+        self.cli_set(base_path + ['v3', 'group', snmpv3_group, 'view', snmpv3_view])
+        self.cli_set(base_path + ['v3', 'view', snmpv3_view, 'oid', snmpv3_view_oid])
+
+        for trap_target in trap_targets:
+            trap_base = base_path + ['v3', 'trap-target', trap_target]
+
+            self.cli_set(trap_base + ['auth', 'plaintext-password', snmpv3_auth_pw])
+            self.cli_set(trap_base + ['auth', 'type', 'sha'])
+            self.cli_set(trap_base + ['privacy', 'plaintext-password', snmpv3_priv_pw])
+            self.cli_set(trap_base + ['privacy', 'type', 'aes'])
+            self.cli_set(trap_base + ['type', 'trap'])
+            self.cli_set(trap_base + ['user', snmpv3_user])
+
+        self.cli_commit()
+
+        tmp = read_file(SNMPD_CONF)
+        for trap_target in trap_targets:
+            cli_default_trap_port = default_value(base_path + ['v3', 'trap-target', trap_target, 'port'])
+            cli_default_trap_protocol = default_value(base_path + ['v3', 'trap-target', trap_target, 'protocol'])
+            if is_ipv6(trap_target):
+                cli_default_trap_protocol = f'{cli_default_trap_protocol}6'
+
+            self.assertIn(f'trapsess -v 3  -e "{snmpv3_engine_id}" -u {snmpv3_user} -a SHA -A {snmpv3_auth_pw} ' \
+                          f'-x AES -X {snmpv3_priv_pw} -l authPriv ' \
+                          f'{cli_default_trap_protocol}:{bracketize_ipv6(trap_target)}:{cli_default_trap_port}', tmp)
 
     def test_snmp_script_extensions(self):
         extensions = {

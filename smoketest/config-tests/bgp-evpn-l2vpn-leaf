@@ -6,13 +6,10 @@ set interfaces ethernet eth0 address '192.0.2.41/27'
 set interfaces ethernet eth0 description 'Out-of-Band Managament Port'
 set interfaces ethernet eth0 vrf 'MGMT'
 set interfaces ethernet eth1 address '172.29.1.1/31'
-set interfaces ethernet eth1 mtu '1600'
 set interfaces ethernet eth2 address '172.29.2.1/31'
-set interfaces ethernet eth2 mtu '1600'
 set interfaces ethernet eth2 offload gro
 set interfaces ethernet eth3 offload gro
 set interfaces loopback lo
-set interfaces vxlan vxlan100 mtu '1500'
 set interfaces vxlan vxlan100 parameters nolearning
 set interfaces vxlan vxlan100 port '8472'
 set interfaces vxlan vxlan100 source-address '172.29.0.1'

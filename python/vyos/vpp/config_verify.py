@@ -22,7 +22,6 @@ from vyos import ConfigError
 from vyos.base import Warning
 from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
 
-from vyos.vpp.control_host import get_eth_driver
 from vyos.vpp.config_resource_checks import cpu as cpu_checks, memory as mem_checks
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.utils import human_memory_to_bytes, bytes_to_human_memory
@@ -122,7 +121,7 @@ def verify_vpp_tunnel_source_address(config: dict):
     )
 
 
-def verify_dev_driver(iface_name: str, driver_type: str) -> bool:
+def verify_dev_driver(driver_type: str, driver: str) -> bool:
     # Lists of drivers compatible with DPDK and XDP
     drivers_dpdk: list[str] = [
         'atlantic',
@@ -166,8 +165,6 @@ def verify_dev_driver(iface_name: str, driver_type: str) -> bool:
         'virtio_net',
         'vmxnet3',
     ]
-
-    driver: str = get_eth_driver(iface_name)
 
     if driver_type == 'dpdk':
         if driver in drivers_dpdk:

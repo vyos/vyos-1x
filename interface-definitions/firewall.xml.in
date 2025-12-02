@@ -428,6 +428,29 @@
             </properties>
             <defaultValue>drop</defaultValue>
           </leafNode>
+          <node name="default-firewall">
+            <properties>
+              <help>Default firewall rules for traffic coming into this zone</help>
+            </properties>
+            <children>
+              <leafNode name="ipv6-name">
+                <properties>
+                  <help>IPv6 firewall ruleset</help>
+                  <completionHelp>
+                    <path>firewall ipv6 name</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="name">
+                <properties>
+                  <help>IPv4 firewall ruleset</help>
+                  <completionHelp>
+                    <path>firewall ipv4 name</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <tagNode name="from">
             <properties>
               <help>Zone from which to filter traffic</help>

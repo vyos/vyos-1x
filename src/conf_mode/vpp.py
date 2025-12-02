@@ -346,6 +346,9 @@ def get_config(config=None):
                     conf, base_settings + ['interface', iface, 'driver']
                 )
 
+                if old_driver:
+                    config['settings']['interface'][iface]['driver_changed'] = {}
+
                 # Get current kernel module, required for extra verification and
                 # logic for VMBus interfaces
                 config['settings']['interface'][iface]['kernel_module'] = (
@@ -542,10 +545,14 @@ def verify(config):
     # ensure DPDK/XDP settings are properly configured
     for iface, iface_config in config['settings']['interface'].items():
         # check if selected driver is supported, but only for new interfaces
-        if iface not in config.get('effective', {}).get('settings', {}).get(
-            'interface', {}
+        # or if driver was changed
+        original_driver = config['persist_config'][iface]['original_driver']
+        if (
+            iface
+            not in config.get('effective', {}).get('settings', {}).get('interface', {})
+            or 'driver_changed' in iface_config
         ):
-            if not verify_dev_driver(iface, iface_config['driver']):
+            if not verify_dev_driver(iface_config['driver'], original_driver):
                 raise ConfigError(
                     f'Driver {iface_config["driver"]} is not compatible with interface {iface}!'
                 )

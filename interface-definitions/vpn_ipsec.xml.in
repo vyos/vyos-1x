@@ -870,6 +870,12 @@
                         <defaultValue>eap-mschapv2</defaultValue>
                       </leafNode>
                       #include <include/auth-local-users.xml.i>
+                      <leafNode name="always-send-cert">
+                        <properties>
+                          <help>Always send local certificate for this connection</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
                       <leafNode name="server-mode">
                         <properties>
                           <help>Server authentication mode</help>

@@ -65,17 +65,6 @@
         <children>
           #include <include/nat-rule.xml.i>
           <tagNode name="rule">
-            <properties>
-              <help>Rule number for NAT</help>
-              <valueHelp>
-                <format>u32:1-999999</format>
-                <description>Number of NAT rule</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-999999"/>
-              </constraint>
-              <constraintErrorMessage>NAT rule number must be between 1 and 999999</constraintErrorMessage>
-            </properties>
             <children>
               #include <include/firewall/outbound-interface.xml.i>
               <node name="translation">

@@ -14,6 +14,7 @@ VYOS_MIBS_DIR := usr/share/snmp/mibs
 VYOS_LOCALUI_DIR := srv/localui
 
 VYCONF := usr/libexec/vyos/vyconf
+VYCONF_BIN := $(VYCONF)/bin
 VYCONF_CONF := $(VYCONF)/config
 VYCONF_SESSION := $(VYCONF)/session
 VYCONF_DATA := usr/share/vyos/vyconf
@@ -184,11 +185,13 @@ override_dh_auto_install:
 	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_SESSION)
 	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_DATA)
 	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_DEF)
+	mkdir -p $(DIR_LIBVYOSCONFIG)/$(VYCONF_BIN)
 
 	cp $(OCAML_DIR)/share/vyconf/vyconf.proto $(DIR_LIBVYOSCONFIG)/$(VYCONF_DATA)
 	cp $(OCAML_DIR)/share/vyconf/vyconfd.conf $(DIR_LIBVYOSCONFIG)/$(VYCONF_DEF)
 	cp $(OCAML_DIR)/bin/vyconfd $(DIR_LIBVYOSCONFIG)/$(VYCONF)
 	cp $(OCAML_DIR)/bin/vyconf_cli $(DIR_LIBVYOSCONFIG)/$(VYCONF)
+	cp $(OCAML_DIR)/bin/vyconf_cli_compat $(DIR_LIBVYOSCONFIG)/$(VYCONF_BIN)
 	cp libvyosconfig/_build/libvyosconfig.so $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)/libvyosconfig.so.0
 
 override_dh_installsystemd:

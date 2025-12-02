@@ -154,12 +154,15 @@ def get_config(config=None):
                 continue
 
             local_zone_conf['from_local'] = {}
+            local_zone_conf['default_local'] = {}
 
             for zone, zone_conf in firewall['zone'].items():
-                if zone == local_zone or 'from' not in zone_conf:
+                if zone == local_zone:
                     continue
-                if local_zone in zone_conf['from']:
+                if 'from' in zone_conf and local_zone in zone_conf['from']:
                     local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
+                elif 'default_firewall' in zone_conf:
+                    local_zone_conf['default_local'][zone] = zone_conf['default_firewall']
 
     set_dependents('conntrack', conf)
 
@@ -626,6 +629,18 @@ def verify(firewall):
                     v6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
                     if v6_name and not dict_search_args(firewall, 'ipv6', 'name', v6_name):
                         raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+
+            if 'default_firewall' in zone_conf:
+                v4_name = dict_search_args(zone_conf, 'default_firewall', 'name')
+                if v4_name and not dict_search_args(firewall, 'ipv4', 'name', v4_name):
+                    raise ConfigError(f'Firewall name "{v4_name}" does not exist')
+
+                v6_name = dict_search_args(zone_conf, 'default_firewall', 'ipv6_name')
+                if v6_name and not dict_search_args(firewall, 'ipv6', 'name', v6_name):
+                    raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+
+                if not v4_name and not v6_name:
+                    raise ConfigError('No firewall names specified for default-firewall')
 
     return None
 

@@ -26,6 +26,7 @@ from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.pki import wrap_openssh_public_key
 from vyos.pki import wrap_openssh_private_key
+from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.file import write_file
 from vyos.utils.process import is_systemd_service_running
@@ -51,7 +52,8 @@ def verify(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    rpki = vrf and config_dict['vrf']['name'][vrf]['protocols']['rpki'] or config_dict['rpki']
+    rpki = vrf and dict_search(f'vrf.name.{vrf}.protocols.rpki',
+                                 config_dict) or config_dict['rpki']
 
     if 'cache' in rpki:
         preferences = []
@@ -90,7 +92,8 @@ def generate(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    rpki = vrf and config_dict['vrf']['name'][vrf]['protocols']['rpki'] or config_dict['rpki']
+    rpki = vrf and dict_search(f'vrf.name.{vrf}.protocols.rpki',
+                                config_dict) or config_dict['rpki']
 
     if 'cache' in rpki:
         for cache, cache_config in rpki['cache'].items():

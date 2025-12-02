@@ -1,0 +1,52 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4251:
+#   - drop "tls enable" node (make "tls" a standalone key)
+#   - split "tls permitted-peers" list by commas into multiple "tls permitted-peer" entries
+
+from vyos.configtree import ConfigTree
+
+base = ['system', 'syslog', 'remote']
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    # Iterate over all remote syslog server entries (like 172.18.0.5)
+    for remote_addr in config.list_nodes(base):
+        remote_base = base + [remote_addr]
+        tls_base = remote_base + ['tls']
+
+        # (1) Remove "tls enable" -> migrate to simple "tls"
+        enable_path = tls_base + ['enable']
+        if config.exists(enable_path):
+            # Remove obsolete "enable" node
+            config.delete(enable_path)
+
+        # (2) Split "tls permitted-peers" (comma-separated string)
+        permitted_peers_path = tls_base + ['permitted-peers']
+        if config.exists(permitted_peers_path):
+            peers_str = config.return_value(permitted_peers_path)
+            # Split CSV values and normalize whitespace
+            peers = [p.strip() for p in peers_str.split(',') if p.strip()]
+
+            # Create a new "permitted-peer" entry per item
+            for peer in peers:
+                config.set(tls_base + ['permitted-peer'], value=peer, replace=False)
+
+            # Remove the old combined node
+            config.delete(permitted_peers_path)

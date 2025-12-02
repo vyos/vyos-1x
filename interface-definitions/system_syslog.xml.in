@@ -86,7 +86,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>fingerprint</format>
-                        <description>Authenticate peer by matching its certificate fingerprint to a configured, permitted list (`permitted-peers` option)</description>
+                        <description>Authenticate peer by matching its certificate fingerprint to a configured, permitted list (`permitted-peer` option)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>certvalid</format>
@@ -94,7 +94,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>name</format>
-                        <description>Authenticate peer by verifying its certificate subject name against a configured value (`permitted-peers` option)</description>
+                        <description>Authenticate peer by verifying its certificate subject name against a configured value (`permitted-peer` option)</description>
                       </valueHelp>
                       <constraint>
                         <regex>(anon|fingerprint|certvalid|name)</regex>
@@ -102,13 +102,14 @@
                     </properties>
                     <defaultValue>anon</defaultValue>
                   </leafNode>
-                  <leafNode name="permitted-peers">
+                  <leafNode name="permitted-peer">
                     <properties>
-                      <help>Comma-separated list of allowed peer certificate fingerprints or subject names</help>
+                      <help>Allowed peer certificate fingerprint or subject name</help>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Comma-separated fingerprints or peer names.\nFor example:\n - 'SHA1:DD:23:E3:E7:70:F5:B4:13:44:16:78:A5:5A:8C:39:48:53:A6:DD:25,SHA256:10:C4:26:1D:CB:3C:AB:12:DB:1A:F0:47:37:AE:6D:D2:DE:66:B5:71:B7:2E:5B:BB:AE:0C:7E:7F:5F:0D:E9:64'\n - 'logs.example.com'</description>
+                        <description>Peer fingerprint - SHA1:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX:XX or subject name - logs.example.com</description>
                       </valueHelp>
+                      <multi/>
                     </properties>
                   </leafNode>
                 </children>

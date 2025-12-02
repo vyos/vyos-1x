@@ -56,6 +56,10 @@
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
+{%         if zone_conf.default_firewall is vyos_defined and zone_conf.default_firewall[fw_name] is vyos_defined %}
+        counter jump NAME{{ suffix }}_{{ zone_conf.default_firewall[fw_name] }}
+        counter return
+{%         endif %}
         {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
     chain VZONE_{{ zone_name }}_OUT {
@@ -69,6 +73,20 @@
 {%                 if 'vrf' in zone[from_zone].member %}
         oifname { {{ zone[from_zone].member.vrf | quoted_join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
         oifname { {{ zone[from_zone].member.vrf | quoted_join(",") }} } counter return
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if zone_conf.default_local is vyos_defined %}
+{%             for from_zone, from_conf in zone_conf.default_local.items() if from_conf[fw_name] is vyos_defined %}
+{%                 if 'interface' in zone[from_zone].member %}
+        oifname { {{ zone[from_zone].member.interface | quoted_join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf[fw_name] }}
+        oifname { {{ zone[from_zone].member.interface | quoted_join(",") }} } counter return
+{%                 endif %}
+{%                 if 'vrf' in zone[from_zone].member %}
+{%                     for vrf_name in zone[from_zone].member.vrf %}
+        oifname { "{{ zone[from_zone]['vrf_interfaces'][vrf_name] }}" } counter jump NAME{{ suffix }}_{{ from_conf[fw_name] }}
+        oifname { "{{ zone[from_zone]['vrf_interfaces'][vrf_name] }}" } counter return
+{%                     endfor %}
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
@@ -103,6 +121,10 @@
 {%                     endif %}
 {%                 endif %}
 {%             endfor %}
+{%         endif %}
+{%         if zone_conf.default_firewall is vyos_defined and zone_conf.default_firewall[fw_name] is vyos_defined %}
+        counter jump NAME{{ suffix }}_{{ zone_conf.default_firewall[fw_name] }}
+        counter return
 {%         endif %}
         {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }

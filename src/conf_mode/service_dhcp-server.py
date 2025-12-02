@@ -32,6 +32,7 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.file import chmod_775
 from vyos.utils.file import makedir
 from vyos.utils.file import write_file
@@ -225,6 +226,9 @@ def get_config(config=None):
                 get_first_key=True,
                 no_tag_node_value_mangle=True,
             )
+
+    if bool(list(dict_search_recursive(dhcp, 'ping_check'))):
+        dhcp['any_ping_check'] = True
 
     return dhcp
 

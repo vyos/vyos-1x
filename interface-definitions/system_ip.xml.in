@@ -5,7 +5,7 @@
       <node name="ip" owner="${vyos_conf_scripts_dir}/system_ip.py">
         <properties>
           <help>IPv4 Settings</help>
-          <!-- must be before any interface, check /opt/vyatta/sbin/priority.pl -->
+          <!-- must be before any interface, check /usr/libexec/vyos/priority.py -->
           <priority>290</priority>
         </properties>
         <children>
