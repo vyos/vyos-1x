@@ -5,7 +5,7 @@
       <node name="wireless" owner="${vyos_conf_scripts_dir}/system_wireless.py">
         <properties>
           <help>Wireless (IEEE-802.11) subsystem settings</help>
-          <!-- must be before interface wireless, check /opt/vyatta/sbin/priority.pl -->
+          <!-- must be before interface wireless, check /usr/libexec/vyos/priority.py -->
           <priority>317</priority>
         </properties>
         <children>

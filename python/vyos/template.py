@@ -1015,7 +1015,7 @@ def kea_shared_network_json(shared_networks):
             'name': name,
             'authoritative': ('authoritative' in config),
             'subnet4': [],
-            'user-context': {}
+            'user-context': {'enable-ping-check': False}
         }
 
         if 'dynamic_dns_update' in config:
@@ -1030,14 +1030,20 @@ def kea_shared_network_json(shared_networks):
             if 'bootfile_server' in config['option']:
                 network['next-server'] = config['option']['bootfile_server']
 
-        if 'ping_check' in config:
-            network['user-context']['enable-ping-check'] = True
+        subnet_ping_check = False
 
         if 'subnet' in config:
             for subnet, subnet_config in config['subnet'].items():
                 if 'disable' in subnet_config:
                     continue
+
+                if 'ping_check' in subnet_config:
+                    subnet_ping_check = True
+
                 network['subnet4'].append(kea_parse_subnet(subnet, subnet_config))
+
+        if 'ping_check' in config or subnet_ping_check:
+            network['user-context']['enable-ping-check'] = True
 
         out.append(network)
 

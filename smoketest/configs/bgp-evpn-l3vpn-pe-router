@@ -44,7 +44,6 @@ interfaces {
     ethernet eth1 {
         address 172.29.0.2/31
         description "link to pe2"
-        mtu 1600
     }
     ethernet eth2 {
         disable
@@ -52,7 +51,6 @@ interfaces {
     ethernet eth3 {
         address 172.29.0.6/31
         description "link to pe3"
-        mtu 1600
     }
     ethernet eth4 {
         description "customer blue"
@@ -66,7 +64,6 @@ interfaces {
     loopback lo {
     }
     vxlan vxlan2000 {
-        mtu 1500
         parameters {
             nolearning
         }
@@ -75,7 +72,6 @@ interfaces {
         vni 2000
     }
     vxlan vxlan3000 {
-        mtu 1500
         parameters {
             nolearning
         }
@@ -84,7 +80,6 @@ interfaces {
         vni 3000
     }
     vxlan vxlan4000 {
-        mtu 1500
         parameters {
             nolearning
         }

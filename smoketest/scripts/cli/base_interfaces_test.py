@@ -700,22 +700,25 @@ class BasicInterfaceTest:
             if not self._test_vlan or not self._test_mtu:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
-            mtu_1500 = '1500'
-            mtu_9000 = '9000'
+            # Some drivers are limited to an MTU of 1500 byte - e.g. when VyOS
+            # runs on PROXMOX with default bridge settings. We use lower values
+            # for this test which will fit for almost every NIC
+            mtu_1300 = '1300'
+            mtu_1420 = '1420'
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
-                self.cli_set(base + ['mtu', mtu_1500])
+                self.cli_set(base + ['mtu', mtu_1300])
                 for option in self._options.get(interface, []):
                     self.cli_set(base + option.split())
                     if 'source-interface' in option:
                         iface = option.split()[-1]
                         iface_type = Section.section(iface)
-                        self.cli_set(['interfaces', iface_type, iface, 'mtu', mtu_9000])
+                        self.cli_set(['interfaces', iface_type, iface, 'mtu', mtu_1420])
 
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
-                    self.cli_set(base + ['mtu', mtu_9000])
+                    self.cli_set(base + ['mtu', mtu_1420])
 
             # check validate() - Interface MTU "9000" too high, parent interface MTU is "1500"!
             with self.assertRaises(ConfigSessionError):
@@ -724,18 +727,18 @@ class BasicInterfaceTest:
             # Change MTU on base interface to be the same as on the VIF interface
             for interface in self._interfaces:
                 base = self._base_path + [interface]
-                self.cli_set(base + ['mtu', mtu_9000])
+                self.cli_set(base + ['mtu', mtu_1420])
 
             self.cli_commit()
 
             # Verify MTU on base and VIF interfaces
             for interface in self._interfaces:
                 tmp = get_interface_config(interface)
-                self.assertEqual(tmp['mtu'], int(mtu_9000))
+                self.assertEqual(tmp['mtu'], int(mtu_1420))
 
                 for vlan in self._vlan_range:
                     tmp = get_interface_config(f'{interface}.{vlan}')
-                    self.assertEqual(tmp['mtu'], int(mtu_9000))
+                    self.assertEqual(tmp['mtu'], int(mtu_1420))
 
 
         def test_vif_8021q_qos_change(self):

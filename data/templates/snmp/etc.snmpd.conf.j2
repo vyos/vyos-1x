@@ -164,6 +164,10 @@ access {{ group }} "" usm {{ group_config.seclevel }} exact {{ group_config.view
 # trap-target
 {%     if v3.trap_target is vyos_defined %}
 {%         for trap, trap_config in v3.trap_target.items() %}
+{%             set protocol = trap_config.protocol %}
+{%             if trap | is_ipv6 %}
+{%                 set protocol = protocol ~ '6' %}
+{%             endif %}
 {%             set options = '' %}
 {%             if trap_config.type == 'inform' %}
 {%                 set options = options ~ ' -Ci' %}
@@ -175,14 +179,14 @@ access {{ group }} "" usm {{ group_config.seclevel }} exact {{ group_config.view
 {%                 set options = options ~ ' -u ' ~ trap_config.user %}
 {%             endif %}
 {%             if trap_config.auth.plaintext_password is vyos_defined or trap_config.auth.encrypted_password is vyos_defined %}
-{%                 set options = options ~ ' -a ' ~ trap_config.auth.type %}
+{%                 set options = options ~ ' -a ' ~ trap_config.auth.type | upper %}
 {%                 if trap_config.auth.plaintext_password is vyos_defined %}
 {%                     set options = options ~ ' -A ' ~ trap_config.auth.plaintext_password %}
 {%                 elif trap_config.auth.encrypted_password is vyos_defined %}
 {%                     set options = options ~ ' -3m ' ~ trap_config.auth.encrypted_password %}
 {%                 endif %}
 {%                 if trap_config.privacy.plaintext_password is vyos_defined or trap_config.privacy.encrypted_password is vyos_defined %}
-{%                     set options = options ~ ' -x ' ~ trap_config.privacy.type %}
+{%                     set options = options ~ ' -x ' ~ trap_config.privacy.type | upper %}
 {%                     if trap_config.privacy.plaintext_password is vyos_defined %}
 {%                         set options = options ~ ' -X ' ~ trap_config.privacy.plaintext_password %}
 {%                     elif trap_config.privacy.encrypted_password is vyos_defined %}
@@ -195,7 +199,7 @@ access {{ group }} "" usm {{ group_config.seclevel }} exact {{ group_config.view
 {%             else %}
 {%                 set options = options ~ ' -l noAuthNoPriv' %}
 {%             endif %}
-trapsess -v 3 {{ options }} {{ trap }}:{{ trap_config.protocol }}:{{ trap_config.port }}
+trapsess -v 3 {{ options }} {{ protocol }}:{{ trap | bracketize_ipv6 }}:{{ trap_config.port }}
 {%         endfor %}
 {%     endif %}
 

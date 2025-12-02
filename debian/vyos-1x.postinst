@@ -81,6 +81,7 @@ if ! grep -q '^tacacs' /etc/passwd; then
             adduser --quiet tacacs${level} disk
             adduser --quiet tacacs${level} frr
             adduser --quiet tacacs${level} _kea
+            adduser --quiet tacacs${level} vpp
         fi
         level=$(( level+1 ))
     done 2>&1 | grep -v "User tacacs${level} already exists"
@@ -113,6 +114,7 @@ if ! grep -q '^radius_priv_user' /etc/passwd; then
     adduser --quiet radius_priv_user users
     adduser --quiet radius_priv_user frr
     adduser --quiet radius_priv_user _kea
+    adduser --quiet radius_priv_user vpp
 fi
 
 # add hostsd group for vyos-hostsd

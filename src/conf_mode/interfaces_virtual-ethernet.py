@@ -27,6 +27,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import VethIf
+from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
 airbag.enable()
 
@@ -82,7 +83,7 @@ def verify(veth):
         raise ConfigError(f'Used peer-name "{peer_name}" on interface "{ifname}" ' \
                           'is not configured!')
 
-    if veth['other_interfaces'][peer_name]['peer_name'] != ifname:
+    if dict_search(f'other_interfaces.{peer_name}.peer_name', veth) != ifname:
         raise ConfigError(
             f'Configuration mismatch between "{ifname}" and "{peer_name}"!')
 

@@ -50,7 +50,8 @@ def verify(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    ospf = vrf and config_dict['vrf']['name'][vrf]['protocols']['ospf'] or config_dict['ospf']
+    ospf = vrf and dict_search(f'vrf.name.{vrf}.protocols.ospf',
+                                 config_dict) or config_dict['ospf']
     ospf['policy'] = config_dict['policy']
 
     verify_common_route_maps(ospf)

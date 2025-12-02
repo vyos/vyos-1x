@@ -158,7 +158,7 @@ def kea_parse_options(config):
 
 
 def kea_parse_subnet(subnet, config):
-    out = {'subnet': subnet, 'id': int(config['subnet_id']), 'user-context': {}}
+    out = {'subnet': subnet, 'id': int(config['subnet_id']), 'user-context': {'enable-ping-check': False}}
 
     if 'option' in config:
         out['option-data'] = kea_parse_options(config['option'])

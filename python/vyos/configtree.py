@@ -473,7 +473,7 @@ class ConfigTree(object):
         return subt
 
 
-def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
+def diff_compare(left, right, path=[], commands=False, libpath=LIBPATH):
     if left is None:
         left = ConfigTree(config_string='\n')
     if right is None:
@@ -488,14 +488,14 @@ def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
     path_str = ' '.join(map(str, path)).encode()
 
     __lib = cdll.LoadLibrary(libpath)
-    __show_diff = __lib.show_diff
-    __show_diff.argtypes = [c_bool, c_char_p, c_void_p, c_void_p]
-    __show_diff.restype = c_char_p
+    __diff_compare = __lib.diff_compare
+    __diff_compare.argtypes = [c_bool, c_char_p, c_void_p, c_void_p]
+    __diff_compare.restype = c_char_p
     __get_error = __lib.get_error
     __get_error.argtypes = []
     __get_error.restype = c_char_p
 
-    res = __show_diff(commands, path_str, left._get_config(), right._get_config())
+    res = __diff_compare(commands, path_str, left._get_config(), right._get_config())
     res = res.decode()
     if res == '#1@':
         msg = __get_error().decode()

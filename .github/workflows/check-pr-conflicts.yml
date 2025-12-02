@@ -1,15 +1,24 @@
 
-name: "PR Conflicts checker"
+name: "PRs Conflict checker"
 on:
+  schedule:
+    # Run every hour to check for PR conflicts
+    - cron: '0 * * * *'
   pull_request_target:
-    types: [synchronize]
-
-permissions:
-  pull-requests: write
-  contents: read
+    types: [synchronize, closed]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  check-pr-conflict:
-    if: github.repository_owner == 'vyos'
+  check-prs-conflict:
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request_target' && github.event.action == 'synchronize') ||
+      (github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.merged == true)
     uses: vyos/.github/.github/workflows/check-pr-merge-conflict.yml@current
+    permissions:
+      contents: read
+      pull-requests: write
     secrets: inherit
+    with:
+      action-ref: 'current'
