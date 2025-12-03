@@ -68,13 +68,6 @@ def get_config(config=None):
                                      with_recursive_defaults=True,
                                      with_pki=True)
 
-    proxy['users'] = conf.get_config_dict(['system', 'login', 'user'],
-                                    key_mangling=('-', '_'),
-                                    no_tag_node_value_mangle=True,
-                                    get_first_key=True,
-                                    with_recursive_defaults=True,
-                                    with_pki=True)
-
     tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
     print(f'is modbus gateway changed {tmp}')
     if tmp: proxy.update({'smodbusd_restart': tmp})
@@ -229,11 +222,6 @@ def generate(proxy):
                         port_config['global']['port_buffering']['mode'] = 'local'
                     elif local_enabled == 0 and remote_enabled == 1:
                         port_config['global']['port_buffering']['mode'] = 'remote'
-
-            if 'users' in proxy:
-                for user, user_config in proxy['users'].items():
-                    if 'serial_access' in user_config:
-                        set_nested(port_config, ['users', user, 'serial_access'], user_config['serial_access'])
 
             if 'service' in port_config:
                 service = port_config.get('service', '')
