@@ -994,6 +994,50 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
         self.verify_nftables(nftables_search_v6, 'ip6 vyos_filter')
 
+    def test_zone_with_default_firewall(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest-default', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'member', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-eth1', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-local', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'default-firewall', 'name', 'smoketest-default'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth1', 'member', 'interface', 'eth1'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth1', 'default-firewall', 'name', 'smoketest-default'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth2', 'member', 'interface', 'eth2'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'local-zone'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'from', 'smoketest-eth0', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'default-firewall', 'name', 'smoketest-default'])
+        self.cli_commit()
+
+        smoketest_eth0_search = [
+            ['iifname "eth1"', 'jump NAME_smoketest'],
+            ['jump NAME_smoketest-default']
+        ]
+        self.verify_nftables_chain_exists('ip vyos_filter', 'VZONE_smoketest-eth0')
+        self.verify_nftables_chain(smoketest_eth0_search, 'ip vyos_filter', 'VZONE_smoketest-eth0')
+
+        smoketest_eth1_search = [
+            ['jump NAME_smoketest-default']
+        ]
+        self.verify_nftables_chain_exists('ip vyos_filter', 'VZONE_smoketest-eth1')
+        self.verify_nftables_chain(smoketest_eth1_search, 'ip vyos_filter', 'VZONE_smoketest-eth1')
+
+        self.verify_nftables_chain_exists('ip vyos_filter', 'VZONE_smoketest-eth2')
+
+        smoketest_local_in_search = [
+            ['iifname "eth0"', 'jump NAME_smoketest'],
+            ['jump NAME_smoketest-default'],
+        ]
+        self.verify_nftables_chain_exists('ip vyos_filter', 'VZONE_smoketest-local_IN')
+        self.verify_nftables_chain(smoketest_local_in_search, 'ip vyos_filter', 'VZONE_smoketest-local_IN')
+
+        smoketest_local_out_search = [
+            ['oifname "eth0"', 'jump NAME_smoketest'],
+            ['oifname "eth1"', 'jump NAME_smoketest-default']
+        ]
+        self.verify_nftables_chain_exists('ip vyos_filter', 'VZONE_smoketest-local_OUT')
+        self.verify_nftables_chain(smoketest_local_out_search, 'ip vyos_filter', 'VZONE_smoketest-local_OUT')
+
     def test_zone_with_vrf(self):
         self.cli_set(['firewall', 'ipv4', 'name', 'ZONE1-to-LOCAL', 'default-action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', 'ZONE2_to_ZONE1', 'default-action', 'continue'])

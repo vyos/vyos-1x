@@ -334,5 +334,29 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
             id = int(id) + 1
 
+    def test_bonding_member_mtu(self):
+        # This Smoketest only works on our CI platform where we force the NIC
+        # to virtio and an MTU of only 1500 bytes max
+        if not os.path.exists('/tmp/vyos.smoketests.hint'):
+            self.skipTest('Not running under VyOS CI/CD QEMU environment!')
+
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+            self.cli_set(self._base_path + [interface, 'mtu', '10000'])
+
+        # check validate() - MTU of bond higher then virtio max MTU
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+            self.cli_delete(self._base_path + [interface, 'mtu'])
+
+        self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

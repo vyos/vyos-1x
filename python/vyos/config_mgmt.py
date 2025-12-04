@@ -37,7 +37,7 @@ from vyos.configtree import ConfigTree
 from vyos.configtree import ConfigTreeError
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.configtree import show_diff
+from vyos.configtree import diff_compare
 from vyos.load_config import load
 from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
@@ -48,6 +48,7 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
 from vyos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 from vyos.component_version import append_system_version
+from vyos.utils.file import file_compare
 
 SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
 config_json = '/run/vyatta/config/config.json'
@@ -97,7 +98,7 @@ def unsaved_commits(allow_missing_config=False) -> bool:
         return True
     tmp_save = '/tmp/config.running'
     save_config(tmp_save)
-    ret = not cmp(tmp_save, config_file, shallow=False)
+    ret = not file_compare(tmp_save, config_file)
     os.unlink(tmp_save)
     return ret
 
@@ -413,9 +414,9 @@ Proceed ?"""
         path = [] if commands else self.edit_path
         try:
             if commands:
-                out = show_diff(ct1, ct2, path=path, commands=True)
+                out = diff_compare(ct1, ct2, path=path, commands=True)
             else:
-                out = show_diff(ct1, ct2, path=path)
+                out = diff_compare(ct1, ct2, path=path)
         except ConfigTreeError as e:
             return e, 1
 

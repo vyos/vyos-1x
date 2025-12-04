@@ -25,8 +25,9 @@ from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
-from vyos.utils.process import is_systemd_service_running
+from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
+from vyos.utils.process import is_systemd_service_running
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -53,7 +54,8 @@ def verify(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    static = vrf and config_dict['vrf']['name'][vrf]['protocols']['static'] or config_dict['static']
+    static = vrf and dict_search(f'vrf.name.{vrf}.protocols.static',
+                                 config_dict) or config_dict['static']
     static['policy'] = config_dict['policy']
 
     verify_common_route_maps(static)
@@ -94,7 +96,8 @@ def generate(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    static = vrf and config_dict['vrf']['name'][vrf]['protocols']['static'] or config_dict['static']
+    static = vrf and dict_search(f'vrf.name.{vrf}.protocols.static',
+                                 config_dict) or config_dict['static']
 
     # Collect interfaces that have DHCP configuration for DHCP hooks
     dhcp_interfaces = set()

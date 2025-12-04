@@ -184,7 +184,8 @@ def verify(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    bgp = vrf and config_dict['vrf']['name'][vrf]['protocols']['bgp'] or config_dict['bgp']
+    bgp = vrf and dict_search(f'vrf.name.{vrf}.protocols.bgp',
+                              config_dict) or config_dict['bgp']
     bgp['policy'] = config_dict['policy']
 
     if 'deleted' in bgp:
@@ -331,7 +332,7 @@ def verify(config_dict):
                             peer_group = peer_config['interface']['v6only']['peer_group']
                             if 'remote_as' in peer_config['interface']['v6only'] and 'remote_as' in bgp['peer_group'][peer_group]:
                                 raise ConfigError(f'Peer-group member "{peer}" cannot override remote-as of peer-group "{peer_group}"!')
-                            
+
                 for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                             'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
                             'l2vpn_evpn']:

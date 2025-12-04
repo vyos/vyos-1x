@@ -248,6 +248,17 @@ def verify(bond):
                         continue
                     raise ConfigError(error_msg + f'it has a "{option_path.replace(".", " ")}" assigned!')
 
+            if mtu := bond.get('mtu'):
+                mtu = int(mtu)
+                max_mtu = int(EthernetIf(interface).get_max_mtu())
+                min_mtu = int(EthernetIf(interface).get_min_mtu())
+                if mtu > max_mtu:
+                    raise ConfigError('Configured MTU is greater then member '\
+                                      f'interface "{interface}" maximum of {max_mtu}!')
+                if mtu < min_mtu:
+                    raise ConfigError('Configured MTU is less then member '\
+                                      f'interface "{interface}" minimum of {min_mtu}!')
+
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:
             raise ConfigError(f'Primary interface of bond "{bond_name}" must be a member interface')

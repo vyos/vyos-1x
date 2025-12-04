@@ -120,9 +120,12 @@ if prifilt("{{ tmp | join(',') }}") then {
         StreamDriverMode="1"
         # Select the authentication mode
         StreamDriverAuthMode="{{ auth_mode if auth_mode == 'anon' else 'x509/' + auth_mode }}"
-{%                 if tls.permitted_peers is vyos_defined and auth_mode in ('fingerprint', 'name') %}
+{%                 if tls.permitted_peer is vyos_defined and auth_mode in ('fingerprint', 'name') %}
+{%                     set permitted_peers = tls.permitted_peer | map('trim') | select | join(',') %}
+{%                     if permitted_peers %}
         # Only include permitted peers (list of allowed fingerprints or names)
-        StreamDriverPermittedPeers="{{ tls.permitted_peers }}"
+        StreamDriverPermittedPeers="{{ permitted_peers }}"
+{%                     endif %}
 {%                 endif %}
 {%                 if tls.ca_certificate_path is vyos_defined %}
         # Include the path to the CA certificate file

@@ -48,7 +48,8 @@ def verify(config_dict):
         vrf = config_dict['vrf_context']
 
     # eqivalent of the C foo ? 'a' : 'b' statement
-    isis = vrf and config_dict['vrf']['name'][vrf]['protocols']['isis'] or config_dict['isis']
+    isis = vrf and dict_search(f'vrf.name.{vrf}.protocols.isis',
+                                 config_dict) or config_dict['isis']
     isis['policy'] = config_dict['policy']
 
     if 'deleted' in isis:

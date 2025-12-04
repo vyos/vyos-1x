@@ -21,13 +21,11 @@ set interfaces ethernet eth0 offload gro
 set interfaces ethernet eth0 vrf 'mgmt'
 set interfaces ethernet eth1 address '172.29.0.2/31'
 set interfaces ethernet eth1 description 'link to pe2'
-set interfaces ethernet eth1 mtu '1600'
 set interfaces ethernet eth1 offload gro
 set interfaces ethernet eth2 disable
 set interfaces ethernet eth2 offload gro
 set interfaces ethernet eth3 address '172.29.0.6/31'
 set interfaces ethernet eth3 description 'link to pe3'
-set interfaces ethernet eth3 mtu '1600'
 set interfaces ethernet eth3 offload gro
 set interfaces ethernet eth4 description 'customer blue'
 set interfaces ethernet eth4 offload gro
@@ -36,17 +34,14 @@ set interfaces ethernet eth5 offload gro
 set interfaces ethernet eth6 description 'customer green'
 set interfaces ethernet eth6 offload gro
 set interfaces loopback lo
-set interfaces vxlan vxlan2000 mtu '1500'
 set interfaces vxlan vxlan2000 parameters nolearning
 set interfaces vxlan vxlan2000 port '4789'
 set interfaces vxlan vxlan2000 source-address '172.29.255.1'
 set interfaces vxlan vxlan2000 vni '2000'
-set interfaces vxlan vxlan3000 mtu '1500'
 set interfaces vxlan vxlan3000 parameters nolearning
 set interfaces vxlan vxlan3000 port '4789'
 set interfaces vxlan vxlan3000 source-address '172.29.255.1'
 set interfaces vxlan vxlan3000 vni '3000'
-set interfaces vxlan vxlan4000 mtu '1500'
 set interfaces vxlan vxlan4000 parameters nolearning
 set interfaces vxlan vxlan4000 port '4789'
 set interfaces vxlan vxlan4000 source-address '172.29.255.1'

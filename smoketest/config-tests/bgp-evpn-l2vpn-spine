@@ -3,12 +3,9 @@ set interfaces ethernet eth0 address '2001:db8::51/64'
 set interfaces ethernet eth0 description 'Out-of-Band Managament Port'
 set interfaces ethernet eth0 vrf 'MGMT'
 set interfaces ethernet eth1 address '172.29.1.0/31'
-set interfaces ethernet eth1 mtu '1600'
 set interfaces ethernet eth2 address '172.29.1.2/31'
-set interfaces ethernet eth2 mtu '1600'
 set interfaces ethernet eth2 offload gro
 set interfaces ethernet eth3 address '172.29.1.4/31'
-set interfaces ethernet eth3 mtu '1600'
 set interfaces ethernet eth3 offload gro
 set interfaces loopback lo
 set protocols bgp address-family ipv4-unicast maximum-paths ibgp '4'

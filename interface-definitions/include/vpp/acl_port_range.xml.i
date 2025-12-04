@@ -11,8 +11,9 @@
       <description>Numbered port range (e.g., 1001-1005)</description>
     </valueHelp>
     <constraint>
-     <validator name="port-range"/>
+     <validator name="numeric" argument="--allow-range --range 1-65535"/>
     </constraint>
+    <constraintErrorMessage>Invalid port or port range</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->

@@ -312,3 +312,30 @@ def move_recursive(src: str, dst: str, overwrite=False):
 
     copy_recursive(src, dst, overwrite=overwrite)
     shutil.rmtree(src)
+
+
+def file_compare(file1: str, file2: str) -> bool:
+    """
+    Compare two files modulo blank lines, leading/trailing whitespace, final
+    newline.
+
+    Returns:
+        bool: True if files are equivalent in the sense above.
+
+    """
+
+    def non_empty(line):
+        return bool(line.strip())
+
+    with open(file1) as f1, open(file2) as f2:
+        it1 = filter(non_empty, f1)
+        it2 = filter(non_empty, f2)
+
+        try:
+            for l1, l2 in zip(it1, it2, strict=True):
+                if l1.strip() != l2.strip():
+                    return False
+        except ValueError:
+            return False
+
+        return True

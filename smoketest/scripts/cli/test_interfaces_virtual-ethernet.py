@@ -19,6 +19,9 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
+from vyos.utils.network import interface_exists
+
 class VEthInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -31,6 +34,21 @@ class VEthInterfaceTest(BasicInterfaceTest.TestCase):
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
         super(VEthInterfaceTest, cls).setUpClass()
+
+    def test_invalid_peers(self):
+        peer = ('veth1001', 'veth1002')
+        self.cli_set(self._base_path + [peer[0]])
+        self.cli_set(self._base_path + [peer[1], 'peer-name', peer[0]])
+
+        # Configuration mismatch between "veth1001" and "veth1001"
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(self._base_path + [peer[0], 'peer-name', peer[1]])
+        self.cli_commit()
+
+        self.assertTrue(interface_exists(peer[0]))
+        self.assertTrue(interface_exists(peer[1]))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

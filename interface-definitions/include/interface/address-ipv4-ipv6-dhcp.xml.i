@@ -22,7 +22,7 @@
       <description>Dynamic Host Configuration Protocol for IPv6</description>
     </valueHelp>
     <constraint>
-      <validator name="ip-host"/>
+      <validator name="interface-address"/>
       <regex>(dhcp|dhcpv6)</regex>
     </constraint>
     <multi/>

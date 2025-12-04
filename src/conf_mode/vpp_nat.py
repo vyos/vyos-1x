@@ -240,7 +240,7 @@ def verify(config):
         addresses_without_ports = set()
         local_addresses = set()
 
-        for rule, rule_config in config['static']['rule'].items():
+        for rule, rule_config in config['static'].get('rule', {}).items():
             error_msg = f'Configuration error in static rule {rule}:'
 
             if not rule_config.get('local', {}).get('address'):
@@ -327,7 +327,7 @@ def verify(config):
                     )
 
     if 'exclude' in config:
-        for rule, rule_config in config['exclude']['rule'].items():
+        for rule, rule_config in config['exclude'].get('rule', {}).items():
             keys = {'local_address', 'external_interface'}
             if not any(key in rule_config for key in keys):
                 raise ConfigError(

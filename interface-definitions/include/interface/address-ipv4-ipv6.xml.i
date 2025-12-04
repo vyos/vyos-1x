@@ -11,7 +11,7 @@
       <description>IPv6 address and prefix length</description>
     </valueHelp>
     <constraint>
-      <validator name="ip-host"/>
+      <validator name="interface-address"/>
     </constraint>
     <multi/>
   </properties>

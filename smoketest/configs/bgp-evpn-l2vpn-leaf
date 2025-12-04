@@ -18,18 +18,15 @@ interfaces {
     }
     ethernet eth1 {
         address 172.29.1.1/31
-        mtu 1600
     }
     ethernet eth2 {
         address 172.29.2.1/31
-        mtu 1600
     }
     ethernet eth3 {
     }
     loopback lo {
     }
     vxlan vxlan100 {
-        mtu 1500
         parameters {
             nolearning
         }

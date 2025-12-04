@@ -8,6 +8,9 @@
         proposals = {{ ike_group[rw_conf.ike_group] | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
         send_certreq = no
+{% if rw_conf.authentication.always_send_cert is vyos_defined %}
+        send_cert = always
+{% endif %}
 {% if ike.dead_peer_detection is vyos_defined %}
         dpd_timeout = {{ ike.dead_peer_detection.timeout }}
         dpd_delay = {{ ike.dead_peer_detection.interval }}
