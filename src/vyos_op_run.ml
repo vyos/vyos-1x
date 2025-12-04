@@ -217,6 +217,9 @@ let group_perms_match perms group cmd =
   perm_list_matches group_perms cmd
 
 let is_admin () =
+  (* If executed by root, skip all permission checks *)
+  if Unix.geteuid () = 0 then true else
+  (* Otherwise, check if the user is a VyOS admin *)
   let admin_group = Unix.getgrnam vyos_admin_group_name in
   let user_groups = Unix.getgroups () in
   match (Array.find_opt ((=) admin_group.gr_gid) user_groups) with
