@@ -107,10 +107,11 @@ def get_config(config=None):
         cli_users = list(login['user'])
 
         for user, user_config in login['user'].items():
-            if 'serial_access' in user_config:
-                conf_diff = D.get_child_nodes_diff(['system', 'login', 'user', user, 'serial-access'], recursive=True)
-                login['user'][user]['serial_access']['add'] = conf_diff['add']
-                login['user'][user]['serial_access']['stable'] = conf_diff['stable']
+            if 'serial' in user_config:
+                if 'access' in user_config['serial']:
+                    conf_diff = D.get_child_nodes_diff(['system', 'login', 'user', user, 'serial', 'access'], recursive=True)
+                    login['user'][user]['serial']['access']['add'] = conf_diff['add']
+                    login['user'][user]['serial']['access']['stable'] = conf_diff['stable']
 
     # prune TACACS global defaults if not set by user
     if login.from_defaults(['tacacs']):
@@ -207,26 +208,26 @@ def verify(login):
                         gen_header = False
                         DeprecationWarning(SSH_DSA_DEPRECATION_WARNING)
                     print(f'User "{user}" with deprecated public-key named: {pubkey}')
+            if 'serial' in user_config:
+                if 'access' in user_config['serial']:
+                    existing = {}
+                    new = {}
+                    if 'stable' in user_config['serial']['access']:
+                        existing = expand_with_origin(user_config['serial']['access']['stable'])
+                    if 'add' in user_config['serial']['access']:
+                        new = expand_with_origin(user_config['serial']['access']['add'])
 
-            if 'serial_access' in user_config:
-                existing = []
-                new = []
-                if 'stable' in user_config['serial_access']:
-                    existing = expand_with_origin(user_config['serial_access']['stable'])
-                if 'add' in user_config['serial_access']:
-                    new = expand_with_origin(user_config['serial_access']['add'])
+                    common_origins = set()
+                    for num, new_sources in new.items():
+                        if num in existing:
+                            existing_sources = existing[num]
+                            if set(new_sources) != set(existing_sources):
+                                common_origins.update(new_sources)
 
-                common_origins = set()
-                for num, new_sources in new.items():
-                    if num in existing:
-                        existing_sources = existing[num]
-                        if set(new_sources) != set(existing_sources):
-                            common_origins.update(new_sources)
+                    common_origins_list = sorted(common_origins)
 
-                common_origins_list = sorted(common_origins)
-
-                if common_origins:
-                    raise ConfigError(f"serial-access range {common_origins_list} cannot be set with existing {user_config['serial_access']['stable']}")
+                    if common_origins:
+                        raise ConfigError(f"serial-access range {common_origins_list} cannot be set with existing {user_config['serial']['access']['stable']}")
 
     # No more than 1 authentication methods
     if len({'radius', 'tacacs', 'saml'}.intersection(set(login))) > 1:
