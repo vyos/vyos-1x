@@ -1,5 +1,5 @@
 <!-- include start from serial/user/serial-access.xml.i -->
-<tagNode name="serial-access">
+<tagNode name="access">
   <properties>
     <help>User serial access</help>
     <valueHelp>

@@ -49,7 +49,16 @@
               <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
             </properties>
             <children>
-              #include <include/serial/user/serial-access.xml.i>
+              <node name="serial">
+                <properties>
+                  <help>Serial setting for current user</help>
+                </properties>
+                <children>
+                  #include <include/serial/user/serial-access.xml.i>
+                  #include <include/serial/user/serial-timeout.xml.i>
+                </children>
+              </node>
+
               <node name="operator">
                 <properties>
                   <help>Restrict the user to operational mode</help>
