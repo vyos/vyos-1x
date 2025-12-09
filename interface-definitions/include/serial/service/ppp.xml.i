@@ -89,8 +89,8 @@
       <properties>
         <help>The IPV4 IP address of the IGOS end of the PPP link</help>
         <valueHelp>
-          <format>ipv4</format>
-          <description>IPv4 address</description>
+          <format>ipv4net</format>
+          <description>IPv4 address and prefix length</description>
         </valueHelp>
         <constraint>
           <validator name="ipv4-host"/>
@@ -101,8 +101,8 @@
       <properties>
         <help>The IPV4 IP address of the remote end of the PPP link</help>
         <valueHelp>
-          <format>ipv4</format>
-          <description>IPv4 address</description>
+          <format>ipv4net</format>
+          <description>IPv4 address and prefix length</description>
         </valueHelp>
         <constraint>
           <validator name="ipv4-host"/>
@@ -136,7 +136,7 @@
           <validator name="numeric" argument="--range 0-255"/>
         </constraint>
       </properties>
-      <defaultValue>2</defaultValue>
+      <defaultValue>10</defaultValue>
     </leafNode>
     <leafNode name="configure-request-timeout">
       <properties>

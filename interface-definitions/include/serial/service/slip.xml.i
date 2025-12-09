@@ -8,8 +8,8 @@
       <properties>
         <help>The IPV4 IP address of the IGOS end of the SLIP link</help>
         <valueHelp>
-          <format>ipv4</format>
-          <description>IPv4 address</description>
+          <format>ipv4net</format>
+          <description>IPv4 address and prefix length</description>
         </valueHelp>
         <constraint>
           <validator name="ipv4-host"/>
@@ -20,8 +20,8 @@
       <properties>
         <help>The IPV4 IP address of the remote end of the SLIP link</help>
         <valueHelp>
-          <format>ipv4</format>
-          <description>IPv4 address</description>
+          <format>ipv4net</format>
+          <description>IPv4 address and prefix length</description>
         </valueHelp>
         <constraint>
           <validator name="ipv4-host"/>
