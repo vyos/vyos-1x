@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="serial">
+        <properties>
+          <help>Show user information on serial ports</help>
+        </properties>
+          <children>
+            <node name="users">
+              <command>iol_dspport</command>
+              <children>
+                <node name="count">
+                  <properties>
+                    <help>Show sessions with user count on all serial ports</help>
+                  </properties>
+                  <command>iol_dspport --count</command>
+                </node>
+              </children>
+            </node>
+            <tagNode name="device">
+              <properties>
+                <help>Show user information on specified serial port</help>
+                <completionHelp>
+                  <script>${vyos_completion_dir}/list_login_ttys.py</script>
+                </completionHelp>
+              </properties>
+              <command>iol_dspport $4</command>
+              <children>
+                <node name="count">
+                  <properties>
+                    <help>Show sessions with user count on specified serial port</help>
+                  </properties>
+                  <command>iol_dspport $4 --count</command>
+                </node>
+              </children>
+            </tagNode>
+          </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
