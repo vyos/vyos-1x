@@ -41,17 +41,6 @@
       </properties>
       <defaultValue>256</defaultValue>
     </leafNode>
-    <leafNode name="routing">
-      <properties>
-        <help>Determines the routing mode (RIP, Routing Information Protocol) used on the SLIP interface</help>
-        <completionHelp>
-          <list>listen send both</list>
-        </completionHelp>
-        <constraint>
-          <regex>(listen|send|both)</regex>
-        </constraint>
-      </properties>
-    </leafNode>
     <leafNode name="disable-vj-comp">
       <properties>
         <help>Disable Van Jacobson style TCP/IP header compression in both the transmit and the receive direction</help>

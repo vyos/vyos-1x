@@ -257,17 +257,6 @@
         <valueless/>
       </properties>
     </leafNode>
-    <leafNode name="routing">
-      <properties>
-        <help>Determines the routing mode (RIP, Routing Information Protocol) used on the PPP interface</help>
-        <completionHelp>
-          <list>listen send both</list>
-        </completionHelp>
-        <constraint>
-          <regex>(listen|send|both)</regex>
-        </constraint>
-      </properties>
-    </leafNode>
     <leafNode name="terminate-request-retry">
       <properties>
         <help>The maximum number of times a terminate request packet will be re-sent before the link is terminated</help>
