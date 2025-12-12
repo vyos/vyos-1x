@@ -27,6 +27,12 @@ from os import readlink
 from os import getpid
 from os import getppid
 from os import sync
+
+# PSL - access to additional routines
+import os.path
+from shutil import move
+# PSL - access to additional routines
+
 from json import loads
 from json import dumps
 from typing import Union
@@ -97,11 +103,14 @@ MSG_INPUT_UNSAVED_COMMITS: str = 'There are unsaved changes to the configuration
 MSG_INPUT_IMAGE_NAME: str = 'What would you like to name this image?'
 MSG_INPUT_IMAGE_NAME_TAKEN: str = 'There is already an installed image by that name; please choose again'
 MSG_INPUT_IMAGE_DEFAULT: str = 'Would you like to set the new image as the default one for boot?'
-MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user:'
-MSG_INPUT_PASSWORD_CONFIRM: str = 'Please confirm password for the "vyos" user:'
+# PSL - branding vyos -> igos
+MSG_INPUT_PASSWORD: str = 'Please enter a password for the "igos" user:'
+MSG_INPUT_PASSWORD_CONFIRM: str = 'Please confirm password for the "igos" user:'
 MSG_INPUT_ROOT_SIZE_ALL: str = 'Would you like to use all the free space on the drive?'
 MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root partition (min is 1.5 GB)?'
 MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial)?'
+# PSL - add console number input
+MSG_INPUT_CONSOLE_NUM: str = 'What console number be used by default? (0: default)?'
 MSG_INPUT_COPY_DATA: str = 'Would you like to copy data to the new image?'
 MSG_INPUT_CHOOSE_COPY_DATA: str = 'From which image would you like to save config information?'
 MSG_INPUT_COPY_ENC_DATA: str = 'Would you like to copy the encrypted config to the new image?'
@@ -138,8 +147,9 @@ external_download_script: str = f'{base_dir}/simple-download.py'
 external_latest_image_url_script: str = f'{base_dir}/latest-image-url.py'
 
 # default boot variables
+# PSL - timeout = 0 in combination with timeout_style-hidden to suppress grub menu/timeout
 DEFAULT_BOOT_VARS: dict[str, str] = {
-    'timeout': '5',
+    'timeout': '0',
     'console_type': 'tty',
     'console_num': '0',
     'console_speed': '115200',
@@ -755,6 +765,26 @@ def console_hint() -> str:
     else:
         return 'K'
 
+# PSL - added to override default console number
+
+def console_num_hint() -> str:
+
+    path = '/usr/share/vyos/templates/default_console'
+    # 1. Check existence
+    if not os.path.isfile(path):
+        return '0'
+
+    # 2. Read ASCII contents
+    with open(path, "r", encoding="ascii", errors="strict") as f:
+        data = f.read().strip()
+
+    # 3. Validate characters: must be between '0' and '4'
+    allowed = set("01234")
+    if not all(ch in allowed for ch in data):
+        return '0'
+
+    # 4. Return validated ASCII string
+    return data
 
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
     """Clean up after installation
@@ -909,6 +939,12 @@ def install_image() -> None:
                                   valid_responses=['K', 'S'])
     console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS'}
 
+    # PSL - added to override default console number
+    console_num: str = ask_input(MSG_INPUT_CONSOLE_NUM,
+                                  default=console_num_hint(),
+                                  valid_responses=['0', '1', '2', '3', '4'])
+    DEFAULT_BOOT_VARS['console_num'] = console_num
+
     config_boot_list = [f'{DIR_CONFIG}/config.boot',
                         '/opt/vyatta/etc/config.boot.default']
     default_config = config_boot_list[0]
@@ -960,11 +996,20 @@ def install_image() -> None:
 
         # copy system image and kernel files
         print('Copying system image files')
-        for file in Path(DIR_KERNEL_SRC).iterdir():
-            if file.is_file():
-                copy(file, f'{DIR_DST_ROOT}/boot/{image_name}/')
+
+        # PSL - copy all system files and symlinks, also rename the filesyste.squashfs
+        copytree(f"{DIR_KERNEL_SRC}/",
+                 f"{DIR_DST_ROOT}/boot/{image_name}/",
+                 dirs_exist_ok=True,
+                 symlinks=True)
+
         copy(FILE_ROOTFS_SRC,
              f'{DIR_DST_ROOT}/boot/{image_name}/{image_name}.squashfs')
+
+        # PSL - START copy over all dtb files for arm64 processors
+        copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
+                 f"{DIR_DST_ROOT}/boot/dtb/ti",
+                 dirs_exist_ok=True)
 
         # copy saved config data and SSH keys
         # owner restored on copy of config data by chmod_2775, above
@@ -1226,12 +1271,18 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
         # copy system image and kernel files
         print('Copying system image files')
-        for file in Path(f'{DIR_ISO_MOUNT}/live').iterdir():
-            if file.is_file() and (file.match('initrd*') or
-                                   file.match('vmlinuz*')):
-                copy(file, f'{root_dir}/boot/{image_name}/')
-        copy(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs',
+        # PSL - copy all system files and symlinks, also rename the filesystem.squashfs
+        copytree(f"{DIR_ISO_MOUNT}/live/",
+                 f"{root_dir}/boot/{image_name}/",
+                 dirs_exist_ok=True,
+                 symlinks=True)
+        move(f'{root_dir}/boot/{image_name}/filesystem.squashfs',
              f'{root_dir}/boot/{image_name}/{image_name}.squashfs')
+
+        # PSL - START copy over all dtb files for arm64 processors
+        copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
+                 f"{DIR_DST_ROOT}/boot/dtb/ti",
+                 dirs_exist_ok=True)
 
         # unmount an ISO and cleanup
         cleanup([str(iso_path)])
