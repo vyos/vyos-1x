@@ -1,0 +1,303 @@
+interfaces {
+    dummy dum0 {
+        address 172.18.254.203/32
+    }
+    ethernet eth0 {
+        duplex auto
+        speed auto
+        vif 10 {
+            address 172.16.33.203/24
+        }
+        vif 203 {
+            address 172.18.203.10/24
+            ip {
+                ospf {
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key ospfvyosnet
+                            }
+                        }
+                    }
+                    dead-interval 40
+                    hello-interval 10
+                    priority 1
+                    retransmit-interval 5
+                    transmit-delay 1
+                }
+            }
+        }
+    }
+    ethernet eth1 {
+        duplex auto
+        speed auto
+    }
+    ethernet eth2 {
+        duplex auto
+        speed auto
+    }
+    ethernet eth3 {
+        duplex auto
+        speed auto
+    }
+    openvpn vtun10 {
+        encryption {
+            cipher aes128gcm
+        }
+        hash sha1
+        local-port 10010
+        mode server
+        persistent-tunnel
+        server {
+            subnet 100.64.10.0/24
+        }
+        tls {
+            auth-file /config/auth/openvpn/tls-auth-1.key
+            ca-cert-file /config/auth/openvpn/ca-1.crt
+            cert-file /config/auth/openvpn/openvpn-hub-1.crt
+            crl-file /config/auth/openvpn/crl-1.pem
+            dh-file /config/auth/openvpn/dh-1.pem
+            key-file /config/auth/openvpn/openvpn-hub-1.key
+        }
+    }
+    openvpn vtun11 {
+        encryption {
+            cipher aes128gcm
+        }
+        hash sha1
+        local-port 10011
+        mode server
+        persistent-tunnel
+        server {
+            subnet 100.64.11.0/24
+        }
+        tls {
+            auth-file /config/auth/openvpn/tls-auth-1.key
+            ca-cert-file /config/auth/openvpn/ca-1.crt
+            cert-file /config/auth/openvpn/openvpn-hub-1.crt
+            crl-file /config/auth/openvpn/crl-1.pem
+            dh-file /config/auth/openvpn/dh-1.pem
+            key-file /config/auth/openvpn/openvpn-hub-1.key
+        }
+    }
+    openvpn vtun12 {
+        encryption {
+            cipher aes128gcm
+        }
+        hash sha1
+        local-port 10012
+        mode server
+        persistent-tunnel
+        server {
+            subnet 100.64.12.0/24
+        }
+        tls {
+            ca-cert-file /config/auth/openvpn/ca-1.crt
+            cert-file /config/auth/openvpn/openvpn-hub-1.crt
+            crl-file /config/auth/openvpn/crl-1.pem
+            crypt-file /config/auth/openvpn/crypt-file.key
+            dh-file /config/auth/openvpn/dh-1.pem
+            key-file /config/auth/openvpn/openvpn-hub-1.key
+        }
+    }
+    openvpn vtun20 {
+        encryption {
+            cipher aes128gcm
+        }
+        hash sha1
+        local-port 10020
+        mode server
+        persistent-tunnel
+        server {
+            subnet 100.64.20.0/24
+        }
+        tls {
+            auth-file /config/auth/openvpn/tls-auth-2.key
+            ca-cert-file /config/auth/openvpn/ca-2.crt
+            cert-file /config/auth/openvpn/openvpn-hub-2.crt
+            crl-file /config/auth/openvpn/crl-2.pem
+            dh-file /config/auth/openvpn/dh-2.pem
+            key-file /config/auth/openvpn/openvpn-hub-2.key
+        }
+    }
+    openvpn vtun21 {
+        encryption {
+            cipher aes128gcm
+        }
+        hash sha1
+        local-port 10021
+        mode server
+        persistent-tunnel
+        server {
+            subnet 100.64.21.0/24
+        }
+        tls {
+            auth-file /config/auth/openvpn/tls-auth-2.key
+            ca-cert-file /config/auth/openvpn/ca-2.crt
+            cert-file /config/auth/openvpn/openvpn-hub-2.crt
+            crl-file /config/auth/openvpn/crl-2.pem
+            dh-file /config/auth/openvpn/dh-2.pem
+            key-file /config/auth/openvpn/openvpn-hub-2.key
+        }
+    }
+    openvpn vtun22 {
+        encryption {
+            cipher aes128gcm
+        }
+        hash sha1
+        local-port 10022
+        mode server
+        persistent-tunnel
+        server {
+            subnet 100.64.22.0/24
+        }
+        tls {
+            ca-cert-file /config/auth/openvpn/ca-2.crt
+            cert-file /config/auth/openvpn/openvpn-hub-2.crt
+            crl-file /config/auth/openvpn/crl-2.pem
+            crypt-file /config/auth/openvpn/crypt-file.key
+            dh-file /config/auth/openvpn/dh-2.pem
+            key-file /config/auth/openvpn/openvpn-hub-2.key
+        }
+    }
+    openvpn vtun30 {
+        local-address 100.64.30.0 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10030
+        mode site-to-site
+        remote-address 192.0.2.0
+        shared-secret-key-file /config/auth/openvpn/shared-secret-1.key
+    }
+    openvpn vtun31 {
+        local-address 100.64.30.2 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10031
+        mode site-to-site
+        remote-address 192.0.2.1
+        shared-secret-key-file /config/auth/openvpn/shared-secret-1.key
+    }
+    openvpn vtun32 {
+        local-address 100.64.30.4 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10032
+        mode site-to-site
+        remote-address 192.0.2.2
+        shared-secret-key-file /config/auth/openvpn/shared-secret-1.key
+    }
+    openvpn vtun40 {
+        local-address 100.64.40.0 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10040
+        mode site-to-site
+        remote-address 192.0.2.3
+        shared-secret-key-file /config/auth/openvpn/shared-secret-2.key
+    }
+    openvpn vtun41 {
+        local-address 100.64.40.2 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10041
+        mode site-to-site
+        remote-address 192.0.2.4
+        shared-secret-key-file /config/auth/openvpn/shared-secret-2.key
+    }
+    openvpn vtun42 {
+        local-address 100.64.40.4 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10042
+        mode site-to-site
+        remote-address 192.0.2.5
+        shared-secret-key-file /config/auth/openvpn/shared-secret-2.key
+    }
+}
+protocols {
+    ospf {
+        area 0 {
+            network 172.18.203.0/24
+            network 172.18.254.203/32
+        }
+        log-adjacency-changes {
+            detail
+        }
+        parameters {
+            abr-type cisco
+            router-id 172.18.254.203
+        }
+        passive-interface default
+        passive-interface-exclude eth0.203
+        redistribute {
+            connected {
+                metric-type 2
+            }
+        }
+    }
+}
+service {
+    lldp {
+        interface all {
+        }
+    }
+    ssh {
+        disable-host-validation
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 10
+    }
+    conntrack {
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sip
+            sqlnet
+            tftp
+        }
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.io
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 172.16.254.30
+    ntp {
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+        server time3.vyos.net {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@23:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.8

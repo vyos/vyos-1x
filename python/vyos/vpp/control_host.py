@@ -133,13 +133,22 @@ def override_driver(bus_id: str, device_id: str, driver_name: str = '') -> None:
 
     unbind_driver(bus_id, device_id)
 
-    # vfio-pci needs special approach
+    # vfio-pci requires a different workflow: drivers must be explicitly bound by
+    # writing the vendor/device IDs to the vfio-pci `new_id` interface. The kernel
+    # does not provide a reliable way to check whether an ID has already been
+    # registered, so we simply attempt the write and ignore the FileExistsError.
+    # Any other failure is treated as a warning.
     if driver_name == 'vfio-pci':
         vendor: str = Path(f'{device_resolved}/vendor').read_text()
         device: str = Path(f'{device_resolved}/device').read_text()
-        Path('/sys/module/vfio_pci/drivers/pci:vfio-pci/new_id').write_text(
-            f'{vendor} {device}'
-        )
+        try:
+            Path('/sys/module/vfio_pci/drivers/pci:vfio-pci/new_id').write_text(
+                f'{vendor} {device}'
+            )
+        except FileExistsError:
+            pass
+        except Exception as e:
+            print(f"Warning: failed to write new_id for vfio-pci: {e}")
 
     # override a driver
     Path(f'{device_resolved}/driver_override').write_text(f'{driver_name}\n')

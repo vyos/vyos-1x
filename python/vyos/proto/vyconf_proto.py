@@ -200,6 +200,10 @@ class EditLevelRoot:
     dummy: int = None
 
 @dataclass
+class ConfigUnsaved:
+    file: str = None
+
+@dataclass
 class Request:
     prompt: Prompt = None
     setup_session: SetupSession = None
@@ -238,6 +242,7 @@ class Request:
     reset_edit_level: ResetEditLevel = None
     get_edit_level: GetEditLevel = None
     edit_level_root: EditLevelRoot = None
+    config_unsaved: ConfigUnsaved = None
 
 @dataclass
 class RequestEnvelope:
@@ -470,5 +475,11 @@ def set_request_get_edit_level(token: str = None, dummy: int = None):
 def set_request_edit_level_root(token: str = None, dummy: int = None):
     reqi = EditLevelRoot (dummy)
     req = Request(edit_level_root=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
+def set_request_config_unsaved(token: str = None, file: str = None):
+    reqi = ConfigUnsaved (file)
+    req = Request(config_unsaved=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env

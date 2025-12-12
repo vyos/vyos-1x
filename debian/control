@@ -109,6 +109,7 @@ Depends:
   file,
   iproute2 (>= 6.0.0),
   linux-cpupower,
+  hwloc,
 # ipaddrcheck is widely used in IP value validators
   ipaddrcheck,
   ethtool (>= 6.10),

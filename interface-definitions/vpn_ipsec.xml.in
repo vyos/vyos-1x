@@ -1160,22 +1160,22 @@
                     <properties>
                       <help>Connection type</help>
                       <completionHelp>
-                        <list>initiate respond none</list>
+                        <list>initiate trap none</list>
                       </completionHelp>
                       <valueHelp>
                         <format>initiate</format>
                         <description>Bring the connection up immediately</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>respond</format>
-                        <description>Wait for the peer to initiate the connection</description>
+                        <format>trap</format>
+                        <description>Bring the connection up only when matching traffic is detected</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
                         <description>Load the connection only</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(initiate|respond|none)</regex>
+                        <regex>(initiate|trap|none)</regex>
                       </constraint>
                     </properties>
                   </leafNode>

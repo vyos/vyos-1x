@@ -149,12 +149,8 @@ override_dh_auto_install:
 	cp -r smoketest/scripts/* $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/smoke
 
 	# Install smoke test configs
-	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/config/
-	cp -r smoketest/configs/* $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/config
-
-	# Install smoke test config tests
-	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/config-tests/
-	cp -r smoketest/config-tests/* $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/config-tests
+	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/configs/
+	cp -r smoketest/configs/* $(DIR)/$(VYOS_LIBEXEC_DIR)/tests/configs
 
 	# Install system programs
 	mkdir -p $(DIR)/$(VYOS_BIN_DIR)

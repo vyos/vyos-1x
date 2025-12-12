@@ -73,9 +73,26 @@ def migrate(config: ConfigTree) -> None:
                 key_pki_name = f'{pki_name}_shared'
 
                 if key:
-                    config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'key'], value=wrapped_pem_to_config_value(key))
-                    config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'version'], value='1')
-                    config.set(base + [interface, 'shared-secret-key'], value=key_pki_name)
+                    # Check if OpenVPN shared-secret already exists - no need to check node
+                    # existence as it is always created above when entering this context
+                    secret_exists = None
+                    for secret_name in config.list_nodes(pki_base + ['openvpn', 'shared-secret']):
+                        secret_path = pki_base + ['openvpn', 'shared-secret', secret_name, 'key']
+                        if not config.exists(secret_path):
+                            continue
+
+                        secret = config.return_value(secret_path)
+                        # Check for duplicate cert/key - and re-use if possible
+                        if secret == wrapped_pem_to_config_value(key):
+                            secret_exists = secret_name
+                            break
+
+                    if secret_exists:
+                        config.set(base + [interface, 'shared-secret-key'], value=secret_exists)
+                    else:
+                        config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'key'], value=wrapped_pem_to_config_value(key))
+                        config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'version'], value='1')
+                        config.set(base + [interface, 'shared-secret-key'], value=key_pki_name)
                 else:
                     print(f'Failed to migrate shared-secret-key on openvpn interface {interface}')
 
@@ -94,9 +111,26 @@ def migrate(config: ConfigTree) -> None:
                 key_pki_name = f'{pki_name}_auth'
 
                 if key:
-                    config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'key'], value=wrapped_pem_to_config_value(key))
-                    config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'version'], value='1')
-                    config.set(base + [interface, 'tls', 'auth-key'], value=key_pki_name)
+                    # Check if OpenVPN auth key already exists - no need to check node
+                    # existence as it is always created above when entering this context
+                    secret_exists = None
+                    for secret_name in config.list_nodes(pki_base + ['openvpn', 'shared-secret']):
+                        secret_path = pki_base + ['openvpn', 'shared-secret', secret_name, 'key']
+                        if not config.exists(secret_path):
+                            continue
+
+                        secret = config.return_value(secret_path)
+                        # Check for duplicate cert/key - and re-use if possible
+                        if secret == wrapped_pem_to_config_value(key):
+                            secret_exists = secret_name
+                            break
+
+                    if secret_exists:
+                        config.set(base + [interface, 'tls', 'auth-key'], value=secret_exists)
+                    else:
+                        config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'key'], value=wrapped_pem_to_config_value(key))
+                        config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'version'], value='1')
+                        config.set(base + [interface, 'tls', 'auth-key'], value=key_pki_name)
                 else:
                     print(f'Failed to migrate auth-key on openvpn interface {interface}')
 
@@ -112,9 +146,26 @@ def migrate(config: ConfigTree) -> None:
                 key_pki_name = f'{pki_name}_crypt'
 
                 if key:
-                    config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'key'], value=wrapped_pem_to_config_value(key))
-                    config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'version'], value='1')
-                    config.set(base + [interface, 'tls', 'crypt-key'], value=key_pki_name)
+                    # Check if OpenVPN auth key already exists - no need to check node
+                    # existence as it is always created above when entering this context
+                    secret_exists = None
+                    for secret_name in config.list_nodes(pki_base + ['openvpn', 'shared-secret']):
+                        secret_path = pki_base + ['openvpn', 'shared-secret', secret_name, 'key']
+                        if not config.exists(secret_path):
+                            continue
+
+                        secret = config.return_value(secret_path)
+                        # Check for duplicate cert/key - and re-use if possible
+                        if secret == wrapped_pem_to_config_value(key):
+                            secret_exists = secret_name
+                            break
+
+                    if secret_exists:
+                        config.set(base + [interface, 'tls', 'crypt-key'], value=secret_exists)
+                    else:
+                        config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'key'], value=wrapped_pem_to_config_value(key))
+                        config.set(pki_base + ['openvpn', 'shared-secret', key_pki_name, 'version'], value='1')
+                        config.set(base + [interface, 'tls', 'crypt-key'], value=key_pki_name)
                 else:
                     print(f'Failed to migrate crypt-key on openvpn interface {interface}')
 
@@ -144,8 +195,26 @@ def migrate(config: ConfigTree) -> None:
                             if cert:
                                 ca_certs[f'{pki_name}_{index}'] = cert
                                 cert_pem = encode_certificate(cert)
-                                config.set(pki_base + ['ca', f'{pki_name}_{index}', 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
-                                config.set(x509_base + ['ca-certificate'], value=f'{pki_name}_{index}', replace=False)
+
+                                # Check if CA already exists - no need to check node existence as
+                                # it is always created above when entering this context
+                                ca_exists = None
+                                for ca_name in config.list_nodes(pki_base + ['ca']):
+                                    ca_cert_path = pki_base + ['ca', ca_name, 'certificate']
+                                    if not config.exists(ca_cert_path):
+                                        continue
+
+                                    ca_base64 = config.return_value(ca_cert_path)
+                                    # Check for duplicate cert/key - and re-use if possible
+                                    if ca_base64 == wrapped_pem_to_config_value(cert_pem):
+                                        ca_exists = ca_name
+                                        break
+
+                                if ca_exists:
+                                    config.set(x509_base + ['ca-certificate'], value=ca_exists, replace=False)
+                                else:
+                                    config.set(pki_base + ['ca', f'{pki_name}_{index}', 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
+                                    config.set(x509_base + ['ca-certificate'], value=f'{pki_name}_{index}', replace=False)
                             else:
                                 print(f'Failed to migrate CA certificate on openvpn interface {interface}')
 
@@ -180,7 +249,23 @@ def migrate(config: ConfigTree) -> None:
 
                 if crl and crl_ca_name:
                     crl_pem = encode_certificate(crl)
-                    config.set(pki_base + ['ca', crl_ca_name, 'crl'], value=wrapped_pem_to_config_value(crl_pem))
+
+                    # Check if CRL already exists - no need to check node
+                    # existence as it is always created above when entering this context
+                    crl_exists = None
+                    for ca_name in config.list_nodes(pki_base + ['ca']):
+                        crl_path = pki_base + ['ca', ca_name, 'crl']
+                        if not config.exists(crl_path):
+                            continue
+
+                        crl_base64 = config.return_value(crl_path)
+                        # Check if CRL is a duplicate and we have already imported it
+                        if crl_base64 == wrapped_pem_to_config_value(crl_pem):
+                            crl_exists = ca_name
+                            break
+
+                    if not crl_exists:
+                        config.set(pki_base + ['ca', crl_ca_name, 'crl'], value=wrapped_pem_to_config_value(crl_pem))
                 else:
                     print(f'Failed to migrate CRL on openvpn interface {interface}')
 
@@ -205,8 +290,25 @@ def migrate(config: ConfigTree) -> None:
 
                 if cert:
                     cert_pem = encode_certificate(cert)
-                    config.set(pki_base + ['certificate', pki_name, 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
-                    config.set(x509_base + ['certificate'], value=pki_name)
+                    # Check if certificate public key already exists - no need to check node
+                    # existence as it is always created above when entering this context
+                    cert_exists = None
+                    for cert_name in config.list_nodes(pki_base + ['certificate']):
+                        cert_path = pki_base + ['certificate', cert_name, 'certificate']
+                        if not config.exists(cert_path):
+                            continue
+
+                        cert_base64 = config.return_value(cert_path)
+                        # Check for duplicate cert/key - and re-use if possible
+                        if cert_base64 == wrapped_pem_to_config_value(cert_pem):
+                            cert_exists = cert_name
+                            break
+
+                    if cert_exists:
+                        config.set(x509_base + ['certificate'], value=cert_exists)
+                    else:
+                        config.set(pki_base + ['certificate', pki_name, 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
+                        config.set(x509_base + ['certificate'], value=pki_name)
                 else:
                     print(f'Failed to migrate certificate on openvpn interface {interface}')
 
@@ -227,7 +329,22 @@ def migrate(config: ConfigTree) -> None:
 
                 if key:
                     key_pem = encode_private_key(key, passphrase=None)
-                    config.set(pki_base + ['certificate', pki_name, 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
+                    # Check if certificate public key already exists - no need to check node
+                    # existence as it is always created above when entering this context
+                    key_exists = None
+                    for key_name in config.list_nodes(pki_base + ['certificate']):
+                        key_path = pki_base + ['certificate', key_name, 'private', 'key']
+                        if not config.exists(key_path):
+                            continue
+
+                        key_base64 = config.return_value(key_path)
+                        # Check for duplicate cert/key - and re-use if possible
+                        if key_base64 == wrapped_pem_to_config_value(key_pem):
+                            key_exists = key_name
+                            break
+
+                    if not key_exists:
+                        config.set(pki_base + ['certificate', pki_name, 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
                 else:
                     print(f'Failed to migrate private key on openvpn interface {interface}')
 
@@ -252,8 +369,26 @@ def migrate(config: ConfigTree) -> None:
 
                 if dh:
                     dh_pem = encode_dh_parameters(dh)
-                    config.set(pki_base + ['dh', pki_name, 'parameters'], value=wrapped_pem_to_config_value(dh_pem))
-                    config.set(x509_base + ['dh-params'], value=pki_name)
+
+                    # Check if DH parameters already exists - no need to check node existence
+                    # as it is always created above when entering this context
+                    dh_exists = None
+                    for dh_name in config.list_nodes(pki_base + ['dh']):
+                        dh_param_path = pki_base + ['dh', dh_name, 'parameters']
+                        if not config.exists(dh_param_path):
+                            continue
+
+                        dh_base64 = config.return_value(dh_param_path)
+                        # Check for duplicate cert/key - and re-use if possible
+                        if dh_base64 == wrapped_pem_to_config_value(dh_pem):
+                            dh_exists = dh_name
+                            break
+
+                    if dh_exists:
+                        config.set(x509_base + ['dh-params'], value=dh_exists)
+                    else:
+                        config.set(pki_base + ['dh', pki_name, 'parameters'], value=wrapped_pem_to_config_value(dh_pem))
+                        config.set(x509_base + ['dh-params'], value=pki_name)
                 else:
                     print(f'Failed to migrate DH parameters on openvpn interface {interface}')
 

@@ -18,6 +18,16 @@
 #   - remove syslog user console logging
 #   - move "global preserve-fqdn" one CLI level up
 #   - rename "host" to "remote"
+#
+# T8059:
+#   - if a syslog remote contains a port (like 192.0.2.1:9000),
+#     migrate the port part to the new dedicated "port" option
+#
+# XXX: this script leads to data loss when a config
+# has multiple remotes with the same host address but different ports.
+# That issue needs to be addressed separately (T8058)
+
+import re
 
 from vyos.configtree import ConfigTree
 
@@ -64,8 +74,35 @@ def migrate(config: ConfigTree) -> None:
         config.set(base + ['remote'])
         config.set_tag(base + ['remote'])
         for remote in config.list_nodes(base + ['host']):
-            config.copy(base + ['host', remote], base + ['remote', remote])
-            config.set_tag(base + ['remote'])
-            if vrf:
-                config.set(base + ['remote', remote, 'vrf'], value=vrf)
+            # Check if the host address has a port
+            # to migrate the port part to the new dedicated "port" option
+            res = re.match(r'(?P<host>[^:]+):(?P<port>.*)', remote)
+            if res:
+                remote_host = res.group('host')
+                remote_port = res.group('port')
+            else:
+                remote_host = remote
+                remote_port = None
+
+            # XXX: the fact that it was possible to use node names like "192.0.2.1:9000"
+            # made it possible to create configurations that would send different messages
+            # to different ports on the same server.
+            # At the moment, such configurations are unsupported
+            # so the script only keeps one of such remotes.
+            if config.exists(base + ['remote', remote_host]):
+                # Skip the remote if it already exists
+                # XXX: This tacitly implies that if multiple remotes
+                # with the same address but different ports are used,
+                # only the first one of those makes it into the migrated config.
+                continue
+            else:
+                config.copy(base + ['host', remote], base + ['remote', remote_host])
+
+                if remote_port:
+                    config.set(base + ['remote', remote_host, 'port'], value=remote_port)
+
+                config.set_tag(base + ['remote'])
+                if vrf:
+                    config.set(base + ['remote', remote_host, 'vrf'], value=vrf)
+
         config.delete(base + ['host'])

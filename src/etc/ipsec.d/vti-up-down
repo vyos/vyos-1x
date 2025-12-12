@@ -29,7 +29,7 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import get_interface_dict
 from vyos.utils.commit import wait_for_commit_lock
 from vyos.utils.process import call
-from vyos.utils.vti_updown_db import open_vti_updown_db_for_update
+from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
 
 def supply_interface_dict(interface):
     # Lazy-load the running config on first invocation
@@ -58,10 +58,10 @@ if __name__ == '__main__':
     wait_for_commit_lock()
 
     if verb in ['up-client', 'up-client-v6', 'up-host', 'up-host-v6']:
-        with open_vti_updown_db_for_update() as db:
+        with open_vti_updown_db_for_create_or_update() as db:
             db.add(interface, connection, protocol)
             db.commit(supply_interface_dict)
     elif verb in ['down-client', 'down-client-v6', 'down-host', 'down-host-v6']:
-        with open_vti_updown_db_for_update() as db:
+        with open_vti_updown_db_for_create_or_update() as db:
             db.remove(interface, connection, protocol)
             db.commit(supply_interface_dict)
