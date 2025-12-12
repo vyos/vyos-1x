@@ -20,7 +20,7 @@ from socket import gethostname
 from sys import exit
 from urllib3 import PoolManager
 
-from vyos.base import Warning
+from vyos.base import Warning, DeprecationWarning
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
@@ -65,6 +65,8 @@ def get_config(config=None):
 def verify(salt):
     if not salt:
         return None
+
+    DeprecationWarning('Salt minion integration is deprecated and will be removed in future VyOS versions')
 
     if 'hash' in salt and salt['hash'] == 'sha1':
         Warning('Do not use sha1 hashing algorithm, upgrade to sha256 or later!')

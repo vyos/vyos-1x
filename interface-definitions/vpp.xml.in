@@ -1033,12 +1033,6 @@
                 <multi/>
               </properties>
             </leafNode>
-            <leafNode name="no-forwarding">
-              <properties>
-                <help>Do not forward packets which do not match existing NAT translations (static or dynamic)</help>
-                <valueless/>
-              </properties>
-            </leafNode>
           </children>
         </node>
         <node name="physmem">

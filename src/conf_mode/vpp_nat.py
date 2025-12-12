@@ -439,10 +439,10 @@ def apply(config):
     # Add NAT44
     n.enable_nat44_ed()
 
-    # Enable/disable forwarding
-    enable_forwarding = True
-    if 'no_forwarding' in config:
-        enable_forwarding = False
+    # Dynamic rules always require `address-pool translation` in CLI - we can use this for an easy validation
+    # Forwarding must be disabled when dynamic rules are present
+    # Without dynamic rules, forwarding remains enabled
+    enable_forwarding = not bool(config.get('address_pool', {}).get('translation'))
     n.enable_disable_nat44_forwarding(enable_forwarding)
 
     # Add inside interfaces

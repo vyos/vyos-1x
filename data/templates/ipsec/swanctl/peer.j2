@@ -27,7 +27,7 @@
         reauth_time = 0
 {% elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
         keyingtries = 0
-{% elif peer_conf.connection_type is vyos_defined('respond') %}
+{% elif peer_conf.connection_type is vyos_defined('trap') %}
         keyingtries = 1
 {% endif %}
 {% if peer_conf.force_udp_encapsulation is vyos_defined %}
@@ -96,7 +96,7 @@
                 start_action = none
 {%     elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
                 start_action = start
-{%     elif peer_conf.connection_type is vyos_defined('respond') %}
+{%     elif peer_conf.connection_type is vyos_defined('trap') %}
                 start_action = trap
 {%     elif peer_conf.connection_type is vyos_defined('none') %}
                 start_action = none
@@ -160,7 +160,7 @@
                 start_action = none
 {%         elif peer_conf.connection_type is not vyos_defined or peer_conf.connection_type is vyos_defined('initiate') %}
                 start_action = start
-{%         elif peer_conf.connection_type is vyos_defined('respond') %}
+{%         elif peer_conf.connection_type is vyos_defined('trap') %}
                 start_action = trap
 {%         elif peer_conf.connection_type is vyos_defined('none') %}
                 start_action = none

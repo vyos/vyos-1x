@@ -11,7 +11,7 @@
             <path>interfaces wwan</path>
           </completionHelp>
         </properties>
-        <command>${vyos_op_scripts_dir}/connect_disconnect.py --connect --disconnect --interface "$3"</command>
+        <command>${vyos_op_scripts_dir}/connect_disconnect.py --reconnect --interface "$3"</command>
       </tagNode>
     </children>
   </node>

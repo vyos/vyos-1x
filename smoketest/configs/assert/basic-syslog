@@ -22,4 +22,7 @@ set system syslog remote syslog02.vyos.net format octet-counted
 set system syslog remote syslog02.vyos.net port '8001'
 set system syslog remote syslog02.vyos.net protocol 'tcp'
 set system syslog remote syslog02.vyos.net vrf 'red'
+set system syslog remote syslog03.vyos.net facility local7 level 'notice'
+set system syslog remote syslog03.vyos.net port '9000'
+set system syslog remote syslog03.vyos.net vrf 'red'
 set vrf name red table '12321'

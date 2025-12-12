@@ -98,19 +98,23 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--connect", help="Bring up a connection-oriented network interface", action="store_true")
     group.add_argument("--disconnect", help="Take down connection-oriented network interface", action="store_true")
+    group.add_argument("--reconnect", help="Reconnect connection-oriented network interface", action="store_true")
     parser.add_argument("--interface", help="Interface name", action="store", required=True)
     args = parser.parse_args()
 
-    if args.connect or args.disconnect:
-        if args.disconnect:
-            disconnect(args.interface)
+    # Disallow connecting interfaces while their configuration might be changing
+    if args.connect or args.reconnect:
+        if commit_in_progress():
+            print('Cannot connect while a commit is in progress')
+            exit(1)
 
-        if args.connect:
-            if commit_in_progress():
-                print('Cannot connect while a commit is in progress')
-                exit(1)
-            connect(args.interface)
-
+    if args.connect:
+        connect(args.interface)
+    elif args.disconnect:
+        disconnect(args.interface)
+    elif args.reconnect:
+        disconnect(args.interface)
+        connect(args.interface)
     else:
         parser.print_help()
 

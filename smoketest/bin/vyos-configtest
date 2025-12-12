@@ -23,8 +23,8 @@ import unittest
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos import ConfigError
 
-config_dir = '/usr/libexec/vyos/tests/config'
-config_test_dir = '/usr/libexec/vyos/tests/config-tests'
+config_dir = '/usr/libexec/vyos/tests/configs'
+config_test_dir = f'{config_dir}/assert'
 save_config = '/tmp/vyos-configtest-save'
 
 class DynamicClassBase(unittest.TestCase):

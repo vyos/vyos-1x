@@ -13,3 +13,6 @@ WorkingDirectory=
 WorkingDirectory=/run/vpp
 Restart=no
 Type=notify
+# T8011 avoid duplicating logs
+StandardOutput=null
+StandardError=null
