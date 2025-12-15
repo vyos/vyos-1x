@@ -308,11 +308,31 @@ def _verify_client(func):
         v = 'v6' if family == 'inet6' else ''
         interface = kwargs.get('interface')
         interface_path = Section.get_config_path(interface)
+        path_elems = interface_path.split()
+        base_path = ['interfaces'] + path_elems
+
         unconf_message = f'DHCP{v} client not configured on interface {interface}!'
 
-        # Check if config does not exist
-        if not config.exists(f'interfaces {interface_path} address dhcp{v}'):
+        iface_conf = config.get_config_dict(
+            base_path, key_mangling=('-', '_'), get_first_key=True
+        )
+
+        if family == 'inet6':
+            addrs = iface_conf.get('address', [])
+            has_dhcpv6_addr = 'dhcpv6' in addrs
+
+            dhcpv6_opts = iface_conf.get('dhcpv6_options', {})
+            has_parameters_only = 'parameters_only' in dhcpv6_opts
+            has_pd = 'pd' in dhcpv6_opts
+
+            config_exists = has_dhcpv6_addr or has_parameters_only or has_pd
+        else:
+            addrs = iface_conf.get('address', [])
+            config_exists = 'dhcp' in addrs
+
+        if not config_exists:
             raise vyos.opmode.UnconfiguredObject(unconf_message)
+
         return func(*args, **kwargs)
 
     return _wrapper

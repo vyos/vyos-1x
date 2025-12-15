@@ -23,6 +23,7 @@ from shutil import rmtree
 from socket import gethostname
 from sys import exit
 from tarfile import open as tar_open
+from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
 from vyos.remote import upload
 
@@ -91,6 +92,22 @@ def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
     with tar_open(name=archive_file, mode='x:gz') as tar_file:
         tar_file.add(tmp_dir_path, arcname=os.path.basename(tmp_dir_path))
 
+def __generate_topology_snapshots(output_dir: Path) -> None:
+    """
+    Generates physical and logical topology PNG files using `lstopo`
+
+    :param output_dir: directory where topology PNGs will be stored
+    """
+
+    physical_topo = output_dir / 'topology.png'
+    logical_topo = output_dir / 'topology-logical.png'
+
+    # Capture physical topology
+    call(['lstopo', '--output-format', 'png', str(physical_topo)])
+
+    # Capture logical topology
+    call(['lstopo', '--logical', '--output-format', 'png', str(logical_topo)])
+
 
 if __name__ == '__main__':
     defualt_tmp_dir = '/tmp'
@@ -124,6 +141,10 @@ if __name__ == '__main__':
 
     report_file: Path = Path(f'{tmp_dir_path}/show_tech-support_report.txt')
     report_file.touch()
+
+    # Call the topology snapshot function here
+    __generate_topology_snapshots(tmp_dir)
+
     try:
 
         save_stdout(op('show tech-support report'), report_file)

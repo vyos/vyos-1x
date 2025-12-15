@@ -90,7 +90,6 @@ dependency_interface_type_map = {
 # dict of drivers that needs to be overrided
 override_drivers: dict[str, str] = {
     'hv_netvsc': 'uio_hv_generic',
-    'ena': 'vfio-pci',
 }
 
 # drivers that does not use PCIe addresses

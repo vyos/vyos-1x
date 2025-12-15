@@ -505,40 +505,50 @@ def generate_run_arguments(name, container_config, host_ident):
     if 'arguments' in container_config:
         command_arguments = container_config['arguments'].strip()
 
+    net = ''
     if 'allow_host_networks' in container_config:
-        return f'{container_base_cmd} {healthcheck} --net host {entrypoint} {image} {command} {command_arguments}'.strip()
-
-    ip_param = ''
-    addr_info = ''
-    networks = ",".join(container_config['network'])
-    for network in container_config['network']:
-        network_name = network
-        if 'address' not in container_config['network'][network]:
-            continue
-        for address in container_config['network'][network]['address']:
-            if is_ipv6(address):
-                ip_param += f' --ip6 {address}'
-            else:
-                ip_param += f' --ip {address}'
-
-        addr_info = ''.join(container_config['network'][network]['address'])
-
-    get_mac = dict_search(f'network.{network_name}.mac', container_config)
-    if get_mac == 'auto' or get_mac is None:
-        mac_add = gen_mac(name, addr_info, host_ident)
+        net = '--net host'
     else:
-        mac_add = get_mac
+        ip_param = ''
+        addr_info = ''
+        networks = ",".join(container_config['network'])
+        for network in container_config['network']:
+            network_name = network
+            if 'address' not in container_config['network'][network]:
+                continue
+            for address in container_config['network'][network]['address']:
+                if is_ipv6(address):
+                    ip_param += f' --ip6 {address}'
+                else:
+                    ip_param += f' --ip {address}'
 
-    mac_address = f'--mac-address {mac_add}'
+            addr_info = ''.join(container_config['network'][network]['address'])
 
-    # Replace mac-auto with the generated mac address
-    if get_mac == 'auto':
-        mac_config_path = ['container', 'name', name, 'network', network_name, 'mac']
+        get_mac = dict_search(f'network.{network_name}.mac', container_config)
+        if get_mac == 'auto' or get_mac is None:
+            mac_add = gen_mac(name, addr_info, host_ident)
+        else:
+            mac_add = get_mac
 
-        delete_cli_node(mac_config_path)
-        add_cli_node(mac_config_path, value=mac_add)
+        mac_address = f'--mac-address {mac_add}'
 
-    return f'{container_base_cmd} {healthcheck} --net {networks} {ip_param} {mac_address} {entrypoint} {image} {command} {command_arguments}'.strip()
+        # Replace mac-auto with the generated mac address
+        if get_mac == 'auto':
+            mac_config_path = [
+                'container',
+                'name',
+                name,
+                'network',
+                network_name,
+                'mac',
+            ]
+
+            delete_cli_node(mac_config_path)
+            add_cli_node(mac_config_path, value=mac_add)
+
+        net = f'--net {networks} {ip_param} {mac_address}'
+
+    return f'{container_base_cmd} {healthcheck} {net} {entrypoint} {image} {command} {command_arguments}'.strip()
 
 
 def generate(container):

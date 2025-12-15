@@ -1366,6 +1366,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(
             base_nat + ['address-pool', 'translation', 'address', translation_pool]
         )
+        self.cli_commit()
+
+        # Forwarding is disabled when only dynamic NAT is configured
+        vpp = VPPControl()
+        out = vpp.api.nat44_show_running_config().forwarding_enabled
+        self.assertFalse(out)
+
         self.cli_set(
             base_nat + ['exclude', 'rule', '100', 'local-address', exclude_local_addr]
         )
@@ -1386,7 +1393,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             base_nat + ['static', 'rule', '100', 'local', 'address', static_local_addr]
         )
 
-        self.cli_set(base_nat_settings + ['no-forwarding'])
         self.cli_set(base_nat_settings + ['session-limit', sess_limit])
         self.cli_set(base_nat_settings + ['timeout', 'icmp', timeout_icmp])
         self.cli_set(
@@ -1425,6 +1431,20 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Summary
         _, out = rc_cmd('sudo vppctl show nat44 summary')
         self.assertIn(f'max translations per thread: {sess_limit} fib 0', out)
+
+        # Forwarding should be disabled with statyc+dynamic NAT
+        vpp = VPPControl()
+        out = vpp.api.nat44_show_running_config().forwarding_enabled
+        self.assertFalse(out)
+
+        # Delete dynamic NAT and check forwarding
+        self.cli_delete(base_nat + ['address-pool'])
+        self.cli_commit()
+
+        # Forwarding should be enabled if only statyc NAT is configured
+        vpp = VPPControl()
+        out = vpp.api.nat44_show_running_config().forwarding_enabled
+        self.assertTrue(out)
 
     def test_17_vpp_sflow(self):
         base_sflow = ['system', 'sflow']
