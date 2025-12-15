@@ -39,6 +39,7 @@ from vyos.utils.serial import send_command_to_iolan
 from vyos.utils.serial import find_active_ttyS_devices
 from vyos.utils.serial import print_global_change_warning
 from vyos import ConfigError
+from vyos.tpm import tpm_enabled
 
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
@@ -388,7 +389,7 @@ def generate(proxy):
                     path['cipher_options'] = subtract_from_key(path['cipher_options'])
 
                 cert_name = ''
-                if 'certificate' in path:
+                if 'certificate' in path and not tpm_enabled:
                     cert_name = path['certificate']
 
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
