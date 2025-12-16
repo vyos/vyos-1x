@@ -775,7 +775,6 @@ def console_num_hint(valid: list[str]) -> str:
     """Get default console number, optionally overridden by a file."""
 
     path = '/usr/share/vyos/templates/default_console'
-    default = valid[0]
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -787,7 +786,7 @@ def console_num_hint(valid: list[str]) -> str:
     except OSError:
         pass
 
-    return default
+    return valid[0]
 
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
     """Clean up after installation
