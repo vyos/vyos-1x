@@ -50,7 +50,8 @@ SYSTEM_USER_SKIP_LIST: frozenset = {
     'tacacs14',
     'tacacs15',
 }
-DEFAULT_PASSWORD: str = 'vyos'
+# PSL - DEFAULT_PASSWORD: str = 'vyos'
+DEFAULT_PASSWORD: str = 'igos'
 LOW_ENTROPY_MSG: str = 'should be at least 8 characters long;'
 WEAK_PASSWORD_MSG: str = 'The password complexity is too low - @MSG@'
 CRACKLIB_ERROR_MSG: str = 'A following error occurred: @MSG@\n' \
