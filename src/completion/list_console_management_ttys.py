@@ -16,7 +16,7 @@
 
 import re
 import argparse
-from vyos.utils.serial import find_all_ttyS_devices
+from vyos.utils.serial import find_active_ttyS_devices_running_cm
 
 def trim_list_from_match(full_tty_list, start_tty):
     try:
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     final_list = []
     # Autocomplete uses runtime state rather than the config tree, as a manual
     # restart/cleanup may be needed for deleted devices.
-    tty_list = sorted(find_all_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
+    tty_list = sorted(find_active_ttyS_devices_running_cm(), key=lambda x: int(re.search(r'\d+', x).group()))
 
     if args.greater:
         final_list = trim_list_from_match(tty_list, args.greater)

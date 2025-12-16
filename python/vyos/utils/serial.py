@@ -79,6 +79,31 @@ def find_active_ttyS_devices():
 
     return sorted(tty_devices)
 
+def find_active_ttyS_devices_running_cm():
+    base_dir = '/run/serial'
+    tty_devices = []
+    if not os.path.exists(base_dir):
+        return tty_devices
+
+    for fname in os.listdir(base_dir):
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                continue
+            if 'ssh-reverse' not in data['service'] and 'telnet-reverse' not in data['service']:
+                continue
+
+            tty_devices.append(os.path.splitext(fname)[0])
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+    return sorted(tty_devices)
+
 def get_serial_units(include_devices=[]):
     # Since we cannot depend on the current config for decommissioned ports,
     # we just grab everything that systemd knows about.
