@@ -3,7 +3,7 @@
   <node name="serial" owner="${vyos_conf_scripts_dir}/serial.py">
     <properties>
       <help>Serial</help>
-      <priority>2</priority>
+      <priority>1280</priority> <!-- after service ssh which has <priority>1000</priority> -->
     </properties>
     <children>
       <node name="global">
