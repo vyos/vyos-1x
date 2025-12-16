@@ -29,7 +29,6 @@ from os import getppid
 from os import sync
 
 # PSL - access to additional routines
-import os.path
 from shutil import move
 # PSL - access to additional routines
 
@@ -110,7 +109,12 @@ MSG_INPUT_ROOT_SIZE_ALL: str = 'Would you like to use all the free space on the 
 MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root partition (min is 1.5 GB)?'
 MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial)?'
 # PSL - add console number input
-MSG_INPUT_CONSOLE_NUM: str = 'What console number be used by default? (0: default)?'
+_valid_console_nums = ['0', '1', '2', '3', '4']
+MSG_INPUT_CONSOLE_NUM: str = (
+    f"What console number should be used by default? "
+    f"(range: {_valid_console_nums[0]} -> {_valid_console_nums[-1]})?"
+)
+
 MSG_INPUT_COPY_DATA: str = 'Would you like to copy data to the new image?'
 MSG_INPUT_CHOOSE_COPY_DATA: str = 'From which image would you like to save config information?'
 MSG_INPUT_COPY_ENC_DATA: str = 'Would you like to copy the encrypted config to the new image?'
@@ -767,24 +771,23 @@ def console_hint() -> str:
 
 # PSL - added to override default console number
 
-def console_num_hint() -> str:
+def console_num_hint(valid: list[str]) -> str:
+    """Get default console number, optionally overridden by a file."""
 
     path = '/usr/share/vyos/templates/default_console'
-    # 1. Check existence
-    if not os.path.isfile(path):
-        return '0'
+    default = valid[0]
 
-    # 2. Read ASCII contents
-    with open(path, "r", encoding="ascii", errors="strict") as f:
-        data = f.read().strip()
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = f.readline().strip()
 
-    # 3. Validate characters: must be between '0' and '4'
-    allowed = set("01234")
-    if not all(ch in allowed for ch in data):
-        return '0'
+        if data in valid:
+            return data
 
-    # 4. Return validated ASCII string
-    return data
+    except OSError:
+        pass
+
+    return default
 
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
     """Clean up after installation
@@ -941,8 +944,9 @@ def install_image() -> None:
 
     # PSL - added to override default console number
     console_num: str = ask_input(MSG_INPUT_CONSOLE_NUM,
-                                  default=console_num_hint(),
-                                  valid_responses=['0', '1', '2', '3', '4'])
+                                 default=console_num_hint(_valid_console_nums),
+                                 valid_responses=_valid_console_nums)
+
     DEFAULT_BOOT_VARS['console_num'] = console_num
 
     config_boot_list = [f'{DIR_CONFIG}/config.boot',
