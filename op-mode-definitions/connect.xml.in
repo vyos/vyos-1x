@@ -14,7 +14,7 @@
             <properties>
               <help>Connect to serial device</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_console_management_ttys.py</script>
+                <script>${vyos_completion_dir}/list_serial.py --selector console-management</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/connect_serial.py "$4"</command>

@@ -7,7 +7,7 @@
       <description>tty port or tty port range to match</description>
     </valueHelp>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_login_ttys.py</script>
+      <script>${vyos_completion_dir}/list_serial.py --selector all</script>
     </completionHelp>
     <constraint>
       <validator name="tty-port-range"/>

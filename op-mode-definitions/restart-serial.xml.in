@@ -12,7 +12,7 @@
             <properties>
               <help>Restart specific TTY device</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_login_ttys.py</script>
+                <script>${vyos_completion_dir}/list_serial.py --selector active</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/restart_serial.py restart_serial_tty --device-name-start "$4"</command>
@@ -21,7 +21,7 @@
                 <properties>
                   <help>Restart specific TTY device</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_login_ttys.py --greater ${COMP_WORDS[3]}</script>
+                    <script>${vyos_completion_dir}/list_serial.py --selector active --greater ${COMP_WORDS[3]}</script>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/restart_serial.py restart_serial_tty --device-name-start "$4" --device-name-end "$6"</command>

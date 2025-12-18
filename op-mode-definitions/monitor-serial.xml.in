@@ -11,7 +11,7 @@
             <properties>
               <help>Monitor specific TTY device</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_login_ttys.py</script>
+                <script>${vyos_completion_dir}/list_serial.py --selector active</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/monitor_serial.sh "$4"</command>
@@ -20,7 +20,7 @@
                 <properties>
                   <help>Monitor another specific TTY device</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_login_ttys.py</script>
+                    <script>${vyos_completion_dir}/list_serial.py --selector active</script>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/monitor_serial.sh "$4" "$6"</command>

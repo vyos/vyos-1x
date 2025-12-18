@@ -79,7 +79,42 @@ def find_active_ttyS_devices():
 
     return sorted(tty_devices)
 
-def find_active_ttyS_devices_running_cm():
+def find_active_ttyS_devices_with_auth_on():
+    base_dir = '/run/serial'
+    tty_devices = []
+    if not os.path.exists(base_dir):
+        return tty_devices
+
+    for fname in os.listdir(base_dir):
+        auth = 0
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                continue
+
+            if 'ssh-reverse' in data['service']:
+                auth = 1
+            if 'telnet-reverse' in data['service'] or 'tcp-reverse' in data['service']:
+                if 'service_setting' in data:
+                    if 'reverse' in data['service_setting']:
+                        if 'auth_user' in data['service_setting']['reverse']:
+                            auth = 1
+
+            if auth == 0:
+                continue
+
+            tty_devices.append(os.path.splitext(fname)[0])
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+    return sorted(tty_devices)
+
+def find_active_ttyS_devices_running_service(service):
     base_dir = '/run/serial'
     tty_devices = []
     if not os.path.exists(base_dir):
@@ -95,10 +130,17 @@ def find_active_ttyS_devices_running_cm():
                 data = json.load(f)
             if 'disable' in data:
                 continue
-            if 'ssh-reverse' not in data['service'] and 'telnet-reverse' not in data['service']:
-                continue
+            if service == 'console-management' and ('ssh-reverse' in data['service'] or 'telnet-reverse' in data['service']):
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'modbus-master' and 'modbus-master' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'modbus-slave' and 'modbus-slave' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'ppp' and 'ppp' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'slip' and 'slip' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
 
-            tty_devices.append(os.path.splitext(fname)[0])
         except Exception as e:
             print(f'Error processing {path}: {e}')
 
