@@ -883,19 +883,7 @@ def kea_high_availability_json(config):
 
     # FIX: Use config['name'] for this server instead of hostname
     this_server_name = config['name']
-
-    # FIX: Derive remote peer name to avoid duplicates
-    if this_server_name == 'backup':
-        remote_peer_name = 'main'
-    elif this_server_name == 'main':
-        remote_peer_name = 'backup'
-    elif this_server_name == 'secondary':
-        remote_peer_name = 'primary'
-    elif this_server_name == 'primary':
-        remote_peer_name = 'secondary'
-    else:
-        # Fallback: append suffix to differentiate
-        remote_peer_name = f"{this_server_name}-peer"
+    remote_peer_name = f'{this_server_name}-peer'
 
     data = {
         'this-server-name': this_server_name,

@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 import unittest
 
@@ -1067,7 +1066,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'peers',
             ],
             {
-                'name': os.uname()[1],
+                'name': failover_name,
                 'url': f'http://{failover_local}:647/',
                 'role': 'primary',
                 'auto-failover': True,
@@ -1086,7 +1085,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'peers',
             ],
             {
-                'name': failover_name,
+                'name': f'{failover_name}-peer',
                 'url': f'http://{failover_remote}:647/',
                 'role': 'secondary',
                 'auto-failover': True,
@@ -1166,7 +1165,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'peers',
             ],
             {
-                'name': os.uname()[1],
+                'name': failover_name,
                 'url': f'http://{failover_local}:647/',
                 'role': 'standby',
                 'auto-failover': True,
@@ -1185,7 +1184,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 'peers',
             ],
             {
-                'name': failover_name,
+                'name': f'{failover_name}-peer',
                 'url': f'http://{failover_remote}:647/',
                 'role': 'primary',
                 'auto-failover': True,
