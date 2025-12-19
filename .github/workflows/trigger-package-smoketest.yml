@@ -13,5 +13,5 @@ permissions:
 
 jobs:
   package-smoketest:
-    uses: ./.github/workflows/package-smoketest.yml
+    uses: vyos/.github/.github/workflows/package-smoketest.yml@current
     secrets: inherit
