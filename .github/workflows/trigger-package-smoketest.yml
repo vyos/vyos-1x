@@ -12,6 +12,15 @@ permissions:
   contents: read
 
 jobs:
-  package-smoketest:
+  package-smoketest-current:
+    if: ${{ github.event.pull_request.base.ref == 'current' }}
     uses: vyos/.github/.github/workflows/package-smoketest.yml@current
+    secrets: inherit
+  package-smoketest-circinus:
+    if: ${{ github.event.pull_request.base.ref == 'circinus' }}
+    uses: vyos/.github/.github/workflows/package-smoketest.yml@circinus
+    secrets: inherit
+  package-smoketest-sagitta:
+    if: ${{ github.event.pull_request.base.ref == 'sagitta' }}
+    uses: vyos/.github/.github/workflows/package-smoketest.yml@sagitta
     secrets: inherit
