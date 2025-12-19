@@ -84,7 +84,7 @@ let filter_bridgeable s =
     with Not_found -> false
 
 let filter_bondable s =
-    let pattern = {|^(eth)(.*)$|}
+    let pattern = {|^(eth|lan|eno|ens)[A-Za-z0-9_-]*$|}
     in
     try
         let _ = Pcre2.exec ~pat:pattern s in
