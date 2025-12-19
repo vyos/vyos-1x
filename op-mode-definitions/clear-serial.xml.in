@@ -11,7 +11,7 @@
             <properties>
               <help>Clear all serial port statistics</help>
             </properties>
-            <command>iol_clrstat</command>
+            <command>iol_dspport -c</command>
             <children>
               <tagNode name="device">
                 <properties>
@@ -20,7 +20,7 @@
                     <script>${vyos_completion_dir}/list_serial.py --selector all</script>
                   </completionHelp>
                 </properties>
-                <command>iol_clrstat -f "$5"</command>
+                <command>iol_dspport -f "$5" -c</command>
                 <children>
                   <tagNode name="to">
                     <properties>
@@ -29,7 +29,7 @@
                         <script>${vyos_completion_dir}/list_serial.py --selector all --greater ${COMP_WORDS[4]}</script>
                       </completionHelp>
                     </properties>
-                    <command>iol_clrstat -f "$5" -e "$7"</command>
+                    <command>iol_dspport -f "$5" -e "$7" -c</command>
                   </tagNode>
                 </children>
               </tagNode>
