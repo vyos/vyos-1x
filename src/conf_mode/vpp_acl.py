@@ -214,9 +214,17 @@ def verify(config):
 
             for iface, iface_config in acl.get('interface', {}).items():
                 if iface not in config.get('vpp_ifaces'):
-                    raise ConfigError(
-                        f'{iface} must be a VPP interface for ACL interface'
-                    )
+                    # Check if it is a sub-interface
+                    if '.' in iface:
+                        parent = iface.split('.')[0]
+                        if parent not in config.get('vpp_ifaces'):
+                            raise ConfigError(
+                                f'{iface} must be a VPP interface for ACL interface'
+                            )
+                    else:
+                        raise ConfigError(
+                            f'{iface} must be a VPP interface for ACL interface'
+                        )
 
     if 'ip' in config:
         acl = config.get('ip')
