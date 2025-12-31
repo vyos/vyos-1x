@@ -162,4 +162,7 @@ if __name__ == '__main__':
                 sys.exit(0)
 
     command = convert(tcpdump, args)
-    call(f'{command} -i {ifname}')
+    try:
+       call(f'{command} -i {ifname}')
+    except KeyboardInterrupt:
+       sys.exit(0)
