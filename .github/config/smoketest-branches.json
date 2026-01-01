@@ -1,5 +1,18 @@
 {
   "branches": {
+    "T8100-smoke-test-refactoring": {
+      "vyos_mirror": "https://packages.vyos.net/repositories/current/",
+      "container_image": "vyos/vyos-build:current",
+      "vyos_build_repo": "vyos/vyos-build",
+      "use_pat": false,
+      "build_runner": ["ubuntu-24.04"],
+      "build_version_format": "%Y.%m.%d-%H%M-integration",
+      "install_build_deps": false,
+      "test_cli_command": "test-no-interfaces-no-vpp",
+      "test_tpm_tests": true,
+      "test_vpp": true,
+      "test_vpp_runner": ["ubuntu-24.04"]
+    },
     "current": {
       "vyos_mirror": "https://packages.vyos.net/repositories/current/",
       "container_image": "vyos/vyos-build:current",

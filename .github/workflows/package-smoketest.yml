@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - T8100-smoke-test-refactoring
       - current
       - circinus
       - sagitta
@@ -13,6 +14,7 @@ on:
       - '!**/*.md'
   pull_request_target:
     branches:
+      - T8100-smoke-test-refactoring
       - current
       - circinus
       - sagitta
@@ -72,12 +74,12 @@ jobs:
           echo "container_image=$(echo $CONFIG | jq -r .container_image)" >> $GITHUB_OUTPUT
           echo "vyos_build_repo=$(echo $CONFIG | jq -r .vyos_build_repo)" >> $GITHUB_OUTPUT
           echo "build_version_format=$(echo $CONFIG | jq -r .build_version_format)" >> $GITHUB_OUTPUT
-          echo "build_runner=$(echo $CONFIG | jq -r .build_runner)" >> $GITHUB_OUTPUT
+          echo "build_runner=$(echo $CONFIG | jq -c .build_runner)" >> $GITHUB_OUTPUT
           echo "use_pat=$(echo $CONFIG | jq -r .use_pat)" >> $GITHUB_OUTPUT
           echo "test_cli_command=$(echo $CONFIG | jq -r .test_cli_command)" >> $GITHUB_OUTPUT
           echo "test_tpm_tests=$(echo $CONFIG | jq -r .test_tpm_tests)" >> $GITHUB_OUTPUT
           echo "test_vpp=$(echo $CONFIG | jq -r .test_vpp)" >> $GITHUB_OUTPUT
-          echo "test_vpp_runner=$(echo $CONFIG | jq -r .test_vpp_runner)" >> $GITHUB_OUTPUT
+          echo "test_vpp_runner=$(echo $CONFIG | jq -c .test_vpp_runner)" >> $GITHUB_OUTPUT
           echo "install_build_deps=$(echo $CONFIG | jq -r .install_build_deps)" >> $GITHUB_OUTPUT
 
   build_iso:
