@@ -54,6 +54,7 @@ from vyos.utils.vti_updown_db import vti_updown_db_exists
 from vyos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
 from vyos.utils.vti_updown_db import remove_vti_updown_db
 from vyos import ConfigError
+from vyos.base import Warning
 from vyos import airbag
 airbag.enable()
 
@@ -261,11 +262,29 @@ def verify(ipsec):
     if not ipsec or 'deleted' in ipsec:
         return
 
+    # T8136 PPK support; keep a list of PPK IDs
+    ppk_ids = []
+
     if 'authentication' in ipsec:
         if 'psk' in ipsec['authentication']:
             for psk, psk_config in ipsec['authentication']['psk'].items():
                 if 'id' not in psk_config or 'secret' not in psk_config:
-                    raise ConfigError(f'Authentication psk "{psk}" missing "id" or "secret"')
+                    raise ConfigError(
+                        f'Authentication psk "{psk}" missing "id" or "secret"'
+                    )
+        # T8136 PPK Support; Check that PPK has an ID and secret defined, and ID is unique
+        if 'ppk' in ipsec['authentication']:
+            for ppk, ppk_config in ipsec['authentication']['ppk'].items():
+                if 'id' not in ppk_config:
+                    raise ConfigError(f'Authentication PPK "{ppk}" missing "id"')
+                if 'secret' not in ppk_config:
+                    raise ConfigError(f'Authentication PPK "{ppk}" missing "secret"')
+                for ppk_id in ppk_config['id']:
+                    if ppk_id in ppk_ids:
+                        raise ConfigError(
+                            f'Authentication PPK "{ppk}" has duplicate ID "{ppk_id}" from another PPK. IDs should be unique.'
+                        )
+                    ppk_ids.append(ppk_id)
 
     if 'interface' in ipsec:
         tmp = re.compile(dynamic_interface_pattern)
@@ -444,6 +463,25 @@ def verify(ipsec):
 
                         elif 'pool' not in ipsec['remote_access'] or pool not in ipsec['remote_access']['pool']:
                             raise ConfigError(f'Requested pool "{pool}" does not exist!')
+
+                # T8136 IPSEC PPK Support
+                # PPKs and Childless only works with IKEv2. Check that ike-group is v2 if either option is enabled. Check that PPK ID was actually defined in authentication. Recommend use of childless when using PPKs if not already configured.
+                if 'ppk' in ra_conf['authentication']:
+                    ike = ra_conf['ike_group']
+                    if dict_search(f'ike_group.{ike}.key_exchange', ipsec) != 'ikev2':
+                        raise ConfigError(
+                            f'Incorrect configuration in IKE group "{ike}": post-quantum pre-shared keys require explicit IKEv2 usage.'
+                        )
+                    if 'childless' not in ra_conf:
+                        Warning(
+                            'It is recommended to use childless IKE SAs when using PPKs'
+                        )
+                if 'childless' in ra_conf:
+                    ike = ra_conf['ike_group']
+                    if dict_search(f'ike_group.{ike}.key_exchange', ipsec) != 'ikev2':
+                        raise ConfigError(
+                            f'Incorrect configuration in IKE group "{ike}": childless IKE SAs can only be used with IKEv2.'
+                        )
 
         if 'pool' in ipsec['remote_access']:
             pool_networks = []
@@ -652,6 +690,25 @@ def verify(ipsec):
                                     f'Encryption algorithm {proposal_config["encryption"]} cannot be used '
                                     f'for ESP proposal {proposal} on tunnel {tunnel} for site-to-site peer {peer} with VPP'
                                 )
+
+            # T8136 IPSEC PPK Support
+            # PPKs and Childless only works with IKEv2. Check that ike-group is v2 if either option is enabled. Check that PPK ID was actually defined in authentication. Recommend use of childless when using PPKs if not already configured.
+            if 'ppk' in peer_conf['authentication']:
+                ike = peer_conf['ike_group']
+                if dict_search(f'ike_group.{ike}.key_exchange', ipsec) != 'ikev2':
+                    raise ConfigError(
+                        f'Post-quantum preshared keys must be used with IKEv2! Please configure IKEv2 key-exchange in ike-group "{ike}".'
+                    )
+                if 'childless' not in peer_conf:
+                    Warning(
+                        'It is recommended to use childless IKE SAs when using PPKs'
+                    )
+            if 'childless' in peer_conf:
+                ike = peer_conf['ike_group']
+                if dict_search(f'ike_group.{ike}.key_exchange', ipsec) != 'ikev2':
+                    raise ConfigError(
+                        f'Childless IKE SAs be used with IKEv2! Please configure IKEv2 key-exchange in ike-group "{ike}".'
+                    )
 
 
 def cleanup_pki_files():
