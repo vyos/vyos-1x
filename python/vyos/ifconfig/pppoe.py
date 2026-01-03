@@ -139,3 +139,7 @@ class PPPoEIf(Interface):
             self._cmd(f'vtysh -c "conf t" {vrf} -c "ip route 0.0.0.0/0 {self.ifname} tag 210 {distance}"')
             if 'ipv6' in config:
                 self._cmd(f'vtysh -c "conf t" {vrf} -c "ipv6 route ::/0 {self.ifname} tag 210 {distance}"')
+
+        # kick RS when IPv6 is up.
+        if 'ipv6' in config and 'address' in config['ipv6'] and 'autoconf' in config['ipv6']['address']:
+            self._cmd(f'rdisc6 -1 -q -r 3 -w 1000 {self.ifname}')
