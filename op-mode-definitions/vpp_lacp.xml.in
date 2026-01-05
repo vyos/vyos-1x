@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="lacp">
+            <properties>
+              <help>Show VPP LACP information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vpp.py show_lacp</command>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specific interface LACP information</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --bondable</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vpp.py show_lacp --ifname=$4</command>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show interface LACP details</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vpp.py show_lacp_details --ifname=$4</command>
+                  </leafNode>
+                </children>
+              </virtualTagNode>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show LACP detailed information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vpp.py show_lacp_details</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

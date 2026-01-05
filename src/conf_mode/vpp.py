@@ -39,9 +39,11 @@ from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import list_loaded_modules
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_active
 
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
+from vyos.vpp import VppNotRunningError
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
     verify_dev_driver,
@@ -771,10 +773,14 @@ def apply(config):
 
     if 'settings' in config and 'interface' in config.get('settings'):
         # connect to VPP
-        # must be performed multiple attempts because API is not available
-        # immediately after the service restart
         try:
-            vpp_control = VPPControl(attempts=20, interval=500)
+            # Bail out early if VPP service is not running
+            if not is_systemd_service_active(f'{service_name}.service'):
+                raise VppNotRunningError(
+                    'VPP service is not running or failed to start'
+                )
+
+            vpp_control = VPPControl()
 
             # preconfigure LCP plugin
             if 'ignore_kernel_routes' in config.get('settings', {}).get('lcp', {}):
@@ -877,7 +883,7 @@ def apply(config):
                         bitmask |= 1 << wid
                 vpp_control.set_nat_workers(bitmask)
 
-        except (VPPIOError, VPPValueError) as e:
+        except (VPPIOError, VPPValueError, VppNotRunningError) as e:
             # if cannot connect to VPP or an error occurred then
             # we need to stop vpp service and initialize interfaces
             call(f'systemctl stop {service_name}.service')

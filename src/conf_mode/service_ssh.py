@@ -29,6 +29,7 @@ from vyos.configverify import verify_pki_openssh_key
 from vyos.defaults import config_files
 from vyos.defaults import SSH_DSA_DEPRECATION_WARNING
 from vyos.utils.process import call
+from vyos.utils.process import rc_cmd
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -172,6 +173,11 @@ def apply(ssh):
         call('systemctl stop ssh@*.service')
         call(f'systemctl stop {systemd_service_sshguard}')
         return None
+
+    # Verify generated sshd configuration is correct
+    rc, out = rc_cmd(f'/usr/sbin/sshd -t -f {config_file}')
+    if rc:
+        raise ConfigError(f'Unexpected error with SSH configuration! {out}')
 
     if 'dynamic_protection' not in ssh:
         call(f'systemctl stop {systemd_service_sshguard}')

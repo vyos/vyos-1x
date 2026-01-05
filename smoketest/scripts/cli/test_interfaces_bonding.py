@@ -80,6 +80,36 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             mac = Interface(interface).get_mac()
             self.assertEqual(mac, base_mac)
 
+    def test_bonding_physical_macs(self):
+        macs = {}
+        # configure member interfaces
+        for interface in self._interfaces:
+            for member in self._members:
+                macs[member] =  get_interface_config(member)['address']
+
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+        self.cli_commit()
+
+        # mac must match the MAC of the first interface
+        for interface in self._interfaces:
+            bond_mac = get_interface_config(interface)['address']
+            self.assertEqual(bond_mac, macs[self._members[0]])
+
+        # remove all member interfaces from the bond
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface, 'member'])
+
+        self.cli_commit()
+
+        # members must re-gain their old MAC address
+        for interface in self._interfaces:
+            for member in self._members:
+                tmp = Interface(member)
+                self.assertEqual(tmp.get_mac(), macs[member])
+                self.assertEqual(tmp.get_admin_state(), 'up')
+
     def test_bonding_remove_member(self):
         # T2515: when removing a bond member the previously enslaved/member
         # interface must be in its former admin-up/down state. Here we ensure

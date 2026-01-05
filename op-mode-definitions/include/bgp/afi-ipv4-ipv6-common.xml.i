@@ -47,7 +47,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
-    <leafNode name="local-AS">
+    <leafNode name="local-as">
       <properties>
         <help>Do not send outside local AS (well-known community)</help>
       </properties>

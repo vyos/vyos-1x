@@ -57,9 +57,9 @@ ListenAddress {{ address }}
 {%     endfor %}
 {% endif %}
 
-{% if ciphers is vyos_defined %}
-# Specifies the ciphers allowed for protocol version 2
-Ciphers {{ ciphers | join(',') }}
+{% if cipher is vyos_defined %}
+# Specifies allowed ciphers for protocol version 2
+Ciphers {{ cipher | join(',') }}
 {% endif %}
 
 {% if hostkey_algorithm is vyos_defined %}

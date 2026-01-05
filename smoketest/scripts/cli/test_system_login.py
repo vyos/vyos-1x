@@ -28,11 +28,11 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from gzip import GzipFile
 from subprocess import Popen
 from subprocess import PIPE
-from pwd import getpwall
 
 from vyos.configsession import ConfigSessionError
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.auth import get_current_user
+from vyos.utils.auth import get_local_passwd_entries
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
@@ -175,7 +175,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # After deletion, a user is not allowed to remain in /etc/passwd
-        usernames = [x[0] for x in getpwall()]
+        usernames = [x.pw_name for x in get_local_passwd_entries()]
         for user in users:
             self.assertNotIn(user, usernames)
         # always forward to base class

@@ -18,10 +18,12 @@ import math
 import re
 import string
 
-from enum import StrEnum
+from dataclasses import dataclass
 from decimal import Decimal
-from pwd import getpwall
-from pwd import getpwnam
+from enum import StrEnum
+from typing import List
+from typing import Optional
+
 from vyos.utils.process import cmd
 
 # Minimum UID used when adding system users
@@ -146,12 +148,62 @@ def get_current_user() -> str:
         current_user = os.environ['USER']
     return current_user
 
+@dataclass
+class PasswdEntry:
+    pw_name: str
+    pw_passwd: str
+    pw_uid: int
+    pw_gid: int
+    pw_gecos: str
+    pw_dir: str
+    pw_shell: str
+
+def get_local_passwd_entries(uid: Optional[int] = None) -> PasswdEntry | List[PasswdEntry] | None:
+    """
+    If uid is None: return a list of all passwd entries.
+    If uid is given: return the matching entry or None.
+    """
+    entries = []
+    with open('/etc/passwd', 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split(":")
+            if len(parts) != 7:
+                continue
+
+            try:
+                entry = PasswdEntry(
+                    pw_name=parts[0],
+                    pw_passwd=parts[1],
+                    pw_uid=int(parts[2]),
+                    pw_gid=int(parts[3]),
+                    pw_gecos=parts[4],
+                    pw_dir=parts[5],
+                    pw_shell=parts[6],
+                )
+            except ValueError:
+                # Skip entries with non-numeric UID or GID
+                continue
+
+            # If searching for a specific UID, return immediately if found
+            if uid is not None and entry.pw_uid == uid:
+                return entry
+
+            entries.append(entry)
+
+    # uid given but not found
+    if uid is not None:
+        return None
+
+    return entries
 
 def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID) -> list:
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
 
-    for s_user in getpwall():
+    for s_user in get_local_passwd_entries():
         if s_user.pw_uid < min_uid:
             continue
         if s_user.pw_uid > max_uid:
@@ -162,7 +214,9 @@ def get_local_users(min_uid=MIN_USER_UID, max_uid=MAX_USER_UID) -> list:
 
     return local_users
 
-
 def get_user_home_dir(user: str) -> str:
     """Return user's home directory"""
-    return getpwnam(user).pw_dir
+    for u in get_local_passwd_entries():
+        if u.pw_name == user:
+            return u.pw_dir
+    raise KeyError(f"User '{user}' not found in /etc/passwd")

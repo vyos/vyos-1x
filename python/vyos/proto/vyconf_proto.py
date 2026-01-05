@@ -204,6 +204,20 @@ class ConfigUnsaved:
     file: str = None
 
 @dataclass
+class ReferencePathExists:
+    path: list[str] = field(default_factory=list)
+
+@dataclass
+class GetPathType:
+    path: list[str] = field(default_factory=list)
+    legacy_format: bool = False
+
+@dataclass
+class GetCompletionEnv:
+    path: list[str] = field(default_factory=list)
+    legacy_format: bool = False
+
+@dataclass
 class Request:
     prompt: Prompt = None
     setup_session: SetupSession = None
@@ -243,6 +257,9 @@ class Request:
     get_edit_level: GetEditLevel = None
     edit_level_root: EditLevelRoot = None
     config_unsaved: ConfigUnsaved = None
+    reference_path_exists: ReferencePathExists = None
+    get_path_type: GetPathType = None
+    get_completion_env: GetCompletionEnv = None
 
 @dataclass
 class RequestEnvelope:
@@ -481,5 +498,23 @@ def set_request_edit_level_root(token: str = None, dummy: int = None):
 def set_request_config_unsaved(token: str = None, file: str = None):
     reqi = ConfigUnsaved (file)
     req = Request(config_unsaved=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
+def set_request_reference_path_exists(token: str = None, path: list[str] = []):
+    reqi = ReferencePathExists (path)
+    req = Request(reference_path_exists=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
+def set_request_get_path_type(token: str = None, path: list[str] = [], legacy_format: bool = False):
+    reqi = GetPathType (path, legacy_format)
+    req = Request(get_path_type=reqi)
+    req_env = RequestEnvelope(token, req)
+    return req_env
+
+def set_request_get_completion_env(token: str = None, path: list[str] = [], legacy_format: bool = False):
+    reqi = GetCompletionEnv (path, legacy_format)
+    req = Request(get_completion_env=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env

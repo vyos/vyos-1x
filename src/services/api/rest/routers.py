@@ -711,6 +711,7 @@ def generate_op(data: GenerateModel):
     try:
         if op == 'generate':
             res = session.generate(path)
+            session.commit()
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:

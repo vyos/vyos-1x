@@ -39,6 +39,32 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         # always forward to base class
         super().tearDown()
 
+    def test_firewall_group_dependence(self):
+        address_group = 'smoketest_addr_dependence'
+        address_group_member_1 = 'fc00::1'
+        address_group_member_2 = 'fc00::2'
+        translation_prefix = 'fc01::/64'
+
+        # add an address group and set a nat66 rule with it
+        self.cli_set(['firewall', 'group', 'ipv6-address-group', address_group, 'address', address_group_member_1])
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', '1', 'translation', 'address', translation_prefix])
+        # commit changes to build configuration file
+        self.cli_commit()
+
+        # replace the member of the address group
+        self.cli_delete(['firewall', 'group', 'ipv6-address-group', address_group, 'address', address_group_member_1])
+        self.cli_set(['firewall', 'group', 'ipv6-address-group', address_group, 'address', address_group_member_2])
+        self.cli_commit()
+
+        # verify that the new member is in the address group
+        nftables_search = [
+            [f'set A6_{address_group}'],
+            [f'elements = {{ {address_group_member_2} }}']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_nat')
+
     def test_source_nat66(self):
         source_prefix = 'fc00::/64'
         translation_prefix = 'fc01::/64'

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="bridge">
+            <properties>
+              <help>Show VPP bridge information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vpp.py show_bridge</command>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Show bridge information for specified interface</help>
+                  <completionHelp>
+                    <path>vpp interfaces bridge</path>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vpp.py show_bridge --ifname=$4</command>
+                <children>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show detailed bridge domain information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vpp.py show_bridge_details --ifname=$4</command>
+                  </leafNode>
+                </children>
+              </virtualTagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

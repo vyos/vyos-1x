@@ -21,8 +21,6 @@ import json
 from copy import deepcopy
 from passlib.hosts import linux_context
 from psutil import users
-from pwd import getpwall
-from pwd import getpwuid
 from sys import exit
 from time import sleep
 
@@ -38,6 +36,7 @@ from vyos.template import is_ipv4
 from vyos.utils.auth import EPasswdStrength
 from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_current_user
+from vyos.utils.auth import get_local_passwd_entries
 from vyos.utils.auth import get_local_users
 from vyos.utils.auth import get_user_home_dir
 from vyos.utils.auth import MIN_USER_UID
@@ -136,7 +135,7 @@ def verify(login):
             raise ConfigError(f'Attempting to delete current user: {tmp}')
 
     if 'user' in login:
-        system_users = getpwall()
+        system_users = get_local_passwd_entries()
         for user, user_config in login['user'].items():
             # Linux system users range up until UID 1000, we can not create a
             # VyOS CLI user which already exists as system user
@@ -432,7 +431,7 @@ def apply(login):
             # retrieve current owner of home directory and adjust on demand
             dir_owner = None
             try:
-                dir_owner = getpwuid(os.stat(home_dir).st_uid).pw_name
+                dir_owner = get_local_passwd_entries(os.stat(home_dir).st_uid).pw_name
             except:
                 pass
 

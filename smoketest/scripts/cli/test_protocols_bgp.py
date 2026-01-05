@@ -1674,7 +1674,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(target_path + ['max-retry', max_retry])
         self.cli_set(target_path + ['mirror'])
         self.cli_set(target_path + ['monitor', 'ipv4-unicast', monitor_ipv4])
+        self.cli_set(target_path + ['monitor', 'ipv4-unicast', 'local-rib'])
         self.cli_set(target_path + ['monitor', 'ipv6-unicast', monitor_ipv6])
+        self.cli_set(target_path + ['monitor', 'ipv6-unicast', 'local-rib'])
         self.cli_commit()
 
         # Verify bgpd bmp configuration
@@ -1684,6 +1686,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'bmp mirror', frrconfig)
         self.assertIn(f'bmp monitor ipv4 unicast {monitor_ipv4}', frrconfig)
         self.assertIn(f'bmp monitor ipv6 unicast {monitor_ipv6}', frrconfig)
+        self.assertIn(f'bmp monitor ipv4 unicast loc-rib', frrconfig)
+        self.assertIn(f'bmp monitor ipv6 unicast loc-rib', frrconfig)
         self.assertIn(f'bmp connect {target_address} port {target_port} min-retry {min_retry} max-retry {max_retry}', frrconfig)
 
 if __name__ == '__main__':
