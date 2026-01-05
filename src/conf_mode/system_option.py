@@ -16,19 +16,22 @@
 
 import os
 import psutil
+import re
 
 from sys import exit
 from time import sleep
 
-
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
 from vyos.system import grub_util
 from vyos.template import render
+from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.cpu import get_cpus
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
+from vyos.utils.file import read_file
 from vyos.utils.kernel import check_kmod
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
@@ -57,6 +60,108 @@ tuned_profiles = {
     'virtual-guest': 'virtual-guest',
     'virtual-host': 'virtual-host',
 }
+
+MANAGED_PARAMS = {
+    'hugepages1g': {
+        'parse': r'hugepagesz=1[Gg]\s+hugepages=(?P<hugepages1g>\d+)',
+        'clean': r'hugepagesz=1[Gg](?:\s+hugepages=\d+)?',
+        'build': lambda v: f'hugepagesz=1G hugepages={v}',
+        'type': int,
+    },
+    'hugepages2m': {
+        'parse': r'hugepagesz=2[Mm]\s+hugepages=(?P<hugepages2m>\d+)',
+        'clean': r'hugepagesz=2[Mm](?:\s+hugepages=\d+)?',
+        'build': lambda v: f'hugepagesz=2M hugepages={v}',
+        'type': int,
+    },
+    'default_hugepagesz': {
+        'parse': r'default_hugepagesz=(?P<default_hugepagesz>\S+)',
+        'clean': r'default_hugepagesz=\S+',
+        'type': str,
+    },
+    'mitigations': {
+        'parse': r'mitigations=(?P<mitigations>\S+)',
+        'clean': r'mitigations=\S+',
+        'type': str,
+    },
+    'intel_idle.max_cstate': {
+        'parse': r'intel_idle\.max_cstate=(?P<intel_idle_max_cstate>\d+)',
+        'clean': r'intel_idle\.max_cstate=\d+',
+        'build': lambda v: f'intel_idle.max_cstate={v}',
+        'type': int,
+    },
+    'processor.max_cstate': {
+        'parse': r'processor\.max_cstate=(?P<processor_max_cstate>\d+)',
+        'clean': r'processor\.max_cstate=\d+',
+        'build': lambda v: f'processor.max_cstate={v}',
+        'type': int,
+    },
+    'initcall_blacklist': {
+        'parse': r'initcall_blacklist=(?P<initcall_blacklist>\S+)',
+        'clean': r'initcall_blacklist=\S+',
+        'type': str,
+    },
+    'amd_pstate': {
+        'parse': r'amd_pstate=(?P<amd_pstate>\S+)',
+        'clean': r'amd_pstate=\S+',
+        'type': str,
+    },
+    'quiet': {
+        'parse': r'(?P<quiet>\bquiet\b)',
+        'clean': r'\bquiet\b',
+        'type': bool,
+    },
+    'nosoftlockup': {
+        'parse': r'(?P<nosoftlockup>\bnosoftlockup\b)',
+        'clean': r'\bnosoftlockup\b',
+        'type': bool,
+    },
+    'panic': {
+        'parse': r'panic=(?P<panic>\d+)',
+        'clean': r'panic=\d+',
+        'type': int,
+    },
+    'mce': {
+        'parse': r'mce=(?P<mce>\S+)',
+        'clean': r'mce=\S+',
+        'type': str,
+    },
+    'hpet': {
+        'parse': r'hpet=(?P<hpet>\S+)',
+        'clean': r'hpet=\S+',
+        'type': str,
+    },
+    'nmi_watchdog': {
+        'parse': r'nmi_watchdog=(?P<nmi_watchdog>\d+)',
+        'clean': r'nmi_watchdog=\d+',
+        'type': int,
+    },
+    'isolcpus': {
+        'parse': r'isolcpus=(?P<isolcpus>\S+)',
+        'clean': r'isolcpus=\S+',
+        'type': str,
+    },
+    'nohz_full': {
+        'parse': r'nohz_full=(?P<nohz_full>\S+)',
+        'clean': r'nohz_full=\S+',
+        'type': str,
+    },
+    'rcu_nocbs': {
+        'parse': r'rcu_nocbs=(?P<rcu_nocbs>\S+)',
+        'clean': r'rcu_nocbs=\S+',
+        'type': str,
+    },
+    'numa_balancing': {
+        'parse': r'numa_balancing=(?P<numa_balancing>\S+)',
+        'clean': r'numa_balancing=\S+',
+        'type': str,
+    },
+}
+
+# Compiled regex pattern for parsing command line options
+_parse_cmdline_pattern = re.compile(
+    '|'.join(v['parse'] for v in MANAGED_PARAMS.values())
+)
 
 
 def _get_total_hugepages_and_memory(config):
@@ -112,10 +217,10 @@ def verify(options):
         if 'source_address' in config:
             address = config['source_address']
             if not is_addr_assigned(config['source_address']):
-                raise ConfigError('No interface with address "{address}" configured!')
+                raise ConfigError(f'No interface with address "{address}" configured!')
 
         if 'source_interface' in config:
-            # verify_source_interface reuires key 'ifname'
+            # verify_source_interface requires key 'ifname'
             config['ifname'] = config['source_interface']
             verify_source_interface(config)
             if 'source_address' in config:
@@ -192,7 +297,8 @@ def generate(options):
         if 'amd_pstate_driver' in options['kernel']:
             mode = options['kernel']['amd_pstate_driver']
             cmdline_options.append(
-                f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
+                f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}'
+            )
         if 'quiet' in options['kernel']:
             cmdline_options.append('quiet')
 
@@ -242,12 +348,126 @@ def generate(options):
             if count:
                 cmdline_options.append(f'hugepages={count}')
 
-    grub_util.update_kernel_cmdline_options(' '.join(cmdline_options))
+    cmdline_options_str = ' '.join(cmdline_options)
+
+    grub_util.update_kernel_cmdline_options(cmdline_options_str)
+
+    options['cmdline_options'] = cmdline_options_str
 
     return None
 
 
+def parse_cmdline(cmdline):
+    """
+    Parse command line parameters into a dictionary of managed parameters.
+
+    Args:
+        cmdline: The command line string (e.g., from /proc/cmdline)
+
+    Returns:
+        Dictionary with parsed parameters
+    """
+    # Produce a complete template of all managed parameters with
+    # consistent default values before scanning the actual kernel cmdline.
+    result = {
+        k: (False if v['type'] is bool else None) for k, v in MANAGED_PARAMS.items()
+    }
+
+    # Mapping from regex group names to real parameter keys
+    group_to_key = {
+        'intel_idle_max_cstate': 'intel_idle.max_cstate',
+        'processor_max_cstate': 'processor.max_cstate',
+    }
+
+    # Find all matches and populate result
+    for match in _parse_cmdline_pattern.finditer(cmdline):
+        for group_name, value in match.groupdict().items():
+            key = group_to_key.get(group_name, group_name)
+
+            # skip empty values and unknown parameters
+            if value is None or key not in MANAGED_PARAMS:
+                continue
+
+            entry = MANAGED_PARAMS[key]
+
+            if entry['type'] is bool:
+                result[key] = True
+            elif entry['type'] is int:
+                result[key] = int(value)
+            else:
+                result[key] = value
+
+    return result
+
+
+def generate_cmdline_for_kexec(options):
+    """
+    Build an updated kernel cmdline string based on desired options and the
+    currently running /proc/cmdline.
+
+    Returns:
+        tuple: (kexec_required, new_cmdline)
+            - kexec_required (bool): True if kernel options were added, removed or modified.
+            - new_cmdline (str): The updated kernel command line string.
+    """
+    # Read current cmdline and parse it
+    current_cmdline = read_file('/proc/cmdline').strip()
+    current_parsed = parse_cmdline(current_cmdline)
+
+    # Parse desired options from options['cmdline_options']
+    desired_options = options.get('cmdline_options', '')
+    desired_parsed = parse_cmdline(desired_options)
+
+    # Compare dicts to define if kexec is needed
+    kexec_required = current_parsed != desired_parsed
+    if not kexec_required:
+        return kexec_required, current_cmdline
+
+    # Clean managed params and surrounding whitespaces
+    clean_patterns = [entry['clean'] for entry in MANAGED_PARAMS.values()]
+    combined_pattern = (
+        r'(?:(?<=^)|(?<=\s))(?:' + '|'.join(clean_patterns) + r')(?=\s|$)'
+    )
+    cleaned = re.sub(combined_pattern, ' ', current_cmdline)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+    # Build new cmdline
+    parts = []
+    for key, entry in MANAGED_PARAMS.items():
+        val = desired_parsed[key]
+        if val is None or val is False:
+            continue
+
+        if 'build' in entry:
+            parts.append(entry['build'](val))
+        elif entry['type'] is bool:
+            parts.append(key)
+        else:
+            parts.append(f'{key}={val}')
+
+    rebuilt = ' '.join(parts)
+
+    new_cmdline = (cleaned + ' ' + rebuilt).strip() if cleaned else rebuilt
+
+    return kexec_required, new_cmdline
+
+
 def apply(options):
+    kexec_required, cmdline_new = generate_cmdline_for_kexec(options)
+    if kexec_required:
+        if not boot_configuration_complete() and os.getenv('VYOS_CONFIGD'):
+            cmd(
+                'kexec -l /boot/vmlinuz --initrd=/boot/initrd.img '
+                f'--command-line="{cmdline_new}" --kexec-file-syscall'
+            )
+            os.sync()
+            cmd('systemctl kexec')
+        elif boot_configuration_complete():
+            Warning(
+                'Kernel configuration options have changed. '
+                'To apply these changes, you must save the configuration and reboot the system!'
+            )
+
     # System bootup beep
     beep_service = 'vyos-beep.service'
     if 'startup_beep' in options:

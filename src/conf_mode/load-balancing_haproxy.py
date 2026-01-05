@@ -127,7 +127,7 @@ def verify(lb):
 
 def generate(lb):
     if not lb:
-        # Delete /run/haproxy/haproxy.cfg
+        # Delete generated config files
         config_files = [load_balancing_conf_file, systemd_override]
         for file in config_files:
             if os.path.isfile(file):
@@ -142,8 +142,8 @@ def generate(lb):
     if not os.path.isdir(load_balancing_dir):
         os.mkdir(load_balancing_dir)
 
-    loaded_ca_certs = {load_certificate(c['certificate'])
-        for c in lb['pki']['ca'].values()} if 'ca' in lb['pki'] else {}
+    loaded_ca_certs = {load_certificate(cert_data['certificate'])
+        for _, cert_data in dict_search('pki.ca', lb, default={}).items()}
 
     # SSL Certificates for frontend
     for front, front_config in lb['service'].items():

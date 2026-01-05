@@ -12,7 +12,7 @@
             <children>
               <leafNode name="detail">
                 <properties>
-                  <help>Show detailed Wireless Modem (WWAN( interface information</help>
+                  <help>Show detailed Wireless Modem (WWAN) interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=wwan</command>
               </leafNode>

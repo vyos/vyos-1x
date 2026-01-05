@@ -60,7 +60,7 @@ elif args.slaves:
         cfg_dict['mode'] = tmp.get_mode()
         cfg_dict['admin_state'] = tmp.get_admin_state()
         cfg_dict['oper_state'] = tmp.operational.get_state()
-        cfg_dict['members'] = tmp.get_slaves()
+        cfg_dict['members'] = tmp.get_members()
         data.append(cfg_dict)
 
 elif args.interface:
@@ -74,7 +74,7 @@ elif args.interface:
 
     # each bond member interface has its own statistics
     data['members'] = []
-    for member in BondIf(args.interface).get_slaves():
+    for member in BondIf(args.interface).get_members():
         tmp = {}
         tmp['ifname'] = member
         tmp['rx_bytes'] = read_file(f'/sys/class/net/{member}/statistics/rx_bytes')

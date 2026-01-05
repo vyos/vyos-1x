@@ -19,12 +19,11 @@ import paramiko
 import re
 import unittest
 
-from pwd import getpwall
-
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.defaults import config_files
+from vyos.utils.auth import get_local_passwd_entries
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
@@ -311,7 +310,7 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # After deletion the test user is not allowed to remain in /etc/passwd
-        usernames = [x[0] for x in getpwall()]
+        usernames = [x.pw_name for x in get_local_passwd_entries()]
         self.assertNotIn(test_user, usernames)
 
     def test_ssh_dynamic_protection(self):
@@ -378,7 +377,7 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         rekey_data = '1024'
 
         for cipher in ciphers:
-            self.cli_set(base_path + ['ciphers', cipher])
+            self.cli_set(base_path + ['cipher', cipher])
         for host_key in host_key_algs:
             self.cli_set(base_path + ['hostkey-algorithm', host_key])
         for kex in kexes:
