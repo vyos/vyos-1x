@@ -19,7 +19,19 @@ import sys
 
 def main():
     ttyname = sys.argv[1]
-    os.system(f'sudo -u {os.environ["SUDO_USER"]} /usr/bin/iol_cm -t {ttyname} 30')
+    user = ""
+
+    try:
+        user = os.environ["SUDO_USER"]
+
+    except KeyError:
+        user = os.path.basename(os.environ.get('PWD'))
+
+    if user:
+        os.system(f'sudo -u {user} /usr/bin/iol_cm -t {ttyname} 30')
+    else:
+        print(f'Failed to get current user!')
+        exit(1)
 
 if __name__ == '__main__':
      main()
