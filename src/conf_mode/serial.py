@@ -68,11 +68,6 @@ def get_config(config=None):
                                      get_first_key=True,
                                      with_recursive_defaults=True,
                                      with_pki=True)
-
-    tmp = is_node_changed(conf, base + ['global', 'modbus-gateway'])
-    print(f'is modbus gateway changed {tmp}')
-    if tmp: proxy.update({'smodbusd_restart': tmp})
-
     if 'global' in proxy_no_default:
         if 'port_buffering' in proxy_no_default['global']:
             if 'syslog' in proxy_no_default['global']['port_buffering']:
@@ -112,9 +107,6 @@ def get_config(config=None):
     print(f'serial_remove {tmp}')
     if tmp: proxy.update({'serial_remove': tmp})
 
-    # print('--------------------------------------- Use to validate ------------------------------- \n ')
-    # print(proxy)
-    # print('\n --------------------------------------- Finish use to validate ------------------------------- \n')
     return proxy
 
 def verify(proxy):
@@ -435,19 +427,8 @@ def generate(proxy):
             with open(filename, 'w') as f:
                 json.dump(port_config, f, indent=4)
 
-    print(proxy)
+    # print(proxy)
     return proxy
-
-def generate_config_id(sub_json, digits=8):
-    json_str = json.dumps(sub_json, sort_keys=True)
-
-    hash_obj = hashlib.sha256(json_str.encode('utf-8'))
-
-    full_int = int(hash_obj.hexdigest(), 16)
-
-    short_id = full_int % (10 ** digits)
-
-    return short_id
 
 def apply(proxy):
     if not proxy or 'device' not in proxy:
@@ -483,7 +464,6 @@ def apply(proxy):
                 sleep(0.100)
 
             if 'disable' not in serial_config:
-
                 send_command_to_iolan('restart', device)
             else:
                 send_command_to_iolan('stop', device)
