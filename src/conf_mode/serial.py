@@ -16,23 +16,15 @@
 
 import os
 import re
-# import sys
 import json
-# import signal
-# import socket
-import hashlib
 import ipaddress
 
 from sys import exit
 from time import sleep
-# from psutil import process_iter
-# from collections import defaultdict
 
 from vyos.config import Config
-# from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
-# from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.serial import send_command_to_iolan
@@ -46,7 +38,6 @@ from vyos.pki import wrap_private_key
 
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
-# from vyos.configdiff import get_config_diff, Diff
 
 CERT_PATH = '/run/vyos_pki/'
 service_name = 'iolan-monitor.service'
