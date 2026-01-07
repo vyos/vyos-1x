@@ -382,7 +382,7 @@ def generate(proxy):
                     key_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'private', 'key')
 
                     ensure_folder_exists('/run/vyos_pki')
-                    with open(os.path.join(CERT_PATH, f'ssl_rsa_cert_{cert_name}.pem'), 'w') as f:
+                    with open(os.path.join(CERT_PATH, f'ssl_cert_{cert_name}.pem'), 'w') as f:
                         f.write(wrap_certificate(cert_data))
 
                     password_protected = 0
@@ -392,7 +392,7 @@ def generate(proxy):
                         else:
                             password_protected = 1
 
-                    with open(os.path.join(CERT_PATH, f'ssl_rsa_key_{cert_name}.pem'), 'w') as f:
+                    with open(os.path.join(CERT_PATH, f'ssl_key_{cert_name}.pem'), 'w') as f:
                         f.write(wrap_private_key(key_data, password_protected))
 
             #inet
