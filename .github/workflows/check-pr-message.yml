@@ -5,6 +5,8 @@ on:
   pull_request_target:
     branches:
       - current
+      - circinus
+      - sagitta
     types: [opened, synchronize, edited]
 
 permissions:

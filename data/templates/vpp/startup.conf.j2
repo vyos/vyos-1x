@@ -168,6 +168,9 @@ memory {
 {%     if memory.main_heap_page_size is vyos_defined %}
     main-heap-page-size {{ memory.main_heap_page_size }}
 {%     endif %}
+{%     if buffers.page_size != '4K' %}
+    default-hugepage-size {{ buffers.page_size }}
+{%     endif %}
 }
 {% endif %}
 

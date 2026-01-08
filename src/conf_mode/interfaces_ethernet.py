@@ -273,6 +273,20 @@ def verify_offload(ethernet: dict, ethtool: Ethtool):
             raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
                               'for MTU size larger then 1500 bytes')
 
+def verify_mac_change(ethernet: dict, ethtool: Ethtool):
+    """
+     Verify if ethernet card driver supports changing the interface MAC address.
+     AWS ENA driver has no support for MAC address changes.
+
+    :param ethernet: dictionary which is received from get_interface_dict
+    :type ethernet: dict
+    :param ethtool: Ethernet object
+    :type ethtool: Ethtool
+    """
+    if 'mac' not in ethernet:
+        return None
+    if not ethtool.check_mac_change():
+        raise ConfigError(f'Driver does not suport changing MAC address!')
 
 def verify_allowedbond_changes(ethernet: dict):
     """
@@ -371,51 +385,45 @@ def verify(ethernet):
 
     if 'deleted' in ethernet:
         return None
+
+    ethtool = Ethtool(ethernet['ifname'])
+    verify_interface_exists(ethernet, ethernet['ifname'])
+    verify_eapol(ethernet)
+    verify_mirror_redirect(ethernet)
+    # No need to check speed and duplex keys as both have default values
+    verify_speed_duplex(ethernet, ethtool)
+    verify_flow_control(ethernet, ethtool)
+    verify_ring_buffer(ethernet, ethtool)
+    verify_offload(ethernet, ethtool)
+    verify_mac_change(ethernet, ethtool)
+
     if 'is_bond_member' in ethernet:
-        verify_bond_member(ethernet)
+        verify_bond_member(ethernet, ethtool)
     else:
-        verify_ethernet(ethernet)
+        verify_ethernet(ethernet, ethtool)
 
 
-def verify_bond_member(ethernet):
+def verify_bond_member(ethernet: dict, ethtool: Ethtool) -> None:
     """
      Verification function for ethernet interface which is in bonding
     :param ethernet: dictionary which is received from get_interface_dict
     :type ethernet: dict
     """
-    ifname = ethernet['ifname']
-    verify_interface_exists(ethernet, ifname)
-    verify_eapol(ethernet)
-    verify_mirror_redirect(ethernet)
-    ethtool = Ethtool(ifname)
-    verify_speed_duplex(ethernet, ethtool)
-    verify_flow_control(ethernet, ethtool)
-    verify_ring_buffer(ethernet, ethtool)
-    verify_offload(ethernet, ethtool)
     verify_allowedbond_changes(ethernet)
+    return None
 
-def verify_ethernet(ethernet):
+def verify_ethernet(ethernet: dict, ethtool: Ethtool) -> None:
     """
      Verification function for simple ethernet interface
     :param ethernet: dictionary which is received from get_interface_dict
     :type ethernet: dict
     """
-    ifname = ethernet['ifname']
-    verify_interface_exists(ethernet, ifname)
     verify_mtu(ethernet)
     verify_mtu_ipv6(ethernet)
     verify_dhcpv6(ethernet)
     verify_address(ethernet)
     verify_vrf(ethernet)
     verify_bond_bridge_member(ethernet)
-    verify_eapol(ethernet)
-    verify_mirror_redirect(ethernet)
-    ethtool = Ethtool(ifname)
-    # No need to check speed and duplex keys as both have default values.
-    verify_speed_duplex(ethernet, ethtool)
-    verify_flow_control(ethernet, ethtool)
-    verify_ring_buffer(ethernet, ethtool)
-    verify_offload(ethernet, ethtool)
     # use common function to verify VLAN configuration
     verify_vlan_config(ethernet)
     return None

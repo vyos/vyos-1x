@@ -35,7 +35,7 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/snmp_ifmib.py</command>
                 <children>
-                  <tagNode name="ifAlias">
+                  <tagNode name="if-alias">
                     <properties>
                       <help>Show SNMP ifAlias for specified interface</help>
                       <completionHelp>
@@ -44,7 +44,7 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifalias="$6"</command>
                   </tagNode>
-                  <tagNode name="ifDescr">
+                  <tagNode name="if-descr">
                     <properties>
                       <help>Show SNMP ifDescr for specified interface</help>
                       <completionHelp>
@@ -53,9 +53,9 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifdescr="$6"</command>
                   </tagNode>
-                  <tagNode name="ifIndex">
+                  <tagNode name="if-index">
                     <properties>
-                      <help>Show SNMP ifDescr for specified interface</help>
+                      <help>Show SNMP ifIndex for specified interface</help>
                       <completionHelp>
                         <script>${vyos_completion_dir}/list_interfaces</script>
                       </completionHelp>

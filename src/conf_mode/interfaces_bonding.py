@@ -30,11 +30,11 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.ethtool import Ethtool
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
-from vyos.ifconfig import Section
 from vyos.utils.assertion import assert_mac
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
@@ -104,7 +104,6 @@ def get_config(config=None):
     conf.set_level(['interfaces'])
 
     if interfaces_removed:
-        bond['shutdown_required'] = {}
         if 'member' not in bond:
             bond['member'] = {}
 
@@ -114,8 +113,7 @@ def get_config(config=None):
             # ethernet commit again in apply function
             # to apply options under ethernet section
             set_dependents('ethernet', conf, interface)
-            section = Section.section(interface) # this will be 'ethernet' for 'eth0'
-            if conf.exists([section, interface, 'disable']):
+            if conf.exists(['ethernet', interface, 'disable']):
                 tmp[interface] = {'disable': ''}
             else:
                 tmp[interface] = {}
@@ -141,17 +139,10 @@ def get_config(config=None):
 
             # Check if member interface is a new member
             if not conf.exists_effective(base + [ifname, 'member', 'interface', interface]):
-                bond['shutdown_required'] = {}
                 bond['member']['interface'][interface].update({'new_added' : {}})
 
-            # Check if member interface is disabled
-            conf.set_level(['interfaces'])
-
-            section = Section.section(interface) # this will be 'ethernet' for 'eth0'
-            if conf.exists([section, interface, 'disable']):
-                if tmp: bond['member']['interface'][interface].update({'disable': ''})
-
-            conf.set_level(old_level)
+            if 'disable' in interface_ethernet_config:
+                bond['member']['interface'][interface].update({'disable': ''})
 
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
@@ -258,6 +249,10 @@ def verify(bond):
                 if mtu < min_mtu:
                     raise ConfigError('Configured MTU is less then member '\
                                       f'interface "{interface}" minimum of {min_mtu}!')
+
+            # not all ethernet drivers support interface bonding
+            if not Ethtool(interface).check_bonding():
+                raise ConfigError(error_msg + 'driver is not supported!')
 
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:

@@ -21,6 +21,8 @@ import unittest
 
 from vyos.utils.kernel import check_kmod
 
+ARCH = platform.machine()
+IS_ARM64 = ARCH in ('aarch64', 'arm64')
 kernel = platform.release()
 class TestKernelModules(unittest.TestCase):
     """ VyOS makes use of a lot of Kernel drivers, modules and features. The
@@ -165,6 +167,30 @@ class TestKernelModules(unittest.TestCase):
         for option in ['CONFIG_SLUB_DEBUG']:
             tmp = re.findall(f'{option}=y', self._config_data)
             self.assertTrue(tmp)
+
+    def test_kexec(self):
+        for option in ['CONFIG_KEXEC', 'CONFIG_KEXEC_FILE', 'CONFIG_KEXEC_SIG']:
+            tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_arm64(self):
+        # Only required on arm64 platforms
+        if not IS_ARM64:
+            self.skipTest('Not an arm64 platform')
+
+        # Marvell CN9130: CONFIG_MVPP2
+        required_options = [
+            'CONFIG_MVPP2',
+            'CONFIG_USB_XHCI_PLATFORM',
+        ]
+
+        for option in required_options:
+            with self.subTest(option=option):
+                tmp = re.findall(f'{option}=(y|m)', self._config_data)
+                self.assertTrue(
+                    tmp, msg=f'{option} must be enabled (=y or =m) on arm64'
+                )
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

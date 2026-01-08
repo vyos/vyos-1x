@@ -5,6 +5,8 @@ on:
   pull_request_target:
     branches:
       - current
+      - circinus
+      - sagitta
 
 permissions:
   pull-requests: write

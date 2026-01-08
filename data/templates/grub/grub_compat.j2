@@ -34,6 +34,7 @@
 {%- endmacro %}
 set default={{ default }}
 set timeout={{ timeout }}
+set timeout_style=hidden
 {% if console_type == 'ttyS' %}
 {%     if console_num == '0' %}
 serial --unit=0 --speed={{ console_speed }}

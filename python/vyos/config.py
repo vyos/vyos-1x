@@ -363,7 +363,7 @@ class Config(object):
                         pki_dict['certificate'][certificate] = config_dict_mangle_acme(
                             certificate, pki_dict['certificate'][certificate])
 
-            conf_dict['pki'] = pki_dict
+                conf_dict['pki'] = pki_dict
 
         interfaces_root = root_dict.get('interfaces', {})
         setattr(conf_dict, 'interfaces_root', interfaces_root)

@@ -218,7 +218,7 @@ _vyatta_op_run ()
     run_cmd=$(_vyatta_op_conv_run_cmd "$run_cmd") # convert the positional parameters
     local ret=0
 
-    if groups "$(whoami)" | grep -q -E ' vyattacfg(\s|$)'; then
+    if [[ $EUID -eq 0 ]] || groups "$(whoami)" | grep -q -E ' vyattacfg(\s|$)'; then
       # If the user is an admin,
       # use sudo directly for now
       op_runner="sudo"

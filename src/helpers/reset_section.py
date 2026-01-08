@@ -26,6 +26,7 @@ from vyos.configsession import ConfigSession
 from vyos.config import Config
 from vyos.configdiff import get_config_diff
 from vyos.xml_ref import is_leaf
+from vyos.utils.commit import wait_for_commit_lock
 
 
 CFG_GROUP = 'vyattacfg'
@@ -99,6 +100,8 @@ if in_session:
 cfg_group = grp.getgrnam(CFG_GROUP)
 os.setgid(cfg_group.gr_gid)
 os.umask(0o002)
+
+wait_for_commit_lock()
 
 shared = not bool(reload)
 

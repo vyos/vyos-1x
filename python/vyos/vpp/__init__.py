@@ -18,3 +18,7 @@
 from .control_vpp import VPPControl
 
 __all__ = ['VPPControl']
+
+
+class VppNotRunningError(Exception):
+    pass

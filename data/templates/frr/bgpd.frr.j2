@@ -510,11 +510,17 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%                 if bmp_config.monitor.ipv4_unicast.post_policy is vyos_defined %}
   bmp monitor ipv4 unicast post-policy
 {%                 endif %}
+{%                 if bmp_config.monitor.ipv4_unicast.local_rib is vyos_defined %}
+  bmp monitor ipv4 unicast loc-rib
+{%                 endif %}
 {%                 if bmp_config.monitor.ipv6_unicast.pre_policy is vyos_defined %}
   bmp monitor ipv6 unicast pre-policy
 {%                 endif %}
 {%                 if bmp_config.monitor.ipv6_unicast.post_policy is vyos_defined %}
   bmp monitor ipv6 unicast post-policy
+{%                 endif %}
+{%                 if bmp_config.monitor.ipv6_unicast.local_rib is vyos_defined %}
+  bmp monitor ipv6 unicast loc-rib
 {%                 endif %}
 {%             endif %}
 {%             if bmp_config.address is vyos_defined %}

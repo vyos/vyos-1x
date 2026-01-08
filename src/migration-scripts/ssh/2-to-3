@@ -1,0 +1,43 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8098: rijndael-cbc@lysator.liu.se was removed in OpenSSH 6.7 which is used
+#        starting with VyOS 1.4 - It is an alias for aes256-cbc which was
+#        standardized in RFC4253, adjust CLI accordingly.
+#        https://github.com/openssh/openssh-portable/commit/03e93c753d7c223063a
+#        Also rename "ciphers" -> "cipher" to follow our CLI guidelines to use
+#        singular when possible
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'ssh']
+
+old_path = base + ['ciphers']
+new_path = base + ['cipher']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    if config.exists(old_path):
+        config.rename(old_path, new_path[-1])
+
+    if config.exists(new_path):
+        deprecated_cipher = 'rijndael-cbc@lysator.liu.se'
+        for cipher in config.return_values(new_path):
+            if cipher == deprecated_cipher:
+                config.delete_value(new_path, value=deprecated_cipher)
+                config.set(new_path, value='aes256-cbc', replace=False)
