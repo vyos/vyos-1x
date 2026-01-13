@@ -10,7 +10,7 @@ def error_invalid(value):
     sys.exit(1)
 
 def error_length():
-    print('Input must be a 2-character hex string')
+    print('Input must be a 4-character hex string')
     sys.exit(1)
 
 if __name__ == '__main__':
@@ -19,11 +19,12 @@ if __name__ == '__main__':
 
     value = sys.argv[1].upper()
 
-    if len(value) != 2:
+    if len(value) != 4:
         error_length()
 
     try:
-        byte = int(value, 16)
+        byte1 = int(value[:2], 16)
+        byte2 = int(value[2:], 16)
     except ValueError:
         error_invalid(value)
 
