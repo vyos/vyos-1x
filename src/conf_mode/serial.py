@@ -375,7 +375,7 @@ def generate(proxy):
                     path['cipher_options'] = subtract_from_key(path['cipher_options'])
 
                 cert_name = ''
-                if 'certificate' in path and not tpm_enabled:
+                if 'certificate' in path and not tpm_enabled():
                     cert_name = path['certificate']
 
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
