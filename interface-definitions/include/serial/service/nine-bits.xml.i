@@ -4,9 +4,9 @@
     <help>Nine bits profile</help>
   </properties>
   <children>
-    <leafNode name="trigger-hex-string">
+    <leafNode name="start-trigger-hex-string">
       <properties>
-        <help>Hex string to trigger nine bits protocol</help>
+        <help>Hex string to start nine bits protocol</help>
         <valueHelp>
           <format>txt</format>
           <description>2 hex value written with 4 digits</description>
@@ -16,6 +16,25 @@
         </constraint>
       </properties>
       <defaultValue>0000</defaultValue>
+    </leafNode>
+    <leafNode name="stop-trigger-hex-string">
+      <properties>
+        <help>Hex string to stop nine bits protocol</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>2 hex value written with 4 digits</description>
+        </valueHelp>
+        <constraint>
+          <validator name="2hex"/>
+        </constraint>
+      </properties>
+      <defaultValue>0000</defaultValue>
+    </leafNode>
+    <leafNode name="trigger">
+      <properties>
+        <help>Enable using trigger to control nine bits protocol</help>
+        <valueless/>
+      </properties>
     </leafNode>
     <leafNode name="delay">
       <properties>
