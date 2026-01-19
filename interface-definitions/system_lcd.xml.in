@@ -12,7 +12,7 @@
             <properties>
               <help>Model of the display attached to this system</help>
               <completionHelp>
-                <list>cfa-533 cfa-631 cfa-633 cfa-635 hd44780 sdec</list>
+                <list>cfa-533 cfa-631 cfa-633 cfa-635 hd44780 sdec mtc-s16209x</list>
               </completionHelp>
               <valueHelp>
                 <format>cfa-533</format>
@@ -38,8 +38,12 @@
                 <format>sdec</format>
                 <description>Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances</description>
               </valueHelp>
+              <valueHelp>
+                <format>mtc-s16209x</format>
+                <description>Microtips Technology S16209x, Sophos SG appliances</description>
+              </valueHelp>
               <constraint>
-                <regex>(cfa-533|cfa-631|cfa-633|cfa-635|hd44780|sdec)</regex>
+                <regex>(cfa-533|cfa-631|cfa-633|cfa-635|hd44780|sdec|mtc-s16209x)</regex>
               </constraint>
             </properties>
           </leafNode>

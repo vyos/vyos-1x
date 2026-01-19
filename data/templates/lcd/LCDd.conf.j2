@@ -55,6 +55,8 @@ Driver=CFontzPacket
 Driver=sdeclcd
 {%     elif model == 'hd44780' %}
 Driver=hd44780
+{%     elif model == 'mtc-s16209x' %}
+Driver=mtc_s16209x
 {%     endif %}
 {% endif %}
 
@@ -135,5 +137,10 @@ USB=yes
 ConnectionType=ezio
 Device={{ device }}
 Size=16x2
+{%     elif model == 'mtc-s16209x' %}
+[mtc_s16209x]
+Device={{ device }}
+Brightness=255
+Reboot=yes
 {%     endif %}
 {% endif %}
