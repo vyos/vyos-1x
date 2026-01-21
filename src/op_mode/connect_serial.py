@@ -14,19 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
-import subprocess
 
 def main():
     ttyname = sys.argv[1]
     user = ""
 
     try:
-        result = subprocess.run(['who', '-m'], capture_output=True, text=True)
-        user = result.stdout.strip().split()[0]
+        user = os.getlogin()
 
-    except subprocess.CalledProcessError as e:
-        print(f'Command failed with exit code {e.returncode}')
+    except OSError:
+        user = None
 
     if user:
         os.system(f'sudo -u {user} /usr/bin/iol_cm -t {ttyname} 30')
