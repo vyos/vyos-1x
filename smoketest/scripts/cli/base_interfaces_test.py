@@ -1010,11 +1010,15 @@ class BasicInterfaceTest:
 
             for interface in self._interfaces:
                 if cli_defined(self._base_path + ['ip'], 'adjust-mss'):
-                    base_options = f'oifname "{interface}"'
-                    out = cmd('sudo nft list chain raw VYOS_TCP_MSS')
-                    for line in out.splitlines():
-                        if line.startswith(base_options):
-                            self.assertIn(f'tcp option maxseg size set {mss}', line)
+                    for chain, iface_dir in [
+                        ('VYOS_TCP_MSS', 'oifname'),
+                        ('VYOS_TCP_MSS_FWD', 'iifname'),
+                    ]:
+                        base_options = f'{iface_dir} "{interface}"'
+                        out = cmd(f'sudo nft list chain raw {chain}')
+                        for line in out.splitlines():
+                            if line.startswith(base_options):
+                                self.assertIn(f'tcp option maxseg size set {mss}', line)
 
                 if cli_defined(self._base_path + ['ip'], 'arp-cache-timeout'):
                     tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
@@ -1101,11 +1105,15 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 proc_base = f'/proc/sys/net/ipv6/conf/{interface}'
                 if cli_defined(self._base_path + ['ipv6'], 'adjust-mss'):
-                    base_options = f'oifname "{interface}"'
-                    out = cmd('sudo nft list chain ip6 raw VYOS_TCP_MSS')
-                    for line in out.splitlines():
-                        if line.startswith(base_options):
-                            self.assertIn(f'tcp option maxseg size set {mss}', line)
+                    for chain, iface_dir in [
+                        ('VYOS_TCP_MSS', 'oifname'),
+                        ('VYOS_TCP_MSS_FWD', 'iifname'),
+                    ]:
+                        base_options = f'{iface_dir} "{interface}"'
+                        out = cmd(f'sudo nft list chain ip6 raw {chain}')
+                        for line in out.splitlines():
+                            if line.startswith(base_options):
+                                self.assertIn(f'tcp option maxseg size set {mss}', line)
 
                 if cli_defined(self._base_path + ['ipv6'], 'accept-dad'):
                     tmp = read_file(f'{proc_base}/accept_dad')

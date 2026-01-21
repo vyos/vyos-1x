@@ -692,13 +692,24 @@ class Interface(Control):
         return self.set_interface('ipv6_cache_tmo', tmo)
 
     def _cleanup_mss_rules(self, table, ifname):
-        commands = []
         results = self._cmd(f'nft -a list chain {table} VYOS_TCP_MSS').split("\n")
         for line in results:
             if f'oifname "{ifname}"' in line:
                 handle_search = re.search('handle (\d+)', line)
                 if handle_search:
-                    self._cmd(f'nft delete rule {table} VYOS_TCP_MSS handle {handle_search[1]}')
+                    self._cmd(
+                        f'nft delete rule {table} VYOS_TCP_MSS handle {handle_search[1]}'
+                    )
+
+    def _cleanup_mss_fwd_rules(self, table, ifname):
+        results = self._cmd(f'nft -a list chain {table} VYOS_TCP_MSS_FWD').split("\n")
+        for line in results:
+            if f'iifname "{ifname}"' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    self._cmd(
+                        f'nft delete rule {table} VYOS_TCP_MSS_FWD handle {handle_search[1]}'
+                    )
 
     def set_tcp_ipv4_mss(self, mss):
         """
@@ -716,13 +727,43 @@ class Interface(Control):
             return None
 
         self._cleanup_mss_rules('raw', self.ifname)
+
         nft_prefix = 'nft add rule raw VYOS_TCP_MSS'
-        base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
+        base_cmd = f'oifname "{self.ifname}" tcp flags & (fin|syn|rst) == syn'
         if mss == 'clamp-mss-to-pmtu':
             self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
         elif int(mss) > 0:
             low_mss = str(int(mss) + 1)
-            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'")
+            self._cmd(
+                f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'"
+            )
+
+    def set_tcp_ipv4_mss_fwd(self, mss):
+        """
+        Set IPv4 TCP MSS value advertised when TCP SYN packets are forwarded
+        from this interface. Value is in bytes.
+
+        A value of 0 will disable the MSS adjustment
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_tcp_ipv4_mss_fwd(1340)
+        """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
+        self._cleanup_mss_fwd_rules('raw', self.ifname)
+
+        nft_prefix = 'nft add rule raw VYOS_TCP_MSS_FWD'
+        base_cmd = f'iifname "{self.ifname}" tcp flags & (fin|syn|rst) == syn'
+        if mss == 'clamp-mss-to-pmtu':
+            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
+        elif int(mss) > 0:
+            low_mss = str(int(mss) + 1)
+            self._cmd(
+                f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'"
+            )
 
     def set_tcp_ipv6_mss(self, mss):
         """
@@ -740,13 +781,43 @@ class Interface(Control):
             return None
 
         self._cleanup_mss_rules('ip6 raw', self.ifname)
+
         nft_prefix = 'nft add rule ip6 raw VYOS_TCP_MSS'
-        base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
+        base_cmd = f'oifname "{self.ifname}" tcp flags & (fin|syn|rst) == syn'
         if mss == 'clamp-mss-to-pmtu':
             self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
         elif int(mss) > 0:
             low_mss = str(int(mss) + 1)
-            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'")
+            self._cmd(
+                f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'"
+            )
+
+    def set_tcp_ipv6_mss_fwd(self, mss):
+        """
+        Set IPv6 TCP MSS value advertised when TCP SYN packets are forwarded
+        from this interface. Value is in bytes.
+
+        A value of 0 will disable the MSS adjustment
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_tcp_ipv6_mss_fwd(1320)
+        """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
+        self._cleanup_mss_fwd_rules('ip6 raw', self.ifname)
+
+        nft_prefix = 'nft add rule ip6 raw VYOS_TCP_MSS_FWD'
+        base_cmd = f'iifname "{self.ifname}" tcp flags & (fin|syn|rst) == syn'
+        if mss == 'clamp-mss-to-pmtu':
+            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
+        elif int(mss) > 0:
+            low_mss = str(int(mss) + 1)
+            self._cmd(
+                f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'"
+            )
 
     def set_arp_filter(self, arp_filter):
         """
@@ -1842,6 +1913,7 @@ class Interface(Control):
         tmp = dict_search('ip.adjust_mss', config)
         value = tmp if (tmp != None) else '0'
         self.set_tcp_ipv4_mss(value)
+        self.set_tcp_ipv4_mss_fwd(value)
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
@@ -1909,6 +1981,7 @@ class Interface(Control):
         tmp = dict_search('ipv6.adjust_mss', config)
         value = tmp if (tmp != None) else '0'
         self.set_tcp_ipv6_mss(value)
+        self.set_tcp_ipv6_mss_fwd(value)
 
         # IPv6 forwarding
         tmp = dict_search('ipv6.disable_forwarding', config)
