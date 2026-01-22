@@ -494,5 +494,22 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('none', authorize_principals_file_config)
         self.assertFalse(os.path.exists(f'/home/{test_user}/.ssh/authorized_principals'))
 
+    def test_ssh_fido(self):
+        # Order does matter for this test because of how the template
+        # collects and maps the options.
+        opt_map = {
+            'pin-required': 'verify-required',
+            'touch-required': 'touch-required',
+        }
+        expected = 'PubkeyAuthOptions '
+        for k, v in opt_map.items():
+            self.cli_set(base_path + ['fido', k])
+            expected = f'{expected}{v} '
+        expected = expected[:-1]
+        self.cli_commit()
+        tmp_sshd_conf = read_file(SSHD_CONF)
+        self.assertIn(expected, tmp_sshd_conf)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

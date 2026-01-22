@@ -51,9 +51,26 @@ ERROR_RELOAD_TEST: str = 'The system encountered an error while rendering the ' 
     'new routing daemon configuration. To ensure network stability and avoid ' \
     'potential connectivity disruptions, the configuration was not applied!'
 
-frr_protocols = ['babel', 'bfd', 'bgp', 'eigrp', 'isis', 'mpls', 'nhrp',
-                 'openfabric', 'ospf', 'ospfv3', 'pim', 'pim6', 'rip',
-                 'ripng', 'rpki', 'segment_routing', 'static']
+frr_protocols = [
+    'babel',
+    'bfd',
+    'bgp',
+    'eigrp',
+    'isis',
+    'mpls',
+    'nhrp',
+    'openfabric',
+    'ospf',
+    'ospfv3',
+    'pim',
+    'pim6',
+    'rip',
+    'ripng',
+    'rpki',
+    'segment_routing',
+    'static',
+    'traffic_engineering',
+]
 
 babel_daemon = 'babeld'
 bfd_daemon = 'bfdd'
@@ -426,6 +443,21 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
     elif conf.exists_effective(sr_cli_path):
         dict.update({'segment_routing' : deleted_protocol})
 
+    # We need to check the CLI if the Traffic Engineering node is present and thus load in
+    # all the default values present on the CLI - that's why we have if conf.exists()
+    te_cli_path = ['protocols', 'traffic-engineering']
+    if conf.exists(te_cli_path):
+        te = conf.get_config_dict(
+            te_cli_path,
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+            with_recursive_defaults=True,
+        )
+        dict.update({'traffic_engineering': te})
+    elif conf.exists_effective(te_cli_path):
+        dict.update({'traffic_engineering': deleted_protocol})
+
     # We need to check the CLI if the static node is present and thus load in
     # all the default values present on the CLI - that's why we have if conf.exists()
     static_cli_path = ['protocols', 'static']
@@ -721,6 +753,15 @@ class FRRender:
                 output += '\n'
             if 'segment_routing' in config_dict and 'deleted' not in config_dict['segment_routing']:
                 output += render_to_string('frr/zebra.segment_routing.frr.j2', config_dict['segment_routing'])
+                output += '\n'
+            if (
+                'traffic_engineering' in config_dict
+                and 'deleted' not in config_dict['traffic_engineering']
+            ):
+                output += render_to_string(
+                    'frr/zebra.traffic_engineering.frr.j2',
+                    config_dict['traffic_engineering'],
+                )
                 output += '\n'
             if 'static' in config_dict and 'deleted' not in config_dict['static']:
                 output += render_to_string('frr/staticd.frr.j2', config_dict['static'])

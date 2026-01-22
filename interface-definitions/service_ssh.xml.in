@@ -61,6 +61,25 @@
               <valueless/>
             </properties>
           </leafNode>
+          <node name="fido">
+            <properties>
+              <help>FIDO2 SSH options</help>
+            </properties>
+            <children>
+              <leafNode name="pin-required">
+                <properties>
+                  <help>Require FIDO2 keys to attest that a user has been verified (e.g. via a PIN)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="touch-required">
+                <properties>
+                  <help>Require FIDO2 keys to attest that a user is physically present</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <node name="dynamic-protection">
             <properties>
               <help>Allow dynamic protection</help>

@@ -349,7 +349,7 @@
       <node name="ipfix" owner="${vyos_conf_scripts_dir}/vpp_ipfix.py">
         <properties>
           <help>IP Flow Information Export (IPFIX) configuration</help>
-          <priority>322</priority>
+          <priority>332</priority>
         </properties>
         <children>
           <tagNode name="collector">
@@ -678,11 +678,11 @@
                     <properties>
                       <help>Receive ring descriptors</help>
                       <valueHelp>
-                        <format>u32:256-8192</format>
+                        <format>u32:256-16384</format>
                         <description>Number of descriptors in receive ring</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="numeric" argument="--range 256-8192"/>
+                        <validator name="numeric" argument="--range 256-16384"/>
                       </constraint>
                     </properties>
                     <defaultValue>1024</defaultValue>

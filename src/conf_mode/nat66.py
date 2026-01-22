@@ -92,10 +92,14 @@ def verify(nat):
             if prefix != None:
                 if not is_ipv6(prefix):
                     raise ConfigError(f'{err_msg} source-prefix not specified')
-                
+
+            if 'source' in config and 'group' in config['source']:
+                if len({'address_group', 'network_group', 'domain_group'} & set(config['source']['group'])) > 1:
+                    raise ConfigError('Only one source address-group, network-group or domain-group can be specified')
+
             if 'destination' in config and 'group' in config['destination']:
                 if len({'address_group', 'network_group', 'domain_group'} & set(config['destination']['group'])) > 1:
-                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+                    raise ConfigError('Only one destination address-group, network-group or domain-group can be specified')
 
     if dict_search('destination.rule', nat):
         for rule, config in dict_search('destination.rule', nat).items():
@@ -112,9 +116,13 @@ def verify(nat):
                         if not interface_exists(interface_name):
                             Warning(f'Interface "{interface_name}" for destination NAT66 rule "{rule}" does not exist!')
 
+            if 'source' in config and 'group' in config['source']:
+                if len({'address_group', 'network_group', 'domain_group'} & set(config['source']['group'])) > 1:
+                    raise ConfigError('Only one source address-group, network-group or domain-group can be specified')
+
             if 'destination' in config and 'group' in config['destination']:
                 if len({'address_group', 'network_group', 'domain_group'} & set(config['destination']['group'])) > 1:
-                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+                    raise ConfigError('Only one destination address-group, network-group or domain-group can be specified')
 
     return None
 

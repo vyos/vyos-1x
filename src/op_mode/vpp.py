@@ -371,14 +371,17 @@ class VPPShow:
 # -----------------------------
 # VyOS IPFIX op-mode entries
 # -----------------------------
+@_verify('ipfix interface')
 def show_ipfix_interfaces(raw: bool):
     return VPPShow().ipfix_interfaces(raw)
 
 
+@_verify('ipfix collector')
 def show_ipfix_collectors(raw: bool):
     return VPPShow().ipfix_collectors(raw)
 
 
+@_verify('ipfix')
 def show_ipfix_table(raw: bool):
     return VPPShow().ipfix_table(raw)
 

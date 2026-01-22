@@ -19,6 +19,7 @@ from vyos import ConfigError
 from vyos.config import Config
 from vyos.vpp.ipfix import IPFIX
 from vyos.vpp.utils import cli_ifaces_list
+from vyos.vpp.utils import vpp_iface_name_transform
 
 
 def get_config(config=None) -> dict:
@@ -116,6 +117,7 @@ def apply(config):
 
     # Remove interfaces
     for iface, iface_conf in config.get('effective', {}).get('interface', {}).items():
+        iface = vpp_iface_name_transform(iface)
         direction = iface_conf.get('direction')
         which = iface_conf.get('flow_variant')
         i.flowprobe_interface_delete(iface, direction=direction, which=which)
@@ -158,6 +160,7 @@ def apply(config):
     # Interfaces
     if 'interface' in config:
         for iface, iface_config in config.get('interface', {}).items():
+            iface = vpp_iface_name_transform(iface)
             direction = iface_config.get('direction')
             which = iface_config.get('flow_variant')
 

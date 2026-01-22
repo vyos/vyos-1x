@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+#
+# T7633: This migration converts legacy 'encryption cipher' directives into
+# 'encryption data-ciphers-fallback' for site-to-site mode tunnels.
+#
+# In modern OpenVPN (v2.6+), 'cipher' and 'data-ciphers' are not valid
+# in site-to-site mode.
+# The appropriate directive is now '--data-ciphers-fallback alg'.
+
+from vyos.configtree import ConfigTree
+
+def migrate(config: ConfigTree) -> None:
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'], path_must_exist=False)
+    for i in ovpn_intfs:
+        base_path = ['interfaces', 'openvpn', i]
+        mode_path = base_path + ['mode']
+        cipher_path = base_path + ['encryption', 'cipher']
+
+        # Only migrate if mode is explicitly 'site-to-site'
+        if config.value_exists(mode_path, 'site-to-site'):
+
+            # Rename 'encryption cipher' with 'encryption data-ciphers-fallback'
+            if config.exists(cipher_path):
+                config.rename(cipher_path, 'data-ciphers-fallback')

@@ -72,6 +72,20 @@ HostKeyAlgorithms {{ hostkey_algorithm | join(',') }}
 PubkeyAcceptedAlgorithms {{ pubkey_accepted_algorithm | join(',') }}
 {% endif %}
 
+{% if fido is vyos_defined %}
+{%     set configured_pubkey_options = [] %}
+{%     if fido.pin_required is vyos_defined %}
+{%         do configured_pubkey_options.append('verify-required') %}
+{%     endif %}
+{%     if fido.touch_required is vyos_defined %}
+{%         do configured_pubkey_options.append('touch-required') %}
+{%     endif %}
+{%     if configured_pubkey_options | length > 0 %}
+# Sets one or more public key authentication options.
+PubkeyAuthOptions {{ configured_pubkey_options | join(' ') }}
+{%     endif %}
+{% endif %}
+
 {% if mac is vyos_defined %}
 # Specifies the available MAC (message authentication code) algorithms
 MACs {{ mac | join(',') }}
