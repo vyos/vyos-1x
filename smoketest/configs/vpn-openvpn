@@ -214,6 +214,18 @@ interfaces {
         remote-address 192.0.2.5
         shared-secret-key-file /config/auth/openvpn/shared-secret-2.key
     }
+    openvpn vtun43 {
+        encryption {
+            cipher aes128
+        }
+        local-address 100.64.40.6 {
+            subnet-mask 255.255.255.254
+        }
+        local-port 10043
+        mode site-to-site
+        remote-address 192.0.2.6
+        shared-secret-key-file /config/auth/openvpn/shared-secret-2.key
+    }
 }
 protocols {
     ospf {

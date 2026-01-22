@@ -114,17 +114,9 @@ advertise-passive-only
 {% if log_adjacency_changes is vyos_defined %}
  log-adjacency-changes
 {% endif %}
-{% if lsp_gen_interval is vyos_defined %}
- lsp-gen-interval {{ lsp_gen_interval }}
-{% endif %}
+ lsp-timers gen-interval {{ lsp_gen_interval }} refresh-interval {{ lsp_refresh_interval }} max-lifetime {{ max_lsp_lifetime }}
 {% if lsp_mtu is vyos_defined %}
  lsp-mtu {{ lsp_mtu }}
-{% endif %}
-{% if lsp_refresh_interval is vyos_defined %}
- lsp-refresh-interval  {{ lsp_refresh_interval }}
-{% endif %}
-{% if max_lsp_lifetime is vyos_defined %}
- max-lsp-lifetime {{ max_lsp_lifetime }}
 {% endif %}
 {% if ldp_sync.holddown is vyos_defined %}
  mpls ldp-sync holddown {{ ldp_sync.holddown }}
@@ -152,6 +144,9 @@ advertise-passive-only
 {%         set level = ' level-2-only' %}
 {%     endif %}
  mpls-te inter-as{{ level }}
+{% endif %}
+{% if traffic_engineering.export is vyos_defined %}
+ mpls-te export
 {% endif %}
 {% if segment_routing is vyos_defined %}
 {%     if segment_routing.maximum_label_depth is vyos_defined %}

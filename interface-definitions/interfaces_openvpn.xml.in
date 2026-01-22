@@ -131,6 +131,49 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="data-ciphers-fallback">
+                <properties>
+                  <help>Fallback cipher to use for site-to-site tunnels</help>
+                  <completionHelp>
+                    <list>none 3des aes128 aes128gcm aes192 aes192gcm aes256 aes256gcm</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>none</format>
+                    <description>Disable encryption</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>3des</format>
+                    <description>DES algorithm with triple encryption</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes128</format>
+                    <description>AES algorithm with 128-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes128gcm</format>
+                    <description>AES algorithm with 128-bit key GCM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes192</format>
+                    <description>AES algorithm with 192-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes192gcm</format>
+                    <description>AES algorithm with 192-bit key GCM</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes256</format>
+                    <description>AES algorithm with 256-bit key CBC</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>aes256gcm</format>
+                    <description>AES algorithm with 256-bit key GCM</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(none|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
             </children>
           </node>
           #include <include/interface/ipv4-options.xml.i>

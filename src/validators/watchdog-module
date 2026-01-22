@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+import sys
+
+from vyos.utils.kernel import load_module
+from vyos.utils.process import rc_cmd
+
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        # No value to validate
+        return 1
+
+    module = sys.argv[1].strip()
+    if not module:
+        return 1
+
+    # Keep the module name format strict.
+    if not re.fullmatch(r"[a-zA-Z0-9_\-]+", module):
+        return 1
+
+    # Ensure the module exists and is loadable (dry-run).
+    # This does not load the module.
+    try:
+        rc = load_module(module, quiet=True, dry_run=True)
+    except OSError:
+        return 1
+
+    if rc != 0:
+        return 1
+
+    # Validate that the module looks like a watchdog driver.
+    # Use modinfo filename location as the heuristic.
+    rc, out = rc_cmd(["modinfo", "-F", "filename", module])
+    if rc != 0:
+        return 1
+    filename = (out or "").strip().lower()
+
+    # Accept modules located under drivers/watchdog, plus explicit exception for
+    # ipmi_watchdog which lives in drivers/char/ipmi.
+    is_watchdog_driver = (
+        ("/watchdog/" in filename)
+        or filename.endswith("/ipmi_watchdog.ko")
+    )
+
+    return 0 if is_watchdog_driver else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

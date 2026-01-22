@@ -79,6 +79,7 @@
                     </properties>
                   </leafNode>
                   #include <include/nat-port.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
                 </children>
               </node>
               <node name="translation">
@@ -216,6 +217,7 @@
                     </properties>
                   </leafNode>
                 #include <include/nat-port.xml.i>
+                #include <include/firewall/source-destination-group-ipv6.xml.i>
                 </children>
               </node>
               <node name="translation">

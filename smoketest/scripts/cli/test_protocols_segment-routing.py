@@ -57,7 +57,7 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
                 'prefix': '2001:d::/48',
                 'block-len': '32',
                 'node-len': '16',
-                'func-bits': '16',
+                'func-bits': '12',
                 'usid': {},
                 'format': 'usid-f3216',
             },
@@ -131,13 +131,25 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         self.assertIn('  locators', frrconfig)
         for locator, locator_config in locators.items():
             prefix = locator_config['prefix']
-            block_len = locator_config.get('block-len', '40')
-            node_len = locator_config.get('node-len', '24')
-            func_bits = locator_config.get('func-bits', '16')
+            block_len = (
+                f' block-len {locator_config["block-len"]}'
+                if 'block-len' in locator_config
+                else ''
+            )
+            node_len = (
+                f' node-len {locator_config["node-len"]}'
+                if 'node-len' in locator_config
+                else ''
+            )
+            func_bits = (
+                f' func-bits {locator_config["func-bits"]}'
+                if 'func-bits' in locator_config
+                else ''
+            )
 
             self.assertIn(f'   locator {locator}', frrconfig)
             self.assertIn(
-                f'    prefix {prefix} block-len {block_len} node-len {node_len} func-bits {func_bits}',
+                f'    prefix {prefix}{block_len}{node_len}{func_bits}',
                 frrconfig,
             )
 

@@ -69,6 +69,37 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <node name="certificate">
+                    <properties>
+                      <help>Use certificate-based authentication</help>
+                    </properties>
+                    <children>
+                      <leafNode name="user-identifier-field">
+                        <properties>
+                          <help>Certificate field to identify users by</help>
+                          <valueHelp>
+                            <format>cn</format>
+                            <description>OID 2.5.4.3 - Common Name</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>uid</format>
+                            <description>OID 0.9.2342.19200300.100.1.1 - UID</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>x.x.xx.xxx</format>
+                            <description>Custom OID in dotted decimal format</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(^\d{1,5}(?:\.\d{1,5})*$|cn|uid)</regex>
+                          </constraint>
+                          <constraintErrorMessage>Invalid OID selection. Must be cn, uid, or a valid OID format.</constraintErrorMessage>
+                          <completionHelp>
+                            <list>cn uid x.x.xx.xxx</list>
+                          </completionHelp>
+                         </properties>
+                       </leafNode>
+                     </children>
+                   </node>
                 </children>
               </node>
               <node name="identity-based-config">

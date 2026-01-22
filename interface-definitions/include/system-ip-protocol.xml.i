@@ -3,7 +3,7 @@
   <properties>
     <help>Filter routing info exchanged between routing protocol and zebra</help>
     <completionHelp>
-      <list>any babel bgp connected eigrp isis kernel ospf rip static table</list>
+      <list>any babel bgp eigrp isis ospf rip static</list>
     </completionHelp>
     <valueHelp>
       <format>any</format>
@@ -18,20 +18,12 @@
       <description>Border Gateway Protocol</description>
     </valueHelp>
     <valueHelp>
-      <format>connected</format>
-      <description>Connected routes (directly attached subnet or host)</description>
-    </valueHelp>
-    <valueHelp>
       <format>eigrp</format>
       <description>Enhanced Interior Gateway Routing Protocol</description>
     </valueHelp>
     <valueHelp>
       <format>isis</format>
       <description>Intermediate System to Intermediate System</description>
-    </valueHelp>
-    <valueHelp>
-      <format>kernel</format>
-      <description>Kernel routes (not installed via the zebra RIB)</description>
     </valueHelp>
     <valueHelp>
       <format>ospf</format>
@@ -46,7 +38,7 @@
       <description>Statically configured routes</description>
     </valueHelp>
     <constraint>
-      <regex>(any|babel|bgp|connected|eigrp|isis|kernel|ospf|rip|static|table)</regex>
+      <regex>(any|babel|bgp|eigrp|isis|ospf|rip|static)</regex>
     </constraint>
   </properties>
   <children>

@@ -80,6 +80,57 @@ CRL_PATH    = f'{swanctl_dir}/x509crl/'
 
 DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_interfaces'
 
+
+def _cleanup_default_prefixes(ipsec: dict, default_values: dict):
+    """
+    Remove default local/remote prefixes from tunnels
+    that use 'transport' mode ESP and do not have explicit prefix definitions
+    """
+    site_to_site = dict_search_args(ipsec, 'site_to_site', 'peer') or {}
+
+    for peer, peer_conf in site_to_site.items():
+        tunnels = peer_conf.get('tunnel') or {}
+        default_esp_group = peer_conf.get('default_esp_group')
+
+        for tunnel, tunnel_conf in tunnels.items():
+            # Determine ESP group name - prefer specific over default
+            tunnel_esp_group = tunnel_conf.get('esp_group')
+            esp_group_name = tunnel_esp_group or default_esp_group
+
+            # Get default values for the tunnel
+            tunnel_defaults = dict_search_args(
+                default_values, 'site_to_site', 'peer', peer, 'tunnel', tunnel
+            )
+
+            # Skip if no defaults found or ESP group defined
+            # Yes, this can happen because of user misconfiguration
+            if tunnel_defaults is None or esp_group_name is None:
+                continue
+
+            # Fetch ESP group details
+            esp_group_mode = dict_search_args(
+                ipsec, 'esp_group', esp_group_name, 'mode'
+            )
+
+            # Only act if ESP group is in transport mode
+            if esp_group_mode == 'transport':
+
+                # Look for local and remote prefixes
+                local_prefixes = dict_search_args(tunnel_conf, 'local', 'prefix')
+                remote_prefixes = dict_search_args(tunnel_conf, 'remote', 'prefix')
+
+                # Safely remove missing prefixes from defaults
+                # if user has not defined them but they are in defaults
+                if not local_prefixes:
+                    prefix = dict_search_args(tunnel_defaults, 'local', 'prefix')
+                    if prefix is not None:
+                        del tunnel_defaults['local']['prefix']
+
+                if not remote_prefixes:
+                    prefix = dict_search_args(tunnel_defaults, 'remote', 'prefix')
+                    if prefix is not None:
+                        del tunnel_defaults['remote']['prefix']
+
 def get_config(config=None):
     if config:
         conf = config
@@ -113,6 +164,9 @@ def get_config(config=None):
         for name, ike in ipsec['ike_group'].items():
             if 'dead_peer_detection' not in ike:
                 del default_values['ike_group'][name]['dead_peer_detection']
+
+    # Clean up default prefixes for ESP transport-mode tunnels
+    _cleanup_default_prefixes(ipsec, default_values)
 
     ipsec = config_dict_merge(default_values, ipsec)
 

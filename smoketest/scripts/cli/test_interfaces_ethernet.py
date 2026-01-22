@@ -154,16 +154,18 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 self.assertEqual(int(tmp), 0)
 
     def test_non_existing_interface(self):
-        unknonw_interface = self._base_path + ['eth667']
-        self.cli_set(unknonw_interface)
+        unknonw_interface = 'eth667'
+        self.cli_set(self._base_path + [unknonw_interface])
 
         # check validate() - interface does not exist
-        with self.assertRaises(ConfigSessionError):
+        with self.assertRaises(ConfigSessionError) as cm:
             self.cli_commit()
+            self.assertIn(f'Interface "{unknonw_interface}" does not exist!',
+                          str(cm.exception))
 
         # we need to remove this wrong interface from the configuration
         # manually, else tearDown() will have problem in commit()
-        self.cli_delete(unknonw_interface)
+        self.cli_delete(self._base_path + [unknonw_interface])
 
     def test_speed_duplex_verify(self):
         for interface in self._interfaces:

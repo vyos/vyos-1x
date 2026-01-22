@@ -46,6 +46,7 @@ from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
 from vyos.utils.process import is_systemd_service_running
+from vyos.vpp.control_vpp import VPPControl
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -386,11 +387,12 @@ def verify(ethernet):
     if 'deleted' in ethernet:
         return None
 
-    ethtool = Ethtool(ethernet['ifname'])
-    verify_interface_exists(ethernet, ethernet['ifname'])
+    ifname = ethernet['ifname']
+    verify_interface_exists(ethernet, ifname, state_required=True)
     verify_eapol(ethernet)
     verify_mirror_redirect(ethernet)
     # No need to check speed and duplex keys as both have default values
+    ethtool = Ethtool(ifname)
     verify_speed_duplex(ethernet, ethtool)
     verify_flow_control(ethernet, ethtool)
     verify_ring_buffer(ethernet, ethtool)
@@ -436,13 +438,27 @@ def generate(ethernet):
 def apply(ethernet):
     if 'frr_dict' in ethernet and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()
-    e = EthernetIf(ethernet['ifname'])
+    ifname = ethernet['ifname']
+    e = EthernetIf(ifname)
     if 'deleted' in ethernet:
         e.remove()
     else:
         e.update(ethernet)
     if 'static_arp' in ethernet:
         call_dependents()
+
+    # If the interface is managed by the VPP DPDK driver, synchronize runtime
+    # parameters between Linux and the corresponding VPP LCP interface
+    if dict_search(f'vpp.settings.interface.{ifname}.driver', ethernet) == 'dpdk':
+        vpp_api = VPPControl()
+        # Find LCP pair
+        lcp_pair = vpp_api.lcp_pair_find(vpp_name_hw=ifname)
+        lcp_name = lcp_pair.get('vpp_name_kernel')
+        # Sync MTU to VPP LCP pair interface
+        if lcp_name:
+            mtu = e.get_mtu()
+            vpp_api.set_iface_mtu(lcp_name, mtu)
+
     return None
 
 if __name__ == '__main__':

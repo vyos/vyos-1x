@@ -4,6 +4,9 @@
 {%     for iface, iface_config in interface.items() %}
 interface {{ iface }} {
     IgnoreIfMissing on;
+{%         if iface_config.captive_portal is vyos_defined %}
+    AdvCaptivePortalAPI "{{ iface_config.captive_portal }}";
+{%         endif %}
 {%         if iface_config.default_preference is vyos_defined %}
     AdvDefaultPreference {{ iface_config.default_preference }};
 {%         endif %}

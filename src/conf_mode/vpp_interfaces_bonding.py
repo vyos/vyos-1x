@@ -153,6 +153,10 @@ def get_config(config=None) -> dict:
     if conf.exists(['vpp', 'acl']):
         set_dependents('vpp_acl', conf)
 
+    # IPFIX dependency
+    if conf.exists(['vpp', 'ipfix']):
+        set_dependents('vpp_ipfix', conf)
+
     config['ifname'] = ifname
 
     return config

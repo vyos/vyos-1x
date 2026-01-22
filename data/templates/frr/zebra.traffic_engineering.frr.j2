@@ -1,0 +1,37 @@
+{% if interface is vyos_defined %}
+!
+{%     set ns = namespace(mask_by_admin_group=dict()) %}
+{%     if admin_group is vyos_defined %}
+{%         for ag in admin_group %}
+{%             set _ = ns.mask_by_admin_group.update({ag: 1.__lshift__(admin_group[ag]['bit_position'] | int)}) %}
+{%         endfor %}
+{%     endif %}
+{%     set mbit_per_second_2_byte_per_second = 1024 * 1024 / 8 %}
+{%     for ifname, data in interface.items() %}
+interface {{ ifname }}
+ link-params
+{%         if data.metric is vyos_defined %}
+  metric {{ data.metric }}
+{%         endif %}
+{%         if data.admin_group is vyos_defined %}
+{%             set val = namespace(x=0) %}
+{%             for ag in data.admin_group %}
+{%                 set val.x = (val.x | int).__or__(ns.mask_by_admin_group[ag]) %}
+{%             endfor %}
+  admin-grp {{ '0x{:x}'.format(val.x) }}
+{%         endif %}
+{%         if data.max_bandwidth is vyos_defined %}
+  max-bw {{ (data.max_bandwidth | int) * mbit_per_second_2_byte_per_second }}
+{%         endif %}
+{%         if data.max_reservable_bandwidth is vyos_defined %}
+{%             set v = (data.max_reservable_bandwidth | int) * mbit_per_second_2_byte_per_second %}
+  max-rsv-bw {{ v }}
+{%             for i in range(8) %}
+  unrsv-bw {{ i }} {{ v }}
+{%             endfor %}
+{%         endif %}
+ exit-link-params
+exit
+!
+{%     endfor %}
+{% endif %}

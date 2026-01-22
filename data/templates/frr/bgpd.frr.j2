@@ -652,6 +652,8 @@ bgp route-reflector allow-outbound-policy
 {% endif %}
 {% if parameters.reject_as_sets is vyos_defined %}
  bgp reject-as-sets
+{% else %}
+ no bgp reject-as-sets
 {% endif %}
 {% if parameters.router_id is vyos_defined and parameters.router_id is not none %}
  bgp router-id {{ parameters.router_id }}

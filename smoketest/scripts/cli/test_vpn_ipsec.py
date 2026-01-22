@@ -419,6 +419,91 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
 
+    def test_site_to_site_gre_over_ipsec(self):
+        """Test GRE over IPsec site‑to‑site configuration with transport mode ESP"""
+
+        tunnel_id = '100'
+        local_address = '172.168.99.2'
+
+        # Interfaces
+        base_tun_path = tunnel_path + [f'tun{tunnel_id}']
+        self.cli_set(base_tun_path + ['address', '10.12.0.1/30'])
+        self.cli_set(base_tun_path + ['encapsulation', 'gre'])
+        self.cli_set(base_tun_path + ['remote', peer_ip])
+        self.cli_set(base_tun_path + ['source-address', local_address])
+        self.cli_set(ethernet_path + [interface, 'vif', vif, 'address', 'dhcp'])
+
+        # Authentication (PSK)
+        base_psk_path = base_path + ['authentication', 'psk']
+        self.cli_set(base_psk_path + [peer_name, 'id', local_address])
+        self.cli_set(base_psk_path + [peer_name, 'id', peer_ip])
+        self.cli_set(base_psk_path + [peer_name, 'secret', secret])
+
+        # ESP group
+        base_esp_path = base_path + ['esp-group', esp_group]
+        self.cli_set(base_esp_path + ['lifetime', '3600'])
+        self.cli_set(base_esp_path + ['mode', 'transport'])
+        self.cli_set(base_esp_path + ['pfs', 'dh-group14'])
+        self.cli_set(base_esp_path + ['proposal', '10', 'encryption', 'aes256'])
+        self.cli_set(base_esp_path + ['proposal', '10', 'hash', 'sha1'])
+
+        # IKE group
+        base_ike_path = base_path + ['ike-group', ike_group]
+        self.cli_set(base_ike_path + ['close-action', 'none'])
+        self.cli_set(base_ike_path + ['dead-peer-detection', 'action', 'restart'])
+        self.cli_set(base_ike_path + ['dead-peer-detection', 'interval', '10'])
+        self.cli_set(base_ike_path + ['key-exchange', 'ikev2'])
+        self.cli_set(base_ike_path + ['lifetime', '28800'])
+        self.cli_set(base_ike_path + ['proposal', '10', 'dh-group', '5'])
+        self.cli_set(base_ike_path + ['proposal', '10', 'encryption', 'aes256'])
+        self.cli_set(base_ike_path + ['proposal', '10', 'hash', 'sha1'])
+
+        # IPsec interface binding
+        self.cli_set(base_path + ['interface', interface])
+
+        # Site‑to‑site peer
+        peer_path = base_path + ['site-to-site', 'peer', peer_name]
+        self.cli_set(peer_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_path + ['authentication', 'local-id', local_address])
+        self.cli_set(peer_path + ['authentication', 'remote-id', peer_ip])
+        self.cli_set(peer_path + ['connection-type', 'initiate'])
+        self.cli_set(peer_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_path + ['ike-group', ike_group])
+        self.cli_set(peer_path + ['local-address', local_address])
+        self.cli_set(peer_path + ['remote-address', peer_ip])
+        self.cli_set(peer_path + ['tunnel', tunnel_id, 'protocol', 'gre'])
+
+        # Commit and verify
+        self.cli_commit()
+
+        # Verify strongSwan configuration
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            'version = 2',
+            'auth = psk',
+            'proposals = aes128-sha1-modp1024,aes256-sha1-modp1536',
+            'esp_proposals = aes128-sha1-modp2048,aes256-sha1-modp2048',
+            'life_time = 3600s',
+            'mode = transport',  # ensure transport mode is used
+            f'{peer_name}-tunnel-{tunnel_id}',
+            f'local_ts = {local_address}[gre/]',  # GRE tunnel source/target
+            f'remote_ts = {peer_ip}[gre/]',
+            f'local_addrs = {local_address} # dhcp:no',
+            f'remote_addrs = {peer_ip}',
+        ]
+        for line in swanctl_conf_lines:
+            with self.subTest(line=line):
+                self.assertIn(line, swanctl_conf)
+
+        # Verify validation of local/remote prefix
+        base_tun_path = peer_path + ['tunnel', tunnel_id]
+        self.cli_set(base_tun_path + ['local', 'prefix', '10.1.2.0/24'])
+        self.cli_set(base_tun_path + ['remote', 'prefix', '10.4.5.0/24'])
+
+        err_msg = 'Local/remote prefix cannot be used with ESP transport mode on tunnel'
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
     def test_site_to_site_vti(self):
         local_address = '192.0.2.10'
         vti = 'vti10'

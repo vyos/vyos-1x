@@ -217,6 +217,9 @@ cipher {{ encryption.cipher | openvpn_cipher }}
 {%     if encryption.data_ciphers is vyos_defined %}
 data-ciphers {{ encryption.data_ciphers | openvpn_data_ciphers }}
 {%     endif %}
+{%     if encryption.data_ciphers_fallback is vyos_defined %}
+data-ciphers-fallback {{ encryption.data_ciphers_fallback | openvpn_data_ciphers_fallback }}
+{%     endif %}
 {% endif %}
 providers default
 
