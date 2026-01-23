@@ -32,7 +32,7 @@
               </valueHelp>
               <valueHelp>
                 <format>hd44780</format>
-                <description>Hitachi HD44780, Caswell Appliances</description>
+                <description>Hitachi HD44780, Caswell Appliances, Sophos XG appliances</description>
               </valueHelp>
               <valueHelp>
                 <format>sdec</format>
