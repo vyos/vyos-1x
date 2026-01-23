@@ -12,7 +12,7 @@
             <properties>
               <help>Model of the display attached to this system</help>
               <completionHelp>
-                <list>cfa-533 cfa-631 cfa-633 cfa-635 hd44780 sdec mtc_s16209x</list>
+                <list>cfa-533 cfa-631 cfa-633 cfa-635 hd44780 sdec mtc-s16209x</list>
               </completionHelp>
               <valueHelp>
                 <format>cfa-533</format>
@@ -32,7 +32,7 @@
               </valueHelp>
               <valueHelp>
                 <format>hd44780</format>
-                <description>Hitachi HD44780, Caswell Appliances</description>
+                <description>Hitachi HD44780, Caswell Appliances, Sophos XG appliances</description>
               </valueHelp>
               <valueHelp>
                 <format>sdec</format>
