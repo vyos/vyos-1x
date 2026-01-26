@@ -17,18 +17,45 @@
 import os
 import sys
 
+def get_login_shell_pid():
+    pid = os.getpid()
+
+    while pid > 1:
+        with open(f'/proc/{pid}/stat') as f:
+            fields = f.read().split()
+            comm = fields[1].strip('()')
+            ppid = int(fields[3])
+
+        if comm == 'vbash':
+            try:
+                for fd in ('0', '1', '2'):
+                    path = os.readlink(f'/proc/{pid}/fd/{fd}')
+                    if path.startswith('/dev/pts/'):
+                        return pid
+            except Exception:
+                pass
+
+        pid = ppid
+
+    raise RuntimeError('Login shell not found')
+
 def main():
     ttyname = sys.argv[1]
-    user = ""
+    user = ''
+    shell_pid = -1
 
     try:
         user = os.getlogin()
-
     except OSError:
         user = None
 
-    if user:
-        os.system(f'sudo -u {user} /usr/bin/iol_cm -t {ttyname} 30')
+    try:
+        shell_pid = get_login_shell_pid()
+    except RuntimeError as e:
+        print(f'Error: {e}')
+
+    if user and shell_pid != -1:
+        os.system(f'sudo -u {user} /usr/bin/iol_cm -t {ttyname} -p {shell_pid} 30')
     else:
         print(f'Failed to get current user!')
         exit(1)
