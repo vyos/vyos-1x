@@ -17,6 +17,7 @@
 import os
 import re
 import json
+import shutil
 import ipaddress
 
 from sys import exit
@@ -40,7 +41,9 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 
 CERT_PATH = '/run/vyos_pki/'
-service_name = 'iolan-monitor.service'
+SERIAL_PATH = '/run/serial/'
+SERIAL_SERVICE = 'iolan-monitor.service'
+
 
 def get_config(config=None):
     if config:
@@ -381,7 +384,7 @@ def generate(proxy):
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
                     key_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'private', 'key')
 
-                    ensure_folder_exists('/run/vyos_pki')
+                    ensure_folder_exists(CERT_PATH)
                     with open(os.path.join(CERT_PATH, f'ssl_cert_{cert_name}.pem'), 'w') as f:
                         f.write(wrap_certificate(cert_data))
 
@@ -413,8 +416,8 @@ def generate(proxy):
 
             replace_empty_dicts(port_config)
 
-            ensure_folder_exists('/run/serial')
-            filename = f'/run/serial/ttyS{ttynum}.json'
+            ensure_folder_exists(SERIAL_PATH)
+            filename = f'{SERIAL_PATH}/ttyS{ttynum}.json'
             with open(filename, 'w') as f:
                 json.dump(port_config, f, indent=4)
 
@@ -423,18 +426,20 @@ def generate(proxy):
 
 def apply(proxy):
     if not proxy or 'device' not in proxy:
-        if is_systemd_service_active(service_name):
-            cmd(f'systemctl stop {service_name}')
+        if is_systemd_service_active(SERIAL_SERVICE):
+            cmd(f'systemctl stop {SERIAL_SERVICE}')
+            shutil.rmtree(SERIAL_PATH)
         return None
+    else:
+        if not is_systemd_service_active(SERIAL_SERVICE):
+            cmd(f'systemctl start {SERIAL_SERVICE}')
+            cmd(f'systemctl is-active --wait {SERIAL_SERVICE}')
 
     if 'serial_remove' in proxy:
         for device in proxy['serial_remove']:
             send_command_to_iolan('delete', device)
 
     if 'device' in proxy:
-        if not is_systemd_service_active(service_name):
-            cmd(f'systemctl start {service_name}')
-
         displayed_warning = 0
         for device, serial_config in proxy['device'].items():
             if 'serial_restart' in proxy:
@@ -451,7 +456,7 @@ def apply(proxy):
                     print_global_change_warning()
                 break
 
-            while not is_systemd_service_active(service_name):
+            while not is_systemd_service_active(SERIAL_SERVICE):
                 sleep(0.100)
 
             if 'disable' not in serial_config:

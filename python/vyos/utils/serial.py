@@ -21,6 +21,7 @@ from typing import List
 from vyos.base import Warning
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_running
 
 GLOB_GETTY_UNITS = 'serial-getty@*.service'
 RE_GETTY_DEVICES = re.compile(r'.+@(.+).service$')
@@ -29,6 +30,7 @@ SD_UNIT_PATH = '/run/systemd/system'
 UTMP_PATH = '/run/utmp'
 
 SOCKET_PATH = '/tmp/iol_perleinit'
+SERIAL_SERVICE = 'iolan-monitor.service'
 
 def send_command_to_iolan(action, name):
     msg = {
@@ -40,6 +42,10 @@ def send_command_to_iolan(action, name):
 
     # Send message as JSON
     try:
+        if not os.path.exists(SOCKET_PATH) and is_systemd_service_running(SERIAL_SERVICE):
+            cmd(f'systemctl restart {SERIAL_SERVICE}')
+            cmd(f'systemctl is-active --wait {SERIAL_SERVICE}')
+
         sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
         print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
     except Exception as e:
