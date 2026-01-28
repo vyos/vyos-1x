@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="watchdog" owner="${vyos_conf_scripts_dir}/system_watchdog.py">
+        <properties>
+          <help>Hardware watchdog configuration</help>
+          <priority>9999</priority>
+        </properties>
+        <children>
+          <leafNode name="module">
+            <properties>
+              <help>Kernel module to load for watchdog device (optional)</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Module name (e.g. 'softdog', 'iTCO_wdt', 'sp5100_tco')</description>
+              </valueHelp>
+              <constraint>
+                <validator name="watchdog-module"/>
+              </constraint>
+              <constraintErrorMessage>Module must be an available watchdog kernel driver module</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="timeout">
+            <properties>
+              <help>Watchdog timeout for runtime in seconds (1-65535)</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+              <constraintErrorMessage>Timeout must be between 1 and 65535 seconds</constraintErrorMessage>
+            </properties>
+            <defaultValue>10</defaultValue>
+          </leafNode>
+          <leafNode name="shutdown-timeout">
+            <properties>
+              <help>Watchdog timeout during shutdown in seconds (60-65535)</help>
+              <valueHelp>
+                <format>u32:60-65535</format>
+                <description>Seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 60-65535"/>
+              </constraint>
+              <constraintErrorMessage>Shutdown timeout must be between 60 and 65535 seconds</constraintErrorMessage>
+            </properties>
+            <defaultValue>120</defaultValue>
+          </leafNode>
+          <leafNode name="reboot-timeout">
+            <properties>
+              <help>Watchdog timeout during reboot in seconds (60-65535)</help>
+              <valueHelp>
+                <format>u32:60-65535</format>
+                <description>Seconds</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 60-65535"/>
+              </constraint>
+              <constraintErrorMessage>Reboot timeout must be between 60 and 65535 seconds</constraintErrorMessage>
+            </properties>
+            <defaultValue>120</defaultValue>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

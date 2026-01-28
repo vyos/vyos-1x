@@ -97,8 +97,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
             _verify_gc_thres(size)
 
     def test_system_ipv6_protocol_route_map(self):
-        protocols = ['any', 'babel', 'bgp', 'connected', 'isis',
-                     'kernel', 'ospfv3', 'ripng', 'static', 'table']
+        protocols = ['any', 'babel', 'bgp', 'isis', 'ospfv3', 'ripng', 'static']
 
         for protocol in protocols:
             route_map = 'route-map-' + protocol.replace('ospfv3', 'ospf6')

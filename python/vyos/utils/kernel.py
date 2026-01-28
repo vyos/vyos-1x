@@ -19,16 +19,48 @@ import os
 # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/wireguard/messages.h?h=linux-6.6.y#n45
 WIREGUARD_REKEY_AFTER_TIME = 120
 
+
+def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
+    """Load a kernel module via modprobe.
+
+    Returns the modprobe return code.
+    """
+
+    from vyos.utils.process import run
+
+    if is_module_loaded(name):
+        return 0
+
+    cmd = ['modprobe']
+    if dry_run:
+        cmd.append('-n')
+    if quiet:
+        cmd.append('-q')
+    cmd.append(name)
+    return run(cmd)
+
+
+def unload_module(name: str) -> int:
+    """Unload a kernel module via rmmod.
+
+    Returns the rmmod return code.
+    """
+
+    from vyos.utils.process import run
+
+    if not is_module_loaded(name):
+        return 0
+
+    return run(['rmmod', name])
+
 def check_kmod(k_mod):
     """ Common utility function to load required kernel modules on demand """
     from vyos import ConfigError
-    from vyos.utils.process import call
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:
-        if not os.path.exists(f'/sys/module/{module}'):
-            if call(f'modprobe {module}') != 0:
-                raise ConfigError(f'Loading Kernel module {module} failed')
+        if load_module(module) != 0:
+            raise ConfigError(f'Loading Kernel module {module} failed')
 
 
 def is_module_loaded(module):
@@ -38,13 +70,11 @@ def is_module_loaded(module):
 def unload_kmod(k_mod):
     """ Common utility function to unload required kernel modules on demand """
     from vyos import ConfigError
-    from vyos.utils.process import call
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:
-        if is_module_loaded(module):
-            if call(f'rmmod {module}') != 0:
-                raise ConfigError(f'Unloading Kernel module {module} failed')
+        if unload_module(module) != 0:
+            raise ConfigError(f'Unloading Kernel module {module} failed')
 
 def list_loaded_modules():
     """ Returns the list of currently loaded kernel modules """

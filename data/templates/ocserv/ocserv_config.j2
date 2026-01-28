@@ -30,6 +30,15 @@ auth = "plain[otp=/run/ocserv/users.oath]"
 {%     else %}
 auth = "plain[/run/ocserv/ocpasswd]"
 {%     endif %}
+{% elif "certificate" in authentication.mode %}
+auth = "certificate"
+{%     if authentication.mode.certificate.user_identifier_field == "cn" %}
+cert-user-oid = 2.5.4.3
+{%     elif authentication.mode.certificate.user_identifier_field == "uid" %}
+cert-user-oid = 0.9.2342.19200300.100.1.1
+{%     else %}
+cert-user-oid = {{ authentication.mode.certificate.user_identifier_field }}
+{%     endif %}
 {% else %}
 auth = "plain[/run/ocserv/ocpasswd]"
 {% endif %}

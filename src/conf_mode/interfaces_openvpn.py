@@ -168,6 +168,12 @@ def is_ec_private_key(pki, cert_name):
     key = load_private_key(pki_cert['private']['key'])
     return isinstance(key, ec.EllipticCurvePrivateKey)
 
+
+def verify_data_ciphers_fallback(openvpn):
+    if openvpn['mode'] != 'site-to-site':
+        if dict_search('encryption.data_ciphers_fallback', openvpn):
+            raise ConfigError('Cipher fallback is valid only in site-to-site mode')
+
 def verify_pki(openvpn):
     pki = openvpn['pki']
     interface = openvpn['ifname']
@@ -614,6 +620,8 @@ def verify(openvpn):
     verify_vrf(openvpn)
     verify_bond_bridge_member(openvpn)
     verify_mirror_redirect(openvpn)
+
+    verify_data_ciphers_fallback(openvpn)
 
     return None
 

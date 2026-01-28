@@ -816,6 +816,30 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+    def test_site2site_data_ciphers_fallback(self):
+        vtun_if = 'vtun2010'
+        path = ['interfaces', 'openvpn', vtun_if]
+
+        # Configure a minimal site-to-site tunnel with data-ciphers-fallback
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['encryption', 'data-ciphers-fallback', 'aes192'])
+        self.cli_set(path + ['local-address', '10.0.1.1'])
+        self.cli_set(path + ['remote-address', '10.0.1.2'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+
+        self.cli_commit()
+
+        config_file = f'/run/openvpn/{vtun_if}.conf'
+        config = read_file(config_file)
+
+        # Validate correct OpenVPN configuration rendering
+        self.assertIn(f'dev {vtun_if}', config)
+        self.assertIn('data-ciphers-fallback AES-192-CBC', config)
+
+        # Ensure no other directives are rendered
+        self.assertNotIn('cipher ', config)
+        self.assertNotIn('data-ciphers ', config)
+
     def test_openvpn_server_server_bridge(self):
         # Create OpenVPN server interface using bridge.
         # Validate configuration afterwards.

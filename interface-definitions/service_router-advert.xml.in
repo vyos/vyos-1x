@@ -16,6 +16,7 @@
               </completionHelp>
             </properties>
             <children>
+              #include <include/dhcp/captive-portal.xml.i>
               <leafNode name="hop-limit">
                 <properties>
                   <help>Set Hop Count field of the IP header for outgoing packets</help>

@@ -83,8 +83,7 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
             _verify_gc_thres(size)
 
     def test_system_ip_protocol_route_map(self):
-        protocols = ['any', 'babel', 'bgp', 'connected', 'eigrp', 'isis',
-                     'kernel', 'ospf', 'rip', 'static', 'table']
+        protocols = ['any', 'babel', 'bgp', 'eigrp', 'isis', 'ospf', 'rip', 'static']
 
         rule_num = '10'
 

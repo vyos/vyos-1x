@@ -55,7 +55,7 @@ def _get_environment(location=None):
         loader=loc_loader,
         trim_blocks=True,
         undefined=ChainableUndefined,
-        extensions=['jinja2.ext.loopcontrols']
+        extensions=['jinja2.ext.loopcontrols', 'jinja2.ext.do']
     )
     env.filters.update(_FILTERS)
     env.tests.update(_TESTS)
@@ -571,6 +571,11 @@ def get_openvpn_data_ciphers(ciphers):
         else:
             out.append(cipher)
     return ':'.join(out).upper()
+
+
+@register_filter('openvpn_data_ciphers_fallback')
+def get_openvpn_data_ciphers_fallback(cipher):
+    return get_openvpn_cipher(cipher)
 
 @register_filter('snmp_auth_oid')
 def snmp_auth_oid(type):

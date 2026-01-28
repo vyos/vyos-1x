@@ -1,0 +1,42 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T7644:
+#   FRR 10.5 doesn't have ip protocols:
+#   - connected
+#   - kernel
+#   - table
+#
+#   Remove them from
+#   - system ip protocol
+#   - system ipv6 protocol
+
+from vyos.configtree import ConfigTree
+
+bases = [
+    ['system', 'ip', 'protocol'],
+    ['system', 'ipv6', 'protocol'],
+]
+remove_ip_protocols = ['connected', 'kernel', 'table']
+
+def migrate(config: ConfigTree) -> None:
+    for base in bases:
+        if not config.exists(base):
+            continue
+
+        # Iterate over all ip protocols to remove
+        for protocol in remove_ip_protocols:
+            if config.exists(base + [protocol]):
+                config.delete(base + [protocol])

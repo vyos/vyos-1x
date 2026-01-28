@@ -98,6 +98,7 @@
       <validator name="numeric" argument="--range 1-120"/>
     </constraint>
   </properties>
+  <defaultValue>30</defaultValue>
 </leafNode>
 <leafNode name="lsp-mtu">
   <properties>
@@ -116,13 +117,14 @@
   <properties>
     <help>LSP refresh interval</help>
     <valueHelp>
-      <format>u32:1-65235</format>
+      <format>u32:2-65235</format>
       <description>LSP refresh interval in seconds</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 1-65235"/>
+      <validator name="numeric" argument="--range 2-65235"/>
     </constraint>
   </properties>
+  <defaultValue>900</defaultValue>
 </leafNode>
 <leafNode name="max-lsp-lifetime">
   <properties>
@@ -135,6 +137,7 @@
       <validator name="numeric" argument="--range 1-65535"/>
     </constraint>
   </properties>
+  <defaultValue>1200</defaultValue>
 </leafNode>
 <leafNode name="metric-style">
   <properties>
@@ -264,6 +267,12 @@
         <constraint>
           <validator name="ipv4-address"/>
         </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="export">
+      <properties>
+        <help>Export Traffic Engineering Database, see options under protocols traffic-engineering</help>
+        <valueless/>
       </properties>
     </leafNode>
   </children>

@@ -224,6 +224,17 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.assertIn(tmp, config)
         self.assertIn('AdvValidLifetime 65528;', config) # default
 
+    def test_captive_portal(self):
+        captive_portal = 'https://example.com/api/capport.json'
+
+        self.cli_set(base_path + ['captive-portal', captive_portal])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        tmp = get_config_value('AdvCaptivePortalAPI')
+        self.assertEqual(tmp, f'"{captive_portal}"')
+
     def test_advsendadvert_advintervalopt(self):
         ra_src = ['fe80::1', 'fe80::2']
 

@@ -29,6 +29,8 @@ from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_set_nested
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.network import get_vrf_tableid
 from vyos.utils.network import get_vrf_members
 from vyos.utils.network import interface_exists
@@ -118,6 +120,17 @@ def get_config(config=None):
     vrf = conf.get_config_dict(base, key_mangling=('-', '_'),
                                no_tag_node_value_mangle=True, get_first_key=True)
 
+    # Policy based routing supports referencing VRFs in it's rules - we need to
+    # prevent VRF deletion if VRF is used in a PBR rule
+    for policy_type in ['local-route', 'local-route6', 'route', 'route6']:
+        tmp = conf.get_config_dict(['policy', policy_type],
+                                    key_mangling=('-', '_'),
+                                    no_tag_node_value_mangle=True,
+                                    get_first_key=True)
+        if tmp:
+            policy_type = policy_type.replace('-', '_')
+            dict_set_nested(f'policy.{policy_type}', tmp, vrf)
+
     # determine which VRF has been removed
     for name in node_changed(conf, base + ['name']):
         if 'vrf_remove' not in vrf:
@@ -130,6 +143,10 @@ def get_config(config=None):
         # get VRF bound routing instances
         routes = vrf_routing(conf, name)
         if routes: vrf['vrf_remove'][name]['route'] = routes
+        # get VRF bound policy routes
+        if 'policy' in vrf:
+            for key, _ in dict_search_recursive(vrf['policy'], 'vrf'):
+                if key == name: vrf['vrf_remove'][name]['policy'] = {}
 
     if 'name' in vrf:
         vrf['conntrack'] = conntrack_required(conf)
@@ -143,12 +160,13 @@ def verify(vrf):
     # ensure VRF is not assigned to any interface
     if 'vrf_remove' in vrf:
         for name, config in vrf['vrf_remove'].items():
+            err = f'Can not remove VRF "{name}",'
             if 'interface' in config:
-                raise ConfigError(f'Can not remove VRF "{name}", it still has '\
-                                  f'member interfaces!')
+                raise ConfigError(f'{err} it still has member interfaces!')
             if 'route' in config:
-                raise ConfigError(f'Can not remove VRF "{name}", it still has '\
-                                  f'static routes installed!')
+                raise ConfigError(f'{err} it still has static routes installed!')
+            if 'policy' in config:
+                raise ConfigError(f'{err} it still has policy routes!')
 
     if 'name' in vrf:
         reserved_names = ['add', 'all', 'broadcast', 'default', 'delete', 'dev',

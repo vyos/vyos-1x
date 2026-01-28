@@ -105,11 +105,17 @@ def verify(ocserv):
     if 'authentication' in ocserv:
         if 'mode' in ocserv['authentication']:
             if (
-                'local' in ocserv['authentication']['mode']
-                and 'radius' in ocserv['authentication']['mode']
+                ('local' in ocserv['authentication']['mode']
+                 and 'radius' in ocserv['authentication']['mode'])
+                or
+                ('local' in ocserv['authentication']['mode']
+                 and 'certificate' in ocserv['authentication']['mode'])
+                or
+                ('radius' in ocserv['authentication']['mode']
+                 and 'certificate' in ocserv['authentication']['mode'])
             ):
                 raise ConfigError(
-                    'OpenConnect authentication modes are mutually-exclusive, remove either local or radius from your configuration'
+                    'OpenConnect authentication modes are mutually-exclusive. Use only one of local, radius, or certificate.'
                 )
             if 'radius' in ocserv['authentication']['mode']:
                 if 'server' not in ocserv['authentication']['radius']:
@@ -202,6 +208,9 @@ def verify(ocserv):
     if 'certificate' not in ocserv['ssl']:
         raise ConfigError('SSL certificate missing on OpenConnect config!')
     verify_pki_certificate(ocserv, ocserv['ssl']['certificate'])
+
+    if 'ca_certificate' not in ocserv['ssl'] and 'certificiate' in ocserv['authentication']['mode']:
+        raise ConfigError('CA certificate must be provided in certificate authentication mode!')
 
     if 'ca_certificate' in ocserv['ssl']:
         for ca_cert in ocserv['ssl']['ca_certificate']:

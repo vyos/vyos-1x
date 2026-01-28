@@ -18,25 +18,40 @@ import os
 
 from sys import exit
 from stat import S_IXOTH
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, TimeoutExpired
 
-success = True
+timeout_minutes = 20 # 20 minutes per test should be enough?..
+timeout_seconds = timeout_minutes * 60
+tests = []
+
 for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
     for name in files:
         test_file = os.path.join(root, name)
         mode = os.stat(test_file).st_mode
 
         if name.startswith("test_") and mode & S_IXOTH:
-            print('Running Testcase: ' + test_file)
-            process = Popen([test_file], stdout=PIPE)
-            (output, err) = process.communicate()
-            exit_code = process.wait()
-            # We do not want an instant fail - other tests should be run, too
-            if exit_code != 0:
-                success = False
+            tests.append(test_file)
 
-if success:
+fails = []
+n = len(tests)
+for i, test_file in enumerate(tests):
+    print(f'Running Testcase ({i+1}/{n}): {test_file}')
+    process = Popen([test_file], stdout=PIPE)
+    try:
+        (output, err) = process.communicate(timeout=timeout_seconds)
+        exit_code = process.returncode
+    except TimeoutExpired:
+        print(f'TIMEOUT ({timeout_minutes} minutes) expired - consider test failed!')
+        exit_code = 1
+        process.kill()
+    # We do not want an instant fail - other tests should be run, too
+    if exit_code != 0:
+        fails.append(test_file)
+
+if not len(fails):
+    print(f'SUCCESS! All {n} tests passed.')
     exit(0)
 
-print("ERROR: One or more tests failed!")
+print(f'ERROR: {len(fails)}/{n} tests failed:')
+print('* ' + '\n* '.join(fails))
 exit(1)
