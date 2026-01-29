@@ -7,6 +7,41 @@
     </properties>
     <children>
       #include <include/firewall/global-options.xml.i>
+      <node name="custom-rules">
+        <properties>
+          <help>Add custom nftables rules from a file (advanced users only)</help>
+        </properties>
+        <children>
+          <tagNode name="from-file">
+            <properties>
+              <help>Filename that contains custom nftables rules</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>/path/to/nft-config.nft</description>
+              </valueHelp>
+              <constraint>
+                <validator name="path-check"/>
+              </constraint>
+              <constraintErrorMessage>Filename that contains custom nftables rules not found</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="revision">
+                <properties>
+                  <help>Unique revision number for the custom rule changes</help>
+                  <valueHelp>
+                    <format>u32:0-999999</format>
+                    <description>Unique revision number for the custom rule changes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-999999"/>
+                  </constraint>
+                  <constraintErrorMessage>Revision number must be between 0 and 999999</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
       <tagNode name="flowtable">
         <properties>
           <help>Flowtable</help>

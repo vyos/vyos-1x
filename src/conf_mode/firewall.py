@@ -17,6 +17,9 @@
 import os
 import re
 
+from pathlib import Path
+from shutil import copy2
+
 from glob import glob
 
 from sys import exit
@@ -489,6 +492,17 @@ def verify_hardware_offload(ifname):
         raise ConfigError(f'Interface "{ifname}" requires "offload hw-tc-offload"')
 
 def verify(firewall):
+    if 'custom_rules' in firewall:
+        base_path = Path('/config').resolve()
+        if dict_search('custom_rules.from_file', firewall) is None:
+            raise ConfigError("'from-file' must be defined")
+        for custom_rule, custom_rule_conf in dict_search('custom_rules.from_file', firewall).items():
+            custom_rule_path = Path(custom_rule).resolve()
+            if not custom_rule_path.is_relative_to(base_path):
+                raise ConfigError(f"Custom rule will not be persistent after upgrades if not in '/config' directory")
+            if not dict_search('revision', custom_rule_conf):
+                raise ConfigError(f"Custom rule {custom_rule} must have a revision number")
+
     if 'flowtable' in firewall:
         for flowtable, flowtable_conf in firewall['flowtable'].items():
             if 'interface' not in flowtable_conf:
@@ -647,6 +661,29 @@ def verify(firewall):
 def generate(firewall):
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     render(sysctl_file, 'firewall/sysctl-firewall.conf.j2', firewall)
+    nftables_conf_path = Path(nftables_conf)
+
+    if dict_search('custom_rules.from_file', firewall):
+        custom_rules_path = Path('/config/vyos-custom-nft-rules')
+        if not custom_rules_path.exists():
+            custom_rules_path.mkdir(parents=True, exist_ok=True)
+
+        for custom_rule, custom_rule_conf in firewall['custom_rules']['from_file'].items():
+            original_path = Path(custom_rule)
+            revision = dict_search("revision", custom_rule_conf)
+            filename = f'{original_path.name}.rev{revision}'
+            updated_path = custom_rules_path / filename
+
+            if not updated_path.exists():
+                include_path = f'/tmp/{filename}'
+                copy2(original_path, f'/tmp/{filename}')
+            else:
+                include_path = custom_rules_path / filename
+
+            with open(nftables_conf_path, 'a') as f:
+                f.write(f'include "{include_path}"\n')
+
+            firewall['custom_rules']['from_file'][custom_rule]['path'] = str(custom_rules_path / filename)
 
     # Cleanup remote-group cache files
     if os.path.exists(firewall_config_dir):
@@ -707,6 +744,13 @@ def apply(firewall):
     # Double check just in case
     if install_result == 1:
         raise ConfigError(f'Failed to apply firewall: {output}')
+
+    if dict_search('custom_rules.from_file', firewall):
+        for custom_rule, custom_rule_conf in firewall['custom_rules']['from_file'].items():
+            original_path = Path(custom_rule)
+            destination_path = Path(custom_rule_conf['path'])
+            if not destination_path.exists():
+                copy2(original_path, destination_path)
 
     # Apply firewall global-options sysctl settings
     cmd(f'sysctl -f {sysctl_file}')
