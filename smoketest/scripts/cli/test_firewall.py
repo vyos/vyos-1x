@@ -19,6 +19,8 @@ import unittest
 from glob import glob
 from time import sleep
 
+from pathlib import Path
+
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
@@ -1536,6 +1538,37 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
+    def test_custom_nftables_rules(self):
+        config = """\
+        table ip test {
+                map flow_vmap {
+                        type ipv4_addr . ipv4_addr . inet_service . inet_proto : verdict
+                        flags interval
+                        counter
+                        elements = { 192.0.2.10 . 198.51.100.20 . 22 . tcp : accept,
+                                    0.0.0.0/0 . 203.0.113.5 . 23 . tcp : accept }
+                }
+
+                chain my_custom_chain {
+                        ip saddr . ip daddr . tcp dport . meta l4proto vmap @flow_vmap comment "My Custom Rule"
+                }
+        }
+        """
+
+        path = Path("/config/nft-configs/test.nft")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(config)
+
+        self.cli_set(['firewall', 'custom-rules', 'from-file', path, 'revision', '1'])
+        self.cli_commit()
+
+        nftables_search = [
+            ['map flow_vmap'],
+            ['type ipv4_addr . ipv4_addr . inet_service . inet_proto : verdict'],
+            ['chain my_custom_chain'],
+            ['ip saddr . ip daddr . tcp dport . meta l4proto vmap @flow_vmap comment "My Custom Rule"']
+        ]
+        self.verify_nftables(nftables_search, 'ip test')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
