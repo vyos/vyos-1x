@@ -11,7 +11,7 @@
             <properties>
               <help>Generate tech support archive to defined location</help>
               <completionHelp>
-                <list> &lt;file&gt; &lt;scp://user:passwd@host&gt; &lt;ftp://user:passwd@host&gt;</list>
+                <list> &lt;file&gt; &lt;directory/&gt; &lt;scp://user:passwd@host&gt; &lt;ftp://user:passwd@host&gt;</list>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/generate_tech-support_archive.py $4</command>

@@ -321,3 +321,9 @@ def ip_cmd(args, json=True):
     else:
         res = cmd(f"ip {args}")
         return res
+
+
+def wrap_op(cmd: str) -> str:
+    """Returns a command with the VyOS operational mode wrapper."""
+
+    return f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}'
