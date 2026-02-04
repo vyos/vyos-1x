@@ -86,6 +86,7 @@ def is_target_alive(
     port=None,
     nexthop_vrf='',
     policy='any-available',
+    is_dhcp_interface=False,
 ) -> bool:
     """Check the availability of each target in the target_dict using
     the specified protocol ICMP, ARP, TCP
@@ -106,12 +107,30 @@ def is_target_alive(
         % is_target_alive(['192.0.2.1', '192.0.2.5'], 'eth1', proto='arp', policy='all-available')
         True
     """
+    # Perle change start: save the iface name
+    target_iface = iface
+    # Perle change end
+
     if iface != '':
         iface = f'-I {iface}'
 
     num_reachable_targets = 0
     for options in targets:
         target = options.target
+
+        # Perle change start
+        print_debug(f'    [ CHECK-TARGET ]: target {target} on {target_iface}: is_dhcp_interface={is_dhcp_interface}')
+        if target == '0.0.0.0' and is_dhcp_interface:
+            cur_dhcpgw = get_dhcp_router(target_iface)
+            if cur_dhcpgw:
+                print_debug(f'    [ CHECK-TARGET ]: target {target} is replaced with actual DHCP gateway: {cur_dhcpgw}')
+                target = cur_dhcpgw
+            else:
+                # set target to unreachable value
+                print_debug(f'    [ CHECK-TARGET ]: target {target} no DHCP gateway found on interface {target_iface}, target=gateway-not-found')
+                target = 'gateway-not-found'
+        # Perle change end
+
         vrf = options.vrf if options.vrf else nexthop_vrf
         # don't use nexthop interface if 'vrf' is given
         iface_opt = iface if vrf == nexthop_vrf else ''
@@ -516,6 +535,10 @@ if __name__ == '__main__':
             vrf_opt = route_config.vrf_opt
 
             for nhc in route_config.nexthops:
+                # Perle change start: process dhcp_interface
+                is_dhcp_iface = True if nhc.dhcp_interface is not None else False
+                # Perle change end
+
                 if nhc.dhcp_interface:
                     nhc = process_dhcp_interface(nhc, nexthop_by_dhcp_nexthop)
                     if not nhc:
@@ -531,6 +554,9 @@ if __name__ == '__main__':
                     nhc.port,
                     nexthop_vrf=vrf,
                     policy=nhc.policy,
+                    # Perle change start
+                    is_dhcp_interface=is_dhcp_iface,
+                    # Perle change end
                 )
 
                 # Route not found in the current routing table
