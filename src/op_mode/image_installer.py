@@ -1010,9 +1010,10 @@ def install_image() -> None:
              f'{DIR_DST_ROOT}/boot/{image_name}/{image_name}.squashfs')
 
         # PSL - START copy over all dtb files for arm64 processors
-        copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
-                 f"{DIR_DST_ROOT}/boot/dtb/ti",
-                 dirs_exist_ok=True)
+        if Path(f"{DIR_KERNEL_SRC}/dtb/ti").exists():
+            copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
+                     f"{DIR_DST_ROOT}/boot/dtb/ti",
+                     dirs_exist_ok=True)
 
         # copy saved config data and SSH keys
         # owner restored on copy of config data by chmod_2775, above
@@ -1283,9 +1284,10 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
              f'{root_dir}/boot/{image_name}/{image_name}.squashfs')
 
         # PSL - START copy over all dtb files for arm64 processors
-        copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
-                 f"{DIR_DST_ROOT}/boot/dtb/ti",
-                 dirs_exist_ok=True)
+        if Path(f"{DIR_KERNEL_SRC}/dtb/ti").exists():
+            copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
+                     f"{DIR_DST_ROOT}/boot/dtb/ti",
+                     dirs_exist_ok=True)
 
         # unmount an ISO and cleanup
         cleanup([str(iso_path)])
