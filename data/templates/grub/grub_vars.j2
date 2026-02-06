@@ -2,3 +2,15 @@
 set {{ var_name | e }}="{{ var_value | e }}"
 export {{ var_name | e }}
 {% endfor %}
+
+{% raw %}
+source (hd0,gpt2)/RESET.ENV
+
+if [ "${reset}" == "1" ]; then
+    echo "Factory default iGOS boot ...."
+    set default=${factory}
+else
+    echo "Normal iGOS boot ...."
+    set default=${current}
+fi
+{% endraw %}
