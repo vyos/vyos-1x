@@ -47,6 +47,23 @@ valid_groups = [
     'interface_group'
 ]
 
+
+def get_rule_table_id(rule_conf):
+    set_table = dict_search_args(rule_conf, 'set', 'table')
+    set_vrf = dict_search_args(rule_conf, 'set', 'vrf')
+    if set_vrf:
+        if set_vrf == 'default':
+            return int(rt_global_vrf)
+        table_id = get_vrf_tableid(set_vrf)
+        if table_id is None:
+            return None
+        return int(table_id)
+    if set_table:
+        if set_table == 'main':
+            return int(rt_global_table)
+        return int(set_table)
+    return None
+
 def geoip_updated(conf):
     updated = False
 
@@ -131,6 +148,22 @@ def verify_rule(policy, name, rule_conf, ipv6, rule_id):
         if 'vrf' in rule_conf['set'] and 'table' in rule_conf['set']:
             raise ConfigError(f'{name} rule {rule_id}: Cannot set both forwarding route table and VRF')
 
+        suppress_prefix_len = dict_search_args(
+            rule_conf, 'set', 'suppress_prefix_length'
+        )
+        if suppress_prefix_len is not None:
+            if 'vrf' not in rule_conf['set'] and 'table' not in rule_conf['set']:
+                raise ConfigError(
+                    f'{name} rule {rule_id}: suppress-prefix-length requires set table or set vrf'
+                )
+
+            max_prefix_len = 128 if ipv6 else 32
+            if int(suppress_prefix_len) > max_prefix_len:
+                raise ConfigError(
+                    f'{name} rule {rule_id}: suppress-prefix-length must be between 0 and '
+                    f'{max_prefix_len} for this policy family'
+                )
+
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
         if dict_search_args(rule_conf, 'protocol') != 'tcp':
@@ -174,6 +207,37 @@ def verify_rule(policy, name, rule_conf, ipv6, rule_id):
                 if rule_conf['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
+
+def verify_suppress_prefix_consistency(policy):
+    for route in ['route', 'route6']:
+        if route not in policy:
+            continue
+
+        suppress_per_table = {}
+        for name, pol_conf in policy[route].items():
+            if 'rule' not in pol_conf:
+                continue
+
+            for rule_id, rule_conf in pol_conf['rule'].items():
+                table_id = get_rule_table_id(rule_conf)
+                if table_id is None:
+                    continue
+
+                suppress_prefix_len = dict_search_args(
+                    rule_conf, 'set', 'suppress_prefix_length'
+                )
+
+                if table_id not in suppress_per_table:
+                    suppress_per_table[table_id] = suppress_prefix_len
+                    continue
+
+                if suppress_per_table[table_id] != suppress_prefix_len:
+                    raise ConfigError(
+                        f'{name} rule {rule_id}: table {table_id} has conflicting suppress-prefix-length '
+                        f'with another policy route rule'
+                    )
+
+
 def verify(policy):
     for route in ['route', 'route6']:
         ipv6 = route == 'route6'
@@ -182,6 +246,8 @@ def verify(policy):
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
                         verify_rule(policy, name, rule_conf, ipv6, rule_id)
+
+    verify_suppress_prefix_consistency(policy)
 
     return None
 
@@ -196,30 +262,28 @@ def apply_table_marks(policy):
     for route in ['route', 'route6']:
         if route in policy:
             cmd_str = 'ip' if route == 'route' else 'ip -6'
-            tables = []
+            tables = set()
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
-                        vrf_table_id = None
-                        set_table = dict_search_args(rule_conf, 'set', 'table')
-                        set_vrf = dict_search_args(rule_conf, 'set', 'vrf')
-                        if set_vrf:
-                            if set_vrf == 'default':
-                                vrf_table_id = rt_global_vrf
-                            else:
-                                vrf_table_id = get_vrf_tableid(set_vrf)
-                        elif set_table:
-                            if set_table == 'main':
-                                vrf_table_id = rt_global_table
-                            else:
-                                vrf_table_id = set_table
+                        vrf_table_id = get_rule_table_id(rule_conf)
                         if vrf_table_id is not None:
-                            vrf_table_id = int(vrf_table_id)
+                            suppress_prefix_len = dict_search_args(
+                                rule_conf, 'set', 'suppress_prefix_length'
+                            )
                             if vrf_table_id in tables:
                                 continue
-                            tables.append(vrf_table_id)
+                            tables.add(vrf_table_id)
                             table_mark = mark_offset - vrf_table_id
-                            cmd(f'{cmd_str} rule add pref {vrf_table_id} fwmark {table_mark} table {vrf_table_id}')
+                            ip_rule_cmd = (
+                                f'{cmd_str} rule add pref {vrf_table_id} fwmark {table_mark} '
+                                f'table {vrf_table_id}'
+                            )
+                            if suppress_prefix_len is not None:
+                                ip_rule_cmd += (
+                                    f' suppress_prefixlength {suppress_prefix_len}'
+                                )
+                            cmd(ip_rule_cmd)
 
 def cleanup_table_marks():
     for cmd_str in ['ip', 'ip -6']:

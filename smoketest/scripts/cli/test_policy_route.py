@@ -17,12 +17,14 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from vyos.configsession import ConfigSessionError
 
 mark = '100'
 conn_mark = '555'
 conn_mark_set = '111'
 table_mark_offset = 0x7fffffff
 table_id = '101'
+table_suppress_prefix_len = '8'
 vrf = 'PBRVRF'
 vrf_table_id = '102'
 interface = 'eth0'
@@ -172,6 +174,118 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_rules(ip_rule_search)
+
+    def test_pbr_table_suppress_prefix_length(self):
+        self.cli_set(['policy', 'route', 'suppress', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(
+            ['policy', 'route', 'suppress', 'rule', '1', 'destination', 'port', '443']
+        )
+        self.cli_set(
+            ['policy', 'route', 'suppress', 'rule', '1', 'set', 'table', 'main']
+        )
+        self.cli_set(
+            [
+                'policy',
+                'route',
+                'suppress',
+                'rule',
+                '1',
+                'set',
+                'suppress-prefix-length',
+                table_suppress_prefix_len,
+            ]
+        )
+        self.cli_set(['policy', 'route6', 'suppress6', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(
+            ['policy', 'route6', 'suppress6', 'rule', '1', 'destination', 'port', '443']
+        )
+        self.cli_set(
+            ['policy', 'route6', 'suppress6', 'rule', '1', 'set', 'table', 'main']
+        )
+        self.cli_set(
+            [
+                'policy',
+                'route6',
+                'suppress6',
+                'rule',
+                '1',
+                'set',
+                'suppress-prefix-length',
+                table_suppress_prefix_len,
+            ]
+        )
+        self.cli_set(['policy', 'route', 'suppress', 'interface', interface])
+        self.cli_set(['policy', 'route6', 'suppress6', 'interface', interface])
+
+        self.cli_commit()
+
+        main_table_id = '254'
+        mark_hex = "{0:#010x}".format(table_mark_offset - int(main_table_id))
+
+        nftables_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR_UD_suppress'],
+            ['tcp dport 443', 'meta mark set ' + mark_hex],
+        ]
+        self.verify_nftables(nftables_search, 'ip vyos_mangle')
+
+        nftables6_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR6_UD_suppress6'],
+            ['tcp dport 443', 'meta mark set ' + mark_hex],
+        ]
+        self.verify_nftables(nftables6_search, 'ip6 vyos_mangle')
+
+        ip_rule_search = [
+            [
+                'fwmark ' + hex(table_mark_offset - int(main_table_id)),
+                'suppress_prefixlength ' + table_suppress_prefix_len,
+            ]
+        ]
+        self.verify_rules(ip_rule_search, addr_family='inet')
+        self.verify_rules(ip_rule_search, addr_family='inet6')
+
+    def test_pbr_table_suppress_prefix_length_conflict(self):
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(
+            ['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'port', '443']
+        )
+        self.cli_set(
+            ['policy', 'route', 'smoketest', 'rule', '1', 'set', 'table', table_id]
+        )
+        self.cli_set(
+            [
+                'policy',
+                'route',
+                'smoketest',
+                'rule',
+                '1',
+                'set',
+                'suppress-prefix-length',
+                table_suppress_prefix_len,
+            ]
+        )
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
+        self.cli_set(
+            ['policy', 'route', 'smoketest', 'rule', '2', 'destination', 'port', '8443']
+        )
+        self.cli_set(
+            ['policy', 'route', 'smoketest', 'rule', '2', 'set', 'table', table_id]
+        )
+        self.cli_set(
+            [
+                'policy',
+                'route',
+                'smoketest',
+                'rule',
+                '2',
+                'set',
+                'suppress-prefix-length',
+                '1',
+            ]
+        )
+        self.cli_set(['policy', 'route', 'smoketest', 'interface', interface])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
 
     def test_pbr_vrf(self):

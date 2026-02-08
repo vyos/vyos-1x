@@ -234,6 +234,25 @@
                 </children>
               </node>
               #include <include/policy/route-common.xml.i>
+              <node name="set">
+                <properties>
+                  <help>Packet modifications</help>
+                </properties>
+                <children>
+                  <leafNode name="suppress-prefix-length">
+                    <properties>
+                      <help>Suppress route prefixes up to specified length during lookup</help>
+                      <valueHelp>
+                        <format>u32:0-128</format>
+                        <description>Suppress matching routes with prefix length less than or equal to this value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-128"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-options.xml.i>
               #include <include/firewall/hop-limit.xml.i>
@@ -301,6 +320,25 @@
                 </children>
               </node>
               #include <include/policy/route-common.xml.i>
+              <node name="set">
+                <properties>
+                  <help>Packet modifications</help>
+                </properties>
+                <children>
+                  <leafNode name="suppress-prefix-length">
+                    <properties>
+                      <help>Suppress route prefixes up to specified length during lookup</help>
+                      <valueHelp>
+                        <format>u32:0-32</format>
+                        <description>Suppress matching routes with prefix length less than or equal to this value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-32"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               #include <include/firewall/icmp.xml.i>
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-options.xml.i>
