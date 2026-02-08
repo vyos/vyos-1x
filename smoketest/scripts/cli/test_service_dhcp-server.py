@@ -482,6 +482,100 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.verify_service_running()
 
+    def test_dhcp_single_pool_dnr_option(self):
+        shared_net_name = 'SMOKE-DNR'
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+        dnr_ipv4 = inc_ip(subnet, 100)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        self.cli_set(pool + ['option', 'dnr', '10', 'priority', '100'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '10',
+                'authentication-domain-name',
+                'resolver1.example',
+            ]
+        )
+        self.cli_set(pool + ['option', 'dnr', '10', 'address', dnr_ipv4])
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'alpn', 'dot'])
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'alpn', 'doq'])
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'port', '853'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '10',
+                'service-parameter',
+                'dohpath',
+                '/dns-query{dns}',
+            ]
+        )
+
+        self.cli_set(pool + ['option', 'dnr', '20', 'priority', '200'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '20',
+                'authentication-domain-name',
+                'resolver2.example',
+            ]
+        )
+
+        self.cli_commit()
+
+        config = read_file(KEA4_CONF)
+        obj = loads(config)
+
+        dnr_data = (
+            f'100, resolver1.example, {dnr_ipv4}, '
+            'alpn=dot\\,doq port=853 dohpath=/dns-query{?dns} | '
+            '200, resolver2.example'
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'v4-dnr', 'data': dnr_data},
+        )
+
+        self.verify_service_running()
+
+    def test_dhcp_dnr_http_alpn_requires_dohpath(self):
+        shared_net_name = 'SMOKE-DNR-VERIFY'
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        self.cli_set(pool + ['option', 'dnr', '10', 'priority', '100'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '10',
+                'authentication-domain-name',
+                'resolver.example',
+            ]
+        )
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'alpn', 'h2'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
     def test_dhcp_single_pool_options_scoped(self):
         shared_net_name = 'SMOKE-2'
 

@@ -216,6 +216,110 @@ class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_dnr_options(self):
+        shared_net_name = 'SMOKE-DNR'
+        range_start = inc_ip(subnet, 256)  # ::100
+        range_stop = inc_ip(subnet, 65535)  # ::ffff
+        dnr_ipv6_1 = inc_ip(subnet, 100)
+        dnr_ipv6_2 = inc_ip(subnet, 101)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['interface', interface])
+        self.cli_set(pool + ['range', '1', 'start', range_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_stop])
+
+        self.cli_set(pool + ['option', 'dnr', '10', 'priority', '100'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '10',
+                'authentication-domain-name',
+                'resolver1.example',
+            ]
+        )
+        self.cli_set(pool + ['option', 'dnr', '10', 'address', dnr_ipv6_1])
+        self.cli_set(pool + ['option', 'dnr', '10', 'address', dnr_ipv6_2])
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'alpn', 'dot'])
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'alpn', 'h2'])
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'port', '853'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '10',
+                'service-parameter',
+                'dohpath',
+                '/dns-query{dns}',
+            ]
+        )
+
+        self.cli_set(pool + ['option', 'dnr', '20', 'priority', '200'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '20',
+                'authentication-domain-name',
+                'resolver2.example',
+            ]
+        )
+
+        self.cli_commit()
+
+        config = read_file(KEA6_CONF)
+        obj = loads(config)
+
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {
+                'name': 'v6-dnr',
+                'data': (
+                    f'100, resolver1.example, {dnr_ipv6_1} {dnr_ipv6_2}, '
+                    'alpn=dot\\,h2 port=853 dohpath=/dns-query{?dns}'
+                ),
+            },
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp6', 'shared-networks', 0, 'subnet6', 0, 'option-data'],
+            {'name': 'v6-dnr', 'data': '200, resolver2.example'},
+        )
+
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dnr_http_alpn_requires_dohpath(self):
+        shared_net_name = 'SMOKE-DNR-VERIFY'
+        range_start = inc_ip(subnet, 256)
+        range_stop = inc_ip(subnet, 65535)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        self.cli_set(pool + ['subnet-id', '1'])
+        self.cli_set(pool + ['interface', interface])
+        self.cli_set(pool + ['range', '1', 'start', range_start])
+        self.cli_set(pool + ['range', '1', 'stop', range_stop])
+
+        self.cli_set(pool + ['option', 'dnr', '10', 'priority', '100'])
+        self.cli_set(
+            pool
+            + [
+                'option',
+                'dnr',
+                '10',
+                'authentication-domain-name',
+                'resolver.example',
+            ]
+        )
+        self.cli_set(pool + ['option', 'dnr', '10', 'service-parameter', 'alpn', 'h3'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
 
     def test_prefix_delegation(self):
         shared_net_name = 'SMOKE-2'

@@ -96,6 +96,99 @@ def kea_test_config(process: str, config_path: str) -> tuple[bool, str]:
     find = re.search(r'Error encountered:\s([^\n$]+)', output)
     return (False, find[1] if find else None)
 
+
+def _kea_dnr_sort_key(instance_id):
+    value = str(instance_id)
+    if value.isdigit():
+        return (0, int(value))
+    return (1, value)
+
+
+def _kea_dnr_normalize_list(value):
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        return value
+
+    return [value]
+
+
+def _kea_dnr_parse_service_parameters(service_parameter):
+    if not service_parameter:
+        return ''
+
+    params = []
+
+    alpn = _kea_dnr_normalize_list(service_parameter.get('alpn'))
+    if alpn:
+        params.append('alpn=' + r'\,'.join(alpn))
+
+    if 'port' in service_parameter:
+        params.append(f'port={int(service_parameter["port"])}')
+
+    if 'dohpath' in service_parameter:
+        dohpath = service_parameter['dohpath']
+        # Kea expects "{?dns}" in dohpath. To keep CLI ergonomic, append it for
+        # plain paths (e.g. "/dns-query"), normalize common "{dns}" typo, but
+        # reject unrelated templates that do not include "{?dns}".
+        if '{?dns}' not in dohpath:
+            if '{dns}' in dohpath:
+                dohpath = dohpath.replace('{dns}', '{?dns}')
+            elif '{' in dohpath or '}' in dohpath:
+                raise ConfigError(
+                    'DNR service-parameter "dohpath" custom URI template must '
+                    'include "{?dns}" (plain paths and "{dns}" are auto-normalized)'
+                )
+            else:
+                dohpath = f'{dohpath}{{?dns}}'
+
+        # RFC 9463 allows pipe in dohpath, it must be escaped for Kea parser.
+        # Keep this idempotent by only escaping pipes that are not already escaped.
+        dohpath = re.sub(r'(?<!\\)\|', r'\\|', dohpath)
+        params.append(f'dohpath={dohpath}')
+
+    return ' '.join(params)
+
+
+def _kea_parse_dnr_instances(dnr_config):
+    if not dnr_config:
+        return []
+
+    entries = []
+
+    for instance_id, instance_config in sorted(
+        dnr_config.items(), key=lambda entry: _kea_dnr_sort_key(entry[0])
+    ):
+        if 'priority' not in instance_config:
+            raise ConfigError(
+                f'DNR instance "{instance_id}" requires "priority" to be configured'
+            )
+
+        if 'authentication_domain_name' not in instance_config:
+            raise ConfigError(
+                f'DNR instance "{instance_id}" requires '
+                '"authentication-domain-name" to be configured'
+            )
+
+        priority = int(instance_config['priority'])
+        data_fields = [str(priority), instance_config['authentication_domain_name']]
+
+        address = _kea_dnr_normalize_list(instance_config.get('address'))
+        service_parameter = _kea_dnr_parse_service_parameters(
+            instance_config.get('service_parameter')
+        )
+
+        if address or service_parameter:
+            data_fields.append(' '.join(address))
+
+        if service_parameter:
+            data_fields.append(service_parameter)
+
+        entries.append(', '.join(data_fields))
+
+    return entries
+
 def kea_parse_options(config):
     options = []
 
@@ -153,6 +246,10 @@ def kea_parse_options(config):
         options.append(
             {'name': 'unifi-controller', 'data': unifi_controller, 'space': 'ubnt'}
         )
+
+    dnr_entries = _kea_parse_dnr_instances(config.get('dnr'))
+    if dnr_entries:
+        options.append({'name': 'v4-dnr', 'data': ' | '.join(dnr_entries)})
 
     return options
 
@@ -279,6 +376,11 @@ def kea6_parse_options(config):
         options.append(
             {'name': 'tftp-servers', 'code': 2, 'space': 'cisco', 'data': cisco_tftp}
         )
+
+    dnr_entries = _kea_parse_dnr_instances(config.get('dnr'))
+    if dnr_entries:
+        for dnr_entry in dnr_entries:
+            options.append({'name': 'v6-dnr', 'data': dnr_entry})
 
     return options
 

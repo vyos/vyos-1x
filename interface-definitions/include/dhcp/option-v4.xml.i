@@ -7,6 +7,7 @@
     #include <include/dhcp/captive-portal.xml.i>
     #include <include/dhcp/domain-name.xml.i>
     #include <include/dhcp/domain-search.xml.i>
+    #include <include/dhcp/dnr-v4.xml.i>
     #include <include/dhcp/ntp-server.xml.i>
     #include <include/name-server-ipv4.xml.i>
     <leafNode name="bootfile-name">

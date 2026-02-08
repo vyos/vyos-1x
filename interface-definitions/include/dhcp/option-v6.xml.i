@@ -6,6 +6,7 @@
   <children>
     #include <include/dhcp/captive-portal.xml.i>
     #include <include/dhcp/domain-search.xml.i>
+    #include <include/dhcp/dnr-v6.xml.i>
     #include <include/name-server-ipv6.xml.i>
     <leafNode name="capwap-controller">
       <properties>

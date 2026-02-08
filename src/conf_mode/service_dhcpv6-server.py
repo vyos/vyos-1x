@@ -102,6 +102,45 @@ def get_config(config=None):
 
     return dhcpv6
 
+
+def verify_dnr_dohpath_requirement(option, scope):
+    if 'dnr' not in option:
+        return None
+
+    for instance, config in option['dnr'].items():
+        service_parameter = config.get('service_parameter')
+        if not service_parameter:
+            continue
+
+        if 'dohpath' in service_parameter:
+            dohpath = service_parameter['dohpath']
+            if (
+                '{?dns}' not in dohpath
+                and '{dns}' not in dohpath
+                and ('{' in dohpath or '}' in dohpath)
+            ):
+                raise ConfigError(
+                    f'{scope}: DNR instance "{instance}" has invalid '
+                    '"service-parameter dohpath" URI template. '
+                    'Custom templates must include "{?dns}" '
+                    '(plain paths and "{dns}" are auto-normalized)'
+                )
+
+        alpn = service_parameter.get('alpn')
+        if not alpn:
+            continue
+
+        alpn_values = alpn if isinstance(alpn, list) else [alpn]
+        if any(proto in {'h2', 'h3'} for proto in alpn_values):
+            if 'dohpath' not in service_parameter:
+                raise ConfigError(
+                    f'{scope}: DNR instance "{instance}" requires '
+                    '"service-parameter dohpath" when ALPN includes h2/h3'
+                )
+
+    return None
+
+
 def verify(dhcpv6):
     # bail out early - looks like removal from running config
     if not dhcpv6 or 'disable' in dhcpv6:
@@ -117,6 +156,11 @@ def verify(dhcpv6):
     subnet_ids = []
     listen_ok = False
     for network, network_config in dhcpv6['shared_network_name'].items():
+        if 'option' in network_config:
+            verify_dnr_dohpath_requirement(
+                network_config['option'], f'Shared-network "{network}"'
+            )
+
         # A shared-network requires a subnet definition
         if 'subnet' not in network_config:
             raise ConfigError(f'No DHCPv6 lease subnets configured for "{network}". '\
@@ -124,6 +168,11 @@ def verify(dhcpv6):
                               'each shared network!')
 
         for subnet, subnet_config in network_config['subnet'].items():
+            if 'option' in subnet_config:
+                verify_dnr_dohpath_requirement(
+                    subnet_config['option'], f'Subnet "{subnet}"'
+                )
+
             if 'subnet_id' not in subnet_config:
                 raise ConfigError(f'Unique subnet ID not specified for subnet "{subnet}"')
 
@@ -137,6 +186,12 @@ def verify(dhcpv6):
                 range6_stop = []
 
                 for num, range_config in subnet_config['range'].items():
+                    if 'option' in range_config:
+                        verify_dnr_dohpath_requirement(
+                            range_config['option'],
+                            f'Range "{num}" in subnet "{subnet}"',
+                        )
+
                     if 'start' in range_config:
                         start = range_config['start']
 
@@ -145,11 +200,11 @@ def verify(dhcpv6):
                         stop = range_config['stop']
 
                         # Start address must be inside network
-                        if not ip_address(start) in ip_network(subnet):
+                        if ip_address(start) not in ip_network(subnet):
                             raise ConfigError(f'Range start address "{start}" is not in subnet "{subnet}"!')
 
                         # Stop address must be inside network
-                        if not ip_address(stop) in ip_network(subnet):
+                        if ip_address(stop) not in ip_network(subnet):
                              raise ConfigError(f'Range stop address "{stop}" is not in subnet "{subnet}"!')
 
                         # Stop address must be greater or equal to start address
@@ -220,6 +275,12 @@ def verify(dhcpv6):
             # Static mappings don't require anything (but check if IP is in subnet if it's set)
             if 'static_mapping' in subnet_config:
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
+                    if 'option' in mapping_config:
+                        verify_dnr_dohpath_requirement(
+                            mapping_config['option'],
+                            f'Static-mapping "{mapping}" in subnet "{subnet}"',
+                        )
+
                     if 'ipv6_address' in mapping_config:
                         # Static address must be in subnet
                         if ip_address(mapping_config['ipv6_address']) not in ip_network(subnet):

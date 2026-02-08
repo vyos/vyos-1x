@@ -242,6 +242,45 @@ def verify_ddns_domain_servers(domain_type, domain):
             raise ConfigError(f'{domain_type} DNS servers {", ".join(invalid_servers)} in DDNS configuration need to have an IP address')
     return None
 
+
+def verify_dnr_dohpath_requirement(option, scope):
+    if 'dnr' not in option:
+        return None
+
+    for instance, config in option['dnr'].items():
+        service_parameter = config.get('service_parameter')
+        if not service_parameter:
+            continue
+
+        if 'dohpath' in service_parameter:
+            dohpath = service_parameter['dohpath']
+            if (
+                '{?dns}' not in dohpath
+                and '{dns}' not in dohpath
+                and ('{' in dohpath or '}' in dohpath)
+            ):
+                raise ConfigError(
+                    f'{scope}: DNR instance "{instance}" has invalid '
+                    '"service-parameter dohpath" URI template. '
+                    'Custom templates must include "{?dns}" '
+                    '(plain paths and "{dns}" are auto-normalized)'
+                )
+
+        alpn = service_parameter.get('alpn')
+        if not alpn:
+            continue
+
+        alpn_values = alpn if isinstance(alpn, list) else [alpn]
+        if any(proto in {'h2', 'h3'} for proto in alpn_values):
+            if 'dohpath' not in service_parameter:
+                raise ConfigError(
+                    f'{scope}: DNR instance "{instance}" requires '
+                    '"service-parameter dohpath" when ALPN includes h2/h3'
+                )
+
+    return None
+
+
 def verify(dhcp):
     # bail out early - looks like removal from running config
     if not dhcp or 'disable' in dhcp:
@@ -264,6 +303,11 @@ def verify(dhcp):
 
     # A shared-network requires a subnet definition
     for network, network_config in dhcp['shared_network_name'].items():
+        if 'option' in network_config:
+            verify_dnr_dohpath_requirement(
+                network_config['option'], f'Shared-network "{network}"'
+            )
+
         if 'disable' in network_config:
             disabled_shared_networks += 1
 
@@ -292,6 +336,11 @@ def verify(dhcp):
                             f'DHCP static-route "{route}" requires router to be defined!'
                         )
 
+            if 'option' in subnet_config:
+                verify_dnr_dohpath_requirement(
+                    subnet_config['option'], f'Subnet "{subnet}"'
+                )
+
             # If a client class has been specified then it must exist
             if 'client_class' in subnet_config:
                 client_class = subnet_config['client_class']
@@ -312,6 +361,12 @@ def verify(dhcp):
                         client_class = range_config['client_class']
                         if client_class not in dhcp.get('client_class', {}):
                             raise ConfigError(f'Client class "{client_class}" set in range "{range}" but does not exist')
+
+                    if 'option' in range_config:
+                        verify_dnr_dohpath_requirement(
+                            range_config['option'],
+                            f'Range "{range}" in subnet "{subnet}"',
+                        )
 
                     # Start/Stop address must be inside network
                     for key in ['start', 'stop']:
@@ -365,6 +420,12 @@ def verify(dhcp):
                 used_mac = []
                 used_duid = []
                 for mapping, mapping_config in subnet_config['static_mapping'].items():
+                    if 'option' in mapping_config:
+                        verify_dnr_dohpath_requirement(
+                            mapping_config['option'],
+                            f'Static-mapping "{mapping}" in subnet "{subnet}"',
+                        )
+
                     if 'ip_address' in mapping_config:
                         if ip_address(mapping_config['ip_address']) not in ip_network(
                             subnet
