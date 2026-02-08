@@ -691,19 +691,84 @@ class Interface(Control):
             return None
         return self.set_interface('ipv6_cache_tmo', tmo)
 
-    def _cleanup_mss_rules(self, table, ifname):
-        commands = []
-        results = self._cmd(f'nft -a list chain {table} VYOS_TCP_MSS').split("\n")
-        for line in results:
-            if f'oifname "{ifname}"' in line:
-                handle_search = re.search('handle (\d+)', line)
-                if handle_search:
-                    self._cmd(f'nft delete rule {table} VYOS_TCP_MSS handle {handle_search[1]}')
+    _TCP_MSS_POSTROUTING_CHAIN = 'VYOS_TCP_MSS'
+    _TCP_MSS_PREROUTING_CHAIN = 'VYOS_TCP_MSS_PREROUTING'
+    _TCP_MSS_CHAIN_HOOKS = {
+        'raw': {
+            _TCP_MSS_POSTROUTING_CHAIN: 'type filter hook postrouting priority -300; policy accept;',
+            _TCP_MSS_PREROUTING_CHAIN: 'type filter hook prerouting priority -300; policy accept;',
+        },
+        'ip6 raw': {
+            _TCP_MSS_POSTROUTING_CHAIN: 'type filter hook postrouting priority -300; policy accept;',
+            _TCP_MSS_PREROUTING_CHAIN: 'type filter hook prerouting priority -300; policy accept;',
+        },
+    }
 
-    def set_tcp_ipv4_mss(self, mss):
+    def _ensure_mss_chain(self, table, chain):
+        try:
+            self._cmd(f'nft list chain {table} {chain}')
+        except OSError:
+            chain_definition = self._TCP_MSS_CHAIN_HOOKS[table][chain]
+            self._cmd(f"nft add chain {table} {chain} '{{ {chain_definition} }}'")
+
+    def _ensure_mss_chains(self, table):
+        for chain in self._TCP_MSS_CHAIN_HOOKS[table]:
+            self._ensure_mss_chain(table, chain)
+
+    def _cleanup_mss_rules(self, table, ifname):
+        self._ensure_mss_chains(table)
+        for chain in self._TCP_MSS_CHAIN_HOOKS[table]:
+            results = self._cmd(f'nft -a list chain {table} {chain}').split('\n')
+            for line in results:
+                if f'oifname "{ifname}"' in line or f'iifname "{ifname}"' in line:
+                    handle_search = re.search(r'handle (\d+)', line)
+                    if handle_search:
+                        self._cmd(
+                            f'nft delete rule {table} {chain} handle {handle_search[1]}'
+                        )
+
+    def _get_mss_match_options(self, direction, mss):
+        inbound_chain = (
+            self._TCP_MSS_POSTROUTING_CHAIN
+            if mss == 'clamp-mss-to-pmtu'
+            else self._TCP_MSS_PREROUTING_CHAIN
+        )
+        # Keep pre-direction configs working during upgrades.
+        if not direction:
+            direction = 'outbound'
+
+        direction_map = {
+            'outbound': [(self._TCP_MSS_POSTROUTING_CHAIN, 'oifname')],
+            'inbound': [(inbound_chain, 'iifname')],
+            'both': [
+                (self._TCP_MSS_POSTROUTING_CHAIN, 'oifname'),
+                (inbound_chain, 'iifname'),
+            ],
+        }
+
+        if direction not in direction_map:
+            raise ValueError(f'Invalid adjust-mss-direction "{direction}"')
+
+        return direction_map[direction]
+
+    def _add_fixed_mss_rule(self, table, chain, match_option, mss):
+        nft_prefix = f'nft add rule {table} {chain}'
+        base_cmd = f'{match_option} "{self.ifname}" tcp flags & (syn|rst) == syn'
+        low_mss = str(int(mss) + 1)
+        self._cmd(
+            f"{nft_prefix} '{base_cmd} tcp option maxseg size "
+            f"{low_mss}-65535 tcp option maxseg size set {mss}'"
+        )
+
+    def _add_clamp_mss_rule(self, table, chain, match_option):
+        nft_prefix = f'nft add rule {table} {chain}'
+        base_cmd = f'{match_option} "{self.ifname}" tcp flags & (syn|rst) == syn'
+        self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
+
+    def set_tcp_ipv4_mss(self, mss, direction):
         """
-        Set IPv4 TCP MSS value advertised when TCP SYN packets leave this
-        interface. Value is in bytes.
+        Set IPv4 TCP MSS value advertised for TCP SYN packets crossing this
+        interface in requested direction. Value is in bytes.
 
         A value of 0 will disable the MSS adjustment
 
@@ -716,18 +781,19 @@ class Interface(Control):
             return None
 
         self._cleanup_mss_rules('raw', self.ifname)
-        nft_prefix = 'nft add rule raw VYOS_TCP_MSS'
-        base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
         if mss == 'clamp-mss-to-pmtu':
-            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
-        elif int(mss) > 0:
-            low_mss = str(int(mss) + 1)
-            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'")
+            for chain, mss_direction in self._get_mss_match_options(direction, mss):
+                self._add_clamp_mss_rule('raw', chain, mss_direction)
+            return
 
-    def set_tcp_ipv6_mss(self, mss):
+        if int(mss) > 0:
+            for chain, mss_direction in self._get_mss_match_options(direction, mss):
+                self._add_fixed_mss_rule('raw', chain, mss_direction, mss)
+
+    def set_tcp_ipv6_mss(self, mss, direction):
         """
-        Set IPv6 TCP MSS value advertised when TCP SYN packets leave this
-        interface. Value is in bytes.
+        Set IPv6 TCP MSS value advertised for TCP SYN packets crossing this
+        interface in requested direction. Value is in bytes.
 
         A value of 0 will disable the MSS adjustment
 
@@ -740,13 +806,14 @@ class Interface(Control):
             return None
 
         self._cleanup_mss_rules('ip6 raw', self.ifname)
-        nft_prefix = 'nft add rule ip6 raw VYOS_TCP_MSS'
-        base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
         if mss == 'clamp-mss-to-pmtu':
-            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
-        elif int(mss) > 0:
-            low_mss = str(int(mss) + 1)
-            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'")
+            for chain, mss_direction in self._get_mss_match_options(direction, mss):
+                self._add_clamp_mss_rule('ip6 raw', chain, mss_direction)
+            return
+
+        if int(mss) > 0:
+            for chain, mss_direction in self._get_mss_match_options(direction, mss):
+                self._add_fixed_mss_rule('ip6 raw', chain, mss_direction, mss)
 
     def set_arp_filter(self, arp_filter):
         """
@@ -847,7 +914,7 @@ class Interface(Control):
         results = self._cmd(f'nft -a list chain ip raw vyos_rpfilter').split("\n")
         for line in results:
             if f'iifname "{ifname}"' in line:
-                handle_search = re.search('handle (\d+)', line)
+                handle_search = re.search(r'handle (\d+)', line)
                 if handle_search:
                     self._cmd(f'nft delete rule ip raw vyos_rpfilter handle {handle_search[1]}')
 
@@ -876,7 +943,7 @@ class Interface(Control):
         results = self._cmd(f'nft -a list chain ip6 raw vyos_rpfilter').split("\n")
         for line in results:
             if f'iifname "{ifname}"' in line:
-                handle_search = re.search('handle (\d+)', line)
+                handle_search = re.search(r'handle (\d+)', line)
                 if handle_search:
                     self._cmd(f'nft delete rule ip6 raw vyos_rpfilter handle {handle_search[1]}')
 
@@ -1841,7 +1908,8 @@ class Interface(Control):
         # Configure MSS value for IPv4 TCP connections
         tmp = dict_search('ip.adjust_mss', config)
         value = tmp if (tmp != None) else '0'
-        self.set_tcp_ipv4_mss(value)
+        direction = dict_search('ip.adjust_mss_direction', config)
+        self.set_tcp_ipv4_mss(value, direction)
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
@@ -1908,7 +1976,8 @@ class Interface(Control):
         # Configure MSS value for IPv6 TCP connections
         tmp = dict_search('ipv6.adjust_mss', config)
         value = tmp if (tmp != None) else '0'
-        self.set_tcp_ipv6_mss(value)
+        direction = dict_search('ipv6.adjust_mss_direction', config)
+        self.set_tcp_ipv6_mss(value, direction)
 
         # IPv6 forwarding
         tmp = dict_search('ipv6.disable_forwarding', config)

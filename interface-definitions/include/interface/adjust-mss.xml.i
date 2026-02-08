@@ -20,4 +20,28 @@
     </constraint>
   </properties>
 </leafNode>
+<leafNode name="adjust-mss-direction">
+  <properties>
+    <help>Adjust TCP MSS direction</help>
+    <completionHelp>
+      <list>outbound inbound both</list>
+    </completionHelp>
+    <valueHelp>
+      <format>outbound</format>
+      <description>Adjust MSS for packets leaving this interface</description>
+    </valueHelp>
+    <valueHelp>
+      <format>inbound</format>
+      <description>Adjust MSS for packets entering this interface</description>
+    </valueHelp>
+    <valueHelp>
+      <format>both</format>
+      <description>Adjust MSS for both inbound and outbound packets</description>
+    </valueHelp>
+    <constraint>
+      <regex>(outbound|inbound|both)</regex>
+    </constraint>
+  </properties>
+  <defaultValue>outbound</defaultValue>
+</leafNode>
 <!-- include end -->

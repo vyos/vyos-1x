@@ -960,12 +960,93 @@ class BasicInterfaceTest:
                     tmp = get_interface_config(f'{interface}.{vif_s}')
                     self.assertEqual(tmp['linkinfo']['info_data']['protocol'], new_protocol.upper())
 
+        @staticmethod
+        def _expected_adjust_mss_directions(direction_supported, configured_direction):
+            if not direction_supported:
+                return {'outbound'}
+
+            if configured_direction == 'both':
+                return {'inbound', 'outbound'}
+
+            return {configured_direction}
+
+        @staticmethod
+        def _expected_adjust_mss_chains(mss, expected_directions):
+            expected_chains = {}
+            for direction in expected_directions:
+                expected_chains[direction] = (
+                    'postrouting'
+                    if direction == 'outbound' or mss == 'clamp-mss-to-pmtu'
+                    else 'prerouting'
+                )
+
+            return expected_chains
+
+        def _assert_adjust_mss_rules(
+            self,
+            postrouting_output,
+            prerouting_output,
+            interface,
+            mss,
+            expected_directions,
+        ):
+            expected_mss_clause = (
+                'tcp option maxseg size set rt mtu'
+                if mss == 'clamp-mss-to-pmtu'
+                else f'tcp option maxseg size set {mss}'
+            )
+
+            outbound_pattern = re.compile(
+                rf'(?:^|\s)(?:meta\s+)?oifname\s+"{re.escape(interface)}"(?:\s|$)'
+            )
+            inbound_pattern = re.compile(
+                rf'(?:^|\s)(?:meta\s+)?iifname\s+"{re.escape(interface)}"(?:\s|$)'
+            )
+
+            found_chains = {'outbound': set(), 'inbound': set()}
+            chain_outputs = (
+                ('postrouting', postrouting_output),
+                ('prerouting', prerouting_output),
+            )
+            for chain_name, chain_output in chain_outputs:
+                for line in chain_output.splitlines():
+                    if expected_mss_clause not in line:
+                        continue
+
+                    normalized_line = line.strip()
+                    if outbound_pattern.search(normalized_line):
+                        found_chains['outbound'].add(chain_name)
+                    if inbound_pattern.search(normalized_line):
+                        found_chains['inbound'].add(chain_name)
+
+            expected_chains = self._expected_adjust_mss_chains(mss, expected_directions)
+            for direction in ('outbound', 'inbound'):
+                expected = (
+                    {expected_chains[direction]}
+                    if direction in expected_directions
+                    else set()
+                )
+                self.assertSetEqual(
+                    found_chains[direction],
+                    expected,
+                    msg=(
+                        f'MSS rules for interface "{interface}" direction "{direction}" '
+                        f'expected in chains {sorted(expected)} but found '
+                        f'{sorted(found_chains[direction])}'
+                    ),
+                )
+
         def test_interface_ip_options(self):
             if not self._test_ip:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
             arp_tmo = '300'
             mss = '1420'
+            mss_direction = 'both'
+            adjust_mss = cli_defined(self._base_path + ['ip'], 'adjust-mss')
+            adjust_mss_direction = cli_defined(
+                self._base_path + ['ip'], 'adjust-mss-direction'
+            )
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -973,8 +1054,10 @@ class BasicInterfaceTest:
                     self.cli_set(path + option.split())
 
                 # Options
-                if cli_defined(self._base_path + ['ip'], 'adjust-mss'):
+                if adjust_mss:
                     self.cli_set(path + ['ip', 'adjust-mss', mss])
+                if adjust_mss_direction:
+                    self.cli_set(path + ['ip', 'adjust-mss-direction', mss_direction])
 
                 if cli_defined(self._base_path + ['ip'], 'arp-cache-timeout'):
                     self.cli_set(path + ['ip', 'arp-cache-timeout', arp_tmo])
@@ -1008,13 +1091,27 @@ class BasicInterfaceTest:
 
             self.cli_commit()
 
+            mss_postrouting_output = ''
+            mss_prerouting_output = ''
+            expected_directions = None
+            if adjust_mss:
+                mss_postrouting_output = cmd('sudo nft list chain raw VYOS_TCP_MSS')
+                mss_prerouting_output = cmd(
+                    'sudo nft list chain raw VYOS_TCP_MSS_PREROUTING'
+                )
+                expected_directions = self._expected_adjust_mss_directions(
+                    adjust_mss_direction, mss_direction
+                )
+
             for interface in self._interfaces:
-                if cli_defined(self._base_path + ['ip'], 'adjust-mss'):
-                    base_options = f'oifname "{interface}"'
-                    out = cmd('sudo nft list chain raw VYOS_TCP_MSS')
-                    for line in out.splitlines():
-                        if line.startswith(base_options):
-                            self.assertIn(f'tcp option maxseg size set {mss}', line)
+                if adjust_mss:
+                    self._assert_adjust_mss_rules(
+                        mss_postrouting_output,
+                        mss_prerouting_output,
+                        interface,
+                        mss,
+                        expected_directions,
+                    )
 
                 if cli_defined(self._base_path + ['ip'], 'arp-cache-timeout'):
                     tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
@@ -1067,10 +1164,15 @@ class BasicInterfaceTest:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
             mss = '1400'
+            mss_direction = 'both'
             dad_transmits = '10'
             accept_dad = '0'
             source_validation = 'strict'
             interface_identifier = '::fffe'
+            adjust_mss = cli_defined(self._base_path + ['ipv6'], 'adjust-mss')
+            adjust_mss_direction = cli_defined(
+                self._base_path + ['ipv6'], 'adjust-mss-direction'
+            )
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -1078,8 +1180,10 @@ class BasicInterfaceTest:
                     self.cli_set(path + option.split())
 
                 # Options
-                if cli_defined(self._base_path + ['ipv6'], 'adjust-mss'):
+                if adjust_mss:
                     self.cli_set(path + ['ipv6', 'adjust-mss', mss])
+                if adjust_mss_direction:
+                    self.cli_set(path + ['ipv6', 'adjust-mss-direction', mss_direction])
 
                 if cli_defined(self._base_path + ['ipv6'], 'accept-dad'):
                     self.cli_set(path + ['ipv6', 'accept-dad', accept_dad])
@@ -1098,14 +1202,28 @@ class BasicInterfaceTest:
 
             self.cli_commit()
 
+            mss_postrouting_output = ''
+            mss_prerouting_output = ''
+            expected_directions = None
+            if adjust_mss:
+                mss_postrouting_output = cmd('sudo nft list chain ip6 raw VYOS_TCP_MSS')
+                mss_prerouting_output = cmd(
+                    'sudo nft list chain ip6 raw VYOS_TCP_MSS_PREROUTING'
+                )
+                expected_directions = self._expected_adjust_mss_directions(
+                    adjust_mss_direction, mss_direction
+                )
+
             for interface in self._interfaces:
                 proc_base = f'/proc/sys/net/ipv6/conf/{interface}'
-                if cli_defined(self._base_path + ['ipv6'], 'adjust-mss'):
-                    base_options = f'oifname "{interface}"'
-                    out = cmd('sudo nft list chain ip6 raw VYOS_TCP_MSS')
-                    for line in out.splitlines():
-                        if line.startswith(base_options):
-                            self.assertIn(f'tcp option maxseg size set {mss}', line)
+                if adjust_mss:
+                    self._assert_adjust_mss_rules(
+                        mss_postrouting_output,
+                        mss_prerouting_output,
+                        interface,
+                        mss,
+                        expected_directions,
+                    )
 
                 if cli_defined(self._base_path + ['ipv6'], 'accept-dad'):
                     tmp = read_file(f'{proc_base}/accept_dad')
