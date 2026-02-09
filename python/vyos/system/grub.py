@@ -160,6 +160,10 @@ def version_list(root_dir: str = '') -> list[str]:
     versions_files = Path(f'{root_dir}/{GRUB_DIR_VYOS_VERS}').glob('*.cfg')
     versions_order: dict[str, int] = {}
     for file in versions_files:
+        # PSL - Skip the default firmware file
+        if file.name == "default-firmware.cfg":
+            continue
+
         p = Path(root_dir).joinpath('boot').joinpath(file.stem)
         command = f'stat -c %W {p.as_posix()}'
         rc, out = rc_cmd(command)
@@ -354,6 +358,41 @@ def set_default(version_name: str, root_dir: str = '') -> None:
     vars_current['default'] = gen_version_uuid(version_name)
     vars_write(vars_file, vars_current)
 
+# PSL - START - New routines to set factory firmware uuid and current uuid
+
+def set_current_default(version_name: str, root_dir: str = '') -> None:
+    """Set version uuid as current boot entry
+
+    Args:
+        version_name (str): version name (current)
+        root_dir (str, optional): an optional path to the root directory.
+        Defaults to empty.
+    """
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    vars_file = f'{root_dir}/{CFG_VYOS_VARS}'
+    vars_current = vars_read(vars_file)
+    vars_current['current'] = gen_version_uuid(version_name)
+    vars_write(vars_file, vars_current)
+
+def set_factory_default(version_name: str, root_dir: str = '') -> None:
+    """Set factory version uuid for default-firmware boot entry
+
+    Args:
+        version_name (str): version name (of default-firmware)
+        root_dir (str, optional): an optional path to the root directory.
+        Defaults to empty.
+    """
+    if not root_dir:
+        root_dir = disk.find_persistence()
+
+    vars_file = f'{root_dir}/{CFG_VYOS_VARS}'
+    vars_current = vars_read(vars_file)
+    vars_current['factory'] = gen_version_uuid(version_name)
+    vars_write(vars_file, vars_current)
+
+# PSL - END - New routines to set factory firmware uuid and current uuid
 
 def common_write(root_dir: str = '', grub_common: dict[str, str] = {}) -> None:
     """Write common GRUB configuration file (overwrite everything)
