@@ -1,0 +1,68 @@
+# WWAN Interface Manager Service (Non-Root Version)
+# This version uses PolicyKit for fine-grained permissions
+# Requires the PolicyKit rules file to be installed first
+#
+# Installation:
+#   1. Create wwan user: sudo useradd -r -s /bin/false wwan
+#   2. Install PolicyKit rules: sudo cp 50-wwan-interface-manager.rules /etc/polkit-1/rules.d/
+#   3. Install service: sudo cp wwan-interface-manager-secure.service /etc/systemd/system/
+#   4. Enable: sudo systemctl daemon-reload && sudo systemctl enable wwan-interface-manager-secure.service
+
+[Unit]
+Description=WWAN Interface Manager (Secure)
+Documentation=https://your-docs-url.com
+After=network.target polkit.service
+Before=network-online.target
+Wants=network.target
+Requires=polkit.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/python3 /opt/wwan-manager/interfaces_wwan_main.py
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=10
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+# Working directory
+WorkingDirectory=/opt/wwan-manager
+
+# User and permissions - RUNS AS DEDICATED USER
+User=wwan
+Group=wwan
+
+# Enhanced security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/wwan /var/run/wwan /tmp
+PrivateTmp=true
+PrivateDevices=false  # Need access to modem devices
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+# Only the minimal capabilities needed
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wwan-manager
+
+# Environment
+Environment=PYTHONPATH=/opt/wwan-manager
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
