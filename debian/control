@@ -24,6 +24,7 @@ Build-Depends:
   python3-certbot-nginx,
   python3-pam,
   python3-dbus,
+  python3-dbus-next | python3-pip,
   python3-pyroute2,
   python3-voluptuous,
 # For generating command definitions
@@ -100,6 +101,7 @@ Depends:
   python3-voluptuous,
   python3-xmltodict,
   python3-zmq,
+## Note: python3-dbus-next is installed via pip from requirements.txt
 ## End of Python libraries
 ## Basic System services and utilities
   coreutils,
