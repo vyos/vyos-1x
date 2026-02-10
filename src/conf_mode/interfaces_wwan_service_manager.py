@@ -3,9 +3,9 @@ import logging
 import logging.handlers
 import socket
 from datetime import datetime, timezone
-from dbus_next.aio import MessageBus
-from dbus_next.service import ServiceInterface, method
-from dbus_next.errors import DBusError
+from dbus_next.aio import MessageBus  # pylint: disable=import-error
+from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
+from dbus_next.errors import DBusError  # pylint: disable=import-error
 from interfaces_wwan_state_machine import ModemStateMachine
 from interfaces_wwan_config import InterfaceConfig
 
@@ -164,14 +164,14 @@ class ConfigServiceManager:
         await self.bus.request_name("com.igos.IgosModemManager")
         control = ControlInterface(self)
         self.bus.export("/com/igos/IgosModemManager/Control", control)
-        
+
         # Auto-create initial interface if specified (non-on-demand mode)
         if initial_interface is not None:
             logger.info(f"Auto-creating interface {initial_interface} for immediate connection")
             await self.add_interface(initial_interface)
         else:
             logger.info("WWAN ConfigService is running, waiting for AddInterface() calls")
-            
+
         await asyncio.get_event_loop().create_future()
 
     async def add_interface(self, interface_number: int):
@@ -181,14 +181,14 @@ class ConfigServiceManager:
         if fsm is None:
             logger.info("Creating new state machine",
                        extra={'interface_number': interface_number})
-            
+
             # Create FSM without configuration - will be set via D-Bus SetConfiguration
             fsm = ModemStateMachine(interface_number, self.bus)
             logger.info("State machine created without configuration - awaiting D-Bus SetConfiguration",
                        extra={'interface_number': interface_number})
-            
+
             await fsm.initialize()
-                
+
             self.modem_state_machines[interface_number] = fsm
 
         iface = InterfaceConfig(interface_number, fsm)

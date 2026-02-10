@@ -9,9 +9,9 @@ import socket
 import os
 from datetime import datetime, timezone
 from enum import Enum
-from dbus_next.aio import MessageBus
-from dbus_next.message import Message
-from dbus_next import Variant
+from dbus_next.aio import MessageBus  # pylint: disable=import-error
+from dbus_next.message import Message  # pylint: disable=import-error
+from dbus_next import Variant  # pylint: disable=import-error
 from automaton import machines
 from interfaces_wwan_util import modem_reset
 
@@ -232,35 +232,35 @@ class ModemStateMachine:
         self.config_active_sim = None       # Track configured active SIM
         self.sim_switch_reason = None       # Track why SIM was switched
         self.target_sim_slot = None         # Track target SIM during switch
-        
+
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
         self.sim_changed = False            # Flag to indicate SIM card change detected
-        
+
         # Reset cooldown tracking to prevent cascading failures
         self.last_reset_time = 0            # Timestamp of last hardware reset
         self.reset_cooldown_seconds = 300   # 5 minute cooldown between resets
-        
+
         # Service-initiated modem operations tracking (improved reset-aware)
         self.service_initiated_disable = False  # Flag to prevent false SIM missing detection
         self.reset_operation_in_progress = False  # Track reset operations across re-enumeration
         self.reset_grace_period_end = 0     # Timestamp when reset grace period ends
         self.reset_timeout_task = None      # Task to clear reset flag on timeout
         self.registration_handling_in_progress = False  # Prevent concurrent registration handling tasks
-        
+
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
         self.parsed_config = None  # Will store WWANConfiguration object
-        
+
         # Initialize APN discovery
         self.apn_discovery = APNDiscovery(interface_number)
-        
+
         # Initialize connection manager
         self.connection_manager = ConnectionManager(interface_number)
-        
+
         # Initialize state transition manager
         self.transition_manager = StateTransitionManager()
-        
+
         self.machine = machines.FiniteMachine()
         self._setup_states()
         self._setup_transitions()
@@ -277,14 +277,14 @@ class ModemStateMachine:
         """🔄 SAFE EXTRACTION: Setup transitions using new StateTransitionManager"""
         # Get transitions from the data-driven manager
         transitions = self.transition_manager.get_all_transitions()
-        
+
         # Convert state/event names to enum values and add to machine
         for from_state, to_state, event in transitions:
             from_state_enum = getattr(ModemState, from_state)
-            to_state_enum = getattr(ModemState, to_state) 
+            to_state_enum = getattr(ModemState, to_state)
             event_enum = getattr(ModemEvent, event)
             self.machine.add_transition(from_state_enum.value, to_state_enum.value, event_enum.value)
-        
+
         # Log transition statistics
         stats = self.transition_manager.get_statistics()
         logger.info("State transitions configured using data-driven approach",
@@ -304,7 +304,7 @@ class ModemStateMachine:
             # Configuration flow
             (ModemState.MODEM_FOUND,    ModemState.WAITING_FOR_CONFIG, ModemEvent.WAIT_FOR_CONFIG),
             (ModemState.WAITING_FOR_CONFIG, ModemState.CONFIGURING,    ModemEvent.CONFIG_UPDATE),
-            
+
             # Hot-plug: Handle new modem detection from USAGE_MONITORING state
             (ModemState.USAGE_MONITORING, ModemState.MODEM_FOUND,      ModemEvent.MODEM_FOUND),
             (ModemState.USAGE_MONITORING, ModemState.WAITING_FOR_CONFIG, ModemEvent.WAIT_FOR_CONFIG),
@@ -382,10 +382,10 @@ class ModemStateMachine:
             return
 
         logger.info("Initializing FSM", extra={'interface_number': self.interface_number})
-        
+
         # Setup ModemManager signal monitoring for instant modem detection
         await self.setup_modem_manager_monitoring()
-        
+
         self.transition(ModemEvent.START_SCAN)
         # Start modem scanning as a background task instead of blocking
         asyncio.create_task(self.scan_for_modem())
@@ -395,7 +395,7 @@ class ModemStateMachine:
         import time
         current_time = time.time()
         time_since_last_reset = current_time - self.last_reset_time
-        
+
         if time_since_last_reset < self.reset_cooldown_seconds:
             remaining_cooldown = self.reset_cooldown_seconds - time_since_last_reset
             logger.warning(f"Hardware reset blocked by cooldown - {remaining_cooldown:.1f}s remaining",
@@ -404,7 +404,7 @@ class ModemStateMachine:
                                 'cooldown_seconds': self.reset_cooldown_seconds})
             return False
         return True
-    
+
     def _record_reset(self):
         """Record that a hardware reset was performed"""
         import time
@@ -421,7 +421,7 @@ class ModemStateMachine:
         """Check if we're still in the grace period after a reset operation"""
         import time
         current_time = time.time()
-        
+
         if self.reset_operation_in_progress and current_time < self.reset_grace_period_end:
             remaining = self.reset_grace_period_end - current_time
             logger.debug(f"Still in reset grace period - {remaining:.1f}s remaining",
@@ -434,7 +434,7 @@ class ModemStateMachine:
             self.reset_operation_in_progress = False
             self.service_initiated_disable = False  # Also clear the old flag
             return False
-        
+
         return False
 
     async def setup_modem_manager_monitoring(self):
@@ -442,22 +442,22 @@ class ModemStateMachine:
         try:
             logger.info("Setting up ModemManager signal monitoring",
                        extra={'interface_number': self.interface_number})
-            
+
             # Get ObjectManager proxy for ModemManager
             introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, MODEM_MANAGER_PATH)
             self.object_manager_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, MODEM_MANAGER_PATH, introspect)
             object_manager = self.object_manager_proxy.get_interface(OBJECT_MANAGER_INTERFACE)
-            
+
             # Set up signal handlers for hardware add/remove events
             object_manager.on_interfaces_removed(self.on_modem_removed)
             self.interfaces_removed_handler = self.on_modem_removed
-            
+
             object_manager.on_interfaces_added(self.on_modem_added)
             self.interfaces_added_handler = self.on_modem_added
-            
+
             logger.info("ModemManager signal monitoring active",
                        extra={'interface_number': self.interface_number})
-                       
+
         except Exception as e:
             logger.error(f"Failed to setup ModemManager signal monitoring: {e}",
                         extra={'interface_number': self.interface_number})
@@ -469,27 +469,27 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number,
                                'removed_path': path,
                                'current_modem_path': self.modem_path})
-            
+
             # Check if this is our current modem
             if hasattr(self, 'modem_path') and self.modem_path and path == self.modem_path:
                 logger.warning("Current modem removed via signal, transitioning to scanning",
                               extra={'interface_number': self.interface_number,
                                      'modem_path': path})
-                
+
                 # Store original state for logging
                 original_state = self.machine.current_state
-                
+
                 # Clean up current modem references
                 self.proxy = None
                 self.modem_path = None
                 self.bearer_path = None
-                
+
                 # Cancel any ongoing tasks
                 if hasattr(self, 'usage_monitor_task') and self.usage_monitor_task and not self.usage_monitor_task.done():
                     self.usage_monitor_task.cancel()
                     logger.info("Cancelled usage monitoring task due to modem removal",
                                extra={'interface_number': self.interface_number})
-                
+
                 # For hardware removal, force transition to SCANNING from ANY state
                 # With the enhanced transition table, we can go directly to SCANNING from any state
                 try:
@@ -503,10 +503,10 @@ class ModemStateMachine:
                     logger.info("Force setting state to SCANNING",
                                extra={'interface_number': self.interface_number})
                     self.machine.set_state(ModemState.SCANNING)
-                
+
                 # Start scanning again (don't await - let it run in background)
                 asyncio.create_task(self.scan_for_modem())
-                
+
         except Exception as e:
             logger.error(f"Error handling modem removal signal: {e}",
                         extra={'interface_number': self.interface_number})
@@ -517,14 +517,14 @@ class ModemStateMachine:
             logger.debug(f"ModemManager signal: modem added at {path}",
                         extra={'interface_number': self.interface_number,
                                'added_path': path})
-            
+
             # Only process if we're currently scanning for a modem
             if self.machine.current_state == ModemState.SCANNING.value:
                 logger.info("New modem detected via signal while scanning",
                            extra={'interface_number': self.interface_number,
                                   'modem_path': path})
                 # The ongoing scan will pick this up naturally
-                
+
         except Exception as e:
             logger.error(f"Error handling modem addition signal: {e}",
                         extra={'interface_number': self.interface_number})
@@ -577,7 +577,7 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number,
                                       'paths': str(paths),
                                       'scan_count': scan_count})
-                    
+
                     for path in paths:
                         try:
                             introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, path)
@@ -598,7 +598,7 @@ class ModemStateMachine:
 
                             logger.debug(f"Comparing device '{physdev_uid}' with target '{target_modem_id}'",
                                         extra={'interface_number': self.interface_number})
-                            
+
                             if physdev_uid == target_modem_id:
                                 # MODEM FOUND! Get additional info for logging
                                 device_variant = await props.call_get(MODEM_INTERFACE, "Device")
@@ -606,7 +606,7 @@ class ModemStateMachine:
 
                                 self.proxy = proxy
                                 self.modem_path = path
-                                
+
                                 # Set proxy for connection manager
                                 self.connection_manager.set_proxy(proxy)
 
@@ -627,7 +627,7 @@ class ModemStateMachine:
                                 # Only transition if not already in MODEM_FOUND state
                                 if self.machine.current_state != ModemState.MODEM_FOUND.value:
                                     self.transition(ModemEvent.MODEM_FOUND)
-                                
+
                                 # Always call on_modem_found to check for config and proceed
                                 logger.debug("About to call on_modem_found()",
                                            extra={'interface_number': self.interface_number})
@@ -852,7 +852,7 @@ class ModemStateMachine:
 
         # Always transition to WAITING_FOR_CONFIG first (valid from MODEM_FOUND)
         self.transition(ModemEvent.WAIT_FOR_CONFIG)
-        
+
         # Check if config was already applied before modem was found
         if self.config:
             logger.info("Configuration already available, applying immediately",
@@ -872,29 +872,29 @@ class ModemStateMachine:
             # Only process signals from the Modem interface
             if interface_name != "org.freedesktop.ModemManager1.Modem":
                 return
-                
+
             # Debug: Show exactly what we received
             logger.debug(f"PropertiesChanged signal: interface={interface_name}, "
                         f"changed={list(changed_properties.keys()) if changed_properties else 'None'}",
                        extra={'interface_number': self.interface_number})
-            
+
             # Check if State property changed
             if changed_properties and 'State' in changed_properties:
                 new_state = changed_properties['State'].value
-                
+
                 # Get current state for comparison (if available)
                 old_state = getattr(self, '_last_modem_state', None)
                 self._last_modem_state = new_state
-                
+
                 # Convert state numbers to readable names
                 old_state_name = self._get_state_name(old_state) if old_state else "unknown"
                 new_state_name = self._get_state_name(new_state)
-                
+
                 logger.info("🔄 ModemManager State change detected",
                            extra={'interface_number': self.interface_number,
                                   'old_state': f"{old_state} ({old_state_name})" if old_state else "unknown",
                                   'new_state': f"{new_state} ({new_state_name})"})
-                
+
                 # Call the existing FSM handler which will handle state transitions
                 self.handle_modem_event(new_state, None)
             else:
@@ -902,7 +902,7 @@ class ModemStateMachine:
                 if changed_properties:
                     logger.debug(f"Other modem properties changed: {list(changed_properties.keys())}",
                                extra={'interface_number': self.interface_number})
-            
+
         except Exception as e:
             logger.error(f"Error handling modem properties changed signal: {e}",
                         extra={'interface_number': self.interface_number})
@@ -912,11 +912,11 @@ class ModemStateMachine:
         # ModemManager state values from the D-Bus API
         state_map = {
             -1: "FAILED",
-            0: "UNKNOWN", 
+            0: "UNKNOWN",
             1: "INITIALIZING",
             2: "LOCKED",
             3: "DISABLED",
-            4: "DISABLING", 
+            4: "DISABLING",
             5: "ENABLING",
             6: "ENABLED",
             7: "SEARCHING",
@@ -982,7 +982,7 @@ class ModemStateMachine:
         # Only process signals from the 3GPP interface
         if interface_name != "org.freedesktop.ModemManager1.Modem.Modem3gpp":
             return
-            
+
         logger.info("🌐 3GPP properties changed",
                    extra={'interface_number': self.interface_number,
                           'changed_properties': list(changed_properties.keys()) if changed_properties else 'None'})
@@ -994,7 +994,7 @@ class ModemStateMachine:
             logger.info("📡 Registration state changed",
                        extra={'interface_number': self.interface_number,
                               'registration_state': f"{reg_state} ({reg_state_name})"})
-            
+
             # Enhanced interface management: Consider both bearer AND registration state
             # Prevent concurrent registration handling to avoid D-Bus feedback loops
             if not self.registration_handling_in_progress:
@@ -1092,7 +1092,7 @@ class ModemStateMachine:
                 logger.info("Modem connected successfully, staying in CONNECTED state",
                            extra={'interface_number': self.interface_number})
                 self.transition(ModemEvent.CONNECTED)
-                
+
                 # Start network interface management
                 try:
                     if self.ensure_link_up_on_connect:
@@ -1101,7 +1101,7 @@ class ModemStateMachine:
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
-                
+
                 # Only start usage monitoring if data limits are configured
                 if self.config and self.config.get('data_limit_size'):
                     logger.info("Data usage limits configured, will start monitoring",
@@ -1113,7 +1113,7 @@ class ModemStateMachine:
                 else:
                     logger.info("No data usage limits configured, staying in CONNECTED state",
                                extra={'interface_number': self.interface_number})
-                    
+
             elif current_fsm_state == ModemState.CONNECTED.value:
                 # Already connected - connection is stable
                 logger.info("Already in CONNECTED state - connection stable",
@@ -1177,7 +1177,7 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number,
                                'event': event.value,
                                'current_state': self.machine.current_state})
-            
+
             # Handle invalid transitions from FAILED state by attempting recovery
             if self.machine.current_state == ModemState.FAILED.value:
                 if event == ModemEvent.CONNECTION_FAILED:
@@ -1201,7 +1201,7 @@ class ModemStateMachine:
         # Store previous config for selective disconnection logic
         if hasattr(self, 'config') and self.config:
             self._previous_config = self.config.copy()
-        
+
         self.config = config
 
         # 🔄 Extract configuration loading using safe extraction framework
@@ -1276,22 +1276,22 @@ class ModemStateMachine:
         """🔄 SAFE EXTRACTION: Load and parse configuration using new ConfigurationLoader"""
         # Load configuration using new loader
         self.parsed_config = self.config_loader.load_configuration(config)
-        
+
         # Validate configuration
         if not self.config_loader.validate_configuration(self.parsed_config):
             logger.error("Configuration validation failed",
                         extra={'interface_number': self.interface_number})
             return
-        
+
         # Apply parsed configuration to instance variables
         self._apply_parsed_configuration()
-        
+
         # Handle connectivity monitoring normalization
         if 'connectivity_monitoring' in config:
             config['connectivity_monitoring'] = self._normalize_connectivity_config(
                 config['connectivity_monitoring']
             )
-        
+
         # Log configuration applied
         active_sim_slot = config.get('active_sim_slot', 1)
         logger.info("Configuration applied",
@@ -1305,7 +1305,7 @@ class ModemStateMachine:
 
     def _load_configuration_safe_original(self, config: dict):
         """🏗️ ORIGINAL: Legacy configuration loading (for comparison)"""
-        # 🆕 Initialize Enhanced Reconnection Strategy Configuration  
+        # 🆕 Initialize Enhanced Reconnection Strategy Configuration
         enhanced_value = config.get('enhanced_reconnection', 'enabled')
         if isinstance(enhanced_value, dict):
             self.enhanced_reconnection = enhanced_value.get('enabled', 'enabled').lower() == 'enabled' if isinstance(enhanced_value.get('enabled'), str) else bool(enhanced_value.get('enabled', True))
@@ -1329,12 +1329,12 @@ class ModemStateMachine:
         self.monitor_bearer_state = self.interface_management.get('monitor_bearer_state', True)
         self.monitor_ip_changes = self.interface_management.get('monitor_ip_changes', True)
         self.interface_up_timeout = self.interface_management.get('interface_up_timeout', 10)
-        
+
         # Initialize network interface management state
         self._bearer_disconnect_timer = None
         self._last_known_ip = None
         self._ip_monitoring_task = None
-        
+
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None
         self._bearer_interface = None
@@ -1377,12 +1377,12 @@ class ModemStateMachine:
         self.monitor_bearer_state = self.parsed_config.interface_management.monitor_bearer_state
         self.monitor_ip_changes = self.parsed_config.interface_management.monitor_ip_changes
         self.interface_up_timeout = self.parsed_config.interface_management.interface_up_timeout
-        
+
         # Initialize network interface management state
         self._bearer_disconnect_timer = None
         self._last_known_ip = None
         self._ip_monitoring_task = None
-        
+
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None
         self._bearer_interface = None
@@ -1397,7 +1397,7 @@ class ModemStateMachine:
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
             state_variant = await props.call_get(MODEM_INTERFACE, "State")
             state = state_variant.value
-            
+
             # Only reset if modem is actually connected (abnormal startup condition)
             # States: 4=DISABLED, 6=ENABLING, 7=ENABLED, 8=SEARCHING, 9=REGISTERED, 11=CONNECTING, 12=CONNECTED
             if state >= 11:  # Only CONNECTING or CONNECTED states need reset
@@ -1405,7 +1405,7 @@ class ModemStateMachine:
                               extra={'interface_number': self.interface_number,
                                      'modem_state': state,
                                      'reason': 'Service should manage connections, not inherit existing ones'})
-                
+
                 # Strategy 1: Gentle disable-enable cycle (preserves USB/QMI interface)
                 try:
                     success = await self._try_gentle_reset()
@@ -1425,7 +1425,7 @@ class ModemStateMachine:
                                        extra={'interface_number': self.interface_number})
                             # Give modem proper time to boot up - modems can take 2+ minutes
                             await asyncio.sleep(30)  # Initial wait for hardware initialization
-                            
+
                             # Re-scan for modem after reset with patient timeout
                             self.proxy = None  # Clear old proxy
                             # scan_for_modem() has built-in exponential backoff and will wait patiently
@@ -1433,7 +1433,7 @@ class ModemStateMachine:
                         else:
                             logger.warning("Skipping hardware reset after gentle reset failure due to cooldown",
                                          extra={'interface_number': self.interface_number})
-                    
+
                 except Exception as reset_error:
                     logger.error(f"Hardware reset failed: {reset_error}",
                                 extra={'interface_number': self.interface_number})
@@ -1465,31 +1465,31 @@ class ModemStateMachine:
 
             logger.info("Initial modem configuration complete",
                        extra={'interface_number': self.interface_number})
-            
+
             # Automatically proceed to connection since signal handlers are disabled
             logger.info("Automatically proceeding to connection phase",
                        extra={'interface_number': self.interface_number})
             self.transition(ModemEvent.CONNECT)
-            
+
             # Debug: Log current configuration
             logger.info(f"Current config keys: {list(self.config.keys()) if self.config else 'No config'}",
                         extra={'interface_number': self.interface_number})
             if self.config:
                 logger.info(f"Config structure: {self.config}",
                            extra={'interface_number': self.interface_number})
-            
+
             # Proper APN connection priority order:
             # 1. Try APNs from colleague's discovery service
-            # 2. Try automatic network-provided APN  
+            # 2. Try automatic network-provided APN
             # 3. Fallback to configured APN as customer override
-            
+
             logger.info("Starting APN connection attempts with proper priority order",
                        extra={'interface_number': self.interface_number})
-            
+
             # Get SIM config for connection parameters
             active_slot = self.config.get('active_sim_slot', 1) if self.config else 1
             sim_config = {'pdp_type': 'ipv4', 'roaming': 'disabled'}  # defaults
-            
+
             if self.config and 'sim_slots' in self.config:
                 for slot in self.config['sim_slots']:
                     if slot['slot'] == active_slot:
@@ -1498,9 +1498,9 @@ class ModemStateMachine:
                             'roaming': slot.get('roaming', 'disabled')
                         }
                         break
-            
+
             connection_successful = False
-            
+
             # Get current SIM information and check for SIM changes
             sim_info = await self._get_sim_information()
             if not sim_info:
@@ -1509,7 +1509,7 @@ class ModemStateMachine:
                 sim_changed = False
             else:
                 sim_changed = await self._check_sim_change(sim_info)
-            
+
             # PRIORITY 1: Try configured APN first (highest priority) - unless SIM changed
             if not sim_changed and self.config and 'sim_slots' in self.config:
                 active_sim = None
@@ -1517,19 +1517,19 @@ class ModemStateMachine:
                     if slot['slot'] == active_slot:
                         active_sim = slot
                         break
-                
+
                 if active_sim and active_sim.get('apn'):
                     logger.info("Attempting connection with configured APN (highest priority)",
                                extra={'interface_number': self.interface_number,
                                       'configured_apn': active_sim['apn']})
-                    
+
                     apn_config = {
                         'name': active_sim['apn'],
                         'username': active_sim.get('username', ''),
                         'password': active_sim.get('password', ''),
                         'auth_type': active_sim.get('auth_type', 'none')
                     }
-                    
+
                     try:
                         success = await self._try_connection_with_apn(apn_config, sim_config)
                         if success:
@@ -1537,10 +1537,10 @@ class ModemStateMachine:
                     except Exception as e:
                         logger.warning(f"Configured APN failed: {e}",
                                      extra={'interface_number': self.interface_number})
-            
+
             # PRIORITY 1.5: If SIM changed, skip cached APNs and go straight to discovery
             # This ensures fresh discovery when user changes SIM cards
-            
+
             # PRIORITY 2: Try cached successful APN (unless SIM changed)
             if not connection_successful and not sim_changed and sim_info:
                 cached_apn = await self._get_cached_successful_apn(sim_info)
@@ -1558,7 +1558,7 @@ class ModemStateMachine:
                     except Exception as e:
                         logger.warning(f"Cached APN failed: {e}",
                                       extra={'interface_number': self.interface_number})
-            
+
             # PRIORITY 3: Try APNs from discovery service
             if not connection_successful and self.config and self.config.get('android_apn_discovery') == 'enabled':
                 logger.info("Attempting connection using APN discovery service",
@@ -1571,7 +1571,7 @@ class ModemStateMachine:
                 except Exception as e:
                     logger.warning(f"APN discovery service failed: {e}",
                                  extra={'interface_number': self.interface_number})
-            
+
             # PRIORITY 3: Try automatic network-provided APN (lowest priority)
             if not connection_successful:
                 logger.info("Attempting automatic APN assignment from network",
@@ -1583,11 +1583,11 @@ class ModemStateMachine:
                 except Exception as e:
                     logger.warning(f"Automatic APN assignment failed: {e}",
                                  extra={'interface_number': self.interface_number})
-            
+
             if connection_successful:
                 logger.info("Connection established successfully, transitioning to CONNECTED state",
                            extra={'interface_number': self.interface_number})
-                
+
                 # Update SIM info after successful connection for future change detection
                 if sim_info:
                     self.last_known_sim_info = sim_info.copy()
@@ -1596,15 +1596,15 @@ class ModemStateMachine:
                                 extra={'interface_number': self.interface_number,
                                        'operator': sim_info.get('operator_name', 'Unknown'),
                                        'mcc_mnc': sim_info.get('mcc_mnc', 'Unknown')})
-                
+
                 # Transition to CONNECTED and stay there for event-driven monitoring
                 self.transition(ModemEvent.CONNECTED)
                 logger.info("Connected - staying in CONNECTED state for event-driven monitoring",
                            extra={'interface_number': self.interface_number})
-                
+
                 # Apply bearer IP configuration to interface (VyOS responsibility)
                 await self._apply_bearer_ip_configuration()
-                
+
                 # Start network interface management
                 try:
                     if self.ensure_link_up_on_connect:
@@ -1613,7 +1613,7 @@ class ModemStateMachine:
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
-                
+
                 # Only start data usage monitoring if limits are configured
                 if self.config and self.config.get('data_limit_size'):
                     logger.info("Data usage limits configured, starting data monitoring",
@@ -2004,29 +2004,29 @@ class ModemStateMachine:
             # Check power state first - modem needs to be powered on before enabling
             power_state_variant = await props.call_get(MODEM_INTERFACE, "PowerState")
             power_state = power_state_variant.value
-            
+
             # PowerState: 0=unknown, 1=off, 2=low, 3=on
             if power_state == 1:  # Power is off
                 logger.info(f"Modem power is off, powering on first...",
                            extra={'interface_number': self.interface_number})
-                
+
                 iface = self.proxy.get_interface(MODEM_INTERFACE)
                 try:
                     # Power on the modem first
                     await iface.call_set_power_state(2)  # 2 = low power (sufficient for enable)
                     await asyncio.sleep(3)  # Wait for power to stabilize
-                    
+
                     # Check if power state changed
                     power_state_variant = await props.call_get(MODEM_INTERFACE, "PowerState")
                     new_power_state = power_state_variant.value
                     logger.info(f"Power state after power-on: {new_power_state}",
                                extra={'interface_number': self.interface_number})
-                               
+
                 except Exception as power_error:
                     logger.warning(f"Failed to power on modem: {power_error}",
                                   extra={'interface_number': self.interface_number})
                     # Continue anyway - maybe it will work
-            
+
             logger.info(f"Modem is disabled, enabling... (timeout: {timeout_seconds}s)",
                        extra={'interface_number': self.interface_number})
 
@@ -2319,7 +2319,7 @@ class ModemStateMachine:
                     # SIM is present but locked - attempt unlock instead of failover
                     self.transition(ModemEvent.SIM_LOCKED)
                     return
-                    
+
             # No SIM in configured slot - treat as missing
             logger.info("SIM actually missing from configured slot",
                        extra={'interface_number': self.interface_number,
@@ -2474,11 +2474,11 @@ class ModemStateMachine:
 
         # Re-scan using same logic as initial scan with patience
         target_modem_id = f"modem{self.interface_number}"
-        
+
         try:
             # Try multiple times with increasing delays - modems can take 2+ minutes to boot
             max_attempts = 24  # 24 attempts over ~2 minutes
-            
+
             for attempt in range(1, max_attempts + 1):
                 try:
                     msg = Message(
@@ -2508,10 +2508,10 @@ class ModemStateMachine:
                                 if physdev_uid == target_modem_id:
                                     self.proxy = proxy
                                     self.modem_path = path
-                                    
+
                                     # Set proxy for connection manager
                                     self.connection_manager.set_proxy(proxy)
-                                    
+
                                     # Enable signal monitoring for accurate dBm readings
                                     await self._enable_signal_monitoring()
 
@@ -2524,14 +2524,14 @@ class ModemStateMachine:
 
                             except Exception:
                                 continue
-                                
+
                     # Not found yet, wait before next attempt (if not last attempt)
                     if attempt < max_attempts:
-                        wait_time = min(5 + (attempt * 0.5), 10)  # 5-10 seconds between attempts  
+                        wait_time = min(5 + (attempt * 0.5), 10)  # 5-10 seconds between attempts
                         logger.debug(f"Modem not found after reset, attempt {attempt}/{max_attempts}, waiting {wait_time}s",
                                    extra={'interface_number': self.interface_number})
                         await asyncio.sleep(wait_time)
-                        
+
                 except Exception as e:
                     logger.debug(f"D-Bus error during rescan attempt {attempt}: {e}",
                                extra={'interface_number': self.interface_number})
@@ -2539,7 +2539,7 @@ class ModemStateMachine:
                         await asyncio.sleep(5)
 
             raise Exception("Modem not found after reset - exhausted all attempts")
-            
+
         except Exception as e:
             logger.error(f"Failed to re-scan for modem after reset: {e}",
                         extra={'interface_number': self.interface_number})
@@ -2921,7 +2921,7 @@ class ModemStateMachine:
         """Determine if configuration changes require bearer disconnection"""
         if not old_config:
             return False  # First-time configuration doesn't need disconnection
-        
+
         # Connection-affecting parameters that require disconnection
         connection_params = [
             'active_sim_slot',
@@ -2929,7 +2929,7 @@ class ModemStateMachine:
             'supported_bands',
             'network_mode'
         ]
-        
+
         # Check basic connection parameters
         for param in connection_params:
             if old_config.get(param) != new_config.get(param):
@@ -2943,33 +2943,33 @@ class ModemStateMachine:
                     logger.info(f"Connection parameter '{param}' changed - disconnection required",
                                extra={'interface_number': self.interface_number, 'param': param})
                     return True
-        
+
         logger.info("Only monitoring/timer parameters changed - no disconnection needed",
                    extra={'interface_number': self.interface_number})
         return False
-    
+
     def _sim_connection_params_changed(self, old_sim_slots, new_sim_slots):
         """Check if SIM connection parameters (APN, auth, etc.) changed"""
         # Convert to dict by slot for easier comparison
         old_slots = {slot['slot']: slot for slot in old_sim_slots}
         new_slots = {slot['slot']: slot for slot in new_sim_slots}
-        
+
         # Connection-affecting SIM parameters
         connection_sim_params = ['apn', 'username', 'password', 'auth_type', 'pdp_type', 'roaming']
-        
+
         for slot_num in set(old_slots.keys()) | set(new_slots.keys()):
             old_slot = old_slots.get(slot_num, {})
             new_slot = new_slots.get(slot_num, {})
-            
+
             for param in connection_sim_params:
                 if old_slot.get(param) != new_slot.get(param):
                     logger.info(f"SIM slot {slot_num} connection parameter '{param}' changed",
-                               extra={'interface_number': self.interface_number, 
+                               extra={'interface_number': self.interface_number,
                                       'slot': slot_num, 'param': param,
                                       'old_value': old_slot.get(param),
                                       'new_value': new_slot.get(param)})
                     return True
-        
+
         return False
 
     async def _reconfigure_modem(self):
@@ -2980,16 +2980,16 @@ class ModemStateMachine:
         # Check if we need to disconnect for this configuration change
         old_config = getattr(self, '_previous_config', {})
         needs_disconnect = self._requires_disconnection(old_config, self.config)
-        
+
         if needs_disconnect and self.machine.current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
             logger.info("Disconnecting for connection parameter changes",
                        extra={'interface_number': self.interface_number})
             await self._disconnect_bearer()
-            
+
             # Reconfigure connection-affecting parameters
             await self._configure_sim_slot()
             await self._configure_supported_bands()
-            
+
             # After reconfiguration, attempt reconnection
             logger.info("Reconnecting with updated configuration",
                        extra={'interface_number': self.interface_number})
@@ -2999,7 +2999,7 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number})
             # For non-connection changes, just update internal state
             # The FSM will continue in its current state with updated parameters
-        
+
         # Store current config for future comparisons
         self._previous_config = self.config.copy() if self.config else {}
 
@@ -3122,7 +3122,7 @@ class ModemStateMachine:
             sim_path_variant = await props.call_get(MODEM_INTERFACE, "Sim")
             if not sim_path_variant:
                 return None
-            
+
             # Extract the actual path from the Variant
             sim_path = sim_path_variant.value if hasattr(sim_path_variant, 'value') else sim_path_variant
             if not sim_path or sim_path == '/':
@@ -3139,7 +3139,7 @@ class ModemStateMachine:
             imsi_variant = await sim_props.call_get(sim_interface, "Imsi")
             operator_name_variant = await sim_props.call_get(sim_interface, "OperatorName")
             sim_identifier_variant = await sim_props.call_get(sim_interface, "SimIdentifier")
-            
+
             # Extract values from Variants
             imsi = imsi_variant.value if hasattr(imsi_variant, 'value') else imsi_variant
             operator_name = operator_name_variant.value if hasattr(operator_name_variant, 'value') else operator_name_variant
@@ -3287,7 +3287,7 @@ class ModemStateMachine:
 
         return candidates
 
-    @safe_extraction('_convert_android_apns')  
+    @safe_extraction('_convert_android_apns')
     def _convert_android_apns(self, android_apns, sim_info):
         """NEW: Convert Android APN format using extracted utility"""
         return convert_android_apns(android_apns, sim_info)
@@ -3390,10 +3390,10 @@ class ModemStateMachine:
         """🔄 SAFE EXTRACTION: Try APN candidates using new ConnectionManager"""
         # Set proxy for connection manager
         self.connection_manager.set_proxy(self.proxy)
-        
+
         # Use the extracted connection manager
         success = await self.connection_manager.try_apn_candidates(candidates, sim_config, sim_info)
-        
+
         if success:
             # Update bearer path for backward compatibility
             self.bearer_path = self.connection_manager.get_current_bearer_path()
@@ -3462,14 +3462,14 @@ class ModemStateMachine:
         """🔄 SAFE EXTRACTION: Try connection using new ConnectionManager"""
         # Set proxy for connection manager
         self.connection_manager.set_proxy(self.proxy)
-        
+
         # Use the extracted connection manager
         success = await self.connection_manager.try_connection_with_apn(apn_config, sim_config)
-        
+
         if success:
             # Update bearer path for backward compatibility
             self.bearer_path = self.connection_manager.get_current_bearer_path()
-        
+
         return success
 
     async def _try_connection_with_apn_original(self, apn_config, sim_config):
@@ -3737,7 +3737,7 @@ class ModemStateMachine:
                 logger.warning("No current SIM info available for change detection",
                               extra={'interface_number': self.interface_number})
                 return False
-            
+
             # If we have no previous SIM info, this is first run - save current info
             if not self.last_known_sim_info:
                 logger.info("First SIM detection - saving SIM info",
@@ -3748,41 +3748,41 @@ class ModemStateMachine:
                 self.last_known_sim_info = current_sim_info.copy()
                 self.sim_changed = False
                 return False
-            
+
             # Compare key SIM identifiers
             current_imsi = current_sim_info.get('imsi', '')
             current_mcc_mnc = current_sim_info.get('mcc_mnc', '')
             current_operator = current_sim_info.get('operator_name', '')
-            
+
             last_imsi = self.last_known_sim_info.get('imsi', '')
             last_mcc_mnc = self.last_known_sim_info.get('mcc_mnc', '')
             last_operator = self.last_known_sim_info.get('operator_name', '')
-            
+
             # Check for changes in IMSI (most reliable) or MCC/MNC
             sim_changed = False
             change_reasons = []
-            
+
             if current_imsi != last_imsi and current_imsi and last_imsi:
                 sim_changed = True
                 change_reasons.append(f"IMSI changed")
-            
+
             if current_mcc_mnc != last_mcc_mnc and current_mcc_mnc and last_mcc_mnc:
                 sim_changed = True
                 change_reasons.append(f"MCC/MNC changed from {last_mcc_mnc} to {current_mcc_mnc}")
-            
+
             if current_operator != last_operator and current_operator and last_operator:
                 # Operator name change alone might not indicate SIM change (roaming)
                 # but combined with other changes it's significant
                 if sim_changed:
                     change_reasons.append(f"Operator changed from {last_operator} to {current_operator}")
-            
+
             if sim_changed:
                 logger.warning("SIM card change detected - will use fresh APN discovery",
                               extra={'interface_number': self.interface_number,
                                      'changes': ', '.join(change_reasons),
                                      'current_operator': current_operator,
                                      'previous_operator': last_operator})
-                
+
                 # Update stored SIM info
                 self.last_known_sim_info = current_sim_info.copy()
                 self.sim_changed = True
@@ -3794,7 +3794,7 @@ class ModemStateMachine:
                                    'mcc_mnc': current_mcc_mnc})
                 self.sim_changed = False
                 return False
-                
+
         except Exception as e:
             logger.error(f"Error checking SIM change: {e}",
                         extra={'interface_number': self.interface_number})
@@ -3892,10 +3892,10 @@ class ModemStateMachine:
             # Check if bearer is connected - FIX: Extract .value from Variant
             connected_variant = await props.call_get(BEARER_INTERFACE, "Connected")
             connected = connected_variant.value
-            
+
             interface_variant = await props.call_get(BEARER_INTERFACE, "Interface")
             interface_name = interface_variant.value
-            
+
             # Store interface name for later use in interface management
             self.interface_name = interface_name
 
@@ -3950,7 +3950,7 @@ class ModemStateMachine:
         data_limit = self.config.get('data_limit_size', 0)
         data_action = self.config.get('data_limit_action', 'alert')
         billing_date = self.config.get('data_limit_billing_date', '2024-01-01')
-        
+
         if not data_limit:
             logger.info("No data usage limit configured",
                        extra={'interface_number': self.interface_number})
@@ -3970,7 +3970,7 @@ class ModemStateMachine:
                     introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.bearer_path)
                     proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.bearer_path, introspect)
                     props = proxy.get_interface("org.freedesktop.DBus.Properties")
-                    
+
                     # Try to get statistics (may not be available on all modems)
                     try:
                         stats_variant = await props.call_get(BEARER_INTERFACE, "Stats")
@@ -3979,14 +3979,14 @@ class ModemStateMachine:
                             rx_bytes = stats.get('rx-bytes', 0)
                             tx_bytes = stats.get('tx-bytes', 0)
                             total_bytes = rx_bytes + tx_bytes
-                            
+
                             logger.info("Data usage check",
                                        extra={'interface_number': self.interface_number,
                                               'total_mb': total_bytes / (1024*1024),
                                               'rx_mb': rx_bytes / (1024*1024),
                                               'tx_mb': tx_bytes / (1024*1024),
                                               'limit_gb': data_limit / (1024*1024*1024)})
-                            
+
                             # Check if limit exceeded
                             if total_bytes >= data_limit:
                                 logger.warning("Data usage limit exceeded",
@@ -3994,7 +3994,7 @@ class ModemStateMachine:
                                                     'usage_gb': total_bytes / (1024*1024*1024),
                                                     'limit_gb': data_limit / (1024*1024*1024),
                                                     'action': data_action})
-                                
+
                                 if data_action == 'disconnect':
                                     # Transition to USAGE_MONITORING for limit handling
                                     self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
@@ -4006,18 +4006,18 @@ class ModemStateMachine:
                         else:
                             logger.debug("Bearer statistics not available",
                                        extra={'interface_number': self.interface_number})
-                    
+
                     except Exception as stats_e:
                         logger.debug(f"Could not retrieve bearer statistics: {stats_e}",
                                    extra={'interface_number': self.interface_number})
-                    
+
                     await asyncio.sleep(60)  # Check every minute for data usage
-                    
+
                 except Exception as e:
                     logger.error(f"Data usage monitoring error: {e}",
                                extra={'interface_number': self.interface_number})
                     await asyncio.sleep(60)
-                    
+
         except Exception as e:
             logger.error(f"Failed to initialize data usage monitoring: {e}",
                         extra={'interface_number': self.interface_number})
@@ -4044,7 +4044,7 @@ class ModemStateMachine:
             if not signal_adequate:
                 logger.warning("Signal inadequate for reconnection - waiting for improvement",
                               extra={'interface_number': self.interface_number})
-                
+
                 # Wait for signal improvement with timeout
                 # 🆕 Enhanced: Wait for adequate signal before reconnection
                 if not await self._wait_for_adequate_signal():  # Uses configurable timeout
@@ -4103,35 +4103,35 @@ class ModemStateMachine:
         try:
             # Give the interface a moment to come up
             await asyncio.sleep(1)
-            
+
             logger.info("🔄 Checking bearer status after registration recovery",
                        extra={'interface_number': self.interface_number})
-            
+
             # Check if bearer is already connected
             is_connected = await self._is_bearer_connected()
-            
+
             if is_connected:
                 logger.info("✅ Bearer already connected after registration recovery",
                            extra={'interface_number': self.interface_number})
                 # Apply IP configuration from existing bearer
                 await self._apply_bearer_ip_configuration()
                 return True
-            
+
             logger.info("🔌 Bearer not connected - initiating reconnection after registration recovery",
                        extra={'interface_number': self.interface_number})
-            
+
             # Use the existing enhanced reconnection logic
             success = await self._enhanced_reconnection_attempt()
-            
+
             if success:
                 logger.info("✅ Bearer reconnection successful after registration recovery",
                            extra={'interface_number': self.interface_number})
             else:
                 logger.warning("⚠️ Bearer reconnection failed after registration recovery",
                               extra={'interface_number': self.interface_number})
-                
+
             return success
-            
+
         except Exception as e:
             logger.error(f"Error handling registration recovery: {e}",
                         extra={'interface_number': self.interface_number})
@@ -4143,21 +4143,21 @@ class ModemStateMachine:
             # If enhanced reconnection is disabled, always return True
             if not getattr(self, 'enhanced_reconnection', True):
                 return True
-            
+
             # Use enhanced reconnection configuration
             min_signal_dbm = getattr(self, 'reconnection_signal_threshold', -85)
             buffer_dbm = getattr(self, 'signal_strength_buffer', 5)
             effective_threshold = min_signal_dbm - buffer_dbm
-            
+
             signal_percent, signal_dbm = await self._get_detailed_signal_quality()
-            
+
             if signal_percent is None or signal_dbm is None:
                 logger.warning("Cannot read signal strength - assuming adequate for reconnection",
                               extra={'interface_number': self.interface_number})
                 return True
-            
+
             adequate = signal_dbm >= effective_threshold
-            
+
             logger.info("Enhanced signal adequacy check for reconnection",
                        extra={'interface_number': self.interface_number,
                               'signal_percent': signal_percent,
@@ -4166,14 +4166,14 @@ class ModemStateMachine:
                               'effective_threshold': effective_threshold,
                               'buffer_dbm': buffer_dbm,
                               'adequate': adequate})
-            
+
             return adequate
-            
+
         except Exception as e:
             logger.error(f"Signal adequacy check failed: {e}",
                         extra={'interface_number': self.interface_number})
             return True  # Assume adequate if check fails
-    
+
     async def _enable_signal_monitoring(self):
         """Enable ModemManager signal monitoring for accurate dBm readings"""
         try:
@@ -4181,33 +4181,33 @@ class ModemStateMachine:
                 logger.warning("Cannot enable signal monitoring - no modem proxy",
                              extra={'interface_number': self.interface_number})
                 return False
-                
+
             # Use the Signal interface to setup signal monitoring
             # This is equivalent to: mmcli -m 0 --signal-setup=5
             signal_interface = self.proxy.get_interface("org.freedesktop.ModemManager1.Modem.Signal")
-            
+
             # Setup signal monitoring with 5-second refresh rate
             await signal_interface.call_setup(5)  # 5 seconds refresh rate
-            
+
             logger.info("Signal monitoring enabled (5-second refresh)",
                        extra={'interface_number': self.interface_number})
             return True
-            
+
         except Exception as e:
             logger.warning(f"Could not enable signal monitoring: {e}",
                          extra={'interface_number': self.interface_number})
             logger.debug("Signal quality will fall back to percentage-based estimation",
                         extra={'interface_number': self.interface_number})
             return False
-    
+
     async def _get_detailed_signal_quality(self):
         """Get detailed signal quality metrics using actual dBm readings"""
         try:
             if not self.proxy:
                 return None, None
-                
+
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-            
+
             # Get signal quality percentage (for backwards compatibility)
             signal_percent = 0
             try:
@@ -4219,7 +4219,7 @@ class ModemStateMachine:
             except Exception as e:
                 logger.debug(f"Could not get signal quality percentage: {e}",
                            extra={'interface_number': self.interface_number})
-            
+
             # Get actual dBm readings from Signal interface
             signal_dbm = None
             try:
@@ -4227,7 +4227,7 @@ class ModemStateMachine:
                 lte_signal_variant = await props.call_get("org.freedesktop.ModemManager1.Modem.Signal", "Lte")
                 if lte_signal_variant and lte_signal_variant.value:
                     lte_signals = lte_signal_variant.value
-                    
+
                     # Try RSSI first (most common)
                     if 'rssi' in lte_signals:
                         signal_dbm = lte_signals['rssi'].value
@@ -4238,7 +4238,7 @@ class ModemStateMachine:
                         signal_dbm = lte_signals['rsrp'].value
                         logger.debug(f"Got RSRP signal: {signal_dbm} dBm",
                                    extra={'interface_number': self.interface_number})
-                    
+
                 # Try other technologies if LTE not available
                 if signal_dbm is None:
                     # Try 5G NR signals first (most modern)
@@ -4257,7 +4257,7 @@ class ModemStateMachine:
                                            extra={'interface_number': self.interface_number})
                     except:
                         pass
-                        
+
                     # Try UMTS signals (3G)
                     if signal_dbm is None:
                         try:
@@ -4274,7 +4274,7 @@ class ModemStateMachine:
                                                extra={'interface_number': self.interface_number})
                         except:
                             pass
-                    
+
                     # Try GSM signals (2G)
                     if signal_dbm is None:
                         try:
@@ -4287,7 +4287,7 @@ class ModemStateMachine:
                                                extra={'interface_number': self.interface_number})
                         except:
                             pass
-                            
+
                     # Try CDMA signals (2G CDMA)
                     if signal_dbm is None:
                         try:
@@ -4300,7 +4300,7 @@ class ModemStateMachine:
                                                extra={'interface_number': self.interface_number})
                         except:
                             pass
-                            
+
                     # Try EVDO signals (3G CDMA)
                     if signal_dbm is None:
                         try:
@@ -4313,11 +4313,11 @@ class ModemStateMachine:
                                                extra={'interface_number': self.interface_number})
                         except:
                             pass
-                            
+
             except Exception as e:
                 logger.debug(f"Could not access Signal interface: {e}",
                            extra={'interface_number': self.interface_number})
-            
+
             # Fall back to percentage-based estimation if no dBm available
             if signal_dbm is None:
                 logger.debug("Using percentage-based dBm estimation as fallback",
@@ -4325,51 +4325,51 @@ class ModemStateMachine:
                 if signal_percent > 80:
                     signal_dbm = -60
                 elif signal_percent > 60:
-                    signal_dbm = -70  
+                    signal_dbm = -70
                 elif signal_percent > 40:
                     signal_dbm = -80
                 elif signal_percent > 20:
                     signal_dbm = -90
                 else:
                     signal_dbm = -100
-                
+
             return signal_percent, signal_dbm
-            
+
         except Exception as e:
             logger.error(f"Failed to get detailed signal quality: {e}",
                         extra={'interface_number': self.interface_number})
             return None, None
-    
+
     async def _wait_for_adequate_signal(self, max_wait=None):
         """Wait for signal to improve before attempting reconnection"""
         if max_wait is None:
             max_wait = getattr(self, 'max_wait_for_signal', 120)
         check_interval = getattr(self, 'signal_check_interval', 10)
-        
+
         start_time = time.time()
-        
+
         logger.info("Waiting for signal improvement before reconnection",
                    extra={'interface_number': self.interface_number,
                           'max_wait': max_wait,
                           'check_interval': check_interval})
-        
+
         while time.time() - start_time < max_wait:
             if await self._check_signal_adequacy_for_reconnection():
                 elapsed = time.time() - start_time
                 logger.info(f"Signal improved after {elapsed:.1f}s - ready for reconnection",
                            extra={'interface_number': self.interface_number})
                 return True
-            
+
             elapsed = time.time() - start_time
             logger.debug(f"Signal still inadequate after {elapsed:.0f}s - continuing to wait",
                         extra={'interface_number': self.interface_number})
-            
+
             await asyncio.sleep(check_interval)
-        
+
         logger.warning(f"Signal did not improve within {max_wait}s timeout",
                       extra={'interface_number': self.interface_number})
         return False
-    
+
     async def _enhanced_reconnection_attempt(self):
         """Enhanced reconnection with signal validation and faster timing"""
         try:
@@ -4381,7 +4381,7 @@ class ModemStateMachine:
             else:
                 logger.warning("Attempting reconnection despite inadequate signal",
                               extra={'interface_number': self.interface_number})
-            
+
             # Disconnect current bearer if it exists
             if self.bearer_path:
                 try:
@@ -4393,13 +4393,13 @@ class ModemStateMachine:
                 except Exception as disconnect_e:
                     logger.warning(f"Could not disconnect existing bearer: {disconnect_e}",
                                   extra={'interface_number': self.interface_number})
-            
+
             # Attempt reconnection
             await self.apply_modem_configuration()
             logger.info("Enhanced reconnection attempt completed",
                        extra={'interface_number': self.interface_number})
             return True
-            
+
         except Exception as e:
             logger.error(f"Enhanced reconnection attempt failed: {e}",
                         extra={'interface_number': self.interface_number})
@@ -4933,14 +4933,14 @@ class ModemStateMachine:
                 logger.info(f"Setting interface {interface_name} UP",
                            extra={'interface_number': self.interface_number,
                                   'interface': interface_name})
-                
+
                 # Set interface UP
                 result = await asyncio.create_subprocess_exec(
                     'ip', 'link', 'set', interface_name, 'up',
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
-                stdout, stderr = await asyncio.wait_for(result.communicate(), 
+                stdout, stderr = await asyncio.wait_for(result.communicate(),
                                                        timeout=self.interface_up_timeout)
 
                 if result.returncode == 0:
@@ -4976,7 +4976,7 @@ class ModemStateMachine:
             logger.info(f"Setting interface {interface_name} DOWN",
                        extra={'interface_number': self.interface_number,
                               'interface': interface_name})
-            
+
             result = await asyncio.create_subprocess_exec(
                 'ip', 'link', 'set', interface_name, 'down',
                 stdout=asyncio.subprocess.PIPE,
@@ -5015,11 +5015,11 @@ class ModemStateMachine:
             # This matches the systemd.link configuration that ensures consistent naming
             # regardless of ModemManager's dynamic modem numbering (modem0, modem1, etc.)
             expected_name = f"wwan{self.interface_number}"
-            
+
             # Verify the expected interface exists
             if os.path.exists(f'/sys/class/net/{expected_name}'):
                 return expected_name
-            
+
             # Fallback: Find any available wwan interface if expected one doesn't exist
             result = await asyncio.create_subprocess_exec(
                 'ls', '/sys/class/net/',
@@ -5027,17 +5027,17 @@ class ModemStateMachine:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await result.communicate()
-            
+
             if result.returncode == 0:
                 interfaces = stdout.decode().strip().split('\n')
                 wwan_interfaces = [iface for iface in interfaces if iface.startswith('wwan')]
-                
+
                 # For simplicity, use the interface number to match
                 # wwan0 for interface 0, wwan1 for interface 1, etc.
                 expected_name = f"wwan{self.interface_number}"
                 if expected_name in wwan_interfaces:
                     return expected_name
-                
+
                 # If expected name not found, use first available wwan interface
                 if wwan_interfaces:
                     logger.info(f"Using first available wwan interface: {wwan_interfaces[0]}",
@@ -5069,7 +5069,7 @@ class ModemStateMachine:
                 lines = stdout.decode().split('\n')
                 ipv4 = None
                 ipv6 = None
-                
+
                 for line in lines:
                     line = line.strip()
                     if 'inet ' in line and 'scope global' in line and not ipv4:
@@ -5092,7 +5092,7 @@ class ModemStateMachine:
                                     if not ipv6 or ('temporary' not in line and ipv6 and 'temporary' in str(ipv6)):
                                         ipv6 = current_ipv6
                                     break
-                
+
                 return {'ipv4': ipv4, 'ipv6': ipv6}
             else:
                 return None
@@ -5106,20 +5106,20 @@ class ModemStateMachine:
         """Check if two IPv6 addresses are in the same subnet (typically /64 for SLAAC)"""
         try:
             import ipaddress
-            
+
             if not ip1 or not ip2:
                 return False
-                
+
             addr1 = ipaddress.IPv6Address(ip1)
             addr2 = ipaddress.IPv6Address(ip2)
-            
+
             # Create networks with the specified prefix length
             net1 = ipaddress.IPv6Network(f"{addr1}/{prefix_len}", strict=False)
             net2 = ipaddress.IPv6Network(f"{addr2}/{prefix_len}", strict=False)
-            
+
             # Check if they're in the same network
             return net1.network_address == net2.network_address
-            
+
         except Exception as e:
             logger.debug(f"IPv6 subnet comparison error: {e}",
                         extra={'interface_number': self.interface_number,
@@ -5131,13 +5131,13 @@ class ModemStateMachine:
         try:
             if not hasattr(self, 'bearer_path') or not self.bearer_path:
                 return None
-                
+
             introspect = await self.bus.introspect('org.freedesktop.ModemManager1', self.bearer_path)
             bearer_proxy = self.bus.get_proxy_object('org.freedesktop.ModemManager1', self.bearer_path, introspect)
             bearer_props = bearer_proxy.get_interface('org.freedesktop.DBus.Properties')
-            
+
             result = {}
-            
+
             # Get IPv4 configuration
             try:
                 ipv4_config_variant = await bearer_props.call_get('org.freedesktop.ModemManager1.Bearer', 'Ip4Config')
@@ -5166,7 +5166,7 @@ class ModemStateMachine:
             except Exception as e:
                 logger.debug(f"Could not get IPv4 config from bearer: {e}",
                            extra={'interface_number': self.interface_number})
-            
+
             # Get IPv6 configuration
             try:
                 ipv6_config_variant = await bearer_props.call_get('org.freedesktop.ModemManager1.Bearer', 'Ip6Config')
@@ -5195,9 +5195,9 @@ class ModemStateMachine:
             except Exception as e:
                 logger.debug(f"Could not get IPv6 config from bearer: {e}",
                            extra={'interface_number': self.interface_number})
-            
+
             return result if result else None
-            
+
         except Exception as e:
             logger.error(f"Error getting bearer expected IPs: {e}",
                         extra={'interface_number': self.interface_number})
@@ -5208,14 +5208,14 @@ class ModemStateMachine:
         try:
             if not hasattr(self, 'bearer_path') or not self.bearer_path:
                 return False
-                
+
             introspect = await self.bus.introspect('org.freedesktop.ModemManager1', self.bearer_path)
             bearer_proxy = self.bus.get_proxy_object('org.freedesktop.ModemManager1', self.bearer_path, introspect)
             bearer_props = bearer_proxy.get_interface('org.freedesktop.DBus.Properties')
-            
+
             connected_variant = await bearer_props.call_get('org.freedesktop.ModemManager1.Bearer', 'Connected')
             return connected_variant.value
-            
+
         except Exception as e:
             logger.debug(f"Error checking bearer connection status: {e}",
                         extra={'interface_number': self.interface_number})
@@ -5261,7 +5261,7 @@ class ModemStateMachine:
 
         # Cancel IP monitoring task
         if self._ip_monitoring_task and not self._ip_monitoring_task.done():
-            self._ip_monitoring_task.cancel() 
+            self._ip_monitoring_task.cancel()
             self._ip_monitoring_task = None
 
     async def _setup_bearer_signal_monitoring(self):
@@ -5280,15 +5280,15 @@ class ModemStateMachine:
             introspect = await self.bus.introspect("org.freedesktop.ModemManager1", self.bearer_path)
             self._bearer_proxy = self.bus.get_proxy_object("org.freedesktop.ModemManager1", self.bearer_path, introspect)
             self._bearer_interface = self._bearer_proxy.get_interface("org.freedesktop.ModemManager1.Bearer")
-            
+
             # Try different signal connection methods - dbus_next might use a different API
             bearer_properties_iface = self._bearer_proxy.get_interface("org.freedesktop.DBus.Properties")
-            
+
             # Use the correct dbus_next Properties interface method
             bearer_properties_iface.on_properties_changed(self._handle_bearer_properties_changed)
-            logger.info("Using on_properties_changed method for D-Bus signals", 
+            logger.info("Using on_properties_changed method for D-Bus signals",
                        extra={'interface_number': self.interface_number})
-            
+
             # Store reference for cleanup
 
 
@@ -5308,9 +5308,9 @@ class ModemStateMachine:
                 # Note: dbus_next signal handlers are automatically cleaned up when the proxy is destroyed
                 logger.debug("Bearer signal monitoring cleaned up",
                            extra={'interface_number': self.interface_number})
-            
 
-            
+
+
             # Clear references
             self._bearer_proxy = None
             self._bearer_interface = None
@@ -5325,7 +5325,7 @@ class ModemStateMachine:
             # Debug: Show all changed properties
             logger.debug(f"Bearer PropertiesChanged: {list(changed_properties.keys()) if changed_properties else 'None'}",
                         extra={'interface_number': self.interface_number})
-            
+
             if 'Connected' in changed_properties:
                 # Skip monitoring actions during controlled reset operations
                 if self.reset_operation_in_progress:
@@ -5355,13 +5355,13 @@ class ModemStateMachine:
                                    extra={'interface_number': self.interface_number,
                                           'action': 'interface_stays_up'})
                         self._cancel_disconnect_timer()
-                    
+
                     # Ensure interface is UP when bearer is connected
                     logger.info("🔺 Bearer CONNECTED - ensuring interface UP",
                                extra={'interface_number': self.interface_number,
                                       'action': 'setting_interface_up'})
                     asyncio.create_task(self._ensure_interface_up())
-            
+
             # Check for IP configuration changes
             if 'Ip4Config' in changed_properties or 'Ip6Config' in changed_properties:
                 logger.info("🌐 Bearer IP configuration changed - updating interface",
@@ -5378,10 +5378,10 @@ class ModemStateMachine:
         try:
             # Set flag to prevent concurrent handling and feedback loops
             self.registration_handling_in_progress = True
-            
+
             # Store current registration state
             self._last_registration_state = reg_state
-            
+
             # Skip monitoring actions during controlled reset operations
             if self.reset_operation_in_progress:
                 logger.debug(f"Registration state changed to {reg_state} ({reg_state_name}) during reset - skipping interface actions",
@@ -5389,23 +5389,23 @@ class ModemStateMachine:
                                   'registration_state': f"{reg_state} ({reg_state_name})",
                                   'reason': 'reset_in_progress'})
                 return
-            
+
             # Define states that indicate good network connectivity
             connected_states = {1, 5}  # HOME, ROAMING
             disconnected_states = {0, 2, 3, 4}  # IDLE, SEARCHING, DENIED, UNKNOWN
-            
+
             if reg_state in disconnected_states:
                 # Network registration lost - consider bringing interface down
                 # But check if bearer is still connected to avoid unnecessary flapping
                 try:
                     if hasattr(self, 'bearer_path') and self.bearer_path:
                         introspect = await self.bus.introspect('org.freedesktop.ModemManager1', self.bearer_path)
-                        bearer_proxy = self.bus.get_proxy_object('org.freedesktop.ModemManager1', 
+                        bearer_proxy = self.bus.get_proxy_object('org.freedesktop.ModemManager1',
                                                                self.bearer_path, introspect)
                         bearer_props = bearer_proxy.get_interface('org.freedesktop.DBus.Properties')
                         connected_variant = await bearer_props.call_get('org.freedesktop.ModemManager1.Bearer', 'Connected')
                         bearer_connected = connected_variant.value
-                        
+
                         if not bearer_connected:
                             # Both registration and bearer are disconnected - definitely bring interface down
                             logger.warning("📡❌ Network registration lost AND bearer disconnected - interface going DOWN",
@@ -5432,7 +5432,7 @@ class ModemStateMachine:
                                         'registration_state': f"{reg_state} ({reg_state_name})",
                                         'action': 'interface_down_conservative'})
                     asyncio.create_task(self._set_interface_down())
-            
+
             elif reg_state in connected_states:
                 # Network registration restored
                 logger.info("📡✅ Network registration restored - ensuring interface UP and bearer connected",
@@ -5445,13 +5445,13 @@ class ModemStateMachine:
                     self._registration_loss_timer = None
                     logger.info("📡🔄 Registration recovery - cancelled registration loss timer",
                                extra={'interface_number': self.interface_number})
-                
+
                 # Ensure interface is up
                 asyncio.create_task(self._ensure_interface_up())
-                
+
                 # Check bearer status and reconnect if necessary
                 asyncio.create_task(self._handle_registration_recovery())
-            
+
         except Exception as e:
             logger.error(f"Error handling registration state change: {e}",
                         extra={'interface_number': self.interface_number})
@@ -5464,7 +5464,7 @@ class ModemStateMachine:
         try:
             # Wait 30 seconds for registration to recover
             await asyncio.sleep(30)
-            
+
             # Check if registration has recovered
             current_reg_state = getattr(self, '_last_registration_state', None)
             if current_reg_state in {0, 2, 3, 4}:  # Still disconnected
@@ -5477,7 +5477,7 @@ class ModemStateMachine:
                 logger.info("📡✅ Registration recovered during timeout period",
                            extra={'interface_number': self.interface_number,
                                   'recovered_registration_state': current_reg_state})
-                
+
         except asyncio.CancelledError:
             logger.debug("Registration recovery timer cancelled",
                         extra={'interface_number': self.interface_number})
@@ -5492,7 +5492,7 @@ class ModemStateMachine:
             interface_name = f"wwan{self.interface_number}"
             logger.info(f"Setting interface {interface_name} DOWN (interface number {self.interface_number})",
                        extra={'interface_number': self.interface_number})
-                
+
             # Check if interface is currently UP
             result = await asyncio.create_subprocess_exec(
                 'ip', 'link', 'show', interface_name,
@@ -5500,16 +5500,16 @@ class ModemStateMachine:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await result.communicate()
-            
+
             if result.returncode == 0:
                 interface_info = stdout.decode()
                 is_up = 'state UP' in interface_info or ',UP,' in interface_info
-                
+
                 if is_up:
                     logger.warning(f"🔻 Setting interface {interface_name} DOWN",
                                  extra={'interface_number': self.interface_number,
                                         'reason': 'network_registration_lost'})
-                    
+
                     # Set interface DOWN
                     result = await asyncio.create_subprocess_exec(
                         'ip', 'link', 'set', interface_name, 'down',
@@ -5517,7 +5517,7 @@ class ModemStateMachine:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
-                    
+
                     if result.returncode == 0:
                         logger.warning(f"🔻 Interface {interface_name} set DOWN successfully",
                                      extra={'interface_number': self.interface_number})
@@ -5527,7 +5527,7 @@ class ModemStateMachine:
                 else:
                     logger.debug(f"Interface {interface_name} already DOWN",
                                extra={'interface_number': self.interface_number})
-                    
+
         except Exception as e:
             logger.error(f"Error setting interface DOWN: {e}",
                         extra={'interface_number': self.interface_number})
@@ -5543,17 +5543,17 @@ class ModemStateMachine:
                 try:
                     current_ips = await self._get_current_ip()
                     bearer_ips = await self._get_bearer_expected_ips()
-                    
+
                     # Enhanced IP validation: Compare interface IPs to bearer IPs
                     ip_mismatch = False
                     mismatch_details = []
-                    
+
                     if bearer_ips and current_ips:
                         # Check IPv4 mismatch
                         if bearer_ips.get('ipv4') and bearer_ips['ipv4'] != current_ips.get('ipv4'):
                             ip_mismatch = True
                             mismatch_details.append(f"IPv4: bearer={bearer_ips['ipv4']} vs interface={current_ips.get('ipv4', 'None')}")
-                        
+
                         # Check IPv6 mismatch (compare subnets for SLAAC compatibility)
                         if bearer_ips.get('ipv6') and current_ips.get('ipv6'):
                             # Use subnet comparison instead of exact match for IPv6 (SLAAC generates multiple addresses)
@@ -5563,7 +5563,7 @@ class ModemStateMachine:
                         elif bearer_ips.get('ipv6') and not current_ips.get('ipv6'):
                             ip_mismatch = True
                             mismatch_details.append(f"IPv6 missing: bearer={bearer_ips['ipv6']} vs interface=None")
-                    
+
                     if ip_mismatch:
                         # Check if bearer is still connected before handling mismatch
                         bearer_connected = await self._is_bearer_connected()
@@ -5586,7 +5586,7 @@ class ModemStateMachine:
                                    extra={'interface_number': self.interface_number,
                                           'old_ip': self._last_known_ip,
                                           'new_ip': current_ips})
-                    
+
                     self._last_known_ip = current_ips
 
                     # Check every 30 seconds
@@ -5633,15 +5633,15 @@ class ModemStateMachine:
             self._bearer_disconnect_timer = asyncio.create_task(
                 asyncio.sleep(self.bearer_disconnect_delay)
             )
-            
+
             await self._bearer_disconnect_timer
-            
+
             # Timer expired without cancellation - notify Linux of link down
             logger.warning("Bearer disconnect timer expired - setting interface DOWN",
                           extra={'interface_number': self.interface_number,
                                  'delay': self.bearer_disconnect_delay})
             await self._set_interface_down()
-            
+
             # Clear timer
             self._bearer_disconnect_timer = None
 
@@ -5695,10 +5695,10 @@ class ModemStateMachine:
             await self._set_interface_down()
             await asyncio.sleep(self.ip_change_delay * 2)  # Longer delay for IP sync
             await self._set_interface_up()
-            
+
             # Wait a bit for DHCP/configuration to complete
             await asyncio.sleep(5)
-            
+
             # Verify fix
             new_interface_ips = await self._get_current_ip()
             logger.info("🔧 IP mismatch fix completed",
@@ -5715,21 +5715,21 @@ class ModemStateMachine:
         """Check if bearer and interface IPs match"""
         if not bearer_ips or not interface_ips:
             return False
-        
-        ipv4_match = (not bearer_ips.get('ipv4') or 
+
+        ipv4_match = (not bearer_ips.get('ipv4') or
                       bearer_ips.get('ipv4') == interface_ips.get('ipv4'))
-        ipv6_match = (not bearer_ips.get('ipv6') or 
+        ipv6_match = (not bearer_ips.get('ipv6') or
                       self._ipv6_same_subnet(bearer_ips.get('ipv6'), interface_ips.get('ipv6')))
-        
+
         return ipv4_match and ipv6_match
 
     async def _try_gentle_reset(self) -> bool:
         """
         Attempt gentle modem reset using disable/enable cycle.
-        
+
         This is equivalent to 'mmcli -m 0 --disable' followed by 'mmcli -m 0 --enable'
         and cleanly resets the modem state including all bearers.
-        
+
         Returns:
             bool: True if gentle reset succeeded, False if it failed
         """
@@ -5738,23 +5738,23 @@ class ModemStateMachine:
                 logger.error("No modem proxy available for gentle reset",
                            extra={'interface_number': self.interface_number})
                 return False
-            
+
             # Set flag to suspend registration/bearer monitoring during controlled reset
             self.reset_operation_in_progress = True
             self.service_initiated_disable = True  # Prevent SIM failover during gentle reset
-            
+
             # Set up timeout to ensure flag gets cleared even if something goes wrong
             if self.reset_timeout_task:
                 self.reset_timeout_task.cancel()
             self.reset_timeout_task = asyncio.create_task(self._reset_timeout_handler())
-            
+
             logger.info("Starting gentle reset using modem disable/enable cycle",
                        extra={'interface_number': self.interface_number})
-            
+
             # Get modem interface
             modem_iface = self.proxy.get_interface(MODEM_INTERFACE)
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-            
+
             # Disable modem
             try:
                 logger.info("Disabling modem (equivalent to 'mmcli -m 0 --disable')",
@@ -5768,7 +5768,7 @@ class ModemStateMachine:
                                   'error_type': type(disable_error).__name__})
                 self._clear_reset_operation_flag()
                 return False
-            
+
             # Wait for disable to complete
             for i in range(30):  # Wait up to 30 seconds
                 await asyncio.sleep(1)
@@ -5790,7 +5790,7 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
                 self._clear_reset_operation_flag()
                 return False
-            
+
             # Re-enable modem
             try:
                 logger.info("Re-enabling modem (equivalent to 'mmcli -m 0 --enable')",
@@ -5804,7 +5804,7 @@ class ModemStateMachine:
                                   'error_type': type(enable_error).__name__})
                 self._clear_reset_operation_flag()
                 return False
-            
+
             # Wait for enable to complete
             for i in range(30):  # Wait up to 30 seconds
                 await asyncio.sleep(1)
@@ -5822,12 +5822,12 @@ class ModemStateMachine:
                     logger.debug(f"State check failed: {e}",
                                extra={'interface_number': self.interface_number})
                     continue
-            
+
             logger.error("Modem failed to re-enable within 30 seconds",
                        extra={'interface_number': self.interface_number})
             self._clear_reset_operation_flag()
             return False
-            
+
         except Exception as e:
             logger.error(f"Gentle reset failed: {e}",
                         extra={'interface_number': self.interface_number})
@@ -5847,14 +5847,14 @@ class ModemStateMachine:
         try:
             # Wait for reasonable timeout (120 seconds should be plenty for any reset)
             await asyncio.sleep(120)
-            
+
             # If we get here, the reset took too long - force clear the flag
             if self.reset_operation_in_progress:
                 logger.warning("Reset operation timeout - forcing resumption of network monitoring",
                              extra={'interface_number': self.interface_number,
                                     'timeout_seconds': 120})
                 self.reset_operation_in_progress = False
-                
+
         except asyncio.CancelledError:
             # Normal case - reset completed and task was cancelled
             pass
@@ -5878,10 +5878,10 @@ class ModemStateMachine:
                 return
 
             interface_name = f"wwan{self.interface_number}"
-            
+
             # Clear existing IP addresses to avoid conflicts (except link-local)
             await self._clear_interface_addresses(interface_name)
-            
+
             # Apply IPv4 configuration
             if bearer_ips.get('ipv4'):
                 ipv4_addr = bearer_ips['ipv4']
@@ -5889,13 +5889,13 @@ class ModemStateMachine:
                 ipv4_gateway = bearer_ips.get('ipv4_gateway')
                 ipv4_dns = bearer_ips.get('ipv4_dns', [])
                 ipv4_mtu = bearer_ips.get('ipv4_mtu')
-                
+
                 logger.info(f"Applying IPv4 configuration: {ipv4_addr}/{ipv4_prefix}",
                            extra={'interface_number': self.interface_number,
                                   'gateway': ipv4_gateway,
                                   'dns_servers': ipv4_dns,
                                   'mtu': ipv4_mtu})
-                
+
                 # Add IPv4 address
                 result = await asyncio.create_subprocess_exec(
                     'ip', 'addr', 'add', f"{ipv4_addr}/{ipv4_prefix}", 'dev', interface_name,
@@ -5903,11 +5903,11 @@ class ModemStateMachine:
                     stderr=asyncio.subprocess.PIPE
                 )
                 stdout, stderr = await result.communicate()
-                
+
                 if result.returncode != 0 and b'exists' not in stderr:
                     logger.warning(f"Failed to add IPv4 address: {stderr.decode()}",
                                  extra={'interface_number': self.interface_number})
-                
+
                 # Set MTU if provided
                 if ipv4_mtu:
                     result = await asyncio.create_subprocess_exec(
@@ -5916,14 +5916,14 @@ class ModemStateMachine:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
-                    
+
                     if result.returncode != 0:
                         logger.warning(f"Failed to set MTU {ipv4_mtu}: {stderr.decode()}",
                                      extra={'interface_number': self.interface_number})
                     else:
                         logger.debug(f"Set interface MTU to {ipv4_mtu}",
                                    extra={'interface_number': self.interface_number})
-                
+
                 # Configure DNS servers using systemd-resolved (IPv4 only, IPv6 will be combined later)
                 if ipv4_dns and not bearer_ips.get('ipv6_dns'):
                     # Only apply IPv4 DNS if there are no IPv6 DNS servers to combine with
@@ -5933,14 +5933,14 @@ class ModemStateMachine:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
-                    
+
                     if result.returncode != 0:
                         logger.warning(f"Failed to set IPv4 DNS servers: {stderr.decode()}",
                                      extra={'interface_number': self.interface_number})
                     else:
                         logger.info(f"Configured IPv4 DNS servers: {', '.join(ipv4_dns)}",
                                   extra={'interface_number': self.interface_number})
-                
+
                 # Add IPv4 default route if gateway provided
                 if ipv4_gateway:
                     result = await asyncio.create_subprocess_exec(
@@ -5949,25 +5949,25 @@ class ModemStateMachine:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
-                    
+
                     if result.returncode != 0 and b'exists' not in stderr:
                         logger.debug(f"IPv4 route add result: {stderr.decode()}",
                                    extra={'interface_number': self.interface_number})
 
-            # Apply IPv6 configuration  
+            # Apply IPv6 configuration
             if bearer_ips.get('ipv6'):
                 ipv6_addr = bearer_ips['ipv6']
                 ipv6_prefix = bearer_ips.get('ipv6_prefix', '64')  # Default /64
                 ipv6_gateway = bearer_ips.get('ipv6_gateway')
                 ipv6_dns = bearer_ips.get('ipv6_dns', [])
                 ipv6_mtu = bearer_ips.get('ipv6_mtu')
-                
+
                 logger.info(f"Applying IPv6 configuration: {ipv6_addr}/{ipv6_prefix}",
                            extra={'interface_number': self.interface_number,
                                   'gateway': ipv6_gateway,
                                   'dns_servers': ipv6_dns,
                                   'mtu': ipv6_mtu})
-                
+
                 # Add IPv6 address (carrier-assigned)
                 result = await asyncio.create_subprocess_exec(
                     'ip', '-6', 'addr', 'add', f"{ipv6_addr}/{ipv6_prefix}", 'dev', interface_name,
@@ -5975,11 +5975,11 @@ class ModemStateMachine:
                     stderr=asyncio.subprocess.PIPE
                 )
                 stdout, stderr = await result.communicate()
-                
+
                 if result.returncode != 0 and b'exists' not in stderr:
                     logger.warning(f"Failed to add IPv6 address: {stderr.decode()}",
                                  extra={'interface_number': self.interface_number})
-                
+
                 # Configure IPv6 DNS servers using systemd-resolved (combine with IPv4 DNS if present)
                 if ipv6_dns:
                     # Combine IPv4 and IPv6 DNS servers for this interface
@@ -5990,14 +5990,14 @@ class ModemStateMachine:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
-                    
+
                     if result.returncode != 0:
                         logger.warning(f"Failed to set combined DNS servers: {stderr.decode()}",
                                      extra={'interface_number': self.interface_number})
                     else:
                         logger.info(f"Configured combined DNS servers (IPv4+IPv6): {', '.join(all_dns)}",
                                   extra={'interface_number': self.interface_number})
-                
+
                 # Add IPv6 default route if gateway provided
                 if ipv6_gateway:
                     result = await asyncio.create_subprocess_exec(
@@ -6006,7 +6006,7 @@ class ModemStateMachine:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
-                    
+
                     if result.returncode != 0 and b'exists' not in stderr:
                         logger.debug(f"IPv6 route add result: {stderr.decode()}",
                                    extra={'interface_number': self.interface_number})
@@ -6030,10 +6030,10 @@ class ModemStateMachine:
                 stderr=asyncio.subprocess.PIPE
             )
             await result.communicate()
-            
+
             # Note: We don't clear IPv6 addresses explicitly as 'flush scope global'
             # should handle both, but we keep link-local addresses intact
-            
+
         except Exception as e:
             logger.debug(f"Error clearing interface addresses: {e}",
                         extra={'interface_number': self.interface_number})

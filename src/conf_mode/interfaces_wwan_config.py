@@ -5,9 +5,9 @@ import logging.handlers
 import socket
 import re
 from datetime import datetime, timezone
-from dbus_next.service import ServiceInterface, method
-from dbus_next.errors import DBusError
-from dbus_next import Variant
+from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
+from dbus_next.errors import DBusError  # pylint: disable=import-error
+from dbus_next import Variant  # pylint: disable=import-error
 
 class RFC5424Formatter(logging.Formatter):
     """RFC 5424 compliant syslog formatter for config SNMP integration"""
@@ -369,11 +369,11 @@ class InterfaceConfig(ServiceInterface):
         super().__init__("com.igos.IgosModemManager.Interface")
         self.interface_number = interface_number
         self.fsm = fsm
-        
+
         # Configuration persistence (only for service crashes, not across reboots)
         self.config_state_dir = "/run/wwan"  # /run is tmpfs, cleared on boot
         self.config_state_file = f"{self.config_state_dir}/interface{interface_number}.conf"
-        
+
         # Try to restore configuration on startup
         self._restore_configuration()
 
@@ -382,10 +382,10 @@ class InterfaceConfig(ServiceInterface):
         try:
             import os
             import json
-            
+
             # Create state directory if it doesn't exist
             os.makedirs(self.config_state_dir, exist_ok=True)
-            
+
             # Create JSON-safe copy of configuration
             json_safe_config = {}
             for key, value in config_dict.items():
@@ -396,11 +396,11 @@ class InterfaceConfig(ServiceInterface):
                 except (TypeError, ValueError):
                     # Convert complex objects to string representation
                     json_safe_config[key] = str(value)
-            
+
             # Save configuration as JSON
             with open(self.config_state_file, 'w') as f:
                 json.dump(json_safe_config, f, indent=2)
-                
+
             logger.info("Configuration saved to persistent storage",
                        extra={'interface_number': self.interface_number,
                               'config_file': self.config_state_file,
@@ -415,7 +415,7 @@ class InterfaceConfig(ServiceInterface):
         """Remove configuration from persistent storage (called during interface removal)"""
         try:
             import os
-            
+
             if os.path.exists(self.config_state_file):
                 os.remove(self.config_state_file)
                 logger.info("Configuration file removed from persistent storage",
@@ -428,28 +428,28 @@ class InterfaceConfig(ServiceInterface):
         except Exception as e:
             logger.error(f"Failed to remove configuration file: {e}",
                         extra={'interface_number': self.interface_number})
-    
+
     def _restore_configuration(self):
         """Restore configuration from persistent storage on service restart"""
         try:
             import os
             import json
-            
+
             if not os.path.exists(self.config_state_file):
                 logger.info("No saved configuration found",
                            extra={'interface_number': self.interface_number})
                 return
-            
+
             # Load configuration from JSON
             with open(self.config_state_file, 'r') as f:
                 saved_config = json.load(f)
-            
+
             logger.info("Restored configuration from persistent storage",
                        extra={'interface_number': self.interface_number,
                               'config_file': self.config_state_file})
-            
+
             # Apply the restored configuration
-            from dbus_next import Variant
+            from dbus_next import Variant  # pylint: disable=import-error
             dbus_config = {}
             for key, value in saved_config.items():
                 # Convert back to D-Bus variants
@@ -464,38 +464,38 @@ class InterfaceConfig(ServiceInterface):
                     dbus_config[key] = Variant('as', value)
                 else:
                     dbus_config[key] = Variant('s', str(value))
-            
+
             # Apply configuration asynchronously
             import asyncio
             asyncio.create_task(self._apply_restored_config(dbus_config))
-            
+
         except Exception as e:
             logger.error(f"Failed to restore configuration: {e}",
                         extra={'interface_number': self.interface_number})
-    
+
     async def _apply_restored_config(self, dbus_config):
         """Apply restored configuration asynchronously"""
         try:
             # Wait a moment for the service to be fully ready
             await asyncio.sleep(2)
-            
+
             logger.info("Applying restored configuration",
                        extra={'interface_number': self.interface_number})
-            
+
             # Apply the configuration
             await self.set_configuration(dbus_config)
-            
+
             logger.info("Restored configuration applied successfully",
                        extra={'interface_number': self.interface_number})
-                       
+
         except Exception as e:
             logger.error(f"Failed to apply restored configuration: {e}",
                         extra={'interface_number': self.interface_number})
 
     def _extract_variant_value(self, value):
         """Extract value from D-Bus Variant, handling nested structures"""
-        from dbus_next.signature import Variant
-        
+        from dbus_next.signature import Variant  # pylint: disable=import-error
+
         if isinstance(value, Variant):
             # Recursively extract the Variant's value
             return self._extract_variant_value(value.value)
@@ -557,7 +557,7 @@ class InterfaceConfig(ServiceInterface):
 
             # Apply configuration to FSM
             self.fsm.apply_config(cfg)
-            
+
             # Save configuration for crash recovery
             self._save_configuration(cfg)
 
@@ -671,14 +671,14 @@ class InterfaceConfig(ServiceInterface):
 
         # Start with default
         merged = default_monitoring.copy()
-        
+
         # Apply current values
         if current_monitoring:
             merged.update(current_monitoring)
-            
+
         # Apply new values
         merged.update(new_monitoring)
-        
+
         return merged
 
     def _merge_enhanced_reconnection(self, new_reconnection, current_reconnection, default_reconnection):
@@ -688,14 +688,14 @@ class InterfaceConfig(ServiceInterface):
 
         # Start with default
         merged = default_reconnection.copy()
-        
+
         # Apply current values
         if current_reconnection:
             merged.update(current_reconnection)
-            
+
         # Apply new values
         merged.update(new_reconnection)
-        
+
         return merged
 
     def _validate_configuration(self, config):
@@ -1282,7 +1282,7 @@ class InterfaceConfig(ServiceInterface):
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'data_usage_warning_thresholds'})
                 raise ValueError("data_usage_warning_thresholds must be a list")
-            
+
             for threshold in thresholds:
                 if not isinstance(threshold, (int, float)) or threshold < 1 or threshold > 100:
                     logger.warning("Invalid data usage warning threshold value",
@@ -1608,7 +1608,7 @@ class InterfaceConfig(ServiceInterface):
             current_state = getattr(self.fsm.machine, 'current_state', 'UNKNOWN') if hasattr(self.fsm, 'machine') and self.fsm.machine else 'UNKNOWN'
             modem_path = getattr(self.fsm, 'modem_path', '') or ''
             bearer_path = getattr(self.fsm, 'bearer_path', '') or ''
-            
+
             status = {
                 'interface_number': Variant('i', self.interface_number or 0),
                 'current_state': Variant('s', current_state),

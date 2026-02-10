@@ -7,10 +7,10 @@ import logging
 import logging.handlers
 import socket
 from datetime import datetime, timezone
-from dbus_next.aio import MessageBus
+from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from interfaces_wwan_service_manager import ConfigServiceManager
-from dbus_next.constants import BusType
-from dbus_next.message import Message
+from dbus_next.constants import BusType  # pylint: disable=import-error
+from dbus_next.message import Message  # pylint: disable=import-error
 
 class RFC5424Formatter(logging.Formatter):
     """RFC 5424 compliant syslog formatter for SNMP integration"""

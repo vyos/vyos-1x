@@ -8,10 +8,10 @@ import logging
 import logging.handlers
 import socket
 from datetime import datetime, timezone
-from dbus_next.aio import MessageBus
-from dbus_next.constants import BusType
-from dbus_next.errors import DBusError
-from dbus_next import Variant
+from dbus_next.aio import MessageBus  # pylint: disable=import-error
+from dbus_next.constants import BusType  # pylint: disable=import-error
+from dbus_next.errors import DBusError  # pylint: disable=import-error
+from dbus_next import Variant  # pylint: disable=import-error
 
 
 class RFC5424Formatter(logging.Formatter):
@@ -64,7 +64,7 @@ class RFC5424Formatter(logging.Formatter):
     def _get_message_id(self, record):
         """Generate message ID for SNMP categorization"""
         msg = record.getMessage().lower()
-        
+
         if 'service' in msg and ('start' in msg or 'running' in msg):
             return 'SERVICE_STATUS'
         elif 'configuration' in msg and ('load' in msg or 'applied' in msg):
@@ -315,7 +315,7 @@ def python_to_dbus_variant(value):
             # String array
             return Variant('as', value)
         elif all(isinstance(x, int) for x in value):
-            # Integer array  
+            # Integer array
             return Variant('ai', value)
         elif all(isinstance(x, (int, float)) for x in value):
             # Number array (convert to doubles)
@@ -417,7 +417,7 @@ async def configure_interface(config):
         ctrl_path = "/com/igos/IgosModemManager/Control"
         max_retries = 30  # 30 seconds max wait
         retry_interval = 1  # 1 second between retries
-        
+
         for attempt in range(max_retries):
             try:
                 intro = await bus.introspect(bus_name, ctrl_path)
