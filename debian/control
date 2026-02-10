@@ -10,6 +10,8 @@ Build-Depends:
   iproute2,
   libzmq3-dev,
   python3 (>= 3.10),
+  python3-pip,
+  python3-setuptools,
 # For libvyosconfig
   libpcre2-dev,
   libffi-dev,

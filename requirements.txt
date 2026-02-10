@@ -1,0 +1,3 @@
+# Runtime Python dependencies not available as Debian packages
+dbus_next>=0.2.3
+automaton>=2.1.0
