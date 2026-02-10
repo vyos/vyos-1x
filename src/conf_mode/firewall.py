@@ -51,6 +51,21 @@ firewall_config_dir = "/config/firewall"
 
 sysctl_file = r'/run/sysctl/10-vyos-firewall.conf'
 
+# Protocol number to name mapping (IANA Protocol Numbers)
+# This ensures consistent handling of numeric protocol specifications
+PROTOCOL_NUMBER_TO_NAME = {
+    '1': 'icmp',
+    '2': 'igmp',
+    '6': 'tcp',
+    '17': 'udp',
+    '47': 'gre',
+    '50': 'esp',
+    '51': 'ah',
+    '58': 'ipv6-icmp',
+    '89': 'ospf',
+    '132': 'sctp',
+}
+
 valid_groups = [
     'address_group',
     'domain_group',
@@ -252,6 +267,16 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
             verify_jump_target(firewall, hook, target, family, recursive=True)
         else:
             verify_jump_target(firewall, hook, target, family, recursive=False)
+
+    # Normalize protocol number to name for consistent handling
+    # This allows numeric protocol specifications (e.g., "6" for TCP) to work
+    # consistently across all rule validations
+    if 'protocol' in rule_conf:
+        protocol = str(rule_conf['protocol'])
+
+        # Convert protocol number to name if it's a known mapping
+        if protocol in PROTOCOL_NUMBER_TO_NAME:
+            rule_conf['protocol'] = PROTOCOL_NUMBER_TO_NAME[protocol]
 
     if rule_conf['action'] == 'offload':
         if 'offload_target' not in rule_conf:
