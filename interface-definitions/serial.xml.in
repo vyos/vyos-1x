@@ -40,21 +40,16 @@
       </node>
       <tagNode name="device">
         <properties>
-          <help>System serial interface name (ttyS or ttyUSB)</help>
+          <help>System serial interface name (ttyS)</help>
           <completionHelp>
             <script>ls -1 /dev | grep ttyS</script>
-            <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
           </completionHelp>
           <valueHelp>
             <format>ttySxxx</format>
             <description>Regular serial interface</description>
           </valueHelp>
-          <valueHelp>
-            <format>usbxbxpx</format>
-            <description>USB based serial interface</description>
-          </valueHelp>
           <constraint>
-            <regex>(ttyS\d+|usb\d+b.*p.*)</regex>
+            <regex>(ttyS\d+)</regex>
           </constraint>
         </properties>
         <children>
