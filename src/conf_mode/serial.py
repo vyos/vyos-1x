@@ -22,6 +22,7 @@ import ipaddress
 
 from sys import exit
 from time import sleep
+from pathlib import Path
 
 from vyos.config import Config
 from vyos.utils.dict import dict_search
@@ -40,10 +41,9 @@ from vyos.pki import wrap_private_key
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 
-CERT_PATH = '/run/vyos_pki/'
-SERIAL_PATH = '/run/serial/'
+CERT_PATH = Path('/run/vyos_pki')
+SERIAL_PATH = Path('/run/serial')
 SERIAL_SERVICE = 'iolan-monitor.service'
-
 
 def get_config(config=None):
     if config:
@@ -78,7 +78,7 @@ def get_config(config=None):
     for device in proxy.get('device', []):
         # Want to restart serial if its config changed
         tmp = is_node_changed(conf, base + ['device', device])
-        print(f'is_node_changed for {device}: {tmp}')
+        # print(f'is_node_changed for {device}: {tmp}')
         if tmp:
             changed_tty_list.append(device)
             if 'tls' in proxy_no_default['device'][device]:
@@ -89,16 +89,16 @@ def get_config(config=None):
     if changed_tty_list:
         proxy['serial_restart'] = changed_tty_list
 
-    print(f'changed_tty_list {changed_tty_list}')
+    # print(f'changed_tty_list {changed_tty_list}')
 
     tmp = is_node_changed(conf, base + ['global'])
     if tmp:
-        print(f'global changed')
+        # print(f'global changed')
         proxy.update({'global_changed': tmp})
 
     # Delete serial port if was deleted from config tree
     tmp = node_changed(conf, base + ['device'])
-    print(f'serial_remove {tmp}')
+    # print(f'serial_remove {tmp}')
     if tmp: proxy.update({'serial_remove': tmp})
 
     return proxy
@@ -143,15 +143,10 @@ def verify(proxy):
 
     return None
 
-def ensure_folder_exists(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
 def replace_empty_dicts(d):
     if isinstance(d, dict):
         for key, value in d.items():
             if value == {}:
-                # print(f'key empty value is {key}')
                 d[key] = '1'
             elif isinstance(value, dict):
                 replace_empty_dicts(value)
@@ -384,8 +379,9 @@ def generate(proxy):
                     cert_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'certificate')
                     key_data = dict_search_args(proxy['pki'], 'certificate', cert_name, 'private', 'key')
 
-                    ensure_folder_exists(CERT_PATH)
-                    with open(os.path.join(CERT_PATH, f'ssl_cert_{cert_name}.pem'), 'w') as f:
+                    CERT_PATH.mkdir(parents=True, exist_ok=True)
+                    cert_file_path = (CERT_PATH/f'ssl_cert_{cert_name}.pem').absolute()
+                    with cert_file_path.open('w') as f:
                         f.write(wrap_certificate(cert_data))
 
                     password_protected = 0
@@ -395,7 +391,8 @@ def generate(proxy):
                         else:
                             password_protected = 1
 
-                    with open(os.path.join(CERT_PATH, f'ssl_key_{cert_name}.pem'), 'w') as f:
+                    key_file_path = (CERT_PATH/f'ssl_key_{cert_name}.pem').absolute()
+                    with key_file_path.open('w') as f:
                         f.write(wrap_private_key(key_data, password_protected))
 
             #inet
@@ -416,9 +413,9 @@ def generate(proxy):
 
             replace_empty_dicts(port_config)
 
-            ensure_folder_exists(SERIAL_PATH)
-            filename = f'{SERIAL_PATH}/ttyS{ttynum}.json'
-            with open(filename, 'w') as f:
+            SERIAL_PATH.mkdir(parents=True, exist_ok=True)
+            cfg_filename = (SERIAL_PATH/f'ttyS{ttynum}.json').absolute()
+            with cfg_filename.open('w') as f:
                 json.dump(port_config, f, indent=4)
 
     # print(proxy)

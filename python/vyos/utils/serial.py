@@ -47,7 +47,7 @@ def send_command_to_iolan(action, name):
             cmd(f'systemctl is-active --wait {SERIAL_SERVICE}')
 
         sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
-        print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
+        # print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
     except Exception as e:
         print(f'Error sending message: {e}')
     finally:
