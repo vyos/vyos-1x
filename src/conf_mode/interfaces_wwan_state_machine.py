@@ -12,7 +12,7 @@ from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
-from automaton import machines
+from automaton import machines  # pylint: disable=import-error
 from interfaces_wwan_util import modem_reset
 
 # Import the existing Android APN lookup library
@@ -28,10 +28,10 @@ from wwan_utilities import (
     extract_apn_field, convert_android_auth_type, calculate_android_priority,
     convert_android_apns, normalize_auth_type, normalize_pdp_type
 )
-from wwan_configuration import ConfigurationLoader, WWANConfiguration
-from apn_discovery import APNDiscovery
-from connection_manager import ConnectionManager
-from state_transition_manager import StateTransitionManager
+from wwan_configuration import ConfigurationLoader, WWANConfiguration  # pylint: disable=import-error
+from apn_discovery import APNDiscovery  # pylint: disable=import-error
+from connection_manager import ConnectionManager  # pylint: disable=import-error
+from state_transition_manager import StateTransitionManager  # pylint: disable=import-error
 
 class RFC5424Formatter(logging.Formatter):
     """RFC 5424 compliant syslog formatter for FSM SNMP integration"""
