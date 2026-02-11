@@ -8,7 +8,7 @@ Handles connection attempts, bearer management, and APN configuration.
 
 import logging
 import asyncio
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 from dbus_next import Variant  # pylint: disable=import-error
 
 logger = logging.getLogger(__name__)

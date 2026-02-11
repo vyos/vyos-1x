@@ -214,7 +214,7 @@ def setup_config_logging():
         )
         syslog_handler.setFormatter(formatter)
         use_syslog = True
-    except:
+    except (OSError, IOError):
         use_syslog = False
 
     console_formatter = logging.Formatter(

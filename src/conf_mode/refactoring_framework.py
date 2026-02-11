@@ -6,8 +6,7 @@ Provides comparison testing and rollback capabilities
 
 import logging
 import functools
-import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict
 import json
 
 logger = logging.getLogger(__name__)
@@ -76,7 +75,7 @@ class RefactoringFramework:
                 return json.dumps(new_result, sort_keys=True) == json.dumps(old_result, sort_keys=True)
             else:
                 return new_result == old_result
-        except:
+        except Exception:
             return False
 
     def _log_difference(self, method_name: str, old_result: Any, new_result: Any):

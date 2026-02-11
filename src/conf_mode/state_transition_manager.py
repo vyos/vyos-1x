@@ -7,9 +7,8 @@ dynamic state transition configuration.
 """
 
 import logging
-from typing import Dict, List, Tuple, Set, Optional
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
-from enum import Enum
 
 logger = logging.getLogger(__name__)
 

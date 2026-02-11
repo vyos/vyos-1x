@@ -137,7 +137,7 @@ def setup_rfc5424_logging():
         syslog_handler = logging.handlers.SysLogHandler(address='/dev/log', facility=logging.handlers.SysLogHandler.LOG_LOCAL0)
         syslog_handler.setFormatter(main_formatter)
         use_syslog = True
-    except:
+    except (OSError, IOError):
         use_syslog = False
 
     # Console handler for debugging (human-readable format)

@@ -3,7 +3,6 @@ import logging
 import logging.handlers
 import socket
 from datetime import datetime, timezone
-from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from interfaces_wwan_state_machine import ModemStateMachine
@@ -98,7 +97,7 @@ def setup_service_logging():
         )
         syslog_handler.setFormatter(formatter)
         use_syslog = True
-    except:
+    except (OSError, IOError):
         use_syslog = False
 
     # Console handler with human-readable format

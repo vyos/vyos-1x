@@ -139,7 +139,7 @@ def setup_fsm_logging():
         )
         syslog_handler.setFormatter(formatter)
         use_syslog = True
-    except:
+    except (OSError, IOError):
         use_syslog = False
 
     console_formatter = logging.Formatter(
@@ -779,7 +779,7 @@ class ModemStateMachine:
                         sim_path = sim_path_variant.value
                         sim_slots = [{'path': str(sim_path) if sim_path else 'None'}]
                         self.current_active_sim = 1  # Default to slot 1 for single SIM
-                    except:
+                    except Exception:
                         sim_slots = [{'path': 'Unknown'}]
                         self.current_active_sim = 1
 
@@ -788,7 +788,7 @@ class ModemStateMachine:
                 try:
                     signal_quality_variant = await props.call_get(MODEM_INTERFACE, "SignalQuality")
                     signal_quality = signal_quality_variant.value
-                except:
+                except Exception:
                     pass
 
                 # Get registration state if available
@@ -796,7 +796,7 @@ class ModemStateMachine:
                 try:
                     registration_state_variant = await props.call_get(MODEM_INTERFACE, "AccessTechnologies")
                     registration_state = registration_state_variant.value
-                except:
+                except Exception:
                     pass
 
                 logger.info("Modem initial state with dual-SIM details",
@@ -3156,7 +3156,7 @@ class ModemStateMachine:
                 gid2_variant = await sim_props.call_get(sim_interface, "Gid2")
                 gid1 = (gid1_variant.value if hasattr(gid1_variant, 'value') else gid1_variant) or ""
                 gid2 = (gid2_variant.value if hasattr(gid2_variant, 'value') else gid2_variant) or ""
-            except:
+            except Exception:
                 pass
 
             # Extract MCC/MNC from IMSI
@@ -3306,7 +3306,7 @@ class ModemStateMachine:
                 return str(apn[field_name]) if field_name in apn else default_value
             else:
                 return default_value
-        except:
+        except (AttributeError, KeyError, TypeError):
             return default_value
 
     @safe_extraction('_extract_apn_field')
@@ -3355,7 +3355,7 @@ class ModemStateMachine:
             else:
                 return 5 + index  # Lower priority, with index as tiebreaker
 
-        except:
+        except Exception:
             return 5 + index
 
     async def _discover_with_fallback_original(self, sim_info, sim_config):
@@ -3530,7 +3530,7 @@ class ModemStateMachine:
                     # Cleanup failed connection
                     try:
                         await simple_iface.call_disconnect(bearer_path)
-                    except:
+                    except Exception:
                         pass
                     self.bearer_path = None
                     return False
@@ -4257,7 +4257,7 @@ class ModemStateMachine:
                                 signal_dbm = nr5g_signals['rssi'].value
                                 logger.debug(f"Got 5G NR RSSI signal: {signal_dbm} dBm",
                                            extra={'interface_number': self.interface_number})
-                    except:
+                    except Exception:
                         pass
 
                     # Try UMTS signals (3G)
@@ -4274,7 +4274,7 @@ class ModemStateMachine:
                                     signal_dbm = umts_signals['rscp'].value
                                     logger.debug(f"Got UMTS (3G) RSCP signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
-                        except:
+                        except Exception:
                             pass
 
                     # Try GSM signals (2G)
@@ -4287,7 +4287,7 @@ class ModemStateMachine:
                                     signal_dbm = gsm_signals['rssi'].value
                                     logger.debug(f"Got GSM (2G) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
-                        except:
+                        except Exception:
                             pass
 
                     # Try CDMA signals (2G CDMA)
@@ -4300,7 +4300,7 @@ class ModemStateMachine:
                                     signal_dbm = cdma_signals['rssi'].value
                                     logger.debug(f"Got CDMA (2G) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
-                        except:
+                        except Exception:
                             pass
 
                     # Try EVDO signals (3G CDMA)
@@ -4313,7 +4313,7 @@ class ModemStateMachine:
                                     signal_dbm = evdo_signals['rssi'].value
                                     logger.debug(f"Got EVDO (3G CDMA) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
-                        except:
+                        except Exception:
                             pass
 
             except Exception as e:
@@ -4798,7 +4798,7 @@ class ModemStateMachine:
                         try:
                             process.kill()
                             await process.wait()
-                        except:
+                        except Exception:
                             pass
 
                 except Exception as e:

@@ -4,7 +4,7 @@ WWAN Utilities Module
 Extracted utility functions for APN processing and conversions
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def extract_apn_field(apn: Any, field_name: str, default_value: str = '') -> str
             return str(apn[field_name]) if field_name in apn else default_value
         else:
             return default_value
-    except:
+    except (AttributeError, KeyError, TypeError):
         return default_value
 
 def convert_android_auth_type(android_auth: str) -> str:

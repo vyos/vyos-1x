@@ -96,7 +96,7 @@ def setup_logging():
         syslog_formatter = RFC5424Formatter("wwan-config")
         syslog_handler.setFormatter(syslog_formatter)
         use_syslog = True
-    except:
+    except (OSError, IOError) as e:
         use_syslog = False
 
     # Configure logger

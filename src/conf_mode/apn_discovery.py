@@ -8,10 +8,56 @@ Handles Android APN database lookup, fallback discovery, and APN prioritization.
 
 import logging
 import asyncio
-from typing import Dict, List, Any, Optional
-from wwan_utilities import extract_apn_field, convert_android_auth_type, calculate_android_priority
+from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# UTILITY FUNCTIONS (inline to avoid import issues in VyOS conf_mode)
+# ============================================================================
+
+def extract_apn_field(apn: Any, field_name: str, default_value: str = '') -> str:
+    """Extract field from Android APN object"""
+    try:
+        if hasattr(apn, field_name):
+            return str(getattr(apn, field_name, default_value))
+        elif isinstance(apn, dict):
+            return str(apn.get(field_name, default_value))
+        elif hasattr(apn, '__getitem__'):
+            return str(apn[field_name]) if field_name in apn else default_value
+        else:
+            return default_value
+    except (AttributeError, KeyError, TypeError):
+        return default_value
+
+def convert_android_auth_type(android_auth: str) -> str:
+    """Convert Android auth type to standardized format"""
+    auth_mapping = {
+        '0': 'none', 'none': 'none',
+        '1': 'pap', 'pap': 'pap',
+        '2': 'chap', 'chap': 'chap',
+        '3': 'pap_chap', 'pap_chap': 'pap_chap'
+    }
+    return auth_mapping.get(str(android_auth).lower(), 'none')
+
+def calculate_android_priority(apn: Dict, index: int) -> int:
+    """Calculate priority for Android APN"""
+    apn_type = extract_apn_field(apn, 'type', 'default')
+    if isinstance(apn_type, list):
+        apn_type = ','.join(apn_type).lower()
+    else:
+        apn_type = str(apn_type).lower()
+
+    if 'default' in apn_type:
+        return 1
+    elif any(t in apn_type for t in ['internet', 'supl', 'fota']):
+        return 2
+    elif any(t in apn_type for t in ['mms', 'xcap']):
+        return 3
+    elif 'ims' in apn_type:
+        return 4
+    else:
+        return 5 + index
 
 # Check if Android APN lookup is available
 try:
