@@ -200,6 +200,7 @@ class ModemEvent(str, Enum):
     DISCONNECT = "disconnect"
     DISCONNECTED = "disconnected"
     SIM_MISSING = "sim_missing"
+    SIM_LOCKED = "sim_locked"
     CONNECTION_FAILED = "connection_failed"
     RECONFIGURE = "reconfigure"
     SIM_READY = "sim_ready"
@@ -247,6 +248,7 @@ class ModemStateMachine:
         self.reset_grace_period_end = 0     # Timestamp when reset grace period ends
         self.reset_timeout_task = None      # Task to clear reset flag on timeout
         self.registration_handling_in_progress = False  # Prevent concurrent registration handling tasks
+        self._registration_loss_timer = None    # Initialize registration loss timer
 
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
@@ -3252,7 +3254,7 @@ class ModemStateMachine:
             logger.error(f"Android APN lookup failed: {e}",
                         extra={'interface_number': self.interface_number})
             # Fallback to built-in database
-            return await self._discover_with_fallback(sim_info, sim_config)
+            return await self._discover_with_fallback_original(sim_info, sim_config)
 
     def _convert_android_apns_original(self, android_apns, sim_info):
         """ORIGINAL: Convert Android APN format to our standardized format (kept for comparison)"""

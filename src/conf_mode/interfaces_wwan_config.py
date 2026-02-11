@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # filepath: /home/jfeeney/vyos-1x/src/conf_mode/interfaces_wwan_config.py
+import asyncio
 import logging
 import logging.handlers
 import socket
