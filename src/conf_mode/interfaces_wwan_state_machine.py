@@ -25,10 +25,10 @@ except ImportError:
 # Import refactored utilities
 from refactoring_framework import safe_extraction
 from wwan_utilities import (
-    extract_apn_field, convert_android_auth_type, calculate_android_priority,
-    convert_android_apns, normalize_auth_type, normalize_pdp_type
+    extract_apn_field, convert_android_auth_type,
+    convert_android_apns
 )
-from wwan_configuration import ConfigurationLoader, WWANConfiguration  # pylint: disable=import-error
+from wwan_configuration import ConfigurationLoader  # pylint: disable=import-error
 from apn_discovery import APNDiscovery  # pylint: disable=import-error
 from connection_manager import ConnectionManager  # pylint: disable=import-error
 from state_transition_manager import StateTransitionManager  # pylint: disable=import-error
