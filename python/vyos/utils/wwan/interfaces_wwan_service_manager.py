@@ -5,8 +5,8 @@ import socket
 from datetime import datetime, timezone
 from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
-from interfaces_wwan_state_machine import ModemStateMachine
-from interfaces_wwan_config import InterfaceConfig
+from vyos.utils.wwan.interfaces_wwan_state_machine import ModemStateMachine
+from vyos.utils.wwan.interfaces_wwan_config import InterfaceConfig
 
 class RFC5424Formatter(logging.Formatter):
     """RFC 5424 compliant syslog formatter for SNMP integration"""

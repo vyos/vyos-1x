@@ -23,15 +23,15 @@ except ImportError:
     APN_LOOKUP_AVAILABLE = False
 
 # Import refactored utilities
-from refactoring_framework import safe_extraction
-from wwan_utilities import (
+from vyos.utils.refactoring_framework import safe_extraction
+from vyos.utils.wwan.wwan_utilities import (
     extract_apn_field, convert_android_auth_type,
     convert_android_apns
 )
 from wwan_configuration import ConfigurationLoader  # pylint: disable=import-error
-from apn_discovery import APNDiscovery  # pylint: disable=import-error
-from connection_manager import ConnectionManager  # pylint: disable=import-error
-from state_transition_manager import StateTransitionManager  # pylint: disable=import-error
+from vyos.utils.wwan.apn_discovery import APNDiscovery
+from vyos.utils.wwan.connection_manager import ConnectionManager
+from vyos.utils.wwan.state_transition_manager import StateTransitionManager
 
 class RFC5424Formatter(logging.Formatter):
     """RFC 5424 compliant syslog formatter for FSM SNMP integration"""
@@ -1420,7 +1420,7 @@ class ModemStateMachine:
                         if self._is_reset_allowed():
                             logger.warning("Gentle reset failed, trying hardware reset",
                                           extra={'interface_number': self.interface_number})
-                            from interfaces_wwan_util import modem_reset
+                            from vyos.utils.wwan.interfaces_wwan_util import modem_reset
                             await modem_reset(self.interface_number)
                             self._record_reset()
                             logger.info("Hardware reset completed, waiting for modem re-enumeration",

@@ -8,7 +8,7 @@ import logging.handlers
 import socket
 from datetime import datetime, timezone
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
-from interfaces_wwan_service_manager import ConfigServiceManager
+from vyos.utils.wwan.interfaces_wwan_service_manager import ConfigServiceManager
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
 

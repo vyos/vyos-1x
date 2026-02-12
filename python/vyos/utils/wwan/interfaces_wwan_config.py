@@ -1510,7 +1510,7 @@ class InterfaceConfig(ServiceInterface):
             self.fsm.apply_config(config)
 
             # Trigger SIM unlock in state machine
-            from interfaces_wwan_state_machine import ModemEvent
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
             self.fsm.transition(ModemEvent.SIM_READY)
 
             return f"SIM{sim_slot} unlock initiated on interface {self.interface_number}"
@@ -1555,7 +1555,7 @@ class InterfaceConfig(ServiceInterface):
             self.fsm.apply_config(config)
 
             # Trigger SIM unlock in state machine
-            from interfaces_wwan_state_machine import ModemEvent
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
             self.fsm.transition(ModemEvent.SIM_READY)
 
             return f"SIM{sim_slot} PUK unlock initiated on interface {self.interface_number}"
@@ -1572,7 +1572,7 @@ class InterfaceConfig(ServiceInterface):
         try:
             logger.info("Connecting interface",
                        extra={'interface_number': self.interface_number})
-            from interfaces_wwan_state_machine import ModemEvent
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
             self.fsm.transition(ModemEvent.CONNECT)
             return f"connect() on {self.interface_number}"
         except Exception as e:
@@ -1586,7 +1586,7 @@ class InterfaceConfig(ServiceInterface):
         try:
             logger.info("Disconnecting interface",
                        extra={'interface_number': self.interface_number})
-            from interfaces_wwan_state_machine import ModemEvent
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
             self.fsm.transition(ModemEvent.DISCONNECT)
             return f"disconnect() on {self.interface_number}"
         except Exception as e:
