@@ -891,26 +891,19 @@
             </leafNode>
           </children>
         </node>
-        <node name="unix">
+        <leafNode name="poll-sleep-usec">
           <properties>
-            <help>Unix settings</help>
+            <help>Add a fixed-sleep between main loop poll</help>
+            <valueHelp>
+              <format>u32:0-500000</format>
+              <description>Sleep interval in microseconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 0-500000"/>
+            </constraint>
           </properties>
-          <children>
-            <leafNode name="poll-sleep-usec">
-              <properties>
-                <help>Add a fixed-sleep between main loop poll</help>
-                <valueHelp>
-                  <format>u32:0-500000</format>
-                  <description>Sleep interval in microseconds</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 0-500000"/>
-                </constraint>
-              </properties>
-              <defaultValue>0</defaultValue>
-            </leafNode>
-          </children>
-        </node>
+          <defaultValue>0</defaultValue>
+        </leafNode>
       </children>
     </node>
     <node name="sflow" owner="${vyos_conf_scripts_dir}/vpp_sflow.py">

@@ -21,15 +21,23 @@
 #
 # Delete 'ipsec' node and all settings and replace it with single 'ipsec-acceleration' flag (T8262)
 
-
 from vyos.configtree import ConfigTree
 
+def _migrate_vpp_unix_settings(config: ConfigTree) -> None:
+    base_path = ['vpp', 'settings']
+    old_base_path = base_path + ['unix']
+    old_path = old_base_path + ['poll-sleep-usec']
+    new_path = base_path + ['poll-sleep-usec']
+
+    if config.exists(old_path):
+        poll_sleep_usec = config.return_value(old_path)
+        config.set(new_path, value=poll_sleep_usec)
+        config.delete(old_base_path)
 
 def _migrate_vpp_log(config: ConfigTree) -> None:
     base = ['vpp', 'settings', 'logging']
     if config.exists(base + ['default-log-level']):
         config.rename(base + ['default-log-level'], 'default-level')
-
 
 def _migrate_vpp_nat44(config: ConfigTree) -> None:
     base_path = ['vpp', 'nat44']
@@ -69,6 +77,7 @@ def migrate(config: ConfigTree) -> None:
         # Nothing to do
         return
 
+    _migrate_vpp_unix_settings(config)
     _migrate_vpp_log(config)
     _migrate_vpp_nat44(config)
     _migrate_vpp_ipsec(config)
