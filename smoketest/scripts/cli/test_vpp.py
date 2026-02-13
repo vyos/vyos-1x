@@ -1274,14 +1274,15 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
 
     def test_14_vpp_ipsec_xfrm_nl(self):
-        base_ipsec = base_path + ['settings', 'ipsec']
+        base_lcp = base_path + ['settings', 'lcp']
         batch_delay = '250'
         batch_size = '150'
         rx_buffer_zise = '1024'
 
-        self.cli_set(base_ipsec + ['netlink', 'batch-delay-ms', batch_delay])
-        self.cli_set(base_ipsec + ['netlink', 'batch-size', batch_size])
-        self.cli_set(base_ipsec + ['netlink', 'rx-buffer-size', rx_buffer_zise])
+        self.cli_set(base_path + ['settings', 'ipsec-acceleration'])
+        self.cli_set(base_lcp + ['netlink', 'batch-delay-ms', batch_delay])
+        self.cli_set(base_lcp + ['netlink', 'batch-size', batch_size])
+        self.cli_set(base_lcp + ['netlink', 'rx-buffer-size', rx_buffer_zise])
         self.cli_commit()
 
         config_entries = (
@@ -1297,13 +1298,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         config = read_file(VPP_CONF)
         for config_entry in config_entries:
             self.assertIn(config_entry, config)
-
-        # set IPsec tunnel-type ipip
-        self.cli_set(base_ipsec + ['interface-type', 'ipip'])
-        self.cli_commit()
-
-        config = read_file(VPP_CONF)
-        self.assertIn('interface ipip', config)
 
     def test_15_1_vpp_cgnat(self):
         base_cgnat = base_path + ['nat', 'cgnat']
