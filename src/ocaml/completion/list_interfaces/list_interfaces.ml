@@ -23,7 +23,7 @@ let type_to_prefix it =
     | "bonding" -> "bond"
     | "bridge" -> "br"
     | "dummy" -> "dum"
-    | "ethernet" -> "eth"
+    | "ethernet" -> "eth|sw|swp"
     | "geneve" -> "gnv"
     | "input" -> "ifb"
     | "l2tpeth" -> "l2tpeth"
@@ -44,13 +44,13 @@ let type_to_prefix it =
 
 (* filter_section to match the constraint of python.vyos.ifconfig.section
  *)
-let rx = Pcre2.regexp {|\d(\d|v|\.)*$|}
+let rx = Pcre2.regexp {|\d(\d|[psv]|\.)*$|}
 
 let filter_section s =
     let r = Pcre2.qreplace_first ~rex:rx ~templ:"" s in
     match r with
     |"bond"|"br"|"dum"|"eth"|"gnv"|"ifb"|"l2tpeth"|"lo"|"macsec" -> true
-    |"peth"|"pppoe"|"sstpc"|"tun"|"veth"|"vti"|"vtun"|"vxlan"|"wg"|"wlan"|"wwan" -> true
+    |"peth"|"pppoe"|"sstpc"|"sw"|"swp"|"tun"|"veth"|"vti"|"vtun"|"vxlan"|"wg"|"wlan"|"wwan" -> true
     | _ -> false
 
 let filter_from_prefix p s =
@@ -76,7 +76,7 @@ let filter_broadcast s =
     with Not_found -> false
 
 let filter_bridgeable s =
-    let pattern = {|^(bond|eth|gnv|l2tpeth|lo|tun|veth|vtun|vxlan|wlan)(.*)$|}
+    let pattern = {|^(bond|eth|gnv|l2tpeth|lo|sw|tun|veth|vtun|vxlan|wlan)(.*)$|}
     in
     try
         let _ = Pcre2.exec ~pat:pattern s in
@@ -84,7 +84,7 @@ let filter_bridgeable s =
     with Not_found -> false
 
 let filter_bondable s =
-    let pattern = {|^(eth|lan|eno|ens)[A-Za-z0-9_-]*$|}
+    let pattern = {|^(eth|lan|eno|ens|sw)[A-Za-z0-9_-]*$|}
     in
     try
         let _ = Pcre2.exec ~pat:pattern s in

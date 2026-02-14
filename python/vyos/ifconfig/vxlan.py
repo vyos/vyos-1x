@@ -75,6 +75,7 @@ class VXLANIf(Interface):
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',
             'parameters.nolearning'      : 'nolearning',
+            'parameters.noudpcsum'       : 'noudpcsum',
             'parameters.vni_filter'      : 'vnifilter',
             'remote'                     : 'remote',
             'source_address'             : 'local',

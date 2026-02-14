@@ -87,6 +87,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="noudpcsum">
+                <properties>
+                  <help>Do not require UDP checksums.  Required for mellanox switch support</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="neighbor-suppress">
                 <properties>
                   <help>Enable neighbor discovery (ARP and ND) suppression</help>
