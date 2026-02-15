@@ -28,7 +28,7 @@ libvyosconfig:
 
 .PHONY: interface_definitions
 .ONESHELL:
-interface_definitions: $(config_xml_obj)
+interface_definitions: libvyosconfig $(config_xml_obj)
 	mkdir -p $(TMPL_DIR)
 
 	$(CURDIR)/scripts/override-default $(BUILD_DIR)/interface-definitions
