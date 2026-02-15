@@ -8,10 +8,8 @@ unix {
     gid vpp
     systemd-notify
     # exec /etc/vpp/bootstrap.vpp
-{% if unix is vyos_defined %}
-{%     if unix.poll_sleep_usec is vyos_defined %}
-    poll-sleep-usec {{ unix.poll_sleep_usec }}
-{%     endif %}
+{% if poll_sleep_usec is vyos_defined %}
+    poll-sleep-usec {{ poll_sleep_usec }}
 {% endif %}
 }
 

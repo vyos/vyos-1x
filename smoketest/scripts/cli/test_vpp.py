@@ -95,7 +95,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         super().setUp()
 
         self.cli_set(base_path + ['settings', 'interface', interface])
-        self.cli_set(base_path + ['settings', 'unix', 'poll-sleep-usec', '10'])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '10'])
 
     def tearDown(self):
         try:
@@ -128,7 +128,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
         self.cli_set(base_path + ['settings', 'cpu', 'main-core', main_core])
-        self.cli_set(base_path + ['settings', 'unix', 'poll-sleep-usec', poll_sleep])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', poll_sleep])
 
         # commit changes
         self.cli_commit()
@@ -302,7 +302,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(kernel_address, current_address)
 
         # change vpp settings
-        self.cli_set(base_path + ['settings', 'unix', 'poll-sleep-usec', '5'])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '5'])
         self.cli_commit()
 
         config = read_file(VPP_CONF)
@@ -1662,7 +1662,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Change VPP configuration
-        self.cli_set(base_path + ['settings', 'unix', 'poll-sleep-usec', '50'])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '50'])
 
         # Ensure arp entry is not disappeared
         _, neighbors = rc_cmd('sudo ip neighbor')
