@@ -6,7 +6,7 @@
   <children>
     <leafNode name="code">
       <properties>
-        <help>ICMPv6 code</help>
+        <help>ICMPv6 code field - depends on the message type</help>
         <valueHelp>
           <format>u32:0-255</format>
           <description>ICMPv6 code (0-255)</description>
@@ -18,10 +18,14 @@
     </leafNode>
     <leafNode name="type">
       <properties>
-        <help>ICMPv6 type</help>
+        <help>ICMPv6 message type</help>
         <valueHelp>
-          <format>u32:0-255</format>
-          <description>ICMPv6 type (0-255)</description>
+          <format>u32:0-127</format>
+          <description>ICMPv6 error message</description>
+        </valueHelp>
+        <valueHelp>
+          <format>u32:128-255</format>
+          <description>ICMPv6 information message</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-255"/>
