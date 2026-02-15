@@ -29,7 +29,7 @@ libvyosconfig:
 .PHONY: interface_definitions
 .ONESHELL:
 interface_definitions: libvyosconfig $(config_xml_obj)
-	mkdir -p $(TMPL_DIR)
+	rm -rf $(TMPL_DIR); mkdir -p $(TMPL_DIR)
 
 	$(CURDIR)/scripts/override-default $(BUILD_DIR)/interface-definitions
 
@@ -58,7 +58,7 @@ endif
 .PHONY: op_mode_definitions
 .ONESHELL:
 op_mode_definitions: $(op_xml_obj)
-	mkdir -p $(OP_TMPL_DIR)
+	rm -rf $(OP_TMPL_DIR); mkdir -p $(OP_TMPL_DIR)
 
 	find $(BUILD_DIR)/op-mode-definitions/ -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-op-templates {} $(CURDIR)/schema/op-mode-definition.rng $(OP_TMPL_DIR) || exit 1
 
