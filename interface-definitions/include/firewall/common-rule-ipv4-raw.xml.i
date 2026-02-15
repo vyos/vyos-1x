@@ -27,7 +27,12 @@
     #include <include/firewall/geoip.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
-    #include <include/firewall/source-destination-group.xml.i>
+    #include <include/firewall/source-destination-group-ipv4.xml.i>
+    <node name="group">
+      <children>
+        #include <include/firewall/mac-group.xml.i>
+      </children>
+    </node>
   </children>
 </node>
 <node name="source">
@@ -41,7 +46,12 @@
     #include <include/firewall/geoip.xml.i>
     #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
-    #include <include/firewall/source-destination-group.xml.i>
+    #include <include/firewall/source-destination-group-ipv4.xml.i>
+    <node name="group">
+      <children>
+        #include <include/firewall/mac-group.xml.i>
+      </children>
+    </node>
   </children>
 </node>
 <!-- include end -->
