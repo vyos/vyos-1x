@@ -18,6 +18,8 @@
 #
 # Move 'vpp nat44' and 'vpp settings nat44' to 'vpp nat nat44'.
 # Drop settings for nat workers (T8254)
+#
+# Delete 'ipsec' node and all settings and replace it with single 'ipsec-acceleration' flag (T8262)
 
 
 from vyos.configtree import ConfigTree
@@ -54,6 +56,13 @@ def _migrate_vpp_nat44(config: ConfigTree) -> None:
             config.copy(settings_path + ['timeout'], new_base_path + ['timeout'])
         config.delete(settings_path)
 
+def _migrate_vpp_ipsec(config: ConfigTree) -> None:
+    base = ['vpp', 'settings']
+
+    if config.exists(base + ['ipsec']):
+        config.set(base + ['ipsec-acceleration'])
+        config.delete(base + ['ipsec'])
+
 
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
@@ -62,3 +71,4 @@ def migrate(config: ConfigTree) -> None:
 
     _migrate_vpp_log(config)
     _migrate_vpp_nat44(config)
+    _migrate_vpp_ipsec(config)

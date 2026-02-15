@@ -305,10 +305,6 @@ def get_config(config=None):
 
     config = config_dict_merge(default_values, config)
 
-    # Ignore default XML values if config doesn't exists
-    if not conf.exists(base_settings + ['ipsec']):
-        del config['settings']['ipsec']
-
     # add running config
     if effective_config:
         default_values_effective = conf.get_config_defaults(

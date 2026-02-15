@@ -742,34 +742,12 @@
               </leafNode>
             </children>
           </node>
-          <node name="ipsec">
+          <leafNode name="ipsec-acceleration">
             <properties>
-              <help>IPsec settings</help>
+              <help>Enable IPsec acceleration</help>
+              <valueless/>
             </properties>
-            <children>
-              <leafNode name="interface-type">
-                <properties>
-                  <help>IPsec interface type</help>
-                  <completionHelp>
-                    <list>ipsec ipip</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>ipsec</format>
-                    <description>IPsec interface type</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipip</format>
-                    <description>IPIP tunnel interface type</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(ipsec|ipip)</regex>
-                  </constraint>
-                </properties>
-                <defaultValue>ipsec</defaultValue>
-              </leafNode>
-              #include <include/vpp/netlink.xml.i>
-            </children>
-          </node>
+          </leafNode>
           <node name="l2learn">
             <properties>
               <help>Level 2 MAC address learning settings</help>
