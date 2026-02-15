@@ -12,15 +12,6 @@
         </completionHelp>
       </properties>
     </leafNode>
-    <leafNode name="domain-group">
-      <properties>
-        <help>Group of domains</help>
-        <completionHelp>
-          <path>firewall group domain-group</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
-    #include <include/firewall/mac-group.xml.i>
     <leafNode name="network-group">
       <properties>
         <help>Group of networks</help>
@@ -29,14 +20,9 @@
         </completionHelp>
       </properties>
     </leafNode>
-    <leafNode name="port-group">
-      <properties>
-        <help>Group of ports</help>
-        <completionHelp>
-          <path>firewall group port-group</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
+    #include <include/firewall/mac-group.xml.i>
+    #include <include/firewall/domain-group.xml.i>
+    #include <include/firewall/port-group.xml.i>
   </children>
 </node>
 <!-- include end -->
