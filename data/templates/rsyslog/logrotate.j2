@@ -6,7 +6,7 @@
   notifempty
   create
   rotate {{ file_options.archive.file }}
-  size={{ file_options.archive.size | int // 1024 }}k
+  size={{ file_options.archive.size }}k
 }
 
 {%     endfor %}
