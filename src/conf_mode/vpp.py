@@ -35,6 +35,7 @@ from vyos.ifconfig import Section
 from vyos.logger import getLogger
 from vyos.template import render
 from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.cpu import get_available_cpus
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import list_loaded_modules
@@ -49,11 +50,7 @@ from vyos.vpp.config_verify import (
     verify_dev_driver,
     verify_vpp_minimum_cpus,
     verify_vpp_minimum_memory,
-    verify_vpp_settings_cpu,
-    verify_vpp_settings_cpu_corelist_workers,
-    verify_vpp_cpu_main_core,
-    verify_vpp_settings_cpu_skip_cores,
-    verify_vpp_settings_cpu_workers,
+    verify_vpp_cpu_cores,
     verify_vpp_memory,
     verify_vpp_statseg_size,
     verify_vpp_interfaces_dpdk_num_queues,
@@ -62,6 +59,7 @@ from vyos.vpp.config_verify import (
     verify_vpp_buffers,
 )
 from vyos.vpp.config_resource_checks import memory
+from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
 from vyos.vpp.configdb import JSONStorage
@@ -152,25 +150,28 @@ def _unload_module(module_name: str):
         raise
 
 
-def _get_workers_count(cpu_settings: dict) -> int:
-    if 'corelist_workers' in cpu_settings:
-        corelist_workers = []
-        for worker_range in cpu_settings['corelist_workers']:
-            core_numbers = worker_range.split('-')
-            corelist_workers.extend(
-                range(int(core_numbers[0]), int(core_numbers[-1]) + 1)
-            )
+def _configure_vpp_cpu_settings(config: dict):
+    """Configure VPP CPU settings: main-core, workers and skip-cores based on 'cpu-cores'"""
+    cpu_cores = int(config['settings']['resource_allocation']['cpu_cores'])
+    reserved_cpus = default_resource_map.get('reserved_cpu_cores')
 
-        return len(corelist_workers)
+    # Get sorted list of available CPU IDs
+    available = sorted({cpu['cpu'] for cpu in get_available_cpus()})
 
-    return int(cpu_settings.get('workers', 0))
+    if reserved_cpus < len(available):
+        main_core = available[reserved_cpus]  # first non-reserved CPU
+        config['settings']['cpu'] = {
+            'main_core': str(main_core),
+            'skip_cores': str(reserved_cpus),
+        }
+        if cpu_cores > 1:
+            config['settings']['cpu']['workers'] = str(cpu_cores - 1)
 
 
 def _normalize_buffers(config: dict):
     """Replace 'auto' buffers_per_numa with calculated value"""
     if config['settings']['buffers']['buffers_per_numa'] == 'auto':
-        workers = _get_workers_count(config['settings'].get('cpu', {}))
-        buffers = memory.buffers_required(config['settings'], workers)
+        buffers = memory.buffers_required(config['settings'])
         config['settings']['buffers']['buffers_per_numa'] = str(buffers)
 
 
@@ -398,15 +399,18 @@ def get_config(config=None):
                         )
                     if 'zero-copy' in iface_config['xdp_options']:
                         xdp_api_params['mode'] = 'zero-copy'
-                    if iface_config.get('rx_mode') in ('interrupt', 'adaptive') and any(
-                        key in config['settings'].get('cpu', {})
-                        for key in ('workers', 'corelist_workers')
+                    if (
+                        iface_config.get('rx_mode') in ('interrupt', 'adaptive')
+                        and int(config['settings']['resource_allocation']['cpu_cores'])
+                        > 1
                     ):
                         xdp_api_params['flags'] = 'no_syscall_lock'
                     iface_config['xdp_api_params'] = xdp_api_params
 
         # Buffer normalization (auto → computed)
         _normalize_buffers(config)
+        # Configure VPP main-core and workers 'cpu-cores' settings
+        _configure_vpp_cpu_settings(config)
 
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
@@ -507,38 +511,15 @@ def verify(config):
             raise ConfigError(f'Interface {iface} does not exist or is not Ethernet!')
 
     # Resource usage checks
-    cpu_settings = config['settings'].get('cpu', {})
-
-    if not any(key in cpu_settings for key in ('workers', 'corelist_workers')):
-        verify_vpp_minimum_cpus()
-
-    if 'cpu' in config['settings']:
-        # Check whether the workers and corelist-workers are configured properly
-        verify_vpp_settings_cpu(cpu_settings)
-
-        # Check if there are enough CPU cores to skip according to config
-        if 'skip_cores' in cpu_settings:
-            skip_cores = int(cpu_settings['skip_cores'])
-            verify_vpp_settings_cpu_skip_cores(skip_cores)
-
-        # Check if there are enough CPU cores to add workers
-        if 'workers' in cpu_settings:
-            verify_vpp_settings_cpu_workers(cpu_settings)
-
-        if 'main_core' in cpu_settings:
-            verify_vpp_cpu_main_core(cpu_settings)
-
-        # Check the CPU main core not falling to the corelist-workers
-        if 'corelist_workers' in cpu_settings:
-            verify_vpp_settings_cpu_corelist_workers(cpu_settings)
-
-    workers = _get_workers_count(config['settings'].get('cpu', {}))
+    cpu_cores = int(config['settings']['resource_allocation']['cpu_cores'])
+    verify_vpp_minimum_cpus()
+    verify_vpp_cpu_cores(cpu_cores)
 
     verify_vpp_main_heap_size(config['settings'])
     verify_vpp_statseg_size(config['settings'])
 
     # Check buffers
-    verify_vpp_buffers(config['settings'], workers)
+    verify_vpp_buffers(config['settings'])
 
     # Check if available memory is enough for current VPP config
     verify_vpp_memory(config)
@@ -579,13 +560,13 @@ def verify(config):
             if 'num_rx_queues' in iface_config['dpdk_options']:
                 rx_queues = int(iface_config['dpdk_options']['num_rx_queues'])
                 verify_vpp_interfaces_dpdk_num_queues(
-                    qtype='receive', num_queues=rx_queues, workers=workers
+                    qtype='receive', num_queues=rx_queues, workers=cpu_cores
                 )
 
             if 'num_tx_queues' in iface_config['dpdk_options']:
                 tx_queues = int(iface_config['dpdk_options']['num_tx_queues'])
                 verify_vpp_interfaces_dpdk_num_queues(
-                    qtype='transmit', num_queues=tx_queues, workers=workers
+                    qtype='transmit', num_queues=tx_queues, workers=cpu_cores
                 )
 
         # RX-mode verification
@@ -652,7 +633,7 @@ def verify(config):
                 f'Interface {iface_config["iface_name"]} is an xconnect member and cannot be removed'
             )
 
-    verify_routes_count(config['settings'], workers)
+    verify_routes_count(config['settings'])
 
 
 def generate(config):

@@ -174,10 +174,11 @@ def total_memory_required(settings: dict) -> dict:
     return memory
 
 
-def buffers_required(settings: dict, workers) -> int:
+def buffers_required(settings: dict) -> int:
     """
     Calculate total VPP buffer requirements based on interface settings and workers.
     """
+    workers = int(settings['resource_allocation']['cpu_cores'])
     buffers_total = 0
     for ifname, iface_config in settings.get('interface', {}).items():
         # Do not include XDP interfaces in buffer calculations.
@@ -185,14 +186,14 @@ def buffers_required(settings: dict, workers) -> int:
         # so buffer requirements cannot be derived from descriptors here.
         # Buffers for XDP are handled internally by the kernel/XDP layer,
         # not by VPP’s buffer allocator.
-        if iface_config.get('driver') == 'xdp':
-            continue
+        # if iface_config.get('driver') == 'xdp':
+        #     continue
+
         dpdk_options = iface_config.get('dpdk_options', {})
         rx_queues = int(dpdk_options.get('num_rx_queues', 1))
         rx_desc = int(dpdk_options.get('num_rx_desc'))
         # default TX queues is equal to number of worker threads
-        # plus 1 main thread
-        tx_queues = int(dpdk_options.get('num_tx_queues', workers + 1))
+        tx_queues = int(dpdk_options.get('num_tx_queues', workers))
         tx_desc = int(dpdk_options.get('num_tx_desc'))
 
         # buffers for RX/TX queues for interface

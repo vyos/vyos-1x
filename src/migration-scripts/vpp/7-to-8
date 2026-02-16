@@ -20,6 +20,8 @@
 # Drop settings for nat workers (T8254)
 #
 # Delete 'ipsec' node and all settings and replace it with single 'ipsec-acceleration' flag (T8262)
+#
+# Unify CPU settings into a single 'cpu-cores' node under 'resource-allocation' (T8268)
 
 from vyos.configtree import ConfigTree
 
@@ -71,6 +73,38 @@ def _migrate_vpp_ipsec(config: ConfigTree) -> None:
         config.set(base + ['ipsec-acceleration'])
         config.delete(base + ['ipsec'])
 
+def _migrate_vpp_cpu(config: ConfigTree) -> None:
+    settings_path = ['vpp', 'settings']
+    cpu_path = settings_path + ['cpu']
+
+    if not config.exists(cpu_path):
+        # Nothing to do
+        return
+
+    # get number of configured workers
+    workers = 0
+
+    if config.exists(cpu_path + ['workers']):
+        workers += int(config.return_value(cpu_path + ['workers']))
+        # add main-core to total workers
+        workers += 1
+
+    if config.exists(cpu_path + ['corelist-workers']):
+        def _count_range(item: str) -> int:
+            if '-' in item:
+                start, end = map(int, item.split('-'))
+                return end - start + 1
+            return 1
+
+        tmp = config.return_values(cpu_path + ['corelist-workers'])
+        workers = sum(_count_range(item) for item in tmp) + 1  # + main core
+
+    # set 'resource-allocation cpu-cores'
+    if workers:
+        config.set(settings_path + ['resource-allocation', 'cpu-cores'], value=str(workers))
+
+    config.delete(cpu_path)
+
 
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
@@ -81,3 +115,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_log(config)
     _migrate_vpp_nat44(config)
     _migrate_vpp_ipsec(config)
+    _migrate_vpp_cpu(config)

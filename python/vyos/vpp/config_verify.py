@@ -22,7 +22,7 @@ from vyos import ConfigError
 from vyos.base import Warning
 from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
 
-from vyos.vpp.config_resource_checks import cpu as cpu_checks, memory as mem_checks
+from vyos.vpp.config_resource_checks import memory as mem_checks
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.utils import human_memory_to_bytes, bytes_to_human_memory
 
@@ -183,17 +183,13 @@ def verify_dev_driver(driver_type: str, driver: str) -> bool:
     return False
 
 
-def create_cpu_error_message(
-    cpus_required: int, cpus_available: int = None, skip_cores: int = 0
-) -> str:
+def create_cpu_error_message(cpus_required: int, cpus_available: int = None) -> str:
     cpu_info = get_cpus()
     logical_cores = sum(
         [int(s.get('siblings')) if 'siblings' in s else 1 for s in cpu_info]
     )
 
     reserved_cpus = default_resource_map.get('reserved_cpu_cores')
-    if skip_cores > reserved_cpus:
-        reserved_cpus = skip_cores
 
     available_str = (
         (
@@ -320,100 +316,19 @@ def verify_vpp_memory(config: dict):
         )
 
 
-def verify_vpp_settings_cpu_skip_cores(skip_cores: int):
-    cpu_cores = total_core_count()
-
-    # The number of skipped cores must not be greater than
-    # available CPU cores in the system - 1 for main thread
-    if skip_cores > (cpu_cores - 1):
-        raise ConfigError(
-            f'The system does not have enough available CPUs to skip '
-            f'(reduce "cpu skip-cores" to {cpu_cores} or less)'
-        )
-
-
-def verify_vpp_settings_cpu(settings: dict):
-    """
-    Verify 'cpu main-core' is set if worker-related settings are used.
-    `set vpp settings cpu workers` and `set vpp settings cpu corelist-workers`
-    are mutually exclusive!
-    """
-    worker_related = ('corelist_workers', 'workers', 'skip_cores')
-
-    if any(key in settings for key in worker_related) and 'main_core' not in settings:
-        raise ConfigError('"cpu main-core" is required but not set!')
-
-    if 'corelist_workers' in settings and 'workers' in settings:
-        raise ConfigError(
-            '"cpu corelist-workers" and "cpu workers" cannot be used at the same time!'
-        )
-
-
-def verify_vpp_cpu_main_core(cpu_settings: dict) -> None:
-    """Check that the main core is available"""
-    skip_cores = int(cpu_settings.get('skip_cores', 0))
-    available_cores = cpu_checks.available_cores_list(skip_cores)
-    main_core = int(cpu_settings['main_core'])
-
-    if main_core not in available_cores:
-        raise ConfigError(
-            'Cannot set main core for VPP process: '
-            f'CPU#{main_core} is not available.'
-        )
-
-
-def verify_vpp_settings_cpu_workers(cpu_settings: dict):
+def verify_vpp_cpu_cores(cpu_cores: int):
     """
     Verify that the system has enough available CPU cores
     to run a given amount of worker processes (1 worker/core)
     """
-    workers = int(cpu_settings.get('workers', 0))
-    available_cores = cpu_checks.available_cores_count(cpu_settings)
+    total_cores = total_core_count()
+    reserved_cpus = default_resource_map.get('reserved_cpu_cores')
+    available_cores = total_cores - reserved_cpus
 
-    if workers > available_cores:
+    if cpu_cores > available_cores:
         raise ConfigError(
-            f'Not enough free physical CPU cores for {workers} VPP workers '.ljust(72)
-            + create_cpu_error_message(
-                workers, available_cores, cpu_settings.get('skip_cores', 0)
-            )
-        )
-
-
-def verify_vpp_settings_cpu_corelist_workers(cpu_settings: dict):
-    """
-    Verify that the CPU cores provided to the config are free and can be used by VPP
-    """
-    workers = cpu_settings.get('corelist_workers')
-    main_core = int(cpu_settings.get('main_core'))
-    skip_cores = int(cpu_settings.get('skip_cores', 0))
-    available_cores = cpu_checks.available_cores_list(skip_cores)
-    try:
-        all_core_nums = cpu_checks.worker_cores_list(
-            iface='cpu corelist', worker_ranges=workers
-        )
-    except ValueError as e:
-        raise ConfigError(str(e))
-
-    error_msg = 'Cannot set VPP "cpu corelist-workers": '.ljust(72)
-
-    if main_core in all_core_nums:
-        raise ConfigError(
-            f'CPU#{main_core} is set as main core and should not '
-            'be included to the corelist-workers'
-        )
-
-    invalid_cores = [str(el) for el in all_core_nums if el not in available_cores]
-    if invalid_cores:
-        raise ConfigError(error_msg + f'CPU# {",".join(invalid_cores)} not available.')
-
-    available_cores_count = cpu_checks.available_cores_count(cpu_settings)
-    if len(all_core_nums) > available_cores_count:
-        raise ConfigError(
-            error_msg
-            + 'Not enough free physical CPUs in the system.'.ljust(72)
-            + create_cpu_error_message(
-                len(all_core_nums), available_cores_count, skip_cores
-            )
+            f'Not enough free physical CPU cores for {cpu_cores} "cpu-cores" '.ljust(72)
+            + create_cpu_error_message(cpu_cores, available_cores)
         )
 
 
@@ -441,12 +356,12 @@ def verify_vpp_interfaces_dpdk_num_queues(qtype: str, num_queues: int, workers: 
 
     if num_queues > workers:
         raise ConfigError(
-            f'The number of {qtype} queues cannot be greater than the number of configured VPP workers: '
-            f'workers: {workers}, queues: {num_queues}'
+            f'The number of {qtype} queues cannot be greater than the number of configured VPP "cpu-cores": '
+            f'cpu-cores: {workers}, queues: {num_queues}'
         )
 
 
-def verify_routes_count(settings: dict, workers: int):
+def verify_routes_count(settings: dict):
     """
     Maximum routes count depending on main heap size,
     statistics segment size and workers
@@ -454,12 +369,13 @@ def verify_routes_count(settings: dict, workers: int):
     counters = 2  # 2 counters for each route
     bytes = 16  # each counter consumes 16 bytes
     statseg_scale = 2
+    cpu_cores = int(settings['resource_allocation']['cpu_cores'])
     statseg_size = settings['statseg']['size']
     statseg_size_in_bytes = human_memory_to_bytes(statseg_size)
     main_heap = settings['memory']['main_heap_size']
     main_heap_in_gb = human_memory_to_bytes(main_heap) >> 30
 
-    formula = (workers + 1) * counters * bytes * statseg_scale
+    formula = cpu_cores * counters * bytes * statseg_scale
     routes_count_statseg = statseg_size_in_bytes / formula
     routes_count_statseg = round(routes_count_statseg / 1_000_000, 2)
     routes_count_mh = main_heap_in_gb * 2
@@ -472,10 +388,10 @@ def verify_routes_count(settings: dict, workers: int):
     )
 
 
-def verify_vpp_buffers(settings: dict, workers: int):
+def verify_vpp_buffers(settings: dict):
     buffers_configured = int(settings['buffers']['buffers_per_numa'])
 
-    buffers_required = mem_checks.buffers_required(settings, workers)
+    buffers_required = mem_checks.buffers_required(settings)
 
     if buffers_required > buffers_configured:
         raise ConfigError(
