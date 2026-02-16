@@ -36,6 +36,7 @@ def get_config(config=None) -> dict:
         conf = Config()
 
     base = ['vpp', 'kernel-interfaces']
+    base_settings = ['vpp', 'settings']
 
     ifname = os.environ['VYOS_TAGNODE_VALUE']
 
@@ -51,6 +52,16 @@ def get_config(config=None) -> dict:
     if not conf.exists(['vpp']):
         config['remove_vpp'] = True
         return config
+
+    # Get 'vpp settings' config with default values
+    config_settings = conf.get_config_dict(
+        base_settings,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_defaults=True,
+    )
+    config['vpp_settings'] = config_settings
 
     # Get effective config as we need full dicitonary per interface delete
     if __name__ == '__main__':
@@ -185,7 +196,7 @@ def apply(config):
             v.set_admin_state('up')
 
     # Set rx-mode
-    rx_mode = config.get('rx_mode')
+    rx_mode = config['vpp_settings'].get('interface_rx_mode')
     if rx_mode:
         vpp_control = VPPControl()
         lcp_name = vpp_control.lcp_pair_find(kernel_name=ifname).get('vpp_name_kernel')

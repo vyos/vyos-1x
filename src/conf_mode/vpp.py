@@ -334,6 +334,8 @@ def get_config(config=None):
 
     if 'settings' in config:
         if 'interface' in config['settings']:
+            interface_rx_mode = config['settings'].get('interface_rx_mode')
+
             for iface, iface_config in config['settings']['interface'].items():
                 iface_config['driver'] = 'dpdk'
 
@@ -400,7 +402,7 @@ def get_config(config=None):
                     if 'zero-copy' in iface_config['xdp_options']:
                         xdp_api_params['mode'] = 'zero-copy'
                     if (
-                        iface_config.get('rx_mode') in ('interrupt', 'adaptive')
+                        interface_rx_mode in ('interrupt', 'adaptive')
                         and int(config['settings']['resource_allocation']['cpu_cores'])
                         > 1
                     ):
@@ -524,6 +526,8 @@ def verify(config):
     # Check if available memory is enough for current VPP config
     verify_vpp_memory(config)
 
+    interface_rx_mode = config['settings'].get('interface_rx_mode')
+
     # ensure DPDK/XDP settings are properly configured
     for iface, iface_config in config['settings']['interface'].items():
         # check if selected driver is supported, but only for new interfaces
@@ -570,7 +574,7 @@ def verify(config):
                 )
 
         # RX-mode verification
-        rx_mode = iface_config.get('rx_mode')
+        rx_mode = interface_rx_mode
         if rx_mode and rx_mode != 'polling':
             # By default drivers operate in polling mode. Not all NIC drivers support
             # RX mode interrupt and adaptive
@@ -759,6 +763,8 @@ def apply(config):
             del config['persist_config'][iface['iface_name']]
 
     if 'settings' in config and 'interface' in config.get('settings'):
+        interface_rx_mode = config['settings'].get('interface_rx_mode')
+
         # connect to VPP
         try:
             # Bail out early if VPP service is not running
@@ -840,7 +846,7 @@ def apply(config):
                 iproute.link('set', index=dev_index, state='up')
 
                 # Set rx-mode. Should be configured after interface state set to UP
-                rx_mode = iface_config.get('rx_mode')
+                rx_mode = interface_rx_mode
                 if rx_mode:
                     # to hardware side
                     vpp_control.iface_rxmode(iface, rx_mode)

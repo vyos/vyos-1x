@@ -48,3 +48,4 @@ set vpp settings interface eth3
 set vpp settings interface eth4
 set vpp settings poll-sleep-usec '12'
 set vpp settings logging default-level 'debug'
+set vpp settings interface-rx-mode 'polling'

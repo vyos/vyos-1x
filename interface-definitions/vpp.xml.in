@@ -608,7 +608,6 @@
               <constraintErrorMessage>Invalid interface name</constraintErrorMessage>
             </properties>
             <children>
-              #include <include/vpp/iface_rx_mode.xml.i>
               <node name="dpdk-options">
                 <properties>
                   <help>DPDK settings</help>
@@ -863,6 +862,7 @@
           </properties>
           <defaultValue>0</defaultValue>
         </leafNode>
+        #include <include/vpp/iface_rx_mode.xml.i>
       </children>
     </node>
     <node name="sflow" owner="${vyos_conf_scripts_dir}/vpp_sflow.py">
@@ -1594,7 +1594,6 @@
         #include <include/interface/disable.xml.i>
         #include <include/interface/mtu-68-16000.xml.i>
         #include <include/vpp/vif.xml.i>
-        #include <include/vpp/iface_rx_mode.xml.i>
       </children>
     </tagNode>
   </children>
