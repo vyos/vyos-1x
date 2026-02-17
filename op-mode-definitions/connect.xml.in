@@ -5,16 +5,22 @@
       <help>Establish connection</help>
     </properties>
     <children>
-      <tagNode name="console">
+      <node name="serial">
         <properties>
-          <help>Connect to device attached to serial console server</help>
-          <completionHelp>
-            <path>service console-server device</path>
-            <script>${vyos_completion_dir}/list_consoles.sh</script>
-          </completionHelp>
+          <help>Connect to serial</help>
         </properties>
-        <command>/usr/bin/console "$3"</command>
-      </tagNode>
+        <children>
+          <tagNode name="device">
+            <properties>
+              <help>Connect to serial device</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_serial.py --selector console-management</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/connect_serial.py "$4"</command>
+          </tagNode>
+        </children>
+      </node>
       <tagNode name="interface">
         <properties>
           <help>Bring up a connection-oriented network interface</help>

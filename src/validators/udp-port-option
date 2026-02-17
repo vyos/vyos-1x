@@ -1,0 +1,24 @@
+#!/usr/bin/python3
+
+import sys
+import re
+
+def error():
+    print(f'Number is not in any of allowed ranges')
+    sys.exit(1)
+
+if __name__ == '__main__':
+    if len(sys.argv)>1:
+        udp_port_option = sys.argv[1]
+        if re.fullmatch(r'auto-learn|any', udp_port_option):
+            sys.exit(0)
+        else:
+            if udp_port_option.isnumeric():
+                if int(udp_port_option) not in range(1, 65536):
+                    error()
+            else:
+                sys.exit(2)
+    else:
+        sys.exit(2)
+
+    sys.exit(0)

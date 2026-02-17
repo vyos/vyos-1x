@@ -1,0 +1,30 @@
+#!/usr/bin/python3
+import sys
+
+def error_out_of_range(value):
+    print(f'Hex value {value} out of byte range (00-FF)')
+    sys.exit(1)
+
+def error_invalid(value):
+    print(f'Invalid hex input "{value}"')
+    sys.exit(1)
+
+def error_length():
+    print('Input must be a 2-character hex string')
+    sys.exit(1)
+
+if __name__ == '__main__':
+    if len(sys.argv) <= 1:
+        sys.exit(2)
+
+    value = sys.argv[1].upper()
+
+    if len(value) != 2:
+        error_length()
+
+    try:
+        byte = int(value, 16)
+    except ValueError:
+        error_invalid(value)
+
+    sys.exit(0)

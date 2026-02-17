@@ -14,17 +14,143 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, re, json
+# import glob
+import socket
 from typing import List
 
 from vyos.base import Warning
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_running
 
 GLOB_GETTY_UNITS = 'serial-getty@*.service'
 RE_GETTY_DEVICES = re.compile(r'.+@(.+).service$')
 
 SD_UNIT_PATH = '/run/systemd/system'
 UTMP_PATH = '/run/utmp'
+
+SOCKET_PATH = '/tmp/iol_perleinit'
+SERIAL_SERVICE = 'iolan-monitor.service'
+
+def send_command_to_iolan(action, name):
+    msg = {
+        'action': action,  # 'restart' | 'stop' | 'delete' | 'relaunch'
+        'name': name,
+    }
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+    # Send message as JSON
+    try:
+        if not os.path.exists(SOCKET_PATH) and is_systemd_service_running(SERIAL_SERVICE):
+            cmd(f'systemctl restart {SERIAL_SERVICE}')
+            cmd(f'systemctl is-active --wait {SERIAL_SERVICE}')
+
+        sock.sendto(json.dumps(msg).encode(), SOCKET_PATH)
+        # print(f'Sent to {SOCKET_PATH}:\n{json.dumps(msg, indent=4)}')
+    except Exception as e:
+        print(f'Error sending message: {e}')
+    finally:
+        sock.close()
+
+def print_global_change_warning():
+    Warning('Global configuration changes have been made. To activate the new settings, run the "restart serial ..." command to restart the serial port!')
+
+def find_all_ttyS_devices():
+    tty_devices = []
+    for entry in os.listdir('/dev'):
+        if re.fullmatch(r'ttyS\d+', entry):
+            tty_devices.append(entry)
+    return sorted(tty_devices)
+
+def find_active_ttyS_devices():
+    base_dir = '/run/serial'
+    tty_devices = []
+    if not os.path.exists(base_dir):
+        return tty_devices
+
+    for fname in os.listdir(base_dir):
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                continue
+            tty_devices.append(os.path.splitext(fname)[0])
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+    return sorted(tty_devices)
+
+def find_active_ttyS_devices_with_auth_on():
+    base_dir = '/run/serial'
+    tty_devices = []
+    if not os.path.exists(base_dir):
+        return tty_devices
+
+    for fname in os.listdir(base_dir):
+        auth = 0
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                continue
+
+            if 'ssh-reverse' in data['service']:
+                auth = 1
+            if 'telnet-reverse' in data['service'] or 'tcp-reverse' in data['service']:
+                if 'service_setting' in data:
+                    if 'reverse' in data['service_setting']:
+                        if 'auth_user' in data['service_setting']['reverse']:
+                            auth = 1
+
+            if auth == 0:
+                continue
+
+            tty_devices.append(os.path.splitext(fname)[0])
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+    return sorted(tty_devices)
+
+def find_active_ttyS_devices_running_service(service):
+    base_dir = '/run/serial'
+    tty_devices = []
+    if not os.path.exists(base_dir):
+        return tty_devices
+
+    for fname in os.listdir(base_dir):
+        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+            continue
+
+        path = os.path.join(base_dir, fname)
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if 'disable' in data:
+                continue
+            if service == 'console-management' and ('ssh-reverse' in data['service'] or 'telnet-reverse' in data['service']):
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'modbus-master' and 'modbus-master' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'modbus-slave' and 'modbus-slave' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'ppp' and 'ppp' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+            elif service == 'slip' and 'slip' in data['service']:
+                tty_devices.append(os.path.splitext(fname)[0])
+
+        except Exception as e:
+            print(f'Error processing {path}: {e}')
+
+    return sorted(tty_devices)
 
 def get_serial_units(include_devices=[]):
     # Since we cannot depend on the current config for decommissioned ports,
@@ -96,7 +222,7 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
                 # This flag is used by conf_mode/system_console.py to reset things, if there's
                 # a problem, the user should issue a manual restart for serial-getty.
                 Warning('Please ensure all settings are committed and saved before issuing a ' \
-                      '"restart serial console" command to apply new configuration!')
+                      '"restart serial" command to apply new configuration!')
         if not prompt_user:
             return False
         if not ask_yes_no('Any uncommitted changes from these sessions will be lost\n' \
