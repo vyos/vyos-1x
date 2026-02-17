@@ -272,12 +272,18 @@ def search_previous_installation(disks: list[str]) -> None:
     print('Searching for data from previous installations')
     image_data = []
     encrypted_configs = []
+    legacy_bind_mount = False
     for disk_name in disks:
         for partition in disk.partition_list(disk_name):
             if disk.partition_mount(partition, mnt_tmp):
                 if Path(mnt_tmp + '/boot').exists():
                     for path in Path(mnt_tmp + '/boot').iterdir():
-                        if path.joinpath('rw/opt/vyatta/etc/config/.vyatta_config').exists():
+                        if path.joinpath('rw/config/.vyatta_config').exists():
+                            legacy_bind_mount = True
+                            image_data.append((path.name, partition))
+                        elif path.joinpath(
+                            'rw/opt/vyatta/etc/config/.vyatta_config'
+                        ).exists():
                             image_data.append((path.name, partition))
                 if Path(mnt_tmp + '/luks').exists():
                     for path in Path(mnt_tmp + '/luks').iterdir():
@@ -330,7 +336,12 @@ def search_previous_installation(disks: list[str]) -> None:
     disk.partition_mount(image_drive, mnt_tmp)
 
     if not encrypted:
-        copytree(f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config)
+        if legacy_bind_mount:
+            copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+        else:
+            copytree(
+                f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config
+            )
     else:
         copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
 
