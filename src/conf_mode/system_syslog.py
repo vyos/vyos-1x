@@ -40,7 +40,6 @@ airbag.enable()
 
 cert_dir = '/etc/rsyslog.d/certs'
 rsyslog_conf = '/run/rsyslog/rsyslog.conf'
-logrotate_user_conf = '/etc/logrotate.d/vyos-rsyslog-user'
 logrotate_messages_conf = '/etc/logrotate.d/vyos-rsyslog'
 
 systemd_socket = 'syslog.socket'
@@ -202,8 +201,6 @@ def generate(syslog):
     if not syslog:
         if os.path.exists(rsyslog_conf):
             os.unlink(rsyslog_conf)
-        if os.path.exists(logrotate_user_conf):
-            os.unlink(logrotate_user_conf)
 
         return None
 
@@ -213,7 +210,6 @@ def generate(syslog):
                 _save_tls_certificates_for_remote(syslog, remote_options)
 
     render(rsyslog_conf, 'rsyslog/rsyslog.conf.j2', syslog)
-    render(logrotate_user_conf, 'rsyslog/logrotate.j2', syslog)
     return None
 
 def apply(syslog):
