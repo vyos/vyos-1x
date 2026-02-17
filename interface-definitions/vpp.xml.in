@@ -527,6 +527,26 @@
           <help>VPP settings</help>
         </properties>
         <children>
+          <node name="resource-allocation">
+            <properties>
+              <help>Resource allocation settings</help>
+            </properties>
+            <children>
+              <leafNode name="cpu-cores">
+                <properties>
+                  <help>Create worker threads (including main-core)</help>
+                  <valueHelp>
+                    <format>u32:1-512</format>
+                    <description>Worker threads</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-512"/>
+                  </constraint>
+                </properties>
+                <defaultValue>1</defaultValue>
+              </leafNode>
+            </children>
+          </node>
           <node name="buffers">
             <properties>
               <help>Buffer settings</help>
@@ -569,67 +589,6 @@
                   #include <include/unformat_log2_page_size.xml.i>
                 </properties>
                 <defaultValue>2M</defaultValue>
-              </leafNode>
-            </children>
-          </node>
-          <node name="cpu">
-            <properties>
-              <help>CPU settings</help>
-            </properties>
-            <children>
-              <leafNode name="corelist-workers">
-                <properties>
-                  <help>List of cores worker threads</help>
-                  <valueHelp>
-                    <format>&lt;id&gt;</format>
-                    <description>CPU core id</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>&lt;idN&gt;-&lt;idM&gt;</format>
-                    <description>CPU core id range (use '-' as delimiter)</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--allow-range --range 0-512"/>
-                  </constraint>
-                  <constraintErrorMessage>not a valid CPU core value or range</constraintErrorMessage>
-                  <multi/>
-                </properties>
-              </leafNode>
-              <leafNode name="main-core">
-                <properties>
-                  <help>Main core</help>
-                  <valueHelp>
-                    <format>u32:0-512</format>
-                    <description>Assign main thread to specific core</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 0-512"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="skip-cores">
-                <properties>
-                  <help>Skip cores</help>
-                  <valueHelp>
-                    <format>u32:1-512</format>
-                    <description>Skip cores</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-512"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              <leafNode name="workers">
-                <properties>
-                  <help>Create worker threads</help>
-                  <valueHelp>
-                    <format>u32:0-4294967295</format>
-                    <description>Worker threads</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 0-512"/>
-                  </constraint>
-                </properties>
               </leafNode>
             </children>
           </node>

@@ -26,6 +26,7 @@ from json import loads
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.utils.cpu import get_available_cpus
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import rc_cmd
@@ -33,6 +34,7 @@ from vyos.utils.system import sysctl_read
 from vyos.system import image
 from vyos.vpp import VPPControl
 from vyos.vpp.utils import vpp_iface_name_transform
+from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 
 PROCESS_NAME = 'vpp_main'
 VPP_CONF = '/run/vpp/vpp.conf'
@@ -81,6 +83,14 @@ def get_address(interface):
             return ip_address
 
 
+def get_vpp_cpu_allocation():
+    reserved_cpus = default_resource_map.get('reserved_cpu_cores')
+    # Get sorted list of available CPU IDs
+    available = sorted({cpu['cpu'] for cpu in get_available_cpus()})
+    main_core = available[reserved_cpus]  # first non-reserved CPU
+    return reserved_cpus, main_core
+
+
 class TestVPP(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -116,18 +126,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         super().tearDown()
 
     def test_01_vpp_basic(self):
-        main_core = '0'
         poll_sleep = '0'
         mtu = '2500'
+        skip_cores, main_core = get_vpp_cpu_allocation()
 
-        # Main core must be verified
-        # expect raise ConfigError
-        self.cli_set(base_path + ['settings', 'cpu', 'main-core', '99'])
-
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + ['settings', 'cpu', 'main-core', main_core])
         self.cli_set(base_path + ['settings', 'poll-sleep-usec', poll_sleep])
 
         # commit changes
@@ -135,6 +137,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         config_entries = (
             f'poll-sleep-usec {poll_sleep}',
+            f'skip-cores {skip_cores}',
             f'main-core {main_core}',
             'plugin default { disable }',
             'plugin dpdk_plugin.so { enable }',
@@ -1128,11 +1131,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         dpdk_options = {
             'num-rx-desc': '512',
             'num-tx-desc': '512',
-            'num-rx-queues': '1',
-            'num-tx-queues': '1',
+            'num-rx-queues': '2',
+            'num-tx-queues': '2',
         }
-        main_core = '0'
-        workers = '1'
+        cpu_cores = '2'
 
         base_interface_path = base_path + ['settings', 'interface', interface]
 
@@ -1144,8 +1146,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(base_path + ['settings', 'cpu', 'main-core', main_core])
-        self.cli_set(base_path + ['settings', 'cpu', 'workers', workers])
+        self.cli_set(
+            base_path + ['settings', 'resource-allocation', 'cpu-cores', cpu_cores]
+        )
 
         # # DPDK driver expect only dpdk-options and not xdp-options to be set
         # # expect raise ConfigError
@@ -1165,35 +1168,25 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for option, value in dpdk_options.items():
             self.assertIn(f'{option} {value}', config)
 
-    def test_11_vpp_cpu_settings(self):
-        main_core = '2'
-        workers = '1'
-        skip_cores = '1'
+    def test_11_vpp_cpu_cores(self):
+        cpu_cores = '2'
+        skip_cores, main_core = get_vpp_cpu_allocation()
 
-        self.cli_set(base_path + ['settings', 'cpu', 'workers', workers])
-
-        # "cpu workers" reqiures main-core to be set
+        # verify 'cpu-cores' are set not correctly
         # expect raise ConfigError
+        self.cli_set(base_path + ['settings', 'resource-allocation', 'cpu-cores', '99'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(base_path + ['settings', 'cpu', 'main-core', main_core])
-
-        self.cli_set(base_path + ['settings', 'cpu', 'skip-cores', '99'])
-
-        # "cpu skip-cores" cannot be more than number of available CPUs - 1
-        # expect raise ConfigError
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + ['settings', 'cpu', 'skip-cores', skip_cores])
-
+        self.cli_set(
+            base_path + ['settings', 'resource-allocation', 'cpu-cores', cpu_cores]
+        )
         self.cli_commit()
 
         config_entries = (
-            f'skip-cores {skip_cores}',
-            f'main-core {main_core}',
-            f'workers {workers}',
+            f'skip-cores {skip_cores}',  # reserved cpus skipped for system use
+            f'main-core {main_core}',  # first available core is set as main-core
+            f'workers {int(cpu_cores) - 1}',
             'dev 0000:00:00.0',
         )
 
@@ -1202,49 +1195,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, config)
 
-    def test_12_vpp_cpu_corelist_workers(self):
-        main_core = '0'
-        corelist_workers = ['3']
-
-        for worker in corelist_workers:
-            self.cli_set(base_path + ['settings', 'cpu', 'corelist-workers', worker])
-
-        # "cpu corelist-workers" reqiures main-core to be set
-        # expect raise ConfigError
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + ['settings', 'cpu', 'main-core', main_core])
-
-        # corelist-workers and workers cannot be used at the same time
-        # expect raise ConfigError
-        self.cli_set(base_path + ['settings', 'cpu', 'workers', '2'])
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_delete(base_path + ['settings', 'cpu', 'workers'])
-
-        # verify corelist-workers are set not correctly
-        # expect raise ConfigError
-        self.cli_set(base_path + ['settings', 'cpu', 'corelist-workers', '99-101'])
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_delete(base_path + ['settings', 'cpu', 'corelist-workers', '99-101'])
-
-        self.cli_commit()
-
-        config_entries = (
-            f'main-core {main_core}',
-            f'corelist-workers {",".join(corelist_workers)}',
-            'dev 0000:00:00.0',
-        )
-
-        # Check configured options
-        config = read_file(VPP_CONF)
-        for config_entry in config_entries:
-            self.assertIn(config_entry, config)
-
-    def test_13_1_buffer_page_size(self):
+    def test_12_1_buffer_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
             self.cli_set(base_path + ['settings', 'buffers', 'page-size', size])
@@ -1253,7 +1204,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['buffers']['page-size'], size)
 
-    def test_13_2_statseg_page_size(self):
+    def test_12_2_statseg_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
             self.cli_set(base_path + ['settings', 'statseg', 'page-size', size])
@@ -1262,7 +1213,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['statseg']['page-size'], size)
 
-    def test_13_3_mem_page_size(self):
+    def test_12_3_mem_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
             self.cli_set(
@@ -1273,7 +1224,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
 
-    def test_14_vpp_ipsec_xfrm_nl(self):
+    def test_13_vpp_ipsec_xfrm_nl(self):
         base_lcp = base_path + ['settings', 'lcp']
         batch_delay = '250'
         batch_size = '150'
@@ -1299,7 +1250,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, config)
 
-    def test_15_1_vpp_cgnat(self):
+    def test_14_1_vpp_cgnat(self):
         base_cgnat = base_path + ['nat', 'cgnat']
         iface_out = 'eth0'
         iface_inside = 'eth1'
@@ -1338,7 +1289,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'tcp transitory timeout: {timeout_tcp_trans}sec', out)
         self.assertIn(f'icmp timeout: {timeout_icmp}sec', out)
 
-    def test_15_2_vpp_cgnat_bond_with_vifs(self):
+    def test_14_2_vpp_cgnat_bond_with_vifs(self):
         base_cgnat = base_path + ['nat', 'cgnat']
         base_kernel = base_path + ['kernel-interfaces']
         base_bond = base_path + ['interfaces', 'bonding']
@@ -1382,7 +1333,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         lines = out.split('\n')
         self.assertTrue(len(lines) == 3)
 
-    def test_16_vpp_nat44(self):
+    def test_15_vpp_nat44(self):
         base_nat = base_path + ['nat', 'nat44']
         exclude_local_addr = '100.64.0.52'
         exclude_local_port = '22'
@@ -1479,7 +1430,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         out = vpp.api.nat44_show_running_config().forwarding_enabled
         self.assertTrue(out)
 
-    def test_17_vpp_sflow(self):
+    def test_16_vpp_sflow(self):
         base_sflow = ['system', 'sflow']
         sampling_rate = '1500'
         polling_interval = '55'
@@ -1540,7 +1491,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show sflow')
         self.assertIn('interfaces enabled: 0', out)
 
-    def test_18_resource_limits(self):
+    def test_17_resource_limits(self):
         max_map_count = '100000'
         shmmax = '55555555555555'
         hr_path = ['system', 'option', 'resource-limits']
@@ -1567,7 +1518,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
         self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
 
-    def test_19_vpp_pppoe_mapping(self):
+    def test_18_vpp_pppoe_mapping(self):
         config_file = '/run/accel-pppd/pppoe.conf'
         pool = "TEST-POOL"
         vni = '23'
@@ -1617,7 +1568,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
         self.cli_commit()
 
-    def test_20_kernel_options_hugepages(self):
+    def test_19_kernel_options_hugepages(self):
         default_hp_size = '2M'
         hp_size_1g = '1G'
         hp_size_2m = '2M'
@@ -1650,7 +1601,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' hugepagesz={hp_size_1g} hugepages={hp_count_1g}', tmp)
         self.assertIn(f' hugepagesz={hp_size_2m} hugepages={hp_count_2m}', tmp)
 
-    def test_21_static_arp(self):
+    def test_20_static_arp(self):
         host = '192.0.2.10'
         mac = '00:01:02:03:04:0a'
         path_static_arp = ['protocols', 'static', 'arp']
@@ -1674,7 +1625,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(path_static_arp)
 
-    def test_22_1_vpp_ipfix(self):
+    def test_21_1_vpp_ipfix(self):
         base_ipfix = base_path + ['ipfix']
         base_collector = base_ipfix + ['collector']
         collector_ip = '127.0.0.2'
@@ -1761,7 +1712,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             len(non_default_exporters), 0, 'Exporters not cleaned up properly'
         )
 
-    def test_22_2_vpp_ipfix_bond(self):
+    def test_21_2_vpp_ipfix_bond(self):
         base_ipfix = base_path + ['ipfix']
         base_bond = base_path + ['interfaces', 'bonding']
         iface_bond = 'bond0'

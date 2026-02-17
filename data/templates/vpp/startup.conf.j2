@@ -18,9 +18,6 @@ cpu {
 {%     if cpu.main_core is vyos_defined %}
     main-core {{ cpu.main_core }}
 {%     endif %}
-{%     if cpu.corelist_workers is vyos_defined %}
-    corelist-workers {{ cpu.corelist_workers | join(',') }}
-{%     endif %}
 {%     if cpu.skip_cores is vyos_defined %}
     skip-cores {{ cpu.skip_cores }}
 {%     endif %}
