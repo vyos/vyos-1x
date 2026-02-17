@@ -36,20 +36,23 @@ if __name__ == '__main__':
     final_list = []
     # Autocomplete uses runtime state rather than the config tree, as a manual
     # restart/cleanup may be needed for deleted devices.
-    if args.selector == 'all':
-        tty_list = sorted(find_all_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
-    elif args.selector == 'active':
-        tty_list = sorted(find_active_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
-    elif args.selector == 'auth':
-        tty_list = sorted(find_active_ttyS_devices_with_auth_on(), key=lambda x: int(re.search(r'\d+', x).group()))
+
+    if find_all_ttyS_devices():
+        if args.selector == 'all':
+            tty_list = sorted(find_all_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
+        elif args.selector == 'active':
+            tty_list = sorted(find_active_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
+        elif args.selector == 'auth':
+            tty_list = sorted(find_active_ttyS_devices_with_auth_on(), key=lambda x: int(re.search(r'\d+', x).group()))
+        else:
+            tty_list = sorted(find_active_ttyS_devices_running_service(args.selector), key=lambda x: int(re.search(r'\d+', x).group()))
+
+        if args.greater:
+            final_list = trim_list_from_match(tty_list, args.greater)
+        else:
+            final_list = tty_list
+
+        tty_completions = [ '<text>' ] + final_list
+        print(' '.join(tty_completions))
     else:
-        tty_list = sorted(find_active_ttyS_devices_running_service(args.selector), key=lambda x: int(re.search(r'\d+', x).group()))
-
-
-    if args.greater:
-        final_list = trim_list_from_match(tty_list, args.greater)
-    else:
-        final_list = tty_list
-
-    tty_completions = [ '<text>' ] + final_list
-    print(' '.join(tty_completions))
+        print('No device nodes with prefix /dev/ttyS exist')
