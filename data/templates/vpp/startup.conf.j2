@@ -178,17 +178,17 @@ dpdk {
 {%     if iface_config.driver == 'dpdk' %}
     dev {{ iface_config.dpdk_options.dev_id }} {
         name {{ iface }}
-{%         if iface_config.dpdk_options.num_rx_desc is vyos_defined %}
-        num-rx-desc {{ iface_config.dpdk_options.num_rx_desc }}
+{%         if iface_config.num_rx_desc is vyos_defined %}
+        num-rx-desc {{ iface_config.num_rx_desc }}
 {%         endif %}
-{%         if iface_config.dpdk_options.num_tx_desc is vyos_defined %}
-        num-tx-desc {{ iface_config.dpdk_options.num_tx_desc }}
+{%         if iface_config.num_tx_desc is vyos_defined %}
+        num-tx-desc {{ iface_config.num_tx_desc }}
 {%         endif %}
-{%         if iface_config.dpdk_options.num_rx_queues is vyos_defined %}
-        num-rx-queues {{ iface_config.dpdk_options.num_rx_queues }}
+{%         if iface_config.num_rx_queues is vyos_defined %}
+        num-rx-queues {{ iface_config.num_rx_queues }}
 {%         endif %}
-{%         if iface_config.dpdk_options.num_tx_queues is vyos_defined %}
-        num-tx-queues {{ iface_config.dpdk_options.num_tx_queues }}
+{%         if iface_config.num_tx_queues is vyos_defined %}
+        num-tx-queues {{ iface_config.num_tx_queues }}
 {%         endif %}
         }
 {%     endif %}

@@ -554,21 +554,15 @@ def verify(config):
 
                 Warning(f'Not all RX queues will be connected to VPP for {iface}!')
 
-        if iface_config['driver'] == 'xdp' and 'dpdk_options' in iface_config:
-            raise ConfigError('DPDK options are not applicable for XDP driver!')
-
-        if iface_config['driver'] == 'dpdk' and 'xdp_options' in iface_config:
-            raise ConfigError('XDP options are not applicable for DPDK driver!')
-
-        if iface_config['driver'] == 'dpdk' and 'dpdk_options' in iface_config:
-            if 'num_rx_queues' in iface_config['dpdk_options']:
-                rx_queues = int(iface_config['dpdk_options']['num_rx_queues'])
+        if iface_config['driver'] == 'dpdk':
+            if 'num_rx_queues' in iface_config:
+                rx_queues = int(iface_config['num_rx_queues'])
                 verify_vpp_interfaces_dpdk_num_queues(
                     qtype='receive', num_queues=rx_queues, workers=cpu_cores
                 )
 
-            if 'num_tx_queues' in iface_config['dpdk_options']:
-                tx_queues = int(iface_config['dpdk_options']['num_tx_queues'])
+            if 'num_tx_queues' in iface_config:
+                tx_queues = int(iface_config['num_tx_queues'])
                 verify_vpp_interfaces_dpdk_num_queues(
                     qtype='transmit', num_queues=tx_queues, workers=cpu_cores
                 )
@@ -783,13 +777,6 @@ def apply(config):
             # add interfaces
             iproute = IPRoute()
             for iface, iface_config in config['settings']['interface'].items():
-                # promisc option for DPDK interfaces
-                if iface_config['driver'] == 'dpdk':
-                    if 'promisc' in iface_config['dpdk_options']:
-                        if_index = vpp_control.get_sw_if_index(iface)
-                        vpp_control.api.sw_interface_set_promisc(
-                            sw_if_index=if_index, promisc_on=True
-                        )
                 # add XDP interfaces
                 if iface_config['driver'] == 'xdp':
                     control_host.rename_iface(iface, f'defunct_{iface}')

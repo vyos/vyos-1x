@@ -45,7 +45,10 @@ set vpp interfaces vxlan vxlan10 vni '10'
 set vpp settings interface eth1
 set vpp settings interface eth2
 set vpp settings interface eth3
-set vpp settings interface eth4
+set vpp settings interface eth4 num-rx-desc '512'
+set vpp settings interface eth4 num-tx-desc '512'
+set vpp settings interface eth4 num-rx-queues '1'
+set vpp settings interface eth4 num-tx-queues '1'
 set vpp settings poll-sleep-usec '12'
 set vpp settings logging default-level 'debug'
 set vpp settings interface-rx-mode 'polling'
