@@ -61,6 +61,14 @@
               <help>Segment-Routing SRv6 configuration</help>
             </properties>
             <children>
+              <node name="encapsulation">
+                <properties>
+                  <help>Segment Routing SRv6 encapsulation</help>
+                </properties>
+                <children>
+                  #include <include/source-address-ipv6.xml.i>
+                </children>
+              </node>
               <tagNode name="locator">
                 <properties>
                   <help>Segment-Routing SRv6 locators configuration</help>
