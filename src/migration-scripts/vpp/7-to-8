@@ -26,6 +26,11 @@
 # Convert `vpp settings interface <name> rx-mode` and `vpp kernel-interfaces <name> rx-mode`
 # to `vpp settings interfaces-rx-mode` by choose the worst value from all nodes (T8266)
 #
+# Get rid of 'dpdk-options' section for 'num-*' parameters:
+#  - `vpp settings interface <ethN> dpdk-options num-*`
+#  - `vpp settings interface <ethN> num-*`
+# and delete `vpp settings interface <ethN> dpdk-options promisc` (T8274)
+#
 
 from vyos.configtree import ConfigTree
 
@@ -155,6 +160,34 @@ def _migrate_vpp_interface_rx_mode(config: ConfigTree) -> None:
     _delete_rx_modes(kernel_interface_path)
 
 
+def _migrate_vpp_dpdk_options(config: ConfigTree) -> None:
+    base_path = ['vpp', 'settings', 'interface']
+    params = ['num-rx-desc', 'num-rx-queues', 'num-tx-desc', 'num-tx-queues']
+
+    if not config.exists(base_path):
+        return
+
+    for iface_name in config.list_nodes(base_path):
+        iface_path = base_path + [iface_name]
+        dpdk_path = iface_path + ['dpdk-options']
+
+        if config.exists(dpdk_path):
+            for param in params:
+                param_path = dpdk_path + [param]
+                new_param_path = iface_path + [param]
+
+                if config.exists(param_path):
+                    # Move `vpp settings interface <iface_name> dpdk-options num-*`
+                    # to `vpp settings interface <iface_name> num-*`
+                    config.copy(param_path, new_param_path)
+                    config.delete(param_path)
+
+        # Delete `vpp settings interface <iface_name> dpdk-options promisc`
+        promisc_path = dpdk_path + ['promisc']
+        if config.exists(promisc_path):
+            config.delete(promisc_path)
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
         # Nothing to do
@@ -166,3 +199,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_ipsec(config)
     _migrate_vpp_cpu(config)
     _migrate_vpp_interface_rx_mode(config)
+    _migrate_vpp_dpdk_options(config)

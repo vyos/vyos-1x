@@ -608,69 +608,56 @@
               <constraintErrorMessage>Invalid interface name</constraintErrorMessage>
             </properties>
             <children>
-              <node name="dpdk-options">
+              <leafNode name="num-rx-desc">
                 <properties>
-                  <help>DPDK settings</help>
+                  <help>Receive ring descriptors</help>
+                  <valueHelp>
+                    <format>u32:256-16384</format>
+                    <description>Number of descriptors in receive ring</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 256-16384"/>
+                  </constraint>
                 </properties>
-                <children>
-                  <leafNode name="num-rx-desc">
-                    <properties>
-                      <help>Receive ring descriptors</help>
-                      <valueHelp>
-                        <format>u32:256-16384</format>
-                        <description>Number of descriptors in receive ring</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 256-16384"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>1024</defaultValue>
-                  </leafNode>
-                  <leafNode name="num-tx-desc">
-                    <properties>
-                      <help>Tranceive ring descriptors</help>
-                      <valueHelp>
-                        <format>u32:256-8192</format>
-                        <description>Number of descriptors in tranceive ring</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 256-8192"/>
-                      </constraint>
-                    </properties>
-                    <defaultValue>1024</defaultValue>
-                  </leafNode>
-                  <leafNode name="num-rx-queues">
-                    <properties>
-                      <help>Number of receive queues</help>
-                      <valueHelp>
-                        <format>u32:1-8192</format>
-                        <description>Number of receive queues</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-8192"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="num-tx-queues">
-                    <properties>
-                      <help>Number of tranceive queues</help>
-                      <valueHelp>
-                        <format>u32:1-8192</format>
-                        <description>Number of tranceive queues</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-8192"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="promisc">
-                    <properties>
-                      <help>Enable promisc mode on a vpp interface</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+                <defaultValue>1024</defaultValue>
+              </leafNode>
+              <leafNode name="num-tx-desc">
+                <properties>
+                  <help>Tranceive ring descriptors</help>
+                  <valueHelp>
+                    <format>u32:256-8192</format>
+                    <description>Number of descriptors in tranceive ring</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 256-8192"/>
+                  </constraint>
+                </properties>
+                <defaultValue>1024</defaultValue>
+              </leafNode>
+              <leafNode name="num-rx-queues">
+                <properties>
+                  <help>Number of receive queues</help>
+                  <valueHelp>
+                    <format>u32:1-8192</format>
+                    <description>Number of receive queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-8192"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="num-tx-queues">
+                <properties>
+                  <help>Number of tranceive queues</help>
+                  <valueHelp>
+                    <format>u32:1-8192</format>
+                    <description>Number of tranceive queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-8192"/>
+                  </constraint>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
           <node name="ipv6">

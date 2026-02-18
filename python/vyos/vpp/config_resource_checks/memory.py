@@ -189,12 +189,11 @@ def buffers_required(settings: dict) -> int:
         # if iface_config.get('driver') == 'xdp':
         #     continue
 
-        dpdk_options = iface_config.get('dpdk_options', {})
-        rx_queues = int(dpdk_options.get('num_rx_queues', 1))
-        rx_desc = int(dpdk_options.get('num_rx_desc'))
+        rx_queues = int(iface_config.get('num_rx_queues', 1))
+        rx_desc = int(iface_config.get('num_rx_desc'))
         # default TX queues is equal to number of worker threads
-        tx_queues = int(dpdk_options.get('num_tx_queues', workers))
-        tx_desc = int(dpdk_options.get('num_tx_desc'))
+        tx_queues = int(iface_config.get('num_tx_queues', workers))
+        tx_desc = int(iface_config.get('num_tx_desc'))
 
         # buffers for RX/TX queues for interface
         buffers_total += rx_queues * rx_desc + tx_queues * tx_desc

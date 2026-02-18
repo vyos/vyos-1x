@@ -905,7 +905,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Add check dependency ethernet => bridge
         self.cli_set(
-            base_path + ['settings', 'interface', interface, 'dpdk-options', 'promisc']
+            base_path + ['settings', 'interface', interface, 'num-rx-desc', '512']
         )
         self.cli_commit()
         # check bridge interface
@@ -1128,7 +1128,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertNotIn(required_string, out)
 
     def test_10_vpp_driver_options(self):
-        dpdk_options = {
+        driver_options = {
             'num-rx-desc': '512',
             'num-tx-desc': '512',
             'num-rx-queues': '2',
@@ -1138,8 +1138,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         base_interface_path = base_path + ['settings', 'interface', interface]
 
-        for option, value in dpdk_options.items():
-            self.cli_set(base_interface_path + ['dpdk-options', option, value])
+        for option, value in driver_options.items():
+            self.cli_set(base_interface_path + [option, value])
 
         # rx/tx queue configuration expect VPP workers to be set
         # expect raise ConfigError
@@ -1165,7 +1165,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # check dpdk options in config file
         config = read_file(VPP_CONF)
 
-        for option, value in dpdk_options.items():
+        for option, value in driver_options.items():
             self.assertIn(f'{option} {value}', config)
 
     def test_11_vpp_cpu_cores(self):
@@ -1552,7 +1552,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # check if dependency is called and mapping is correct after changes in vpp script
         self.cli_set(
-            base_path + ['settings', 'interface', interface, 'dpdk-options', 'promisc']
+            base_path + ['settings', 'interface', interface, 'num-tx-desc', '512']
         )
         self.cli_commit()
 

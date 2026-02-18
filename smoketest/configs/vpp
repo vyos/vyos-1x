@@ -120,6 +120,12 @@ vpp {
         }
         interface eth4 {
             driver "dpdk"
+            dpdk-options {
+                num-rx-desc "512"
+                num-tx-desc "512"
+                num-rx-queues "1"
+                num-tx-queues "1"
+            }
         }
         unix {
             poll-sleep-usec "12"
