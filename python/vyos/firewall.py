@@ -12,24 +12,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import csv
-import gzip
-import os
 import re
 
-from pathlib import Path
 from socket import AF_INET
 from socket import AF_INET6
 from socket import getaddrinfo
-from time import strftime
 
-from vyos.remote import download
 from vyos.template import is_ipv4
-from vyos.template import render
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
-from vyos.utils.process import run
 from vyos.utils.network import get_vrf_tableid
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
@@ -691,147 +683,3 @@ def parse_time(time):
         out_days = [f'"{day}"' for day in days if day[0] != '!']
         out.append(f'day {{{",".join(out_days)}}}')
     return " ".join(out)
-
-# GeoIP
-
-nftables_geoip_conf = '/run/nftables-geoip.conf'
-geoip_database = '/usr/share/vyos-geoip/dbip-country-lite.csv.gz'
-geoip_lock_file = '/run/vyos-geoip.lock'
-
-def geoip_load_data(codes=[]):
-    data = None
-
-    if not os.path.exists(geoip_database):
-        return []
-
-    try:
-        with gzip.open(geoip_database, mode='rt') as csv_fh:
-            reader = csv.reader(csv_fh)
-            out = []
-            for start, end, code in reader:
-                if code.lower() in codes:
-                    out.append([start, end, code.lower()])
-            return out
-    except:
-        print('Error: Failed to open GeoIP database')
-    return []
-
-def geoip_download_data():
-    url = 'https://download.db-ip.com/free/dbip-country-lite-{}.csv.gz'.format(strftime("%Y-%m"))
-    try:
-        dirname = os.path.dirname(geoip_database)
-        if not os.path.exists(dirname):
-            os.mkdir(dirname)
-
-        download(geoip_database, url)
-        print("Downloaded GeoIP database")
-        return True
-    except:
-        print("Error: Failed to download GeoIP database")
-    return False
-
-class GeoIPLock(object):
-    def __init__(self, file):
-        self.file = file
-
-    def __enter__(self):
-        if os.path.exists(self.file):
-            return False
-
-        Path(self.file).touch()
-        return True
-
-    def __exit__(self, exc_type, exc_value, tb):
-        os.unlink(self.file)
-
-def geoip_update(firewall=None, policy=None, force=False):
-    with GeoIPLock(geoip_lock_file) as lock:
-        if not lock:
-            print("Script is already running")
-            return False
-
-        if not firewall and not policy:
-            print("Firewall and policy are not configured")
-            return True
-
-        if not os.path.exists(geoip_database):
-            if not geoip_download_data():
-                return False
-        elif force:
-            geoip_download_data()
-
-        ipv4_codes = {}
-        ipv6_codes = {}
-
-        ipv4_sets = {}
-        ipv6_sets = {}
-
-        ipv4_codes_policy = {}
-        ipv6_codes_policy = {}
-
-        ipv4_sets_policy = {}
-        ipv6_sets_policy = {}
-
-        # Map country codes to set names
-        if firewall:
-            for codes, path in dict_search_recursive(firewall, 'country_code'):
-                set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
-                if ( path[0] == 'ipv4'):
-                    for code in codes:
-                        ipv4_codes.setdefault(code, []).append(set_name)
-                elif ( path[0] == 'ipv6' ):
-                    set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
-                    for code in codes:
-                        ipv6_codes.setdefault(code, []).append(set_name)
-
-        if policy:
-            for codes, path in dict_search_recursive(policy, 'country_code'):
-                set_name = f'GEOIP_CC_{path[0]}_{path[1]}_{path[3]}'
-                if ( path[0] == 'route'):
-                    for code in codes:
-                        ipv4_codes_policy.setdefault(code, []).append(set_name)
-                elif ( path[0] == 'route6' ):
-                    set_name = f'GEOIP_CC6_{path[0]}_{path[1]}_{path[3]}'
-                    for code in codes:
-                        ipv6_codes_policy.setdefault(code, []).append(set_name)
-
-        if not ipv4_codes and not ipv6_codes and not ipv4_codes_policy and not ipv6_codes_policy:
-            if force:
-                print("GeoIP not in use by firewall and policy")
-            return True
-
-        geoip_data = geoip_load_data([*ipv4_codes, *ipv6_codes, *ipv4_codes_policy, *ipv6_codes_policy])
-
-        # Iterate IP blocks to assign to sets
-        for start, end, code in geoip_data:
-            ipv4 = is_ipv4(start)
-            if code in ipv4_codes and ipv4:
-                ip_range = f'{start}-{end}' if start != end else start
-                for setname in ipv4_codes[code]:
-                    ipv4_sets.setdefault(setname, []).append(ip_range)
-            if code in ipv4_codes_policy and ipv4:
-                ip_range = f'{start}-{end}' if start != end else start
-                for setname in ipv4_codes_policy[code]:
-                    ipv4_sets_policy.setdefault(setname, []).append(ip_range)
-            if code in ipv6_codes and not ipv4:
-                ip_range = f'{start}-{end}' if start != end else start
-                for setname in ipv6_codes[code]:
-                    ipv6_sets.setdefault(setname, []).append(ip_range)
-            if code in ipv6_codes_policy and not ipv4:
-                ip_range = f'{start}-{end}' if start != end else start
-                for setname in ipv6_codes_policy[code]:
-                    ipv6_sets_policy.setdefault(setname, []).append(ip_range)
-
-        render(nftables_geoip_conf, 'firewall/nftables-geoip-update.j2', {
-            'ipv4_sets': ipv4_sets,
-            'ipv6_sets': ipv6_sets,
-            'ipv4_sets_policy': ipv4_sets_policy,
-            'ipv6_sets_policy': ipv6_sets_policy,
-        })
-
-        result = run(f'nft --file {nftables_geoip_conf}')
-        if result != 0:
-            print('Error: GeoIP failed to update firewall/policy')
-            return False
-
-        return True

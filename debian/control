@@ -92,6 +92,7 @@ Depends:
   python3-pystache,
   python3-pyudev,
   python3-six,
+  python3-systemd,
   python3-tabulate,
   python3-tomli,
   python3-voluptuous,

@@ -28,6 +28,8 @@ from base_interfaces_test import BasicInterfaceTest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.ethtool import Ethtool
+from vyos.netlink import coalesce
 from vyos.frrender import mgmt_daemon
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
@@ -204,6 +206,85 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             # ring-buffer size got increased
             self.assertEqual(max_rx, rx)
             self.assertEqual(max_tx, tx)
+
+    def test_ethtool_coalesce(self):
+        """
+        Verify that coalesce configuration is correctly applied to the interface using netlink
+        """
+
+        for interface in self._interfaces:
+            base_path = self._base_path + [interface, 'interrupt-coalescing']
+            ethtool = Ethtool(interface)
+            is_virtio = ethtool.get_driver_name() == 'virtio_net'
+
+            with self.subTest(interface=interface):
+                # Verify coalesce support on the NIC before check
+                supported = ethtool.check_coalesce()
+
+                # If ethtool reports completely unsupported feature, then the CLI commit
+                # should correctly raise a ConfigSessionError during commit
+                if not supported:
+                    self.cli_set(base_path + ['rx-usecs', '32'])
+                    self.cli_set(base_path + ['tx-usecs', '32'])
+
+                    msg = 'Driver does not fully support coalesce configuration'
+                    with self.assertRaisesRegex(ConfigSessionError, msg):
+                        self.cli_commit()
+                    continue
+
+                # To find out the supported features
+                supported_rx_usecs = ethtool.check_coalesce('rx_usecs')
+                supported_tx_usecs = ethtool.check_coalesce('tx_usecs')
+                supported_adaptive_rx = ethtool.check_coalesce('adaptive_rx')
+                supported_adaptive_tx = ethtool.check_coalesce('adaptive_tx')
+
+                # Disabled adaptive modes and set custom values
+                if supported_rx_usecs:
+                    self.cli_set(base_path + ['rx-usecs', '64'])
+                if supported_tx_usecs:
+                    self.cli_set(base_path + ['tx-usecs', '64'])
+
+                # Force adaptive to be disabled if it is already enabled
+                params = coalesce.get_coalesce(interface)
+                if supported_rx_usecs and params['adaptive_rx']:
+                    cmd(f'sudo ethtool --coalesce {interface} adaptive-rx off')
+                if supported_tx_usecs and params['adaptive_tx']:
+                    cmd(f'sudo ethtool --coalesce {interface} adaptive-tx off')
+
+                # Commit CLI configuration to apply coalescing
+                self.cli_commit()
+
+                # Query coalesce parameters after applying
+                params = coalesce.get_coalesce(interface)
+
+                # Assertions: all should reflect configured values
+                if supported_rx_usecs:
+                    # `virtio-net` doesn't correctly work with this parameter
+                    self.assertEqual(params['rx_usecs'], 0 if is_virtio else 64)
+                if supported_tx_usecs:
+                    # `virtio-net` doesn't correctly work with this parameter
+                    self.assertEqual(params['tx_usecs'], 0 if is_virtio else 64)
+
+                # Not all parameters are adjustable for some of NIC (`virtio-net`)
+                if supported_adaptive_rx:
+                    # Now test enabling RX adaptive coalescing modes
+                    self.cli_delete(base_path + ['rx-usecs'])
+                    self.cli_set(base_path + ['adaptive-rx'])
+
+                if supported_adaptive_tx:
+                    # Now test enabling TX adaptive coalescing modes
+                    self.cli_delete(base_path + ['tx-usecs'])
+                    self.cli_set(base_path + ['adaptive-tx'])
+
+                self.cli_commit()
+
+                # Verify that adaptive modes turned on correctly
+                params = coalesce.get_coalesce(interface)
+                if supported_adaptive_rx:
+                    self.assertTrue(params['adaptive_rx'])
+
+                if supported_adaptive_tx:
+                    self.assertTrue(params['adaptive_tx'])
 
     def test_ethtool_flow_control(self):
         for interface in self._interfaces:

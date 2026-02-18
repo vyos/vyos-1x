@@ -34,6 +34,7 @@ import os
 import requests
 import vyos.defaults
 from vyos.system.image import is_live_boot
+from urllib3.util import retry
 
 from vyos.utils.file import read_file
 from vyos.utils.file import read_json
@@ -124,9 +125,18 @@ def get_remote_version(url):
       }
     ]
     """
+
     headers = {}
+    session = requests.Session()
+
+    # By default, `requests` lib. does not retry failed connections
+    # and this code implements automatic retries using the next wait time range:
+    #   - 0.15, 0.30, 0.60, 1.20 and 2.40 seconds.
+    for adapter in session.adapters.values():
+        adapter.max_retries = retry.Retry(total=5, backoff_factor=0.15)
+
     try:
-        remote_data = requests.get(url=url, headers=headers)
+        remote_data = session.get(url=url, headers=headers)
         remote_data.raise_for_status()
         if remote_data.status_code != 200:
             return False

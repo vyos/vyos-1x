@@ -23,7 +23,6 @@ from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 
-PROCESS_NAME = 'salt-minion'
 SALT_CONF = '/etc/salt/minion'
 base_path = ['service', 'salt-minion']
 
@@ -47,7 +46,7 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(process_named_running('python3.11', '/usr/bin/salt-minion'))
 
         # delete testing SALT config
         self.cli_delete(base_path)
@@ -57,7 +56,7 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
         # from the CI) salt-minion process is not killed by systemd. Apparently
         # no issue on VMWare.
         if cmd('systemd-detect-virt') != 'kvm':
-            self.assertFalse(process_named_running(PROCESS_NAME))
+            self.assertFalse(process_named_running('python3.11', '/usr/bin/salt-minion'))
         # always forward to base class
         super().tearDown()
 

@@ -32,28 +32,28 @@
                 </children>
                 <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_ip_acls</command>
               </node>
-              <node name="macip">
+              <node name="mac">
                 <properties>
-                  <help>Show VPP ACL by macip</help>
+                  <help>Show VPP ACL by mac</help>
                 </properties>
                 <children>
                   <tagNode name="tag-name">
                     <properties>
                       <help>Show specified VPP ACL</help>
                       <completionHelp>
-                        <path>vpp acl macip tag-name</path>
+                        <path>vpp acl mac tag-name</path>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_macip_acls --tag-name="$6"</command>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_mac_acls --tag-name="$6"</command>
                   </tagNode>
                   <node name="interface">
                     <properties>
                       <help>Show VPP ACL interfaces</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_macip_interfaces</command>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_mac_interfaces</command>
                   </node>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_macip_acls</command>
+                <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_mac_acls</command>
               </node>
             </children>
             <command>sudo ${vyos_op_scripts_dir}/vpp_acl.py show_all_acls</command>

@@ -4,40 +4,44 @@
     <children>
       <node name="vpp">
         <children>
-          <node name="nat44">
-            <properties>
-              <help>Show VPP NAT44 information</help>
-            </properties>
+          <node name="nat">
             <children>
-              <node name="static">
+              <node name="nat44">
                 <properties>
-                  <help>Show VPP NAT44 static mapping</help>
+                  <help>Show VPP NAT44 information</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_vpp_nat44.py show_static</command>
-              </node>
-              <node name="sessions">
-                <properties>
-                  <help>Show VPP NAT44 sessions</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_vpp_nat44.py show_sessions</command>
-              </node>
-              <node name="summary">
-                <properties>
-                  <help>Show VPP NAT44 summary</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_vpp_nat44.py show_summary</command>
-              </node>
-              <node name="addresses">
-                <properties>
-                  <help>Show VPP NAT44 pool addresses</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_vpp_nat44.py show_addresses</command>
-              </node>
-              <node name="interfaces">
-                <properties>
-                  <help>Show VPP NAT44 interfaces</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_vpp_nat44.py show_interfaces</command>
+                <children>
+                  <node name="static">
+                    <properties>
+                      <help>Show VPP NAT44 static mapping</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_nat44.py show_static</command>
+                  </node>
+                  <node name="sessions">
+                    <properties>
+                      <help>Show VPP NAT44 sessions</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_nat44.py show_sessions</command>
+                  </node>
+                  <node name="summary">
+                    <properties>
+                      <help>Show VPP NAT44 summary</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_nat44.py show_summary</command>
+                  </node>
+                  <node name="addresses">
+                    <properties>
+                      <help>Show VPP NAT44 pool addresses</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_nat44.py show_addresses</command>
+                  </node>
+                  <node name="interfaces">
+                    <properties>
+                      <help>Show VPP NAT44 interfaces</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_nat44.py show_interfaces</command>
+                  </node>
+                </children>
               </node>
             </children>
           </node>

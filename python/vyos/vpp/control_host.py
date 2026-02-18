@@ -85,6 +85,30 @@ def unbind_driver(bus_id: str, device_id: str) -> bool:
     return True
 
 
+def rebind_gve_driver(iface: str, bus_id: str, device_id: str) -> None:
+    """
+    Rebind a device to the gve kernel driver.
+
+    Args:
+        iface (str): Interface name
+        bus_id (str): Bus type (pci, vmbus, etc.)
+        device_id (str): device id on the bus (PCI address, VMBus UUID)
+    """
+    set_status(iface, 'down')
+
+    # Unbind the device from its current driver
+    unbind_driver(bus_id, device_id)
+
+    # Clear driver override (if set)
+    device_path = Path(f'/sys/bus/{bus_id}/devices/{device_id}').resolve()
+    (device_path / 'driver_override').write_text('')
+
+    # Bind the device to the gve kernel driver
+    Path(f'/sys/bus/{bus_id}/drivers/gve/bind').write_text(device_id)
+
+    set_status(iface, 'up')
+
+
 def probe_driver(bus_id: str, device_id: str) -> None:
     """Probe driver for a device on a bus
 

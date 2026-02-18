@@ -51,8 +51,10 @@ def migrate(config: ConfigTree) -> None:
         # Migrate "service dns dynamic address <interface> service <service> protocol dnsexit"
         #      to "service dns dynamic address <interface> service <service> protocol dnsexit2"
         for address in config.list_nodes(address_path):
-            for svc_cfg in config.list_nodes(address_path + [address, 'service']):
-                if config.exists(address_path + [address, 'service', svc_cfg, 'protocol']):
-                    protocol = config.return_value(address_path + [address, 'service', svc_cfg, 'protocol'])
-                    if protocol == 'dnsexit':
-                        config.set(address_path + [address, 'service', svc_cfg, 'protocol'], 'dnsexit2')
+            service_path = address_path + [address, 'service']
+            if config.exists(service_path):
+                for svc_cfg in config.list_nodes(service_path):
+                    if config.exists(service_path + [svc_cfg, 'protocol']):
+                        protocol = config.return_value(service_path + [svc_cfg, 'protocol'])
+                        if protocol == 'dnsexit':
+                            config.set(service_path + [svc_cfg, 'protocol'], 'dnsexit2')

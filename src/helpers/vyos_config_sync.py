@@ -40,9 +40,12 @@ logger.name = os.path.basename(__file__)
 API_HEADERS = {'Content-Type': 'application/json'}
 
 
-def post_request(url: str,
-                 data: str,
-                 headers: Dict[str, str]) -> requests.Response:
+def post_request(
+    url: str,
+    data: str,
+    params: Dict[str, Any],
+    headers: Dict[str, str],
+) -> requests.Response:
     """Sends a POST request to the specified URL
 
     Args:
@@ -54,11 +57,14 @@ def post_request(url: str,
         requests.Response: The response object representing the server's response to the request
     """
 
-    response = requests.post(url,
-                             data=data,
-                             headers=headers,
-                             verify=False,
-                             timeout=timeout)
+    response = requests.post(
+        url,
+        data=data,
+        params=params,
+        headers=headers,
+        verify=False,
+        timeout=timeout,
+    )
     return response
 
 
@@ -116,6 +122,10 @@ def set_remote_config(
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     url = f'https://{address}:{port}/configure-section'
+    params = {
+        # Ask the remote API to perform the configure and commit workflow asynchronously
+        'in_background': True,
+    }
     data = json.dumps({
         'op': op,
         'mask': mask,
@@ -124,7 +134,7 @@ def set_remote_config(
     })
 
     try:
-        config = post_request(url, data, headers)
+        config = post_request(url, data, params, headers)
         return config.json()
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")

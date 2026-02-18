@@ -13,9 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
-import os
 import re
 import sys
 import glob
@@ -30,21 +28,13 @@ from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VRRP
 from vyos.utils.dict import dict_set_nested
+from vyos.utils.io import catch_broken_pipe
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import interface_exists
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import call
 from vyos.configquery import op_mode_config_dict
-
-def catch_broken_pipe(func):
-    def wrapped(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except (BrokenPipeError, KeyboardInterrupt):
-            # Flush output to /dev/null and bail out.
-            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno()) # pylint: disable = no-member
-    return wrapped
 
 # The original implementation of filtered_interfaces has signature:
 # (ifnames: list, iftypes: typing.Union[str, list], vif: bool, vrrp: bool) -> intf: Interface:

@@ -30,6 +30,7 @@ RSYSLOG_CONF = '/run/rsyslog/rsyslog.conf'
 CERT_DIR = '/etc/rsyslog.d/certs'
 
 base_path = ['system', 'syslog']
+base_logs_path = ['system', 'logs']
 pki_base = ['pki']
 
 dummy_interface = 'dum372874'
@@ -94,6 +95,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
 
         # delete testing SYSLOG config
         self.cli_delete(base_path)
+        self.cli_delete(base_logs_path)
         self.cli_commit()
 
         # The default syslog implementation should make syslog.service a
@@ -130,23 +132,115 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             ]
         )
 
+    def _set_facilities(self, base, facility_map):
+        for facility, facility_options in facility_map.items():
+            level = facility_options['level']
+            self.cli_set(base + ['facility', facility, 'level'], value=level)
+
+    # Build prifilt selector strings the same way as rsyslog.conf.j2, e.g.
+    # "auth.info,*.notice;auth.none" when specific facilities coexist with "all".
+    def _prifilt_selectors(self, facility_map):
+        keys = sorted(facility_map)
+        specific = []
+        for facility in keys:
+            if facility != 'all':
+                specific.append(facility)
+
+        selectors = []
+        for facility in keys:
+            opts = facility_map[facility]
+            level = opts['level'].replace('all', 'debug')
+            if facility == 'all':
+                sel = f'*.{level}'
+                for sf in specific:
+                    sel += f';{sf}.none'
+            else:
+                sel = f'{facility}.{level}'
+            selectors.append(sel)
+
+        prifilt = ','.join(selectors)
+        self._assert_prifilt_sane(prifilt, facility_map)
+        return prifilt
+
+    def _assert_prifilt_sane(self, prifilt, facility_map):
+        has_all = 'all' in facility_map
+        specific_facilities = sorted(f for f in facility_map if f != 'all')
+        self.assertTrue(prifilt)
+        self.assertNotIn(' ', prifilt)
+        parts = prifilt.split(',')
+        self.assertTrue(all(parts))
+        wildcard_parts = [p for p in parts if p.startswith('*.')]
+        if has_all:
+            self.assertEqual(len(wildcard_parts), 1)
+            wildcard = wildcard_parts[0]
+            if specific_facilities:
+                base, *exclusions = wildcard.split(';')
+                self.assertTrue(base.startswith('*.'))
+                expected = {f'{fac}.none' for fac in specific_facilities}
+                self.assertEqual(set(exclusions), expected)
+            else:
+                self.assertNotIn(';', wildcard)
+        else:
+            self.assertEqual(len(wildcard_parts), 0)
+            self.assertNotIn(';', prifilt)
+
+        for part in parts:
+            if ';' in part:
+                base, *exclusions = part.split(';')
+                self.assertTrue(base.startswith('*.'))
+                self.assertNotIn('*.none', base)
+                for ex in exclusions:
+                    self.assertTrue(ex.endswith('.none'))
+                    self.assertFalse(ex.startswith('*.'))
+                    self.assertNotIn(',', ex)
+            else:
+                if part.startswith('*.'):
+                    self.assertTrue(has_all)
+                    continue
+                self.assertEqual(part.count('.'), 1)
+                self.assertFalse(part.startswith('*.'))
+
     def test_console(self):
-        level = 'warning'
-        self.cli_set(base_path + ['console', 'facility', 'all', 'level'], value=level)
+        facility = {
+            'all': {'level': 'warning'},
+        }
+        self._set_facilities(base_path + ['console'], facility)
         self.cli_commit()
 
         rsyslog_conf = get_config()
-        config = [
-            f'if prifilt("*.{level}") then {{', # {{ required to escape { in f-string
-             'action(type="omfile" file="/dev/console")',
-        ]
-        for tmp in config:
-            self.assertIn(tmp, rsyslog_conf)
+        expected_prifilt = self._prifilt_selectors(facility)
+        self.assertIn(f'if prifilt("{expected_prifilt}") then {{', rsyslog_conf)
+        self.assertIn('action(type="omfile" file="/dev/console")', rsyslog_conf)
+
+        self.cli_delete(base_path + ['console'])
+        facility = {
+            'auth': {'level': 'info'},
+            'kern': {'level': 'debug'},
+        }
+        self._set_facilities(base_path + ['console'], facility)
+        self.cli_commit()
+
+        rsyslog_conf = get_config()
+        expected_prifilt = self._prifilt_selectors(facility)
+        self.assertIn(f'if prifilt("{expected_prifilt}") then {{', rsyslog_conf)
+        self.assertIn('action(type="omfile" file="/dev/console")', rsyslog_conf)
+
+        facility['all'] = {'level': 'notice'}
+        self._set_facilities(base_path + ['console'], facility)
+        self.cli_commit()
+
+        rsyslog_conf = get_config()
+        expected_prifilt = self._prifilt_selectors(facility)
+        self.assertIn(f'if prifilt("{expected_prifilt}") then {{', rsyslog_conf)
+        self.assertIn('action(type="omfile" file="/dev/console")', rsyslog_conf)
 
     def test_basic(self):
         hostname = 'vyos123'
         domain_name = 'example.local'
         default_marker_interval = default_value(base_path + ['marker', 'interval'])
+        default_rsyslog_max_size = default_value(
+            base_logs_path + ['logrotate', 'messages', 'max-size']
+        )
 
         facility = {
             'auth': {'level': 'info'},
@@ -158,9 +252,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['system', 'domain-name'], value=domain_name)
         self.cli_set(base_path + ['preserve-fqdn'])
 
-        for tmp, tmp_options in facility.items():
-            level = tmp_options['level']
-            self.cli_set(base_path + ['local', 'facility', tmp, 'level'], value=level)
+        self._set_facilities(base_path + ['local'], facility)
 
         self.cli_commit()
 
@@ -174,21 +266,13 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
             self.assertIn(e, config)
 
         config = get_config('#### GLOBAL LOGGING ####')
-        prifilt = []
-        for tmp, tmp_options in facility.items():
-            if tmp == 'all':
-                tmp = '*'
-            level = tmp_options['level']
-            prifilt.append(f'{tmp}.{level}')
-
-        prifilt.sort()
-        prifilt = ','.join(prifilt)
-
-        self.assertIn(f'if prifilt("{prifilt}") then {{', config)
+        expected_prifilt = self._prifilt_selectors(facility)
+        self.assertIn(f'if prifilt("{expected_prifilt}") then {{', config)
         self.assertIn( '    action(', config)
         self.assertIn( '        type="omfile"', config)
         self.assertIn( '        file="/var/log/messages"', config)
-        self.assertIn( '        rotation.sizeLimit="524288"', config)
+        size_limit = int(default_rsyslog_max_size) * 1024 * 1024
+        self.assertIn(f'        rotation.sizeLimit="{size_limit}"', config)
         self.assertIn( '        rotation.sizeLimitCommand="/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog"', config)
 
         self.cli_set(base_path + ['marker', 'disable'])
@@ -234,10 +318,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(remote_base + ['port'], value=remote_options['port'])
 
             if 'facility' in remote_options:
-                for facility, facility_options in remote_options['facility'].items():
-                    level = facility_options['level']
-                    self.cli_set(remote_base + ['facility', facility, 'level'],
-                                 value=level)
+                self._set_facilities(remote_base, remote_options['facility'])
 
             if 'format' in remote_options:
                 for format in remote_options['format']:
@@ -261,16 +342,9 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
         config = read_file(RSYSLOG_CONF)
         for remote, remote_options in rhosts.items():
             config = get_config(f'# Remote syslog to {remote}')
-            prifilt = []
+            prifilt = ''
             if 'facility' in remote_options:
-                for facility, facility_options in remote_options['facility'].items():
-                    level = facility_options['level']
-                    if facility == 'all':
-                        facility = '*'
-                    prifilt.append(f'{facility}.{level}')
-
-            prifilt.sort()
-            prifilt = ','.join(prifilt)
+                prifilt = self._prifilt_selectors(remote_options['facility'])
             if not prifilt:
                 # Skip test - as we do not render anything if no facility is set
                 continue
@@ -429,7 +503,7 @@ class TestRSYSLOGService(VyOSUnitTestSHIM.TestCase):
                     self.assertIn(f'StreamDriverPermittedPeers="{value}"', config)
 
                 if not tls:
-                    self.assertIn(f'StreamDriverAuthMode="anon"', config)
+                    self.assertIn('StreamDriverAuthMode="anon"', config)
 
     def test_remote_tls_protocol_udp(self):
         remote_base = base_path + ['remote', '172.11.0.1']

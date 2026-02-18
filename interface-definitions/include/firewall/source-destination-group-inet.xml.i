@@ -20,7 +20,6 @@
         </completionHelp>
       </properties>
     </leafNode>
-    #include <include/firewall/mac-group.xml.i>
     <leafNode name="ipv4-network-group">
       <properties>
         <help>Group of IPv4 networks</help>
@@ -37,14 +36,8 @@
         </completionHelp>
       </properties>
     </leafNode>
-    <leafNode name="port-group">
-      <properties>
-        <help>Group of ports</help>
-        <completionHelp>
-          <path>firewall group port-group</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
+    #include <include/firewall/mac-group.xml.i>
+    #include <include/firewall/port-group.xml.i>
   </children>
 </node>
 <!-- include end -->

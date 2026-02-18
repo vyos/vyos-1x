@@ -15,10 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import requests
 
 from pathlib import Path
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.utils.process import call
 from vyos import ConfigError
@@ -53,6 +55,21 @@ def verify(config):
 
     if 'url' not in config:
         raise ConfigError('URL is required!')
+
+    url = config['url']
+
+    # Make sure that provided URL is available and responses a valid JSON
+    # otherwise print warning and display type of error (connection, timeout and etc.)
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        response.json()
+    except requests.exceptions.RequestException as e:
+        error_type = type(e).__name__
+        Warning(
+            '"system update-check url" has a valid URL but '
+            f'unable to retrieve data from the server: {error_type}'
+        )
 
 
 def generate(config):

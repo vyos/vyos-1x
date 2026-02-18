@@ -37,6 +37,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bond_bridge_member
 from vyos.configverify import verify_eapol
 from vyos.ethtool import Ethtool
+from vyos.netlink import coalesce
 from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import EthernetIf
@@ -256,6 +257,26 @@ def verify_ring_buffer(ethernet: dict, ethtool: Ethtool):
                               f'size of "{max_tx}" bytes!')
 
 
+def verify_coalesce(ethernet: dict, ethtool: Ethtool):
+    """
+    Verify coalesce settings
+    :param ethernet: dictionary which is received from get_interface_dict
+    :type ethernet: dict
+    :param ethtool: Ethernet object
+    :type ethtool: Ethtool
+    """
+    if 'interrupt_coalescing' in ethernet:
+        if not ethtool.check_coalesce():
+            raise ConfigError('Driver does not fully support coalesce configuration!')
+
+        for param in coalesce.get_all_params():
+            if param in ethernet['interrupt_coalescing']:
+                if not ethtool.check_coalesce(param):
+                    param_name = param.replace('_', '-')
+                    msg = f'Driver does not support "{param_name}" coalesce setting!'
+                    raise ConfigError(msg)
+
+
 def verify_offload(ethernet: dict, ethtool: Ethtool):
     """
      Verify offloading capabilities
@@ -336,17 +357,17 @@ def verify_vpp_remove_vif(ethernet: dict):
         # Known paths that already use VLAN interfaces
         r'(nat\.cgnat\.interface\.inside)|'
         r'(nat\.cgnat\.interface\.outside)|'
-        r'(nat44\.interface\.inside)|'
-        r'(nat44\.interface\.outside)|'
+        r'(nat\.nat44\.interface\.inside)|'
+        r'(nat\.nat44\.interface\.outside)|'
         # Potential paths for VLAN interfaces
-        r'(nat44\.address_pool\.translation\.interface)|'
-        r'(nat44\.address_pool\.twice_nat\.interface)|'
-        r'(nat44\.exclude\.rule\.(\d)+\.external_interface)|'
+        r'(nat\.nat44\.address_pool\.translation\.interface)|'
+        r'(nat\.nat44\.address_pool\.twice_nat\.interface)|'
+        r'(nat\.nat44\.exclude\.rule\.(\d)+\.external_interface)|'
         r'(interfaces\.bonding\.bond(\d)+\.member\.interface)|'
         r'(interfaces\.bridge\.br(\d)+\.member\.interface)|'
         r'(interfaces\.xconnect\.xcon(\d)+\.member\.interface)|'
         r'(acl\.ip\.interface)|'
-        r'(acl\.macip\.interface)'
+        r'(acl\.mac\.interface)'
     )
     ifname = ethernet['ifname']
 
@@ -398,6 +419,7 @@ def verify(ethernet):
     verify_ring_buffer(ethernet, ethtool)
     verify_offload(ethernet, ethtool)
     verify_mac_change(ethernet, ethtool)
+    verify_coalesce(ethernet, ethtool)
 
     if 'is_bond_member' in ethernet:
         verify_bond_member(ethernet, ethtool)
@@ -447,15 +469,32 @@ def apply(ethernet):
     if 'static_arp' in ethernet:
         call_dependents()
 
-    # If the interface is managed by the VPP DPDK driver, synchronize runtime
-    # parameters between Linux and the corresponding VPP LCP interface
-    if dict_search(f'vpp.settings.interface.{ifname}.driver', ethernet) == 'dpdk':
+    vpp_iface_config = dict_search(f'vpp.settings.interface.{ifname}', ethernet)
+    if vpp_iface_config is not None and is_systemd_service_running('vpp.service'):
         vpp_api = VPPControl()
+
+        # Enable ip4-dhcp-client-detect feature for DHCP-configured interfaces.
+        # This feature is required for VPP to process DHCP packets and assign addresses.
+        if 'dhcp' in ethernet.get('address', []):
+            vpp_api.enable_dhcp_client(ifname)
+        else:
+            vpp_api.disable_dhcp_client(ifname)
+
+        # Enable ip6-icmp-ra-punt feature for DHCPv6-configured interfaces.
+        if 'dhcpv6' in ethernet.get('address', []) or (
+            'autoconf' in ethernet.get('ipv6', {}).get('address', {})
+        ):
+            vpp_api.enable_icmpv6_ra_punt(ifname)
+        else:
+            vpp_api.disable_icmpv6_ra_punt(ifname)
+
+        # If the interface is managed by the VPP DPDK driver, synchronize runtime
+        # parameters between Linux and the corresponding VPP LCP interface
         # Find LCP pair
         lcp_pair = vpp_api.lcp_pair_find(vpp_name_hw=ifname)
-        lcp_name = lcp_pair.get('vpp_name_kernel')
         # Sync MTU to VPP LCP pair interface
-        if lcp_name:
+        if lcp_pair:
+            lcp_name = lcp_pair.get('vpp_name_kernel')
             mtu = e.get_mtu()
             vpp_api.set_iface_mtu(lcp_name, mtu)
 

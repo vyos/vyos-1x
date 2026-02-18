@@ -1,50 +1,41 @@
 <!-- include start from vpp/acl_tcp_flags.xml.i -->
-<leafNode name="syn">
-  <properties>
-    <help>Synchronise flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="ack">
-  <properties>
-    <help>Acknowledge flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="fin">
-  <properties>
-    <help>Finish flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="rst">
-  <properties>
-    <help>Reset flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="urg">
-  <properties>
-    <help>Urgent flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="psh">
-  <properties>
-    <help>Push flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="ecn">
-  <properties>
-    <help>Explicit Congestion Notification flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
-<leafNode name="cwr">
-  <properties>
-    <help>Congestion Window Reduced flag</help>
-    <valueless/>
-  </properties>
-</leafNode>
+<completionHelp>
+  <list>ack cwr ecn fin psh rst syn urg</list>
+</completionHelp>
+<valueHelp>
+  <format>ack</format>
+  <description>Acknowledge flag</description>
+</valueHelp>
+<valueHelp>
+  <format>cwr</format>
+  <description>Congestion Window Reduced flag</description>
+</valueHelp>
+<valueHelp>
+  <format>ecn</format>
+  <description>Explicit Congestion Notification flag</description>
+</valueHelp>
+<valueHelp>
+  <format>fin</format>
+  <description>Finish flag</description>
+</valueHelp>
+<valueHelp>
+  <format>psh</format>
+  <description>Push flag</description>
+</valueHelp>
+<valueHelp>
+  <format>rst</format>
+  <description>Reset flag</description>
+</valueHelp>
+<valueHelp>
+  <format>syn</format>
+  <description>Synchronise flag</description>
+</valueHelp>
+<valueHelp>
+  <format>urg</format>
+  <description>Urgent flag</description>
+</valueHelp>
+<constraint>
+  <regex>(syn|ack|fin|rst|urg|psh|ecn|cwr)</regex>
+</constraint>
+<multi/>
 <!-- include end -->

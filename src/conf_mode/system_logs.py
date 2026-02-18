@@ -19,6 +19,8 @@ from sys import exit
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.logger import syslog
 from vyos.template import render
 from vyos.utils.dict import dict_search
@@ -34,6 +36,8 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
+    set_dependents('syslog', conf)
 
     base = ['system', 'logs']
     logs_config = conf.get_config_dict(base, key_mangling=('-', '_'),
@@ -64,8 +68,8 @@ def generate(logs_config):
 
 
 def apply(logs_config):
-    # No further actions needed
-    pass
+    # Ensure dependent config scripts (e.g., syslog) are re-run
+    call_dependents()
 
 
 if __name__ == '__main__':
