@@ -1,0 +1,33 @@
+set interfaces ethernet eth0 address 'dhcp'
+set interfaces ethernet eth1 address 'dhcp'
+set interfaces loopback lo
+set service dns dynamic name rfc2136-PDNS-eth0 address interface 'eth0'
+set service dns dynamic name rfc2136-PDNS-eth0 host-name 'sub.example.com'
+set service dns dynamic name rfc2136-PDNS-eth0 key '/config/auth/../config.boot'
+set service dns dynamic name rfc2136-PDNS-eth0 protocol 'nsupdate'
+set service dns dynamic name rfc2136-PDNS-eth0 server '192.168.101.15'
+set service dns dynamic name rfc2136-PDNS-eth0 zone 'example.com'
+set service dns dynamic name service-dyndns-eth1 address interface 'eth1'
+set service dns dynamic name service-dyndns-eth1 host-name 'my-dyndns-hostname'
+set service dns dynamic name service-dyndns-eth1 password 'my-password'
+set service dns dynamic name service-dyndns-eth1 protocol 'dyndns2'
+set service dns dynamic name service-dyndns-eth1 username 'my-login'
+set service ntp allow-client address '0.0.0.0/0'
+set service ntp allow-client address '::/0'
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set system config-management commit-revisions '100'
+set system conntrack modules ftp
+set system conntrack modules h323
+set system conntrack modules nfs
+set system conntrack modules pptp
+set system conntrack modules sip
+set system conntrack modules sqlnet
+set system conntrack modules tftp
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$YuG5oKoRYQnbnxk$P2eZNlIwXJP82JFyFrF2g4ZoOZr6zgLHK.SDJVoqWDGefKkRrJijUZODAVMLeWU.9EGM48YtG9MwfuewWoOGE.'
+set system login user vyos authentication plaintext-password ''
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'

@@ -1,0 +1,48 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Migrate 'tcp-flags' to 'tcp-flags is-set' and 'tcp-flags is-not-set' multi-value nodes (T8250)
+
+
+from vyos.configtree import ConfigTree
+
+base = ['vpp', 'acl', 'ip', 'tag-name']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    for tag_name in config.list_nodes(base):
+        base_tag = base + [tag_name, 'rule']
+        for rule in config.list_nodes(base_tag):
+            base_tcp_flags = base_tag + [rule, 'tcp-flags']
+
+            if not config.exists(base_tcp_flags):
+                return
+
+            flags = config.list_nodes(base_tcp_flags)
+            set_flags = [flag for flag in flags if flag != 'not']
+            not_set_flags = config.list_nodes(base_tcp_flags + ['not'])
+
+            config.delete(base_tcp_flags)
+
+            if set_flags:
+                for flag in set_flags:
+                    config.set(base_tcp_flags + ['is-set'], value=flag, replace=False)
+
+            if not_set_flags:
+                for flag in not_set_flags:
+                    config.set(base_tcp_flags + ['is-not-set'], value=flag, replace=False)

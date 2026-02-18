@@ -8,10 +8,8 @@ unix {
     gid vpp
     systemd-notify
     # exec /etc/vpp/bootstrap.vpp
-{% if unix is vyos_defined %}
-{%     if unix.poll_sleep_usec is vyos_defined %}
-    poll-sleep-usec {{ unix.poll_sleep_usec }}
-{%     endif %}
+{% if poll_sleep_usec is vyos_defined %}
+    poll-sleep-usec {{ poll_sleep_usec }}
 {% endif %}
 }
 
@@ -19,9 +17,6 @@ unix {
 cpu {
 {%     if cpu.main_core is vyos_defined %}
     main-core {{ cpu.main_core }}
-{%     endif %}
-{%     if cpu.corelist_workers is vyos_defined %}
-    corelist-workers {{ cpu.corelist_workers | join(',') }}
 {%     endif %}
 {%     if cpu.skip_cores is vyos_defined %}
     skip-cores {{ cpu.skip_cores }}
@@ -67,9 +62,9 @@ l2learn {
 
 {% if logging is vyos_defined %}
 logging {
-{%     if logging.default_log_level is vyos_defined %}
-    default-log-level {{ logging.default_log_level }}
-    default-syslog-log-level {{ logging.default_log_level }}
+{%     if logging.default_level is vyos_defined %}
+    default-log-level {{ logging.default_level }}
+    default-syslog-log-level {{ logging.default_level }}
 {%     endif %}
 }
 {% endif %}
@@ -84,7 +79,6 @@ physmem {
 
 plugins {
     plugin default { disable }
-    plugin af_xdp_plugin.so { enable }
     plugin avf_plugin.so { enable }
     plugin dpdk_plugin.so { enable }
     plugin vmxnet3_plugin.so { enable }
@@ -114,12 +108,14 @@ plugins {
     # plugin wireguard_plugin.so { enable }
     # ACL
     plugin acl_plugin.so { enable }
+    # DHCP plugin
+    plugin dhcp_plugin.so { enable }
 }
 
 
 crypto-engines {
     default { disable }
-{% if ipsec is vyos_defined %}
+{% if ipsec_acceleration is vyos_defined %}
     ipsecmb { enable }
     native { enable }
     openssl { enable }
@@ -200,18 +196,18 @@ dpdk {
     uio-bind-force
 }
 
-{% if ipsec is vyos_defined %}
+{% if ipsec_acceleration is vyos_defined %}
 linux-xfrm-nl {
      enable-route-mode-ipsec
-     interface {{ ipsec.interface_type }}
-{%     if ipsec.netlink.batch_delay_ms is vyos_defined %}
-     nl-batch-delay-ms {{ ipsec.netlink.batch_delay_ms }}
+     interface ipsec
+{%     if lcp.netlink.batch_delay_ms is vyos_defined %}
+     nl-batch-delay-ms {{ lcp.netlink.batch_delay_ms }}
 {%     endif %}
-{%     if ipsec.netlink.batch_size is vyos_defined %}
-     nl-batch-size {{ ipsec.netlink.batch_size }}
+{%     if lcp.netlink.batch_size is vyos_defined %}
+     nl-batch-size {{ lcp.netlink.batch_size }}
 {%     endif %}
-{%     if ipsec.netlink.rx_buffer_size is vyos_defined %}
-     nl-rx-buffer-size {{ ipsec.netlink.rx_buffer_size }}
+{%     if lcp.netlink.rx_buffer_size is vyos_defined %}
+     nl-rx-buffer-size {{ lcp.netlink.rx_buffer_size }}
 {%     endif %}
 }
 {% endif %}

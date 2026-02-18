@@ -52,49 +52,61 @@ global(localHostname="{{ preserve_fqdn.host_name }}.{{ preserve_fqdn.domain_name
 {%     endif %}
 {% endif %}
 
+{# Build a prifilt selector list with "all" excluding any explicitly-set facilities #}
+{% macro prifilt_selectors(facility_map) %}
+{# pass 1: collect explicit facilities #}
+{% set selectors = [] %}
+{% set keys = facility_map.keys() | list | sort %}
+{% set specific = [] %}
+{% for facility in keys %}
+{%     if facility != 'all' %}
+{%         set _ = specific.append(facility) %}
+{%     endif %}
+{% endfor %}
+{# pass 2: build selectors; add ;fac.none exclusions to wildcard #}
+{% for facility in keys %}
+{%     set opts = facility_map[facility] %}
+{%     set level = opts.level.replace('all', 'debug') %}
+{%     if facility == 'all' %}
+{%         set ns = namespace(sel="*." ~ level) %}
+{%         for sf in specific %}
+{%             set ns.sel = ns.sel ~ ";" ~ sf ~ ".none" %}
+{%         endfor %}
+{%         set sel = ns.sel %}
+{%     else %}
+{%         set sel = facility ~ "." ~ level %}
+{%     endif %}
+{%     set _ = selectors.append(sel) %}
+{% endfor %}
+{{ selectors | join(',') }}
+{% endmacro %}
+
 #### GLOBAL LOGGING ####
 {% if local.facility is vyos_defined %}
-{%     set tmp = [] %}
-{%     if local.facility is vyos_defined %}
-{%         for facility, facility_options in local.facility.items() %}
-{%             set _ = tmp.append(facility.replace('all', '*') ~ "." ~ facility_options.level.replace('all', 'debug')) %}
-{%         endfor %}
-if prifilt("{{ tmp | join(',') }}") then {
+if prifilt("{{ prifilt_selectors(local.facility) | trim }}") then {
     action(
         type="omfile"
         file="/var/log/messages"
-        rotation.sizeLimit="524288" # 512Kib - maximum filesize before rotation
+        rotation.sizeLimit="{{ logrotate_size_limit }}" # maximum filesize before rotation
         rotation.sizeLimitCommand="/usr/sbin/logrotate {{ logrotate }}"
     )
 }
-{%     endif %}
 {% endif %}
 
 #### CONSOLE LOGGING ####
 {% if console.facility is vyos_defined %}
-{%     set tmp = [] %}
-{%     if console.facility is vyos_defined %}
-{%         for facility, facility_options in console.facility.items() %}
-{%             set _ = tmp.append(facility.replace('all', '*') ~ "." ~ facility_options.level.replace('all', 'debug')) %}
-{%         endfor %}
-if prifilt("{{ tmp | join(',') }}") then {
+if prifilt("{{ prifilt_selectors(console.facility) | trim }}") then {
     action(type="omfile" file="/dev/console")
 }
-{%     endif %}
 {% endif %}
 
 #### REMOTE LOGGING ####
 {% if remote is vyos_defined %}
 {%     for remote_name, remote_options in remote.items() %}
-{%         set tmp = [] %}
 {%         if remote_options.facility is vyos_defined %}
-{%             for facility, facility_options in remote_options.facility.items() %}
-{%                 set _ = tmp.append(facility.replace('all', '*') ~ "." ~ facility_options.level.replace('all', 'debug')) %}
-{%             endfor %}
-{%             set _ = tmp.sort() %}
 {%             set tls = remote_options.tls %}
 # Remote syslog to {{ remote_name }}
-if prifilt("{{ tmp | join(',') }}") then {
+if prifilt("{{ prifilt_selectors(remote_options.facility) | trim }}") then {
     action(
         type="omfwd"
         # Remote syslog server where we send our logs to

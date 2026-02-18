@@ -54,7 +54,7 @@ def _verify(target):
     """Decorator checks if config for VPP NAT CGNAT exists"""
     from functools import wraps
 
-    if target not in ['ip', 'macip', 'no_target']:
+    if target not in ['ip', 'mac', 'no_target']:
         raise ValueError('Invalid target')
 
     def _verify_target(func):
@@ -64,8 +64,8 @@ def _verify(target):
             path = 'vpp acl'
             if target == 'ip':
                 path += ' ip'
-            elif target == 'macip':
-                path += ' macip'
+            elif target == 'mac':
+                path += ' mac'
             if not config.exists(path):
                 raise vyos.opmode.UnconfiguredSubsystem(f'"{path}" is not configured')
             return func(*args, **kwargs)
@@ -83,7 +83,7 @@ def _get_acl_tag_by_index(vpp, acl_index):
     return None
 
 
-def _get_macip_acl_tag_by_index(vpp, acl_index):
+def _get_mac_acl_tag_by_index(vpp, acl_index):
     acl = vpp.api.macip_acl_dump(acl_index=acl_index)
     if acl:
         return acl[0].tag
@@ -147,11 +147,11 @@ def _get_formatted_output_interfaces(vpp, interfaces):
     return tabulate(data_entries, headers=headers, tablefmt='simple')
 
 
-def _get_formatted_output_macip_interfaces(vpp, interfaces):
+def _get_formatted_output_mac_interfaces(vpp, interfaces):
     data_entries = []
     for interface in interfaces:
         name = vpp.get_interface_name(interface.get('sw_if_index'))
-        acl = _get_macip_acl_tag_by_index(vpp, int(interface.get('acls')[0]))
+        acl = _get_mac_acl_tag_by_index(vpp, int(interface.get('acls')[0]))
         data_entries.append([name, acl])
 
     headers = ['Interface', 'ACL']
@@ -218,7 +218,7 @@ def _get_formatted_output_acls(acls_list):
         print('\n')
 
 
-def _get_formatted_output_macip_acls(acls_list):
+def _get_formatted_output_mac_acls(acls_list):
     conf = Config()
 
     for acl in acls_list:
@@ -230,7 +230,7 @@ def _get_formatted_output_macip_acls(acls_list):
             f'MACIP ACL "tag-name {tag}" acl_index {acl_index}\n'
         )
 
-        path = ['vpp', 'acl', 'macip', 'tag-name', tag, 'rule']
+        path = ['vpp', 'acl', 'mac', 'tag-name', tag, 'rule']
         conf_rules = conf.list_nodes(path)
         data_entries = []
         for rule_index, rule in enumerate(rules):
@@ -274,8 +274,8 @@ def show_ip_acls(raw: bool, tag_name: typing.Optional[str]):
         return _get_formatted_output_acls(acls)
 
 
-@_verify('macip')
-def show_macip_acls(raw: bool, tag_name: typing.Optional[str]):
+@_verify('mac')
+def show_mac_acls(raw: bool, tag_name: typing.Optional[str]):
     vpp = VPPControl()
     acls_dump = vpp.api.macip_acl_dump(acl_index=NO_ACL_INDEX)
     acls: list[dict] = _get_raw_output_acls(acls_dump)
@@ -287,7 +287,7 @@ def show_macip_acls(raw: bool, tag_name: typing.Optional[str]):
         return acls
 
     else:
-        return _get_formatted_output_macip_acls(acls)
+        return _get_formatted_output_mac_acls(acls)
 
 
 @_verify('ip')
@@ -303,8 +303,8 @@ def show_interfaces(raw: bool):
         return _get_formatted_output_interfaces(vpp, interfaces)
 
 
-@_verify('macip')
-def show_macip_interfaces(raw: bool):
+@_verify('mac')
+def show_mac_interfaces(raw: bool):
     vpp = VPPControl()
     interfaces_dump = vpp.api.macip_acl_interface_list_dump()
     interfaces: list[dict] = _get_raw_output_interfaces(interfaces_dump)
@@ -313,7 +313,7 @@ def show_macip_interfaces(raw: bool):
         return interfaces
 
     else:
-        return _get_formatted_output_macip_interfaces(vpp, interfaces)
+        return _get_formatted_output_mac_interfaces(vpp, interfaces)
 
 
 @_verify('no_target')
@@ -324,9 +324,9 @@ def show_all_acls(raw: bool):
     if conf.exists(path + ['ip']):
         ip_acls = show_ip_acls(raw, tag_name=None)
         acls_all['ip'] = ip_acls
-    if conf.exists(path + ['macip']):
-        macip_acls = show_macip_acls(raw, tag_name=None)
-        acls_all['macip'] = macip_acls
+    if conf.exists(path + ['mac']):
+        mac_acls = show_mac_acls(raw, tag_name=None)
+        acls_all['mac'] = mac_acls
 
     if raw:
         return acls_all

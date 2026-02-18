@@ -228,6 +228,16 @@ class Nat44:
         """Enable/disable NAT44 forwarding"""
         self.vpp.api.nat44_forwarding_enable_disable(enable=enable)
 
+    def set_nat44_session_limit(self, session_limit: int) -> None:
+        """Set NAT44 session limit
+
+        Args:
+            session_limit (int): Maximum number of sessions per thread
+        """
+        self.vpp.api.nat44_set_session_limit(
+            session_limit=session_limit,
+        )
+
     def enable_ipfix(self):
         """Enable NAT44 IPFIX logging"""
         self.vpp.api.nat44_ei_ipfix_enable_disable(enable=True)

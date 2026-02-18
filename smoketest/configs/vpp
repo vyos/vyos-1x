@@ -110,6 +110,7 @@ vpp {
         }
         interface eth2 {
             driver "dpdk"
+            rx-mode "polling"
         }
         interface eth3 {
             driver "xdp"
@@ -122,6 +123,9 @@ vpp {
         }
         unix {
             poll-sleep-usec "12"
+        }
+        logging {
+            default-log-level "debug"
         }
     }
 }

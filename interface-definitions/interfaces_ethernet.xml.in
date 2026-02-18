@@ -221,6 +221,313 @@
               </leafNode>
             </children>
           </node>
+          <node name="interrupt-coalescing">
+            <properties>
+              <help>Interrupt coalescing options for the interface</help>
+            </properties>
+            <children>
+              <leafNode name="adaptive-rx">
+                <properties>
+                  <help>Enable adaptive receive interrupt coalescing</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="adaptive-tx">
+                <properties>
+                  <help>Enable adaptive transmit interrupt coalescing</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-usecs">
+                <properties>
+                  <help>Delay in microseconds before generating RX interrupt</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>RX interrupt coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-frames">
+                <properties>
+                  <help>Number of RX frames before generating interrupt</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>RX interrupt coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-usecs-irq">
+                <properties>
+                  <help>Delay in microseconds before generating RX interrupt while servicing IRQ</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>RX IRQ interrupt coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-frames-irq">
+                <properties>
+                  <help>Number of RX frames before generating interrupt while servicing IRQ</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>RX IRQ interrupt coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-usecs">
+                <properties>
+                  <help>Delay in microseconds before generating TX interrupt</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>TX interrupt coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-frames">
+                <properties>
+                  <help>Number of TX frames before generating interrupt</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>TX interrupt coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-usecs-irq">
+                <properties>
+                  <help>Delay in microseconds before generating TX interrupt while servicing IRQ</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>TX IRQ interrupt coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-frames-irq">
+                <properties>
+                  <help>Number of TX frames before generating interrupt while servicing IRQ</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>TX IRQ interrupt coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="stats-block-usecs">
+                <properties>
+                  <help>Time in microseconds between updating coalescing statistics</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Statistics block interval</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="pkt-rate-low">
+                <properties>
+                  <help>Lower packet rate threshold for adaptive coalescing</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Low packet rate threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-usecs-low">
+                <properties>
+                  <help>RX coalescing delay (usecs) for low packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>Low-rate RX coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-frame-low">
+                <properties>
+                  <help>RX coalescing frames threshold for low packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Low-rate RX coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-usecs-low">
+                <properties>
+                  <help>TX coalescing delay (usecs) for low packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>Low-rate TX coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-frame-low">
+                <properties>
+                  <help>TX coalescing frames threshold for low packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Low-rate TX coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="pkt-rate-high">
+                <properties>
+                  <help>Upper packet rate threshold for adaptive coalescing</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>High packet rate threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-usecs-high">
+                <properties>
+                  <help>RX coalescing delay (usecs) for high packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>High-rate RX coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="rx-frame-high">
+                <properties>
+                  <help>RX coalescing frames threshold for high packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>High-rate RX coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-usecs-high">
+                <properties>
+                  <help>TX coalescing delay (usecs) for high packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>High-rate TX coalescing delay</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-frame-high">
+                <properties>
+                  <help>TX coalescing frames threshold for high packet rate</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>High-rate TX coalescing frames threshold</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="sample-interval">
+                <properties>
+                  <help>Sampling interval for adaptive coalescing (in seconds)</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Adaptive sampling interval</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="cqe-mode-rx">
+                <properties>
+                  <help>Enable RX CQE (Completion Queue Entry) mode</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="cqe-mode-tx">
+                <properties>
+                  <help>Enable TX CQE (Completion Queue Entry) mode</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-aggr-max-bytes">
+                <properties>
+                  <help>Maximum number of bytes to aggregate before transmitting</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>TX aggregation maximum bytes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-aggr-max-frames">
+                <properties>
+                  <help>Maximum number of frames to aggregate before transmitting</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>TX aggregation maximum frames</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="tx-aggr-time-usecs">
+                <properties>
+                  <help>Maximum time in microseconds to wait before transmitting aggregated frames</help>
+                  <valueHelp>
+                    <format>u32:0-16384</format>
+                    <description>TX aggregation timeout</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-16384"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           #include <include/interface/redirect.xml.i>
           #include <include/interface/vif-s.xml.i>
           #include <include/interface/vif.xml.i>

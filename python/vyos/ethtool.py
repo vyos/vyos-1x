@@ -14,10 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import contextlib
 
 from json import loads
 from vyos.utils.network import interface_exists
 from vyos.utils.process import popen
+from vyos.netlink import coalesce
 
 # These drivers do not support using ethtool to change the speed, duplex, or
 # flow control settings
@@ -65,6 +67,7 @@ class Ethtool:
     _driver_name = None
     _flow_control = None
     _channels = ''
+    _coalesce = None
 
     def __init__(self, ifname):
         # Get driver used for interface
@@ -121,6 +124,10 @@ class Ethtool:
         out, err = popen(f'ethtool --show-channels {ifname}')
         if not bool(err):
             self._channels = out.lower()
+
+        # Get information about NIC coalesce settings
+        with contextlib.suppress(coalesce.CoalesceError, coalesce.GeneralNetlinkError):
+            self._coalesce = coalesce.get_coalesce(ifname)
 
     def check_auto_negotiation_supported(self):
         """ Check if the NIC supports changing auto-negotiation """
@@ -235,3 +242,16 @@ class Ethtool:
     def check_bonding(self) -> bool:
         """ Check if ethernet drivers supports bonding """
         return bool(self.get_driver_name() not in _drivers_without_bonding_support)
+
+    def check_coalesce(self, setting_name=None):
+        """Check if the NIC supports 'coalesce' parameter(s)"""
+
+        if not self._coalesce:
+            return False
+
+        return self._coalesce.get(setting_name) is not None if setting_name else True
+
+    def get_coalesce(self):
+        """Get all 'coalesce' parameters for the interface"""
+
+        return self._coalesce.copy() if self._coalesce else {}

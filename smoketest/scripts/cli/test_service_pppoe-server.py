@@ -213,19 +213,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertIn('accept-any-service=1', config)
         self.assertIn('accept-blank-service=1', config)
 
-    def test_accel_vpp_cp(self):
-        self.basic_config()
-        self.cli_commit()
-
-        self.set(['interface', interface, 'vpp-cp'])
-
-        # vpp-cp require VPP service to be started and interface is configured in VPP
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # All other checks for PPPoE control-plane integration
-        # with VPP are verified in test_vpp.py
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -29,6 +29,7 @@ from vyos.accel_ppp_util import verify_accel_ppp_name_servers
 from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
 from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
 from vyos.accel_ppp_util import verify_accel_ppp_authentication
+from vyos.vpp.utils import cli_ifaces_list
 from vyos import ConfigError
 from vyos import airbag
 
@@ -58,6 +59,9 @@ def get_config(config=None):
         )
 
     ipoe['server_type'] = 'ipoe'
+
+    ipoe['vpp_ifaces'] = cli_ifaces_list(conf)
+
     return ipoe
 
 
@@ -69,6 +73,13 @@ def verify(ipoe):
         raise ConfigError('No IPoE interface configured')
 
     for interface, iface_config in ipoe['interface'].items():
+        if ipoe.get('vpp_ifaces'):
+            base_interface = interface.split('.')[0]
+            if base_interface in ipoe['vpp_ifaces']:
+                raise ConfigError(
+                    f'{interface} is a VPP interface and cannot be used for IPoE!'
+                )
+
         verify_interface_exists(ipoe, interface, warning_only=True)
         if 'client_subnet' in iface_config and 'vlan' in iface_config:
             raise ConfigError(

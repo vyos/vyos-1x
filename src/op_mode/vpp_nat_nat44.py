@@ -50,7 +50,7 @@ def _verify(func):
     @wraps(func)
     def _wrapper(*args, **kwargs):
         config = ConfigTreeQuery()
-        base = 'vpp nat44'
+        base = 'vpp nat nat44'
         if not config.exists(base):
             raise vyos.opmode.UnconfiguredSubsystem(f'{base} is not configured')
 

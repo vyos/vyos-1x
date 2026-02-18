@@ -22,7 +22,7 @@ from vyos import ConfigError
 
 from vyos.configdiff import Diff
 from vyos.configdict import node_changed
-from vyos.config import Config
+from vyos.config import Config, config_dict_merge
 from vyos.utils.network import get_interface_address
 
 from vyos.vpp.utils import cli_ifaces_list
@@ -45,16 +45,14 @@ def get_config(config=None) -> dict:
     else:
         conf = Config()
 
-    base = ['vpp', 'nat44']
+    base = ['vpp', 'nat', 'nat44']
 
-    # Get config_dict with default values
+    # Get config_dict
     config = conf.get_config_dict(
         base,
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
-        with_defaults=True,
-        with_recursive_defaults=True,
     )
 
     if not conf.exists(['vpp']):
@@ -73,6 +71,11 @@ def get_config(config=None) -> dict:
     if not config:
         config['remove'] = True
         return config
+
+    # Get default values which we need to conditionally update into the
+    # dictionary retrieved.
+    default_values = conf.get_config_defaults(**config.kwargs, recursive=True)
+    config = config_dict_merge(default_values, config)
 
     config_changed = node_changed(
         conf,
@@ -109,13 +112,6 @@ def get_config(config=None) -> dict:
             'vpp_ifaces': cli_ifaces_list(conf),
         }
     )
-
-    settings = conf.get_config_dict(
-        ['vpp', 'settings', 'nat44'],
-        key_mangling=('-', '_'),
-        with_recursive_defaults=True,
-    )
-    config.update(settings.get('nat44'))
 
     if effective_config:
         config.update({'effective': effective_config})
@@ -502,6 +498,8 @@ def apply(config):
             tcp_established=int(config.get('timeout').get('tcp_established')),
             tcp_transitory=int(config.get('timeout').get('tcp_transitory')),
         )
+    if 'session_limit' in config:
+        n.set_nat44_session_limit(int(config['session_limit']))
 
 
 if __name__ == '__main__':

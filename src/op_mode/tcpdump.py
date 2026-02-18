@@ -16,6 +16,7 @@
 
 import sys
 
+from vyos.utils.io import catch_broken_pipe
 from vyos.utils.process import call
 
 options = {
@@ -50,8 +51,6 @@ options = {
         'help': 'Parse packets with increased detail output, including link-level headers and extended decoding protocol sanity checks.'
     },
 }
-
-tcpdump = 'sudo /usr/bin/tcpdump'
 
 class List(list):
     def first(self):
@@ -92,7 +91,8 @@ def complete(prefix):
     return [o for o in options if o.startswith(prefix)]
 
 
-def convert(command, args):
+def convert(args):
+    command = 'sudo /usr/bin/tcpdump'
     while args:
         shortname = args.first()
         longnames = complete(shortname)
@@ -109,6 +109,9 @@ def convert(command, args):
                 command=command, value=args.first())
     return command
 
+@catch_broken_pipe
+def run_tcpdump(command: str, ifname: str) -> None:
+    call(f'{command} -i {ifname}')
 
 if __name__ == '__main__':
     args = List(sys.argv[1:])
@@ -161,5 +164,4 @@ if __name__ == '__main__':
                 sys.stdout.write(helplines)
                 sys.exit(0)
 
-    command = convert(tcpdump, args)
-    call(f'{command} -i {ifname}')
+    run_tcpdump(convert(args), ifname)
