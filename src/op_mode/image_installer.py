@@ -761,7 +761,7 @@ def console_hint() -> str:
         path = '/dev/tty'
 
     name = Path(path).name
-    if name in ('ttyS0', 'ttyAMA0'):
+    if name in ['ttyS0', 'ttyAMA0']:
         return 'S'
     else:
         return 'K'
