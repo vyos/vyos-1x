@@ -335,16 +335,16 @@ def verify_vpp_cpu_cores(cpu_cores: int):
 def verify_vpp_statseg_size(settings: dict):
     statseg_size = mem_checks.statseg_size(settings)
 
-    if 'size' in settings.get('statseg'):
+    if 'size' in settings['resource_allocation']['memory']['stats']:
         if statseg_size < 128 << 20:
-            raise ConfigError('The statseg size must be greater than or equal to 128M')
+            raise ConfigError('The "stats size" must be greater than or equal to 128M')
 
-    if 'page_size' in settings['statseg']:
+    if 'page_size' in settings['resource_allocation']['memory']['stats']:
         statseg_page_size = mem_checks.statseg_page_size(settings)
         if statseg_page_size > statseg_size:
             readable_statseg_page = bytes_to_human_memory(statseg_page_size, 'K')
             raise ConfigError(
-                f'The statseg size must be greater than or equal to page-size ({readable_statseg_page})'
+                f'The "stats size" must be greater than or equal to page-size ({readable_statseg_page})'
             )
 
 
@@ -370,9 +370,9 @@ def verify_routes_count(settings: dict):
     bytes = 16  # each counter consumes 16 bytes
     statseg_scale = 2
     cpu_cores = int(settings['resource_allocation']['cpu_cores'])
-    statseg_size = settings['statseg']['size']
+    statseg_size = settings['resource_allocation']['memory']['stats']['size']
     statseg_size_in_bytes = human_memory_to_bytes(statseg_size)
-    main_heap = settings['memory']['main_heap_size']
+    main_heap = settings['resource_allocation']['memory']['main_heap_size']
     main_heap_in_gb = human_memory_to_bytes(main_heap) >> 30
 
     formula = cpu_cores * counters * bytes * statseg_scale
@@ -389,7 +389,9 @@ def verify_routes_count(settings: dict):
 
 
 def verify_vpp_buffers(settings: dict):
-    buffers_configured = int(settings['buffers']['buffers_per_numa'])
+    buffers_configured = int(
+        settings['resource_allocation']['buffers']['buffers_per_numa']
+    )
 
     buffers_required = mem_checks.buffers_required(settings)
 

@@ -19,7 +19,7 @@
 
 default_resource_map = {
     # Default size of buffers transferred via netlink
-    'netlink_rx_buffer_size': 212992,
+    'netlink_rx_buffer_size': 268435456,
     # Minimal amount of memory required to start VPP
     'min_memory': '8G',
     # Minimal number of physical CPU cores required to start VPP

@@ -39,6 +39,7 @@ from vyos.vpp.config_resource_checks.resource_defaults import default_resource_m
 PROCESS_NAME = 'vpp_main'
 VPP_CONF = '/run/vpp/vpp.conf'
 base_path = ['vpp']
+resource_path = base_path + ['settings', 'resource-allocation']
 interface = 'eth1'
 
 
@@ -158,7 +159,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         required_str = 'lcp route-no-paths on'
         self.assertIn(required_str, out)
 
-        self.cli_set(base_path + ['settings', 'lcp', 'ignore-kernel-routes'])
+        self.cli_set(resource_path + ['ignore-kernel-routes'])
         self.cli_commit()
 
         # check disabled 'route no path'
@@ -1146,9 +1147,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(
-            base_path + ['settings', 'resource-allocation', 'cpu-cores', cpu_cores]
-        )
+        self.cli_set(resource_path + ['cpu-cores', cpu_cores])
 
         # # DPDK driver expect only dpdk-options and not xdp-options to be set
         # # expect raise ConfigError
@@ -1174,13 +1173,11 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # verify 'cpu-cores' are set not correctly
         # expect raise ConfigError
-        self.cli_set(base_path + ['settings', 'resource-allocation', 'cpu-cores', '99'])
+        self.cli_set(resource_path + ['cpu-cores', '99'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(
-            base_path + ['settings', 'resource-allocation', 'cpu-cores', cpu_cores]
-        )
+        self.cli_set(resource_path + ['cpu-cores', cpu_cores])
         self.cli_commit()
 
         config_entries = (
@@ -1198,7 +1195,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
     def test_12_1_buffer_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
-            self.cli_set(base_path + ['settings', 'buffers', 'page-size', size])
+            self.cli_set(resource_path + ['buffers', 'page-size', size])
             self.cli_commit()
 
             conf = get_vpp_config()
@@ -1207,7 +1204,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
     def test_12_2_statseg_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
-            self.cli_set(base_path + ['settings', 'statseg', 'page-size', size])
+            self.cli_set(resource_path + ['memory', 'stats', 'page-size', size])
             self.cli_commit()
 
             conf = get_vpp_config()
@@ -1216,32 +1213,22 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
     def test_12_3_mem_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
-            self.cli_set(
-                base_path + ['settings', 'memory', 'main-heap-page-size', size]
-            )
+            self.cli_set(resource_path + ['memory', 'main-heap-page-size', size])
             self.cli_commit()
 
             conf = get_vpp_config()
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
 
     def test_13_vpp_ipsec_xfrm_nl(self):
-        base_lcp = base_path + ['settings', 'lcp']
-        batch_delay = '250'
-        batch_size = '150'
-        rx_buffer_zise = '1024'
+        rx_buffer_zise = default_resource_map.get('netlink_rx_buffer_size')
 
         self.cli_set(base_path + ['settings', 'ipsec-acceleration'])
-        self.cli_set(base_lcp + ['netlink', 'batch-delay-ms', batch_delay])
-        self.cli_set(base_lcp + ['netlink', 'batch-size', batch_size])
-        self.cli_set(base_lcp + ['netlink', 'rx-buffer-size', rx_buffer_zise])
         self.cli_commit()
 
         config_entries = (
             'linux-xfrm-nl',
             'enable-route-mode-ipsec',
             'interface ipsec',
-            f'nl-batch-delay-ms {batch_delay}',
-            f'nl-batch-size {batch_size}',
             f'nl-rx-buffer-size {rx_buffer_zise}',
         )
 

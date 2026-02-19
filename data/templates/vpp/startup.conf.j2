@@ -27,36 +27,34 @@ cpu {
 }
 {% endif %}
 
-{% if buffers is vyos_defined %}
+{% if resource_allocation.buffers is vyos_defined %}
 buffers {
-{%     if buffers.buffers_per_numa is vyos_defined %}
-    buffers-per-numa {{ buffers.buffers_per_numa }}
+{%     if resource_allocation.buffers.buffers_per_numa is vyos_defined %}
+    buffers-per-numa {{ resource_allocation.buffers.buffers_per_numa }}
 {%     endif %}
-{%     if buffers.data_size is vyos_defined %}
-    default data-size {{ buffers.data_size }}
+{%     if resource_allocation.buffers.data_size is vyos_defined %}
+    default data-size {{ resource_allocation.buffers.data_size }}
 {%     endif %}
-{%     if buffers.page_size is vyos_defined %}
-    page-size {{ buffers.page_size }}
+{%     if resource_allocation.buffers.page_size is vyos_defined %}
+    page-size {{ resource_allocation.buffers.page_size }}
 {%     endif %}
 }
 {% endif %}
 
-{% if ipv6 is vyos_defined %}
+{% if resource_allocation.ipv6 is vyos_defined %}
 ip6 {
-{%     if ipv6.hash_buckets is vyos_defined %}
-    hash-buckets {{ ipv6.hash_buckets }}
+{%     if resource_allocation.ipv6.hash_buckets is vyos_defined %}
+    hash-buckets {{ resource_allocation.ipv6.hash_buckets }}
 {%     endif %}
-{%     if ipv6.heap_size is vyos_defined %}
-    heap-size {{ ipv6.heap_size }}
+{%     if resource_allocation.ipv6.heap_size is vyos_defined %}
+    heap-size {{ resource_allocation.ipv6.heap_size }}
 {%     endif %}
 }
 {% endif %}
 
-{% if l2learn is vyos_defined %}
+{% if resource_allocation.mac_limit is vyos_defined %}
 l2learn {
-{%     if l2learn.limit is vyos_defined %}
-    limit {{ l2learn.limit }}
-{%     endif %}
+    limit {{ resource_allocation.mac_limit }}
 }
 {% endif %}
 
@@ -69,11 +67,9 @@ logging {
 }
 {% endif %}
 
-{% if physmem is vyos_defined %}
+{% if resource_allocation.memory.physmem_max_size is vyos_defined %}
 physmem {
-{%     if physmem.max_size is vyos_defined %}
-    max-size {{ physmem.max_size }}
-{%     endif %}
+    max-size {{ resource_allocation.memory.physmem_max_size }}
 }
 {% endif %}
 
@@ -126,46 +122,37 @@ crypto-engines {
 linux-cp {
     lcp-sync
     lcp-auto-subint
-{% if lcp.ignore_kernel_routes is not vyos_defined %}
+{% if resource_allocation.ignore_kernel_routes is not vyos_defined %}
     route-no-paths
 {% endif %}
 }
 
-{% if lcp.netlink is vyos_defined %}
+{% set netlink_rx_buffers = 268435456 %}
 linux-nl {
-{%     if lcp.netlink.rx_buffer_size is vyos_defined %}
-    nl-rx-buffer-size {{ lcp.netlink.rx_buffer_size }}
-{%     endif %}
-{%     if lcp.netlink.batch_size is vyos_defined %}
-    nl-batch-size {{ lcp.netlink.batch_size }}
-{%     endif %}
-{%     if lcp.netlink.batch_delay_ms is vyos_defined %}
-    nl-batch-delay-ms {{ lcp.netlink.batch_delay_ms }}
-{%     endif %}
+    nl-rx-buffer-size {{ netlink_rx_buffers }}
 }
-{% endif %}
 
-{% if statseg is vyos_defined %}
+{% if resource_allocation.memory.stats is vyos_defined %}
 statseg {
-{%     if statseg.size is vyos_defined %}
-    size {{ statseg.size }}
+{%     if resource_allocation.memory.stats.size is vyos_defined %}
+    size {{ resource_allocation.memory.stats.size }}
 {%     endif %}
-{%     if statseg.page_size is vyos_defined %}
-    page-size {{ statseg.page_size }}
+{%     if resource_allocation.memory.stats.page_size is vyos_defined %}
+    page-size {{ resource_allocation.memory.stats.page_size }}
 {%     endif %}
 }
 {% endif %}
 
-{% if memory is vyos_defined %}
+{% if resource_allocation.memory is vyos_defined %}
 memory {
-{%     if memory.main_heap_size is vyos_defined %}
-    main-heap-size {{ memory.main_heap_size }}
+{%     if resource_allocation.memory.main_heap_size is vyos_defined %}
+    main-heap-size {{ resource_allocation.memory.main_heap_size }}
 {%     endif %}
-{%     if memory.main_heap_page_size is vyos_defined %}
-    main-heap-page-size {{ memory.main_heap_page_size }}
+{%     if resource_allocation.memory.main_heap_page_size is vyos_defined %}
+    main-heap-page-size {{ resource_allocation.memory.main_heap_page_size }}
 {%     endif %}
-{%     if buffers.page_size != '4K' %}
-    default-hugepage-size {{ buffers.page_size }}
+{%     if resource_allocation.buffers.page_size != '4K' %}
+    default-hugepage-size {{ resource_allocation.buffers.page_size }}
 {%     endif %}
 }
 {% endif %}
@@ -200,15 +187,7 @@ dpdk {
 linux-xfrm-nl {
      enable-route-mode-ipsec
      interface ipsec
-{%     if lcp.netlink.batch_delay_ms is vyos_defined %}
-     nl-batch-delay-ms {{ lcp.netlink.batch_delay_ms }}
-{%     endif %}
-{%     if lcp.netlink.batch_size is vyos_defined %}
-     nl-batch-size {{ lcp.netlink.batch_size }}
-{%     endif %}
-{%     if lcp.netlink.rx_buffer_size is vyos_defined %}
-     nl-rx-buffer-size {{ lcp.netlink.rx_buffer_size }}
-{%     endif %}
+     nl-rx-buffer-size {{ netlink_rx_buffers }}
 }
 {% endif %}
 

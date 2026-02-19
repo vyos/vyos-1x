@@ -170,9 +170,14 @@ def _configure_vpp_cpu_settings(config: dict):
 
 def _normalize_buffers(config: dict):
     """Replace 'auto' buffers_per_numa with calculated value"""
-    if config['settings']['buffers']['buffers_per_numa'] == 'auto':
+    if (
+        config['settings']['resource_allocation']['buffers']['buffers_per_numa']
+        == 'auto'
+    ):
         buffers = memory.buffers_required(config['settings'])
-        config['settings']['buffers']['buffers_per_numa'] = str(buffers)
+        config['settings']['resource_allocation']['buffers']['buffers_per_numa'] = str(
+            buffers
+        )
 
 
 def _get_max_xdp_rx_queues(config: dict):
@@ -770,7 +775,9 @@ def apply(config):
             vpp_control = VPPControl()
 
             # preconfigure LCP plugin
-            if 'ignore_kernel_routes' in config.get('settings', {}).get('lcp', {}):
+            if 'ignore_kernel_routes' in config['settings'].get(
+                'resource_allocation', {}
+            ):
                 vpp_control.cli_cmd('lcp param route-no-paths off')
             else:
                 vpp_control.cli_cmd('lcp param route-no-paths on')

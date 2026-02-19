@@ -31,6 +31,8 @@
 #  - `vpp settings interface <ethN> num-*`
 # and delete `vpp settings interface <ethN> dpdk-options promisc` (T8274)
 #
+# Migrate all resource settings into 'resource-allocation' section  (T8261)
+#
 
 from vyos.configtree import ConfigTree
 
@@ -188,6 +190,60 @@ def _migrate_vpp_dpdk_options(config: ConfigTree) -> None:
             config.delete(promisc_path)
 
 
+def _migrate_vpp_resources(config: ConfigTree) -> None:
+    base = ['vpp', 'settings']
+    new_base = ['vpp', 'settings', 'resource-allocation']
+
+    if not config.exists(new_base):
+        config.set(new_base)
+
+    if config.exists(base + ['buffers']):
+        # copy "settings buffers" to "settings resource-allocation buffers"
+        config.copy(base + ['buffers'], new_base + ['buffers'])
+        config.delete(base + ['buffers'])
+
+    if config.exists(base + ['memory']):
+        # copy "settings memory" to "settings resource-allocation memory"
+        config.copy(base + ['memory'], new_base + ['memory'])
+        config.delete(base + ['memory'])
+
+    if config.exists(base + ['statseg']):
+        # copy "settings statseg" to "settings resource-allocation memory stats"
+        if not config.exists(new_base + ['memory']):
+            config.set(new_base + ['memory'])
+        config.copy(base + ['statseg'], new_base + ['memory', 'stats'])
+        config.delete(base + ['statseg'])
+
+    if config.exists(base + ['ipv6']):
+        # copy "settings ipv6" to "settings resource-allocation ipv6"
+        config.copy(base + ['ipv6'], new_base + ['ipv6'])
+        config.delete(base + ['ipv6'])
+
+    if config.exists(base + ['lcp']):
+        # move "settings lcp ignore-kernel-routes" to "settings resource-allocation ignore-kernel-routes"
+        # and remove "settings lcp netlink" node
+        if config.exists(base + ['lcp', 'ignore-kernel-routes']):
+            config.set(new_base + ['ignore-kernel-routes'])
+        config.delete(base + ['lcp'])
+
+    if config.exists(base + ['l2learn']):
+        # move "settings l2learn limit" to "settings resource-allocation mac-limit"
+        if config.exists(base + ['l2learn', 'limit']):
+            tmp = config.return_value(base + ['l2learn', 'limit'])
+            config.set(new_base + ['mac-limit'], value=tmp)
+        config.delete(base + ['l2learn'])
+
+    if config.exists(base + ['physmem']):
+        # move "settings physmem max-size" to "settings resource-allocation memory physmem-max-size"
+        if config.exists(base + ['physmem', 'max-size']):
+            tmp = config.return_value(base + ['physmem', 'max-size'])
+            config.set(new_base + ['memory', 'physmem-max-size'], value=tmp)
+        config.delete(base + ['physmem'])
+
+    if len(config.list_nodes(new_base)) == 0:
+            config.delete(new_base)
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
         # Nothing to do
@@ -200,3 +256,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_cpu(config)
     _migrate_vpp_interface_rx_mode(config)
     _migrate_vpp_dpdk_options(config)
+    _migrate_vpp_resources(config)
