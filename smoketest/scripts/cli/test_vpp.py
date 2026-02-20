@@ -40,6 +40,7 @@ PROCESS_NAME = 'vpp_main'
 VPP_CONF = '/run/vpp/vpp.conf'
 base_path = ['vpp']
 resource_path = base_path + ['settings', 'resource-allocation']
+interfaces_path = ['interfaces', 'vpp']
 interface = 'eth1'
 
 
@@ -115,6 +116,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         finally:
             # Ensure these cleanup operations always run
             self.cli_delete(base_path)
+            self.cli_delete(interfaces_path)
             self.cli_commit()
 
             # delete address for Ethernet interface
@@ -667,31 +669,17 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_06_vpp_bonding(self):
-        interface_bond = 'bond23'
-        interface_kernel = 'vpptun23'
+        bond_path = interfaces_path + ['bonding']
+        interface_bond = 'vppbond23'
         hash = 'layer3+4'
         mode = '802.3ad'
         description = 'Interface-Bonding'
         vlans = ['123', '456']
         vlan_description = 'My-vlan-123'
 
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'bonding',
-                interface_bond,
-                'member',
-                'interface',
-                interface,
-            ]
-        )
-        self.cli_set(
-            base_path + ['interfaces', 'bonding', interface_bond, 'hash-policy', hash]
-        )
-        self.cli_set(
-            base_path + ['interfaces', 'bonding', interface_bond, 'mode', mode]
-        )
+        self.cli_set(bond_path + [interface_bond, 'member', 'interface', interface])
+        self.cli_set(bond_path + [interface_bond, 'hash-policy', hash])
+        self.cli_set(bond_path + [interface_bond, 'mode', mode])
 
         # commit changes
         self.cli_commit()
@@ -706,42 +694,21 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             "Interface BondEthernet23 is not in the expected state 'up'.",
         )
 
-        # set kernel interface
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'bonding',
-                interface_bond,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        self.cli_set(
-            base_path
-            + ['kernel-interfaces', interface_kernel, 'description', description]
-        )
+        self.cli_set(bond_path + [interface_bond, 'description', description])
         for vlan in vlans:
             self.cli_set(
-                base_path
-                + [
-                    'kernel-interfaces',
-                    interface_kernel,
-                    'vif',
-                    vlan,
-                    'description',
-                    vlan_description,
-                ]
+                bond_path
+                + [interface_bond, 'vif', vlan, 'description', vlan_description]
             )
 
         # commit changes
         self.cli_commit()
 
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}.{vlan}'))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_bond}'))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_bond}.{vlan}'))
 
-        current_alias = read_file(f'/sys/class/net/{interface_kernel}/ifalias')
-        vlan_alias = read_file(f'/sys/class/net/{interface_kernel}.{vlan}/ifalias')
+        current_alias = read_file(f'/sys/class/net/{interface_bond}/ifalias')
+        vlan_alias = read_file(f'/sys/class/net/{interface_bond}.{vlan}/ifalias')
         self.assertEqual(current_alias, description)
         self.assertEqual(vlan_alias, vlan_description)
 
@@ -772,23 +739,12 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         )
 
         # delete vpp kernel-interface vlan
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel, 'vif'])
+        self.cli_delete(bond_path + [interface_bond, 'vif'])
         self.cli_commit()
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}.{vlan}'))
-
-        # delete vpp kernel-interface
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel])
-        self.cli_commit()
-
-        # delete bonding kernel-interface
-        self.cli_delete(
-            base_path + ['interfaces', 'bonding', interface_bond, 'kernel-interface']
-        )
-        self.cli_commit()
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
+        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_bond}.{vlan}'))
 
         # delete bonding interface
-        self.cli_delete(base_path + ['interfaces', 'bonding'])
+        self.cli_delete(bond_path)
         self.cli_commit()
 
         # check deleting bonding interface
@@ -1278,10 +1234,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
     def test_14_2_vpp_cgnat_bond_with_vifs(self):
         base_cgnat = base_path + ['nat', 'cgnat']
-        base_kernel = base_path + ['kernel-interfaces']
-        base_bond = base_path + ['interfaces', 'bonding']
-        iface_kernel = 'vpptun0'
-        iface_bond = 'bond0'
+        base_bond = interfaces_path + ['bonding']
+        iface_bond = 'vppbond0'
         vif_1 = '23'
         vif_2 = '24'
         iface_out = f'{iface_bond}.{vif_1}'
@@ -1289,11 +1243,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         address_1 = '100.64.0.23/32'
         address_2 = '192.0.2.1/32'
 
-        self.cli_set(base_bond + [iface_bond, 'kernel-interface', iface_kernel])
         self.cli_set(base_bond + [iface_bond, 'member', 'interface', interface])
-
-        self.cli_set(base_kernel + [iface_kernel, 'vif', vif_1, 'address', address_1])
-        self.cli_set(base_kernel + [iface_kernel, 'vif', vif_2, 'address', address_2])
+        self.cli_set(base_bond + [iface_bond, 'vif', vif_1, 'address', address_1])
+        self.cli_set(base_bond + [iface_bond, 'vif', vif_2, 'address', address_2])
 
         self.cli_set(base_cgnat + ['interface', 'inside', iface_inside])
         self.cli_set(base_cgnat + ['interface', 'outside', iface_out])
@@ -1701,13 +1653,12 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
     def test_21_2_vpp_ipfix_bond(self):
         base_ipfix = base_path + ['ipfix']
-        base_bond = base_path + ['interfaces', 'bonding']
-        iface_bond = 'bond0'
+        base_bond = interfaces_path + ['bonding']
+        iface_bond = 'vppbond0'
         collector_ip = '127.0.0.2'
         collector_src = '127.0.0.1'
 
-        self.cli_set(base_bond + [iface_bond, 'kernel-interface', 'vpptun0'])
-        self.cli_set(base_bond + [iface_bond, 'member', 'interface', iface_bond])
+        self.cli_set(base_bond + [iface_bond, 'member', 'interface', interface])
 
         self.cli_set(
             base_ipfix + ['collector', collector_ip, 'source-address', collector_src]

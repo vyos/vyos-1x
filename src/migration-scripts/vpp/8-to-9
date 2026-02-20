@@ -1,0 +1,88 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Move bonding interface from vpp section to 'interfaces vpp bonding' (T8283)
+
+
+from vyos.configtree import ConfigTree
+
+base = ['vpp', 'interfaces', 'bonding']
+new_base = ['interfaces', 'vpp', 'bonding']
+kernel_interface_base = ['vpp', 'kernel-interfaces']
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        return
+
+    config.set(new_base)
+
+    for ifname in config.list_nodes(base):
+        bond_kernel_interface_path = base + [ifname, 'kernel-interface']
+        kernel_iface = None
+        if config.exists(bond_kernel_interface_path):
+            kernel_iface = config.return_value(bond_kernel_interface_path)
+            config.delete(bond_kernel_interface_path)
+        new_ifname = f'vpp{ifname}'
+        iface_base = new_base + [new_ifname]
+        config.copy(base + [ifname], iface_base)
+        config.set_tag(new_base)
+
+        if kernel_iface and config.exists(kernel_interface_base + [kernel_iface]):
+            if config.exists(kernel_interface_base + [kernel_iface, 'vif']):
+                config.copy(kernel_interface_base + [kernel_iface, 'vif'], iface_base + ['vif'])
+            if config.exists(kernel_interface_base + [kernel_iface, 'mtu']):
+                config.copy(kernel_interface_base + [kernel_iface, 'mtu'], iface_base + ['mtu'])
+            if config.exists(kernel_interface_base + [kernel_iface, 'address']):
+                config.copy(kernel_interface_base + [kernel_iface, 'address'], iface_base + ['address'])
+            config.delete(kernel_interface_base + [kernel_iface])
+
+        for feature in ['nat44', 'cgnat']:
+            for direction in ['inside', 'outside']:
+                tmp_path = ['vpp', 'nat', feature, 'interface', direction]
+
+                if not config.exists(tmp_path):
+                    continue
+
+                names = config.return_values(tmp_path)
+                for name in names:
+                    if name.split('.')[0] == ifname:
+                        new_name = f'vpp{name}'
+                        config.delete_value(tmp_path, name)
+                        config.set(tmp_path, value=new_name, replace=False)
+
+        ipfix_path = ['vpp', 'ipfix', 'interface']
+        if config.exists(ipfix_path):
+            for name in config.list_nodes(ipfix_path):
+                if name.split('.')[0] == ifname:
+                    new_name = f'vpp{name}'
+                    config.rename(ipfix_path + [name], new_name)
+
+        bridge_path = ['vpp', 'interfaces', 'bridge']
+        if config.exists(bridge_path):
+            for iface in config.list_nodes(bridge_path):
+                tmp = bridge_path + [iface, 'member', 'interface']
+                if config.exists(tmp):
+                    for name in config.list_nodes(tmp):
+                        if name == ifname:
+                            new_name = f'vpp{name}'
+                            config.rename(tmp + [name], new_name)
+
+    config.delete(base)
+
+    if config.exists(kernel_interface_base) and len(config.list_nodes(kernel_interface_base)) == 0:
+        config.delete(['vpp', 'kernel-interfaces'])
+
+    if len(config.list_nodes(['vpp', 'interfaces'])) == 0:
+        config.delete(['vpp', 'interfaces'])
