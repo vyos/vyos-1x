@@ -1,0 +1,53 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# T8291:
+#   - "service dns forwarding name-server ... dot" introduces explicit DoT.
+#   - "dot-to-port-853" is disabled to avoid implicit DoT upgrades.
+#   - To preserve behavior for upgraded configs that relied on implicit DoT,
+#     add "dot" to upstreams explicitly configured with port 853.
+
+from vyos.configtree import ConfigTree
+
+base = ['service', 'dns', 'forwarding']
+
+
+def migrate_name_servers(config: ConfigTree, name_servers_base) -> None:
+    if not config.exists(name_servers_base):
+        return
+
+    for name_server in config.list_nodes(name_servers_base):
+        ns_base = name_servers_base + [name_server]
+        port_path = ns_base + ['port']
+        dot_path = ns_base + ['dot']
+
+        if config.exists(dot_path) or not config.exists(port_path):
+            continue
+
+        if str(config.return_value(port_path)) == '853':
+            config.set(dot_path)
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(base):
+        # Nothing to do
+        return
+
+    migrate_name_servers(config, base + ['name-server'])
+
+    domain_base = base + ['domain']
+    if config.exists(domain_base):
+        for domain in config.list_nodes(domain_base):
+            migrate_name_servers(config, domain_base + [domain, 'name-server'])

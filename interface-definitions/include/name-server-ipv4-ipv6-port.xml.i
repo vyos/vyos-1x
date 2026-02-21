@@ -16,8 +16,11 @@
   </properties>
   <children>
     #include <include/port-number.xml.i>
-    <leafNode name="port">
-      <defaultValue>53</defaultValue>
+    <leafNode name="dot">
+      <properties>
+        <help>Use DNS over TLS (DoT) for this upstream DNS server</help>
+        <valueless/>
+      </properties>
     </leafNode>
   </children>
 </tagNode>

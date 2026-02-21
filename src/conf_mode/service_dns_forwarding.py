@@ -238,6 +238,20 @@ def get_config(config=None):
 
     return dns
 
+def get_name_server_port(name_server_data):
+    if not name_server_data:
+        return 53
+    if 'port' in name_server_data:
+        return int(name_server_data['port'])
+    if 'dot' in name_server_data:
+        return 853
+    return 53
+
+
+def canonicalize_name_server(name_server, name_server_data):
+    return f'{bracketize_ipv6(name_server)}:{get_name_server_port(name_server_data)}'
+
+
 def verify(dns):
     # bail out early - looks like removal from running config
     if not dns:
@@ -337,10 +351,12 @@ def apply(dns):
         hc.delete_name_servers([hostsd_tag])
         if 'name_server' in dns:
             # 'name_server' is of the form
-            # {'192.0.2.1': {'port': 53}, '2001:db8::1': {'port': 853}, ...}
+            # {'192.0.2.1': {}, '2001:db8::1': {'dot': {}}, ...}
             # canonicalize them as ['192.0.2.1:53', '[2001:db8::1]:853', ...]
-            nslist = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port']}")(h, p)
-                      for (h, p) in dns['name_server'].items()]
+            nslist = [
+                (lambda h, p: canonicalize_name_server(h, p))(h, p)
+                for (h, p) in dns['name_server'].items()
+            ]
             hc.add_name_servers({hostsd_tag: nslist})
 
         # delete all nameserver tags
@@ -380,10 +396,12 @@ def apply(dns):
             zones = dns['domain']
             for domain in zones.keys():
                 # 'name_server' is of the form
-                # {'192.0.2.1': {'port': 53}, '2001:db8::1': {'port': 853}, ...}
+                # {'192.0.2.1': {}, '2001:db8::1': {'dot': {}}, ...}
                 # canonicalize them as ['192.0.2.1:53', '[2001:db8::1]:853', ...]
-                zones[domain]['name_server'] = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port']}")(h, p)
-                                                for (h, p) in zones[domain]['name_server'].items()]
+                zones[domain]['name_server'] = [
+                    (lambda h, p: canonicalize_name_server(h, p))(h, p)
+                    for (h, p) in zones[domain]['name_server'].items()
+                ]
             hc.add_forward_zones(zones)
 
         # hostsd generates NTAs for the authoritative zones

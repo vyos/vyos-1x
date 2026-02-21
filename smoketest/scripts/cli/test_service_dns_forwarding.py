@@ -41,6 +41,14 @@ def get_config_value(key, file=CONFIG_FILE):
     tmp = re.findall(r'\n{}=+(.*)'.format(key), tmp)
     return tmp[0]
 
+
+def get_upstream_port(upstream_data):
+    if 'port' in upstream_data:
+        return upstream_data['port']
+    if 'dot' in upstream_data:
+        return '853'
+    return '53'
+
 class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -131,6 +139,10 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('local-port')
         self.assertEqual(tmp, '53')
 
+        # implicit DoT on port 853 must be disabled
+        tmp = get_config_value('dot-to-port-853')
+        self.assertEqual(tmp, 'no')
+
     def test_dnssec(self):
         # DNSSEC option testing
         options = ['off', 'process-no-validate', 'process', 'log-fail', 'validate']
@@ -156,14 +168,48 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         tmp = get_config_value(r'\+.', file=FORWARD_FILE)
-        canonical_entries = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port'] if 'port' in p else 53}")(h, p)
-                             for (h, p) in nameservers.items()]
+        canonical_entries = [
+            (lambda h, p: f"{bracketize_ipv6(h)}:{get_upstream_port(p)}")(h, p)
+            for (h, p) in nameservers.items()
+        ]
         self.assertEqual(tmp, ', '.join(canonical_entries))
 
         # Do not use local /etc/hosts file in name resolution
         # default: yes
         tmp = get_config_value('export-etc-hosts')
         self.assertEqual(tmp, 'yes')
+
+    def test_external_nameserver_dot(self):
+        nameservers = {
+            '192.0.2.3': {'dot': {}},
+            '2001:db8::3': {'dot': {}, 'port': '853'},
+        }
+
+        for h, p in nameservers.items():
+            if 'port' in p:
+                self.cli_set(base_path + ['name-server', h, 'port', p['port']])
+            if 'dot' in p:
+                self.cli_set(base_path + ['name-server', h, 'dot'])
+
+        self.cli_commit()
+
+        tmp = get_config_value(r'\+.', file=FORWARD_FILE)
+        canonical_entries = [
+            (lambda h, p: f"{bracketize_ipv6(h)}:{get_upstream_port(p)}")(h, p)
+            for (h, p) in nameservers.items()
+        ]
+        self.assertEqual(tmp, ', '.join(canonical_entries))
+
+    def test_external_nameserver_dot_custom_port(self):
+        nameserver = '192.0.2.4'
+        port = '1053'
+        self.cli_set(base_path + ['name-server', nameserver, 'dot'])
+        self.cli_set(base_path + ['name-server', nameserver, 'port', port])
+
+        self.cli_commit()
+
+        tmp = get_config_value(r'\+.', file=FORWARD_FILE)
+        self.assertIn(f'{nameserver}:{port}', tmp)
 
     def test_domain_forwarding(self):
         domains = ['vyos.io', 'vyos.net', 'vyos.com']
@@ -190,16 +236,56 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         hosts_conf = read_file(HOSTSD_FILE)
         for domain in domains:
             # Test 'recursion-desired' flag for the first domain only
-            if domain == domains[0]: key =f'\+{domain}'
-            else: key =f'{domain}'
+            if domain == domains[0]:
+                key = fr'\+{domain}'
+            else:
+                key = f'{domain}'
             tmp = get_config_value(key, file=FORWARD_FILE)
-            canonical_entries = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port'] if 'port' in p else 53}")(h, p)
-                        for (h, p) in nameservers.items()]
+            canonical_entries = [
+                (lambda h, p: f"{bracketize_ipv6(h)}:{get_upstream_port(p)}")(h, p)
+                for (h, p) in nameservers.items()
+            ]
             self.assertEqual(tmp, ', '.join(canonical_entries))
 
             # Test 'negative trust anchor' flag for the second domain only
             if domain == domains[1]:
                 self.assertIn(f'addNTA("{domain}", "static")', hosts_conf)
+
+    def test_domain_forwarding_dot(self):
+        domain = 'dot.vyos.io'
+        nameservers = {
+            '192.0.2.10': {'dot': {}},
+            '2001:db8::10': {'dot': {}},
+        }
+
+        for h, p in nameservers.items():
+            if 'port' in p:
+                self.cli_set(
+                    base_path + ['domain', domain, 'name-server', h, 'port', p['port']]
+                )
+            if 'dot' in p:
+                self.cli_set(base_path + ['domain', domain, 'name-server', h, 'dot'])
+
+        self.cli_commit()
+
+        tmp = get_config_value(domain, file=FORWARD_FILE)
+        canonical_entries = [
+            (lambda h, p: f"{bracketize_ipv6(h)}:{get_upstream_port(p)}")(h, p)
+            for (h, p) in nameservers.items()
+        ]
+        self.assertEqual(tmp, ', '.join(canonical_entries))
+
+    def test_domain_forwarding_dot_custom_port(self):
+        domain = 'dot-port.vyos.io'
+        self.cli_set(base_path + ['domain', domain, 'name-server', '192.0.2.11', 'dot'])
+        self.cli_set(
+            base_path + ['domain', domain, 'name-server', '192.0.2.11', 'port', '1053']
+        )
+
+        self.cli_commit()
+
+        tmp = get_config_value(domain, file=FORWARD_FILE)
+        self.assertIn('192.0.2.11:1053', tmp)
 
     def test_no_rfc1918_forwarding(self):
         self.cli_set(base_path + ['no-serve-rfc1918'])

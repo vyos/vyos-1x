@@ -35,6 +35,9 @@ local-port={{ port }}
 # dnssec
 dnssec={{ dnssec }}
 
+# disable implicit DoT for forwarders on port 853
+dot-to-port-853=no
+
 {% if dns64_prefix is vyos_defined %}
 # dns64-prefix
 dns64-prefix={{ dns64_prefix }}
@@ -70,4 +73,3 @@ ecs-ipv4-bits={{ options.ecs_ipv4_bits }}
 {% if options.edns_subnet_allow_list is vyos_defined %}
 edns-subnet-allow-list={{ options.edns_subnet_allow_list | join(',') }}
 {% endif %}
-
