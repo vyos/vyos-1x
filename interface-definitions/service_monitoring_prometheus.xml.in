@@ -47,6 +47,11 @@
                     <defaultValue>9342</defaultValue>
                   </leafNode>
                   #include <include/interface/vrf.xml.i>
+                  <node name="collectors">
+                    <properties>
+                      <help>Set collectors to be enabled</help>
+                    </properties>
+                  </node>
                 </children>
               </node>
               <node name="blackbox-exporter">

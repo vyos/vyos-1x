@@ -10,12 +10,17 @@ User=frr
 {% endif %}
 ExecStart={{ vrf_command }}/usr/sbin/frr_exporter \
           --collector.bgp6 \
+          --collector.bgp.peer-descriptions \
+          --collector.bgp.peer-descriptions.plain-text \
+          --collector.bgp.peer-groups \
+          --collector.bgp.accepted-filtered-prefixes \
+          --collector.vrrp \
 {% if listen_address is vyos_defined %}
 {%     for address in listen_address %}
-        --web.listen-address={{ address | bracketize_ipv6 }}:{{ port }}
+          --web.listen-address={{ address | bracketize_ipv6 }}:{{ port }}
 {%     endfor %}
 {% else %}
-        --web.listen-address=:{{ port }}
+          --web.listen-address=:{{ port }}
 {% endif %}
 [Install]
 WantedBy=multi-user.target
