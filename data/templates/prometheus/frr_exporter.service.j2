@@ -13,8 +13,6 @@ ExecStart={{ vrf_command }}/usr/sbin/frr_exporter \
           --collector.bgp.peer-descriptions \
           --collector.bgp.peer-descriptions.plain-text \
           --collector.bgp.peer-groups \
-          --collector.bgp.accepted-filtered-prefixes \
-          --collector.vrrp \
 {% if listen_address is vyos_defined %}
 {%     for address in listen_address %}
           --web.listen-address={{ address | bracketize_ipv6 }}:{{ port }}
