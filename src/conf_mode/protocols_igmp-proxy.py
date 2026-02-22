@@ -87,18 +87,18 @@ def generate(igmp_proxy):
         return None
 
     render(config_file, 'igmp-proxy/igmpproxy.conf.j2', igmp_proxy)
-
     return None
 
 def apply(igmp_proxy):
+    service_name = 'igmpproxy.service'
     if not igmp_proxy or 'disable' in igmp_proxy:
-         # IGMP Proxy support is removed in the commit
-         call('systemctl stop igmpproxy.service')
-         if os.path.exists(config_file):
-             os.unlink(config_file)
-    else:
-        call('systemctl restart igmpproxy.service')
+        # IGMP Proxy support is removed in the commit
+        call(f'systemctl stop {service_name}')
+        if os.path.exists(config_file):
+            os.unlink(config_file)
+        return None
 
+    call(f'systemctl restart {service_name}')
     return None
 
 if __name__ == '__main__':
