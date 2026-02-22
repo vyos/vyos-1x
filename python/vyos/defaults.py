@@ -57,6 +57,7 @@ internal_ports = {
 
 config_files = {
     'sshd_user_ca' : '/run/sshd/trusted_user_ca',
+    'igmp_proxy' : '/run/igmpproxy/igmpproxy.conf',
 }
 
 config_status = '/tmp/vyos-config-status'

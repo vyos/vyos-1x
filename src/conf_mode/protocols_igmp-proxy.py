@@ -21,6 +21,7 @@ from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
+from vyos.defaults import config_files
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
@@ -28,7 +29,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/igmpproxy.conf'
+config_file = config_files['igmp_proxy']
 
 def get_config(config=None):
     if config:
