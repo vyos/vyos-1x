@@ -218,7 +218,7 @@ let group_perms_match perms group cmd =
 
 let is_admin () =
   (* If executed by root, skip all permission checks *)
-  if Unix.geteuid () = 0 then true else
+  if Unix.getuid () = 0 then true else
   (* Otherwise, check if the user is a VyOS admin *)
   let admin_group = Unix.getgrnam vyos_admin_group_name in
   let user_groups = Unix.getgroups () in
@@ -487,10 +487,10 @@ let () =
   let () = setup_logging debug in
   let op_defs = read_command_definitions () in
   let permissions = read_permissions () in
-  let () = Unix.setuid 0 in
   let () = Logs.debug @@ fun m -> m "Executing VyOS command [%s]" (String.concat " " args) in
   try
     check_command_permissions permissions args;
+    Unix.setuid 0;
     run_vyos_command options ~env:[] ~parent:"" op_defs args
   with
   | Permission_error ->
