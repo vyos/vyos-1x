@@ -1,0 +1,10 @@
+[Unit]
+Description=IGMP multicast proxy
+After=vyos-router.service
+ConditionPathExists=/run/igmpproxy/igmpproxy.conf
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+ExecStart=/usr/sbin/igmpproxy -n /run/igmpproxy/igmpproxy.conf
