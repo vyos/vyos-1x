@@ -1,3 +1,10 @@
+vyos-utils (0.0.6) unstable; urgency=medium
+
+  * Fix a permission check bypass.
+  * Improve debug logging and error messages.
+
+ -- Daniil Baturin <daniil@vyos.io>  Tue, 24 Feb 2026 14:38:55 +0000
+
 vyos-utils (0.0.5) unstable; urgency=medium
 
   * Sanitize the environment in vyos-op-run to prevent malicious variable injection
