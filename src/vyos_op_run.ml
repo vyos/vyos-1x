@@ -520,6 +520,12 @@ let () =
   | Incomplete_command ->
     Printf.fprintf stderr "Incomplete command: %s\n" options.vyos_command;
     exit 2
+  | Sys_error msg ->
+    Printf.fprintf stderr "System error: %s" msg;
+    exit 255
+  | Unix.Unix_error (err, func, _) ->
+    Printf.fprintf stderr "Failed to execute Unix call %s: %s" func (Unix.error_message err);
+    exit 255
   | Internal_error msg ->
     Printf.fprintf stderr "Internal error: %s\n" msg;
     exit 255
