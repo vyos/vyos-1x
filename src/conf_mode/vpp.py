@@ -231,10 +231,10 @@ def get_config(config=None):
     # this is required because some interfaces after they are connected
     # to VPP is really hard or impossible to restore without knowing
     # their original parameters (like IDs)
-    persist_config = JSONStorage('vpp_conf')
-    eth_ifaces_persist: dict[str, dict[str, str]] = persist_config.read(
-        'eth_ifaces', {}
-    )
+    with JSONStorage('vpp_conf') as persist_config:
+        eth_ifaces_persist: dict[str, dict[str, str]] = persist_config.read(
+            'eth_ifaces', {}
+        )
 
     if config:
         conf = config
@@ -692,10 +692,10 @@ def apply(config):
     modules = ('vfio_iommu_type1', 'vfio_pci', 'vfio_pci_core', 'vfio')
     # Open persistent config
     # It is required for operations with interfaces
-    persist_config = JSONStorage('vpp_conf')
     if not config or ('removed_ifaces' in config and 'settings' not in config):
         # Cleanup persistent config
-        persist_config.delete()
+        with JSONStorage('vpp_conf') as persist_config:
+            persist_config.delete()
         # And stop the service
         call(f'systemctl stop {service_name}.service')
         # Unlod modules (modprobe -r)
@@ -869,7 +869,8 @@ def apply(config):
 
     # Save persistent config
     if 'persist_config' in config and config['persist_config']:
-        persist_config.write('eth_ifaces', config['persist_config'])
+        with JSONStorage('vpp_conf') as persist_config:
+            persist_config.write('eth_ifaces', config['persist_config'])
 
     # reinitialize interfaces, but not during the first boot
     if boot_configuration_complete():

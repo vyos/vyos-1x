@@ -1730,6 +1730,29 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show flowprobe feature')
         self.assertIn(required_str, out)
 
+    def test_22_double_enabling_vpp(self):
+        # Verify double enabling of VPP
+
+        # Delete already defined settings from 'setUp' method
+        self.cli_delete(base_path)
+
+        # First commit changes
+        self.cli_set(base_path + ['settings', 'interface', interface])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '20'])
+        self.cli_commit()
+
+        # Delete all VPP changes
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # Second commit changes
+        self.cli_set(base_path + ['settings', 'interface', interface])
+        self.cli_set(base_path + ['settings', 'poll-sleep-usec', '30'])
+        self.cli_commit()
+
+        # Ensure that VPP process is active
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
