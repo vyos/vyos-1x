@@ -84,6 +84,9 @@ interface {{ iface }} {
         AdvPreferredLifetime {{ prefix_options.preferred_lifetime }};
         DeprecatePrefix {{ 'on' if prefix_options.deprecate_prefix is vyos_defined else 'off' }};
         DecrementLifetimes {{ 'on' if prefix_options.decrement_lifetime is vyos_defined else 'off' }};
+{%                 if prefix_options.base_interface is vyos_defined %}
+        Base6Interface {{ prefix_options.base_interface }};
+{%                 endif %}
     };
 {%             endfor %}
 {%         endif %}
