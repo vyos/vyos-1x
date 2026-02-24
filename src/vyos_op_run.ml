@@ -100,12 +100,14 @@ let get_string_field name obj =
   member name obj |> to_string
 
 let read_command_definitions () =
+  let () = Logs.debug @@ fun m -> m "Reading command definitions from %s" op_def_file in
   let ic = open_in op_def_file in
   let data = Yojson.Safe.from_channel ic in
   let () = close_in ic in
   data
 
 let read_permissions () =
+  let () = Logs.debug @@ fun m -> m "Reading user permissions from %s" permissions_file in
   let ic = open_in permissions_file in
   let data = Yojson.Safe.from_channel ic in
   let () = close_in ic in
@@ -218,13 +220,21 @@ let group_perms_match perms group cmd =
 
 let is_admin () =
   (* If executed by root, skip all permission checks *)
-  if Unix.getuid () = 0 then true else
-  (* Otherwise, check if the user is a VyOS admin *)
-  let admin_group = Unix.getgrnam vyos_admin_group_name in
-  let user_groups = Unix.getgroups () in
-  match (Array.find_opt ((=) admin_group.gr_gid) user_groups) with
-  | Some _ -> true
-  | None -> false
+  if Unix.getuid () = 0 then
+    let () = Logs.debug @@ fun m -> m "The user is root, permission checks will be skipped" in
+    true
+  else begin
+    (* Otherwise, check if the user is a VyOS admin *)
+    let admin_group = Unix.getgrnam vyos_admin_group_name in
+    let user_groups = Unix.getgroups () in
+    match (Array.find_opt ((=) admin_group.gr_gid) user_groups) with
+    | Some _ ->
+      let () = Logs.debug @@ fun m -> m "The user is a VyOS admin, permission checks will be skipped" in
+      true
+    | None ->
+      let () = Logs.debug @@ fun m -> m "The user does not have VyOS admin permissions" in
+      false
+  end
 
 let has_unsafe_characters cmd =
   (* XXX: this function is highly restrictive now,
@@ -244,6 +254,7 @@ let has_unsafe_characters cmd =
        - 'add system image': requires non-alphanumeric characters
          for URLs.
    *)
+  let () = Logs.debug @@ fun m -> m "Checking the command for unsafe characters" in
   try
     let _ = Pcre2.exec ~pat:{|[^a-zA-Z0-9_\-\.\s]|} cmd in
     let () =
@@ -270,10 +281,13 @@ let is_admin_only_command cmd =
       if p = t then prefix_matches ps ts
       else false
   in
+  let () = Logs.debug @@ fun m -> m "Checking if the command is admin-only" in
   let res = List.find_opt (fun p -> prefix_matches p cmd) admin_only_commands in
   match res with
   | None -> false
-  | Some _ -> true
+  | Some _ ->
+    let () = Logs.debug @@ fun m -> m "Commandis reserved for admins" in
+    true
 
 let check_command_permissions perms cmd =
   let rec aux perms groups cmd =
@@ -283,6 +297,7 @@ let check_command_permissions perms cmd =
       if group_perms_match perms g cmd then ()
       else aux perms gs cmd
   in
+  let () = Logs.debug @@ fun m -> m "Checking if the user is allowed to execute the command" in
   (* VyOS admins can execute any commands without restrictions *)
   if is_admin () then () else
   (* Operators are not allowed to execute commands
@@ -321,7 +336,6 @@ let render_command opts env command_tmpl =
 let run_external_command opts env command_tmpl =
   let cmd = render_command opts env command_tmpl in
   if opts.dry_run then Printf.printf "%s\n%!" cmd else
-  let () = Logs.debug @@ fun m -> m "Command to be executed %s" cmd in
   (* Get the user database entry to populate the basic environment from:
      we cannot trust an unprivileged user to supply $SHELL
      or allow them to impersonate someone else by setting custom $LOGNAME, etc.
@@ -354,6 +368,7 @@ let run_external_command opts env command_tmpl =
      so that a user trying to do PATH=/bad/place vyos-op-run
      cannot achieve anything with that trick.
    *)
+  let () = Logs.debug @@ fun m -> m "Executing Unix command: %s" cmd in
   let res = Unix.execve shell [|shell; "-c"; cmd|] env in
   match res with
   | Unix.WEXITED 0 -> ()
@@ -487,7 +502,7 @@ let () =
   let () = setup_logging debug in
   let op_defs = read_command_definitions () in
   let permissions = read_permissions () in
-  let () = Logs.debug @@ fun m -> m "Executing VyOS command [%s]" (String.concat " " args) in
+  let () = Logs.debug @@ fun m -> m "Executing VyOS command [%s]" options.vyos_command in
   try
     check_command_permissions permissions args;
     Unix.setuid 0;
