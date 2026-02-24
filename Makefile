@@ -50,10 +50,6 @@ interface_definitions: libvyosconfig $(config_xml_obj)
 	# could mask help strings or mandatory priority statements
 	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
-ifeq ($(BUILD_ARCH),arm64)
-	# There is currently no telegraf support in VyOS for ARM64, remove CLI definitions
-	rm -rf $(TMPL_DIR)/service/monitoring/telegraf
-endif
 
 .PHONY: op_mode_definitions
 .ONESHELL:
