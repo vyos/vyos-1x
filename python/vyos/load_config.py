@@ -86,7 +86,11 @@ def set_commands(cmds: list) -> None:
         return
     error_out = []
     for op in cmds:
-        out, rc = popen(f'/opt/vyatta/sbin/my_{op}', shell=True, stderr=DEVNULL)
+        parts = op.split()
+        if not parts or not parts[0].replace('-', '').replace('_', '').isalnum():
+            continue
+        cmd = [f'/opt/vyatta/sbin/my_{parts[0]}'] + parts[1:]
+        out, rc = popen(cmd, stderr=DEVNULL)
         if rc != 0:
             error_out.append(out)
             continue
