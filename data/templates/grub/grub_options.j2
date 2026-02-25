@@ -28,7 +28,7 @@ submenu "Boot options" {
             configfile ${prefix}/grub.cfg.d/*vyos-menu*.cfg
         }
         menuentry "ttyS (serial)" {
-            if [ "${grub_cpu}" = "arm64" ]; then
+            if [ "${grub_cpu}" == "arm64" ]; then
                 set serial_console="ttyAMA"
             else
                 set serial_console="ttyS"
