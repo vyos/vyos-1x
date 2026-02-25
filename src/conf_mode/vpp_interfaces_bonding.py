@@ -16,22 +16,17 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import os
-
 from vyos.config import Config
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import get_interface_dict
 from vyos.configdep import set_dependents, call_dependents
 from vyos import ConfigError
+from vyos.utils.assertion import assert_mac
+from vyos.utils.process import is_systemd_service_active
 
-from vyos.vpp.interface import BondInterface
+from vyos.ifconfig.vpp import VPPBondInterface
 from vyos.vpp.config_deps import deps_xconnect_dict
-from vyos.vpp.config_verify import (
-    verify_vpp_remove_xconnect_interface,
-    verify_vpp_remove_kernel_interface,
-    verify_vpp_change_kernel_interface,
-    verify_vpp_exists_kernel_interface,
-)
-from vyos.vpp.utils import cli_ifaces_list, cli_ifaces_lcp_kernel_list
+from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
+from vyos.vpp.utils import cli_ifaces_list
 
 
 def _get_bond_mode(mode_name: str) -> int:
@@ -71,55 +66,15 @@ def get_config(config=None) -> dict:
     else:
         conf = Config()
 
-    base = ['vpp', 'interfaces', 'bonding']
-    base_kernel_interfaces = ['vpp', 'kernel-interfaces']
+    base = ['interfaces', 'vpp', 'bonding']
 
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    ifname, config = get_interface_dict(conf, base)
 
-    # Get config_dict with default values
-    config = conf.get_config_dict(
-        base + [ifname],
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-        with_defaults=True,
-        with_recursive_defaults=True,
-    )
-
-    if not conf.exists(['vpp']):
+    if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
 
-    # Get effective config as we need full dicitonary per interface delete
-    effective_config = conf.get_config_dict(
-        base + [ifname],
-        key_mangling=('-', '_'),
-        effective=True,
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
-    if effective_config:
-        config.update({'effective': effective_config})
-
-    if not conf.exists(base + [ifname]):
-        config['remove'] = True
-
-    if effective_config:
-        config.update({'effective': effective_config})
-
     config['vpp_ifaces'] = cli_ifaces_list(conf, 'candidate')
-
-    # Get global 'vpp kernel-interfaces' for verify
-    config['vpp_kernel_interfaces'] = conf.get_config_dict(
-        base_kernel_interfaces,
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
-    # list of all kernel interfaces `vpp interface xxx kernel-interface xxx`
-    config['candidate_kernel_interfaces'] = cli_ifaces_lcp_kernel_list(conf)
 
     # convert values to VPP compatible
     if 'mode' in config:
@@ -127,21 +82,19 @@ def get_config(config=None) -> dict:
     if 'hash_policy' in config:
         config['hash_policy'] = _get_bond_lb(config['hash_policy'])
 
-    tmp = leaf_node_changed(conf, base + [ifname, 'kernel-interface'])
-    if tmp:
-        config['kernel_interface_removed'] = tmp
+    # Get 'vpp settings' config with default values
+    config['vpp_settings'] = conf.get_config_dict(
+        ['vpp', 'settings'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
 
     # Dependency
     config['xconn_members'] = deps_xconnect_dict(conf)
     if ifname in config['xconn_members']:
         for xconn_iface in config['xconn_members'][ifname]:
             set_dependents('vpp_interfaces_xconnect', conf, xconn_iface)
-
-    if conf.exists(base + [ifname, 'kernel-interface']):
-        if effective_config.get('kernel_interface') or __name__ != '__main__':
-            iface = config.get('kernel_interface')
-            if conf.exists(['vpp', 'kernel-interfaces', iface]):
-                set_dependents('vpp_kernel_interface', conf, iface)
 
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
@@ -157,8 +110,6 @@ def get_config(config=None) -> dict:
     if conf.exists(['vpp', 'ipfix']):
         set_dependents('vpp_ipfix', conf)
 
-    config['ifname'] = ifname
-
     return config
 
 
@@ -166,19 +117,29 @@ def verify(config):
     if 'remove_vpp' in config:
         return None
 
-    verify_vpp_remove_kernel_interface(config)
     verify_vpp_remove_xconnect_interface(config)
+
+    if 'deleted' in config:
+        return None
+
+    if not is_systemd_service_active('vpp.service'):
+        raise ConfigError(
+            'Cannot configure VPP bonding interface: vpp.service is not running'
+        )
 
     # Member must belong to VPP
     for iface in config.get('member', {}).get('interface', []):
         if iface not in config['vpp_ifaces']:
             raise ConfigError(f'{iface} must be a VPP interface for bonding')
 
-    if 'remove' in config:
-        return None
-
-    verify_vpp_change_kernel_interface(config)
-    verify_vpp_exists_kernel_interface(config)
+    if 'mac' in config:
+        mac = config['mac']
+        try:
+            assert_mac(mac, test_all_zero=False)
+        except:
+            raise ConfigError(
+                f'Cannot use {mac}: it is a multicast MAC address. Please provide a unicast MAC address.'
+            )
 
 
 def generate(config):
@@ -190,37 +151,13 @@ def apply(config):
         return None
 
     ifname = config.get('ifname')
-    # remove old members
-    if 'effective' in config:
-        members = config['effective'].get('member', {}).get('interface', [])
+    bond = VPPBondInterface(ifname, config)
+    bond.remove()
 
-        kernel_interface = config['effective'].get('kernel_interface', '')
-        i = BondInterface(ifname, kernel_interface=kernel_interface)
-        for member in members:
-            i.detach_member(interface=member)
+    if 'deleted' in config:
+        return
 
-        if 'kernel_interface' in config['effective'] and i.lcp_pair_exists():
-            i.kernel_delete()
-        # Delete bonding interface
-        i.delete()
-
-    if 'remove' in config:
-        return None
-
-    # Create a new one
-    mode = config.get('mode')
-    lb = config.get('hash_policy')
-    members = config.get('member', {}).get('interface', [])
-    mac = config.get('mac', '')
-    kernel_interface = config.get('kernel_interface', '')
-    state = 'up' if 'disable' not in config else 'down'
-
-    i = BondInterface(ifname, mode, lb, mac, kernel_interface, state)
-    i.add()
-    # Add members to bond
-    if members:
-        for member in members:
-            i.add_member(interface=member)
+    bond.update(config)
 
     call_dependents()
 

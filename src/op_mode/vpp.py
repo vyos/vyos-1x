@@ -31,13 +31,12 @@ def _verify(target: typing.Optional[str]):
     """Decorator checks if config for VPP feature exists"""
     from functools import wraps
 
-    target = target.split() if target else []
+    path = target.split() if target else []
 
     def _verify_target(func):
         @wraps(func)
         def _wrapper(*args, **kwargs):
             config = ConfigTreeQuery()
-            path = ['vpp'] + target
             if not config.exists(path):
                 raise vyos.opmode.UnconfiguredSubsystem(
                     f'"{" ".join(path)}" is not configured'
@@ -371,17 +370,17 @@ class VPPShow:
 # -----------------------------
 # VyOS IPFIX op-mode entries
 # -----------------------------
-@_verify('ipfix interface')
+@_verify('vpp ipfix interface')
 def show_ipfix_interfaces(raw: bool):
     return VPPShow().ipfix_interfaces(raw)
 
 
-@_verify('ipfix collector')
+@_verify('vpp ipfix collector')
 def show_ipfix_collectors(raw: bool):
     return VPPShow().ipfix_collectors(raw)
 
 
-@_verify('ipfix')
+@_verify('vpp ipfix')
 def show_ipfix_table(raw: bool):
     return VPPShow().ipfix_table(raw)
 
@@ -389,12 +388,12 @@ def show_ipfix_table(raw: bool):
 # -----------------------------
 # VPP LACP information
 # -----------------------------
-@_verify('interfaces bonding')
+@_verify('interfaces vpp bonding')
 def show_lacp(raw: bool, ifname: typing.Optional[str]):
     return VPPShow().lacp_info(raw, ifname)
 
 
-@_verify('interfaces bonding')
+@_verify('interfaces vpp bonding')
 def show_lacp_details(raw: bool, ifname: typing.Optional[str]):
     return VPPShow().lacp_details(raw, ifname)
 
@@ -402,12 +401,12 @@ def show_lacp_details(raw: bool, ifname: typing.Optional[str]):
 # -----------------------------
 # Bridge op-mode entries
 # -----------------------------
-@_verify('interfaces bridge')
+@_verify('vpp interfaces bridge')
 def show_bridge(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain(raw, ifname)
 
 
-@_verify('interfaces bridge')
+@_verify('vpp interfaces bridge')
 def show_bridge_details(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain_details(raw, ifname)
 

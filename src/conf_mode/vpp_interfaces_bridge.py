@@ -96,7 +96,7 @@ def verify(config):
 
     # Check if interface exists in vpp before adding to bridge-domain
 
-    allowed_prefixes = ('bond', 'gre', 'geneve', 'lo', 'vxlan')
+    allowed_prefixes = ('vppbond', 'gre', 'geneve', 'lo', 'vxlan')
 
     if 'member' in config:
         bvi_exists = False
@@ -141,9 +141,9 @@ def apply(config):
             if member.startswith('lo'):
                 # interface name in VPP is loopX
                 member = member.replace('lo', 'loop')
-            elif member.startswith('bond'):
+            elif member.startswith('vppbond'):
                 # interface name in VPP is BondEthernetX
-                member = member.replace('bond', 'BondEthernet')
+                member = member.replace('vppbond', 'BondEthernet')
             i.detach_member(member=member)
 
     # Delete bridge domain
@@ -171,9 +171,9 @@ def apply(config):
                 member = member.replace('lo', 'loop')
                 if 'bvi' in member_config:
                     port_type = 1
-            elif member.startswith('bond'):
+            elif member.startswith('vppbond'):
                 # interface name in VPP is BondEthernetX
-                member = member.replace('bond', 'BondEthernet')
+                member = member.replace('vppbond', 'BondEthernet')
 
             br.add_member(member=member, port_type=port_type)
             # set default port type 0 (not BVI)

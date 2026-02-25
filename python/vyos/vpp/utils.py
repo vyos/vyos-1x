@@ -58,9 +58,9 @@ def vpp_iface_name_transform(iface: str) -> str:
         str: Interface name formatted as recognized by VPP (e.g., "BondEthernet0").
     """
     vpp_iface_name = iface
-    if vpp_iface_name.startswith('bond'):
+    if vpp_iface_name.startswith('vppbond'):
         # interface name in VPP is BondEthernetX
-        vpp_iface_name = vpp_iface_name.replace('bond', 'BondEthernet')
+        vpp_iface_name = vpp_iface_name.replace('vppbond', 'BondEthernet')
     return vpp_iface_name
 
 

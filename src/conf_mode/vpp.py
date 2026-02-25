@@ -279,6 +279,15 @@ def get_config(config=None):
         iface for iface in pppoe_ifaces if iface.split('.')[0] in tmp
     ]
 
+    interfaces_config = conf.get_config_dict(
+        ['interfaces', 'vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_defaults=True,
+        with_recursive_defaults=True,
+    )
+
     if not conf.exists(base):
         if changed_pppoe_ifaces:
             set_dependents('pppoe_server', conf)
@@ -286,6 +295,8 @@ def get_config(config=None):
             'removed_ifaces': removed_ifaces,
             'xconn_members': xconn_members,
             'persist_config': eth_ifaces_persist,
+            'interfaces_vpp': interfaces_config,
+            'remove': {},
         }
 
     config = conf.get_config_dict(
@@ -423,6 +434,8 @@ def get_config(config=None):
         config['removed_ifaces'] = removed_ifaces
         config['xconn_members'] = xconn_members
 
+    config['interfaces_vpp'] = interfaces_config
+
     # Dependencies
     for dependency, interface_type in dependency_interface_type_map.items():
         # if conf.exists(base + ['interfaces', interface_type]):
@@ -433,6 +446,13 @@ def get_config(config=None):
                 # filter unsupported config nodes
                 if interface_type == 'ethernet':
                     iface_filter_eth(conf, iface)
+                set_dependents(dependency, conf, iface)
+
+    for dependency, interface_type in dependency_interface_type_map.items():
+        if conf.exists(['interfaces', 'vpp', interface_type]):
+            for iface, iface_config in interfaces_config.get(
+                interface_type, {}
+            ).items():
                 set_dependents(dependency, conf, iface)
 
     config['ipoe_conf'] = conf.get_config_dict(
@@ -484,8 +504,13 @@ def verify(config):
         config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {})
     )
 
+    if config.get('interfaces_vpp') and 'remove' in config:
+        raise ConfigError(
+            'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
+        )
+
     # bail out early - looks like removal from running config
-    if not config or ('removed_ifaces' in config and 'settings' not in config):
+    if not config or 'remove' in config:
         return None
 
     if 'settings' not in config:
@@ -640,7 +665,7 @@ def verify(config):
 
 
 def generate(config):
-    if not config or ('removed_ifaces' in config and 'settings' not in config):
+    if not config or 'remove' in config:
         # Remove old config and return
         service_conf.unlink(missing_ok=True)
         return None
@@ -692,7 +717,7 @@ def apply(config):
     modules = ('vfio_iommu_type1', 'vfio_pci', 'vfio_pci_core', 'vfio')
     # Open persistent config
     # It is required for operations with interfaces
-    if not config or ('removed_ifaces' in config and 'settings' not in config):
+    if not config or 'remove' in config:
         # Cleanup persistent config
         with JSONStorage('vpp_conf') as persist_config:
             persist_config.delete()
