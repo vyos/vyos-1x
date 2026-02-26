@@ -46,7 +46,8 @@ TMPL_GRUB_OPTS: str = 'grub/grub_options.j2'
 TMPL_GRUB_COMMON: str = 'grub/grub_common.j2'
 
 # default boot options
-BOOT_OPTS_STEM: str = 'boot=live rootdelay=5 noautologin net.ifnames=0 biosdevname=0 vyos-union=/boot/'
+# PERLE - initramfs will run ip-config and dropbear unless we disable early ip and networking in the kernel
+BOOT_OPTS_STEM: str = 'boot=live rootdelay=5 ip=none nonetworking noautologin net.ifnames=0 biosdevname=0 vyos-union=/boot/'
 
 # prepare regexes
 REGEX_GRUB_VARS: str = r'^set (?P<variable_name>\w+)=[\'"]?(?P<variable_value>.*)(?<![\'"])[\'"]?$'

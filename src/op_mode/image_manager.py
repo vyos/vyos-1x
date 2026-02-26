@@ -141,7 +141,8 @@ def set_image(image_name: Optional[str] = None,
 
     # set default boot image
     try:
-        grub.set_default(image_name, persistence_storage)
+        # PSL - grub.set_default(image_name, persistence_storage)
+        grub.set_current_default(image_name, persistence_storage)
         print(f'The image "{image_name}" is now default boot image')
     except Exception as err:
         exit(f'Unable to set default image "{image_name}": {err}')
