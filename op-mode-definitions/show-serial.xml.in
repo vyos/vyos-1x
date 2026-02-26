@@ -1,0 +1,194 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="serial">
+        <properties>
+          <help>Show information on serial ports</help>
+        </properties>
+        <children>
+          <node name="users">
+            <properties>
+              <help>Show user information on serial ports</help>
+            </properties>
+            <command>iol_dspuser</command>
+            <children>
+              <node name="count">
+                <properties>
+                  <help>Show sessions with user count on all serial ports with auth on</help>
+                </properties>
+                <command>iol_dspuser --count</command>
+              </node>
+              <tagNode name="device">
+                <properties>
+                  <help>Show user information on specified serial port with auth on</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_serial.py --selector auth</script>
+                  </completionHelp>
+                </properties>
+                <command>iol_dspuser $5</command>
+                <children>
+                  <node name="count">
+                    <properties>
+                      <help>Show sessions with user count on specified serial port</help>
+                    </properties>
+                    <command>iol_dspuser $5 --count</command>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <node name="console-management">
+            <properties>
+              <help>Show serial ports running service console-management</help>
+            </properties>
+            <command>iol_dspcm</command>
+          </node>
+          <node name="statistics">
+            <properties>
+              <help>Show serial statistics</help>
+            </properties>
+            <command>iol_dspport</command>
+            <children>
+              <tagNode name="device">
+                <properties>
+                  <help>Show statistics on specific TTY device</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_serial.py --selector all</script>
+                  </completionHelp>
+                </properties>
+                <command>iol_dspport -f "$5"</command>
+                <children>
+                  <tagNode name="to">
+                    <properties>
+                      <help>Show statistics on range of TTY devices</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_serial.py --selector all --greater ${COMP_WORDS[4]}</script>
+                      </completionHelp>
+                    </properties>
+                    <command>iol_dspport -f "$5" -e "$7"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <node name="modbus">
+                <properties>
+                  <help>Show serial modbus statistics</help>
+                </properties>
+                <children>
+                  <node name="master-tcp">
+                    <properties>
+                      <help>Show serial modbus master-tcp statistics</help>
+                    </properties>
+                    <children>
+                      <tagNode name="device">
+                        <properties>
+                          <help>Show modbus master-tcp statistics on specific TTY device</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_serial.py --selector modbus-master</script>
+                          </completionHelp>
+                        </properties>
+                        <command>iol_mbstats -f "$7" -m -t</command>
+                        <children>
+                          <tagNode name="to">
+                            <properties>
+                              <help>Show modbus master-tcp statistics on range of TTY devices</help>
+                              <completionHelp>
+                                <script>${vyos_completion_dir}/list_serial.py --selector modbus-master --greater ${COMP_WORDS[6]}</script>
+                              </completionHelp>
+                            </properties>
+                            <command>iol_mbstats -f "$7" -e "$9" -m -t</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="master-udp">
+                    <properties>
+                      <help>Show serial modbus master-udp statistics</help>
+                    </properties>
+                    <children>
+                      <tagNode name="device">
+                        <properties>
+                          <help>Show modbus master-udp statistics on specific TTY device</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_serial.py --selector modbus-master</script>
+                          </completionHelp>
+                        </properties>
+                        <command>iol_mbstats -f "$7" -m -u</command>
+                        <children>
+                          <tagNode name="to">
+                            <properties>
+                              <help>Show modbus master-udp statistics on range of TTY devices</help>
+                              <completionHelp>
+                                <script>${vyos_completion_dir}/list_serial.py --selector modbus-master --greater ${COMP_WORDS[6]}</script>
+                              </completionHelp>
+                            </properties>
+                            <command>iol_mbstats -f "$7" -e "$9" -m -u</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="slave-tcp">
+                    <properties>
+                      <help>Show serial modbus slave-tcp statistics</help>
+                    </properties>
+                    <children>
+                      <tagNode name="device">
+                        <properties>
+                          <help>Show modbus slave-tcp statistics on specific TTY device</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_serial.py --selector modbus-slave</script>
+                          </completionHelp>
+                        </properties>
+                        <command>iol_mbstats -f "$7" -s -t</command>
+                        <children>
+                          <tagNode name="to">
+                            <properties>
+                              <help>Show modbus slave-tcp statistics on range of TTY devices</help>
+                              <completionHelp>
+                                <script>${vyos_completion_dir}/list_serial.py --selector modbus-slave --greater ${COMP_WORDS[6]}</script>
+                              </completionHelp>
+                            </properties>
+                            <command>iol_mbstats -f "$7" -e "$9" -s -t</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  <node name="slave-udp">
+                    <properties>
+                      <help>Show serial modbus slave-udp statistics</help>
+                    </properties>
+                    <children>
+                      <tagNode name="device">
+                        <properties>
+                          <help>Show modbus slave-udp statistics on specific TTY device</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_serial.py --selector modbus-slave</script>
+                          </completionHelp>
+                        </properties>
+                        <command>iol_mbstats -f "$7" -s -u</command>
+                        <children>
+                          <tagNode name="to">
+                            <properties>
+                              <help>Show modbus slave-udp statistics on range of TTY devices</help>
+                              <completionHelp>
+                                <script>${vyos_completion_dir}/list_serial.py --selector modbus-slave --greater ${COMP_WORDS[6]}</script>
+                              </completionHelp>
+                            </properties>
+                            <command>iol_mbstats -f "$7" -e "$9" -s -u</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

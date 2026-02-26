@@ -143,7 +143,7 @@ DIR_ROOTFS_SRC: str = f'{DIR_INSTALLATION}/root_src'
 DIR_ROOTFS_DST: str = f'{DIR_INSTALLATION}/root_dst'
 DIR_ISO_MOUNT: str = f'{DIR_INSTALLATION}/iso_src'
 DIR_DST_ROOT: str = f'{DIR_INSTALLATION}/disk_dst'
-DIR_KERNEL_SRC: str = '/boot/'
+DIR_KERNEL_SRC: str = '/boot'
 FILE_ROOTFS_SRC: str = '/usr/lib/live/mount/medium/live/filesystem.squashfs'
 ISO_DOWNLOAD_PATH: str = ''
 
@@ -286,12 +286,18 @@ def search_previous_installation(disks: list[str]) -> None:
     print('Searching for data from previous installations')
     image_data = []
     encrypted_configs = []
+    legacy_bind_mount = False
     for disk_name in disks:
         for partition in disk.partition_list(disk_name):
             if disk.partition_mount(partition, mnt_tmp):
                 if Path(mnt_tmp + '/boot').exists():
                     for path in Path(mnt_tmp + '/boot').iterdir():
-                        if path.joinpath('rw/opt/vyatta/etc/config/.vyatta_config').exists():
+                        if path.joinpath('rw/config/.vyatta_config').exists():
+                            legacy_bind_mount = True
+                            image_data.append((path.name, partition))
+                        elif path.joinpath(
+                            'rw/opt/vyatta/etc/config/.vyatta_config'
+                        ).exists():
                             image_data.append((path.name, partition))
                 if Path(mnt_tmp + '/luks').exists():
                     for path in Path(mnt_tmp + '/luks').iterdir():
@@ -344,7 +350,12 @@ def search_previous_installation(disks: list[str]) -> None:
     disk.partition_mount(image_drive, mnt_tmp)
 
     if not encrypted:
-        copytree(f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config)
+        if legacy_bind_mount:
+            copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+        else:
+            copytree(
+                f'{mnt_tmp}/boot/{image_name}/rw/opt/vyatta/etc/config', mnt_config
+            )
     else:
         copy(f'{mnt_tmp}/luks/{image_name}', mnt_encrypted_config)
 
@@ -1000,17 +1011,33 @@ def install_image() -> None:
         # copy system image and kernel files
         print('Copying system image files')
 
-        # PSL - copy all system files and symlinks, also rename the filesyste.squashfs
+        # PSL - copy all system files and symlinks, also rename the filesystem.squashfs
+        # Note: DIR_KERNEL_SRC is /boot that within the RUNNING filesystem.squashfs and
+        #       does NOT contain the filesystem.squashfs file itself but has the dtb and grub
         copytree(f"{DIR_KERNEL_SRC}/",
                  f"{DIR_DST_ROOT}/boot/{image_name}/",
                  dirs_exist_ok=True,
                  symlinks=True)
+
+        # PSL - from previous copytree() the dtb and grub directories were copied to the
+        #       installation directory, so we can remove them so the installation looks
+        #       EXACTLY like an iso installation using "add system image <isoname>"
+        tmppath = Path(f'{DIR_DST_ROOT}/boot/{image_name}/dtb')
+        if tmppath.exists():
+            print(f"Pruning unused {image_name}/dtb directory")
+            rmtree(tmppath, ignore_errors=True)
+
+        tmppath = Path(f'{DIR_DST_ROOT}/boot/{image_name}/grub')
+        if tmppath.exists():
+            print(f"Pruning unused {image_name}/grub directory")
+            rmtree(tmppath, ignore_errors=True)
 
         copy(FILE_ROOTFS_SRC,
              f'{DIR_DST_ROOT}/boot/{image_name}/{image_name}.squashfs')
 
         # PSL - START copy over all dtb files for arm64 processors
         if Path(f"{DIR_KERNEL_SRC}/dtb/ti").exists():
+            print('Copying DTB files')
             copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
                      f"{DIR_DST_ROOT}/boot/dtb/ti",
                      dirs_exist_ok=True)
@@ -1030,8 +1057,41 @@ def install_image() -> None:
         # add information about version
         grub.create_structure()
         grub.version_add(image_name, DIR_DST_ROOT)
-        grub.set_default(image_name, DIR_DST_ROOT)
+        # PSL - grub.set_default(image_name, DIR_DST_ROOT)
+        grub.set_current_default(image_name, DIR_DST_ROOT)
         grub.set_console_type(console_dict[console_type], DIR_DST_ROOT)
+
+        # PSL - START check if default-firmware exists, removes it,  and copy over all system files
+        default_image_name: str = 'default-firmware'
+        path = Path(f'{DIR_DST_ROOT}/boot/{default_image_name}')
+
+        print(f"Default firmware path is: {path}, default image name is: {default_image_name}")
+        if path.exists():
+            print(f"Removing existing default-firmware rootfs at: {path}")
+            rmtree(path)
+
+        print("Creating factory default-firmware installation")
+        copytree(f"{DIR_KERNEL_SRC}/",
+            f"{DIR_DST_ROOT}/boot/{default_image_name}/",
+            dirs_exist_ok=True,
+            symlinks=True)
+
+        tmppath = Path(f'{DIR_DST_ROOT}/boot/{default_image_name}/dtb')
+        if tmppath.exists():
+            print(f"Pruning unused {default_image_name}/dtb directory")
+            rmtree(tmppath, ignore_errors=True)
+
+        tmppath = Path(f'{DIR_DST_ROOT}/boot/{default_image_name}/grub')
+        if tmppath.exists():
+            print(f"Pruning unused {default_image_name}/grub directory")
+            rmtree(tmppath, ignore_errors=True)
+
+        copy(FILE_ROOTFS_SRC,
+            f'{DIR_DST_ROOT}/boot/{default_image_name}/default-firmware.squashfs')
+
+        grub.version_add(default_image_name, DIR_DST_ROOT)
+        grub.set_factory_default(default_image_name, DIR_DST_ROOT)
+        # PSL - END check if default-firmware exists and copy over all system files
 
         if is_raid_install(install_target):
             # add RAID specific modules
@@ -1284,9 +1344,10 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
              f'{root_dir}/boot/{image_name}/{image_name}.squashfs')
 
         # PSL - START copy over all dtb files for arm64 processors
-        if Path(f"{DIR_KERNEL_SRC}/dtb/ti").exists():
-            copytree(f"{DIR_KERNEL_SRC}/dtb/ti",
-                     f"{DIR_DST_ROOT}/boot/dtb/ti",
+        if Path(f"{DIR_ISO_MOUNT}/boot/dtb/ti").exists():
+            print('Copying DTB files')
+            copytree(f"{DIR_ISO_MOUNT}/boot/dtb/ti",
+                     f"{root_dir}/boot/dtb/ti",
                      dirs_exist_ok=True)
 
         # unmount an ISO and cleanup
@@ -1295,7 +1356,8 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
         # add information about version
         grub.version_add(image_name, root_dir)
         if set_as_default:
-            grub.set_default(image_name, root_dir)
+            # PSL - grub.set_default(image_name, root_dir)
+            grub.set_current_default(image_name, root_dir)
 
         if Path(f'{target_config_dir}/config.boot').exists():
             cmdline_options = get_cli_kernel_options(

@@ -20,11 +20,12 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
-from vyos.configdict import is_node_changed
-from vyos.configdiff import get_config_diff, Diff
+from vyos.configdict import is_node_changed, node_changed
+from vyos.configdiff import Diff
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.dict import dict_search
 from vyos.accel_ppp_util import verify_accel_ppp_name_servers
 from vyos.accel_ppp_util import verify_accel_ppp_wins_servers
@@ -39,6 +40,12 @@ airbag.enable()
 
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
 pppoe_chap_secrets = r'/run/accel-pppd/pppoe.chap-secrets'
+
+
+def base_ifname(ifname):
+    # Get the base interface name without VLAN
+    return ifname.split('.')[0]
+
 
 def convert_pado_delay(pado_delay):
     new_pado_delay = {'delays_without_sessions': [],
@@ -60,18 +67,18 @@ def get_config(config=None):
     # retrieve common dictionary keys
     pppoe = get_accel_dict(conf, base, pppoe_chap_secrets)
 
-    if conf.exists(['vpp']):
-        pppoe['vpp_config'] = conf.get_config_dict(
-            ['vpp'],
+    vpp_interface_base = ['vpp', 'settings', 'interface']
+    if conf.exists(vpp_interface_base) and is_systemd_service_active('vpp.service'):
+        vpp_ifaces = conf.get_config_dict(
+            vpp_interface_base,
             key_mangling=('-', '_'),
             get_first_key=True,
             no_tag_node_value_mangle=True,
         )
-
-    diff = get_config_diff(conf)
-    node_diff = diff.get_child_nodes_diff(
-        base + ['interface'], expand_nodes=Diff.DELETE, recursive=True
-    )
+        pppoe['vpp_ifaces'] = vpp_ifaces
+        for interface in pppoe.get('interface', {}):
+            if base_ifname(interface) in vpp_ifaces:
+                pppoe['interface'][interface]['vpp_cp'] = {}
 
     pppoe['vpp_cp_interfaces'] = {
         'add': [
@@ -81,8 +88,8 @@ def get_config(config=None):
         ],
         'delete': [
             iface
-            for iface, iface_config in node_diff.get('delete').items()
-            if 'vpp-cp' in iface_config
+            for iface in node_changed(conf, base + ['interface'])
+            if base_ifname(iface) in pppoe.get('vpp_ifaces', {})
         ],
     }
 
@@ -98,14 +105,23 @@ def get_config(config=None):
         pado_delay = dict_search('pado_delay', pppoe)
         pppoe['pado_delay'] = convert_pado_delay(pado_delay)
 
-    # reload-or-restart does not implemented in accel-ppp
+    # reload-or-restart is not implemented in accel-ppp
     # use this workaround until it will be implemented
     # https://phabricator.accel-ppp.org/T3
-    conditions = [is_node_changed(conf, base + ['client-ip-pool']),
-                  is_node_changed(conf, base + ['client-ipv6-pool']),
-                  is_node_changed(conf, base + ['interface']),
-                  is_node_changed(conf, base + ['authentication','radius','dynamic-author']),
-                  is_node_changed(conf, base + ['authentication','mode'])]
+    changed_vpp_ifaces = node_changed(
+        conf, vpp_interface_base, expand_nodes=Diff.DELETE | Diff.ADD
+    )
+    conditions = [
+        is_node_changed(conf, base + ['client-ip-pool']),
+        is_node_changed(conf, base + ['client-ipv6-pool']),
+        is_node_changed(conf, base + ['interface']),
+        is_node_changed(conf, base + ['authentication', 'radius', 'dynamic-author']),
+        is_node_changed(conf, base + ['authentication', 'mode']),
+        any(
+            base_ifname(iface) in changed_vpp_ifaces
+            for iface in pppoe.get('interface', {})
+        ),
+    ]
     if any(conditions):
         pppoe.update({'restart_required': {}})
     pppoe['server_type'] = 'pppoe'
@@ -154,27 +170,19 @@ def verify(pppoe):
 
     # Check is interface exists in the system
     for interface, interface_config in pppoe['interface'].items():
-        verify_interface_exists(pppoe, interface, warning_only=True)
+        # Interfaces integrated with the control-plane in VPP must exist in the system
+        warning_only = 'vpp_cp' not in interface_config
+        verify_interface_exists(pppoe, interface, warning_only=warning_only)
+
+        if 'vlan_mon' in interface_config and base_ifname(interface) in pppoe.get(
+            'vpp_ifaces', {}
+        ):
+            raise ConfigError(
+                f'Cannot set option "vlan-mon": interface {interface} is integrated with control-plane!'
+            )
 
         if 'vlan_mon' in interface_config and not 'vlan' in interface_config:
             raise ConfigError('Option "vlan-mon" requires "vlan" to be set!')
-
-    vpp_cp_interfaces = pppoe.get('vpp_cp_interfaces', {}).get('add', [])
-    if vpp_cp_interfaces:
-        try:
-            vpp = VPPControl()
-        except Exception:
-            raise ConfigError(
-                'PPPoE control-plane integration with VPP is enabled on '
-                f'interface(s) {", ".join(vpp_cp_interfaces)} '
-                'but VPP service was not started'
-            )
-
-        for iface in vpp_cp_interfaces:
-            if vpp.get_sw_if_index(iface) is None:
-                raise ConfigError(
-                    f'{iface} should be a VPP interface for control-plane integration'
-                )
 
     return None
 
@@ -196,7 +204,7 @@ def apply(pppoe):
 
     # delete pppoe mapping in vpp
     vpp_cp_ifaces_delete = pppoe.get('vpp_cp_interfaces', {}).get('delete', [])
-    if 'vpp_config' in pppoe and vpp_cp_ifaces_delete:
+    if 'vpp_ifaces' in pppoe and vpp_cp_ifaces_delete:
         vpp = VPPControl()
         for iface in vpp_cp_ifaces_delete:
             vpp.map_pppoe_interface(iface, is_add=False)

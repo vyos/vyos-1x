@@ -18,6 +18,7 @@ server {
     listen [::]:{{ port }} ssl;
 {% endif %}
 
+    server_tokens off;
     server_name {{ hostname }};
     root /srv/localui;
 
@@ -59,6 +60,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 600;
         proxy_buffering off;
+        allow 127.0.0.1;     # Only allow requests from localhost
+        deny all;            # Deny all other IP addresses
 {% else %}
         return 503;
 {% endif %}

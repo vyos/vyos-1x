@@ -40,7 +40,7 @@ bfd_profile = 'foo-bar-baz'
 
 import_afi = 'ipv4-unicast'
 import_vrf = 'red'
-import_rd = ASN + ':100'
+import_rd = f'{ASN}:100'
 import_vrf_base = ['vrf', 'name']
 neighbor_config = {
     '192.0.2.1' : {
@@ -64,7 +64,7 @@ neighbor_config = {
         },
     '192.0.2.2' : {
         'bfd_profile'      : bfd_profile,
-        'remote_as'        : '200',
+        'remote_as'        : 'auto',
         'shutdown'         : '',
         'no_cap_nego'      : '',
         'port'             : '667',
@@ -111,7 +111,7 @@ neighbor_config = {
         'local_role_strict': '',
         },
     '2001:db8::2' : {
-        'remote_as'        : '456',
+        'remote_as'        : 'auto',
         'shutdown'         : '',
         'no_cap_nego'      : '',
         'port'             : '667',
@@ -141,7 +141,7 @@ peer_group_config = {
         'p_attr_discard'   : ['100', '150', '200'],
         },
     'bar' : {
-        'remote_as'        : '111',
+        'remote_as'        : 'auto',
         'graceful_rst_no'  : '',
         'port'             : '667',
         'p_attr_taw'       : '126',

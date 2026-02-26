@@ -19,6 +19,7 @@ from glob import glob
 
 from vyos.base import Warning
 from vyos.ethtool import Ethtool
+from vyos.netlink import coalesce
 from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
@@ -455,6 +456,57 @@ class EthernetIf(Interface):
             print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
 
+    def set_interrupt_coalescing(self, params: dict):
+        """
+        Apply ethtool coalesce settings to an interface.
+
+        This method configures interrupt coalescing parameters for the interface
+        using the netlink API.
+
+        Args:
+            params: dict containing any of the supported keys, e.g.:
+              - adaptive_rx, adaptive_tx,
+              - rx_usecs, rx_frames, rx_usecs_irq, rx_frames_irq,
+              - tx_usecs, tx_frames, tx_usecs_irq, tx_frames_irq,
+              - stats_block_usecs,
+              - pkt_rate_low, pkt_rate_high,
+              - rx_usecs_low, rx_frames_low,
+              - tx_usecs_low, tx_frames_low,
+              - rx_usecs_high, rx_frames_high,
+              - tx_usecs_high, tx_frames_high,
+              - sample_interval,
+              - cqe_mode_rx, cqe_mode_tx,
+              - tx_aggr_max_bytes, tx_aggr_max_frames, tx_aggr_time_usecs.
+
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_interrupt_coalescing({'rx_usecs': 8, 'tx_usecs': 16})
+        """
+
+        ifname = self.config['ifname']
+        output = ''
+
+        # Nothing to apply
+        if not params:
+            return None
+
+        # Override boolean parameters to true if they exist and supported by NIC driver
+        for boolean_param in coalesce.get_all_params(boolean=True):
+            supported = self.ethtool.check_coalesce(boolean_param)
+            if supported:
+                params[boolean_param] = boolean_param in params
+
+        # Update interrupt coalescing parameters
+        try:
+            coalesce.set_coalesce(ifname, **params)
+        except coalesce.CoalesceError as e:
+            print(f'interrupt coalescing error: {e}')
+        except coalesce.GeneralNetlinkError as e:
+            print(f'netlink error: {e}')
+
+        return output
+
     def set_channels(self, rx_tx_comb, queues):
         """
         Example:
@@ -542,6 +594,10 @@ class EthernetIf(Interface):
         if 'ring_buffer' in config:
             for rx_tx, size in config['ring_buffer'].items():
                 self.set_ring_buffer(rx_tx, size)
+
+        # Set coalesce settings for the interface
+        if 'interrupt_coalescing' in config:
+            self.set_interrupt_coalescing(config['interrupt_coalescing'])
 
         self.set_switchdev('switchdev' in config)
 

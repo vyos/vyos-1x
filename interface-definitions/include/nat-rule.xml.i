@@ -21,7 +21,12 @@
         #include <include/firewall/fqdn.xml.i>
         #include <include/nat-address.xml.i>
         #include <include/nat-port.xml.i>
-        #include <include/firewall/source-destination-group.xml.i>
+        #include <include/firewall/source-destination-group-ipv4.xml.i>
+        <node name="group">
+          <children>
+            #include <include/firewall/mac-group.xml.i>
+          </children>
+        </node>
       </children>
     </node>
     #include <include/generic-disable-node.xml.i>
@@ -319,7 +324,12 @@
         #include <include/firewall/fqdn.xml.i>
         #include <include/nat-address.xml.i>
         #include <include/nat-port.xml.i>
-        #include <include/firewall/source-destination-group.xml.i>
+        #include <include/firewall/source-destination-group-ipv4.xml.i>
+        <node name="group">
+          <children>
+            #include <include/firewall/mac-group.xml.i>
+          </children>
+        </node>
       </children>
     </node>
   </children>

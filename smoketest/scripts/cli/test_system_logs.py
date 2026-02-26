@@ -18,17 +18,19 @@ import re
 import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.utils.file import read_file
+from vyos.xml_ref import default_value
 
 # path to logrotate configs
 logrotate_atop_file = '/etc/logrotate.d/vyos-atop'
 logrotate_rsyslog_file = '/etc/logrotate.d/vyos-rsyslog'
-# default values
-default_atop_maxsize = '10M'
-default_atop_rotate = '10'
-default_rsyslog_size = '1M'
-default_rsyslog_rotate = '10'
 
 base_path = ['system', 'logs']
+
+# default values
+default_atop_maxsize = f"{default_value(base_path + ['logrotate', 'atop', 'max-size'])}M"
+default_atop_rotate = default_value(base_path + ['logrotate', 'atop', 'rotate'])
+default_rsyslog_size = f"{default_value(base_path + ['logrotate', 'messages', 'max-size'])}M"
+default_rsyslog_rotate = default_value(base_path + ['logrotate', 'messages', 'rotate'])
 
 
 def logrotate_config_parse(file_path):

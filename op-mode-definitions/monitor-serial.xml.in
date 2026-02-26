@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="serial">
+        <properties>
+          <help>Monitor serial changes</help>
+        </properties>
+        <children>
+          <tagNode name="device">
+            <properties>
+              <help>Monitor specific TTY device</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_serial.py --selector active</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/monitor_serial.sh "$4"</command>
+            <children>
+              <tagNode name="and">
+                <properties>
+                  <help>Monitor another specific TTY device</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_serial.py --selector active</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/monitor_serial.sh "$4" "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

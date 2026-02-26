@@ -1,5 +1,5 @@
 <!-- include start from vpp/iface_rx_mode.xml.i -->
-<leafNode name="rx-mode">
+<leafNode name="interface-rx-mode">
     <properties>
         <help>Receive packet processing mode</help>
         <completionHelp>

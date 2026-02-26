@@ -70,36 +70,36 @@ class Acl:
             count=0,
         )
 
-    def get_macip_acl_index_by_tag(self, tag):
-        """Get macip ACL by tag name"""
+    def get_mac_acl_index_by_tag(self, tag):
+        """Get mac ACL by tag name"""
         for acl in self.vpp.api.macip_acl_dump():
             if acl.tag == tag:
                 return acl.acl_index
         return NO_ACL_INDEX
 
-    def add_replace_acl_macip(self, tag, rules):
-        """Add or replace existing macip ACL"""
+    def add_replace_acl_mac(self, tag, rules):
+        """Add or replace existing mac ACL"""
         self.vpp.api.macip_acl_add_replace(
             tag=tag,
-            acl_index=self.get_macip_acl_index_by_tag(tag),
+            acl_index=self.get_mac_acl_index_by_tag(tag),
             count=len(rules),
             r=rules,
         )
 
-    def delete_acl_macip(self, tag):
-        """Delete existing macip ACL"""
-        self.vpp.api.macip_acl_del(acl_index=self.get_macip_acl_index_by_tag(tag))
+    def delete_acl_mac(self, tag):
+        """Delete existing mac ACL"""
+        self.vpp.api.macip_acl_del(acl_index=self.get_mac_acl_index_by_tag(tag))
 
-    def add_acl_macip_interface(self, interface, tag):
-        """Add or replace macip ACLs on interface"""
+    def add_acl_mac_interface(self, interface, tag):
+        """Add or replace mac ACLs on interface"""
         self.vpp.api.macip_acl_interface_add_del(
             sw_if_index=self.vpp.get_sw_if_index(interface),
-            acl_index=self.get_macip_acl_index_by_tag(tag),
+            acl_index=self.get_mac_acl_index_by_tag(tag),
             is_add=True,
         )
 
-    def delete_acl_macip_interface(self, interface):
-        """Delete macip ACLs from interface"""
+    def delete_acl_mac_interface(self, interface):
+        """Delete mac ACLs from interface"""
         self.vpp.api.macip_acl_interface_add_del(
             sw_if_index=self.vpp.get_sw_if_index(interface),
             is_add=False,

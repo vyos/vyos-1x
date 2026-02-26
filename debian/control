@@ -402,8 +402,14 @@ Depends:
   telnet,
   stunnel4,
   uidmap,
-  saml-sso
+  saml-sso,
 ## End optional utilities
+## Serial telnet server
+  telnetd,
+## End serial telnet server
+## Serial nfs remote port buffer
+  nfs-common
+## End serial nfs remote port buffer
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 

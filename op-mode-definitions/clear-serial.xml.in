@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="serial">
+        <properties>
+          <help>Clear serial</help>
+        </properties>
+        <children>
+          <node name="statistics">
+            <properties>
+              <help>Clear all serial port statistics</help>
+            </properties>
+            <command>iol_dspport -c</command>
+            <children>
+              <tagNode name="device">
+                <properties>
+                  <help>Show statistics on specific TTY device</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_serial.py --selector all</script>
+                  </completionHelp>
+                </properties>
+                <command>iol_dspport -f "$5" -c</command>
+                <children>
+                  <tagNode name="to">
+                    <properties>
+                      <help>Show statistics on range of TTY devices</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_serial.py --selector all --greater ${COMP_WORDS[4]}</script>
+                      </completionHelp>
+                    </properties>
+                    <command>iol_dspport -f "$5" -e "$7" -c</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
