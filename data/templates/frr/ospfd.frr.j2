@@ -3,6 +3,7 @@
 {%     for iface, iface_config in interface.items() %}
 interface {{ iface }}
 {%         if iface_config.authentication.plaintext_password is vyos_defined %}
+ ip ospf authentication
  ip ospf authentication-key {{ iface_config.authentication.plaintext_password }}
 {%         elif iface_config.authentication.md5 is vyos_defined %}
  ip ospf authentication message-digest
@@ -121,6 +122,7 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         if area_config.virtual_link is vyos_defined %}
 {%             for link, link_config in area_config.virtual_link.items() %}
 {%                 if link_config.authentication.plaintext_password is vyos_defined %}
+ area {{ area_id }} virtual-link {{ link }} authentication
  area {{ area_id }} virtual-link {{ link }} authentication-key {{ link_config.authentication.plaintext_password }}
 {%                 elif link_config.authentication.md5.key_id is vyos_defined %}
 {%                     for key, key_config in link_config.authentication.md5.key_id.items() %}
