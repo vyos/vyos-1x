@@ -12,15 +12,39 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
-
+#
 # Migrate 'tcp-flags' to 'tcp-flags is-set' and 'tcp-flags is-not-set' multi-value nodes (T8250)
-
+#
+# Rename acl 'macip' node to 'mac' (T8252)
+#
+# Rename `vpp settings logging default-log-level` to
+# `vpp settings logging default-level` (T8255)
+#
+# Move 'vpp nat44' and 'vpp settings nat44' to 'vpp nat nat44'.
+# Drop settings for nat workers (T8254)
+#
+# Delete 'ipsec' node and all settings and replace it with single 'ipsec-acceleration' flag (T8262)
+#
+# Unify CPU settings into a single 'cpu-cores' node under 'resource-allocation' (T8268)
+#
+# Convert `vpp settings interface <name> rx-mode` and `vpp kernel-interfaces <name> rx-mode`
+# to `vpp settings interfaces-rx-mode` by choose the worst value from all nodes (T8266)
+#
+# Get rid of 'dpdk-options' section for 'num-*' parameters:
+#  - `vpp settings interface <ethN> dpdk-options num-*`
+#  - `vpp settings interface <ethN> num-*`
+# and delete `vpp settings interface <ethN> dpdk-options promisc` (T8274)
+#
+# Migrate all resource settings into 'resource-allocation' section  (T8261)
+#
+# Move bonding interface from vpp section to 'interfaces vpp bonding' (T8283)
+#
 
 from vyos.configtree import ConfigTree
 
-base = ['vpp', 'acl', 'ip', 'tag-name']
+def _migrate_vpp_acl_tcp_flags(config: ConfigTree) -> None:
+    base = ['vpp', 'acl', 'ip', 'tag-name']
 
-def migrate(config: ConfigTree) -> None:
     if not config.exists(base):
         # Nothing to do
         return
@@ -46,3 +70,309 @@ def migrate(config: ConfigTree) -> None:
             if not_set_flags:
                 for flag in not_set_flags:
                     config.set(base_tcp_flags + ['is-not-set'], value=flag, replace=False)
+
+
+def _migrate_vpp_macip(config: ConfigTree) -> None:
+    base = ['vpp', 'acl']
+    if config.exists(base + ['macip']):
+        config.rename(base + ['macip'], 'mac')
+
+
+def _migrate_vpp_unix_settings(config: ConfigTree) -> None:
+    base_path = ['vpp', 'settings']
+    old_base_path = base_path + ['unix']
+    old_path = old_base_path + ['poll-sleep-usec']
+    new_path = base_path + ['poll-sleep-usec']
+
+    if config.exists(old_path):
+        poll_sleep_usec = config.return_value(old_path)
+        config.set(new_path, value=poll_sleep_usec)
+        config.delete(old_base_path)
+
+
+def _migrate_vpp_log(config: ConfigTree) -> None:
+    base = ['vpp', 'settings', 'logging']
+    if config.exists(base + ['default-log-level']):
+        config.rename(base + ['default-log-level'], 'default-level')
+
+
+def _migrate_vpp_nat44(config: ConfigTree) -> None:
+    base_path = ['vpp', 'nat44']
+    new_base_path = ['vpp', 'nat', 'nat44']
+    settings_path = ['vpp', 'settings', 'nat44']
+
+    if not config.exists(base_path):
+        # Nothing to do
+        return
+
+    if not config.exists(['vpp', 'nat']):
+        config.set(['vpp', 'nat'])
+
+    # copy "vpp nat44" to "vpp nat nat44"
+    config.copy(base_path, new_base_path)
+    config.delete(base_path)
+
+    # move 'vpp settings nat44' to 'vpp nat nat44'
+    if config.exists(settings_path):
+        if config.exists(settings_path + ['session-limit']):
+            session_limit = config.return_value(settings_path + ['session-limit'])
+            config.set(new_base_path + ['session-limit'], value=session_limit)
+        if config.exists(settings_path + ['timeout']):
+            config.copy(settings_path + ['timeout'], new_base_path + ['timeout'])
+        config.delete(settings_path)
+
+
+def _migrate_vpp_ipsec(config: ConfigTree) -> None:
+    base = ['vpp', 'settings']
+
+    if config.exists(base + ['ipsec']):
+        config.set(base + ['ipsec-acceleration'])
+        config.delete(base + ['ipsec'])
+
+
+def _migrate_vpp_cpu(config: ConfigTree) -> None:
+    settings_path = ['vpp', 'settings']
+    cpu_path = settings_path + ['cpu']
+
+    if not config.exists(cpu_path):
+        # Nothing to do
+        return
+
+    # get number of configured workers
+    workers = 0
+
+    if config.exists(cpu_path + ['workers']):
+        workers += int(config.return_value(cpu_path + ['workers']))
+        # add main-core to total workers
+        workers += 1
+
+    if config.exists(cpu_path + ['corelist-workers']):
+        def _count_range(item: str) -> int:
+            if '-' in item:
+                start, end = map(int, item.split('-'))
+                return end - start + 1
+            return 1
+
+        tmp = config.return_values(cpu_path + ['corelist-workers'])
+        workers = sum(_count_range(item) for item in tmp) + 1  # + main core
+
+    # set 'resource-allocation cpu-cores'
+    if workers:
+        config.set(settings_path + ['resource-allocation', 'cpu-cores'], value=str(workers))
+
+    config.delete(cpu_path)
+
+
+def _migrate_vpp_interface_rx_mode(config: ConfigTree) -> None:
+    # Per-interface rx-mode commands
+    external_interface_path = ['vpp', 'settings', 'interface']
+    kernel_interface_path = ['vpp', 'kernel-interfaces']
+
+    # New global interface rx-mode command
+    new_rx_mode_path = ['vpp', 'settings', 'interface-rx-mode']
+
+    def _iter_by_rx_modes(base_path: list):
+        if config.exists(base_path):
+            for iface_name in config.list_nodes(base_path):
+                rx_mode_path = base_path + [iface_name, 'rx-mode']
+                if config.exists(rx_mode_path):
+                    rx_mode = config.return_value(rx_mode_path)
+                    yield rx_mode, rx_mode_path
+
+    rx_modes = set()
+
+    def _collect_rx_modes(base_path: list):
+        for rx_mode, _ in _iter_by_rx_modes(base_path):
+            rx_modes.add(rx_mode)
+
+    _collect_rx_modes(external_interface_path)
+    _collect_rx_modes(kernel_interface_path)
+
+    if not rx_modes:
+        return
+
+    if 'interrupt' in rx_modes:
+        rx_mode = 'interrupt'
+    elif 'adaptive' in rx_modes:
+        rx_mode = 'adaptive'
+    else:
+        rx_mode = 'polling'
+
+    config.set(new_rx_mode_path, value=rx_mode)
+
+    def _delete_rx_modes(base_path: list):
+        for _, rx_mode_path in _iter_by_rx_modes(base_path):
+            config.delete(rx_mode_path)
+
+    _delete_rx_modes(external_interface_path)
+    _delete_rx_modes(kernel_interface_path)
+
+
+def _migrate_vpp_dpdk_options(config: ConfigTree) -> None:
+    base_path = ['vpp', 'settings', 'interface']
+    params = ['num-rx-desc', 'num-rx-queues', 'num-tx-desc', 'num-tx-queues']
+
+    if not config.exists(base_path):
+        return
+
+    for iface_name in config.list_nodes(base_path):
+        iface_path = base_path + [iface_name]
+        dpdk_path = iface_path + ['dpdk-options']
+
+        if config.exists(dpdk_path):
+            for param in params:
+                param_path = dpdk_path + [param]
+                new_param_path = iface_path + [param]
+
+                if config.exists(param_path):
+                    # Move `vpp settings interface <iface_name> dpdk-options num-*`
+                    # to `vpp settings interface <iface_name> num-*`
+                    config.copy(param_path, new_param_path)
+                    config.delete(param_path)
+
+        # Delete `vpp settings interface <iface_name> dpdk-options promisc`
+        promisc_path = dpdk_path + ['promisc']
+        if config.exists(promisc_path):
+            config.delete(promisc_path)
+
+
+def _migrate_vpp_resources(config: ConfigTree) -> None:
+    base = ['vpp', 'settings']
+    new_base = ['vpp', 'settings', 'resource-allocation']
+
+    if not config.exists(new_base):
+        config.set(new_base)
+
+    if config.exists(base + ['buffers']):
+        # copy "settings buffers" to "settings resource-allocation buffers"
+        config.copy(base + ['buffers'], new_base + ['buffers'])
+        config.delete(base + ['buffers'])
+
+    if config.exists(base + ['memory']):
+        # copy "settings memory" to "settings resource-allocation memory"
+        config.copy(base + ['memory'], new_base + ['memory'])
+        config.delete(base + ['memory'])
+
+    if config.exists(base + ['statseg']):
+        # copy "settings statseg" to "settings resource-allocation memory stats"
+        if not config.exists(new_base + ['memory']):
+            config.set(new_base + ['memory'])
+        config.copy(base + ['statseg'], new_base + ['memory', 'stats'])
+        config.delete(base + ['statseg'])
+
+    if config.exists(base + ['ipv6']):
+        # copy "settings ipv6" to "settings resource-allocation ipv6"
+        config.copy(base + ['ipv6'], new_base + ['ipv6'])
+        config.delete(base + ['ipv6'])
+
+    if config.exists(base + ['lcp']):
+        # move "settings lcp ignore-kernel-routes" to "settings resource-allocation ignore-kernel-routes"
+        # and remove "settings lcp netlink" node
+        if config.exists(base + ['lcp', 'ignore-kernel-routes']):
+            config.set(new_base + ['ignore-kernel-routes'])
+        config.delete(base + ['lcp'])
+
+    if config.exists(base + ['l2learn']):
+        # move "settings l2learn limit" to "settings resource-allocation mac-limit"
+        if config.exists(base + ['l2learn', 'limit']):
+            tmp = config.return_value(base + ['l2learn', 'limit'])
+            config.set(new_base + ['mac-limit'], value=tmp)
+        config.delete(base + ['l2learn'])
+
+    if config.exists(base + ['physmem']):
+        # move "settings physmem max-size" to "settings resource-allocation memory physmem-max-size"
+        if config.exists(base + ['physmem', 'max-size']):
+            tmp = config.return_value(base + ['physmem', 'max-size'])
+            config.set(new_base + ['memory', 'physmem-max-size'], value=tmp)
+        config.delete(base + ['physmem'])
+
+    if len(config.list_nodes(new_base)) == 0:
+            config.delete(new_base)
+
+
+def _migrate_vpp_bonding_interface(config: ConfigTree) -> None:
+    base = ['vpp', 'interfaces', 'bonding']
+    new_base = ['interfaces', 'vpp', 'bonding']
+    kernel_interface_base = ['vpp', 'kernel-interfaces']
+
+    if not config.exists(base):
+        return
+
+    config.set(new_base)
+
+    for ifname in config.list_nodes(base):
+        bond_kernel_interface_path = base + [ifname, 'kernel-interface']
+        kernel_iface = None
+        if config.exists(bond_kernel_interface_path):
+            kernel_iface = config.return_value(bond_kernel_interface_path)
+            config.delete(bond_kernel_interface_path)
+        new_ifname = f'vpp{ifname}'
+        iface_base = new_base + [new_ifname]
+        config.copy(base + [ifname], iface_base)
+        config.set_tag(new_base)
+
+        if kernel_iface and config.exists(kernel_interface_base + [kernel_iface]):
+            if config.exists(kernel_interface_base + [kernel_iface, 'vif']):
+                config.copy(kernel_interface_base + [kernel_iface, 'vif'], iface_base + ['vif'])
+            if config.exists(kernel_interface_base + [kernel_iface, 'mtu']):
+                config.copy(kernel_interface_base + [kernel_iface, 'mtu'], iface_base + ['mtu'])
+            if config.exists(kernel_interface_base + [kernel_iface, 'address']):
+                config.copy(kernel_interface_base + [kernel_iface, 'address'], iface_base + ['address'])
+            config.delete(kernel_interface_base + [kernel_iface])
+
+        for feature in ['nat44', 'cgnat']:
+            for direction in ['inside', 'outside']:
+                tmp_path = ['vpp', 'nat', feature, 'interface', direction]
+
+                if not config.exists(tmp_path):
+                    continue
+
+                names = config.return_values(tmp_path)
+                for name in names:
+                    if name.split('.')[0] == ifname:
+                        new_name = f'vpp{name}'
+                        config.delete_value(tmp_path, name)
+                        config.set(tmp_path, value=new_name, replace=False)
+
+        ipfix_path = ['vpp', 'ipfix', 'interface']
+        if config.exists(ipfix_path):
+            for name in config.list_nodes(ipfix_path):
+                if name.split('.')[0] == ifname:
+                    new_name = f'vpp{name}'
+                    config.rename(ipfix_path + [name], new_name)
+
+        bridge_path = ['vpp', 'interfaces', 'bridge']
+        if config.exists(bridge_path):
+            for iface in config.list_nodes(bridge_path):
+                tmp = bridge_path + [iface, 'member', 'interface']
+                if config.exists(tmp):
+                    for name in config.list_nodes(tmp):
+                        if name == ifname:
+                            new_name = f'vpp{name}'
+                            config.rename(tmp + [name], new_name)
+
+    config.delete(base)
+
+    if config.exists(kernel_interface_base) and len(config.list_nodes(kernel_interface_base)) == 0:
+        config.delete(['vpp', 'kernel-interfaces'])
+
+    if len(config.list_nodes(['vpp', 'interfaces'])) == 0:
+        config.delete(['vpp', 'interfaces'])
+
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['vpp']):
+        # Nothing to do
+        return
+
+    _migrate_vpp_acl_tcp_flags(config)
+    _migrate_vpp_macip(config)
+    _migrate_vpp_unix_settings(config)
+    _migrate_vpp_log(config)
+    _migrate_vpp_nat44(config)
+    _migrate_vpp_ipsec(config)
+    _migrate_vpp_cpu(config)
+    _migrate_vpp_interface_rx_mode(config)
+    _migrate_vpp_dpdk_options(config)
+    _migrate_vpp_resources(config)
+    _migrate_vpp_bonding_interface(config)
