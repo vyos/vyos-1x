@@ -38,6 +38,12 @@
         </tagNode>
       </children>
     </node>
+    <leafNode name="null">
+      <properties>
+        <help>Use null authentication</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="plaintext-password">
       <properties>
         <help>Plain text password</help>

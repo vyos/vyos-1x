@@ -102,8 +102,17 @@ def verify(config_dict):
             if 'area' in ospf and 'area' in interface_config:
                 for area, area_config in ospf['area'].items():
                     if 'network' in area_config:
-                        raise ConfigError('Can not use OSPF interface area and area ' \
-                                          'network configuration at the same time!')
+                        raise ConfigError('Can not use OSPF "interface area" and ' \
+                                          '"area network" configuration at the same time!')
+
+            # FRR only allows a single authentication mode (MD5, NULL or plaintext)
+            # at a time. Prevent users from defining more than one authentication mode.
+            if 'authentication' in interface_config:
+                auth_keys = set(interface_config['authentication'])
+                exclusive_auth_keys = {'md5', 'null', 'plaintext_password'}
+                if len(auth_keys & exclusive_auth_keys) >= 2:
+                    raise ConfigError('Can not use multiple authentication modes '
+                                      f'simultaneously for interface "{interface}"!')
 
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS

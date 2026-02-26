@@ -12,6 +12,8 @@ interface {{ iface }}
  ip ospf message-digest-key {{ key }} md5 {{ key_config.md5_key }}
 {%                 endfor %}
 {%             endif %}
+{%         elif iface_config.authentication.null is vyos_defined %}
+ ip ospf authentication null
 {%         endif %}
 {%         if iface_config.area is vyos_defined %}
  ip ospf area {{ iface_config.area }}
@@ -128,6 +130,8 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%                     for key, key_config in link_config.authentication.md5.key_id.items() %}
  area {{ area_id }} virtual-link {{ link }} message-digest-key {{ key }} md5 {{ key_config.md5_key }}
 {%                     endfor %}
+{%                 elif link_config.authentication.null is vyos_defined %}
+ area {{ area_id }} virtual-link {{ link }} authentication null
 {%                 endif %}
 {#         The following values are default values #}
  area {{ area_id }} virtual-link {{ link }} hello-interval {{ link_config.hello_interval }} retransmit-interval {{ link_config.retransmit_interval }} retransmit-window {{ link_config.retransmit_window }} transmit-delay {{ link_config.transmit_delay }} dead-interval {{ link_config.dead_interval }}
