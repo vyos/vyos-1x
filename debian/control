@@ -351,6 +351,9 @@ Depends:
   vpp-plugin-core,
   vpp-plugin-dpdk,
 # End "vpp"
+# For "serial"
+  monitor,
+# End "serial"
 ## End Configuration mode
 ## Operational mode
 # Used for hypervisor model in "run show version"
