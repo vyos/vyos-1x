@@ -62,30 +62,30 @@ def verify(config_dict):
 
     # Validate if configured Access-list exists
     if 'area' in ospf:
-          networks = []
-          for area, area_config in ospf['area'].items():
-              # Implemented as warning to not break existing configurations
-              if area == '0' and dict_search('area_type.nssa', area_config) != None:
-                  Warning('You cannot configure NSSA to backbone!')
-              # Implemented as warning to not break existing configurations
-              if area == '0' and dict_search('area_type.stub', area_config) != None:
-                  Warning('You cannot configure STUB to backbone!')
-              # Implemented as warning to not break existing configurations
-              if len(area_config['area_type']) > 1:
-                  Warning(f'Only one area-type is supported for area "{area}"!')
+        networks = []
+        for area, area_config in ospf['area'].items():
+            # Implemented as warning to not break existing configurations
+            if area == '0' and dict_search('area_type.nssa', area_config) != None:
+                Warning('You cannot configure NSSA to backbone!')
+            # Implemented as warning to not break existing configurations
+            if area == '0' and dict_search('area_type.stub', area_config) != None:
+                Warning('You cannot configure STUB to backbone!')
+            # Implemented as warning to not break existing configurations
+            if len(area_config['area_type']) > 1:
+                Warning(f'Only one area-type is supported for area "{area}"!')
 
-              if 'import_list' in area_config:
-                  acl_import = area_config['import_list']
-                  if acl_import: verify_access_list(acl_import, ospf)
-              if 'export_list' in area_config:
-                  acl_export = area_config['export_list']
-                  if acl_export: verify_access_list(acl_export, ospf)
+            if 'import_list' in area_config:
+                if acl_import := area_config['import_list']:
+                    verify_access_list(acl_import, ospf)
+            if 'export_list' in area_config:
+                if acl_export := area_config['export_list']:
+                    verify_access_list(acl_export, ospf)
 
-              if 'network' in area_config:
-                  for network in area_config['network']:
-                      if network in networks:
-                          raise ConfigError(f'Network "{network}" already defined in different area!')
-                      networks.append(network)
+            if 'network' in area_config:
+                for network in area_config['network']:
+                    if network in networks:
+                        raise ConfigError(f'Network "{network}" already defined in different area!')
+                    networks.append(network)
 
     if 'interface' in ospf:
         for interface, interface_config in ospf['interface'].items():
