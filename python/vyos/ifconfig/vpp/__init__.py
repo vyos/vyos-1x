@@ -17,10 +17,12 @@
 
 from .bond import VPPBondInterface
 from .interface import VPPInterface
+from .ipip import VPPIPIPInterface
 from .vxlan import VPPVXLANInterface
 
 __all__ = [
     'VPPBondInterface',
     'VPPInterface',
+    'VPPIPIPInterface',
     'VPPVXLANInterface',
 ]
