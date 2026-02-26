@@ -22,7 +22,6 @@ from .gre import GREInterface
 from .interface import Interface
 from .ipip import IPIPInterface
 from .loopback import LoopbackInterface
-from .vxlan import VXLANInterface
 from .wireguard import WireguardInterface
 from .xconnect import XconnectInterface
 
@@ -34,7 +33,6 @@ __all__ = [
     'Interface',
     'IPIPInterface',
     'LoopbackInterface',
-    'VXLANInterface',
     'WireguardInterface',
     'XconnectInterface',
 ]

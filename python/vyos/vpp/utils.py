@@ -27,7 +27,7 @@ mem_shift = {'K': 10, 'KB': 10, 'M': 20, 'MB': 20, 'G': 30, 'GB': 30}
 
 
 def iftunnel_transform(iface: str) -> str:
-    """Transform interface name from `xxxNN` to `xxx_tunnelNN`
+    """Transform interface name from `vppxxxNN` to `xxx_tunnelNN`
 
     Args:
         iface (str): original interface name
@@ -38,6 +38,8 @@ def iftunnel_transform(iface: str) -> str:
     Returns:
         str: Transformed interface name
     """
+    # Remove vpp prefix
+    iface = iface.removeprefix('vpp')
     # Check format
     if not iface[0].isascii() or not iface[-1].isdecimal():
         raise ValueError(f'Wrong interface name format: {iface}')
@@ -87,6 +89,15 @@ def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
         with_recursive_defaults=True,
     )
 
+    interfaces_config = config_instance.get_config_dict(
+        ['interfaces', 'vpp'],
+        key_mangling=('-', '_'),
+        effective=effective_mode,
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_recursive_defaults=True,
+    )
+
     vpp_ifaces: list[str] = []
 
     # Get a list of Ethernet interfaces
@@ -96,6 +107,11 @@ def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
     # Get a list of VPP interfaces
     for iface_type in config.get('interfaces', {}).keys():
         for iface in config.get('interfaces', {}).get(iface_type, {}).keys():
+            vpp_ifaces.append(iface)
+
+    # Get a list of interfaces VPP
+    for iface_type in interfaces_config.keys():
+        for iface in interfaces_config.get(iface_type, {}).keys():
             vpp_ifaces.append(iface)
 
     return vpp_ifaces
