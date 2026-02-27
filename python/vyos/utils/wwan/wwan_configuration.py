@@ -6,7 +6,7 @@ Extracted from the main state machine to improve code organization and maintaina
 '''
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
