@@ -351,6 +351,9 @@ Depends:
   vpp-plugin-core,
   vpp-plugin-dpdk,
 # End "vpp"
+# For web interface
+  flask-react-web,
+# End web interface
 ## End Configuration mode
 ## Operational mode
 # Used for hypervisor model in "run show version"
