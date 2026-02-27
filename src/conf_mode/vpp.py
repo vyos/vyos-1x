@@ -29,8 +29,11 @@ from vyos import ConfigError
 from vyos import airbag
 from vyos.base import Warning
 from vyos.config import Config, config_dict_merge
-from vyos.configdep import set_dependents, call_dependents
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import node_changed
+from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_virtual_interface_exists
 from vyos.ifconfig import Section
 from vyos.logger import getLogger
 from vyos.template import render
@@ -480,6 +483,7 @@ def get_config(config=None):
     changed_pppoe_ifaces.extend(added_pppoe_ifaces)
     if changed_pppoe_ifaces:
         set_dependents('pppoe_server', conf)
+    config['changed_pppoe_ifaces'] = changed_pppoe_ifaces
 
     return config
 
@@ -610,6 +614,11 @@ def verify(config):
 
     verify_routes_count(config['settings'])
 
+    for pppoe_iface in config.get('changed_pppoe_ifaces', []):
+        if '.' in pppoe_iface:
+            verify_virtual_interface_exists(config, pppoe_iface)
+        else:
+            verify_interface_exists(config, pppoe_iface)
 
 def generate(config):
     if not config or 'remove' in config:

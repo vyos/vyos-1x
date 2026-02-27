@@ -31,6 +31,7 @@ from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
+from vyos.utils.network import interface_exists
 from vyos.system import image
 from vyos.vpp import VPPControl
 from vyos.vpp.utils import vpp_iface_name_transform
@@ -1034,7 +1035,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
         self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
 
-    def test_17_vpp_pppoe_mapping(self):
+    def test_17_1_vpp_pppoe_mapping(self):
         config_file = '/run/accel-pppd/pppoe.conf'
         pool = "TEST-POOL"
         vni = '23'
@@ -1082,6 +1083,102 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # delete vif Ethernet interface
         self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
+        self.cli_commit()
+
+    def test_17_2_vpp_pppoe_invalid_vif(self):
+        # Test verify step behavior when referenced PPPoE interface does not actually exist
+        pool = "TEST-POOL-2"
+        vni = '24'
+        pppoe_base = ['service', 'pppoe-server']
+
+        # Basic pppoe-server config
+        self.cli_set(pppoe_base + ['authentication', 'mode', 'noauth'])
+        self.cli_set(pppoe_base + ['gateway-address', '192.0.3.1'])
+        self.cli_set(pppoe_base + ['client-ip-pool', pool, 'range', '192.0.3.0/24'])
+        self.cli_set(pppoe_base + ['default-pool', pool])
+
+        self.cli_set(pppoe_base + ['interface', interface, 'combined'])
+        self.cli_set(pppoe_base + ['interface', f'{interface}.{vni}'])
+
+        err_msg = f'Virtual Interface "{interface}.{vni}" does not exist'
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # The second commit can throw exception instead of verify error:
+        #   - `FileNotFoundError: PCI device tap does not exist`
+        # More details here: https://vyos.dev/T8276
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.assertTrue(interface_exists(interface))
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vni])
+        self.cli_commit()
+
+        # Cleanup PPPoE server configuration and created VIF
+        self.cli_delete(pppoe_base)
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif', vni])
+        self.cli_commit()
+
+    def test_17_3_vpp_pppoe_delete_invalid_vif(self):
+        # Test verify step behavior when referenced PPPoE virtual interface was deleted
+        pool = "TEST-POOL-3"
+        vni = '25'
+        pppoe_base = ['service', 'pppoe-server']
+
+        # Basic pppoe-server config
+        self.cli_set(pppoe_base + ['authentication', 'mode', 'noauth'])
+        self.cli_set(pppoe_base + ['gateway-address', '192.0.4.1'])
+        self.cli_set(pppoe_base + ['client-ip-pool', pool, 'range', '192.0.4.0/24'])
+        self.cli_set(pppoe_base + ['default-pool', pool])
+        self.cli_set(pppoe_base + ['interface', interface, 'combined'])
+        self.cli_set(pppoe_base + ['interface', f'{interface}.{vni}'])
+
+        err_msg = f'Virtual Interface "{interface}.{vni}" does not exist'
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        self.cli_delete(pppoe_base + ['interface', f'{interface}.{vni}'])
+        self.cli_commit()
+
+        # Cleanup PPPoE server configuration and created VIF
+        self.cli_delete(pppoe_base)
+        self.cli_commit()
+
+    def test_17_4_vpp_pppoe_invalid_sub_vif(self):
+        # Test verify step behavior when referenced PPPoE
+        # sub-interface which have several tags does not exist
+        pool = "TEST-POOL-4"
+        vif_s, vif_c = '26', '10'
+        pppoe_base = ['service', 'pppoe-server']
+
+        # Basic pppoe-server config
+        self.cli_set(pppoe_base + ['authentication', 'mode', 'noauth'])
+        self.cli_set(pppoe_base + ['gateway-address', '192.0.5.1'])
+        self.cli_set(pppoe_base + ['client-ip-pool', pool, 'range', '192.0.5.0/24'])
+        self.cli_set(pppoe_base + ['default-pool', pool])
+
+        self.cli_set(pppoe_base + ['interface', interface, 'combined'])
+        self.cli_set(pppoe_base + ['interface', f'{interface}.{vif_s}.{vif_c}'])
+
+        err_msg = f'Virtual Interface "{interface}.{vif_s}.{vif_c}" does not exist'
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+
+        # The second commit can throw exception instead of verify error:
+        #   - `FileNotFoundError: PCI device tap does not exist`
+        # More details here: https://vyos.dev/T8276
+        with self.assertRaisesRegex(ConfigSessionError, err_msg):
+            self.cli_commit()
+        self.assertTrue(interface_exists(interface))
+
+        self.cli_set(
+            ['interfaces', 'ethernet', interface, 'vif-s', vif_s, 'vif-c', vif_c]
+        )
+        self.cli_commit()
+
+        # Cleanup PPPoE server configuration and created VIF
+        self.cli_delete(pppoe_base)
+        self.cli_delete(['interfaces', 'ethernet', interface, 'vif-s', vif_s])
         self.cli_commit()
 
     def test_18_kernel_options_hugepages(self):
