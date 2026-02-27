@@ -612,17 +612,17 @@ def verify(config):
                 )
 
     # check GRE tunnels as part of the bridge, only tunnel-type teb is allowed
-    #   set vpp interfaces bridge br1 member interface gre1
-    #   set vpp interfaces gre gre1 tunnel-type teb
+    #   set vpp interfaces bridge br1 member interface vppgre1
+    #   set interfaces vpp gre vppgre1 tunnel-type teb
     if 'interfaces' in config:
         if 'bridge' in config['interfaces']:
             for iface, iface_config in config['interfaces']['bridge'].items():
                 if 'member' in iface_config:
                     for member in iface_config['member'].get('interface', []):
-                        if member.startswith('gre'):
+                        if member.startswith('vppgre'):
                             if (
-                                'gre' in config['interfaces']
-                                and config['interfaces']['gre']
+                                'gre' in config['interfaces_vpp']
+                                and config['interfaces_vpp']['gre']
                                 .get(member, {})
                                 .get('tunnel_type')
                                 != 'teb'
@@ -630,29 +630,6 @@ def verify(config):
                                 raise ConfigError(
                                     f'Only tunnel-type teb is allowed for GRE interfaces in bridge {iface}'
                                 )
-
-        # Only one multipoint GRE tunnel is allowed from the same source address
-        #   set vpp interfaces gre gre0 mode 'point-to-multipoint'
-        #   set vpp interfaces gre gre0 remote '0.0.0.0'
-        #   set vpp interfaces gre gre0 source-address '192.0.2.1'
-        #   set vpp interfaces gre gre1 mode 'point-to-multipoint'
-        #   set vpp interfaces gre gre1 remote '0.0.0.0'
-        #   set vpp interfaces gre gre1 source-address '192.0.2.1'
-        if 'gre' in config['interfaces']:
-            for iface, iface_config in config['interfaces']['gre'].items():
-                if iface_config['mode'] == 'point-to-multipoint':
-                    for other_iface, other_iface_config in config['interfaces'][
-                        'gre'
-                    ].items():
-                        if (
-                            other_iface_config['mode'] == 'point-to-multipoint'
-                            and other_iface_config['source_address']
-                            == iface_config['source_address']
-                            and iface != other_iface
-                        ):
-                            raise ConfigError(
-                                'Only one multipoint GRE tunnel is allowed from the same source address'
-                            )
 
     # Check if deleted interfaces are not xconnect memebrs
     for iface_config in config.get('removed_ifaces', []):

@@ -293,29 +293,16 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_03_vpp_gre(self):
-        interface_gre = 'gre12'
-        interface_kernel = 'vpptun12'
-        new_interface_kernel = 'vpptun123'
+        gre_path = interfaces_path + ['gre']
+        interface_gre = 'vppgre12'
         source_address = '192.0.2.1'
         new_source_address = '192.0.2.2'
         remote_address = '192.0.2.254'
-        kernel_address = '10.0.0.0'
+        address = '10.0.0.0'
 
-        self.cli_set(
-            base_path
-            + ['interfaces', 'gre', interface_gre, 'source-address', source_address]
-        )
-        self.cli_set(
-            base_path + ['interfaces', 'gre', interface_gre, 'remote', remote_address]
-        )
-        self.cli_set(
-            base_path
-            + ['interfaces', 'gre', interface_gre, 'kernel-interface', interface_kernel]
-        )
-        self.cli_set(
-            base_path
-            + ['kernel-interfaces', interface_kernel, 'address', f'{kernel_address}/31']
-        )
+        self.cli_set(gre_path + [interface_gre, 'source-address', source_address])
+        self.cli_set(gre_path + [interface_gre, 'remote', remote_address])
+        self.cli_set(gre_path + [interface_gre, 'address', f'{address}/31'])
 
         # source address of the tunnel interface should be configured
         # expect raise ConfigError
@@ -329,9 +316,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        current_address = get_address(interface_kernel)
-        self.assertEqual(kernel_address, current_address)
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_gre}'))
+        current_address = get_address(interface_gre)
+        self.assertEqual(address, current_address)
 
         # check gre interface
         _, out = rc_cmd('sudo vppctl show gre tunnel')
@@ -339,10 +326,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(required_str, out)
 
         # update gre interface
-        self.cli_set(
-            base_path
-            + ['interfaces', 'gre', interface_gre, 'source-address', new_source_address]
-        )
+        self.cli_set(gre_path + [interface_gre, 'source-address', new_source_address])
 
         self.cli_set(
             ['interfaces', 'ethernet', interface, 'address', f'{new_source_address}/24']
@@ -353,46 +337,11 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show gre tunnel')
         required_str = f'[0] instance 12 src {new_source_address} dst {remote_address}'
         self.assertIn(required_str, out)
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        self.assertEqual(kernel_address, current_address)
-
-        # delete gre kernel-interface but do not delete 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_delete(
-            base_path
-            + ['interfaces', 'gre', interface_gre, 'kernel-interface', interface_kernel]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # update gre kernel-interface but do not change 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'gre',
-                interface_gre,
-                'kernel-interface',
-                new_interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # delete kernel interface
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel])
-        self.cli_commit()
-
-        # delete gre kernel-interface
-        self.cli_delete(
-            base_path + ['interfaces', 'gre', interface_gre, 'kernel-interface']
-        )
-        self.cli_commit()
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_gre}'))
+        self.assertEqual(address, current_address)
 
         # delete gre interface
-        self.cli_delete(base_path + ['interfaces', 'gre', interface_gre])
+        self.cli_delete(gre_path + [interface_gre])
         self.cli_commit()
 
     @unittest.skip('Skipping this test geneve index always is 0')

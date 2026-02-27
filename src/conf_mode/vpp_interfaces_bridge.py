@@ -96,7 +96,7 @@ def verify(config):
 
     # Check if interface exists in vpp before adding to bridge-domain
 
-    allowed_prefixes = ('vppbond', 'gre', 'geneve', 'vpplo', 'vppvxlan')
+    allowed_prefixes = ('vppbond', 'vppgre', 'geneve', 'vpplo', 'vppvxlan')
 
     if 'member' in config:
         bvi_exists = False
