@@ -12,52 +12,6 @@
           <priority>300</priority>
         </properties>
         <children>
-          <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/vpp_interfaces_bridge.py">
-            <properties>
-              <priority>327</priority>
-              <help>Bridge domain</help>
-              <constraint>
-                <!-- Bridge domain 0 is reserved to vpp default -->
-                <regex>br(?!0$)[0-9]+</regex>
-              </constraint>
-              <constraintErrorMessage>Bridge domain must be named brN and br0 is reserved</constraintErrorMessage>
-              <valueHelp>
-                <format>brN</format>
-                <description>Bridge interface name</description>
-              </valueHelp>
-            </properties>
-            <children>
-              #include <include/generic-description.xml.i>
-              #include <include/interface/disable.xml.i>
-              <node name="member">
-                <properties>
-                  <help>Bridge member interfaces</help>
-                </properties>
-                <children>
-                  <tagNode name="interface">
-                    <properties>
-                      <help>Member interface name</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Interface name</description>
-                      </valueHelp>
-                    </properties>
-                    <children>
-                      <leafNode name="bvi">
-                        <properties>
-                          <help>Bridge Virtual Interface (BVI)</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </tagNode>
-                </children>
-              </node>
-            </children>
-          </tagNode>
           <!-- Disable as geneve interface index in the VPP always 0 and not configured -->
           <!-- <tagNode name="geneve" owner="${vyos_conf_scripts_dir}/vpp_interfaces_geneve.py">
             <properties>

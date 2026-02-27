@@ -26,10 +26,9 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.ifconfig.vpp import VPPVXLANInterface
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
-from vyos.vpp.config_verify import (
-    verify_vpp_remove_xconnect_interface,
-    verify_vpp_tunnel_source_address,
-)
+from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
+from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
+from vyos.vpp.config_verify import verify_vpp_tunnel_source_address
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 
 
@@ -96,6 +95,7 @@ def verify(config):
         return None
 
     verify_vpp_remove_xconnect_interface(config)
+    verify_vpp_remove_bridge_interface(config)
 
     if 'deleted' in config:
         return None

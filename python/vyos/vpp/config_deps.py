@@ -61,7 +61,7 @@ def deps_bridge_dict(conf) -> dict[str, list[str]]:
     """
     bridge_members_dict: dict[str, list[str]] = {}
     config = conf.get_config_dict(
-        ['vpp', 'interfaces', 'bridge'],
+        ['interfaces', 'vpp', 'bridge'],
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
@@ -69,7 +69,7 @@ def deps_bridge_dict(conf) -> dict[str, list[str]]:
 
     for bridge_name, bridge_config in config.items():
         for member_name in bridge_config.get('member', {}).get('interface', []):
-            bridge_ifaces_list = bridge_members_dict.get(bridge_name, [])
+            bridge_ifaces_list = bridge_members_dict.get(member_name, [])
             bridge_ifaces_list.append(bridge_name)
             bridge_members_dict.update({member_name: bridge_ifaces_list})
 

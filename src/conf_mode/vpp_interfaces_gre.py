@@ -24,11 +24,11 @@ from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig.vpp import VPPGREInterface
+from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
-from vyos.vpp.config_verify import (
-    verify_vpp_remove_xconnect_interface,
-    verify_vpp_tunnel_source_address,
-)
+from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
+from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
+from vyos.vpp.config_verify import verify_vpp_tunnel_source_address
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 
 
@@ -61,6 +61,11 @@ def get_config(config=None) -> dict:
     if ifname in config['xconn_members']:
         for xconn_iface in config['xconn_members'][ifname]:
             set_dependents('vpp_interfaces_xconnect', conf, xconn_iface)
+
+    config['bridge_members'] = deps_bridge_dict(conf)
+    if ifname in config['bridge_members']:
+        for bridge_iface in config['bridge_members'][ifname]:
+            set_dependents('vpp_interfaces_bridge', conf, bridge_iface)
 
     # Get 'vpp settings' config
     config['vpp_settings'] = conf.get_config_dict(
@@ -99,6 +104,7 @@ def verify(config):
         return None
 
     verify_vpp_remove_xconnect_interface(config)
+    verify_vpp_remove_bridge_interface(config)
 
     # config removed
     if 'deleted' in config:

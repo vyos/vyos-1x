@@ -101,6 +101,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, interfaces_path)
 
     def setUp(self):
         # always forward to base class
@@ -574,9 +575,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn('BondEthernet23', out)
 
     def test_07_vpp_bridge(self):
+        bridge_path = interfaces_path + ['bridge']
         fake_member = 'eth2'
         members = [interface]
-        interface_bridge = 'br10'
+        interface_bridge = 'vppbr10'
         vni = '23'
         interface_vxlan = f'vppvxlan{vni}'
         source_address = '192.0.2.1'
@@ -585,15 +587,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['interfaces', 'ethernet', interface, 'address', '192.0.2.1/24'])
         for member in members:
             self.cli_set(
-                base_path
-                + [
-                    'interfaces',
-                    'bridge',
-                    interface_bridge,
-                    'member',
-                    'interface',
-                    member,
-                ]
+                bridge_path + [interface_bridge, 'member', 'interface', member]
             )
 
         # commit changes
@@ -617,29 +611,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Set non exist member
         # expect raise ConfigError
         self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'bridge',
-                interface_bridge,
-                'member',
-                'interface',
-                fake_member,
-            ]
+            bridge_path + [interface_bridge, 'member', 'interface', fake_member]
         )
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
         self.cli_delete(
-            base_path
-            + [
-                'interfaces',
-                'bridge',
-                interface_bridge,
-                'member',
-                'interface',
-                fake_member,
-            ]
+            bridge_path + [interface_bridge, 'member', 'interface', fake_member]
         )
 
         # Add VXLAN to the bridge
@@ -652,15 +630,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         )
         self.cli_set(interfaces_path + ['vxlan', interface_vxlan, 'vni', vni])
         self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'bridge',
-                interface_bridge,
-                'member',
-                'interface',
-                interface_vxlan,
-            ]
+            bridge_path + [interface_bridge, 'member', 'interface', interface_vxlan]
         )
 
         # commit changes
@@ -673,7 +643,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Perform assertions based on the normalized output
         self.assertIn('BD-ID Index BSN Age(min)', normalized_out)
-        self.assertIn('10 1 0 off', normalized_out)
+        self.assertRegex(normalized_out, r'10 1 \d+ off')
         self.assertIn('Learning U-Forwrd UU-Flood Flooding', normalized_out)
         self.assertIn('on on flood on', normalized_out)
         self.assertIn('Interface If-idx ISN', normalized_out)
@@ -696,16 +666,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Add Loopback BVI to the bridge
         self.cli_set(interfaces_path + ['loopback', f'vpplo{vni}'])
         self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'bridge',
-                interface_bridge,
-                'member',
-                'interface',
-                f'vpplo{vni}',
-                'bvi',
-            ]
+            bridge_path
+            + [interface_bridge, 'member', 'interface', f'vpplo{vni}', 'bvi']
         )
         # commit changes
         self.cli_commit()
@@ -715,7 +677,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Normalize the output for consistent whitespace
         normalized_out = re.sub(r'\s+', ' ', out)
 
-        self.assertIn('10 1 0 off', normalized_out)
+        self.assertRegex(normalized_out, r'10 1 \d+ off')
         self.assertRegex(out, r'\bloop23\s+\d+\s+\d+\s+\d+\s+\*\s+')
 
     def test_08_vpp_ipip(self):

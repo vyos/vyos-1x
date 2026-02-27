@@ -71,6 +71,12 @@ vpp {
             }
             mode "802.3ad"
         }
+        bridge br1 {
+            description "Bridge1"
+            member {
+                interface "eth2"
+            }
+        }
         gre gre10 {
             description "Layer-3"
             mode "point-to-point"
