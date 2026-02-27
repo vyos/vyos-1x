@@ -352,7 +352,7 @@ Depends:
   vpp-plugin-dpdk,
 # End "vpp"
 # For "serial"
-  monitor,
+  psl-iolan-monitor,
 # End "serial"
 ## End Configuration mode
 ## Operational mode
