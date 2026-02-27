@@ -351,6 +351,9 @@ Depends:
   vpp-plugin-core,
   vpp-plugin-dpdk,
 # End "vpp"
+# For "serial"
+  psl-iolan-monitor,
+# End "serial"
 # For web interface
   flask-react-web,
 # End web interface
