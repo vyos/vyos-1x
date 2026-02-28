@@ -98,7 +98,7 @@ def verify_vpp_exists_kernel_interface(config: dict):
 
 
 def verify_vpp_remove_xconnect_interface(config: dict):
-    if not config.get('remove'):
+    if not 'deleted' in config:
         return
     for xconn_member, xconn_iface in config.get('xconn_members').items():
         if xconn_member == config.get('ifname'):

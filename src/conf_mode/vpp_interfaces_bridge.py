@@ -96,7 +96,7 @@ def verify(config):
 
     # Check if interface exists in vpp before adding to bridge-domain
 
-    allowed_prefixes = ('vppbond', 'gre', 'geneve', 'lo', 'vxlan')
+    allowed_prefixes = ('vppbond', 'gre', 'geneve', 'lo', 'vppvxlan')
 
     if 'member' in config:
         bvi_exists = False
@@ -130,8 +130,8 @@ def apply(config):
         return None
 
     ifname = config.get('ifname')
-    # vxlan10 in the vpp is vxlan_tunnel10
-    interface_transform_filter = ('geneve', 'vxlan')
+    # vppvxlan10 in the vpp is vxlan_tunnel10
+    interface_transform_filter = ('geneve', 'vppvxlan')
     # update members
     if 'members_removed' in config:
         i = BridgeInterface(ifname)

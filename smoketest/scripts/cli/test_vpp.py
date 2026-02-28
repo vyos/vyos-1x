@@ -211,57 +211,34 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(icmpv6_ra_punt_feature.is_enabled)
 
     def test_02_vpp_vxlan(self):
+        vxlan_path = interfaces_path + ['vxlan']
         vni = '23'
-        interface_vxlan = f'vxlan{vni}'
-        interface_kernel = f'vpptap{vni}'
-        new_interface_kernel = f'vpptap1{vni}'
+        interface_vxlan = f'vppvxlan{vni}'
         source_address = '192.0.2.1'
         new_source_address = '192.0.2.3'
         remote_address = '192.0.2.254'
-        kernel_address = '203.0.113.1'
+        address = '203.0.113.1'
 
         self.cli_set(['interfaces', 'ethernet', interface, 'address', '192.0.2.1/24'])
-        self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'source-address', source_address]
-        )
-        self.cli_set(base_path + ['interfaces', 'vxlan', interface_vxlan, 'vni', vni])
+        self.cli_set(vxlan_path + [interface_vxlan, 'source-address', source_address])
+        self.cli_set(vxlan_path + [interface_vxlan, 'vni', vni])
 
         # remote and source address must not be the same
         # expect raise ConfigError
-        self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'remote', source_address]
-        )
+        self.cli_set(vxlan_path + [interface_vxlan, 'remote', source_address])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'remote', remote_address]
-        )
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'vxlan',
-                interface_vxlan,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        self.cli_set(
-            base_path
-            + ['kernel-interfaces', interface_kernel, 'address', f'{kernel_address}/24']
-        )
+        self.cli_set(vxlan_path + [interface_vxlan, 'remote', remote_address])
+        self.cli_set(vxlan_path + [interface_vxlan, 'address', f'{address}/24'])
 
         # commit changes
         self.cli_commit()
 
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_vxlan}'))
 
-        current_address = get_address(interface_kernel)
-        self.assertEqual(kernel_address, current_address)
+        current_address = get_address(interface_vxlan)
+        self.assertEqual(address, current_address)
 
         # check vxlan interface
         _, out = rc_cmd('sudo vppctl show vxlan tunnel')
@@ -270,14 +247,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # update vxlan interface
         self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'vxlan',
-                interface_vxlan,
-                'source-address',
-                new_source_address,
-            ]
+            vxlan_path + [interface_vxlan, 'source-address', new_source_address]
         )
 
         # source address of the tunnel interface should be configured
@@ -304,8 +274,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             f'[0] instance {vni} src {new_source_address} dst {remote_address}'
         )
         self.assertIn(required_str, out)
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        self.assertEqual(kernel_address, current_address)
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_vxlan}'))
+        self.assertEqual(address, current_address)
 
         # change vpp settings
         self.cli_set(base_path + ['settings', 'poll-sleep-usec', '5'])
@@ -314,49 +284,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         config = read_file(VPP_CONF)
         self.assertIn('poll-sleep-usec 5', config)
 
-        # delete vxlan kernel-interface but do not delete 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_delete(
-            base_path
-            + [
-                'interfaces',
-                'vxlan',
-                interface_vxlan,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # update vxlan kernel-interface but do not change 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'vxlan',
-                interface_vxlan,
-                'kernel-interface',
-                new_interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # delete vpp kernel-interface
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel])
-        self.cli_commit()
-
-        # delete vxlan kernel-interface
-        self.cli_delete(
-            base_path + ['interfaces', 'vxlan', interface_vxlan, 'kernel-interface']
-        )
-        self.cli_commit()
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-
         # delete vxlan interface
-        self.cli_delete(base_path + ['interfaces', 'vxlan', interface_vxlan])
+        self.cli_delete(vxlan_path + [interface_vxlan])
         self.cli_commit()
 
         # delete vif Ethernet interface
@@ -756,7 +685,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         members = [interface]
         interface_bridge = 'br10'
         vni = '23'
-        interface_vxlan = f'vxlan{vni}'
+        interface_vxlan = f'vppvxlan{vni}'
         source_address = '192.0.2.1'
         remote_address = '192.0.2.254'
 
@@ -822,14 +751,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Add VXLAN to the bridge
         self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'source-address', source_address]
+            interfaces_path
+            + ['vxlan', interface_vxlan, 'source-address', source_address]
         )
         self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'remote', remote_address]
+            interfaces_path + ['vxlan', interface_vxlan, 'remote', remote_address]
         )
-        self.cli_set(base_path + ['interfaces', 'vxlan', interface_vxlan, 'vni', vni])
+        self.cli_set(interfaces_path + ['vxlan', interface_vxlan, 'vni', vni])
         self.cli_set(
             base_path
             + [
@@ -1017,21 +945,20 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
     def test_09_vpp_xconnect(self):
         vni = '23'
-        interface_vxlan = f'vxlan{vni}'
+        interface_vxlan = f'vppvxlan{vni}'
         interface_xconnect = f'xcon{vni}'
         source_address = '192.0.2.1'
         remote_address = '192.0.2.254'
 
         self.cli_set(['interfaces', 'ethernet', interface, 'address', '192.0.2.1/24'])
         self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'source-address', source_address]
+            interfaces_path
+            + ['vxlan', interface_vxlan, 'source-address', source_address]
         )
         self.cli_set(
-            base_path
-            + ['interfaces', 'vxlan', interface_vxlan, 'remote', remote_address]
+            interfaces_path + ['vxlan', interface_vxlan, 'remote', remote_address]
         )
-        self.cli_set(base_path + ['interfaces', 'vxlan', interface_vxlan, 'vni', vni])
+        self.cli_set(interfaces_path + ['vxlan', interface_vxlan, 'vni', vni])
 
         # Add xconneect
         self.cli_set(

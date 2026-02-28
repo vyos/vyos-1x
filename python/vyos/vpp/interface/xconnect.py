@@ -42,8 +42,8 @@ class XconnectInterface:
             a.add_l2_xconnect()
         """
         interface_transform_filter = ('vxlan', 'gre')
-        first_member = self.members[0]
-        second_member = self.members[1]
+        first_member = self.members[0].removeprefix('vpp')
+        second_member = self.members[1].removeprefix('vpp')
         # Check if member in required filter to transform 'vxlanX' => 'vxlan_tunnelX'
         if first_member.startswith(interface_transform_filter):
             first_member = iftunnel_transform(first_member)
@@ -73,8 +73,8 @@ class XconnectInterface:
             a.del_l2_xconnect()
         """
         interface_transform_filter = ('vxlan', 'gre')
-        first_member = self.members[0]
-        second_member = self.members[1]
+        first_member = self.members[0].removeprefix('vpp')
+        second_member = self.members[1].removeprefix('vpp')
         # Check if member in required filter to transform 'vxlanX' => 'vxlan_tunnelX'
         if first_member.startswith(interface_transform_filter):
             first_member = iftunnel_transform(first_member)
