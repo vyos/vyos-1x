@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="restart">
+    <children>
+      <node name="gpsd">
+        <properties>
+          <help>Restart GPSD service</help>
+        </properties>
+        <command>bash -c 'if cli-shell-api existsActive service gpsd; then systemctl restart gpsd.service; else echo "Service GPSD not configured"; fi'</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

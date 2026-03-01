@@ -229,6 +229,10 @@ Depends:
   isc-kea-dhcp-ddns,
   isc-kea-hooks,
 # End "service dhcp-server"
+# For "service gpsd"
+  gpsd,
+  gpsd-clients,
+# End "service gpsd"
 # For "service lldp"
   lldpd,
 # End "service lldp"

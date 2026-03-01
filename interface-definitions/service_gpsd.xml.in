@@ -1,0 +1,168 @@
+<?xml version="1.0"?>
+<!-- GPSD configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="gpsd" owner="${vyos_conf_scripts_dir}/service_gpsd.py">
+        <properties>
+          <help>GPS Daemon. Allows GPS information to be served over the network</help>
+          <priority>990</priority>
+        </properties>
+        <children>
+          <leafNode name="bad-time">
+            <properties>
+              <help>Use GPS time even with no current fix</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="debug">
+            <properties>
+              <help>Set debug level. Default is 0. Levels 2 and above produce a lot of data</help>
+              <valueHelp>
+                <format>u32:0-5</format>
+                <description>Debug verbosity level</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-5"/>
+              </constraint>
+              <constraintErrorMessage>Debug level must be in range 0 to 5</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/generic-disable-node.xml.i>
+          <leafNode name="disable-usb-auto">
+            <properties>
+              <help>Disable hot add/remove of USB GPS devices via gpsdctl</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="framing">
+            <properties>
+              <help>Fix the serial framing to the GNSS device</help>
+              <valueHelp>
+                <format>8N1</format>
+                <description>Format is [78][ENO][012]; most GNSS are 8N1</description>
+              </valueHelp>
+              <constraint>
+                <regex>[78][ENO][012]</regex>
+              </constraint>
+              <constraintErrorMessage>Framing must match [78][ENO][012], e.g. 8N1</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="listen-any">
+            <properties>
+              <help>Listen on all addresses (INADDR_ANY) rather than just the loop back (INADDR_LOOPBACK) address</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="no-wait">
+            <properties>
+              <help>Don’t wait for a client to connect before polling whatever GPS is associated with it</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>2947</defaultValue>
+          </leafNode>
+          <leafNode name="read-only">
+            <properties>
+              <help>Broken-device-safety mode, otherwise known as read-only mode</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="speed">
+            <properties>
+              <help>Fix the serial port speed to the GNSS device</help>
+              <completionHelp>
+                <list>4800 9600 19200 38400 57600 115200 230400 460800 921600</list>
+              </completionHelp>
+              <valueHelp>
+                <format>4800</format>
+                <description>4800 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>9600</format>
+                <description>9600 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>19200</format>
+                <description>19200 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>38400</format>
+                <description>38400 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>57600</format>
+                <description>57600 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>115200</format>
+                <description>115200 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>230400</format>
+                <description>230400 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>460800</format>
+                <description>460800 bps</description>
+              </valueHelp>
+              <valueHelp>
+                <format>921600</format>
+                <description>921600 bps</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(4800|9600|19200|38400|57600|115200|230400|460800|921600)$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="source">
+            <properties>
+              <help>Device path or URL used as a data source</help>
+              <multi/>
+              <completionHelp>
+                <script>find /dev -name ttyS* | sort</script>
+                <script>find /dev -name ttyUSS* | sort</script>
+                <script>if [ -d /dev/serial/by-id ]; then find /dev/serial/by-id/ -type l; fi</script>
+              </completionHelp>
+              <valueHelp>
+                <format>/dev/&lt;device&gt;</format>
+                <description>Device node path (e.g. /dev/ttyS0)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>tcp://&lt;host&gt;:&lt;port&gt;</format>
+                <description>TCP URL</description>
+              </valueHelp>
+              <valueHelp>
+                <format>udp://&lt;host&gt;:&lt;port&gt;</format>
+                <description>UDP URL</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ntrip://&lt;host&gt;:&lt;port&gt;</format>
+                <description>NTRIP Caster</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dgpsip://&lt;host&gt;:&lt;port&gt;</format>
+                <description>DGPSIP Server</description>
+              </valueHelp>
+              <valueHelp>
+                <format>gpsd://&lt;host&gt;:&lt;port&gt;</format>
+                <description>Remote gpsd feed</description>
+              </valueHelp>
+              <valueHelp>
+                <format>nmea2000://&lt;host&gt;:&lt;port&gt;</format>
+                <description>NMEA2000 CAN data</description>
+              </valueHelp>
+              <constraint>
+                <regex>
+                  ^(/dev/\S+|(tcp|udp|ntrip|dgpsip|gpsd|nmea2000)://\S+)$
+                </regex>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
