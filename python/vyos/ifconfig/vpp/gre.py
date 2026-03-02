@@ -34,7 +34,7 @@ class VPPGREInterface(Interface, VPPInterface):
 
     MODE_MAP = {
         'point-to-point': 0,
-        'point-to-multipoint': 1,
+        # 'point-to-multipoint': 1,
     }
 
     def __init__(self, ifname, config):
@@ -51,7 +51,7 @@ class VPPGREInterface(Interface, VPPInterface):
         self.src_address = config.get('source_address')
         self.dst_address = config.get('remote')
         self.tunnel_type = self.TUNNEL_TYPE_MAP.get(config.get('tunnel_type'), 0)
-        self.mode = self.MODE_MAP.get(config.get('mode'), 0)
+        self.mode = self.MODE_MAP['point-to-point']
 
     def _create(self):
         pass

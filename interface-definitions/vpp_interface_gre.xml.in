@@ -20,6 +20,8 @@
             <children>
               #include <include/generic-description.xml.i>
               #include <include/interface/disable.xml.i>
+              <!-- Disable as point-to-multipoint mode does not work without 'teib' feature that is not implemented yet -->
+              <!-- <leafNode name="mode">
               <leafNode name="mode">
                 <properties>
                   <help>GRE tunnel mode</help>
@@ -40,7 +42,7 @@
                   <constraintErrorMessage>Invalid mode, must be one of: point-to-point or point-to-multipoint</constraintErrorMessage>
                 </properties>
                 <defaultValue>point-to-point</defaultValue>
-              </leafNode>
+              </leafNode> -->
               <leafNode name="tunnel-type">
                 <properties>
                   <help>GRE tunnel type</help>

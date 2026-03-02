@@ -45,7 +45,7 @@
 #
 # Migrate loopback interface from vpp section to 'interfaces vpp loopback' (T8324)
 #
-# Migrate gre interface to 'interfaces vpp gre' (T8325)
+# Migrate gre interface to 'interfaces vpp gre', remove interfaces with mode "point-to-multipoint" (T8325)
 #
 
 from vyos.configtree import ConfigTree
@@ -476,6 +476,12 @@ def _migrate_vpp_gre_interface(config: ConfigTree) -> None:
     config.set(new_base)
 
     for ifname in config.list_nodes(base):
+        if config.exists(base + [ifname, 'mode']):
+            if config.return_value(base + [ifname, 'mode']) == 'point-to-multipoint':
+                config.delete(base + [ifname])
+                continue
+            config.delete(base + [ifname, 'mode'])
+
         _migrate_interface(config, 'gre', ifname)
 
         _migrate_members_bridge(config, ifname)
