@@ -517,84 +517,28 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_05_vpp_loopback(self):
-        interface_loopback = 'lo11'
-        interface_kernel = 'vpptun11'
-        new_interface_kernel = 'vpptun12'
-        kernel_address = '192.0.2.54'
+        loopback_path = interfaces_path + ['loopback']
+        interface_loopback = 'vpplo11'
+        address = '192.0.2.54'
 
-        self.cli_set(base_path + ['interfaces', 'loopback', interface_loopback])
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'loopback',
-                interface_loopback,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        self.cli_set(
-            base_path
-            + ['kernel-interfaces', interface_kernel, 'address', f'{kernel_address}/25']
-        )
+        self.cli_set(loopback_path + [interface_loopback])
+        self.cli_set(loopback_path + [interface_loopback, 'address', f'{address}/25'])
 
         # commit changes
         self.cli_commit()
 
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_loopback}'))
 
-        current_address = get_address(interface_kernel)
-        self.assertEqual(kernel_address, current_address)
+        current_address = get_address(interface_loopback)
+        self.assertEqual(address, current_address)
 
         # check loopback interface
         _, out = rc_cmd('sudo vppctl show interface loop11')
         required_str = 'loop11'
         self.assertIn(required_str, out)
 
-        # delete loopback kernel-interface but do not delete 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_delete(
-            base_path
-            + [
-                'interfaces',
-                'loopback',
-                interface_loopback,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # update loopback kernel-interface but do not change 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'loopback',
-                interface_loopback,
-                'kernel-interface',
-                new_interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # delete vpp kernel-interface
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel])
-        self.cli_commit()
-
-        # delete loopback kernel-interface
-        self.cli_delete(
-            base_path
-            + ['interfaces', 'loopback', interface_loopback, 'kernel-interface']
-        )
-        self.cli_commit()
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-
         # delete loopback interface
-        self.cli_delete(base_path + ['interfaces', 'loopback', interface_loopback])
+        self.cli_delete(loopback_path + [interface_loopback])
         self.cli_commit()
 
     def test_06_vpp_bonding(self):
@@ -801,7 +745,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertRegex(out, r'\s*vxlan_tunnel23\s+\d+\s+\d+')
 
         # Add Loopback BVI to the bridge
-        self.cli_set(base_path + ['interfaces', 'loopback', f'lo{vni}'])
+        self.cli_set(interfaces_path + ['loopback', f'vpplo{vni}'])
         self.cli_set(
             base_path
             + [
@@ -810,7 +754,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
                 interface_bridge,
                 'member',
                 'interface',
-                f'lo{vni}',
+                f'vpplo{vni}',
                 'bvi',
             ]
         )

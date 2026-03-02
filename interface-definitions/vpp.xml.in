@@ -146,25 +146,6 @@
               #include <include/kernel-interface-tun.xml.i>
             </children>
           </tagNode>
-          <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/vpp_interfaces_loopback.py">
-            <properties>
-              <priority>325</priority>
-              <help>Loopback Interface</help>
-              <constraint>
-                <regex>lo[0-9]+</regex>
-              </constraint>
-              <constraintErrorMessage>Loopback interface must be named loN</constraintErrorMessage>
-              <valueHelp>
-                <format>loN</format>
-                <description>Loopback interface name</description>
-              </valueHelp>
-            </properties>
-            <children>
-              #include <include/generic-description.xml.i>
-              #include <include/interface/disable.xml.i>
-              #include <include/kernel-interface-tun.xml.i>
-            </children>
-          </tagNode>
           <tagNode name="xconnect" owner="${vyos_conf_scripts_dir}/vpp_interfaces_xconnect.py">
             <properties>
               <help>Layer 2 cross connect</help>

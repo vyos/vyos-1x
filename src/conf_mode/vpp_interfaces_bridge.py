@@ -96,7 +96,7 @@ def verify(config):
 
     # Check if interface exists in vpp before adding to bridge-domain
 
-    allowed_prefixes = ('vppbond', 'gre', 'geneve', 'lo', 'vppvxlan')
+    allowed_prefixes = ('vppbond', 'gre', 'geneve', 'vpplo', 'vppvxlan')
 
     if 'member' in config:
         bvi_exists = False
@@ -116,7 +116,7 @@ def verify(config):
             if 'bvi' in member_config:
                 if bvi_exists:
                     raise ConfigError("Only one BVI per bridge domain is allowed")
-                if not member.startswith('lo'):
+                if not member.startswith('vpplo'):
                     raise ConfigError("BVI can only be defined on loopback interface")
                 bvi_exists = True
 
@@ -138,9 +138,9 @@ def apply(config):
         for member in config.get('members_removed'):
             if member.startswith(interface_transform_filter):
                 member = iftunnel_transform(member)
-            if member.startswith('lo'):
+            if member.startswith('vpplo'):
                 # interface name in VPP is loopX
-                member = member.replace('lo', 'loop')
+                member = member.replace('vpplo', 'loop')
             elif member.startswith('vppbond'):
                 # interface name in VPP is BondEthernetX
                 member = member.replace('vppbond', 'BondEthernet')
@@ -166,9 +166,9 @@ def apply(config):
         for member, member_config in members.items():
             if member.startswith(interface_transform_filter):
                 member = iftunnel_transform(member)
-            if member.startswith('lo'):
+            if member.startswith('vpplo'):
                 # interface name in VPP is loopX
-                member = member.replace('lo', 'loop')
+                member = member.replace('vpplo', 'loop')
                 if 'bvi' in member_config:
                     port_type = 1
             elif member.startswith('vppbond'):
