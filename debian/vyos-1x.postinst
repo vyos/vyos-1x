@@ -152,7 +152,8 @@ mkdir -p /opt/vyatta/etc/config/scripts
 mkdir -p /opt/vyatta/etc/config/user-data
 mkdir -p /opt/vyatta/etc/config/support
 chown -R root:vyattacfg /opt/vyatta/etc/config
-chmod -R 775 /opt/vyatta/etc/config
+chmod -R 2775 /opt/vyatta/etc/config
+touch /opt/vyatta/etc/config/.vyatta_config
 mkdir -p /opt/vyatta/etc/logrotate
 mkdir -p /opt/vyatta/etc/netdevice.d
 
