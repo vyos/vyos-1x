@@ -612,5 +612,48 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {area} {area_type} translate-never no-summary', frrconfig)
         self.assertIn(f' network {network} area {area}', frrconfig)
 
+    def test_ospf_19_authentication(self):
+        md5_key = 'vyosMD5'
+        md5_id = '10'
+        plaintext_key = 'vyos123'
+
+        self.cli_set(base_path + ['area', '0'])
+        self.cli_set(base_path + ['interface', dummy_if, 'authentication', 'md5', 'key-id', md5_id, 'md5-key', md5_key])
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig(f'interface {dummy_if}', stop_section='^exit')
+        self.assertIn( ' ip ospf authentication message-digest', frrconfig)
+        self.assertIn(f' ip ospf message-digest-key {md5_id} md5 {md5_key}', frrconfig)
+
+        self.cli_set(base_path + ['interface', dummy_if, 'authentication', 'plaintext-password', plaintext_key])
+        # FRR only allows a single authentication mode (MD5, NULL or plaintext) at a time
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['interface', dummy_if, 'authentication', 'md5'])
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig(f'interface {dummy_if}', stop_section='^exit')
+        self.assertNotIn( ' ip ospf authentication message-digest', frrconfig)
+        self.assertNotIn(f' ip ospf message-digest-key {md5_id} md5 {md5_key}', frrconfig)
+        self.assertIn( ' ip ospf authentication', frrconfig)
+        self.assertIn(f' ip ospf authentication-key {plaintext_key}', frrconfig)
+
+        self.cli_set(base_path + ['interface', dummy_if, 'authentication', 'null'])
+        # FRR only allows a single authentication mode (MD5, NULL or plaintext) at a time
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['interface', dummy_if, 'authentication', 'plaintext-password'])
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig(f'interface {dummy_if}', stop_section='^exit')
+        self.assertNotIn( ' ip ospf authentication message-digest', frrconfig)
+        self.assertNotIn(f' ip ospf message-digest-key {md5_id} md5 {md5_key}', frrconfig)
+        self.assertNotRegex(r'^ ip ospf authentication$', frrconfig)
+        self.assertNotIn(f' ip ospf authentication-key {plaintext_key}', frrconfig)
+        self.assertIn(' ip ospf authentication null', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
