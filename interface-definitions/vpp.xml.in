@@ -146,27 +146,6 @@
               #include <include/kernel-interface-tun.xml.i>
             </children>
           </tagNode>
-          <tagNode name="ipip" owner="${vyos_conf_scripts_dir}/vpp_interfaces_ipip.py">
-            <properties>
-              <priority>325</priority>
-              <help>IP encapsulation tunnel interface</help>
-              <constraint>
-                <regex>ipip[0-9]+</regex>
-              </constraint>
-              <constraintErrorMessage>IPIP tunnel interface must be named ipipN</constraintErrorMessage>
-              <valueHelp>
-                <format>ipipN</format>
-                <description>IPIP tunnel interface name</description>
-              </valueHelp>
-            </properties>
-            <children>
-              #include <include/generic-description.xml.i>
-              #include <include/interface/disable.xml.i>
-              #include <include/source-address-ipv4-ipv6.xml.i>
-              #include <include/interface/tunnel-remote.xml.i>
-              #include <include/kernel-interface-tun.xml.i>
-            </children>
-          </tagNode>
           <tagNode name="loopback" owner="${vyos_conf_scripts_dir}/vpp_interfaces_loopback.py">
             <properties>
               <priority>325</priority>

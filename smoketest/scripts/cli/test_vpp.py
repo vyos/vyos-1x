@@ -826,43 +826,24 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertRegex(out, r'\bloop23\s+\d+\s+\d+\s+\d+\s+\*\s+')
 
     def test_08_vpp_ipip(self):
-        interface_ipip = 'ipip12'
-        interface_kernel = 'vpptun12'
-        new_interface_kernel = 'vpptun123'
+        ipip_path = interfaces_path + ['ipip']
+        interface_ipip = 'vppipip12'
         source_address = '192.0.2.1'
         new_source_address = '192.0.2.2'
         remote_address = '192.0.2.5'
-        kernel_address = '10.0.0.0'
+        address = '10.0.0.0'
 
         self.cli_set(['interfaces', 'ethernet', interface, 'address', '192.0.2.1/24'])
-        self.cli_set(
-            base_path
-            + ['interfaces', 'ipip', interface_ipip, 'source-address', source_address]
-        )
-        self.cli_set(
-            base_path + ['interfaces', 'ipip', interface_ipip, 'remote', remote_address]
-        )
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'ipip',
-                interface_ipip,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        self.cli_set(
-            base_path
-            + ['kernel-interfaces', interface_kernel, 'address', f'{kernel_address}/31']
-        )
+        self.cli_set(ipip_path + [interface_ipip, 'source-address', source_address])
+        self.cli_set(ipip_path + [interface_ipip, 'remote', remote_address])
+        self.cli_set(ipip_path + [interface_ipip, 'address', f'{address}/31'])
 
         # commit changes
         self.cli_commit()
 
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        current_address = get_address(interface_kernel)
-        self.assertEqual(kernel_address, current_address)
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_ipip}'))
+        current_address = get_address(interface_ipip)
+        self.assertEqual(address, current_address)
 
         # check ipip interface
         _, out = rc_cmd('sudo vppctl show ipip tunnel')
@@ -870,16 +851,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(required_str, out)
 
         # update ipip interface
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'ipip',
-                interface_ipip,
-                'source-address',
-                new_source_address,
-            ]
-        )
+        self.cli_set(ipip_path + [interface_ipip, 'source-address', new_source_address])
 
         # source address of the tunnel interface should be configured
         # expect raise ConfigError
@@ -895,52 +867,11 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show ipip tunnel')
         required_str = f'[0] instance 12 src {new_source_address} dst {remote_address}'
         self.assertIn(required_str, out)
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        self.assertEqual(kernel_address, current_address)
-
-        # delete ipip kernel-interface but do not delete 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_delete(
-            base_path
-            + [
-                'interfaces',
-                'ipip',
-                interface_ipip,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # update ipip kernel-interface but do not change 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'ipip',
-                interface_ipip,
-                'kernel-interface',
-                new_interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # delete kernel interface
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel])
-        self.cli_commit()
-
-        # delete ipip kernel-interface
-        self.cli_delete(
-            base_path + ['interfaces', 'ipip', interface_ipip, 'kernel-interface']
-        )
-        self.cli_commit()
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_ipip}'))
+        self.assertEqual(address, current_address)
 
         # delete ipip interface
-        self.cli_delete(base_path + ['interfaces', 'ipip', interface_ipip])
+        self.cli_delete(ipip_path + [interface_ipip])
         self.cli_commit()
 
     def test_09_vpp_xconnect(self):
