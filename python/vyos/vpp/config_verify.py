@@ -103,8 +103,8 @@ def verify_vpp_remove_xconnect_interface(config: dict):
     for xconn_member, xconn_iface in config.get('xconn_members').items():
         if xconn_member == config.get('ifname'):
             raise ConfigError(
-                f'interface "{xconn_member}" is still in use within "vpp interfaces xconnect". '
-                f'Please remove it from "vpp interface xconnect {xconn_iface}" before proceeding.'
+                f'interface "{xconn_member}" is still in use within "interfaces vpp xconnect". '
+                f'Please remove it from "interface vpp xconnect {xconn_iface}" before proceeding.'
             )
 
 

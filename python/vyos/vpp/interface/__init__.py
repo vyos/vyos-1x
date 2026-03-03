@@ -19,12 +19,10 @@ from .ethernet import EthernetInterface
 from .geneve import GeneveInterface
 from .interface import Interface
 from .wireguard import WireguardInterface
-from .xconnect import XconnectInterface
 
 __all__ = [
     'EthernetInterface',
     'GeneveInterface',
     'Interface',
     'WireguardInterface',
-    'XconnectInterface',
 ]
