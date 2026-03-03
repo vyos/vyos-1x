@@ -16,25 +16,20 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import os
-
 from vyos import ConfigError
 
 from vyos.config import Config
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import get_interface_dict
 from vyos.configdep import set_dependents, call_dependents
-from vyos.template import is_interface
+from vyos.utils.process import is_systemd_service_active
 
-from vyos.vpp.interface import GREInterface
+from vyos.ifconfig.vpp import VPPGREInterface
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
-    verify_vpp_remove_kernel_interface,
-    verify_vpp_change_kernel_interface,
     verify_vpp_remove_xconnect_interface,
-    verify_vpp_exists_kernel_interface,
     verify_vpp_tunnel_source_address,
 )
-from vyos.vpp.utils import cli_ifaces_lcp_kernel_list, cli_ethernet_with_vifs_ifaces
+from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 
 
 def get_config(config=None) -> dict:
@@ -50,54 +45,13 @@ def get_config(config=None) -> dict:
     else:
         conf = Config()
 
-    base = ['vpp', 'interfaces', 'gre']
-    base_kernel_interfaces = ['vpp', 'kernel-interfaces']
+    base = ['interfaces', 'vpp', 'gre']
 
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    ifname, config = get_interface_dict(conf, base)
 
-    # Get config_dict with default values
-    config = conf.get_config_dict(
-        base + [ifname],
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-        with_defaults=True,
-        with_recursive_defaults=True,
-    )
-
-    if not conf.exists(['vpp']):
+    if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
-
-    # Get effective config as we need full dicitonary per interface delete
-    effective_config = conf.get_config_dict(
-        base + [ifname],
-        key_mangling=('-', '_'),
-        effective=True,
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
-    if effective_config:
-        config.update({'effective': effective_config})
-
-    if not conf.exists(base + [ifname]):
-        config['remove'] = True
-
-    # Get global 'vpp kernel-interfaces' for verify
-    config['vpp_kernel_interfaces'] = conf.get_config_dict(
-        base_kernel_interfaces,
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
-    tmp = leaf_node_changed(conf, base + [ifname, 'kernel-interface'])
-    if tmp:
-        config['kernel_interface_removed'] = tmp
-
-    # list of all kernel interfaces `vpp interface xxx kernel-interface xxx`
-    config['candidate_kernel_interfaces'] = cli_ifaces_lcp_kernel_list(conf)
 
     # list of all Ethernet interfaces with vifs
     config['vpp_ether_vif_ifaces'] = cli_ethernet_with_vifs_ifaces(conf)
@@ -108,11 +62,23 @@ def get_config(config=None) -> dict:
         for xconn_iface in config['xconn_members'][ifname]:
             set_dependents('vpp_interfaces_xconnect', conf, xconn_iface)
 
-    if effective_config.get('kernel_interface'):
-        if conf.exists(base + [ifname, 'kernel-interface']):
-            iface = config.get('kernel_interface')
-            if conf.exists(['vpp', 'kernel-interfaces', iface]):
-                set_dependents('vpp_kernel_interface', conf, iface)
+    # Get 'vpp settings' config
+    config['vpp_settings'] = conf.get_config_dict(
+        ['vpp', 'settings'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
+    # Get all gre interfaces config
+    config['gre_interfaces'] = conf.get_config_dict(
+        base,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_defaults=True,
+        with_recursive_defaults=True,
+    )
 
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
@@ -124,7 +90,6 @@ def get_config(config=None) -> dict:
     if conf.exists(['vpp', 'acl']):
         set_dependents('vpp_acl', conf)
 
-    config['ifname'] = ifname
     return config
 
 
@@ -133,19 +98,19 @@ def verify(config):
     if 'remove_vpp' in config:
         return None
 
-    # Verify that removed kernel interface is not used in 'vpp kernel-interfaces'.
-    # vpp interfaces gre greX kernel-interface vpp-tunX
-    # vpp kernel-interface vpp-tunX
-    verify_vpp_remove_kernel_interface(config)
-
     verify_vpp_remove_xconnect_interface(config)
 
     # config removed
-    if 'remove' in config:
+    if 'deleted' in config:
         return None
 
+    if not is_systemd_service_active('vpp.service'):
+        raise ConfigError(
+            'Cannot configure VPP GRE interface: vpp.service is not running'
+        )
+
     # source-address and remote are mandatory options
-    required_keys = {'source_address', 'remote', 'mode', 'tunnel_type'}
+    required_keys = {'source_address', 'remote', 'tunnel_type'}
     if not all(key in config for key in required_keys):
         missing_keys = required_keys - set(config.keys())
         raise ConfigError(
@@ -157,17 +122,28 @@ def verify(config):
     if config.get('source_address') == config.get('remote'):
         raise ConfigError('Remote address must not be the same as source address')
 
-    # check multipoint mode
-    if config.get('mode') == 'point-to-multipoint':
-        # For multipoint mode, remote IP must be 0.0.0.0
-        if config.get('remote') != '0.0.0.0':
-            raise ConfigError('For point-to-multipoint mode, remote must be 0.0.0.0')
-
-    # Change 'vpp interfaces gre greX kernel-interface vpp-tunX'
-    #     => 'vpp interfaces gre greX kernel-interface vpp-tunY'
-    # check if we have kernel interface config 'vpp kernel-interface vpp-tunX'
-    verify_vpp_change_kernel_interface(config)
-    verify_vpp_exists_kernel_interface(config)
+    # Disable checks as point-to-multipoint mode does not work without 'teib' feature that is not implemented yet
+    # # check multipoint mode
+    # if config.get('mode') == 'point-to-multipoint':
+    #     # For multipoint mode, remote IP must be 0.0.0.0
+    #     if config.get('remote') != '0.0.0.0':
+    #         raise ConfigError('For point-to-multipoint mode, remote must be 0.0.0.0')
+    #
+    #     # Only one multipoint GRE tunnel is allowed from the same source address
+    #     #   set interfaces vpp gre vppgre0 mode 'point-to-multipoint'
+    #     #   set interfaces vpp gre vppgre0 remote '0.0.0.0'
+    #     #   set interfaces vpp gre vppgre0 source-address '192.0.2.1'
+    #     #   set interfaces vpp gre vppgre1 mode 'point-to-multipoint'
+    #     #   set interfaces vpp gre vppgre1 remote '0.0.0.0'
+    #     #   set interfaces vpp gre vppgre1 source-address '192.0.2.1'
+    #     for other_iface, other_iface_config in config['gre_interfaces'].items():
+    #         if other_iface == config['ifname']:
+    #             continue
+    #         if other_iface_config['mode'] == 'point-to-multipoint':
+    #             if config['source_address'] == other_iface_config.get('source_address'):
+    #                 raise ConfigError(
+    #                     'Only one multipoint GRE tunnel is allowed from the same source address'
+    #                 )
 
 
 def generate(config):
@@ -179,32 +155,13 @@ def apply(config):
         return None
 
     ifname = config.get('ifname')
-    # Delete interface
-    if 'effective' in config:
-        remove_config = config.get('effective')
-        src_addr = remove_config.get('source_address')
-        dst_addr = remove_config.get('remote')
-        i = GREInterface(ifname, src_addr, dst_addr)
-        i.delete()
+    gre = VPPGREInterface(ifname, config)
+    gre.remove()
 
-    if 'remove' in config:
-        return None
+    if 'deleted' in config:
+        return
 
-    # Add interface
-    src_addr = config.get('source_address')
-    dst_addr = config.get('remote')
-    kernel_interface = config.get('kernel_interface', '')
-    mode = config.get('mode')
-    tunnel_type = config.get('tunnel_type')
-    state = 'up' if 'disable' not in config else 'down'
-    i = GREInterface(
-        ifname, src_addr, dst_addr, tunnel_type, mode, kernel_interface, state
-    )
-    i.add()
-
-    # Add kernel-interface (LCP) if interface is not exist
-    if 'kernel_interface' in config and not is_interface(kernel_interface):
-        i.kernel_add()
+    gre.update(config)
 
     call_dependents()
 

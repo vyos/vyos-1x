@@ -45,6 +45,8 @@
 #
 # Migrate loopback interface from vpp section to 'interfaces vpp loopback' (T8324)
 #
+# Migrate gre interface to 'interfaces vpp gre', remove interfaces with mode "point-to-multipoint" (T8325)
+#
 
 from vyos.configtree import ConfigTree
 
@@ -463,6 +465,37 @@ def _migrate_vpp_loopback_interface(config: ConfigTree) -> None:
         config.delete(['vpp', 'interfaces'])
 
 
+def _migrate_vpp_gre_interface(config: ConfigTree) -> None:
+    base = ['vpp', 'interfaces', 'gre']
+    new_base = ['interfaces', 'vpp', 'gre']
+    kernel_interface_base = ['vpp', 'kernel-interfaces']
+
+    if not config.exists(base):
+        return
+
+    config.set(new_base)
+
+    for ifname in config.list_nodes(base):
+        if config.exists(base + [ifname, 'mode']):
+            if config.return_value(base + [ifname, 'mode']) == 'point-to-multipoint':
+                config.delete(base + [ifname])
+                continue
+            config.delete(base + [ifname, 'mode'])
+
+        _migrate_interface(config, 'gre', ifname)
+
+        _migrate_members_bridge(config, ifname)
+        _migrate_members_xconnect(config, ifname)
+
+    config.delete(base)
+
+    if config.exists(kernel_interface_base) and len(config.list_nodes(kernel_interface_base)) == 0:
+        config.delete(['vpp', 'kernel-interfaces'])
+
+    if len(config.list_nodes(['vpp', 'interfaces'])) == 0:
+        config.delete(['vpp', 'interfaces'])
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
         # Nothing to do
@@ -482,3 +515,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_vxlan_interface(config)
     _migrate_vpp_ipip_interface(config)
     _migrate_vpp_loopback_interface(config)
+    _migrate_vpp_gre_interface(config)

@@ -18,7 +18,6 @@
 from .bridge import BridgeInterface
 from .ethernet import EthernetInterface
 from .geneve import GeneveInterface
-from .gre import GREInterface
 from .interface import Interface
 from .wireguard import WireguardInterface
 from .xconnect import XconnectInterface
@@ -27,7 +26,6 @@ __all__ = [
     'BridgeInterface',
     'EthernetInterface',
     'GeneveInterface',
-    'GREInterface',
     'Interface',
     'WireguardInterface',
     'XconnectInterface',
