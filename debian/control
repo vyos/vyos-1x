@@ -393,6 +393,9 @@ Depends:
 # For "run format disk"
   parted,
 # End Operational mode
+# For apn functionality
+  apnscripts,
+# End apn functionality
 ## TPM tools
   cryptsetup,
   tpm2-tools,
