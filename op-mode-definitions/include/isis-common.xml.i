@@ -143,7 +143,7 @@
 </node>
 <node name="segment-routing">
   <properties>
-    <help>Show IS-IS Segment-Routing (SPRING) information</help>
+    <help>Show IS-IS Segment Routing (SPRING) information</help>
   </properties>
   <children>
     <leafNode name="node">
@@ -152,6 +152,19 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
+    <node name="srv6">
+      <properties>
+        <help>Segment Routing over IPv6 (SRv6)</help>
+      </properties>
+      <children>
+        <leafNode name="node">
+          <properties>
+            <help>SRv6 node information</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </node>
 <leafNode name="spf-delay-ietf">
