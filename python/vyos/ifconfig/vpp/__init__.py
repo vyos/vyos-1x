@@ -22,6 +22,7 @@ from .interface import VPPInterface
 from .ipip import VPPIPIPInterface
 from .loopback import VPPLoopbackInterface
 from .vxlan import VPPVXLANInterface
+from .xconnect import VPPXconnectInterface
 
 __all__ = [
     'VPPBondInterface',
@@ -31,4 +32,5 @@ __all__ = [
     'VPPIPIPInterface',
     'VPPLoopbackInterface',
     'VPPVXLANInterface',
+    'VPPXconnectInterface',
 ]

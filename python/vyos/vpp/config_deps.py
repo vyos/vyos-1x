@@ -31,7 +31,7 @@ def deps_xconnect_dict(conf) -> dict[str, list[str]]:
     """
     xconn_members_dict: dict[str, list[str]] = {}
     config = conf.get_config_dict(
-        ['vpp', 'interfaces', 'xconnect'],
+        ['interfaces', 'vpp', 'xconnect'],
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
@@ -39,7 +39,7 @@ def deps_xconnect_dict(conf) -> dict[str, list[str]]:
 
     for xconn_name, xconn_config in config.items():
         for member_name in xconn_config.get('member', {}).get('interface', []):
-            xconn_ifaces_list = xconn_members_dict.get(xconn_name, [])
+            xconn_ifaces_list = xconn_members_dict.get(member_name, [])
             xconn_ifaces_list.append(xconn_name)
             xconn_members_dict.update({member_name: xconn_ifaces_list})
 

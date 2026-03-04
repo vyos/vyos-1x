@@ -730,9 +730,10 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_09_vpp_xconnect(self):
+        xconn_path = interfaces_path + ['xconnect']
         vni = '23'
         interface_vxlan = f'vppvxlan{vni}'
-        interface_xconnect = f'xcon{vni}'
+        interface_xconnect = f'vppxcon{vni}'
         source_address = '192.0.2.1'
         remote_address = '192.0.2.254'
 
@@ -748,15 +749,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Add xconneect
         self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'xconnect',
-                interface_xconnect,
-                'member',
-                'interface',
-                interface,
-            ]
+            xconn_path + [interface_xconnect, 'member', 'interface', interface]
         )
 
         # Cross connect interfaces require 2 interfaces
@@ -765,15 +758,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
         self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'xconnect',
-                interface_xconnect,
-                'member',
-                'interface',
-                interface_vxlan,
-            ]
+            xconn_path + [interface_xconnect, 'member', 'interface', interface_vxlan]
         )
 
         # commit changes
@@ -789,7 +774,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(required_string, out)
 
         # delete xconnect interface
-        self.cli_delete(base_path + ['interfaces', 'xconnect', interface_xconnect])
+        self.cli_delete(xconn_path + [interface_xconnect])
         self.cli_commit()
 
         # check delete xconnect interface
