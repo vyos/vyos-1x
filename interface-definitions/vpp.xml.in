@@ -626,6 +626,51 @@
                 #include <include/generic-description.xml.i>
               </children>
             </tagNode>
+            <node name="exclude">
+              <properties>
+                <help>Exclude packets matching these rules from CGNAT</help>
+              </properties>
+              <children>
+                <tagNode name="rule">
+                  <properties>
+                    <help>Rule number</help>
+                    <valueHelp>
+                      <format>u32</format>
+                      <description>Number of rule</description>
+                    </valueHelp>
+                  </properties>
+                  <children>
+                    <leafNode name="local-address">
+                      <properties>
+                        <help>IP address of the internal (local) device</help>
+                        <valueHelp>
+                          <format>ipv4</format>
+                          <description>IPv4 address</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="ipv4-address"/>
+                        </constraint>
+                      </properties>
+                    </leafNode>
+                    <leafNode name="local-port">
+                      <properties>
+                        <help>Port number used by connection on internal device</help>
+                        <valueHelp>
+                          <format>u32:1-65535</format>
+                          <description>Numeric IP port</description>
+                        </valueHelp>
+                        <constraint>
+                          <validator name="numeric" argument="--range 1-65535"/>
+                        </constraint>
+                        <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
+                      </properties>
+                    </leafNode>
+                    #include <include/vpp/nat_protocol.xml.i>
+                    #include <include/generic-description.xml.i>
+                  </children>
+                </tagNode>
+              </children>
+            </node>
             <node name="timeout">
               <properties>
                 <help>Timeouts for CGNAT sessions</help>

@@ -32,6 +32,12 @@
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/vpp_nat_cgnat.py show_interfaces</command>
                   </node>
+                  <node name="exclude-rules">
+                    <properties>
+                      <help>Show VPP CGNAT exclude rules (identity mappings)</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/vpp_nat_cgnat.py show_exclude_rules</command>
+                  </node>
                 </children>
               </node>
             </children>
