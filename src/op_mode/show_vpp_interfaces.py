@@ -248,9 +248,12 @@ if __name__ == '__main__':
         vpp_interfaces = []
         vpp_ethernet = config.list_nodes('vpp settings interface')
         vpp_interfaces.extend(vpp_ethernet)
-        if config.exists('vpp kernel-interfaces'):
-            vpp_kernel_interfaces = config.list_nodes('vpp kernel-interfaces')
-            vpp_interfaces.extend(vpp_kernel_interfaces)
+        if config.exists('interfaces vpp'):
+            for iface_type in config.list_nodes('interfaces vpp'):
+                vpp_kernel_interfaces = config.list_nodes(
+                    f'interfaces vpp {iface_type}'
+                )
+                vpp_interfaces.extend(vpp_kernel_interfaces)
         print(show_interfaces(interfaces_list=vpp_interfaces))
 
     if args.hardware:

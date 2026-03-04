@@ -104,11 +104,6 @@ def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
     for iface in config.get('settings', {}).get('interface', {}).keys():
         vpp_ifaces.append(iface)
 
-    # Get a list of VPP interfaces
-    for iface_type in config.get('interfaces', {}).keys():
-        for iface in config.get('interfaces', {}).get(iface_type, {}).keys():
-            vpp_ifaces.append(iface)
-
     # Get a list of interfaces VPP
     for iface_type in interfaces_config.keys():
         for iface in interfaces_config.get(iface_type, {}).keys():
@@ -244,44 +239,6 @@ def vpp_ifaces_stats(
             ifaces_stats[iface_name] = stats_item
 
     return ifaces_stats
-
-
-def cli_ifaces_lcp_kernel_list(
-    config_instance, mode: str = 'candidate'
-) -> list[tuple[str, str]]:
-    """List of all VPP kernel-interfaces (CLI names, attached VPP interfaces)
-
-    Args:
-        config_instance (VyOS Config): VyOS Config instance
-        mode (str, optional): `candidate` or `running`. Defaults to 'candidate'.
-
-    Returns:
-        list[tuple[str, str]]: list of interfaces ([(vpp_iface, kernel_iface)])
-    """
-
-    effective_mode: bool = True if mode == 'running' else False
-
-    # Read a config
-    config = config_instance.get_config_dict(
-        ['vpp'],
-        key_mangling=('-', '_'),
-        effective=effective_mode,
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-        with_recursive_defaults=True,
-    )
-
-    lcp_kernel_ifaces: list[tuple[str, str]] = []
-
-    # Get a list with kernel interfaces
-    for ifaces_list in config.get('interfaces', {}).values():
-        for iface_name, iface_settings in ifaces_list.items():
-            if 'kernel_interface' in iface_settings:
-                lcp_kernel_ifaces.append(
-                    (iface_name, iface_settings['kernel_interface'])
-                )
-
-    return lcp_kernel_ifaces
 
 
 def get_default_hugepage_size() -> int:

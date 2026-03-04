@@ -78,8 +78,6 @@ vpp_log = getLogger(
 dependency_interface_type_map = {
     'vpp_interfaces_bonding': 'bonding',
     'vpp_interfaces_bridge': 'bridge',
-    'vpp_interfaces_ethernet': 'ethernet',
-    'vpp_interfaces_geneve': 'geneve',
     'vpp_interfaces_gre': 'gre',
     'vpp_interfaces_ipip': 'ipip',
     'vpp_interfaces_loopback': 'loopback',
@@ -442,17 +440,6 @@ def get_config(config=None):
 
     # Dependencies
     for dependency, interface_type in dependency_interface_type_map.items():
-        # if conf.exists(base + ['interfaces', interface_type]):
-        if effective_config.get('interfaces', {}).get(interface_type):
-            for iface, iface_config in (
-                config.get('interfaces', {}).get(interface_type, {}).items()
-            ):
-                # filter unsupported config nodes
-                if interface_type == 'ethernet':
-                    iface_filter_eth(conf, iface)
-                set_dependents(dependency, conf, iface)
-
-    for dependency, interface_type in dependency_interface_type_map.items():
         if conf.exists(['interfaces', 'vpp', interface_type]):
             for iface, iface_config in interfaces_config.get(
                 interface_type, {}
@@ -465,11 +452,6 @@ def get_config(config=None):
         get_first_key=True,
         no_tag_node_value_mangle=True,
     )
-
-    # kernel-interfaces dependency
-    if effective_config.get('kernel_interfaces'):
-        for iface in config.get('kernel_interfaces', {}):
-            set_dependents('vpp_kernel_interface', conf, iface)
 
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
