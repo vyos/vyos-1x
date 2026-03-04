@@ -345,128 +345,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(gre_path + [interface_gre])
         self.cli_commit()
 
-    @unittest.skip('Skipping this test geneve index always is 0')
-    def test_04_vpp_geneve(self):
-        vni = '2'
-        # Must be 'geneve0' to pass smoketest
-        # As geneve interfaces cannot be named with "instance" suffix
-        interface_geneve = 'geneve0'
-        interface_kernel = f'vpptun{vni}'
-        new_interface_kernel = f'vpptun1{vni}'
-        source_address = '192.0.2.1'
-        new_source_address = '192.0.2.2'
-        remote_address = '203.0.113.10'
-        kernel_address = '10.0.0.1'
-
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'geneve',
-                interface_geneve,
-                'source-address',
-                source_address,
-            ]
-        )
-        self.cli_set(
-            base_path
-            + ['interfaces', 'geneve', interface_geneve, 'remote', remote_address]
-        )
-        self.cli_set(base_path + ['interfaces', 'geneve', interface_geneve, 'vni', vni])
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'geneve',
-                interface_geneve,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        self.cli_set(
-            base_path
-            + ['kernel-interfaces', interface_kernel, 'address', f'{kernel_address}/31']
-        )
-
-        # commit changes
-        self.cli_commit()
-
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        current_address = get_address(interface_kernel)
-        self.assertEqual(kernel_address, current_address)
-
-        # check geneve interface
-        _, out = rc_cmd('sudo vppctl show geneve tunnel')
-        required_str = f'[0] lcl {source_address} rmt {remote_address} vni {vni}'
-        self.assertIn(required_str, out)
-
-        # update geneve interface
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'geneve',
-                interface_geneve,
-                'source-address',
-                new_source_address,
-            ]
-        )
-        self.cli_commit()
-
-        # check geneve interface after update
-        _, out = rc_cmd('sudo vppctl show geneve tunnel')
-        required_str = f'[0] lcl {new_source_address} rmt {remote_address} vni {vni}'
-        self.assertIn(required_str, out)
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-        self.assertEqual(kernel_address, current_address)
-
-        # delete geneve kernel-interface but do not delete 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_delete(
-            base_path
-            + [
-                'interfaces',
-                'geneve',
-                interface_geneve,
-                'kernel-interface',
-                interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # update gemeve kernel-interface but do not change 'vpp kernel-interface'
-        # expect raise ConfigError
-        self.cli_set(
-            base_path
-            + [
-                'interfaces',
-                'geneve',
-                interface_geneve,
-                'kernel-interface',
-                new_interface_kernel,
-            ]
-        )
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        # delete vpp kernel-interface
-        self.cli_delete(base_path + ['kernel-interfaces', interface_kernel])
-        self.cli_commit()
-
-        # delete geneve kernel-interface
-        self.cli_delete(
-            base_path + ['interfaces', 'geneve', interface_geneve, 'kernel-interface']
-        )
-        self.cli_commit()
-
-        self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_kernel}'))
-
-        # delete geneve interface
-        self.cli_set(base_path + ['interfaces', 'geneve', interface_geneve])
-        self.cli_commit()
-
-    def test_05_vpp_loopback(self):
+    def test_04_vpp_loopback(self):
         loopback_path = interfaces_path + ['loopback']
         interface_loopback = 'vpplo11'
         address = '192.0.2.54'
@@ -491,7 +370,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(loopback_path + [interface_loopback])
         self.cli_commit()
 
-    def test_06_vpp_bonding(self):
+    def test_05_vpp_bonding(self):
         bond_path = interfaces_path + ['bonding']
         interface_bond = 'vppbond23'
         hash = 'layer3+4'
@@ -561,7 +440,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             "Interface BondEthernet23 is not in the expected state 'up'.",
         )
 
-        # delete vpp kernel-interface vlan
+        # delete vpp interface vlan
         self.cli_delete(bond_path + [interface_bond, 'vif'])
         self.cli_commit()
         self.assertFalse(os.path.isdir(f'/sys/class/net/{interface_bond}.{vlan}'))
@@ -574,7 +453,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show interface')
         self.assertNotIn('BondEthernet23', out)
 
-    def test_07_vpp_bridge(self):
+    def test_06_vpp_bridge(self):
         bridge_path = interfaces_path + ['bridge']
         fake_member = 'eth2'
         members = [interface]
@@ -680,7 +559,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertRegex(normalized_out, r'10 1 \d+ off')
         self.assertRegex(out, r'\bloop23\s+\d+\s+\d+\s+\d+\s+\*\s+')
 
-    def test_08_vpp_ipip(self):
+    def test_07_vpp_ipip(self):
         ipip_path = interfaces_path + ['ipip']
         interface_ipip = 'vppipip12'
         source_address = '192.0.2.1'
@@ -729,7 +608,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(ipip_path + [interface_ipip])
         self.cli_commit()
 
-    def test_09_vpp_xconnect(self):
+    def test_08_vpp_xconnect(self):
         xconn_path = interfaces_path + ['xconnect']
         vni = '23'
         interface_vxlan = f'vppvxlan{vni}'
@@ -782,7 +661,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for required_string in required_str_list:
             self.assertNotIn(required_string, out)
 
-    def test_10_vpp_driver_options(self):
+    def test_09_vpp_driver_options(self):
         driver_options = {
             'num-rx-desc': '512',
             'num-tx-desc': '512',
@@ -821,7 +700,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for option, value in driver_options.items():
             self.assertIn(f'{option} {value}', config)
 
-    def test_11_vpp_cpu_cores(self):
+    def test_10_vpp_cpu_cores(self):
         cpu_cores = '2'
         skip_cores, main_core = get_vpp_cpu_allocation()
 
@@ -846,7 +725,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, config)
 
-    def test_12_1_buffer_page_size(self):
+    def test_11_1_buffer_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
             self.cli_set(resource_path + ['buffers', 'page-size', size])
@@ -855,7 +734,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['buffers']['page-size'], size)
 
-    def test_12_2_statseg_page_size(self):
+    def test_11_2_statseg_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
             self.cli_set(resource_path + ['memory', 'stats', 'page-size', size])
@@ -864,7 +743,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['statseg']['page-size'], size)
 
-    def test_12_3_mem_page_size(self):
+    def test_11_3_mem_page_size(self):
         sizes = ['4K', '2M']
         for size in sizes:
             self.cli_set(resource_path + ['memory', 'main-heap-page-size', size])
@@ -873,7 +752,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
 
-    def test_13_vpp_ipsec_xfrm_nl(self):
+    def test_12_vpp_ipsec_xfrm_nl(self):
         rx_buffer_zise = default_resource_map.get('netlink_rx_buffer_size')
 
         self.cli_set(base_path + ['settings', 'ipsec-acceleration'])
@@ -891,7 +770,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         for config_entry in config_entries:
             self.assertIn(config_entry, config)
 
-    def test_14_1_vpp_cgnat(self):
+    def test_13_1_vpp_cgnat(self):
         base_cgnat = base_path + ['nat', 'cgnat']
         iface_out = 'eth0'
         iface_inside = 'eth1'
@@ -930,7 +809,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'tcp transitory timeout: {timeout_tcp_trans}sec', out)
         self.assertIn(f'icmp timeout: {timeout_icmp}sec', out)
 
-    def test_14_2_vpp_cgnat_bond_with_vifs(self):
+    def test_13_2_vpp_cgnat_bond_with_vifs(self):
         base_cgnat = base_path + ['nat', 'cgnat']
         base_bond = interfaces_path + ['bonding']
         iface_bond = 'vppbond0'
@@ -970,7 +849,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         lines = out.split('\n')
         self.assertTrue(len(lines) == 3)
 
-    def test_15_vpp_nat44(self):
+    def test_14_vpp_nat44(self):
         base_nat = base_path + ['nat', 'nat44']
         exclude_local_addr = '100.64.0.52'
         exclude_local_port = '22'
@@ -1067,7 +946,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         out = vpp.api.nat44_show_running_config().forwarding_enabled
         self.assertTrue(out)
 
-    def test_16_vpp_sflow(self):
+    def test_15_vpp_sflow(self):
         base_sflow = ['system', 'sflow']
         sampling_rate = '1500'
         polling_interval = '55'
@@ -1128,7 +1007,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show sflow')
         self.assertIn('interfaces enabled: 0', out)
 
-    def test_17_resource_limits(self):
+    def test_16_resource_limits(self):
         max_map_count = '100000'
         shmmax = '55555555555555'
         hr_path = ['system', 'option', 'resource-limits']
@@ -1155,7 +1034,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
         self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
 
-    def test_18_vpp_pppoe_mapping(self):
+    def test_17_vpp_pppoe_mapping(self):
         config_file = '/run/accel-pppd/pppoe.conf'
         pool = "TEST-POOL"
         vni = '23'
@@ -1205,7 +1084,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', interface, 'vif'])
         self.cli_commit()
 
-    def test_19_kernel_options_hugepages(self):
+    def test_18_kernel_options_hugepages(self):
         default_hp_size = '2M'
         hp_size_1g = '1G'
         hp_size_2m = '2M'
@@ -1238,7 +1117,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' hugepagesz={hp_size_1g} hugepages={hp_count_1g}', tmp)
         self.assertIn(f' hugepagesz={hp_size_2m} hugepages={hp_count_2m}', tmp)
 
-    def test_20_static_arp(self):
+    def test_19_static_arp(self):
         host = '192.0.2.10'
         mac = '00:01:02:03:04:0a'
         path_static_arp = ['protocols', 'static', 'arp']
@@ -1262,7 +1141,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(path_static_arp)
 
-    def test_21_1_vpp_ipfix(self):
+    def test_20_1_vpp_ipfix(self):
         base_ipfix = base_path + ['ipfix']
         base_collector = base_ipfix + ['collector']
         collector_ip = '127.0.0.2'
@@ -1349,7 +1228,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             len(non_default_exporters), 0, 'Exporters not cleaned up properly'
         )
 
-    def test_21_2_vpp_ipfix_bond(self):
+    def test_20_2_vpp_ipfix_bond(self):
         base_ipfix = base_path + ['ipfix']
         base_bond = interfaces_path + ['bonding']
         iface_bond = 'vppbond0'
@@ -1379,7 +1258,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show flowprobe feature')
         self.assertIn(required_str, out)
 
-    def test_22_double_enabling_vpp(self):
+    def test_21_double_enabling_vpp(self):
         # Verify double enabling of VPP
 
         # Delete already defined settings from 'setUp' method

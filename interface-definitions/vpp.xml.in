@@ -1244,31 +1244,6 @@
         </node>
       </children>
     </node>
-    <tagNode name="kernel-interfaces" owner="${vyos_conf_scripts_dir}/vpp_kernel-interfaces.py">
-      <properties>
-        <help>VPP kernel interface settings</help>
-        <priority>328</priority>
-        <valueHelp>
-          <format>vpptapN</format>
-          <description>Kernel interface name</description>
-        </valueHelp>
-        <valueHelp>
-          <format>vpptunN</format>
-          <description>Kernel interface name</description>
-        </valueHelp>
-        <constraint>
-          <regex>vpp(tun|tap)\d+</regex>
-        </constraint>
-        <constraintErrorMessage>Kernel interface must start with vpp and include tun or tap N</constraintErrorMessage>
-      </properties>
-      <children>
-        #include <include/interface/address-ipv4-ipv6.xml.i>
-        #include <include/generic-description.xml.i>
-        #include <include/interface/disable.xml.i>
-        #include <include/interface/mtu-68-16000.xml.i>
-        #include <include/vpp/vif.xml.i>
-      </children>
-    </tagNode>
   </children>
 </node>
 </interfaceDefinition>
