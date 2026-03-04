@@ -14,7 +14,7 @@
                 <properties>
                   <help>Show bridge information for specified interface</help>
                   <completionHelp>
-                    <path>vpp interfaces bridge</path>
+                    <path>interfaces vpp bridge</path>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vpp.py show_bridge --ifname=$4</command>

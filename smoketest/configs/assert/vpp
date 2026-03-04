@@ -22,6 +22,8 @@ set system syslog local facility local7 level 'debug'
 set interfaces vpp bonding vppbond0 hash-policy 'layer2+3'
 set interfaces vpp bonding vppbond0 member interface 'eth4'
 set interfaces vpp bonding vppbond0 mode '802.3ad'
+set interfaces vpp bridge vppbr1 description 'Bridge1'
+set interfaces vpp bridge vppbr1 member interface eth2
 set interfaces vpp gre vppgre10 description 'Layer-3'
 set interfaces vpp gre vppgre10 remote '192.0.2.2'
 set interfaces vpp gre vppgre10 source-address '192.0.2.1'

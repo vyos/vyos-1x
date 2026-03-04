@@ -16,6 +16,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from .bond import VPPBondInterface
+from .bridge import VPPBridgeInterface
 from .gre import VPPGREInterface
 from .interface import VPPInterface
 from .ipip import VPPIPIPInterface
@@ -24,6 +25,7 @@ from .vxlan import VPPVXLANInterface
 
 __all__ = [
     'VPPBondInterface',
+    'VPPBridgeInterface',
     'VPPGREInterface',
     'VPPInterface',
     'VPPIPIPInterface',

@@ -277,17 +277,17 @@ class VPPShow:
         if ifname is None:
             return None
 
-        if not ifname.startswith('br') and not ifname[2:].isdigit():
+        if not ifname.startswith('vppbr') and not ifname[5:].isdigit():
             raise vyos.opmode.IncorrectValue(
-                f'"{ifname}" is not a valid bridge interface name (expected brN)'
+                f'"{ifname}" is not a valid bridge interface name (expected vppbrN)'
             )
 
-        if not self.config.exists(['vpp', 'interfaces', 'bridge', ifname]):
+        if not self.config.exists(['interfaces', 'vpp', 'bridge', ifname]):
             raise vyos.opmode.IncorrectValue(
                 f'Bridge interface {ifname} does not exist'
             )
 
-        return int(ifname[2:])
+        return int(ifname[5:])
 
     def _get_bridge_domain_raw(
         self, bd_id: typing.Optional[int] = None
@@ -401,12 +401,12 @@ def show_lacp_details(raw: bool, ifname: typing.Optional[str]):
 # -----------------------------
 # Bridge op-mode entries
 # -----------------------------
-@_verify('vpp interfaces bridge')
+@_verify('interfaces vpp bridge')
 def show_bridge(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain(raw, ifname)
 
 
-@_verify('vpp interfaces bridge')
+@_verify('interfaces vpp bridge')
 def show_bridge_details(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain_details(raw, ifname)
 

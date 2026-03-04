@@ -47,6 +47,8 @@
 #
 # Migrate gre interface to 'interfaces vpp gre', remove interfaces with mode "point-to-multipoint" (T8325)
 #
+# Migrate bridge interface from vpp section to 'interfaces vpp bridge' (T8327)
+#
 
 from vyos.configtree import ConfigTree
 
@@ -496,6 +498,24 @@ def _migrate_vpp_gre_interface(config: ConfigTree) -> None:
         config.delete(['vpp', 'interfaces'])
 
 
+def _migrate_vpp_bridge_interface(config: ConfigTree) -> None:
+    base = ['vpp', 'interfaces', 'bridge']
+    new_base = ['interfaces', 'vpp', 'bridge']
+
+    if not config.exists(base):
+        return
+
+    config.set(new_base)
+
+    for ifname in config.list_nodes(base):
+        _migrate_interface(config, 'bridge', ifname)
+
+    config.delete(base)
+
+    if len(config.list_nodes(['vpp', 'interfaces'])) == 0:
+        config.delete(['vpp', 'interfaces'])
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
         # Nothing to do
@@ -516,3 +536,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_ipip_interface(config)
     _migrate_vpp_loopback_interface(config)
     _migrate_vpp_gre_interface(config)
+    _migrate_vpp_bridge_interface(config)

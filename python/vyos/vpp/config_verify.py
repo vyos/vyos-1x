@@ -108,6 +108,17 @@ def verify_vpp_remove_xconnect_interface(config: dict):
             )
 
 
+def verify_vpp_remove_bridge_interface(config: dict):
+    if not 'deleted' in config:
+        return
+    for bridge_member, bridge_iface in config.get('bridge_members').items():
+        if bridge_member == config.get('ifname'):
+            raise ConfigError(
+                f'interface "{bridge_member}" is still in use within "interfaces vpp bridge". '
+                f'Please remove it from "interface vpp bridge {bridge_iface}" before proceeding.'
+            )
+
+
 def verify_vpp_tunnel_source_address(config: dict):
     from vyos.utils.network import is_intf_addr_assigned
 

@@ -45,6 +45,7 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
 from vyos.vpp import VppNotRunningError
+from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
     verify_dev_driver,
@@ -254,6 +255,7 @@ def get_config(config=None):
     )
 
     xconn_members = deps_xconnect_dict(conf)
+    bridge_members = deps_bridge_dict(conf)
 
     removed_ifaces = []
     tmp = node_changed(conf, base_settings + ['interface'])
@@ -294,6 +296,7 @@ def get_config(config=None):
         return {
             'removed_ifaces': removed_ifaces,
             'xconn_members': xconn_members,
+            'bridge_members': bridge_members,
             'persist_config': eth_ifaces_persist,
             'interfaces_vpp': interfaces_config,
             'remove': {},
@@ -433,6 +436,7 @@ def get_config(config=None):
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
         config['xconn_members'] = xconn_members
+        config['bridge_members'] = bridge_members
 
     config['interfaces_vpp'] = interfaces_config
 
@@ -611,31 +615,15 @@ def verify(config):
                     f'RX mode {rx_mode} is not supported for interface {iface}'
                 )
 
-    # check GRE tunnels as part of the bridge, only tunnel-type teb is allowed
-    #   set vpp interfaces bridge br1 member interface vppgre1
-    #   set interfaces vpp gre vppgre1 tunnel-type teb
-    if 'interfaces' in config:
-        if 'bridge' in config['interfaces']:
-            for iface, iface_config in config['interfaces']['bridge'].items():
-                if 'member' in iface_config:
-                    for member in iface_config['member'].get('interface', []):
-                        if member.startswith('vppgre'):
-                            if (
-                                'gre' in config['interfaces_vpp']
-                                and config['interfaces_vpp']['gre']
-                                .get(member, {})
-                                .get('tunnel_type')
-                                != 'teb'
-                            ):
-                                raise ConfigError(
-                                    f'Only tunnel-type teb is allowed for GRE interfaces in bridge {iface}'
-                                )
-
-    # Check if deleted interfaces are not xconnect memebrs
+    # Check if deleted interfaces are not xconnect members or not bridge members
     for iface_config in config.get('removed_ifaces', []):
         if iface_config['iface_name'] in config.get('xconn_members', {}):
             raise ConfigError(
                 f'Interface {iface_config["iface_name"]} is an xconnect member and cannot be removed'
+            )
+        if iface_config['iface_name'] in config.get('bridge_members', {}):
+            raise ConfigError(
+                f'Interface {iface_config["iface_name"]} is a bridge member and cannot be removed'
             )
 
     verify_routes_count(config['settings'])
