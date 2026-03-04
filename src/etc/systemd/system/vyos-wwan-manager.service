@@ -1,0 +1,45 @@
+[Unit]
+Description=VyOS WWAN Interface Manager
+Documentation=man:vyos-wwan-manager(8)
+After=dbus.service ModemManager.service vyos-router.service
+Wants=dbus.service ModemManager.service
+# Note: Optional service - does not block VyOS boot if it fails
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/lib/python3/dist-packages/vyos/utils/wwan/interfaces_wwan_main.py
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=3
+StartLimitIntervalSec=300
+User=root
+Group=vyattacfg
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/run /var/log /tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RemoveIPC=true
+
+# Allow D-Bus communication
+SupplementaryGroups=messagebus
+
+# Environment
+Environment=PYTHONPATH=/usr/lib/python3/dist-packages
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vyos-wwan-manager
+
+[Install]
+WantedBy=multi-user.target
+# Note: Service must be manually enabled and will not auto-start on installation
