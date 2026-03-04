@@ -91,8 +91,31 @@ secrets {
 {%         endif %}
 {%         if psk_config.secret_type is vyos_defined('base64') %}
         secret = 0s{{ psk_config.secret }}
+{%         elif psk_config.secret_type is vyos_defined('hex') %}
+        secret = 0x{{ psk_config.secret }}
 {%         elif psk_config.secret_type is vyos_defined('plaintext') %}
         secret = "{{ psk_config.secret }}"
+{%         endif %}
+    }
+{%     endfor %}
+{% endif %}
+
+{% if authentication.ppk is vyos_defined %}
+{%     for ppk, ppk_config in authentication.ppk.items() %}
+    ppk-{{ ppk }} {
+{%         if ppk_config.id is vyos_defined %}
+        # ID's from auth ppk <tag> id xxx
+{%             for id in ppk_config.id %}
+{%                 set gen_uuid = '' | generate_uuid4 %}
+        id-{{ gen_uuid }} = "{{ id }}"
+{%             endfor %}
+{%         endif %}
+{%         if ppk_config.secret_type is vyos_defined('base64') %}
+        secret = 0s{{ ppk_config.secret }}
+{%         elif ppk_config.secret_type is vyos_defined('hex') %}
+        secret = 0x{{ ppk_config.secret }}
+{%         elif ppk_config.secret_type is vyos_defined('plaintext') %}
+        secret = "{{ ppk_config.secret }}"
 {%         endif %}
     }
 {%     endfor %}

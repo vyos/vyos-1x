@@ -3,6 +3,15 @@
 {# peer needs to reference the global IKE configuration for certain values #}
 {% set ike = ike_group[peer_conf.ike_group] %}
     {{ name }} {
+{% if peer_conf.authentication.ppk.id is vyos_defined %}
+        ppk_id = {{ peer_conf.authentication.ppk.id }}
+{% endif %}
+{% if peer_conf.authentication.ppk.required is vyos_defined %}
+        ppk_required = yes
+{% endif %}
+{% if peer_conf.childless is vyos_defined %}
+        childless = {{ peer_conf.childless }}
+{% endif %}
         proposals = {{ ike | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
 {% if peer_conf.virtual_address is vyos_defined %}
