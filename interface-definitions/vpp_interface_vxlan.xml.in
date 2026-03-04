@@ -25,7 +25,6 @@
               #include <include/vni.xml.i>
               #include <include/interface/address-ipv4-ipv6.xml.i>
               #include <include/interface/mtu-68-16000.xml.i>
-              #include <include/vpp/vif.xml.i>
             </children>
           </tagNode>
         </children>

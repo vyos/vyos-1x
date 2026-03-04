@@ -51,6 +51,7 @@
 #
 # Migrate xconnect interface from vpp section to 'interfaces vpp xconnect' (T8328)
 #
+# Remove vif option from vxlan interface (T8340)
 
 from vyos.configtree import ConfigTree
 
@@ -536,6 +537,17 @@ def _migrate_vpp_xconnect_interface(config: ConfigTree) -> None:
         config.delete(['vpp', 'interfaces'])
 
 
+def _migrate_vpp_vxlan_remove_vif(config: ConfigTree) -> None:
+    base = ['interfaces', 'vpp', 'vxlan']
+
+    if not config.exists(base):
+        return
+
+    for ifname in config.list_nodes(base):
+        if config.exists(base + [ifname, 'vif']):
+            config.delete(base + [ifname, 'vif'])
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
         # Nothing to do
@@ -558,3 +570,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_gre_interface(config)
     _migrate_vpp_bridge_interface(config)
     _migrate_vpp_xconnect_interface(config)
+    _migrate_vpp_vxlan_remove_vif(config)
