@@ -84,16 +84,14 @@ class SessionChanged:
     dummy: int = None
 
 @dataclass
-class Rename:
-    edit_level: list[str] = field(default_factory=list)
-    source: str = ""
-    destination: str = ""
+class Copy:
+    source: list[str] = field(default_factory=list)
+    destination: list[str] = field(default_factory=list)
 
 @dataclass
-class Copy:
-    edit_level: list[str] = field(default_factory=list)
-    source: str = ""
-    destination: str = ""
+class Rename:
+    source: list[str] = field(default_factory=list)
+    destination: list[str] = field(default_factory=list)
 
 @dataclass
 class Comment:
@@ -351,15 +349,15 @@ def set_request_session_changed(token: str = None, dummy: int = None):
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_rename(token: str = None, edit_level: list[str] = [], source: str = "", destination: str = ""):
-    reqi = Rename (edit_level, source, destination)
-    req = Request(rename=reqi)
+def set_request_copy(token: str = None, source: list[str] = [], destination: list[str] = []):
+    reqi = Copy (source, destination)
+    req = Request(copy=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env
 
-def set_request_copy(token: str = None, edit_level: list[str] = [], source: str = "", destination: str = ""):
-    reqi = Copy (edit_level, source, destination)
-    req = Request(copy=reqi)
+def set_request_rename(token: str = None, source: list[str] = [], destination: list[str] = []):
+    reqi = Rename (source, destination)
+    req = Request(rename=reqi)
     req_env = RequestEnvelope(token, req)
     return req_env
 
