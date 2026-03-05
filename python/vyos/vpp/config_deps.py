@@ -74,3 +74,33 @@ def deps_bridge_dict(conf) -> dict[str, list[str]]:
             bridge_members_dict.update({member_name: bridge_ifaces_list})
 
     return bridge_members_dict
+
+
+def deps_bond_dict(conf) -> dict[str, list[str]]:
+    """Get a dict of all bonding interface members:
+
+        keys: members
+
+        values: bridge interfaces
+
+    Args:
+        conf (config): VyOS config object
+
+    Returns:
+        dict[str, list[str]]: dict of members
+    """
+    bond_members_dict: dict[str, list[str]] = {}
+    config = conf.get_config_dict(
+        ['interfaces', 'vpp', 'bonding'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
+    for bond_name, bond_config in config.items():
+        for member_name in bond_config.get('member', {}).get('interface', []):
+            bond_ifaces_list = bond_members_dict.get(member_name, [])
+            bond_ifaces_list.append(bond_name)
+            bond_members_dict.update({member_name: bond_ifaces_list})
+
+    return bond_members_dict

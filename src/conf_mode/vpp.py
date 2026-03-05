@@ -45,6 +45,7 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
 from vyos.vpp import VppNotRunningError
+from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
@@ -254,6 +255,7 @@ def get_config(config=None):
 
     xconn_members = deps_xconnect_dict(conf)
     bridge_members = deps_bridge_dict(conf)
+    bond_members = deps_bond_dict(conf)
 
     removed_ifaces = []
     tmp = node_changed(conf, base_settings + ['interface'])
@@ -295,6 +297,7 @@ def get_config(config=None):
             'removed_ifaces': removed_ifaces,
             'xconn_members': xconn_members,
             'bridge_members': bridge_members,
+            'bond_members': bond_members,
             'persist_config': eth_ifaces_persist,
             'interfaces_vpp': interfaces_config,
             'remove': {},
@@ -435,6 +438,7 @@ def get_config(config=None):
         config['removed_ifaces'] = removed_ifaces
         config['xconn_members'] = xconn_members
         config['bridge_members'] = bridge_members
+        config['bond_members'] = bond_members
 
     config['interfaces_vpp'] = interfaces_config
 
@@ -597,7 +601,7 @@ def verify(config):
                     f'RX mode {rx_mode} is not supported for interface {iface}'
                 )
 
-    # Check if deleted interfaces are not xconnect members or not bridge members
+    # Check if deleted interfaces are not xconnect/bridge/bond members
     for iface_config in config.get('removed_ifaces', []):
         if iface_config['iface_name'] in config.get('xconn_members', {}):
             raise ConfigError(
@@ -606,6 +610,10 @@ def verify(config):
         if iface_config['iface_name'] in config.get('bridge_members', {}):
             raise ConfigError(
                 f'Interface {iface_config["iface_name"]} is a bridge member and cannot be removed'
+            )
+        if iface_config['iface_name'] in config.get('bond_members', {}):
+            raise ConfigError(
+                f'Interface {iface_config["iface_name"]} is a bond member and cannot be removed'
             )
 
     verify_routes_count(config['settings'])
