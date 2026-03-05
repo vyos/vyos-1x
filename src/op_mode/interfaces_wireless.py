@@ -23,18 +23,9 @@ from tabulate import tabulate
 from vyos.utils.process import popen
 from vyos.configquery import ConfigTreeQuery
 
-def _verify(func):
-    """Decorator checks if Wireless LAN config exists"""
-    from functools import wraps
-
-    @wraps(func)
-    def _wrapper(*args, **kwargs):
-        config = ConfigTreeQuery()
-        if not config.exists(['interfaces', 'wireless']):
-            unconf_message = 'No Wireless interfaces configured'
-            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
-        return func(*args, **kwargs)
-    return _wrapper
+verify_path = ['interfaces', 'wireless']
+verify_error = 'Wireless/WiFi subsystem unconfigured!'
+verify_interface_error = 'Wireless interface {interface} is not configured!'
 
 def _get_raw_info_data():
     output_data = []
@@ -156,7 +147,7 @@ def _format_station_data(raw_data):
     headers = ["Station", "Signal", "RX bytes", "RX packets", "TX bytes", "TX packets"]
     return tabulate(output, headers, numalign="left")
 
-@_verify
+@vyos.opmode.verify_cli_exists(verify_path, verify_error)
 def show_info(raw: bool):
     info_data = _get_raw_info_data()
     if raw:
@@ -169,7 +160,7 @@ def show_scan(raw: bool, intf_name: str):
         return data
     return _format_scan_data(data)
 
-@_verify
+@vyos.opmode.verify_cli_exists(verify_path, verify_interface_error)
 def show_stations(raw: bool, intf_name: str):
     data = _get_raw_station_data(intf_name)
     if raw:

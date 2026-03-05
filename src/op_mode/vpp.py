@@ -23,30 +23,7 @@ from vyos.vpp import VPPControl
 from vyos.configquery import ConfigTreeQuery
 import vyos.opmode
 
-
 NO_INDEX = 0xFFFFFFFF
-
-
-def _verify(target: typing.Optional[str]):
-    """Decorator checks if config for VPP feature exists"""
-    from functools import wraps
-
-    path = target.split() if target else []
-
-    def _verify_target(func):
-        @wraps(func)
-        def _wrapper(*args, **kwargs):
-            config = ConfigTreeQuery()
-            if not config.exists(path):
-                raise vyos.opmode.UnconfiguredSubsystem(
-                    f'"{" ".join(path)}" is not configured'
-                )
-            return func(*args, **kwargs)
-
-        return _wrapper
-
-    return _verify_target
-
 
 class VPPShow:
     RX_STATES = {
@@ -361,6 +338,7 @@ class VPPShow:
         cmd_command = f'show bridge-domain {bd_id} detail'
         data = self.vpp.cli_cmd(cmd_command)
 
+
         if raw:
             return [data.reply]
 
@@ -370,46 +348,39 @@ class VPPShow:
 # -----------------------------
 # VyOS IPFIX op-mode entries
 # -----------------------------
-@_verify('vpp ipfix interface')
+@vyos.opmode.verify_cli_exists(['vpp', 'ipfix', 'interface'])
 def show_ipfix_interfaces(raw: bool):
     return VPPShow().ipfix_interfaces(raw)
 
-
-@_verify('vpp ipfix collector')
+@vyos.opmode.verify_cli_exists(['vpp', 'ipfix', 'collector'])
 def show_ipfix_collectors(raw: bool):
     return VPPShow().ipfix_collectors(raw)
 
-
-@_verify('vpp ipfix')
+@vyos.opmode.verify_cli_exists(['vpp', 'ipfix'])
 def show_ipfix_table(raw: bool):
     return VPPShow().ipfix_table(raw)
-
 
 # -----------------------------
 # VPP LACP information
 # -----------------------------
-@_verify('interfaces vpp bonding')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bonding'])
 def show_lacp(raw: bool, ifname: typing.Optional[str]):
     return VPPShow().lacp_info(raw, ifname)
 
-
-@_verify('interfaces vpp bonding')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bonding'])
 def show_lacp_details(raw: bool, ifname: typing.Optional[str]):
     return VPPShow().lacp_details(raw, ifname)
 
-
 # -----------------------------
-# Bridge op-mode entries
+# Bridge op-mode entrie
 # -----------------------------
-@_verify('interfaces vpp bridge')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bridge'])
 def show_bridge(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain(raw, ifname)
 
-
-@_verify('interfaces vpp bridge')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bridge'])
 def show_bridge_details(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain_details(raw, ifname)
-
 
 if __name__ == '__main__':
     try:
