@@ -35,7 +35,7 @@ from paramiko import MissingHostKeyPolicy
 
 from requests import Session
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3 import PoolManager
+from urllib3 import PoolManager
 
 from vyos.progressbar import Progressbar
 from vyos.utils.io import ask_yes_no
