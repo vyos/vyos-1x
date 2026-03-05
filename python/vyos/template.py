@@ -274,9 +274,9 @@ def netmask_from_ipv4(address):
     Example:
       - 172.18.201.10 -> 255.255.255.128
     """
-    from netifaces import interfaces
-    from netifaces import ifaddresses
-    from netifaces import AF_INET
+    from netifaces import interfaces # pylint: disable = no-name-in-module
+    from netifaces import ifaddresses # pylint: disable = no-name-in-module
+    from socket import AF_INET
     for interface in interfaces():
         tmp = ifaddresses(interface)
         if AF_INET in tmp:
