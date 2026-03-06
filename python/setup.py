@@ -64,6 +64,9 @@ setup(
     keywords = "vyos",
     url = "http://www.vyos.io",
     packages = packages('vyos'),
+    package_data = {
+        'vyos.utils.wwan': ['*.conf'],
+    },
     long_description="VyOS configuration libraries",
     install_requires=[
         "dbus_next>=0.2.3",
