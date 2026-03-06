@@ -134,7 +134,7 @@ def show_exclude_rules(raw: bool):
 
     data_entries = []
     for m in mappings:
-        proto_map = {0: 'all', 1: 'icmp', 6: 'tcp', 17: 'udp'}
+        proto_map = {0: 'all', 1: 'icmp', 6: 'tcp', 17: 'udp', 255: 'all'}
         proto_name = proto_map.get(m.get('protocol'), str(m.get('protocol')))
         port_str = str(m.get('port')) if m.get('port') else 'any'
 
