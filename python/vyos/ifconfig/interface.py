@@ -1630,7 +1630,7 @@ class Interface(Control):
 
         # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
         # qdisc on specified device") - we simply cleanup all stuff here
-        if not 'traffic_policy' in self.config:
+        if not 'qos' in self.config:
             self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
             self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
 
