@@ -501,7 +501,7 @@ def verify_pki_ca_certificate(config: dict, ca_name: str):
 
     pki_cert = config['pki']['ca'][ca_name]
     if 'certificate' not in pki_cert:
-        raise ConfigError(f'PEM CA certificate for "{cert_name}" missing in configuration!')
+        raise ConfigError(f'PEM CA certificate for "{ca_name}" missing in configuration!')
 
 def verify_pki_dh_parameters(config: dict, dh_name: str, min_key_size: int=0):
     """

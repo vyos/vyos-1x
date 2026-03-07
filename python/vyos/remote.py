@@ -35,7 +35,7 @@ from paramiko import MissingHostKeyPolicy
 
 from requests import Session
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3 import PoolManager
+from urllib3 import PoolManager
 
 from vyos.progressbar import Progressbar
 from vyos.utils.io import ask_yes_no
@@ -220,23 +220,21 @@ class SshC:
 
     def upload(self, location: str):
         with self._establish() as ssh, ssh.open_sftp() as sftp:
+            # A file exists at this destination. We're simply going to clobber it.
+            # This is our default fallback
+            path = self.path
             try:
                 # If the remote path is a directory, use the original filename.
                 if stat.S_ISDIR(sftp.stat(self.path).st_mode):
                     path = os.path.join(self.path, os.path.basename(location))
-                # A file exists at this destination. We're simply going to clobber it.
-                else:
-                    path = self.path
-            # This path doesn't point at any existing file. We can freely use this filename.
             except IOError:
-                path = self.path
-            finally:
-                if self.progressbar:
-                    with Progressbar() as p:
-                        sftp.put(location, path, callback=p.progress)
-                else:
-                    sftp.put(location, path)
+                pass
 
+            if self.progressbar:
+                with Progressbar() as p:
+                    sftp.put(location, path, callback=p.progress)
+            else:
+                sftp.put(location, path)
 
 class HttpC:
     def __init__(self,
