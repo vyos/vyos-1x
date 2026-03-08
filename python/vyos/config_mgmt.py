@@ -43,6 +43,7 @@ from vyos.load_config import LoadConfigError
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
 from vyos.utils.io import ask_yes_no
+from vyos.utils.io import catch_broken_pipe
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
@@ -560,6 +561,7 @@ Proceed ?"""
         ret = tabulate(res_l, tablefmt='plain')
         return ret
 
+    @catch_broken_pipe
     def show_commit_diff(
         self, rev: int, rev2: Optional[int] = None, commands: bool = False
     ) -> str:
@@ -800,6 +802,7 @@ Proceed ?"""
 
 # entry_point for console script
 #
+@catch_broken_pipe
 def run():
     from argparse import ArgumentParser, REMAINDER
 
