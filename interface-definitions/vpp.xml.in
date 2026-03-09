@@ -293,12 +293,6 @@
                 </properties>
                 <defaultValue>4194304</defaultValue>
               </leafNode>
-              <leafNode name="ignore-kernel-routes">
-                <properties>
-                  <help>Ignore kernel routes</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
               <node name="memory">
                 <properties>
                   <help>Memory settings</help>
@@ -420,6 +414,12 @@
           <leafNode name="ipsec-acceleration">
             <properties>
               <help>Enable IPsec acceleration</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="ignore-kernel-routes">
+            <properties>
+              <help>Ignore kernel routes</help>
               <valueless/>
             </properties>
           </leafNode>

@@ -162,7 +162,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         required_str = 'lcp route-no-paths on'
         self.assertIn(required_str, out)
 
-        self.cli_set(resource_path + ['ignore-kernel-routes'])
+        self.cli_set(base_path + ['settings', 'ignore-kernel-routes'])
         self.cli_commit()
 
         # check disabled 'route no path'

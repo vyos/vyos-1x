@@ -747,9 +747,7 @@ def apply(config):
             vpp_control = VPPControl()
 
             # preconfigure LCP plugin
-            if 'ignore_kernel_routes' in config['settings'].get(
-                'resource_allocation', {}
-            ):
+            if 'ignore_kernel_routes' in config['settings']:
                 vpp_control.cli_cmd('lcp param route-no-paths off')
             else:
                 vpp_control.cli_cmd('lcp param route-no-paths on')

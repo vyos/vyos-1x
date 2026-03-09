@@ -548,6 +548,19 @@ def _migrate_vpp_vxlan_remove_vif(config: ConfigTree) -> None:
             config.delete(base + [ifname, 'vif'])
 
 
+def _migrate_vpp_ignore_kernel_routes(config: ConfigTree) -> None:
+    base = ['vpp', 'settings']
+    old_base = base + ['resource-allocation', 'ignore-kernel-routes']
+
+    if config.exists(old_base):
+        config.delete(old_base)
+
+        config.set(base + ['ignore-kernel-routes'])
+
+        if len(config.list_nodes(base + ['resource-allocation'])) == 0:
+            config.delete(base + ['resource-allocation'])
+
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['vpp']):
         # Nothing to do
@@ -571,3 +584,4 @@ def migrate(config: ConfigTree) -> None:
     _migrate_vpp_bridge_interface(config)
     _migrate_vpp_xconnect_interface(config)
     _migrate_vpp_vxlan_remove_vif(config)
+    _migrate_vpp_ignore_kernel_routes(config)

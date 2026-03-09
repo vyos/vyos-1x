@@ -122,7 +122,7 @@ crypto-engines {
 linux-cp {
     lcp-sync
     lcp-auto-subint
-{% if resource_allocation.ignore_kernel_routes is not vyos_defined %}
+{% if ignore_kernel_routes is not vyos_defined %}
     route-no-paths
 {% endif %}
 }
