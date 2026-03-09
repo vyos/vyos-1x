@@ -48,18 +48,33 @@ def verify(ndpp):
     if not ndpp:
         return None
 
-    if 'interface' in ndpp:
-        for interface, interface_config in ndpp['interface'].items():
-            verify_interface_exists(ndpp, interface)
+    if 'interface' not in ndpp:
+        return None
 
-            if 'rule' in interface_config:
-                for rule, rule_config in interface_config['rule'].items():
-                    if rule_config['mode'] == 'interface' and 'interface' not in rule_config:
-                        raise ConfigError(f'Rule "{rule}" uses interface mode but no interface defined!')
+    for interface, interface_config in ndpp['interface'].items():
+        if 'disable' in interface_config:
+            continue
 
-                    if rule_config['mode'] != 'interface' and 'interface' in rule_config:
-                        if interface_config['mode'] != 'interface' and 'interface' in interface_config:
-                            raise ConfigError(f'Rule "{rule}" does not use interface mode, thus interface can not be defined!')
+        verify_interface_exists(ndpp, interface)
+
+        if 'prefix' not in interface_config:
+            continue
+
+        for prefix, prefix_config in interface_config['prefix'].items():
+            if 'disable' in prefix_config:
+                continue
+
+            mode = prefix_config.get('mode')
+            prefix_interface = prefix_config.get('interface')
+
+            if mode == 'interface':
+                if not prefix_interface:
+                    raise ConfigError(f'Prefix "{prefix}" uses interface mode but no interface defined!')
+                verify_interface_exists(ndpp, prefix_interface)
+                continue
+
+            if prefix_interface:
+                raise ConfigError(f'Prefix "{prefix}" does not use interface mode, thus interface can not be defined!')
 
     return None
 
