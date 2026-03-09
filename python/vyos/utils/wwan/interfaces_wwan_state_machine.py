@@ -23,7 +23,7 @@ except ImportError:
     APN_LOOKUP_AVAILABLE = False
 
 # Import refactored utilities
-from vyos.utils.refactoring_framework import safe_extraction
+from vyos.utils.wwan.refactoring_framework import safe_extraction
 from vyos.utils.wwan.wwan_utilities import (
     extract_apn_field, convert_android_auth_type,
     convert_android_apns
