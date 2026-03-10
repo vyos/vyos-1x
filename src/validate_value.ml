@@ -4,6 +4,7 @@ type check = Regex of string | Exec of string | Group of check list
 let options = ref []
 let checks = ref []
 let value = ref ""
+let silent = ref false
 
 let buf = Buffer.create 4096
 
@@ -36,6 +37,7 @@ let args = [
   ("--regex", Arg.String (fun s -> options := (RegexOpt s) :: !options), "Check the value against a regex");
   ("--exec", Arg.String (fun s -> options := (ExecOpt s) :: !options), "Check the value against an external command");
   ("--grp", Arg.Unit (fun () -> options := (GroupSeparator) :: !options), "Group following arguments, combining results with logical and");
+  ("--silent", Arg.Unit (fun () -> silent := true), "Suppress individual validator output");
   ("--value", Arg.String (fun s -> value := s), "Value to check");
 ]
 let usage = Printf.sprintf "Usage: %s [OPTIONS] <number>" Sys.argv.(0)
@@ -105,5 +107,6 @@ let _ =
     (* If we got this far, value validation failed.
        Show the user output from the validators.
      *)
-    Buffer.contents buf |> print_endline;
+    if not !silent then Buffer.contents buf |> print_endline
+    else ();
     exit 1
