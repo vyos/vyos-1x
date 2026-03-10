@@ -34,7 +34,7 @@ def verify_vpp_remove_xconnect_interface(config: dict):
         if xconn_member == config.get('ifname'):
             raise ConfigError(
                 f'interface "{xconn_member}" is still in use within "interfaces vpp xconnect". '
-                f'Please remove it from "interface vpp xconnect {xconn_iface}" before proceeding.'
+                f'Please remove it from "interfaces vpp xconnect {xconn_iface}" before proceeding.'
             )
 
 
@@ -45,7 +45,7 @@ def verify_vpp_remove_bridge_interface(config: dict):
         if bridge_member == config.get('ifname'):
             raise ConfigError(
                 f'interface "{bridge_member}" is still in use within "interfaces vpp bridge". '
-                f'Please remove it from "interface vpp bridge {bridge_iface}" before proceeding.'
+                f'Please remove it from "interfaces vpp bridge {bridge_iface}" before proceeding.'
             )
 
 
@@ -339,5 +339,5 @@ def verify_vpp_buffers(settings: dict):
     if buffers_required > buffers_configured:
         raise ConfigError(
             'Not enough buffers to initialize RX/TX queues for interfaces. '
-            f'Set "vpp settings buffers buffers-per-numa" to {buffers_required} or higher'
+            f'Set "vpp settings resource-allocation buffers buffers-per-numa" to {buffers_required} or higher'
         )
