@@ -313,6 +313,42 @@ def get_eth_driver(iface: str) -> str:
         raise Exception(f'Could not determine driver for "{iface}": {error}') from error
 
 
+def get_pci_id(iface: str) -> str | None:
+    """
+    Retrieves the PCI ID for a specified network interface.
+
+    Args:
+        iface (str): The name of the network interface (e.g., 'eth0').
+
+    Raises:
+        OSError: The interface cannot be resolved or PCI ID files cannot be read
+
+    Returns:
+        str: The PCI ID in the format 'vendor:device'.
+        None: In case a NIC is not on a PCI bus.
+    """
+    dev_id = get_dev_id(iface)
+
+    # Check if this device is on a PCI bus, return `None` if this is not a PCI device
+    pci_dev_path = Path(f'/sys/bus/pci/devices/{dev_id}')
+    if not pci_dev_path.exists():
+        return None
+
+    # Read vendor and device IDs
+    def _read_bus(file: str) -> str:
+        path = Path(f'/sys/bus/pci/devices/{dev_id}/{file}')
+        return path.read_text().removeprefix('0x').strip()
+
+    try:
+        device_id, vendor_id = _read_bus('device'), _read_bus('vendor')
+    except OSError as e:
+        # If we reached this exception, then something really weird happened,
+        # but it is still right to have it
+        raise OSError(f'PCI IDs for {iface} cannot be retrieved') from e
+
+    return f'{vendor_id}:{device_id}'.lower()
+
+
 def unsafe_noiommu_mode(status: bool) -> None:
     """Control unsafe_noiommu_mode parameter of vfio module
 

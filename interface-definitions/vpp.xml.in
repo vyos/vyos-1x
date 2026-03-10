@@ -491,6 +491,12 @@
           <defaultValue>0</defaultValue>
         </leafNode>
         #include <include/vpp/iface_rx_mode.xml.i>
+        <leafNode name="allow-unsupported-nics">
+          <properties>
+            <help>Allow the attachment of unsupported NICs to VPP. This operation voids official support for the system</help>
+            <valueless/>
+          </properties>
+        </leafNode>
       </children>
     </node>
     <node name="sflow" owner="${vyos_conf_scripts_dir}/vpp_sflow.py">
