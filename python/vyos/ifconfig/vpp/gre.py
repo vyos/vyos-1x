@@ -52,12 +52,13 @@ class VPPGREInterface(Interface, VPPInterface):
         self.dst_address = config.get('remote')
         self.tunnel_type = self.TUNNEL_TYPE_MAP.get(config.get('tunnel_type'), 0)
         self.mode = self.MODE_MAP['point-to-point']
+        self.key = int(config.get('key', 0))
 
     def _create(self):
         pass
 
     def get_gre(self):
-        tunnels = self.vpp.api.gre_tunnel_dump(sw_if_index=self.index)
+        tunnels = self.vpp.api.gre_tunnel_dump_v2(sw_if_index=self.index)
         return tunnels if tunnels else None
 
     def add_gre(self):
@@ -68,7 +69,7 @@ class VPPGREInterface(Interface, VPPInterface):
             a = VPPGREInterface(ifname='vppgre0', config)
             a.add_gre()
         """
-        self.vpp.api.gre_tunnel_add_del(
+        self.vpp.api.gre_tunnel_add_del_v2(
             is_add=True,
             tunnel={
                 'src': self.src_address,
@@ -76,6 +77,7 @@ class VPPGREInterface(Interface, VPPInterface):
                 'instance': self.instance,
                 'mode': self.mode,
                 'type': self.tunnel_type,
+                'key': self.key,
             },
         )
         # Add LCP pair (kernel) interface
@@ -94,9 +96,13 @@ class VPPGREInterface(Interface, VPPInterface):
         """
         gre = self.get_gre()
         if gre:
-            return self.vpp.api.gre_tunnel_add_del(
+            return self.vpp.api.gre_tunnel_add_del_v2(
                 is_add=False,
-                tunnel={'src': gre.tunnel.src, 'dst': gre.tunnel.dst},
+                tunnel={
+                    'src': gre.tunnel.src,
+                    'dst': gre.tunnel.dst,
+                    'key': gre.tunnel.key,
+                },
             )
 
     def kernel_add(self):
