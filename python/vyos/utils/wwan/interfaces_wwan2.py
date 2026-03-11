@@ -6,13 +6,11 @@ import asyncio
 import subprocess
 import logging
 import logging.handlers
-import socket
-from datetime import datetime, timezone
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter
 
 
 class ClientFormatter(_BaseFormatter):

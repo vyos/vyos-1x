@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 # filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_config.py
 import asyncio
-import logging
-import logging.handlers
-import socket
 import re
-from datetime import datetime, timezone
 from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error

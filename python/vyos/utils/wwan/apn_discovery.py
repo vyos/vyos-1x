@@ -10,12 +10,7 @@ import logging
 import asyncio
 from typing import Dict, List, Any
 
-from vyos.utils.wwan.wwan_utilities import (
-    extract_apn_field,
-    convert_android_auth_type,
-    calculate_android_priority,
-    convert_android_apns,
-)
+from vyos.utils.wwan.wwan_utilities import convert_android_apns
 
 logger = logging.getLogger(__name__)
 

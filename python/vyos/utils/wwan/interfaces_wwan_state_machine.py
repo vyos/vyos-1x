@@ -2,11 +2,7 @@
 # filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_state_machine.py
 import asyncio
 import time
-import logging
-import logging.handlers
-import socket
 import os
-from datetime import datetime, timezone
 from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
@@ -14,9 +10,9 @@ from dbus_next import Variant  # pylint: disable=import-error
 from automaton import machines  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_util import modem_reset
 
-# Import the existing Android APN lookup library
+# Check if Android APN lookup library is available
 try:
-    from apnscripts.apn_lookup_run import find_apn_list
+    import apnscripts.apn_lookup_run  # pylint: disable=unused-import,import-error
     APN_LOOKUP_AVAILABLE = True
 except ImportError:
     APN_LOOKUP_AVAILABLE = False

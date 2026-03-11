@@ -1,8 +1,4 @@
 import asyncio
-import logging
-import logging.handlers
-import socket
-from datetime import datetime, timezone
 from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_state_machine import ModemStateMachine

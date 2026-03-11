@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 # filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_main.py
 import asyncio
-import subprocess
-import sys
 import logging
 import logging.handlers
-import socket
-from datetime import datetime, timezone
+import subprocess
+import sys
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_service_manager import ConfigServiceManager
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter
 
 
 class ManagerFormatter(_BaseFormatter):
