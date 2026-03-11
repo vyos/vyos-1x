@@ -10,54 +10,14 @@ import logging
 import asyncio
 from typing import Dict, List, Any
 
+from vyos.utils.wwan.wwan_utilities import (
+    extract_apn_field,
+    convert_android_auth_type,
+    calculate_android_priority,
+    convert_android_apns,
+)
+
 logger = logging.getLogger(__name__)
-
-# ============================================================================
-# UTILITY FUNCTIONS (inline to avoid import issues in VyOS conf_mode)
-# ============================================================================
-
-def extract_apn_field(apn: Any, field_name: str, default_value: str = '') -> str:
-    """Extract field from Android APN object"""
-    try:
-        if hasattr(apn, field_name):
-            return str(getattr(apn, field_name, default_value))
-        elif isinstance(apn, dict):
-            return str(apn.get(field_name, default_value))
-        elif hasattr(apn, '__getitem__'):
-            return str(apn[field_name]) if field_name in apn else default_value
-        else:
-            return default_value
-    except (AttributeError, KeyError, TypeError):
-        return default_value
-
-def convert_android_auth_type(android_auth: str) -> str:
-    """Convert Android auth type to standardized format"""
-    auth_mapping = {
-        '0': 'none', 'none': 'none',
-        '1': 'pap', 'pap': 'pap',
-        '2': 'chap', 'chap': 'chap',
-        '3': 'pap_chap', 'pap_chap': 'pap_chap'
-    }
-    return auth_mapping.get(str(android_auth).lower(), 'none')
-
-def calculate_android_priority(apn: Dict, index: int) -> int:
-    """Calculate priority for Android APN"""
-    apn_type = extract_apn_field(apn, 'type', 'default')
-    if isinstance(apn_type, list):
-        apn_type = ','.join(apn_type).lower()
-    else:
-        apn_type = str(apn_type).lower()
-
-    if 'default' in apn_type:
-        return 1
-    elif any(t in apn_type for t in ['internet', 'supl', 'fota']):
-        return 2
-    elif any(t in apn_type for t in ['mms', 'xcap']):
-        return 3
-    elif 'ims' in apn_type:
-        return 4
-    else:
-        return 5 + index
 
 # Check if Android APN lookup is available
 try:
@@ -152,37 +112,12 @@ class APNDiscovery:
             return await self._discover_with_fallback(sim_info, sim_config)
 
     def _convert_android_apns(self, android_apns: List[Any], sim_info: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Convert Android APN format to our standardized format"""
-        candidates = []
+        """Convert Android APN format to our standardized format.
 
-        for i, apn in enumerate(android_apns):
-            try:
-                # Android APNs typically have these fields (adjust based on actual structure)
-                candidate = {
-                    'name': extract_apn_field(apn, 'apn', f'apn_{i}'),
-                    'username': extract_apn_field(apn, 'user', ''),
-                    'password': extract_apn_field(apn, 'password', ''),
-                    'auth_type': convert_android_auth_type(
-                        extract_apn_field(apn, 'authtype', '0')
-                    ),
-                    'type': extract_apn_field(apn, 'type', 'default'),
-                    'priority': calculate_android_priority(apn, i),
-                    'carrier': sim_info['operator_name'],
-                    'mcc_mnc': sim_info['mcc_mnc'],
-                    'match_type': 'android_lookup',
-                    'source': 'AOSP'
-                }
-
-                # Only add if APN name is valid
-                if candidate['name'] and candidate['name'] != f'apn_{i}':
-                    candidates.append(candidate)
-
-            except Exception as e:
-                self.logger.warning(f"Failed to convert Android APN {i}: {e}",
-                                  extra={'interface_number': self.interface_number})
-                continue
-
-        return candidates
+        Delegates to the shared convert_android_apns() in wwan_utilities to
+        avoid divergent duplicate implementations.
+        """
+        return convert_android_apns(android_apns, sim_info)
 
     async def _discover_with_fallback(self, sim_info: Dict[str, Any], sim_config: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Fallback discovery when Android library is not available"""

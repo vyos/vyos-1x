@@ -12,59 +12,14 @@ from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
 
 
-class RFC5424Formatter(logging.Formatter):
-    """RFC 5424 compliant syslog formatter for SNMP integration"""
-
-    FACILITY_MAP = {
-        'wwan-config': 18,     # local2
-    }
-
-    SEVERITY_MAP = {
-        logging.DEBUG: 7,      # debug
-        logging.INFO: 6,       # info
-        logging.WARNING: 4,    # warning
-        logging.ERROR: 3,      # error
-        logging.CRITICAL: 2    # critical
-    }
-
-    def __init__(self, app_name="wwan-config"):
-        super().__init__()
-        self.app_name = app_name
-        self.hostname = socket.gethostname()
-        self.facility = self.FACILITY_MAP.get(app_name, 18)
-
-    def format(self, record):
-        # Calculate priority (facility * 8 + severity)
-        severity = self.SEVERITY_MAP.get(record.levelno, 6)
-        priority = self.facility * 8 + severity
-
-        # RFC 5424 timestamp with microseconds and timezone
-        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc)
-        timestamp_str = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-        # Process ID
-        pid = record.process or '-'
-
-        # Message ID for SNMP categorization
-        msgid = self._get_message_id(record)
-
-        # Basic structured data
-        structured_data = f'[config@1 interface="-" operation="{msgid.lower()}"]'
-
-        # Format: <priority>version timestamp hostname app-name procid msgid structured-data msg
-        rfc5424_msg = (
-            f"<{priority}>1 {timestamp_str} {self.hostname} "
-            f"{self.app_name} {pid} {msgid} {structured_data} {record.getMessage()}"
-        )
-
-        return rfc5424_msg
+class ClientFormatter(_BaseFormatter):
+    """Client (interfaces_wwan2) specific RFC 5424 formatter."""
 
     def _get_message_id(self, record):
-        """Generate message ID for SNMP categorization"""
         msg = record.getMessage().lower()
-
         if 'service' in msg and ('start' in msg or 'running' in msg):
             return 'SERVICE_STATUS'
         elif 'configuration' in msg and ('load' in msg or 'applied' in msg):
@@ -83,20 +38,18 @@ class RFC5424Formatter(logging.Formatter):
             return 'CONFIG_GENERAL'
 
 
-def setup_logging():
+def setup_logging_client():
     """Set up RFC 5424 logging for SNMP integration"""
-    # Console handler for debugging (human-readable format)
     console_formatter = logging.Formatter('%(asctime)s wwan-config[%(process)d]: %(levelname)s: %(message)s')
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(console_formatter)
 
-    # Syslog handler for SNMP (RFC 5424 format)
     try:
         syslog_handler = logging.handlers.SysLogHandler(address='/dev/log')
-        syslog_formatter = RFC5424Formatter("wwan-config")
+        syslog_formatter = ClientFormatter("wwan-config")
         syslog_handler.setFormatter(syslog_formatter)
         use_syslog = True
-    except (OSError, IOError) as e:
+    except (OSError, IOError):
         use_syslog = False
 
     # Configure logger
@@ -112,7 +65,7 @@ def setup_logging():
 
 
 # Set up logging
-logger = setup_logging()
+logger = setup_logging_client()
 
 # ─── parse_config() ────────────────────────────────────────────────────────
 def parse_config(config_path):
@@ -483,7 +436,7 @@ async def configure_interface(config):
                 logger.info("Starting connection",
                            extra={'interface_number': interface_number})
                 connect_result = await asyncio.wait_for(cfg_iface.call_connect(), timeout=15.0)
-                logger.info("Connection started",
+                logger.info("Connection result",
                            extra={'interface_number': interface_number, 'result': connect_result})
 
             return True

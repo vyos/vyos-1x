@@ -152,6 +152,9 @@ class ConnectionManager:
                                   extra={'interface_number': self.interface_number,
                                          'apn_name': apn_config['name'],
                                          'timeout_seconds': 60})
+                # A bearer may have been partially created before the timeout.
+                # Attempt cleanup to avoid leaked bearers on the modem.
+                await self._cleanup_failed_bearer()
                 return False
 
         except Exception as e:

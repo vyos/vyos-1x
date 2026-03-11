@@ -7,46 +7,14 @@ from dbus_next.service import ServiceInterface, method  # pylint: disable=import
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_state_machine import ModemStateMachine
 from vyos.utils.wwan.interfaces_wwan_config import InterfaceConfig
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
 
-class RFC5424Formatter(logging.Formatter):
-    """RFC 5424 compliant syslog formatter for SNMP integration"""
 
-    FACILITY = 17  # local1 for service manager
-    SEVERITY_MAP = {
-        logging.DEBUG: 7, logging.INFO: 6, logging.WARNING: 4,
-        logging.ERROR: 3, logging.CRITICAL: 2
-    }
-
-    def __init__(self, app_name="wwan-service"):
-        super().__init__()
-        self.app_name = app_name
-        self.hostname = socket.gethostname()
-
-    def format(self, record):
-        # Calculate priority
-        severity = self.SEVERITY_MAP.get(record.levelno, 6)
-        priority = self.FACILITY * 8 + severity
-
-        # RFC 5424 timestamp
-        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc)
-        timestamp_str = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-        # Process ID
-        pid = record.process or '-'
-
-        # Message ID for SNMP categorization
-        msgid = self._get_message_id(record)
-
-        # Structured data
-        structured_data = self._build_structured_data(record)
-
-        return (f"<{priority}>1 {timestamp_str} {self.hostname} "
-                f"{self.app_name} {pid} {msgid} {structured_data} {record.getMessage()}")
+class ServiceFormatter(_BaseFormatter):
+    """Service-manager-specific RFC 5424 formatter."""
 
     def _get_message_id(self, record):
-        """Generate message ID for SNMP categorization"""
         msg = record.getMessage().lower()
-
         if 'adding interface' in msg:
             return 'IFACE_ADD'
         elif 'removing interface' in msg:
@@ -65,10 +33,7 @@ class RFC5424Formatter(logging.Formatter):
             return 'SERVICE_EVENT'
 
     def _build_structured_data(self, record):
-        """Build structured data for SNMP monitoring"""
         sd_elements = []
-
-        # WWAN service data
         service_data = []
         if hasattr(record, 'interface_number'):
             service_data.append(f'interface="{record.interface_number}"')
@@ -76,50 +41,14 @@ class RFC5424Formatter(logging.Formatter):
             service_data.append(f'path="{record.object_path}"')
         if hasattr(record, 'fsm_count'):
             service_data.append(f'fsm_count="{record.fsm_count}"')
-
         if service_data:
             sd_elements.append(f'[service@32473 {" ".join(service_data)}]')
-
-        # Origin data
         origin_data = [f'software="vyos-wwan-service"', f'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-
         return ''.join(sd_elements) if sd_elements else '-'
 
-# Set up RFC 5424 logging
-def setup_service_logging():
-    formatter = RFC5424Formatter("wwan-service")
 
-    try:
-        syslog_handler = logging.handlers.SysLogHandler(
-            address='/dev/log',
-            facility=logging.handlers.SysLogHandler.LOG_LOCAL1
-        )
-        syslog_handler.setFormatter(formatter)
-        use_syslog = True
-    except (OSError, IOError):
-        use_syslog = False
-
-    # Console handler with human-readable format
-    console_formatter = logging.Formatter(
-        '%(asctime)s wwan-service[%(process)d]: %(levelname)s: %(message)s'
-    )
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    if use_syslog:
-        logger.addHandler(syslog_handler)
-    logger.addHandler(console_handler)
-
-    # Prevent duplicate logs from root logger
-    logger.propagate = False
-
-    return logger
-
-logger = setup_service_logging()
+logger = setup_logging(__name__, "wwan-service", formatter_class=ServiceFormatter)
 
 class ControlInterface(ServiceInterface):
     """

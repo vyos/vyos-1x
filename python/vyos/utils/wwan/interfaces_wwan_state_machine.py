@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/src/conf_mode/interfaces_wwan_state_machine.py
+# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_state_machine.py
 import asyncio
 import time
 import logging
 import logging.handlers
-import time
 import socket
 import os
 from datetime import datetime, timezone
@@ -13,7 +12,7 @@ from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
 from automaton import machines  # pylint: disable=import-error
-from interfaces_wwan_util import modem_reset
+from vyos.utils.wwan.interfaces_wwan_util import modem_reset
 
 # Import the existing Android APN lookup library
 try:
@@ -22,50 +21,24 @@ try:
 except ImportError:
     APN_LOOKUP_AVAILABLE = False
 
-# Import refactored utilities
-from vyos.utils.wwan.refactoring_framework import safe_extraction
 from vyos.utils.wwan.wwan_utilities import (
     extract_apn_field, convert_android_auth_type,
     convert_android_apns
 )
-from wwan_configuration import ConfigurationLoader  # pylint: disable=import-error
+from vyos.utils.wwan.wwan_configuration import ConfigurationLoader
 from vyos.utils.wwan.apn_discovery import APNDiscovery
 from vyos.utils.wwan.connection_manager import ConnectionManager
 from vyos.utils.wwan.state_transition_manager import StateTransitionManager
 
-class RFC5424Formatter(logging.Formatter):
-    """RFC 5424 compliant syslog formatter for FSM SNMP integration"""
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
 
-    FACILITY = 19  # local3 for FSM
-    SEVERITY_MAP = {
-        logging.DEBUG: 7, logging.INFO: 6, logging.WARNING: 4,
-        logging.ERROR: 3, logging.CRITICAL: 2
-    }
 
-    def __init__(self, app_name="wwan-fsm"):
-        super().__init__()
-        self.app_name = app_name
-        self.hostname = socket.gethostname()
-
-    def format(self, record):
-        severity = self.SEVERITY_MAP.get(record.levelno, 6)
-        priority = self.FACILITY * 8 + severity
-
-        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc)
-        timestamp_str = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-        pid = record.process or '-'
-        msgid = self._get_message_id(record)
-        structured_data = self._build_structured_data(record)
-
-        return (f"<{priority}>1 {timestamp_str} {self.hostname} "
-                f"{self.app_name} {pid} {msgid} {structured_data} {record.getMessage()}")
+class FSMFormatter(_BaseFormatter):
+    """FSM-specific RFC 5424 formatter with state-machine message IDs."""
 
     def _get_message_id(self, record):
-        """Generate message ID for SNMP categorization"""
         msg = record.getMessage().lower()
-
-        if 'state changed' in msg or '→' in msg:
+        if 'state changed' in msg or '\u2192' in msg:
             return 'STATE_CHANGE'
         elif 'modem found' in msg:
             return 'MODEM_FOUND'
@@ -91,9 +64,7 @@ class RFC5424Formatter(logging.Formatter):
             return 'FSM_EVENT'
 
     def _build_structured_data(self, record):
-        """Build structured data for SNMP monitoring"""
         sd_elements = []
-
         fsm_data = []
         if hasattr(record, 'interface_number'):
             fsm_data.append(f'interface="{record.interface_number}"')
@@ -119,46 +90,14 @@ class RFC5424Formatter(logging.Formatter):
             fsm_data.append(f'sim_switch_reason="{record.sim_switch_reason}"')
         if hasattr(record, 'target_sim'):
             fsm_data.append(f'target_sim="{record.target_sim}"')
-
         if fsm_data:
             sd_elements.append(f'[fsm@32473 {" ".join(fsm_data)}]')
-
         origin_data = [f'software="vyos-wwan-fsm"', f'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-
         return ''.join(sd_elements) if sd_elements else '-'
 
-# Set up RFC 5424 logging for FSM
-def setup_fsm_logging():
-    formatter = RFC5424Formatter("wwan-fsm")
 
-    try:
-        syslog_handler = logging.handlers.SysLogHandler(
-            address='/dev/log',
-            facility=logging.handlers.SysLogHandler.LOG_LOCAL3
-        )
-        syslog_handler.setFormatter(formatter)
-        use_syslog = True
-    except (OSError, IOError):
-        use_syslog = False
-
-    console_formatter = logging.Formatter(
-        '%(asctime)s wwan-fsm[%(process)d]: %(levelname)s: %(message)s'
-    )
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    if use_syslog:
-        logger.addHandler(syslog_handler)
-    logger.addHandler(console_handler)
-    logger.propagate = False
-
-    return logger
-
-logger = setup_fsm_logging()
+logger = setup_logging(__name__, "wwan-fsm", formatter_class=FSMFormatter)
 
 # Constants
 MODEM_MANAGER_SERVICE = "org.freedesktop.ModemManager1"
@@ -249,6 +188,7 @@ class ModemStateMachine:
         self.reset_timeout_task = None      # Task to clear reset flag on timeout
         self.registration_handling_in_progress = False  # Prevent concurrent registration handling tasks
         self._registration_loss_timer = None    # Initialize registration loss timer
+        self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
 
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
@@ -274,9 +214,8 @@ class ModemStateMachine:
         for state in ModemState:
             self.machine.add_state(state.value)
 
-    @safe_extraction("_setup_transitions")
     def _setup_transitions(self):
-        """🔄 SAFE EXTRACTION: Setup transitions using new StateTransitionManager"""
+        """Setup transitions using new StateTransitionManager"""
         # Get transitions from the data-driven manager
         transitions = self.transition_manager.get_all_transitions()
 
@@ -296,87 +235,6 @@ class ModemStateMachine:
                           'unique_events': stats['unique_events'],
                           'transition_groups': stats['total_groups']})
 
-    def _setup_transitions_original(self):
-        """🏗️ ORIGINAL: Setup transitions using hardcoded table (for comparison)"""
-        transitions = [
-            # Initial flow
-            (ModemState.INITIAL,        ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.SCANNING,       ModemState.MODEM_FOUND,        ModemEvent.MODEM_FOUND),
-
-            # Configuration flow
-            (ModemState.MODEM_FOUND,    ModemState.WAITING_FOR_CONFIG, ModemEvent.WAIT_FOR_CONFIG),
-            (ModemState.WAITING_FOR_CONFIG, ModemState.CONFIGURING,    ModemEvent.CONFIG_UPDATE),
-
-            # Hot-plug: Handle new modem detection from USAGE_MONITORING state
-            (ModemState.USAGE_MONITORING, ModemState.MODEM_FOUND,      ModemEvent.MODEM_FOUND),
-            (ModemState.USAGE_MONITORING, ModemState.WAITING_FOR_CONFIG, ModemEvent.WAIT_FOR_CONFIG),
-            (ModemState.USAGE_MONITORING, ModemState.CONFIGURING,      ModemEvent.CONFIG_UPDATE),
-
-            # Connection flow
-            (ModemState.CONFIGURING,    ModemState.CONNECTING,         ModemEvent.CONNECT),
-            (ModemState.CONNECTING,     ModemState.CONNECTED,          ModemEvent.CONNECTED),
-            # CONNECTED state remains connected - only transitions to USAGE_MONITORING for data limits
-            (ModemState.CONNECTED,      ModemState.USAGE_MONITORING,   ModemEvent.USAGE_LIMIT_EXCEEDED),
-
-            # Disconnection flow
-            (ModemState.CONNECTED,      ModemState.DISCONNECTING,      ModemEvent.DISCONNECT),
-            (ModemState.USAGE_MONITORING, ModemState.DISCONNECTING,    ModemEvent.DISCONNECT),
-            (ModemState.DISCONNECTING,  ModemState.DISCONNECTED,       ModemEvent.DISCONNECTED),
-
-            # Enhanced hot-swap transitions
-            (ModemState.WAITING_FOR_SIM, ModemState.CONFIGURING,        ModemEvent.SIM_READY),
-            (ModemState.FAILED,         ModemState.CONFIGURING,        ModemEvent.SIM_READY),
-
-            # SIM SWITCH FLOW
-            (ModemState.CONNECTED,      ModemState.SIM_SWITCHING,      ModemEvent.SWITCH_SIM),
-            (ModemState.USAGE_MONITORING, ModemState.SIM_SWITCHING,    ModemEvent.SWITCH_SIM),
-            (ModemState.DISCONNECTED,   ModemState.SIM_SWITCHING,      ModemEvent.SWITCH_SIM),
-
-            (ModemState.SIM_SWITCHING,  ModemState.SIM_DISCONNECTING,  ModemEvent.DISCONNECT),
-            (ModemState.SIM_DISCONNECTING, ModemState.SIM_DISABLING,   ModemEvent.SIM_DISCONNECTED),
-            (ModemState.SIM_DISABLING,  ModemState.SIM_ENABLING,       ModemEvent.SIM_DISABLED),
-            (ModemState.SIM_ENABLING,   ModemState.SIM_RECONFIGURING,  ModemEvent.SIM_ENABLED),
-            (ModemState.SIM_RECONFIGURING, ModemState.CONFIGURING,     ModemEvent.SIM_SWITCH_COMPLETE),
-
-            # Error handling
-            (ModemState.CONNECTING,     ModemState.FAILED,             ModemEvent.CONNECTION_FAILED),
-            (ModemState.CONNECTED,      ModemState.FAILED,             ModemEvent.CONNECTION_FAILED),
-            (ModemState.DISCONNECTED,   ModemState.WAITING_FOR_SIM,    ModemEvent.SIM_MISSING),
-            (ModemState.CONFIGURING,    ModemState.WAITING_FOR_SIM,    ModemEvent.SIM_MISSING),
-
-            # Hardware removal - back to scanning from ANY state
-            (ModemState.DISCONNECTED,   ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.CONFIGURING,    ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.CONNECTING,     ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.CONNECTED,      ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.USAGE_MONITORING, ModemState.SCANNING,         ModemEvent.START_SCAN),
-            (ModemState.MODEM_FOUND,    ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.WAITING_FOR_CONFIG, ModemState.SCANNING,       ModemEvent.START_SCAN),
-            (ModemState.WAITING_FOR_SIM, ModemState.SCANNING,          ModemEvent.START_SCAN),
-            (ModemState.FAILED,         ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.SIM_SWITCHING,  ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.SIM_DISCONNECTING, ModemState.SCANNING,        ModemEvent.START_SCAN),
-            (ModemState.SIM_DISABLING,  ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.SIM_ENABLING,   ModemState.SCANNING,           ModemEvent.START_SCAN),
-            (ModemState.SIM_RECONFIGURING, ModemState.SCANNING,        ModemEvent.START_SCAN),
-            (ModemState.USAGE_THRESHOLD, ModemState.SCANNING,          ModemEvent.START_SCAN),
-            (ModemState.USAGE_RESETTING, ModemState.SCANNING,          ModemEvent.START_SCAN),
-
-            # Reconfiguration from any configured state
-            (ModemState.CONFIGURING,    ModemState.CONFIGURING,        ModemEvent.RECONFIGURE),
-            (ModemState.CONNECTED,      ModemState.CONFIGURING,        ModemEvent.RECONFIGURE),
-            (ModemState.DISCONNECTED,   ModemState.CONFIGURING,        ModemEvent.RECONFIGURE),
-            (ModemState.FAILED,         ModemState.CONFIGURING,        ModemEvent.RECONFIGURE),
-            (ModemState.USAGE_MONITORING, ModemState.CONFIGURING,      ModemEvent.RECONFIGURE),
-
-            # Usage monitoring flow
-            (ModemState.USAGE_MONITORING, ModemState.USAGE_THRESHOLD,  ModemEvent.USAGE_LIMIT_EXCEEDED),
-            (ModemState.USAGE_THRESHOLD, ModemState.USAGE_RESETTING,   ModemEvent.RESET_USAGE),
-            (ModemState.USAGE_RESETTING, ModemState.CONFIGURING,       ModemEvent.RECONFIGURE),
-        ]
-        for src, dst, event in transitions:
-            self.machine.add_transition(src.value, dst.value, event.value)
-
     async def initialize(self):
         if not self.bus:
             logger.warning("No D-Bus bus available, skipping initialization",
@@ -390,11 +248,31 @@ class ModemStateMachine:
 
         self.transition(ModemEvent.START_SCAN)
         # Start modem scanning as a background task instead of blocking
-        asyncio.create_task(self.scan_for_modem())
+        self._safe_create_task(self.scan_for_modem())
+
+    def _safe_create_task(self, coro, name=None):
+        """Create an asyncio task with exception logging to prevent silent failures.
+
+        All background tasks should use this instead of raw asyncio.create_task()
+        so that unhandled exceptions are logged rather than silently swallowed.
+        """
+        task = asyncio.create_task(coro, name=name)
+        task.add_done_callback(self._task_exception_handler)
+        return task
+
+    def _task_exception_handler(self, task):
+        """Log exceptions from background tasks instead of letting them vanish."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            logger.error(f"Background task '{task.get_name()}' failed: {exc}",
+                        extra={'interface_number': self.interface_number,
+                               'task_name': task.get_name(),
+                               'exception': str(exc)})
 
     def _is_reset_allowed(self) -> bool:
         """Check if hardware reset is allowed (not in cooldown period)"""
-        import time
         current_time = time.time()
         time_since_last_reset = current_time - self.last_reset_time
 
@@ -409,7 +287,6 @@ class ModemStateMachine:
 
     def _record_reset(self):
         """Record that a hardware reset was performed"""
-        import time
         self.last_reset_time = time.time()
         # Start reset grace period to prevent false SIM missing detection
         self.reset_operation_in_progress = True
@@ -421,7 +298,6 @@ class ModemStateMachine:
 
     def _is_in_reset_grace_period(self) -> bool:
         """Check if we're still in the grace period after a reset operation"""
-        import time
         current_time = time.time()
 
         if self.reset_operation_in_progress and current_time < self.reset_grace_period_end:
@@ -507,7 +383,7 @@ class ModemStateMachine:
                     self.machine.set_state(ModemState.SCANNING)
 
                 # Start scanning again (don't await - let it run in background)
-                asyncio.create_task(self.scan_for_modem())
+                self._safe_create_task(self.scan_for_modem())
 
         except Exception as e:
             logger.error(f"Error handling modem removal signal: {e}",
@@ -862,11 +738,11 @@ class ModemStateMachine:
                               'config_keys': list(self.config.keys())})
             # Now transition to CONFIGURING (valid from WAITING_FOR_CONFIG)
             self.transition(ModemEvent.CONFIG_UPDATE)
-            asyncio.create_task(self._configure_modem_initial())
+            self._safe_create_task(self._configure_modem_initial())
 
         # Start periodic SIM check if we transition to WAITING_FOR_SIM
         if self.machine.current_state == ModemState.WAITING_FOR_SIM.value:
-            asyncio.create_task(self._periodic_sim_check())
+            self._safe_create_task(self._periodic_sim_check())
 
     def _handle_modem_properties_changed(self, interface_name, changed_properties, invalidated_properties):
         """Handle ModemManager PropertiesChanged D-Bus signal for State changes"""
@@ -1000,7 +876,7 @@ class ModemStateMachine:
             # Enhanced interface management: Consider both bearer AND registration state
             # Prevent concurrent registration handling to avoid D-Bus feedback loops
             if not self.registration_handling_in_progress:
-                asyncio.create_task(self._handle_registration_state_change(reg_state, reg_state_name))
+                self._safe_create_task(self._handle_registration_state_change(reg_state, reg_state_name))
             else:
                 logger.debug("Registration state change ignored - handling already in progress",
                            extra={'interface_number': self.interface_number,
@@ -1019,7 +895,7 @@ class ModemStateMachine:
         if mm_state == 2:  # LOCKED (SIM missing or PIN required)
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value]:
                 self.transition(ModemEvent.SIM_MISSING)
-                asyncio.create_task(self._handle_sim_missing_failover())
+                self._safe_create_task(self._handle_sim_missing_failover())
 
         elif mm_state == 3:  # DISABLED
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
@@ -1027,7 +903,7 @@ class ModemStateMachine:
                 # Don't trigger SIM missing if this is service-initiated or we're in reset grace period
                 if not self.service_initiated_disable and not self._is_in_reset_grace_period():
                     self.transition(ModemEvent.SIM_MISSING)
-                    asyncio.create_task(self._handle_sim_missing_failover())
+                    self._safe_create_task(self._handle_sim_missing_failover())
                 else:
                     if self.service_initiated_disable:
                         logger.debug("Modem disabled by service (gentle reset) - not triggering SIM failover",
@@ -1037,14 +913,14 @@ class ModemStateMachine:
                                    extra={'interface_number': self.interface_number})
             elif current_fsm_state == ModemState.WAITING_FOR_SIM.value:
                 # Check if SIM was inserted while waiting
-                asyncio.create_task(self._check_sim_insertion())
+                self._safe_create_task(self._check_sim_insertion())
 
         elif mm_state == 6:  # ENABLED - Could indicate SIM insertion
             if current_fsm_state == ModemState.WAITING_FOR_SIM.value:
                 # SIM might have been inserted!
                 logger.info("Modem enabled while waiting for SIM - checking for insertion",
                            extra={'interface_number': self.interface_number})
-                asyncio.create_task(self._handle_potential_sim_insertion())
+                self._safe_create_task(self._handle_potential_sim_insertion())
             elif current_fsm_state == ModemState.CONFIGURING.value:
                 # Modem enabled successfully during configuration - can proceed
                 logger.info("Modem enabled, continuing configuration",
@@ -1065,7 +941,7 @@ class ModemStateMachine:
                 logger.info("Modem registered to network, ready for connection",
                            extra={'interface_number': self.interface_number})
                 # Trigger connection configuration
-                asyncio.create_task(self.apply_modem_configuration())
+                self._safe_create_task(self.apply_modem_configuration())
 
         elif mm_state == 9:  # DISCONNECTING
             if current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
@@ -1073,13 +949,13 @@ class ModemStateMachine:
                 logger.warning("ModemManager disconnecting - starting enhanced reconnection",
                               extra={'interface_number': self.interface_number})
                 try:
-                    asyncio.create_task(self._stop_network_interface_monitoring())
+                    self._safe_create_task(self._stop_network_interface_monitoring())
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
                 self.transition(ModemEvent.DISCONNECT)
                 # Start enhanced reconnection immediately
-                asyncio.create_task(self.handle_disconnection_recovery())
+                self._safe_create_task(self.handle_disconnection_recovery())
 
         elif mm_state == 10:  # CONNECTING
             if current_fsm_state == ModemState.CONNECTING.value:
@@ -1098,8 +974,8 @@ class ModemStateMachine:
                 # Start network interface management
                 try:
                     if self.ensure_link_up_on_connect:
-                        asyncio.create_task(self._ensure_interface_up())
-                    asyncio.create_task(self._start_network_interface_monitoring())
+                        self._safe_create_task(self._ensure_interface_up())
+                    self._safe_create_task(self._start_network_interface_monitoring())
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
@@ -1111,7 +987,7 @@ class ModemStateMachine:
                                       'limit_gb': self.config.get('data_limit_size', 0) / (1024*1024*1024)})
                     # Don't transition to USAGE_MONITORING state - just start the monitoring task
                     if not self.usage_monitor_task or self.usage_monitor_task.done():
-                        self.usage_monitor_task = asyncio.create_task(self.monitor_data_usage())
+                        self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
                 else:
                     logger.info("No data usage limits configured, staying in CONNECTED state",
                                extra={'interface_number': self.interface_number})
@@ -1146,7 +1022,7 @@ class ModemStateMachine:
             if current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Stop network interface monitoring when leaving connected state
                 try:
-                    asyncio.create_task(self._stop_network_interface_monitoring())
+                    self._safe_create_task(self._stop_network_interface_monitoring())
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
@@ -1162,6 +1038,8 @@ class ModemStateMachine:
                 logger.info("User-initiated connect, clearing disconnect flag",
                            extra={'interface_number': self.interface_number})
                 self.user_disconnected = False
+            # Clear queued connect flag — we're executing it now
+            self.connect_requested = False
 
         # Call original transition logic
         try:
@@ -1226,11 +1104,13 @@ class ModemStateMachine:
         if current == ModemState.WAITING_FOR_CONFIG.value:
             # Ready to configure immediately
             self.transition(ModemEvent.CONFIG_UPDATE)
-            asyncio.create_task(self._configure_modem_initial())
+            self._safe_create_task(self._configure_modem_initial())
 
         elif current == ModemState.SCANNING.value:
             # Store config, will apply when modem found
-            logger.info("Config stored, will apply when modem is found",
+            # Also honour any queued connect request
+            self.connect_requested = True
+            logger.info("Config stored, will apply when modem is found (connect queued)",
                        extra={'interface_number': self.interface_number})
 
         elif current in (
@@ -1242,7 +1122,7 @@ class ModemStateMachine:
         ):
             # Normal reconfiguration
             self.transition(ModemEvent.RECONFIGURE)
-            asyncio.create_task(self._reconfigure_modem())
+            self._safe_create_task(self._reconfigure_modem())
 
         elif current in (
             ModemState.SIM_SWITCHING.value,
@@ -1273,9 +1153,8 @@ class ModemStateMachine:
                           extra={'interface_number': self.interface_number,
                                  'current_state': current})
 
-    @safe_extraction("_load_configuration_safe")
     def _load_configuration_safe(self, config: dict):
-        """🔄 SAFE EXTRACTION: Load and parse configuration using new ConfigurationLoader"""
+        """Load and parse configuration using new ConfigurationLoader"""
         # Load configuration using new loader
         self.parsed_config = self.config_loader.load_configuration(config)
 
@@ -1303,58 +1182,6 @@ class ModemStateMachine:
                           'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', False),
                           'enhanced_reconnection': self.parsed_config.enhanced_reconnection.enabled,
                           'signal_threshold': self.parsed_config.enhanced_reconnection.signal_threshold,
-                          'current_state': self.machine.current_state})
-
-    def _load_configuration_safe_original(self, config: dict):
-        """🏗️ ORIGINAL: Legacy configuration loading (for comparison)"""
-        # 🆕 Initialize Enhanced Reconnection Strategy Configuration
-        enhanced_value = config.get('enhanced_reconnection', 'enabled')
-        if isinstance(enhanced_value, dict):
-            self.enhanced_reconnection = enhanced_value.get('enabled', 'enabled').lower() == 'enabled' if isinstance(enhanced_value.get('enabled'), str) else bool(enhanced_value.get('enabled', True))
-        else:
-            self.enhanced_reconnection = enhanced_value.lower() == 'enabled' if isinstance(enhanced_value, str) else bool(enhanced_value)
-        self.reconnection_signal_threshold = int(config.get('reconnection_signal_threshold', -85))
-        self.enhanced_reconnection_max_retries = int(config.get('enhanced_reconnection_max_retries', 3))
-        self.retry_interval_good_signal = int(config.get('retry_interval_good_signal', 15))
-        self.retry_interval_poor_signal = int(config.get('retry_interval_poor_signal', 45))
-        self.max_wait_for_signal = int(config.get('max_wait_for_signal', 120))
-        self.signal_check_interval = int(config.get('signal_check_interval', 10))
-        self.normal_monitoring_interval = int(config.get('normal_monitoring_interval', 30))
-        self.signal_strength_buffer = int(config.get('signal_strength_buffer', 5))
-
-        # 🆕 Initialize Network Interface Management Configuration
-        self.interface_management = config.get('interface_management', {})
-        self.interface_management_enabled = self.interface_management.get('enabled', True)
-        self.bearer_disconnect_delay = self.interface_management.get('bearer_disconnect_delay', 15)
-        self.ip_change_delay = self.interface_management.get('ip_change_delay', 2)
-        self.ensure_link_up_on_connect = self.interface_management.get('ensure_link_up_on_connect', True)
-        self.monitor_bearer_state = self.interface_management.get('monitor_bearer_state', True)
-        self.monitor_ip_changes = self.interface_management.get('monitor_ip_changes', True)
-        self.interface_up_timeout = self.interface_management.get('interface_up_timeout', 10)
-
-        # Initialize network interface management state
-        self._bearer_disconnect_timer = None
-        self._last_known_ip = None
-        self._ip_monitoring_task = None
-
-        # Bearer D-Bus signal monitoring state
-        self._bearer_proxy = None
-        self._bearer_interface = None
-
-        # 🆕 Normalize connectivity monitoring config
-        if 'connectivity_monitoring' in config:
-            config['connectivity_monitoring'] = self._normalize_connectivity_config(
-                config['connectivity_monitoring']
-            )
-
-        active_sim_slot = config.get('active_sim_slot', 1)
-        logger.info("Configuration applied",
-                   extra={'interface_number': self.interface_number,
-                          'config_keys': list(config.keys()) if config else [],
-                          'active_sim': active_sim_slot,
-                          'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', False),
-                          'enhanced_reconnection': self.enhanced_reconnection,
-                          'signal_threshold': self.reconnection_signal_threshold,
                           'current_state': self.machine.current_state})
 
     def _apply_parsed_configuration(self):
@@ -1420,7 +1247,6 @@ class ModemStateMachine:
                         if self._is_reset_allowed():
                             logger.warning("Gentle reset failed, trying hardware reset",
                                           extra={'interface_number': self.interface_number})
-                            from vyos.utils.wwan.interfaces_wwan_util import modem_reset
                             await modem_reset(self.interface_number)
                             self._record_reset()
                             logger.info("Hardware reset completed, waiting for modem re-enumeration",
@@ -1610,8 +1436,8 @@ class ModemStateMachine:
                 # Start network interface management
                 try:
                     if self.ensure_link_up_on_connect:
-                        asyncio.create_task(self._ensure_interface_up())
-                    asyncio.create_task(self._start_network_interface_monitoring())
+                        self._safe_create_task(self._ensure_interface_up())
+                    self._safe_create_task(self._start_network_interface_monitoring())
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
@@ -1622,7 +1448,7 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number,
                                       'limit_gb': self.config.get('data_limit_size', 0) / (1024*1024*1024)})
                     if not self.usage_monitor_task or self.usage_monitor_task.done():
-                        self.usage_monitor_task = asyncio.create_task(self.monitor_data_usage())
+                        self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
                 else:
                     logger.info("No data usage limits - connection monitoring is now event-driven",
                                extra={'interface_number': self.interface_number})
@@ -2327,14 +2153,14 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'sim_slot': config_sim_slot})
             self.transition(ModemEvent.SIM_MISSING)
-            asyncio.create_task(self._handle_sim_missing_failover())
+            self._safe_create_task(self._handle_sim_missing_failover())
 
         except Exception as e:
             logger.error(f"Failed to handle locked state: {e}",
                         extra={'interface_number': self.interface_number})
             # Fallback to missing SIM handling
             self.transition(ModemEvent.SIM_MISSING)
-            asyncio.create_task(self._handle_sim_missing_failover())
+            self._safe_create_task(self._handle_sim_missing_failover())
 
     async def _check_sim_insertion(self):
         """Check if a SIM was inserted in the configured slot"""
@@ -3195,142 +3021,20 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
             return None
 
-    # @safe_extraction("_discover_apn_candidates")  # Async methods need special handling
     async def _discover_apn_candidates(self, sim_info, sim_config):
-        """🔄 SAFE EXTRACTION: Discover APN candidates using new APNDiscovery class"""
+        """Discover APN candidates using new APNDiscovery class"""
         return await self.apn_discovery.discover_apn_candidates(sim_info, sim_config)
 
-    async def _discover_apn_candidates_original(self, sim_info, sim_config):
-        """🏗️ ORIGINAL: Discover APN candidates using Android library or fallback (for comparison)"""
-        try:
-            if APN_LOOKUP_AVAILABLE:
-                return await self._discover_with_android_library_original(sim_info, sim_config)
-            else:
-                return await self._discover_with_fallback_original(sim_info, sim_config)
-
-        except Exception as e:
-            logger.error(f"APN discovery failed: {e}",
-                        extra={'interface_number': self.interface_number})
-            return []
-
-    async def _discover_with_android_library_original(self, sim_info, sim_config):
-        """Use the Android apnscripts library for APN discovery"""
-        try:
-            # Extract SIM identifiers for the Android library
-            mcc_mnc = sim_info['mcc_mnc'] or ""
-            imsi_prefix = sim_info['imsi'][:15] if sim_info['imsi'] else ""
-            iccid_prefix = sim_info['sim_identifier'] or ""
-            gid1 = sim_info['gid1'] or ""
-            gid2 = sim_info['gid2'] or ""
-            plmn = sim_info['plmn'] or ""
-            spn = sim_info['spn'] or ""
-
-            logger.info("Calling Android APN lookup",
-                       extra={'interface_number': self.interface_number,
-                              'mcc_mnc': mcc_mnc,
-                              'imsi_prefix': imsi_prefix[:6] + '...' if imsi_prefix else None,
-                              'plmn': plmn,
-                              'spn': spn})
-
-            # Call the Android lookup library in executor to avoid blocking
-            loop = asyncio.get_event_loop()
-            apn_list = await loop.run_in_executor(
-                None,
-                find_apn_list,
-                mcc_mnc, imsi_prefix, iccid_prefix, gid1, gid2, plmn, spn
-            )
-
-            logger.info("Android APN lookup completed",
-                       extra={'interface_number': self.interface_number,
-                              'raw_apn_count': len(apn_list),
-                              'mcc_mnc': mcc_mnc})
-
-            # Convert Android APNs to our format
-            candidates = self._convert_android_apns(apn_list, sim_info)
-
-            return candidates
-
-        except Exception as e:
-            logger.error(f"Android APN lookup failed: {e}",
-                        extra={'interface_number': self.interface_number})
-            # Fallback to built-in database
-            return await self._discover_with_fallback_original(sim_info, sim_config)
-
-    def _convert_android_apns_original(self, android_apns, sim_info):
-        """ORIGINAL: Convert Android APN format to our standardized format (kept for comparison)"""
-        candidates = []
-
-        for i, apn in enumerate(android_apns):
-            try:
-                # Android APNs typically have these fields (adjust based on actual structure)
-                candidate = {
-                    'name': self._extract_apn_field_original(apn, 'apn', f'apn_{i}'),
-                    'username': self._extract_apn_field_original(apn, 'user', ''),
-                    'password': self._extract_apn_field_original(apn, 'password', ''),
-                    'auth_type': self._convert_android_auth_type_original(
-                        self._extract_apn_field_original(apn, 'authtype', '0')
-                    ),
-                    'type': self._extract_apn_field_original(apn, 'type', 'default'),
-                    'priority': self._calculate_android_priority(apn, i),
-                    'carrier': sim_info['operator_name'],
-                    'mcc_mnc': sim_info['mcc_mnc'],
-                    'match_type': 'android_lookup',
-                    'source': 'AOSP'
-                }
-
-                # Only add if APN name is valid
-                if candidate['name'] and candidate['name'] != f'apn_{i}':
-                    candidates.append(candidate)
-
-            except Exception as e:
-                logger.warning(f"Failed to convert Android APN {i}: {e}",
-                              extra={'interface_number': self.interface_number})
-                continue
-
-        return candidates
-
-    @safe_extraction('_convert_android_apns')
     def _convert_android_apns(self, android_apns, sim_info):
-        """NEW: Convert Android APN format using extracted utility"""
+        """Convert Android APN format using extracted utility"""
         return convert_android_apns(android_apns, sim_info)
 
-    def _extract_apn_field_original(self, apn, field_name: str, default_value: str = '') -> str:
-        """ORIGINAL: Extract field from Android APN object (kept for comparison)"""
-        try:
-            # Handle different possible structures
-            if hasattr(apn, field_name):
-                return str(getattr(apn, field_name, default_value))
-            elif isinstance(apn, dict):
-                return str(apn.get(field_name, default_value))
-            elif hasattr(apn, '__getitem__'):
-                return str(apn[field_name]) if field_name in apn else default_value
-            else:
-                return default_value
-        except (AttributeError, KeyError, TypeError):
-            return default_value
-
-    @safe_extraction('_extract_apn_field')
     def _extract_apn_field(self, apn, field_name: str, default_value: str = '') -> str:
-        """NEW: Extract field from Android APN object using extracted utility"""
+        """Extract field from Android APN object using extracted utility"""
         return extract_apn_field(apn, field_name, default_value)
 
-    def _convert_android_auth_type_original(self, android_auth: str) -> str:
-        """ORIGINAL: Convert Android auth type to our format (kept for comparison)"""
-        auth_mapping = {
-            '0': 'none',      # No authentication
-            '1': 'pap',       # PAP
-            '2': 'chap',      # CHAP
-            '3': 'pap-chap',  # PAP or CHAP
-            'none': 'none',
-            'pap': 'pap',
-            'chap': 'chap',
-            'pap-chap': 'pap-chap'
-        }
-        return auth_mapping.get(str(android_auth).lower(), 'none')
-
-    @safe_extraction('_convert_android_auth_type')
     def _convert_android_auth_type(self, android_auth: str) -> str:
-        """NEW: Convert Android auth type using extracted utility"""
+        """Convert Android auth type using extracted utility"""
         return convert_android_auth_type(android_auth)
 
     def _calculate_android_priority(self, apn, index: int) -> int:
@@ -3357,39 +3061,8 @@ class ModemStateMachine:
 
         except Exception:
             return 5 + index
-
-    async def _discover_with_fallback_original(self, sim_info, sim_config):
-        """Fallback discovery when Android library is not available"""
-        logger.info("Using fallback APN discovery",
-                   extra={'interface_number': self.interface_number,
-                          'mcc_mnc': sim_info['mcc_mnc'],
-                          'operator_name': sim_info['operator_name']})
-
-        candidates = []
-
-        # Basic fallback database
-        fallback_db = {
-            "310260": [{"name": "fast.t-mobile.com", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-            "311480": [{"name": "vzwinternet", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-            "310410": [{"name": "broadband", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-        }
-
-        mcc_mnc = sim_info['mcc_mnc']
-        if mcc_mnc in fallback_db:
-            for apn in fallback_db[mcc_mnc]:
-                candidates.append({
-                    **apn,
-                    'carrier': sim_info['operator_name'],
-                    'mcc_mnc': mcc_mnc,
-                    'match_type': 'fallback_database',
-                    'source': 'builtin'
-                })
-
-        return candidates
-
-    # @safe_extraction("_try_apn_candidates")  # Async methods need special handling
     async def _try_apn_candidates(self, candidates, sim_config, sim_info):
-        """🔄 SAFE EXTRACTION: Try APN candidates using new ConnectionManager"""
+        """Try APN candidates using new ConnectionManager"""
         # Set proxy for connection manager
         self.connection_manager.set_proxy(self.proxy)
 
@@ -3404,64 +3077,8 @@ class ModemStateMachine:
             logger.warning("All APN candidates failed, trying automatic assignment",
                           extra={'interface_number': self.interface_number,
                                  'total_candidates_tried': len(candidates)})
-
-    async def _try_apn_candidates_original(self, candidates, sim_config, sim_info):
-        """🏗️ ORIGINAL: Try APN candidates in priority order (for comparison)"""
-        logger.info("Trying APN candidates in priority order",
-                   extra={'interface_number': self.interface_number,
-                          'candidate_count': len(candidates)})
-
-        for i, candidate in enumerate(candidates):
-            try:
-                logger.info(f"Trying APN candidate {i+1}/{len(candidates)}",
-                           extra={'interface_number': self.interface_number,
-                                  'apn_name': candidate['name'],
-                                  'apn_type': candidate.get('type', 'default'),
-                                  'priority': candidate.get('priority', 0)})
-
-                # Convert candidate to our APN config format
-                apn_config = {
-                    'name': candidate['name'],
-                    'username': candidate.get('username', ''),
-                    'password': candidate.get('password', ''),
-                    'auth_type': candidate.get('auth_type', 'none')
-                }
-
-                success = await self._try_connection_with_apn_original(apn_config, sim_config)
-
-                if success:
-                    logger.info("APN candidate connection successful",
-                               extra={'interface_number': self.interface_number,
-                                      'successful_apn': candidate['name'],
-                                      'attempt_number': i+1,
-                                      'total_attempts': len(candidates)})
-
-                    # Cache successful APN for future use
-                    await self._cache_successful_apn_original(sim_info, apn_config, candidate)
-                    return
-
-                else:
-                    logger.info(f"APN candidate {i+1} failed, trying next",
-                               extra={'interface_number': self.interface_number,
-                                      'failed_apn': candidate['name'],
-                                      'remaining_candidates': len(candidates) - i - 1})
-
-            except Exception as e:
-                logger.warning(f"Error trying APN candidate: {e}",
-                              extra={'interface_number': self.interface_number,
-                                     'apn_name': candidate['name']})
-                continue
-
-        # All candidates failed
-        logger.warning("All APN candidates failed, trying automatic assignment",
-                      extra={'interface_number': self.interface_number,
-                             'total_candidates_tried': len(candidates)})
-
-        await self._try_automatic_apn_assignment(sim_config)
-
-    # @safe_extraction("_try_connection_with_apn")  # Async methods need special handling
     async def _try_connection_with_apn(self, apn_config, sim_config):
-        """🔄 SAFE EXTRACTION: Try connection using new ConnectionManager"""
+        """Try connection using new ConnectionManager"""
         # Set proxy for connection manager
         self.connection_manager.set_proxy(self.proxy)
 
@@ -3473,80 +3090,6 @@ class ModemStateMachine:
             self.bearer_path = self.connection_manager.get_current_bearer_path()
 
         return success
-
-    async def _try_connection_with_apn_original(self, apn_config, sim_config):
-        """Try to establish connection with specific APN configuration"""
-        try:
-            logger.info("Attempting connection with APN",
-                       extra={'interface_number': self.interface_number,
-                              'apn_name': apn_config['name'],
-                              'has_auth': apn_config['auth_type'] != 'none'})
-
-            # Build connection parameters (reuse existing logic)
-            connect_params = {}
-
-            # Add APN name
-            connect_params['apn'] = Variant('s', apn_config['name'])
-
-            # Add PDP/IP type
-            pdp_type = sim_config.get('pdp_type', 'ipv4')
-            connect_params['ip-type'] = Variant('u', self._convert_pdp_type(pdp_type))
-
-            # Add authentication if configured
-            if apn_config['auth_type'] != 'none' and apn_config['username']:
-                connect_params['user'] = Variant('s', apn_config['username'])
-                connect_params['password'] = Variant('s', apn_config['password'])
-                connect_params['allowed-auth'] = Variant('u', self._convert_auth_type(apn_config['auth_type']))
-
-            # Add roaming settings
-            roaming = sim_config.get('roaming', 'disabled')
-            connect_params['allow-roaming'] = Variant('b', roaming == 'enabled')
-
-            # Attempt connection with timeout
-            simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
-
-            try:
-                bearer_path = await asyncio.wait_for(
-                    simple_iface.call_connect(connect_params),
-                    timeout=60.0  # 60 second timeout per APN attempt
-                )
-
-                self.bearer_path = bearer_path
-
-                # Verify connection
-                await asyncio.sleep(3)  # Brief wait for connection to establish
-                is_connected = await self._verify_bearer_connection()
-
-                if is_connected:
-                    logger.info("APN connection successful and verified",
-                               extra={'interface_number': self.interface_number,
-                                      'apn_name': apn_config['name'],
-                                      'bearer_path': bearer_path})
-                    return True
-                else:
-                    logger.warning("APN connection created but verification failed",
-                                  extra={'interface_number': self.interface_number,
-                                         'apn_name': apn_config['name']})
-                    # Cleanup failed connection
-                    try:
-                        await simple_iface.call_disconnect(bearer_path)
-                    except Exception:
-                        pass
-                    self.bearer_path = None
-                    return False
-
-            except asyncio.TimeoutError:
-                logger.warning("APN connection attempt timed out",
-                              extra={'interface_number': self.interface_number,
-                                     'apn_name': apn_config['name'],
-                                     'timeout_seconds': 60})
-                return False
-
-        except Exception as e:
-            logger.warning(f"APN connection attempt failed: {e}",
-                          extra={'interface_number': self.interface_number,
-                                 'apn_name': apn_config['name']})
-            return False
 
     async def _try_automatic_apn_assignment(self, sim_config):
         """Try automatic APN assignment as last resort"""
@@ -3620,47 +3163,10 @@ class ModemStateMachine:
             logger.debug(f"APN detection failed: {e}",
                         extra={'interface_number': self.interface_number})
 
-    # @safe_extraction("_cache_successful_apn")  # Async methods need special handling
     async def _cache_successful_apn(self, sim_info, apn_config, candidate_info):
-        """🔄 SAFE EXTRACTION: Cache successful APN using ConnectionManager"""
+        """Cache successful APN using ConnectionManager"""
         # Use the extracted connection manager
         await self.connection_manager._cache_successful_apn(sim_info, apn_config, candidate_info)
-
-    async def _cache_successful_apn_original(self, sim_info, apn_config, candidate_info):
-        """🏗️ ORIGINAL: Cache successful APN for future quick connection (for comparison)"""
-        try:
-            import json
-            import os
-
-            # Create cache key from SIM identifiers
-            cache_key = f"{sim_info['mcc_mnc']}_{sim_info.get('sim_identifier', 'unknown')}"
-
-            cache_entry = {
-                'apn_config': apn_config,
-                'candidate_info': candidate_info,
-                'timestamp': time.time(),
-                'success_count': 1,
-                'interface_number': self.interface_number
-            }
-
-            # Store in persistent cache
-            cache_dir = "/var/lib/vyos/wwan-apn-cache"
-            os.makedirs(cache_dir, exist_ok=True)
-
-            cache_file = os.path.join(cache_dir, f"{cache_key}.json")
-
-            with open(cache_file, 'w') as f:
-                json.dump(cache_entry, f, indent=2)
-
-            logger.info("Successful APN cached for future use",
-                       extra={'interface_number': self.interface_number,
-                              'cache_key': cache_key,
-                              'apn_name': apn_config['name'],
-                              'apn_type': candidate_info.get('type', 'unknown')})
-
-        except Exception as e:
-            logger.warning(f"Failed to cache successful APN: {e}",
-                          extra={'interface_number': self.interface_number})
 
     async def _get_cached_successful_apn(self, sim_info):
         """Get previously successful APN from cache"""
@@ -4586,7 +4092,7 @@ class ModemStateMachine:
 
         # Start monitoring task
         if not hasattr(self, 'connectivity_monitor_task') or self.connectivity_monitor_task is None:
-            self.connectivity_monitor_task = asyncio.create_task(self._connectivity_monitor_loop())
+            self.connectivity_monitor_task = self._safe_create_task(self._connectivity_monitor_loop())
 
     async def _connectivity_monitor_loop(self):
         """Main connectivity monitoring loop with ping tests"""
@@ -5246,7 +4752,7 @@ class ModemStateMachine:
 
         # Start IP change monitoring
         if self.monitor_ip_changes and (not self._ip_monitoring_task or self._ip_monitoring_task.done()):
-            self._ip_monitoring_task = asyncio.create_task(self._monitor_ip_changes())
+            self._ip_monitoring_task = self._safe_create_task(self._monitor_ip_changes())
 
     async def _stop_network_interface_monitoring(self):
         """Stop network interface monitoring tasks when leaving CONNECTED state"""
@@ -5349,7 +4855,7 @@ class ModemStateMachine:
                                   extra={'interface_number': self.interface_number,
                                          'debounce_delay_seconds': self.bearer_disconnect_delay,
                                          'action': 'interface_will_go_down_if_no_reconnect'})
-                    asyncio.create_task(self._handle_bearer_disconnect())
+                    self._safe_create_task(self._handle_bearer_disconnect())
                 else:
                     # Bearer connected/reconnected
                     if self._bearer_disconnect_timer:
@@ -5362,14 +4868,14 @@ class ModemStateMachine:
                     logger.info("🔺 Bearer CONNECTED - ensuring interface UP",
                                extra={'interface_number': self.interface_number,
                                       'action': 'setting_interface_up'})
-                    asyncio.create_task(self._ensure_interface_up())
+                    self._safe_create_task(self._ensure_interface_up())
 
             # Check for IP configuration changes
             if 'Ip4Config' in changed_properties or 'Ip6Config' in changed_properties:
                 logger.info("🌐 Bearer IP configuration changed - updating interface",
                            extra={'interface_number': self.interface_number,
                                   'changed_configs': [k for k in ['Ip4Config', 'Ip6Config'] if k in changed_properties]})
-                asyncio.create_task(self._apply_bearer_ip_configuration())
+                self._safe_create_task(self._apply_bearer_ip_configuration())
 
         except Exception as e:
             logger.error(f"Error handling bearer properties changed: {e}",
@@ -5415,7 +4921,7 @@ class ModemStateMachine:
                                                 'registration_state': f"{reg_state} ({reg_state_name})",
                                                 'bearer_connected': bearer_connected,
                                                 'action': 'interface_down_immediate'})
-                            asyncio.create_task(self._set_interface_down())
+                            self._safe_create_task(self._set_interface_down())
                         else:
                             # Registration lost but bearer still connected - start conservative timer
                             logger.warning("📡⚠️ Network registration lost but bearer still connected - starting registration recovery timer",
@@ -5424,7 +4930,7 @@ class ModemStateMachine:
                                                 'bearer_connected': bearer_connected,
                                                 'recovery_timer_seconds': 30,
                                                 'action': 'interface_down_if_no_recovery'})
-                            asyncio.create_task(self._handle_registration_loss_with_bearer())
+                            self._safe_create_task(self._handle_registration_loss_with_bearer())
                 except Exception as e:
                     logger.debug(f"Could not check bearer state during registration change: {e}",
                                 extra={'interface_number': self.interface_number})
@@ -5433,7 +4939,7 @@ class ModemStateMachine:
                                  extra={'interface_number': self.interface_number,
                                         'registration_state': f"{reg_state} ({reg_state_name})",
                                         'action': 'interface_down_conservative'})
-                    asyncio.create_task(self._set_interface_down())
+                    self._safe_create_task(self._set_interface_down())
 
             elif reg_state in connected_states:
                 # Network registration restored
@@ -5449,10 +4955,10 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number})
 
                 # Ensure interface is up
-                asyncio.create_task(self._ensure_interface_up())
+                self._safe_create_task(self._ensure_interface_up())
 
                 # Check bearer status and reconnect if necessary
-                asyncio.create_task(self._handle_registration_recovery())
+                self._safe_create_task(self._handle_registration_recovery())
 
         except Exception as e:
             logger.error(f"Error handling registration state change: {e}",
@@ -5474,7 +4980,7 @@ class ModemStateMachine:
                              extra={'interface_number': self.interface_number,
                                     'final_registration_state': current_reg_state,
                                     'action': 'interface_down_timeout'})
-                asyncio.create_task(self._set_interface_down())
+                self._safe_create_task(self._set_interface_down())
             else:
                 logger.info("📡✅ Registration recovered during timeout period",
                            extra={'interface_number': self.interface_number,
@@ -5632,7 +5138,7 @@ class ModemStateMachine:
         """Handle bearer disconnect with configurable delay"""
         try:
             # Start disconnect timer
-            self._bearer_disconnect_timer = asyncio.create_task(
+            self._bearer_disconnect_timer = self._safe_create_task(
                 asyncio.sleep(self.bearer_disconnect_delay)
             )
 
@@ -5748,7 +5254,7 @@ class ModemStateMachine:
             # Set up timeout to ensure flag gets cleared even if something goes wrong
             if self.reset_timeout_task:
                 self.reset_timeout_task.cancel()
-            self.reset_timeout_task = asyncio.create_task(self._reset_timeout_handler())
+            self.reset_timeout_task = self._safe_create_task(self._reset_timeout_handler())
 
             logger.info("Starting gentle reset using modem disable/enable cycle",
                        extra={'interface_number': self.interface_number})

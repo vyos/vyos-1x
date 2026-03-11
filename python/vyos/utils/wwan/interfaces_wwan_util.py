@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/src/conf_mode/interfaces_wwan_util.py
+# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_util.py
 """
 WWAN Interface Utilities
 

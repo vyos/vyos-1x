@@ -107,6 +107,10 @@ class StateTransitionManager:
                 StateTransition("WAITING_FOR_SIM", "CONFIGURING", "SIM_READY", "SIM card ready"),
                 StateTransition("FAILED", "CONFIGURING", "SIM_READY", "Recovery with SIM ready"),
 
+                # SIM missing detection
+                StateTransition("DISCONNECTED", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while disconnected"),
+                StateTransition("CONFIGURING", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed during config"),
+
                 # SIM switching transitions
                 StateTransition("CONNECTED", "SIM_SWITCHING", "SWITCH_SIM", "Initiate SIM switch"),
                 StateTransition("USAGE_MONITORING", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from monitoring"),
@@ -114,14 +118,20 @@ class StateTransitionManager:
                 StateTransition("DISCONNECTED", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch when disconnected"),
                 StateTransition("FAILED", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from failed state"),
 
-                # SIM switch process (using actual ModemEvent names)
+                # SIM switch process — events match what the code actually fires:
+                #   _execute_sim_switch  -> SIM_DISCONNECTED
+                #   _sim_switch_disconnect -> SIM_DISCONNECTED
+                #   _sim_switch_disable  -> SIM_DISABLED
+                #   _sim_switch_hardware -> SIM_SWITCHED (re-select slot)
+                #   _sim_switch_enable   -> SIM_ENABLED
+                #   _sim_switch_reconfigure -> SIM_SWITCH_COMPLETE
                 StateTransition("SIM_SWITCHING", "SIM_DISCONNECTING", "SIM_DISCONNECTED", "Disconnect for SIM switch"),
                 StateTransition("SIM_DISCONNECTING", "SIM_DISABLING", "SIM_DISABLED", "Disable current SIM"),
                 StateTransition("SIM_DISABLING", "SIM_ENABLING", "SIM_SWITCHED", "Enable target SIM"),
                 StateTransition("SIM_ENABLING", "SIM_RECONFIGURING", "SIM_ENABLED", "Reconfigure with new SIM"),
                 StateTransition("SIM_RECONFIGURING", "CONFIGURING", "SIM_SWITCH_COMPLETE", "SIM switch completed"),
 
-                # SIM switch error handling (using CONNECTION_FAILED for now)
+                # SIM switch error handling
                 StateTransition("SIM_SWITCHING", "FAILED", "CONNECTION_FAILED", "SIM switch failed"),
                 StateTransition("SIM_DISCONNECTING", "FAILED", "CONNECTION_FAILED", "Disconnect failed"),
                 StateTransition("SIM_DISABLING", "FAILED", "CONNECTION_FAILED", "Disable failed"),
@@ -136,10 +146,10 @@ class StateTransitionManager:
             description="Error recovery and failure state management",
             transitions=[
                 StateTransition("CONNECTING", "FAILED", "CONNECTION_FAILED", "Connection attempt failed"),
+                StateTransition("CONNECTED", "FAILED", "CONNECTION_FAILED", "Active connection failed"),
                 StateTransition("CONFIGURING", "FAILED", "CONNECTION_FAILED", "Configuration failed"),
                 StateTransition("SCANNING", "FAILED", "CONNECTION_FAILED", "Modem scan failed"),
                 StateTransition("FAILED", "SCANNING", "START_SCAN", "Retry modem scanning"),
-                StateTransition("FAILED", "CONFIGURING", "RECONFIGURE", "Retry configuration"),
                 StateTransition("FAILED", "CONNECTING", "CONNECT", "Retry connection"),
             ]
         )
@@ -157,6 +167,31 @@ class StateTransitionManager:
             ]
         )
 
+        # Hardware Removal Flow — START_SCAN must be reachable from every state
+        # except INITIAL (hasn't started) and SCANNING (already scanning)
+        hardware_removal_flow = StateTransitionGroup(
+            name="Hardware Removal Flow",
+            description="Handle modem hot-unplug from any operational state",
+            transitions=[
+                StateTransition("MODEM_FOUND", "SCANNING", "START_SCAN", "Modem removed after discovery"),
+                StateTransition("WAITING_FOR_CONFIG", "SCANNING", "START_SCAN", "Modem removed while waiting for config"),
+                StateTransition("WAITING_FOR_SIM", "SCANNING", "START_SCAN", "Modem removed while waiting for SIM"),
+                StateTransition("CONFIGURING", "SCANNING", "START_SCAN", "Modem removed during configuration"),
+                StateTransition("CONNECTING", "SCANNING", "START_SCAN", "Modem removed during connection"),
+                StateTransition("CONNECTED", "SCANNING", "START_SCAN", "Modem removed while connected"),
+                StateTransition("DISCONNECTING", "SCANNING", "START_SCAN", "Modem removed during disconnect"),
+                StateTransition("DISCONNECTED", "SCANNING", "START_SCAN", "Modem removed while disconnected"),
+                StateTransition("USAGE_MONITORING", "SCANNING", "START_SCAN", "Modem removed during monitoring"),
+                StateTransition("USAGE_THRESHOLD", "SCANNING", "START_SCAN", "Modem removed at usage threshold"),
+                StateTransition("USAGE_RESETTING", "SCANNING", "START_SCAN", "Modem removed during usage reset"),
+                StateTransition("SIM_SWITCHING", "SCANNING", "START_SCAN", "Modem removed during SIM switch"),
+                StateTransition("SIM_DISCONNECTING", "SCANNING", "START_SCAN", "Modem removed during SIM disconnect"),
+                StateTransition("SIM_DISABLING", "SCANNING", "START_SCAN", "Modem removed during SIM disable"),
+                StateTransition("SIM_ENABLING", "SCANNING", "START_SCAN", "Modem removed during SIM enable"),
+                StateTransition("SIM_RECONFIGURING", "SCANNING", "START_SCAN", "Modem removed during SIM reconfig"),
+            ]
+        )
+
         # Usage Monitoring Flow
         usage_flow = StateTransitionGroup(
             name="Usage Monitoring Flow",
@@ -171,7 +206,8 @@ class StateTransitionManager:
         # Store all transition groups
         self.transition_groups = [
             initial_flow, config_flow, connection_flow, disconnection_flow,
-            sim_flow, error_flow, reconfig_flow, usage_flow
+            sim_flow, error_flow, reconfig_flow, usage_flow,
+            hardware_removal_flow
         ]
 
     def _index_transitions(self):

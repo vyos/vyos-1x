@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/src/conf_mode/interfaces_wwan_config.py
+# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_config.py
 import asyncio
 import logging
 import logging.handlers
@@ -9,39 +9,14 @@ from datetime import datetime, timezone
 from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
 
-class RFC5424Formatter(logging.Formatter):
-    """RFC 5424 compliant syslog formatter for config SNMP integration"""
 
-    FACILITY = 18  # local2 for config
-    SEVERITY_MAP = {
-        logging.DEBUG: 7, logging.INFO: 6, logging.WARNING: 4,
-        logging.ERROR: 3, logging.CRITICAL: 2
-    }
-
-    def __init__(self, app_name="wwan-config"):
-        super().__init__()
-        self.app_name = app_name
-        self.hostname = socket.gethostname()
-
-    def format(self, record):
-        severity = self.SEVERITY_MAP.get(record.levelno, 6)
-        priority = self.FACILITY * 8 + severity
-
-        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc)
-        timestamp_str = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-        pid = record.process or '-'
-        msgid = self._get_message_id(record)
-        structured_data = self._build_structured_data(record)
-
-        return (f"<{priority}>1 {timestamp_str} {self.hostname} "
-                f"{self.app_name} {pid} {msgid} {structured_data} {record.getMessage()}")
+class ConfigFormatter(_BaseFormatter):
+    """Config-specific RFC 5424 formatter."""
 
     def _get_message_id(self, record):
-        """Generate message ID for SNMP categorization"""
         msg = record.getMessage().lower()
-
         if 'setting configuration' in msg:
             return 'CONFIG_SET'
         elif 'configuration applied' in msg:
@@ -66,9 +41,7 @@ class RFC5424Formatter(logging.Formatter):
             return 'CONFIG_EVENT'
 
     def _build_structured_data(self, record):
-        """Build structured data for SNMP monitoring"""
         sd_elements = []
-
         config_data = []
         if hasattr(record, 'interface_number'):
             config_data.append(f'interface="{record.interface_number}"')
@@ -82,13 +55,10 @@ class RFC5424Formatter(logging.Formatter):
             config_data.append(f'band_count="{record.band_count}"')
         if hasattr(record, 'carrier_resolved'):
             config_data.append(f'carrier_resolved="{record.carrier_resolved}"')
-
         if config_data:
             sd_elements.append(f'[config@32473 {" ".join(config_data)}]')
-
         origin_data = [f'software="vyos-wwan-config"', f'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-
         return ''.join(sd_elements) if sd_elements else '-'
 
 # Carrier name to operator code mapping for user-friendly configuration
@@ -203,37 +173,7 @@ def resolve_carrier_code(carrier_input):
     # No match found - return as-is for direct operator registration attempt
     return carrier_clean, f"Unknown: {carrier_clean}", False
 
-# Set up RFC 5424 logging
-def setup_config_logging():
-    formatter = RFC5424Formatter("wwan-config")
-
-    try:
-        syslog_handler = logging.handlers.SysLogHandler(
-            address='/dev/log',
-            facility=logging.handlers.SysLogHandler.LOG_LOCAL2
-        )
-        syslog_handler.setFormatter(formatter)
-        use_syslog = True
-    except (OSError, IOError):
-        use_syslog = False
-
-    console_formatter = logging.Formatter(
-        '%(asctime)s wwan-config[%(process)d]: %(levelname)s: %(message)s'
-    )
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    if use_syslog:
-        logger.addHandler(syslog_handler)
-    logger.addHandler(console_handler)
-    logger.propagate = False
-
-    return logger
-
-logger = setup_config_logging()
+logger = setup_logging(__name__, "wwan-config", formatter_class=ConfigFormatter)
 
 class InterfaceConfig(ServiceInterface):
     # Centralized default configuration values
@@ -379,10 +319,11 @@ class InterfaceConfig(ServiceInterface):
         self._restore_configuration()
 
     def _save_configuration(self, config_dict):
-        """Save configuration to persistent storage"""
+        """Save configuration to persistent storage (atomic write)"""
         try:
             import os
             import json
+            import tempfile
 
             # Create state directory if it doesn't exist
             os.makedirs(self.config_state_dir, exist_ok=True)
@@ -398,9 +339,24 @@ class InterfaceConfig(ServiceInterface):
                     # Convert complex objects to string representation
                     json_safe_config[key] = str(value)
 
-            # Save configuration as JSON
-            with open(self.config_state_file, 'w') as f:
-                json.dump(json_safe_config, f, indent=2)
+            # Atomic write: write to temp file then rename so a crash
+            # mid-write never leaves a truncated/corrupt config file.
+            fd, tmp_path = tempfile.mkstemp(
+                dir=self.config_state_dir, suffix='.tmp'
+            )
+            try:
+                with os.fdopen(fd, 'w') as f:
+                    json.dump(json_safe_config, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, self.config_state_file)
+            except BaseException:
+                # Clean up temp file on any failure
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
 
             logger.info("Configuration saved to persistent storage",
                        extra={'interface_number': self.interface_number,
@@ -442,8 +398,19 @@ class InterfaceConfig(ServiceInterface):
                 return
 
             # Load configuration from JSON
-            with open(self.config_state_file, 'r') as f:
-                saved_config = json.load(f)
+            try:
+                with open(self.config_state_file, 'r') as f:
+                    saved_config = json.load(f)
+            except (json.JSONDecodeError, ValueError) as je:
+                logger.error(
+                    f"Corrupt configuration file, removing: {je}",
+                    extra={'interface_number': self.interface_number,
+                           'config_file': self.config_state_file})
+                try:
+                    os.remove(self.config_state_file)
+                except OSError:
+                    pass
+                return
 
             logger.info("Restored configuration from persistent storage",
                        extra={'interface_number': self.interface_number,
@@ -468,10 +435,20 @@ class InterfaceConfig(ServiceInterface):
 
             # Apply configuration asynchronously
             import asyncio
-            asyncio.create_task(self._apply_restored_config(dbus_config))
+            task = asyncio.create_task(self._apply_restored_config(dbus_config))
+            task.add_done_callback(self._restore_task_done)
 
         except Exception as e:
             logger.error(f"Failed to restore configuration: {e}",
+                        extra={'interface_number': self.interface_number})
+
+    def _restore_task_done(self, task):
+        """Callback to log exceptions from the config-restore task."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc:
+            logger.error(f"Restored-config task failed: {exc}",
                         extra={'interface_number': self.interface_number})
 
     async def _apply_restored_config(self, dbus_config):
@@ -1569,12 +1546,49 @@ class InterfaceConfig(ServiceInterface):
 
     @method()
     async def connect(self) -> 's':
+        """Request connection. Always accepted — the service handles state internally.
+
+        If the FSM is already in a connectable state, fires the transition
+        immediately.  Otherwise, sets a ``connect_requested`` flag on the FSM
+        so that connection proceeds automatically as soon as the modem is ready.
+        The caller never needs to know or care about FSM state.
+        """
         try:
-            logger.info("Connecting interface",
-                       extra={'interface_number': self.interface_number})
-            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
-            self.fsm.transition(ModemEvent.CONNECT)
-            return f"connect() on {self.interface_number}"
+            current_state = (
+                getattr(self.fsm.machine, 'current_state', 'UNKNOWN')
+                if hasattr(self.fsm, 'machine') and self.fsm.machine
+                else 'UNKNOWN'
+            )
+
+            logger.info("Connect requested",
+                       extra={'interface_number': self.interface_number,
+                              'current_state': current_state})
+
+            # States where CONNECT transition is valid right now
+            connectable_states = {'CONFIGURING', 'FAILED'}
+            # States where we are already connected / on the way
+            already_connected_states = {'CONNECTED', 'CONNECTING', 'USAGE_MONITORING'}
+
+            if current_state in already_connected_states:
+                msg = (f"Interface {self.interface_number} is already "
+                       f"in state {current_state} — no action needed")
+                logger.info(msg, extra={'interface_number': self.interface_number})
+                return msg
+
+            if current_state in connectable_states:
+                from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
+                self.fsm.transition(ModemEvent.CONNECT)
+                return f"connect() on {self.interface_number}"
+
+            # Not ready yet — queue the request so FSM connects when it can
+            self.fsm.connect_requested = True
+            msg = (f"Connect request queued for interface {self.interface_number} "
+                   f"(current state: {current_state}). "
+                   f"Connection will proceed automatically when modem is ready.")
+            logger.info(msg, extra={'interface_number': self.interface_number,
+                                    'current_state': current_state})
+            return msg
+
         except Exception as e:
             logger.error("Connect failed",
                         extra={'interface_number': self.interface_number,
@@ -1586,9 +1600,39 @@ class InterfaceConfig(ServiceInterface):
         try:
             logger.info("Disconnecting interface",
                        extra={'interface_number': self.interface_number})
-            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
-            self.fsm.transition(ModemEvent.DISCONNECT)
-            return f"disconnect() on {self.interface_number}"
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent, ModemState
+
+            current_state = self.fsm.machine.current_state if hasattr(self.fsm, 'machine') and self.fsm.machine else 'UNKNOWN'
+
+            # States where disconnect is a no-op (already disconnected or not connected)
+            already_disconnected = {
+                ModemState.DISCONNECTED.value,
+                ModemState.SCANNING.value,
+                ModemState.INITIAL.value,
+                ModemState.WAITING_FOR_CONFIG.value,
+                ModemState.MODEM_FOUND.value,
+                ModemState.WAITING_FOR_SIM.value,
+            }
+            if current_state in already_disconnected:
+                msg = f"Interface {self.interface_number} not connected (state: {current_state})"
+                logger.info(msg, extra={'interface_number': self.interface_number})
+                return msg
+
+            # States where disconnect is valid
+            disconnectable = {
+                ModemState.CONNECTED.value,
+                ModemState.USAGE_MONITORING.value,
+                ModemState.SIM_SWITCHING.value,
+            }
+            if current_state in disconnectable:
+                self.fsm.transition(ModemEvent.DISCONNECT)
+                return f"disconnect() on {self.interface_number}"
+
+            # Transitional states — log and return gracefully rather than error
+            msg = f"Interface {self.interface_number} in transitional state {current_state}, disconnect queued"
+            logger.info(msg, extra={'interface_number': self.interface_number,
+                                    'current_state': current_state})
+            return msg
         except Exception as e:
             logger.error("Disconnect failed",
                         extra={'interface_number': self.interface_number,

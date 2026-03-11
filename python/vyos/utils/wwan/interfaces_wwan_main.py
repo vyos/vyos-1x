@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# filepath: /home/jfeeney/vyos-1x/src/conf_mode/interfaces_wwan_main.py
+# filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_main.py
 import asyncio
 import subprocess
 import sys
@@ -11,63 +11,14 @@ from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_service_manager import ConfigServiceManager
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
+from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
 
-class RFC5424Formatter(logging.Formatter):
-    """RFC 5424 compliant syslog formatter for SNMP integration"""
 
-    # Facility: local use facilities (16-23)
-    FACILITY_MAP = {
-        'wwan-manager': 16,    # local0
-        'wwan-service': 17,    # local1
-        'wwan-config': 18,     # local2
-        'wwan-fsm': 19,        # local3
-    }
-
-    SEVERITY_MAP = {
-        logging.DEBUG: 7,      # debug
-        logging.INFO: 6,       # info
-        logging.WARNING: 4,    # warning
-        logging.ERROR: 3,      # error
-        logging.CRITICAL: 2    # critical
-    }
-
-    def __init__(self, app_name="wwan-manager"):
-        super().__init__()
-        self.app_name = app_name
-        self.hostname = socket.gethostname()
-        self.facility = self.FACILITY_MAP.get(app_name, 16)
-
-    def format(self, record):
-        # Calculate priority (facility * 8 + severity)
-        severity = self.SEVERITY_MAP.get(record.levelno, 6)
-        priority = self.facility * 8 + severity
-
-        # RFC 5424 timestamp with microseconds and timezone
-        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc)
-        timestamp_str = timestamp.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-        # Process ID
-        pid = record.process or '-'
-
-        # Message ID based on log content for SNMP categorization
-        msgid = self._get_message_id(record)
-
-        # Structured data for SNMP monitoring
-        structured_data = self._build_structured_data(record)
-
-        # Format: <priority>version timestamp hostname app-name procid msgid structured-data msg
-        rfc5424_msg = (
-            f"<{priority}>1 {timestamp_str} {self.hostname} "
-            f"{self.app_name} {pid} {msgid} {structured_data} {record.getMessage()}"
-        )
-
-        return rfc5424_msg
+class ManagerFormatter(_BaseFormatter):
+    """Main-manager-specific RFC 5424 formatter."""
 
     def _get_message_id(self, record):
-        """Generate message ID for SNMP categorization"""
         msg = record.getMessage().lower()
-
-        # Categorize messages for SNMP monitoring
         if 'modemmanager' in msg and ('crash' in msg or 'stop' in msg):
             return 'MM_CRASH'
         elif 'restart' in msg and 'modemmanager' in msg:
@@ -98,10 +49,7 @@ class RFC5424Formatter(logging.Formatter):
             return 'GENERAL'
 
     def _build_structured_data(self, record):
-        """Build structured data section for SNMP monitoring"""
         sd_elements = []
-
-        # Add WWAN-specific structured data
         wwan_data = []
         if hasattr(record, 'interface_number'):
             wwan_data.append(f'interface="{record.interface_number}"')
@@ -116,44 +64,39 @@ class RFC5424Formatter(logging.Formatter):
             wwan_data.append(f'software="{record.software}"')
         if hasattr(record, 'version'):
             wwan_data.append(f'version="{record.version}"')
-
         if wwan_data:
             sd_elements.append(f'[wwan@32473 {" ".join(wwan_data)}]')
-
-        # Add origin structured data for SNMP source tracking
         origin_data = [f'software="vyos-wwan"', f'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-
         return ''.join(sd_elements) if sd_elements else '-'
 
+
+# Set up RFC 5424 logging for SNMP integration — use root logger for manager
 def setup_rfc5424_logging():
-    """Set up RFC 5424 compliant logging for SNMP integration"""
-
-    # Create formatters for different components
-    main_formatter = RFC5424Formatter("wwan-manager")
-
-    # Set up handler for system syslog
+    formatter = ManagerFormatter("wwan-manager")
     try:
-        syslog_handler = logging.handlers.SysLogHandler(address='/dev/log', facility=logging.handlers.SysLogHandler.LOG_LOCAL0)
-        syslog_handler.setFormatter(main_formatter)
+        syslog_handler = logging.handlers.SysLogHandler(
+            address='/dev/log',
+            facility=logging.handlers.SysLogHandler.LOG_LOCAL0,
+        )
+        syslog_handler.setFormatter(formatter)
         use_syslog = True
     except (OSError, IOError):
         use_syslog = False
 
-    # Console handler for debugging (human-readable format)
-    console_formatter = logging.Formatter('%(asctime)s %(name)s[%(process)d]: %(levelname)s: %(message)s')
+    console_formatter = logging.Formatter(
+        '%(asctime)s %(name)s[%(process)d]: %(levelname)s: %(message)s'
+    )
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(console_formatter)
 
-    # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-
     if use_syslog:
         root_logger.addHandler(syslog_handler)
     root_logger.addHandler(console_handler)
-
     return root_logger
+
 
 # Set up RFC 5424 logging for SNMP integration
 logger = setup_rfc5424_logging()
