@@ -24,6 +24,7 @@ from vyos.utils.assertion import assert_mac
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig.vpp import VPPBondInterface
+from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
@@ -92,6 +93,8 @@ def get_config(config=None) -> dict:
         no_tag_node_value_mangle=True,
     )
 
+    config['bond_members'] = deps_bond_dict(conf)
+
     # Dependency
     config['xconn_members'] = deps_xconnect_dict(conf)
     if ifname in config['xconn_members']:
@@ -139,6 +142,21 @@ def verify(config):
     for iface in config.get('member', {}).get('interface', []):
         if iface not in config['vpp_ifaces']:
             raise ConfigError(f'{iface} must be a VPP interface for bonding')
+
+        # Each interface can belong only to one bond
+        bond_members = config['bond_members'][iface]
+        if len(bond_members) > 1:
+            raise ConfigError(
+                f'Interface {iface} cannot be a member of multiple bonding interfaces: {", ".join(bond_members)}'
+            )
+
+        # Interface cannot be a member of a bridge and a bond at the same time
+        bridge_members = config['bridge_members'].get(iface)
+        if bridge_members:
+            raise ConfigError(
+                f'Interface {iface} cannot be a member of a bond because '
+                f'it already belongs to bridge interface: {", ".join(bridge_members)}.'
+            )
 
     if 'mac' in config:
         mac = config['mac']

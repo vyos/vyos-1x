@@ -22,6 +22,8 @@ from vyos import ConfigError
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig.vpp import VPPBridgeInterface
+from vyos.vpp.config_deps import deps_bond_dict
+from vyos.vpp.config_deps import deps_bridge_dict
 
 
 def get_config(config=None) -> dict:
@@ -63,6 +65,9 @@ def get_config(config=None) -> dict:
         with_recursive_defaults=True,
     )
 
+    config['bond_members'] = deps_bond_dict(conf)
+    config['bridge_members'] = deps_bridge_dict(conf)
+
     return config
 
 
@@ -90,6 +95,21 @@ def verify(config):
             ):
                 raise ConfigError(
                     f"Interface '{member}' not found in 'vpp settings interface' or does not start with allowed prefixes {allowed_prefixes}"
+                )
+
+            # Each interface can belong only to one bridge
+            bridge_members = config['bridge_members'][member]
+            if len(bridge_members) > 1:
+                raise ConfigError(
+                    f'Interface {member} is added to more than one bridge: {", ".join(bridge_members)}'
+                )
+
+            # Interface cannot be a member of a bridge and a bond at the same time
+            bond_members = config['bond_members'].get(member)
+            if bond_members:
+                raise ConfigError(
+                    f'Interface {member} cannot be a member of a bridge '
+                    f'because it already belongs to bonding interface: {", ".join(bond_members)}.'
                 )
 
             # Check if BVI is already defined, only one BVI per bridge domain is allowed
