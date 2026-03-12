@@ -16,6 +16,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from vyos.ifconfig.vpp.interface import VPPInterface
+from vyos.utils.dict import dict_search
 from vyos.vpp.utils import iftunnel_transform
 
 
@@ -123,9 +124,9 @@ class VPPBridgeInterface(VPPInterface):
         self.add()
 
         # Add members to bridge
-        for member, member_config in (
-            config.get('member', {}).get('interface', []).items()
-        ):
+        for member, member_config in dict_search(
+            'member.interface', config, {}
+        ).items():
             member = member.removeprefix('vpp')
             if member.startswith('vxlan'):
                 member = iftunnel_transform(member)
