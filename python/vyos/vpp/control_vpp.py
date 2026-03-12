@@ -477,6 +477,30 @@ class VPPControl:
             )
 
     @_Decorators.api_call
+    def get_pppoe_interface_mapping(self) -> dict:
+        """
+        Get PPPoE mapping between data-plain and control-plane interfaces
+
+        Returns:
+            dict: Dict where key is the dataplane interface and value is the control interface
+        """
+
+        reply = self.cli_cmd('show pppoe control-plane binding').reply
+
+        if 'No PPPoE control plane interface configured' in reply:
+            return {}
+
+        lines = reply.splitlines()
+        lines = lines[2:]  # Ignore two lines with headers
+
+        result = {}
+        for line in lines:
+            key, value = line.split()
+            result[key] = value
+
+        return result
+
+    @_Decorators.api_call
     def enable_dhcp_client(self, ifname: str) -> None:
         """Enable DHCP client detection on a given interface
 

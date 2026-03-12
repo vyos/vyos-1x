@@ -23,6 +23,7 @@ from vyos.configdict import get_accel_dict
 from vyos.configdict import is_node_changed, node_changed
 from vyos.configdiff import Diff
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_virtual_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
@@ -172,7 +173,11 @@ def verify(pppoe):
     for interface, interface_config in pppoe['interface'].items():
         # Interfaces integrated with the control-plane in VPP must exist in the system
         warning_only = 'vpp_cp' not in interface_config
-        verify_interface_exists(pppoe, interface, warning_only=warning_only)
+        if '.' in interface:
+            verify_interface_func = verify_virtual_interface_exists
+        else:
+            verify_interface_func = verify_interface_exists
+        verify_interface_func(pppoe, interface, warning_only=warning_only)
 
         if 'vlan_mon' in interface_config and base_ifname(interface) in pppoe.get(
             'vpp_ifaces', {}
@@ -206,8 +211,11 @@ def apply(pppoe):
     vpp_cp_ifaces_delete = pppoe.get('vpp_cp_interfaces', {}).get('delete', [])
     if 'vpp_ifaces' in pppoe and vpp_cp_ifaces_delete:
         vpp = VPPControl()
+        # Make sure that the mapping really exists
+        mapping = vpp.get_pppoe_interface_mapping()
         for iface in vpp_cp_ifaces_delete:
-            vpp.map_pppoe_interface(iface, is_add=False)
+            if iface in mapping:
+                vpp.map_pppoe_interface(iface, is_add=False)
 
     if 'remove' in pppoe:
         call(f'systemctl stop {systemd_service}')
