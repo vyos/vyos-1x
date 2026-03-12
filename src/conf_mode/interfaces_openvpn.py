@@ -367,6 +367,11 @@ def verify(openvpn):
         if dict_search('encryption.data_ciphers', openvpn):
             raise ConfigError('Cipher negotiation can only be used in client or server mode')
 
+        if not dict_search('encryption.cipher', openvpn) and \
+           not dict_search('encryption.data_ciphers_fallback', openvpn):
+            raise ConfigError('Must define "encryption cipher" or "encryption ' \
+                              'data-ciphers-fallback" for site-to-site encryption!')
+
     else:
         # checks for client-server or site-to-site bridged
         if 'local_address' in openvpn or 'remote_address' in openvpn:
