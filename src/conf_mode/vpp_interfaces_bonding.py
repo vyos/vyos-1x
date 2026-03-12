@@ -73,6 +73,9 @@ def get_config(config=None) -> dict:
 
     ifname, config = get_interface_dict(conf, base)
 
+    # Get pppoe-server interfaces
+    config['pppoe_ifaces'] = conf.list_nodes(['service', 'pppoe-server', 'interface'])
+
     if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
@@ -106,6 +109,10 @@ def get_config(config=None) -> dict:
         for bridge_iface in config['bridge_members'][ifname]:
             set_dependents('vpp_interfaces_bridge', conf, bridge_iface)
 
+    # PPPoE dependency
+    if any(i == ifname or i.startswith(f'{ifname}.') for i in config['pppoe_ifaces']):
+        set_dependents('pppoe_server', conf)
+
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
         set_dependents('vpp_nat_nat44', conf)
@@ -124,6 +131,15 @@ def get_config(config=None) -> dict:
 
 
 def verify(config):
+    ifname = config['ifname']
+    if 'deleted' in config and any(
+        i == ifname or i.startswith(f'{ifname}.')
+        for i in config.get('pppoe_ifaces', [])
+    ):
+        raise ConfigError(
+            'Cannot remove interface: it is still in use by the PPPoE server'
+        )
+
     if 'remove_vpp' in config:
         return None
 
@@ -165,6 +181,13 @@ def verify(config):
         except:
             raise ConfigError(
                 f'Cannot use {mac}: it is a multicast MAC address. Please provide a unicast MAC address.'
+            )
+
+    for vif_remove in config.get('vif_remove', []):
+        vif_iface = f'{ifname}.{vif_remove}'
+        if vif_iface in config.get('pppoe_ifaces', []):
+            raise ConfigError(
+                f'Cannot remove interface {vif_iface}: it is still in use by the PPPoE server'
             )
 
 

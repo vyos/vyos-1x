@@ -21,7 +21,8 @@
         "vpp_acl": ["vpp_acl"],
         "vpp_nat_nat44": ["vpp_nat_nat44"],
         "vpp_nat_cgnat": ["vpp_nat_cgnat"],
-        "vpp_ipfix": ["vpp_ipfix"]
+        "vpp_ipfix": ["vpp_ipfix"],
+        "pppoe_server": ["service_pppoe-server"]
     },
     "vpp_interfaces_gre": {
         "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],

@@ -303,6 +303,7 @@ def get_config(config=None):
             'bond_members': bond_members,
             'persist_config': eth_ifaces_persist,
             'interfaces_vpp': interfaces_config,
+            'pppoe_ifaces': pppoe_ifaces,
             'remove': {},
         }
 
@@ -501,6 +502,15 @@ def verify(config):
     if config.get('interfaces_vpp') and 'remove' in config:
         raise ConfigError(
             'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
+        )
+
+    # Find PPPoE ifaces where the base matches any VPP interface (base or VLAN)
+    pppoe_vpp_ifaces = [
+        iface for iface in config.get('pppoe_ifaces', {}) if iface.startswith('vpp')
+    ]
+    if 'remove' in config and pppoe_vpp_ifaces:
+        raise ConfigError(
+            f'Cannot remove VPP: PPPoE server still uses VPP interface(s): {", ".join(pppoe_vpp_ifaces)}'
         )
 
     # bail out early - looks like removal from running config
