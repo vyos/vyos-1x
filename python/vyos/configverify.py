@@ -197,10 +197,10 @@ def verify_mirror_redirect(config):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
 
-    if ('mirror' in config or 'redirect' in config) and dict_search('traffic_policy.in', config) is not None:
+    if 'qos' in config and ('mirror' in config or 'redirect' in config):
         # XXX: support combination of limiting and redirect/mirror - this is an
         # artificial limitation
-        raise ConfigError('Can not use ingress policy together with mirror or redirect!')
+        raise ConfigError('Can not use QoS together with mirror/redirect!')
 
 def verify_authentication(config):
     """

@@ -43,7 +43,6 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._base_path = ['interfaces', 'ethernet']
-        cls._mirror_interfaces = ['dum21354']
 
         # We only test on physical interfaces and not VLAN (sub-)interfaces
         if 'TEST_ETH' in os.environ:
