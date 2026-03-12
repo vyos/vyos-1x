@@ -43,6 +43,10 @@
                 </properties>
                 <defaultValue>point-to-point</defaultValue>
               </leafNode> -->
+              #include <include/interface/parameters-key.xml.i>
+              <leafNode name="key">
+                <defaultValue>0</defaultValue>
+              </leafNode>
               <leafNode name="tunnel-type">
                 <properties>
                   <help>GRE tunnel type</help>
