@@ -341,3 +341,27 @@ def verify_vpp_buffers(settings: dict):
             'Not enough buffers to initialize RX/TX queues for interfaces. '
             f'Set "vpp settings resource-allocation buffers buffers-per-numa" to {buffers_required} or higher'
         )
+
+
+def verify_nat_interfaces(config: dict, feature_name: str):
+    """
+    Verify that interfaces are not already used in the selected NAT feature.
+    Example:
+        verify_nat_interfaces(config, 'nat44')
+        verify_nat_interfaces(config, 'cgnat')
+    """
+    directions = ['inside', 'outside']
+    interfaces = config.get('interface', {})
+    nat_interfaces = config.get(f'{feature_name}_config', {}).get('interface', {})
+
+    for direction in directions:
+        for iface in interfaces.get(direction, []):
+            # Check if iface is used in any nat44/cgnat direction
+            nat_dir = next(
+                (d for d in directions if iface in nat_interfaces.get(d, [])), None
+            )
+            if nat_dir:
+                raise ConfigError(
+                    f'Cannot use {iface} as {direction} interface: '
+                    f'it is already configured as {nat_dir} interface in {feature_name.upper()}'
+                )
