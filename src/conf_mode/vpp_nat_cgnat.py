@@ -25,6 +25,7 @@ from vyos.vpp.utils import vpp_iface_name_transform
 
 from vyos.vpp.nat.det44 import Det44
 from vyos.vpp.control_vpp import VPPControl
+from vyos.vpp.config_verify import verify_nat_interfaces
 
 protocol_map = {
     'all': 0,
@@ -107,6 +108,13 @@ def get_config(config=None) -> dict:
         }
     )
 
+    config['nat44_config'] = conf.get_config_dict(
+        ['vpp', 'nat', 'nat44'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     if effective_config:
         config.update({'effective': effective_config})
 
@@ -138,6 +146,8 @@ def verify(config):
             f'Interface cannot be both inside and outside. '
             f'Please choose a side for: {", ".join(conflict_ifaces)} '
         )
+
+    verify_nat_interfaces(config, 'nat44')
 
     vpp = VPPControl()
     for direction in ['inside', 'outside']:
