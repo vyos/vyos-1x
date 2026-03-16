@@ -229,6 +229,11 @@ class VPPShow:
     def lacp_info(self, raw: bool, ifname: typing.Optional[str]):
         data = self._get_lacp_raw(ifname)
 
+        if not data:
+            raise vyos.opmode.DataUnavailable(
+                'No VPP interface is configured with LACP (802.3ad) mode'
+            )
+
         if raw:
             return data
 
