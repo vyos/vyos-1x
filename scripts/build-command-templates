@@ -177,9 +177,11 @@ def get_properties(p, default=None):
         for vcg in vcge:
             group_validator_string = group_validator_string + " --grp " + collect_validators(vcg)
 
+    silent = " --silent" if p.findall("constraintSilenceOutput") else ""
+
     if vce is not None or len(vcge):
         validator_script = '${vyos_libexec_dir}/validate-value'
-        validator_string = "exec \"{0} {1} {2} --value \\\'$VAR(@)\\\'\"; \"{3}\"".format(validator_script, distinct_validator_string, group_validator_string, error_msg)
+        validator_string = "exec \"{0} {1} {2} --value \\\'$VAR(@)\\\'{3}\"; \"{4}\"".format(validator_script, distinct_validator_string, group_validator_string, silent, error_msg)
 
         props["constraint"] = validator_string
 
