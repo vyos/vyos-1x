@@ -1456,7 +1456,7 @@ class Interface(Control):
 
             # set bridge port path priority
             if 'priority' in bridge_config:
-                self.set_path_cost(bridge_config['priority'])
+                self.set_path_priority(bridge_config['priority'])
 
             bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
 
