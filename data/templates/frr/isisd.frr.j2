@@ -107,7 +107,7 @@ advertise-passive-only
  metric-style {{ metric_style }}
 {% endif %}
 {% if domain_password.md5 is vyos_defined %}
- domain-password md5 {{ domain_password.plaintext_password }}
+ domain-password md5 {{ domain_password.md5 }}
 {% elif domain_password.plaintext_password is vyos_defined %}
  domain-password clear {{ domain_password.plaintext_password }}
 {% endif %}
