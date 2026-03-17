@@ -1,0 +1,2 @@
+# Assign modem0 to the device on USB on AM64x Device
+ACTION=="add|change|move|bind", SUBSYSTEM=="usb", ENV{ID_PATH_TAG}=="platform-xhci-hcd_4_auto-usb-0_1", ENV{ID_MM_PHYSDEV_UID}="modem0"

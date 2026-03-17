@@ -92,6 +92,8 @@ class ConnectionManager:
     async def try_connection_with_apn(self, apn_config: Dict[str, Any], sim_config: Dict[str, Any]) -> bool:
         """Try to establish connection with specific APN configuration"""
         try:
+            apn_config = self._normalize_apn_config(apn_config)
+
             self.logger.info("Attempting connection with APN",
                            extra={'interface_number': self.interface_number,
                                   'apn_name': apn_config['name'],
@@ -162,6 +164,33 @@ class ConnectionManager:
                             extra={'interface_number': self.interface_number,
                                    'apn_name': apn_config.get('name', 'unknown')})
             return False
+
+    def _normalize_apn_config(self, apn_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize APN config and flatten legacy/nested config structures."""
+        if not isinstance(apn_config, dict):
+            return {
+                'name': str(apn_config or ''),
+                'username': '',
+                'password': '',
+                'auth_type': 'none'
+            }
+
+        # Some callers may pass nested APN config in the ``name`` field.
+        nested_apn = apn_config.get('name')
+        if isinstance(nested_apn, dict):
+            apn_config = {
+                **nested_apn,
+                'username': nested_apn.get('username', apn_config.get('username', '')),
+                'password': nested_apn.get('password', apn_config.get('password', '')),
+                'auth_type': nested_apn.get('auth_type', apn_config.get('auth_type', 'none')),
+            }
+
+        return {
+            'name': str(apn_config.get('name', '') or ''),
+            'username': str(apn_config.get('username', '') or ''),
+            'password': str(apn_config.get('password', '') or ''),
+            'auth_type': str(apn_config.get('auth_type', 'none') or 'none')
+        }
 
     async def _verify_bearer_connection(self) -> bool:
         """Verify that the bearer connection is actually working"""

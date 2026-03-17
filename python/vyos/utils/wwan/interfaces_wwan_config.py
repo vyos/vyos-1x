@@ -1561,9 +1561,17 @@ class InterfaceConfig(ServiceInterface):
                               'current_state': current_state})
 
             # States where CONNECT transition is valid right now
-            connectable_states = {'CONFIGURING', 'FAILED'}
+            connectable_states = {'FAILED'}
             # States where we are already connected / on the way
             already_connected_states = {'CONNECTED', 'CONNECTING', 'USAGE_MONITORING'}
+
+            if current_state == 'CONFIGURING':
+                self.fsm.connect_requested = True
+                msg = (f"Connect request queued for interface {self.interface_number} "
+                       f"while configuration is still in progress.")
+                logger.info(msg, extra={'interface_number': self.interface_number,
+                                        'current_state': current_state})
+                return msg
 
             if current_state in already_connected_states:
                 msg = (f"Interface {self.interface_number} is already "

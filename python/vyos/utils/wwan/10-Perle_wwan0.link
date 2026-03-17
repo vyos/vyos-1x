@@ -1,0 +1,5 @@
+[Match]
+Path=platform-xhci-hcd.4.auto-usb-0:1:1.2
+
+[Link]
+Name=wwan0
