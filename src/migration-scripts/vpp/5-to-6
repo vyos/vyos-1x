@@ -529,6 +529,12 @@ def _migrate_vpp_xconnect_interface(config: ConfigTree) -> None:
     config.set(new_base)
 
     for ifname in config.list_nodes(base):
+        tmp = base + [ifname, 'member', 'interface']
+        bond_found = any(name.startswith('bond') for name in config.return_values(tmp))
+        if bond_found:
+            config.delete(base + [ifname])
+            continue
+
         _migrate_interface(config, 'xconnect', ifname)
 
     config.delete(base)
