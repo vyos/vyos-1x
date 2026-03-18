@@ -63,7 +63,23 @@
                 <properties>
                   <help>Show VPP bonding information</help>
                 </properties>
+                <command>${vyos_op_scripts_dir}/vpp.py show_bond</command>
                 <children>
+                  <virtualTagNode>
+                    <properties>
+                      <help>Show bonding information for a specific interface</help>
+                      <completionHelp>
+                        <path>interfaces vpp bonding</path>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vpp.py show_bond --ifname=$5</command>
+                  </virtualTagNode>
+                  <leafNode name="detail">
+                    <properties>
+                      <help>Show detailed bonding information</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vpp.py show_bond_details</command>
+                  </leafNode>
                   <node name="lacp">
                     <properties>
                       <help>Show VPP LACP information</help>
