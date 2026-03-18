@@ -52,7 +52,6 @@ from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
-    verify_dev_driver,
     verify_vpp_minimum_cpus,
     verify_vpp_minimum_memory,
     verify_vpp_cpu_cores,
@@ -115,6 +114,21 @@ drivers_support_interrupt: dict[str, list] = {
 
 # drivers that require changing channels (half the maximum number of RX/TX queues)
 ethtool_channels_change_drv: list[str] = ['ena', 'gve']
+
+# List of NICs where VPP activation is supported
+SUPPORTED_PCI_IDS = (
+    '15b3:1019',  # Mellanox Technologies MT28800 Family [ConnectX-5 Ex]
+    '15b3:101d',  # Mellanox Technologies MT2892 Family [ConnectX-6 Dx]
+    '15b3:101e',  # Mellanox Technologies ConnectX Family mlx5Gen Virtual Function
+    '8086:1592',  # Intel Corporation Ethernet Controller E810-C for QSFP
+    '1ae0:0042',  # Google, Inc. Compute Engine Virtual Ethernet [gVNIC]
+    '1af4:1000',  # Red Hat, Inc. Virtio network device (legacy ID)
+    '1af4:1041',  # Red Hat, Inc. Virtio network device (modern ID)
+    '1d0f:ec20',  # Amazon.com, Inc. Elastic Network Adapter (ENA)
+)
+SUPPORTED_DRIVERS = (
+    'hv_netvsc',  # Microsoft Hyper-V network interface card
+)
 
 
 def _load_module(module_name: str):
@@ -227,6 +241,29 @@ def _check_removed_interfaces(config: dict, feature_name: str, interfaces_config
                 f'Cannot remove interface {iface_name} - it is currently configured for {feature_name}. '
                 f'Remove it from {feature_name} configuration first.'
             )
+
+
+def _is_device_allowed(config: dict, iface: str):
+    """
+    Determines if a network interface device is allowed to be used
+    with VPP based on its PCI ID or driver.
+    """
+    if 'allow_unsupported_nics' in config['settings']:
+        return True
+
+    persist_config = config['persist_config'][iface]
+
+    pci_id = persist_config.get('pci_id')
+    # PCI ID is sufficient by itself, if presented
+    if pci_id is not None and pci_id in SUPPORTED_PCI_IDS:
+        return True
+
+    # If the PCI ID did not match or does not exist, fall back to a driver
+    original_driver = persist_config.get('original_driver')
+    if original_driver is not None and original_driver in SUPPORTED_DRIVERS:
+        return True
+
+    return False
 
 
 def get_config(config=None):
@@ -351,6 +388,7 @@ def get_config(config=None):
             }
             eth_ifaces_persist[iface]['bus_id'] = control_host.get_bus_name(iface)
             eth_ifaces_persist[iface]['dev_id'] = control_host.get_dev_id(iface)
+            eth_ifaces_persist[iface]['pci_id'] = control_host.get_pci_id(iface)
             eth_ifaces_persist[iface]['channels'] = control_host.get_eth_channels(iface)
 
     # Return to config dictionary
@@ -572,10 +610,13 @@ def verify(config):
             not in config.get('effective', {}).get('settings', {}).get('interface', {})
             or 'driver_changed' in iface_config
         ):
-            if not verify_dev_driver(iface_config['driver'], original_driver):
+            if not _is_device_allowed(config, iface):
                 raise ConfigError(
-                    f'Driver {iface_config["driver"]} is not compatible with interface {iface}!'
+                    f'NIC used by "{iface}" is not validated for VPP on VyOS. '
+                    'Using it is unsafe and unsupported and will void support for the entire system. '
+                    'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
                 )
+
         if iface_config['driver'] == 'xdp' and 'xdp_options' in iface_config:
             if iface_config['xdp_options']['num_rx_queues'] != 'all':
                 rx_queues = iface_config['xdp_api_params']['rxq_num']
