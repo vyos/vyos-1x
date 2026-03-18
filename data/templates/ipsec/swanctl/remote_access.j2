@@ -79,7 +79,7 @@
 {% endif %}
 {% set local_prefix = rw_conf.local.prefix if rw_conf.local.prefix is vyos_defined else ['0.0.0.0/0', '::/0'] %}
 {% set local_port = rw_conf.local.port if rw_conf.local.port is vyos_defined else '' %}
-{% set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}
+{% set local_suffix = '[%any/{port}]'.format(port=local_port) if local_port else '' %}
                 local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
 {% if rw_conf.bind is vyos_defined %}
 {#     The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
