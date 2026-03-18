@@ -167,18 +167,19 @@ def vpp_ifaces_list(vpp_api) -> list[dict]:
     return ifaces_list
 
 
-def vpp_ip_addresses_by_index(vpp_api, index: str) -> list[str]:
+def vpp_ip_addresses_by_index(vpp_api, index: int, is_ipv6: bool = False) -> list[str]:
     """List of IP addresses for interface by its index in VPP
 
     Args:
         vpp_api (_type_): VPP API object
-        index (str): interface index in vpp
+        index (int): interface index in vpp
+        is_ipv6 (bool, optional): If True, return IPv6 addresses. Defaults to False.
 
     Returns:
-        list[str]: list of IP addresses
+        list[str]: list of IP addresses (e.g. '192.0.2.1/24', '2001:db8::1/64')
     """
-    ip_addresses_list: list[dict] = []
-    ip_address_dump = vpp_api.ip_address_dump(sw_if_index=index)
+    ip_addresses_list: list[str] = []
+    ip_address_dump = vpp_api.ip_address_dump(sw_if_index=index, is_ipv6=is_ipv6)
     while ip_address_dump:
         ip_address_details = ip_address_dump.pop()
         ip_addresses_list.append(str(ip_address_details._asdict().get('prefix')))
