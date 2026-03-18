@@ -167,6 +167,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
     def test_isis_05_password(self):
         password = 'foo'
+        md5_password = 'secret_md5_hash'
 
         self.cli_set(base_path + ['net', net])
         for interface in self._interfaces:
@@ -199,6 +200,29 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             tmp = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
             self.assertIn(f' isis password clear {password}-{interface}', tmp)
+
+        # Switch to MD5 passwords - delete plaintext passwords first
+        self.cli_delete(base_path + ['area-password', 'plaintext-password'])
+        self.cli_delete(base_path + ['domain-password', 'plaintext-password'])
+        for interface in self._interfaces:
+            self.cli_delete(base_path + ['interface', interface, 'password', 'plaintext-password'])
+
+        self.cli_set(base_path + ['domain-password', 'md5', md5_password])
+        self.cli_set(base_path + ['area-password', 'md5', md5_password])
+        for interface in self._interfaces:
+            self.cli_set(base_path + ['interface', interface, 'password', 'md5', md5_password])
+
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        tmp = self.getFRRconfig(f'router isis {domain}', stop_section='exit')
+        self.assertIn(f' domain-password md5 {md5_password}', tmp)
+        self.assertIn(f' area-password md5 {md5_password}', tmp)
+
+        for interface in self._interfaces:
+            tmp = self.getFRRconfig(f'interface {interface}', stop_section='^exit')
+            self.assertIn(f' isis password md5 {md5_password}', tmp)
 
     def test_isis_06_spf_delay_bfd(self):
         network = 'point-to-point'
