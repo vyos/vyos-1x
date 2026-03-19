@@ -6,6 +6,7 @@ import os
 from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
+from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
 from automaton import machines  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_util import modem_reset
@@ -1352,8 +1353,24 @@ class ModemStateMachine:
             # Get current SIM information and check for SIM changes
             sim_info = await self._get_sim_information()
             if not sim_info:
-                logger.warning("Could not get SIM information",
+                logger.warning("Could not get SIM information - no SIM card may be present",
                               extra={'interface_number': self.interface_number})
+
+                # Verify by checking the Sim property directly
+                try:
+                    sim_path_variant = await props.call_get(MODEM_INTERFACE, "Sim")
+                    sim_path = sim_path_variant.value if hasattr(sim_path_variant, 'value') else sim_path_variant
+                except Exception:
+                    sim_path = None
+
+                if not sim_path or sim_path == '/':
+                    logger.error("❌ No SIM card detected - cannot connect. Transitioning to WAITING_FOR_SIM",
+                                extra={'interface_number': self.interface_number,
+                                       'sim_path': sim_path})
+                    self.transition(ModemEvent.SIM_MISSING)
+                    self._safe_create_task(self._handle_sim_missing_failover())
+                    return  # Stop - don't attempt APN connections without a SIM
+
                 sim_changed = False
             else:
                 sim_changed = await self._check_sim_change(sim_info)
@@ -1480,7 +1497,9 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"Initial modem configuration failed: {e}",
                         extra={'interface_number': self.interface_number})
-            self.transition(ModemEvent.CONNECTION_FAILED)
+            # Don't override SIM_MISSING transition with CONNECTION_FAILED
+            if self.machine.current_state != ModemState.WAITING_FOR_SIM.value:
+                self.transition(ModemEvent.CONNECTION_FAILED)
 
     async def _unlock_sim_if_needed(self):
         """Unlock SIM with PIN/PUK if required"""
@@ -1519,11 +1538,37 @@ class ModemStateMachine:
                                   extra={'interface_number': self.interface_number,
                                          'unlock_required': unlock_required})
             else:
-                logger.info("SIM unlock not needed",
-                           extra={'interface_number': self.interface_number,
-                                  'modem_state': state})
+                # Modem not locked - but check if SIM is actually present
+                # With no SIM, modem can still reach ENABLED state on some hardware
+                try:
+                    sim_path_variant = await props.call_get(MODEM_INTERFACE, "Sim")
+                    sim_path = sim_path_variant.value if hasattr(sim_path_variant, 'value') else sim_path_variant
+                    if not sim_path or sim_path == '/':
+                        logger.warning("⚠️ No SIM card detected in modem (Sim path is empty)",
+                                      extra={'interface_number': self.interface_number,
+                                             'modem_state': state,
+                                             'sim_path': sim_path})
+                        # Transition to WAITING_FOR_SIM
+                        self.transition(ModemEvent.SIM_MISSING)
+                        self._safe_create_task(self._handle_sim_missing_failover())
+                        raise Exception("No SIM card present")
+                    else:
+                        logger.info("SIM unlock not needed",
+                                   extra={'interface_number': self.interface_number,
+                                          'modem_state': state,
+                                          'sim_path': sim_path})
+                except DBusError as dbus_e:
+                    logger.warning(f"Could not check SIM presence: {dbus_e}",
+                                  extra={'interface_number': self.interface_number})
+                    # If we can't check, log but continue (don't block on D-Bus errors)
+                    logger.info("SIM unlock not needed (presence check inconclusive)",
+                               extra={'interface_number': self.interface_number,
+                                      'modem_state': state})
 
         except Exception as e:
+            if "No SIM card present" in str(e):
+                # Re-raise SIM missing - this should stop the connection flow
+                raise
             logger.error(f"SIM unlock check failed: {e}",
                         extra={'interface_number': self.interface_number})
             # Don't fail the entire configuration for SIM unlock issues
