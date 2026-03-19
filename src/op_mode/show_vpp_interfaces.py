@@ -158,7 +158,10 @@ def show_interfaces_dataplane(interfaces_list: list, filter_type: str = 'all') -
         dp_ip_addresses = vpp_ip_addresses_by_index(
             vpp.api, interface.get('sw_if_index')
         )
-        ip_addresses = '\n'.join(dp_ip_addresses)
+        dp_ipv6_addresses = vpp_ip_addresses_by_index(
+            vpp.api, interface.get('sw_if_index'), is_ipv6=True
+        )
+        ip_addresses = '\n'.join(dp_ip_addresses + dp_ipv6_addresses)
 
         mac = str(interface.get('l2_address', 'n/a'))
         mtu = interface.get('mtu', [])[0]
