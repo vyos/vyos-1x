@@ -365,6 +365,14 @@ class VPPShow:
         data = self._get_runtime_raw()
         return data if raw else self._show_runtime_formatted()
 
+    # -----------------------------
+    # Interfaces mode
+    # -----------------------------
+    def mode(self, raw: bool):
+        # VPP does not have API call to get this data
+        data = self.vpp.cli_cmd('show mode')
+        return [data.reply] if raw else data.reply
+
 
 # -----------------------------
 # VyOS IPFIX op-mode entries
@@ -409,6 +417,13 @@ def show_bridge_details(raw: bool, ifname: typing.Optional[str] = None):
 @vyos.opmode.verify_cli_exists(['vpp'])
 def show_runtime(raw: bool):
     return VPPShow().runtime(raw)
+
+# -----------------------------
+# show mode
+# -----------------------------
+@vyos.opmode.verify_cli_exists(['vpp'])
+def show_mode(raw: bool):
+    return VPPShow().mode(raw)
 
 
 if __name__ == '__main__':
