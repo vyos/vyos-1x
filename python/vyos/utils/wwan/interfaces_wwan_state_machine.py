@@ -181,6 +181,7 @@ class ModemStateMachine:
         # Service-initiated modem operations tracking (improved reset-aware)
         self.service_initiated_disable = False  # Flag to prevent false SIM missing detection
         self.reset_operation_in_progress = False  # Track reset operations across re-enumeration
+        self.initial_configuration_in_progress = False  # Prevent handlers from racing with initial config
         self.reset_grace_period_end = 0     # Timestamp when reset grace period ends
         self.reset_timeout_task = None      # Task to clear reset flag on timeout
         self.registration_handling_in_progress = False  # Prevent concurrent registration handling tasks
@@ -1235,6 +1236,9 @@ class ModemStateMachine:
     async def _configure_modem_initial(self):
         """Initial modem configuration - configure SIM/bands/carrier BEFORE network operations"""
         try:
+            # Prevent registration/bearer handlers from racing with this configuration flow
+            self.initial_configuration_in_progress = True
+
             logger.info("Starting initial modem configuration",
                        extra={'interface_number': self.interface_number})
 
@@ -1500,6 +1504,8 @@ class ModemStateMachine:
             # Don't override SIM_MISSING transition with CONNECTION_FAILED
             if self.machine.current_state != ModemState.WAITING_FOR_SIM.value:
                 self.transition(ModemEvent.CONNECTION_FAILED)
+        finally:
+            self.initial_configuration_in_progress = False
 
     async def _unlock_sim_if_needed(self):
         """Unlock SIM with PIN/PUK if required"""
@@ -4909,6 +4915,15 @@ class ModemStateMachine:
                                       'connected': f"{connected} ({'CONNECTED' if connected else 'DISCONNECTED'})",
                                       'reason': 'reset_in_progress'})
                     return
+
+                # Skip during initial configuration - _configure_modem_initial manages the connection
+                if self.initial_configuration_in_progress:
+                    connected = changed_properties['Connected'].value
+                    logger.debug(f"Bearer connection state changed to {connected} during initial config - skipping",
+                               extra={'interface_number': self.interface_number,
+                                      'connected': f"{connected} ({'CONNECTED' if connected else 'DISCONNECTED'})",
+                                      'reason': 'initial_configuration_in_progress'})
+                    return
                 connected = changed_properties['Connected'].value
                 logger.info("Bearer connection state changed via D-Bus signal",
                            extra={'interface_number': self.interface_number,
@@ -4938,10 +4953,15 @@ class ModemStateMachine:
 
             # Check for IP configuration changes
             if 'Ip4Config' in changed_properties or 'Ip6Config' in changed_properties:
-                logger.info("🌐 Bearer IP configuration changed - updating interface",
-                           extra={'interface_number': self.interface_number,
-                                  'changed_configs': [k for k in ['Ip4Config', 'Ip6Config'] if k in changed_properties]})
-                self._safe_create_task(self._apply_bearer_ip_configuration())
+                if self.initial_configuration_in_progress:
+                    logger.debug("Bearer IP config changed during initial config - skipping (will be applied by config flow)",
+                               extra={'interface_number': self.interface_number,
+                                      'reason': 'initial_configuration_in_progress'})
+                else:
+                    logger.info("🌐 Bearer IP configuration changed - updating interface",
+                               extra={'interface_number': self.interface_number,
+                                      'changed_configs': [k for k in ['Ip4Config', 'Ip6Config'] if k in changed_properties]})
+                    self._safe_create_task(self._apply_bearer_ip_configuration())
 
         except Exception as e:
             logger.error(f"Error handling bearer properties changed: {e}",
@@ -4966,6 +4986,14 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number,
                                   'registration_state': f"{reg_state} ({reg_state_name})",
                                   'reason': 'reset_in_progress'})
+                return
+
+            # Skip during initial configuration - _configure_modem_initial handles its own connection
+            if self.initial_configuration_in_progress:
+                logger.debug(f"Registration state changed to {reg_state} ({reg_state_name}) during initial config - skipping",
+                           extra={'interface_number': self.interface_number,
+                                  'registration_state': f"{reg_state} ({reg_state_name})",
+                                  'reason': 'initial_configuration_in_progress'})
                 return
 
             # Define states that indicate good network connectivity
