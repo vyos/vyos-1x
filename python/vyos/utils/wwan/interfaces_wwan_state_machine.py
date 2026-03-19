@@ -1214,6 +1214,7 @@ class ModemStateMachine:
         self.interface_management = self.parsed_config.raw_config.get('interface_management', {})
         self.interface_management_enabled = self.parsed_config.interface_management.enabled
         self.bearer_disconnect_delay = self.parsed_config.interface_management.bearer_disconnect_delay
+        self.registration_recovery_delay = self.parsed_config.interface_management.registration_recovery_delay
         self.ip_change_delay = self.parsed_config.interface_management.ip_change_delay
         self.ensure_link_up_on_connect = self.parsed_config.interface_management.ensure_link_up_on_connect
         self.monitor_bearer_state = self.parsed_config.interface_management.monitor_bearer_state
@@ -1222,6 +1223,7 @@ class ModemStateMachine:
 
         # Initialize network interface management state
         self._bearer_disconnect_timer = None
+        self._registration_debounce_timer = None
         self._last_known_ip = None
         self._ip_monitoring_task = None
 
@@ -4901,7 +4903,11 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
 
     async def _handle_registration_state_change(self, reg_state, reg_state_name):
-        """Handle 3GPP registration state changes for enhanced interface management"""
+        """Handle 3GPP registration state changes for enhanced interface management.
+
+        Uses a configurable debounce (registration_recovery_delay) to avoid reacting
+        to brief registration flaps that resolve themselves within seconds.
+        """
         try:
             # Set flag to prevent concurrent handling and feedback loops
             self.registration_handling_in_progress = True
@@ -4922,62 +4928,68 @@ class ModemStateMachine:
             disconnected_states = {0, 2, 3, 4}  # IDLE, SEARCHING, DENIED, UNKNOWN
 
             if reg_state in disconnected_states:
-                # Network registration lost - consider bringing interface down
-                # But check if bearer is still connected to avoid unnecessary flapping
-                try:
-                    if hasattr(self, 'bearer_path') and self.bearer_path:
-                        introspect = await self.bus.introspect('org.freedesktop.ModemManager1', self.bearer_path)
-                        bearer_proxy = self.bus.get_proxy_object('org.freedesktop.ModemManager1',
-                                                               self.bearer_path, introspect)
-                        bearer_props = bearer_proxy.get_interface('org.freedesktop.DBus.Properties')
-                        connected_variant = await bearer_props.call_get('org.freedesktop.ModemManager1.Bearer', 'Connected')
-                        bearer_connected = connected_variant.value
+                # Network registration lost - start debounce timer before taking action
+                # If registration recovers within registration_recovery_delay, no action is taken
+                debounce_seconds = getattr(self, 'registration_recovery_delay', 5)
 
-                        if not bearer_connected:
-                            # Both registration and bearer are disconnected - definitely bring interface down
-                            logger.warning("📡❌ Network registration lost AND bearer disconnected - interface going DOWN",
-                                         extra={'interface_number': self.interface_number,
-                                                'registration_state': f"{reg_state} ({reg_state_name})",
-                                                'bearer_connected': bearer_connected,
-                                                'action': 'interface_down_immediate'})
-                            self._safe_create_task(self._set_interface_down())
-                        else:
-                            # Registration lost but bearer still connected - start conservative timer
-                            logger.warning("📡⚠️ Network registration lost but bearer still connected - starting registration recovery timer",
-                                         extra={'interface_number': self.interface_number,
-                                                'registration_state': f"{reg_state} ({reg_state_name})",
-                                                'bearer_connected': bearer_connected,
-                                                'recovery_timer_seconds': 30,
-                                                'action': 'interface_down_if_no_recovery'})
-                            self._safe_create_task(self._handle_registration_loss_with_bearer())
-                except Exception as e:
-                    logger.debug(f"Could not check bearer state during registration change: {e}",
-                                extra={'interface_number': self.interface_number})
-                    # If we can't check bearer state, be conservative and assume registration loss is serious
-                    logger.warning("📡❌ Network registration lost (bearer check failed) - interface going DOWN",
-                                 extra={'interface_number': self.interface_number,
-                                        'registration_state': f"{reg_state} ({reg_state_name})",
-                                        'action': 'interface_down_conservative'})
-                    self._safe_create_task(self._set_interface_down())
+                # Cancel any existing debounce timer (reset the clock on repeated loss events)
+                if hasattr(self, '_registration_debounce_timer') and self._registration_debounce_timer:
+                    self._registration_debounce_timer.cancel()
+                    self._registration_debounce_timer = None
+
+                if debounce_seconds > 0:
+                    logger.info(f"📡⏳ Network registration lost - debouncing for {debounce_seconds}s before acting",
+                               extra={'interface_number': self.interface_number,
+                                      'registration_state': f"{reg_state} ({reg_state_name})",
+                                      'debounce_delay_seconds': debounce_seconds,
+                                      'action': 'debounce_wait'})
+                    self._registration_debounce_timer = self._safe_create_task(
+                        self._handle_registration_loss_debounced(debounce_seconds, reg_state, reg_state_name))
+                else:
+                    # No debounce configured - act immediately (original behavior)
+                    logger.info("📡 Network registration lost - acting immediately (debounce=0)",
+                               extra={'interface_number': self.interface_number,
+                                      'registration_state': f"{reg_state} ({reg_state_name})"})
+                    self._safe_create_task(self._handle_registration_loss_immediate(reg_state, reg_state_name))
 
             elif reg_state in connected_states:
                 # Network registration restored
-                logger.info("📡✅ Network registration restored - ensuring interface UP and bearer connected",
-                           extra={'interface_number': self.interface_number,
-                                  'registration_state': f"{reg_state} ({reg_state_name})",
-                                  'action': 'interface_up_and_bearer_check'})
-                # Cancel any pending registration loss timers
+                # Cancel any pending debounce timer - registration recovered before we acted
+                debounce_cancelled = False
+                if hasattr(self, '_registration_debounce_timer') and self._registration_debounce_timer:
+                    self._registration_debounce_timer.cancel()
+                    self._registration_debounce_timer = None
+                    debounce_cancelled = True
+
+                # Cancel any pending registration loss timers (from the 30s bearer-connected path)
+                loss_timer_cancelled = False
                 if hasattr(self, '_registration_loss_timer') and self._registration_loss_timer:
                     self._registration_loss_timer.cancel()
                     self._registration_loss_timer = None
-                    logger.info("📡🔄 Registration recovery - cancelled registration loss timer",
-                               extra={'interface_number': self.interface_number})
+                    loss_timer_cancelled = True
 
-                # Ensure interface is up
-                self._safe_create_task(self._ensure_interface_up())
+                if debounce_cancelled:
+                    # Registration recovered within the debounce window - no action needed
+                    logger.info("📡✅ Network registration restored within debounce window - no recovery action needed",
+                               extra={'interface_number': self.interface_number,
+                                      'registration_state': f"{reg_state} ({reg_state_name})",
+                                      'action': 'debounce_cancelled_noop'})
+                else:
+                    # Registration recovered after debounce expired (recovery from actual outage)
+                    if loss_timer_cancelled:
+                        logger.info("📡🔄 Registration recovery - cancelled registration loss timer",
+                                   extra={'interface_number': self.interface_number})
 
-                # Check bearer status and reconnect if necessary
-                self._safe_create_task(self._handle_registration_recovery())
+                    logger.info("📡✅ Network registration restored - ensuring interface UP and bearer connected",
+                               extra={'interface_number': self.interface_number,
+                                      'registration_state': f"{reg_state} ({reg_state_name})",
+                                      'action': 'interface_up_and_bearer_check'})
+
+                    # Ensure interface is up
+                    self._safe_create_task(self._ensure_interface_up())
+
+                    # Check bearer status and reconnect if necessary
+                    self._safe_create_task(self._handle_registration_recovery())
 
         except Exception as e:
             logger.error(f"Error handling registration state change: {e}",
@@ -4985,6 +4997,78 @@ class ModemStateMachine:
         finally:
             # Always clear the flag to prevent deadlock
             self.registration_handling_in_progress = False
+
+    async def _handle_registration_loss_debounced(self, debounce_seconds, reg_state, reg_state_name):
+        """Wait for the debounce period, then handle registration loss if it persists."""
+        try:
+            await asyncio.sleep(debounce_seconds)
+
+            # Re-check: has registration recovered during the debounce window?
+            current_reg_state = getattr(self, '_last_registration_state', None)
+            if current_reg_state in {1, 5}:  # HOME, ROAMING
+                logger.info("📡✅ Registration recovered during debounce period - no action taken",
+                           extra={'interface_number': self.interface_number,
+                                  'recovered_registration_state': current_reg_state})
+                return
+
+            # Debounce expired and still disconnected - now take action
+            logger.warning(f"📡 Registration still lost after {debounce_seconds}s debounce - taking action",
+                         extra={'interface_number': self.interface_number,
+                                'registration_state': f"{reg_state} ({reg_state_name})",
+                                'current_registration_state': current_reg_state})
+            await self._handle_registration_loss_immediate(reg_state, reg_state_name)
+
+        except asyncio.CancelledError:
+            logger.debug("Registration loss debounce timer cancelled (registration recovered)",
+                        extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.error(f"Error in registration loss debounce handler: {e}",
+                        extra={'interface_number': self.interface_number})
+        finally:
+            self._registration_debounce_timer = None
+
+    async def _handle_registration_loss_immediate(self, reg_state, reg_state_name):
+        """Handle registration loss after debounce period has expired (or debounce=0)."""
+        try:
+            # Check if bearer is still connected to decide severity
+            try:
+                if hasattr(self, 'bearer_path') and self.bearer_path:
+                    introspect = await self.bus.introspect('org.freedesktop.ModemManager1', self.bearer_path)
+                    bearer_proxy = self.bus.get_proxy_object('org.freedesktop.ModemManager1',
+                                                           self.bearer_path, introspect)
+                    bearer_props = bearer_proxy.get_interface('org.freedesktop.DBus.Properties')
+                    connected_variant = await bearer_props.call_get('org.freedesktop.ModemManager1.Bearer', 'Connected')
+                    bearer_connected = connected_variant.value
+
+                    if not bearer_connected:
+                        # Both registration and bearer are disconnected - definitely bring interface down
+                        logger.warning("📡❌ Network registration lost AND bearer disconnected - interface going DOWN",
+                                     extra={'interface_number': self.interface_number,
+                                            'registration_state': f"{reg_state} ({reg_state_name})",
+                                            'bearer_connected': bearer_connected,
+                                            'action': 'interface_down_immediate'})
+                        self._safe_create_task(self._set_interface_down())
+                    else:
+                        # Registration lost but bearer still connected - start conservative timer
+                        logger.warning("📡⚠️ Network registration lost but bearer still connected - starting registration recovery timer",
+                                     extra={'interface_number': self.interface_number,
+                                            'registration_state': f"{reg_state} ({reg_state_name})",
+                                            'bearer_connected': bearer_connected,
+                                            'recovery_timer_seconds': 30,
+                                            'action': 'interface_down_if_no_recovery'})
+                        self._safe_create_task(self._handle_registration_loss_with_bearer())
+            except Exception as e:
+                logger.debug(f"Could not check bearer state during registration change: {e}",
+                            extra={'interface_number': self.interface_number})
+                # If we can't check bearer state, be conservative and assume registration loss is serious
+                logger.warning("📡❌ Network registration lost (bearer check failed) - interface going DOWN",
+                             extra={'interface_number': self.interface_number,
+                                    'registration_state': f"{reg_state} ({reg_state_name})",
+                                    'action': 'interface_down_conservative'})
+                self._safe_create_task(self._set_interface_down())
+        except Exception as e:
+            logger.error(f"Error in immediate registration loss handler: {e}",
+                        extra={'interface_number': self.interface_number})
 
     async def _handle_registration_loss_with_bearer(self):
         """Handle registration loss when bearer is still connected - give time for recovery"""

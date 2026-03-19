@@ -173,6 +173,7 @@ def build_config(raw_cfg):
     interface_management = {
         'enabled': raw_cfg.get('interface_management_enabled', True),
         'bearer_disconnect_delay': int(raw_cfg.get('bearer_disconnect_delay', 15)),
+        'registration_recovery_delay': int(raw_cfg.get('registration_recovery_delay', 5)),
         'ip_change_delay': float(raw_cfg.get('ip_change_delay', 0.5)),
         'ensure_link_up_on_connect': raw_cfg.get('ensure_link_up_on_connect', True),
         'monitor_bearer_state': raw_cfg.get('monitor_bearer_state', True),

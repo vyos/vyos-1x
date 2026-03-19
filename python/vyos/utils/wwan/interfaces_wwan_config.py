@@ -251,6 +251,7 @@ class InterfaceConfig(ServiceInterface):
         "interface_management": {
             "enabled": True,                    # Enable network interface management
             "bearer_disconnect_delay": 15,      # Wait time before link down on bearer loss (seconds)
+            "registration_recovery_delay": 5,   # Debounce delay before acting on registration loss (seconds)
             "ip_change_delay": 0.5,            # Brief delay for IP change link cycling (seconds)
             "ensure_link_up_on_connect": True, # Ensure interface UP when entering CONNECTED state
             "monitor_bearer_state": True,      # Monitor ModemManager bearer state changes
