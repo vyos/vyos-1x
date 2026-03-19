@@ -53,7 +53,7 @@ def _get_bond_lb(lb_name: str) -> int:
         'layer3+4': 1,
     }
 
-    return lb_mapping.get(lb_name, 5)
+    return lb_mapping.get(lb_name, 0)
 
 
 def get_config(config=None) -> dict:
