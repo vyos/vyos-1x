@@ -97,6 +97,12 @@
                   </node>
                 </children>
               </node>
+              <node name="mode">
+                <properties>
+                  <help>Show mode for all VPP interfaces</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/vpp.py show_mode</command>
+              </node>
             </children>
             <command>sudo ${vyos_op_scripts_dir}/show_vpp_interfaces.py --summary</command>
           </node>
