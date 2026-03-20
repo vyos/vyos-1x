@@ -73,7 +73,7 @@ def get_config(config=None):
     if is_node_changed(conf, base + [ifname, 'security']):
         macsec.update({'shutdown_required': {}})
 
-    if is_node_changed(conf, base + [ifname, 'source_interface']):
+    if is_node_changed(conf, base + [ifname, 'source-interface']):
         macsec.update({'shutdown_required': {}})
 
     if 'source_interface' in macsec:

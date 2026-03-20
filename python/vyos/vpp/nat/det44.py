@@ -16,6 +16,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from vyos.vpp import VPPControl
+from vyos.vpp.nat.nat44 import NAT_IS_NONE, NAT_IS_ADDR_ONLY
 
 
 class Det44:
@@ -118,3 +119,29 @@ class Det44:
             if iface.is_inside:
                 ifaces_inside.append(iface.sw_if_index)
         return ifaces_inside
+
+    def add_det44_identity_mapping(self, ip_address, protocol, port, tag=''):
+        """Add DET44 identity mapping (exclude rule)"""
+        flags = NAT_IS_ADDR_ONLY if not (protocol or port) else NAT_IS_NONE
+
+        self.vpp.api.det44_add_del_identity_mapping(
+            is_add=True,
+            addr=ip_address,
+            protocol=protocol,
+            port=port,
+            flags=flags,
+            tag=tag if tag else '',
+        )
+
+    def delete_det44_identity_mapping(self, ip_address, protocol, port, tag=''):
+        """Delete DET44 identity mapping (exclude rule)"""
+        flags = NAT_IS_ADDR_ONLY if not (protocol or port) else NAT_IS_NONE
+
+        self.vpp.api.det44_add_del_identity_mapping(
+            is_add=False,
+            addr=ip_address,
+            protocol=protocol,
+            port=port,
+            flags=flags,
+            tag=tag,
+        )

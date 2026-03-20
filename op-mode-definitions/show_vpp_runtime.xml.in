@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="vpp">
+        <children>
+          <node name="runtime">
+            <properties>
+              <help>Show VPP runtime statistics</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/vpp.py show_runtime</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

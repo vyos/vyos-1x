@@ -13,40 +13,57 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import argparse
 import glob
 from datetime import datetime
 from pathlib import Path
 from shutil import rmtree
-
 from socket import gethostname
 from sys import exit
 from tarfile import open as tar_open
+
+from vyos.defaults import directories
 from vyos.utils.process import call
-from vyos.utils.process import rc_cmd
+from vyos.utils.process import cmd
+from vyos.utils.file import get_name_from_path
 from vyos.remote import upload
 
-def op(cmd: str) -> str:
-    """Returns a command with the VyOS operational mode wrapper."""
-    return f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}'
 
-def save_stdout(command: str, file: Path) -> None:
-    rc, stdout = rc_cmd(command)
-    body: str = f'''### {command} ###
-Command: {command}
-Exit code: {rc}
-Stdout:
-{stdout}
+# Example: bdbdd9a4807f_tech-support-archive_2026-02-02T13-53-18
+ARCHIVE_PATTERN = '_tech-support-archive_'
+# Example: drops-debug_2026-02-02T13-53-18
+ARCHIVE_TMP_DIR_PATTERN = 'drops-debug_'
+DEFAULT_TMP_DIR = '/tmp'
+EXCLUDED_ARCHIVE_EXT = ('.iso', '.gz', '.tar', '.zip')
 
-'''
-    with file.open(mode='a') as f:
-        f.write(body)
+
 def __rotate_logs(path: str, log_pattern:str):
     files_list = glob.glob(f'{path}/{log_pattern}')
     if len(files_list) > 5:
         oldest_file = min(files_list, key=os.path.getctime)
         os.remove(oldest_file)
+
+
+def __save_show_report_files(reports_dir: Path):
+    """
+    Save result of execution `show tech-support report` command
+    :param reports_dir: path to the result directory
+    :type reports_dir: pathlib.Path
+    """
+
+    vyos_op_scripts_dir = directories['op_mode']
+    script_path = f'{vyos_op_scripts_dir}/show_techsupport_report.py'
+    arguments = [
+        '--launched-from-generate-archive',
+        '--outdir',
+        str(reports_dir),
+    ]
+    output = cmd([script_path] + arguments)
+
+    if output.strip():
+        print(output)
 
 
 def __generate_archived_files(location_path: str) -> None:
@@ -55,6 +72,33 @@ def __generate_archived_files(location_path: str) -> None:
     :param location_path: path to temporary directory
     :type location_path: str
     """
+
+    # sync/flush journald before archiving /var/log/journal
+    cmd(['journalctl', '--sync'])
+    cmd(['journalctl', '--flush'])
+
+    def __tar_filter(tarinfo):
+        # path inside tar, because we set arcname=... below
+        name = tarinfo.name
+        basename = os.path.basename(name)
+
+        # /var/log: exclude /var/log/messages and /var/log/messages.*
+        if name.startswith('var/log/messages'):
+            if basename == 'messages' or basename.startswith('messages.'):
+                return None
+
+        # /tmp, /home: exclude previous tech-support archives and temporary archive directories
+        if name.startswith(('tmp/', 'home/')):
+            if ARCHIVE_PATTERN in name or basename.startswith(ARCHIVE_TMP_DIR_PATTERN):
+                return None
+
+        # /home, /opt/vyatta/etc/config, /tmp: exclude general archives
+        if name.startswith(('home/', 'opt/vyatta/etc/config/', 'tmp/')):
+            if basename.lower().endswith(EXCLUDED_ARCHIVE_EXT):
+                return None
+
+        return tarinfo
+
     # Dictionary arhive_name:directory_to_arhive
     archive_dict = {
         'etc': '/etc',
@@ -63,22 +107,23 @@ def __generate_archived_files(location_path: str) -> None:
         'root': '/root',
         'tmp': '/tmp',
         'core-dump': '/var/core',
-        'config': '/opt/vyatta/etc/config'
+        'config': '/opt/vyatta/etc/config',
+        'run': '/run',
     }
-    # Dictionary arhive_name:excluding pattern
-    archive_excludes = {
-        # Old location of archives
-        'config': 'tech-support-archive',
-        # New locations of arhives
-        'tmp': 'tech-support-archive'
-    }
+
     for archive_name, path in archive_dict.items():
-        archive_file: str = f'{location_path}/{archive_name}.tar.gz'
+        if not os.path.exists(path):
+            continue
+
+        arcname = str(path).lstrip('/')  # e.g. /etc -> 'etc'
+
+        archive_file = f'{location_path}/{archive_name}.tar.gz'
         with tar_open(name=archive_file, mode='x:gz') as tar_file:
-            if archive_name in archive_excludes:
-                tar_file.add(path, filter=lambda x: None if str(archive_excludes[archive_name]) in str(x.name) else x)
-            else:
-                tar_file.add(path)
+            try:
+                tar_file.add(path, arcname=arcname, filter=__tar_filter)
+            except (PermissionError, OSError) as e:
+                print(f'Unable to read `{path}` to archive files:', e)
+                continue  # skip paths we can't read
 
 
 def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
@@ -89,8 +134,10 @@ def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
     :param tmp_dir_path: path to arhive memeber
     :type tmp_dir_path: str
     """
+
+    arcname = get_name_from_path(archive_file)
     with tar_open(name=archive_file, mode='x:gz') as tar_file:
-        tar_file.add(tmp_dir_path, arcname=os.path.basename(tmp_dir_path))
+        tar_file.add(tmp_dir_path, arcname=arcname)
 
 def __generate_topology_snapshots(output_dir: Path) -> None:
     """
@@ -109,61 +156,100 @@ def __generate_topology_snapshots(output_dir: Path) -> None:
     call(['lstopo', '--logical', '--output-format', 'png', str(logical_topo)])
 
 
+def __resolve_main_archive_path(input_path: str, default_archive_name: str) -> Path:
+    """
+    Normalize path for saving a .tar.gz file based on rules:
+
+    Rules:
+      - file               -> file.tar.gz
+      - file.tar           -> file.tar.gz
+      - file.tgz           -> file.tgz
+      - dir/               -> dir/{default_archive_name}
+      - ../dir/file.tar.gz -> (unchanged)
+      - file.zip           -> file.tar.gz
+
+    :param input_path: user's provided path to the archive
+    :param default_archive_name: name of archive if user didn't provide it
+    """
+
+    path = Path(input_path)
+
+    # Case 1: default temporary directory -> extend by default name of file
+    if input_path == DEFAULT_TMP_DIR:
+        return path / default_archive_name
+
+    # Case 2: already .tar.gz -> return unchanged
+    if path.name.endswith(('.tar.gz', '.tgz')):
+        return path
+
+    # Case 3: already .tar -> .tar.gz
+    if path.name.endswith('.tar'):
+        return path.with_suffix('.tar.gz')
+
+    # Case 4: directory (explicit trailing slash OR existing directory)
+    if input_path.endswith(('/', '\\')) or path.is_dir():
+        dir_path = path
+        return dir_path / default_archive_name
+
+    # Default behavior for any other extension
+    return path.with_suffix('.tar.gz')
+
+
 if __name__ == '__main__':
-    defualt_tmp_dir = '/tmp'
     parser = argparse.ArgumentParser()
-    parser.add_argument("path", nargs='?', default=defualt_tmp_dir)
+    parser.add_argument('path', nargs='?', default=DEFAULT_TMP_DIR)
     args = parser.parse_args()
-    location_path = args.path[:-1] if args.path[-1] == '/' else args.path
 
     hostname: str = gethostname()
-    time_now: str = datetime.now().isoformat(timespec='seconds').replace(":", "-")
+    time_now: str = datetime.now().isoformat(timespec='seconds').replace(':', '-')
+    default_archive_inner_dir = f'{hostname}{ARCHIVE_PATTERN}{time_now}'
+    default_archive_name = f'{default_archive_inner_dir}.tar.gz'
 
-    remote = False
-    tmp_path = ''
-    tmp_dir_path = ''
-    if 'ftp://' in args.path or 'scp://' in args.path:
-        remote = True
-        tmp_path = defualt_tmp_dir
+    is_remote = args.path.startswith(('ftp://', 'scp://'))
+    if is_remote:
+        base_tmp_path = DEFAULT_TMP_DIR
+        archive_dest_path = Path(f'{base_tmp_path}/{default_archive_name}')
     else:
-        tmp_path = location_path
-    archive_pattern = f'_tech-support-archive_'
-    archive_file_name = f'{hostname}{archive_pattern}{time_now}.tar.gz'
+        # Define destination path to the main archive file based on a rules
+        archive_dest_path = __resolve_main_archive_path(args.path, default_archive_name)
+        base_tmp_path = str(archive_dest_path.parent)
+        default_archive_name = archive_dest_path.name
+        default_archive_inner_dir = get_name_from_path(archive_dest_path.name)
 
     # Log rotation in tmp directory
-    if tmp_path == defualt_tmp_dir:
-        __rotate_logs(tmp_path, f'*{archive_pattern}*')
+    if base_tmp_path == DEFAULT_TMP_DIR:
+        __rotate_logs(base_tmp_path, f'*{ARCHIVE_PATTERN}*')
 
     # Temporary directory creation
-    tmp_dir_path = f'{tmp_path}/drops-debug_{time_now}'
-    tmp_dir: Path = Path(tmp_dir_path)
+    tmp_dir: Path = Path(f'{base_tmp_path}/{ARCHIVE_TMP_DIR_PATTERN}{time_now}')
     tmp_dir.mkdir(parents=True)
 
-    report_file: Path = Path(f'{tmp_dir_path}/show_tech-support_report.txt')
-    report_file.touch()
+    # Directory which contains list of 'tech-support' reports
+    reports_dir: Path = Path(f'{tmp_dir}/show_tech-support_report')
 
     # Call the topology snapshot function here
     __generate_topology_snapshots(tmp_dir)
 
     try:
+        # Generate files using `show tech-support report` command
+        __save_show_report_files(reports_dir)
 
-        save_stdout(op('show tech-support report'), report_file)
         # Generate included archives
-        __generate_archived_files(tmp_dir_path)
+        __generate_archived_files(tmp_dir)
 
         # Generate main archive
-        __generate_main_archive_file(f'{tmp_path}/{archive_file_name}', tmp_dir_path)
-        # Delete temporary directory
-        rmtree(tmp_dir)
+        __generate_main_archive_file(archive_dest_path, tmp_dir)
+
         # Upload to remote site if it is scpecified
-        if remote:
-            upload(f'{tmp_path}/{archive_file_name}', args.path)
-        print(f'Debug file is generated and located in {location_path}/{archive_file_name}')
+        if is_remote:
+            upload_uri = args.path
+            upload(str(archive_dest_path), upload_uri)
     except Exception as err:
         print(f'Error during generating a debug file: {err}')
-        # cleanup
-        if tmp_dir.exists():
-            rmtree(tmp_dir)
+    else:
+        print(f'Debug file is generated and located in {archive_dest_path}')
     finally:
-        # cleanup
+        # Delete temporary directory
+        if tmp_dir.exists():
+            rmtree(tmp_dir, ignore_errors=True)
         exit()

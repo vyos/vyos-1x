@@ -23,6 +23,7 @@ from vyos.configdict import get_accel_dict
 from vyos.configdict import is_node_changed, node_changed
 from vyos.configdiff import Diff
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_virtual_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
@@ -68,6 +69,7 @@ def get_config(config=None):
     pppoe = get_accel_dict(conf, base, pppoe_chap_secrets)
 
     vpp_interface_base = ['vpp', 'settings', 'interface']
+    vpp_bond_interface_base = ['interfaces', 'vpp', 'bonding']
     if conf.exists(vpp_interface_base) and is_systemd_service_active('vpp.service'):
         vpp_ifaces = conf.get_config_dict(
             vpp_interface_base,
@@ -75,23 +77,23 @@ def get_config(config=None):
             get_first_key=True,
             no_tag_node_value_mangle=True,
         )
+        vpp_bond_ifaces = conf.get_config_dict(
+            vpp_bond_interface_base,
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+        )
+        vpp_ifaces = vpp_ifaces | vpp_bond_ifaces
         pppoe['vpp_ifaces'] = vpp_ifaces
         for interface in pppoe.get('interface', {}):
             if base_ifname(interface) in vpp_ifaces:
                 pppoe['interface'][interface]['vpp_cp'] = {}
 
-    pppoe['vpp_cp_interfaces'] = {
-        'add': [
-            ifname
-            for ifname, iface_conf in pppoe.get('interface', {}).items()
-            if 'vpp_cp' in iface_conf
-        ],
-        'delete': [
-            iface
-            for iface in node_changed(conf, base + ['interface'])
-            if base_ifname(iface) in pppoe.get('vpp_ifaces', {})
-        ],
-    }
+    pppoe['vpp_cp_interfaces'] = [
+        ifname
+        for ifname, iface_conf in pppoe.get('interface', {}).items()
+        if 'vpp_cp' in iface_conf
+    ]
 
     if not conf.exists(base):
         pppoe['remove'] = True
@@ -111,6 +113,13 @@ def get_config(config=None):
     changed_vpp_ifaces = node_changed(
         conf, vpp_interface_base, expand_nodes=Diff.DELETE | Diff.ADD
     )
+    changed_vpp_bond_ifaces = node_changed(
+        conf,
+        vpp_bond_interface_base,
+        recursive=True,
+        expand_nodes=Diff.DELETE | Diff.ADD,
+    )
+    all_changed_vpp_ifaces = set(changed_vpp_ifaces) | set(changed_vpp_bond_ifaces)
     conditions = [
         is_node_changed(conf, base + ['client-ip-pool']),
         is_node_changed(conf, base + ['client-ipv6-pool']),
@@ -118,7 +127,7 @@ def get_config(config=None):
         is_node_changed(conf, base + ['authentication', 'radius', 'dynamic-author']),
         is_node_changed(conf, base + ['authentication', 'mode']),
         any(
-            base_ifname(iface) in changed_vpp_ifaces
+            base_ifname(iface) in all_changed_vpp_ifaces
             for iface in pppoe.get('interface', {})
         ),
     ]
@@ -172,7 +181,11 @@ def verify(pppoe):
     for interface, interface_config in pppoe['interface'].items():
         # Interfaces integrated with the control-plane in VPP must exist in the system
         warning_only = 'vpp_cp' not in interface_config
-        verify_interface_exists(pppoe, interface, warning_only=warning_only)
+        if '.' in interface:
+            verify_interface_func = verify_virtual_interface_exists
+        else:
+            verify_interface_func = verify_interface_exists
+        verify_interface_func(pppoe, interface, warning_only=warning_only)
 
         if 'vlan_mon' in interface_config and base_ifname(interface) in pppoe.get(
             'vpp_ifaces', {}
@@ -203,11 +216,11 @@ def apply(pppoe):
     systemd_service = 'accel-ppp@pppoe.service'
 
     # delete pppoe mapping in vpp
-    vpp_cp_ifaces_delete = pppoe.get('vpp_cp_interfaces', {}).get('delete', [])
-    if 'vpp_ifaces' in pppoe and vpp_cp_ifaces_delete:
+    if 'vpp_ifaces' in pppoe:
         vpp = VPPControl()
-        for iface in vpp_cp_ifaces_delete:
-            vpp.map_pppoe_interface(iface, is_add=False)
+        mapping = vpp.get_pppoe_interface_mapping()
+        for dp_iface, cp_iface in mapping.items():
+            vpp.delete_pppoe_mapping(dp_iface, cp_iface)
 
     if 'remove' in pppoe:
         call(f'systemctl stop {systemd_service}')
@@ -222,11 +235,11 @@ def apply(pppoe):
         call(f'systemctl reload-or-restart {systemd_service}')
 
     # add pppoe mapping in vpp
-    vpp_cp_ifaces_add = pppoe.get('vpp_cp_interfaces', {}).get('add', [])
+    vpp_cp_ifaces_add = pppoe.get('vpp_cp_interfaces', [])
     if vpp_cp_ifaces_add:
         vpp = VPPControl()
         for iface in vpp_cp_ifaces_add:
-            vpp.map_pppoe_interface(iface, is_add=True)
+            vpp.map_pppoe_interface(iface)
 
 
 if __name__ == '__main__':

@@ -16,13 +16,14 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import os
-
 from vyos.config import Config
-from vyos.configdict import node_changed
+from vyos.configdict import get_interface_dict
 from vyos import ConfigError
-from vyos.vpp.interface import BridgeInterface
-from vyos.vpp.utils import iftunnel_transform
+from vyos.utils.process import is_systemd_service_active
+
+from vyos.ifconfig.vpp import VPPBridgeInterface
+from vyos.vpp.config_deps import deps_bond_dict
+from vyos.vpp.config_deps import deps_bridge_dict
 
 
 def get_config(config=None) -> dict:
@@ -38,14 +39,25 @@ def get_config(config=None) -> dict:
     else:
         conf = Config()
 
-    base = ['vpp', 'interfaces', 'bridge']
-    vpp_interfaces = ['vpp', 'settings', 'interface']
+    base = ['interfaces', 'vpp', 'bridge']
 
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    ifname, config = get_interface_dict(conf, base)
 
-    # Get config_dict with default values
-    config = conf.get_config_dict(
-        base + [ifname],
+    if not conf.exists(['vpp']) and not conf.exists(base):
+        config['remove_vpp'] = True
+        return config
+
+    # Get global vpp interfaces for verify
+    config['vpp_interfaces'] = conf.get_config_dict(
+        ['vpp', 'settings', 'interface'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
+    # Get all gre interfaces config
+    config['gre_interfaces'] = conf.get_config_dict(
+        ['interfaces', 'vpp', 'gre'],
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
@@ -53,50 +65,23 @@ def get_config(config=None) -> dict:
         with_recursive_defaults=True,
     )
 
-    if not conf.exists(['vpp']):
-        config['remove_vpp'] = True
-        return config
-
-    # Get effective config as we need full dicitonary per interface delete
-    effective_config = conf.get_config_dict(
-        base + [ifname],
-        key_mangling=('-', '_'),
-        effective=True,
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
-    if effective_config:
-        config.update({'effective': effective_config})
-
-    if not conf.exists(base + [ifname]):
-        config['remove'] = True
-
-    # Get global vpp interfaces for verify
-    config['vpp_interfaces'] = conf.get_config_dict(
-        vpp_interfaces,
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
-    # determine which members have been removed
-    interfaces_removed = node_changed(conf, base + [ifname, 'member', 'interface'])
-    if interfaces_removed:
-        config['members_removed'] = interfaces_removed
-
-    config['ifname'] = ifname
+    config['bond_members'] = deps_bond_dict(conf)
+    config['bridge_members'] = deps_bridge_dict(conf)
 
     return config
 
 
 def verify(config):
-    if 'remove' in config or 'remove_vpp' in config:
+    if 'deleted' in config or 'remove_vpp' in config:
         return None
 
-    # Check if interface exists in vpp before adding to bridge-domain
+    if not is_systemd_service_active('vpp.service'):
+        raise ConfigError(
+            'Cannot configure VPP bridge interface: vpp.service is not running'
+        )
 
-    allowed_prefixes = ('bond', 'gre', 'geneve', 'lo', 'vxlan')
+    # Check if interface exists in vpp before adding to bridge-domain
+    allowed_prefixes = ('vppbond', 'vppgre', 'vpplo', 'vppvxlan')
 
     if 'member' in config:
         bvi_exists = False
@@ -112,13 +97,40 @@ def verify(config):
                     f"Interface '{member}' not found in 'vpp settings interface' or does not start with allowed prefixes {allowed_prefixes}"
                 )
 
+            # Each interface can belong only to one bridge
+            bridge_members = config['bridge_members'][member]
+            if len(bridge_members) > 1:
+                raise ConfigError(
+                    f'Interface {member} is added to more than one bridge: {", ".join(bridge_members)}'
+                )
+
+            # Interface cannot be a member of a bridge and a bond at the same time
+            bond_members = config['bond_members'].get(member)
+            if bond_members:
+                raise ConfigError(
+                    f'Interface {member} cannot be a member of a bridge '
+                    f'because it already belongs to bonding interface: {", ".join(bond_members)}.'
+                )
+
             # Check if BVI is already defined, only one BVI per bridge domain is allowed
             if 'bvi' in member_config:
                 if bvi_exists:
                     raise ConfigError("Only one BVI per bridge domain is allowed")
-                if not member.startswith('lo'):
+                if not member.startswith('vpplo'):
                     raise ConfigError("BVI can only be defined on loopback interface")
                 bvi_exists = True
+
+        # check GRE tunnels as part of the bridge, only tunnel-type "teb" is allowed
+        #   set interfaces vpp bridge vppbr1 member interface vppgre1
+        #   set interfaces vpp gre vppgre1 tunnel-type teb
+        if member.startswith('vppgre'):
+            if member in config.get('gre_interfaces'):
+                gre_config = config.get('gre_interfaces').get(member)
+                if gre_config.get('tunnel_type') != 'teb':
+                    raise ConfigError(
+                        f'GRE interface "{member}" in bridge must have tunnel-type "teb". '
+                        f'Current tunnel-type is "{gre_config.get("tunnel_type")}".'
+                    )
 
 
 def generate(config):
@@ -130,54 +142,13 @@ def apply(config):
         return None
 
     ifname = config.get('ifname')
-    # vxlan10 in the vpp is vxlan_tunnel10
-    interface_transform_filter = ('geneve', 'vxlan')
-    # update members
-    if 'members_removed' in config:
-        i = BridgeInterface(ifname)
-        for member in config.get('members_removed'):
-            if member.startswith(interface_transform_filter):
-                member = iftunnel_transform(member)
-            if member.startswith('lo'):
-                # interface name in VPP is loopX
-                member = member.replace('lo', 'loop')
-            elif member.startswith('bond'):
-                # interface name in VPP is BondEthernetX
-                member = member.replace('bond', 'BondEthernet')
-            i.detach_member(member=member)
+    bridge = VPPBridgeInterface(ifname)
+    bridge.remove()
 
-    # Delete bridge domain
-    if 'effective' in config:
-        ifname = config.get('ifname')
-        i = BridgeInterface(ifname)
-        i.delete()
+    if 'deleted' in config:
+        return
 
-    if 'remove' in config:
-        return None
-
-    # Add bridge domain
-    members = config.get('member', {}).get('interface', '')
-    i = BridgeInterface(ifname)
-    i.add()
-    # Add members to bridge
-    if members:
-        br = BridgeInterface(ifname)
-        port_type = 0
-        for member, member_config in members.items():
-            if member.startswith(interface_transform_filter):
-                member = iftunnel_transform(member)
-            if member.startswith('lo'):
-                # interface name in VPP is loopX
-                member = member.replace('lo', 'loop')
-                if 'bvi' in member_config:
-                    port_type = 1
-            elif member.startswith('bond'):
-                # interface name in VPP is BondEthernetX
-                member = member.replace('bond', 'BondEthernet')
-
-            br.add_member(member=member, port_type=port_type)
-            # set default port type 0 (not BVI)
-            port_type = 0
+    bridge.update(config)
 
     return None
 

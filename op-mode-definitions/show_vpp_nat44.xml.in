@@ -3,6 +3,9 @@
   <node name="show">
     <children>
       <node name="vpp">
+        <properties>
+          <help>Show VPP information</help>
+        </properties>
         <children>
           <node name="nat">
             <children>

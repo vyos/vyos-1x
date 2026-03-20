@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name='interfaces'>
+    <children>
+      <node name='vpp'>
+        <children>
+          <tagNode name="vxlan" owner="${vyos_conf_scripts_dir}/vpp_interfaces_vxlan.py">
+            <properties>
+              <priority>325</priority>
+              <help>Virtual Extensible LAN (VXLAN) Interface</help>
+              <constraint>
+                <regex>vppvxlan[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>VXLAN interface must be named vppvxlanN</constraintErrorMessage>
+              <valueHelp>
+                <format>vppvxlanN</format>
+                <description>VXLAN interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/vni.xml.i>
+              #include <include/interface/address-ipv4-ipv6.xml.i>
+              #include <include/interface/mtu-68-16000.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

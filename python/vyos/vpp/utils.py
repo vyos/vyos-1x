@@ -27,7 +27,7 @@ mem_shift = {'K': 10, 'KB': 10, 'M': 20, 'MB': 20, 'G': 30, 'GB': 30}
 
 
 def iftunnel_transform(iface: str) -> str:
-    """Transform interface name from `xxxNN` to `xxx_tunnelNN`
+    """Transform interface name from `vppxxxNN` to `xxx_tunnelNN`
 
     Args:
         iface (str): original interface name
@@ -38,6 +38,8 @@ def iftunnel_transform(iface: str) -> str:
     Returns:
         str: Transformed interface name
     """
+    # Remove vpp prefix
+    iface = iface.removeprefix('vpp')
     # Check format
     if not iface[0].isascii() or not iface[-1].isdecimal():
         raise ValueError(f'Wrong interface name format: {iface}')
@@ -58,9 +60,9 @@ def vpp_iface_name_transform(iface: str) -> str:
         str: Interface name formatted as recognized by VPP (e.g., "BondEthernet0").
     """
     vpp_iface_name = iface
-    if vpp_iface_name.startswith('bond'):
+    if vpp_iface_name.startswith('vppbond'):
         # interface name in VPP is BondEthernetX
-        vpp_iface_name = vpp_iface_name.replace('bond', 'BondEthernet')
+        vpp_iface_name = vpp_iface_name.replace('vppbond', 'BondEthernet')
     return vpp_iface_name
 
 
@@ -87,15 +89,24 @@ def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
         with_recursive_defaults=True,
     )
 
+    interfaces_config = config_instance.get_config_dict(
+        ['interfaces', 'vpp'],
+        key_mangling=('-', '_'),
+        effective=effective_mode,
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_recursive_defaults=True,
+    )
+
     vpp_ifaces: list[str] = []
 
     # Get a list of Ethernet interfaces
     for iface in config.get('settings', {}).get('interface', {}).keys():
         vpp_ifaces.append(iface)
 
-    # Get a list of VPP interfaces
-    for iface_type in config.get('interfaces', {}).keys():
-        for iface in config.get('interfaces', {}).get(iface_type, {}).keys():
+    # Get a list of interfaces VPP
+    for iface_type in interfaces_config.keys():
+        for iface in interfaces_config.get(iface_type, {}).keys():
             vpp_ifaces.append(iface)
 
     return vpp_ifaces
@@ -156,18 +167,19 @@ def vpp_ifaces_list(vpp_api) -> list[dict]:
     return ifaces_list
 
 
-def vpp_ip_addresses_by_index(vpp_api, index: str) -> list[str]:
+def vpp_ip_addresses_by_index(vpp_api, index: int, is_ipv6: bool = False) -> list[str]:
     """List of IP addresses for interface by its index in VPP
 
     Args:
         vpp_api (_type_): VPP API object
-        index (str): interface index in vpp
+        index (int): interface index in vpp
+        is_ipv6 (bool, optional): If True, return IPv6 addresses. Defaults to False.
 
     Returns:
-        list[str]: list of IP addresses
+        list[str]: list of IP addresses (e.g. '192.0.2.1/24', '2001:db8::1/64')
     """
-    ip_addresses_list: list[dict] = []
-    ip_address_dump = vpp_api.ip_address_dump(sw_if_index=index)
+    ip_addresses_list: list[str] = []
+    ip_address_dump = vpp_api.ip_address_dump(sw_if_index=index, is_ipv6=is_ipv6)
     while ip_address_dump:
         ip_address_details = ip_address_dump.pop()
         ip_addresses_list.append(str(ip_address_details._asdict().get('prefix')))
@@ -228,44 +240,6 @@ def vpp_ifaces_stats(
             ifaces_stats[iface_name] = stats_item
 
     return ifaces_stats
-
-
-def cli_ifaces_lcp_kernel_list(
-    config_instance, mode: str = 'candidate'
-) -> list[tuple[str, str]]:
-    """List of all VPP kernel-interfaces (CLI names, attached VPP interfaces)
-
-    Args:
-        config_instance (VyOS Config): VyOS Config instance
-        mode (str, optional): `candidate` or `running`. Defaults to 'candidate'.
-
-    Returns:
-        list[tuple[str, str]]: list of interfaces ([(vpp_iface, kernel_iface)])
-    """
-
-    effective_mode: bool = True if mode == 'running' else False
-
-    # Read a config
-    config = config_instance.get_config_dict(
-        ['vpp'],
-        key_mangling=('-', '_'),
-        effective=effective_mode,
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-        with_recursive_defaults=True,
-    )
-
-    lcp_kernel_ifaces: list[tuple[str, str]] = []
-
-    # Get a list with kernel interfaces
-    for ifaces_list in config.get('interfaces', {}).values():
-        for iface_name, iface_settings in ifaces_list.items():
-            if 'kernel_interface' in iface_settings:
-                lcp_kernel_ifaces.append(
-                    (iface_name, iface_settings['kernel_interface'])
-                )
-
-    return lcp_kernel_ifaces
 
 
 def get_default_hugepage_size() -> int:

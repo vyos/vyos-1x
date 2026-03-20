@@ -28,7 +28,7 @@
                 <description>Xen console</description>
               </valueHelp>
               <constraint>
-                  <regex>(ttyS[0-9]+|hvc[0-9]+|usb[0-9]+b.*)</regex>
+                  <regex>(ttyS[0-9]+|ttyAMA[0-9]+|hvc[0-9]+|usb[0-9]+b.*)</regex>
               </constraint>
             </properties>
             <children>

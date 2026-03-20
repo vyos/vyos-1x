@@ -117,6 +117,7 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
 
     def test_openfabric_03_password(self):
         password = 'foo'
+        md5_password = 'secret_md5_hash'
 
         self.openfabric_base_config()
 
@@ -146,6 +147,23 @@ class TestProtocolsOpenFabric(VyOSUnitTestSHIM.TestCase):
 
         tmp = self.getFRRconfig(f'interface {dummy_if}', stop_section='^exit')
         self.assertIn(f' openfabric password clear {password}-{dummy_if}', tmp)
+
+        # Switch to MD5 passwords - delete plaintext passwords first
+        self.cli_delete(path + ['domain-password', 'plaintext-password'])
+        self.cli_delete(path + ['interface', dummy_if, 'password', 'plaintext-password'])
+
+        self.cli_set(path + ['domain-password', 'md5', md5_password])
+        self.cli_set(path + ['interface', dummy_if, 'password', 'md5', md5_password])
+
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        tmp = self.getFRRconfig(f'router openfabric {domain}', stop_section='^exit')
+        self.assertIn(f' domain-password md5 {md5_password}', tmp)
+
+        tmp = self.getFRRconfig(f'interface {dummy_if}', stop_section='^exit')
+        self.assertIn(f' openfabric password md5 {md5_password}', tmp)
 
     def test_openfabric_multiple_domains(self):
         domain_2 = 'VyOS_2'

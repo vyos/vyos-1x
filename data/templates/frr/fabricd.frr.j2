@@ -39,7 +39,7 @@ exit
 router openfabric {{ name }}
  net {{ net }}
 {%     if router_config.domain_password.md5 is vyos_defined %}
- domain-password md5 {{ router_config.domain_password.plaintext_password }}
+ domain-password md5 {{ router_config.domain_password.md5 }}
 {%     elif router_config.domain_password.plaintext_password is vyos_defined %}
  domain-password clear {{ router_config.domain_password.plaintext_password }}
 {%     endif %}

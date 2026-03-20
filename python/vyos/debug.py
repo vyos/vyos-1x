@@ -38,13 +38,12 @@ def message(message, flag='', destination=sys.stdout):
     if not logfile:
         return enable
 
+    mask = os.umask(0o111)
     try:
         # at boot the file is created as root:vyattacfg
         # at runtime the file is created as user:vyattacfg
         # but the helper scripts are not run as this so it
         # need the default permission to be 666 (an not 660)
-        mask = os.umask(0o111)
-
         with open(logfile, 'a') as f:
             f.write(_timed(_format('log', message)))
     finally:

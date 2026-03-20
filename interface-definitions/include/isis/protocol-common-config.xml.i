@@ -298,25 +298,6 @@
         #include <include/segment-routing-label-value.xml.i>
       </children>
     </node>
-    <node name="srv6">
-      <properties>
-        <help>Segment-Routing SRv6 configuration</help>
-      </properties>
-      <children>
-        <leafNode name="locator">
-          <properties>
-            <help>Specify SRv6 locator</help>
-            <valueHelp>
-              <format>txt</format>
-              <description>SRv6 locator name</description>
-            </valueHelp>
-            <constraint>
-              #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
-            </constraint>
-          </properties>
-        </leafNode>
-      </children>
-    </node>
     <leafNode name="maximum-label-depth">
       <properties>
         <help>Maximum MPLS labels allowed for this router</help>
@@ -410,6 +391,94 @@
         </node>
       </children>
     </tagNode>
+    <node name="srv6">
+      <properties>
+        <help>Segment-Routing over IPv6 (SRv6) configuration</help>
+      </properties>
+      <children>
+        <leafNode name="locator">
+          <properties>
+            <help>Specify SRv6 locator</help>
+            <valueHelp>
+              <format>txt</format>
+              <description>SRv6 locator name</description>
+            </valueHelp>
+            <completionHelp>
+              <script>${vyos_completion_dir}/list_srv6_locators.sh</script>
+            </completionHelp>
+            <constraint>
+              #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+            </constraint>
+          </properties>
+        </leafNode>
+        <node name="node-msd">
+          <properties>
+            <help>SRv6 Maximum Segment ID (SID) Depth (MSD)</help>
+          </properties>
+          <children>
+            <leafNode name="max-end-d">
+              <properties>
+                <help>Maximum Segment Identifier for End-of-Data</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>Maximum End D MSD</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="max-end-pop">
+              <properties>
+                <help>Maximum number of SIDs in Segment-Routing Header (SRH) for segment pop</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>Maximum End Pop MSD</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="max-h-encaps">
+              <properties>
+                <help>Maximum Headend Encapsulation in MSD</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>Maximum Headend encaps in MSD</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="max-segs-left">
+              <properties>
+                <help>Maximum Segments left in MSD</help>
+                <valueHelp>
+                  <format>u32:0-255</format>
+                  <description>Maximum Segments Left</description>
+                </valueHelp>
+                  <constraint>
+                  <validator name="numeric" argument="--range 0-255"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <leafNode name="interface">
+          <properties>
+            <help>Interface for Segment-Routing over IPv6 (SRv6)</help>
+            <completionHelp>
+              <script>${vyos_completion_dir}/list_interfaces</script>
+            </completionHelp>
+            <constraint>
+              #include <include/constraint/interface-name.xml.i>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </node>
 <node name="redistribute">

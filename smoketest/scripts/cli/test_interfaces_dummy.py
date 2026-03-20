@@ -24,6 +24,7 @@ class DummyInterfaceTest(BasicInterfaceTest.TestCase):
     def setUpClass(cls):
         cls._base_path = ['interfaces', 'dummy']
         cls._interfaces = ['dum435', 'dum8677', 'dum0931', 'dum089']
+        cls._mirror_interfaces = ['eth0']
         # call base-classes classmethod
         super(DummyInterfaceTest, cls).setUpClass()
 
