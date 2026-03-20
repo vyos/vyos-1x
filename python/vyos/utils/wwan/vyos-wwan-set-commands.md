@@ -18,15 +18,8 @@ The existing upstream VyOS WWAN commands (`apn`, `authentication`, `connect-on-d
 ```
 interfaces
   └── wwan <wwanN>
-        ├── apn <name>                                    # (existing) Global fallback APN
-        ├── authentication                                # (existing)
-        │     ├── username <text>
-        │     └── password <text>
         ├── connect-on-demand                             # (existing, valueless)
-        ├── auth-type <none|pap|chap|both>                # NEW — global default auth type
-        ├── pdp-type <ipv4|ipv6|ipv4v6>                   # NEW — global default PDP type
-        ├── roaming                                       # NEW — enable roaming (valueless)
-        ├── network-mode <auto|lte|5g|3g|2g>              # NEW
+        ├── network-mode <auto|lte|5g|3g|2g>              # NEW — modem-level RAT selection
         │
         ├── sim                                           # NEW — SIM management
         │     ├── active-slot <1|2>
@@ -138,10 +131,10 @@ automatically using a 4-priority APN discovery chain:
 | Feature | Default (nothing configured) | Effect |
 |---|---|---|
 | **Active SIM slot** | `1` | Slot 1 is used |
-| **APN** | `(empty)` — triggers auto-discovery | Priority chain: 1) configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (if enabled), 4) automatic (let the network assign) |
-| **Authentication** | `none`, no username/password | No PPP auth sent to carrier |
-| **PDP type** | `ipv4` | IPv4-only bearer |
-| **Roaming** | `disabled` | Modem will not register on visited networks |
+| **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (if enabled), 4) automatic (let the network assign) |
+| **Authentication** | per-SIM only, default `none` | No PPP auth; auth-type/username/password configured per SIM slot |
+| **PDP type** | per-SIM only, default `ipv4` | IPv4-only bearer per slot unless overridden |
+| **Roaming** | per-SIM only, default `disabled` | Modem will not register on visited networks unless enabled per slot |
 | **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
 | **SIM PIN** | per-SIM only | No automatic unlock; SIM must already be unlocked or will block at PIN state |
 | **Auto-unlock** | per-SIM, default `true` | If a PIN *is* configured on a slot, the FSM sends it automatically |
@@ -176,16 +169,16 @@ automatically using a 4-priority APN discovery chain:
 To connect a single SIM with a known APN and no other features:
 
 ```
-set interfaces wwan wwan0 apn 'your.carrier.apn'
+set interfaces wwan wwan0 sim slot 1 apn 'your.carrier.apn'
 ```
 
 Everything else uses the defaults above.  If the carrier requires authentication:
 
 ```
-set interfaces wwan wwan0 apn 'your.carrier.apn'
-set interfaces wwan wwan0 authentication username 'user'
-set interfaces wwan wwan0 authentication password 'pass'
-set interfaces wwan wwan0 auth-type 'chap'
+set interfaces wwan wwan0 sim slot 1 apn 'your.carrier.apn'
+set interfaces wwan wwan0 sim slot 1 username 'user'
+set interfaces wwan wwan0 sim slot 1 password 'pass'
+set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
 ```
 
 If the SIM is PIN-locked:
@@ -201,15 +194,9 @@ set interfaces wwan wwan0 sim slot 1 auto-unlock
 
 ### Basic / Existing Commands
 
-> **If unconfigured:** No APN set (auto-discovery chain used), no auth, IPv4 only, roaming off, network-mode auto.
+> **If unconfigured:** Network-mode auto.  APN, auth-type, PDP-type, roaming, username/password are all per-SIM only.
 
 ```
-set interfaces wwan wwan0 apn 'lteinternet.apn'
-set interfaces wwan wwan0 authentication username ''
-set interfaces wwan wwan0 authentication password ''
-set interfaces wwan wwan0 auth-type 'none'
-set interfaces wwan wwan0 pdp-type 'ipv4'
-set interfaces wwan wwan0 roaming
 set interfaces wwan wwan0 network-mode 'auto'
 ```
 
@@ -270,8 +257,56 @@ set interfaces wwan wwan0 dial-on-demand idle-timeout 300
 set interfaces wwan wwan0 dial-on-demand traffic-threshold 1024
 ```
 
-> **Note:** The existing `connect-on-demand` (valueless) enables dial-on-demand.
-> The `dial-on-demand` sub-tree holds the tuning parameters.
+> **Note:** `connect-on-demand` and `dial-on-demand` are **mutually exclusive** modes
+> (plus the default always-on).  See *Design Notes* below.
+
+### Connection Mode Design Notes (future implementation)
+
+Three connection modes are planned:
+
+| Mode | Config | Registration | Bearer | Linux interface | Trigger |
+|---|---|---|---|---|---|
+| **always-on** (default) | neither set | yes | yes, auto | up with IP | automatic at boot |
+| **connect-on-demand** | `connect-on-demand` | yes | no | down | external app calls D-Bus `connect` |
+| **dial-on-demand** | `dial-on-demand` | yes | no | present, no IP | traffic detection or D-Bus "dial-connect"; auto-drops on idle |
+
+**always-on** — Current default.  Modem registers, bearer is established, Linux
+interface comes up, and stays connected indefinitely.
+
+**connect-on-demand** — VyOS-compatible explicit mode.  The FSM registers the
+modem on the network but does **not** establish a bearer.  The modem sits idle
+until an external application (or operator) issues a D-Bus `connect` call.
+Once connected, the bearer stays up until an explicit `disconnect` or a failure.
+This is the existing upstream VyOS behaviour.
+
+**dial-on-demand** — Traffic-aware transparent mode.  The FSM registers the
+modem and waits.  When an application sends a new D-Bus "dial-connect" request
+(or traffic detection triggers), the bearer is established and the Linux
+interface receives an IP.  While traffic flows, the bearer stays up.  When
+traffic drops below `traffic-threshold` bytes/sec for `idle-timeout` seconds,
+the bearer is **silently** torn down — the Linux interface is **not** notified
+and routing is not disturbed.  Only registration loss triggers a real interface
+event visible to the OS.  This keeps the radio attached to the network but
+avoids unnecessary data sessions (important for metered / IoT SIMs).
+
+**FSM states needed:**
+- `REGISTERED_IDLE` — registered on network, no bearer, waiting for trigger
+- `DIAL_CONNECTING` — bearer being established on demand
+- `DIAL_CONNECTED` — bearer up, traffic flowing, idle timer running
+- `DIAL_DISCONNECTING` — idle timeout expired, silently tearing down bearer
+
+**Silent disconnect behaviour:**
+- Bearer is released via MM `Simple.Disconnect()`
+- Linux interface stays present (link-layer up, no IP or stale IP)
+- No routing withdrawal — upstream apps see the interface as "available"
+- Next traffic burst or dial-connect re-establishes the bearer transparently
+- Registration-loss events still propagate normally (interface goes down)
+
+> **Status:** Only the `connect-on-demand` gate is implemented today
+> ([interfaces_wwan2.py line 442](python/vyos/utils/wwan/interfaces_wwan2.py#L442) —
+> skips auto-connect if enabled).  The `dial-on-demand` parameters
+> (`idle-timeout`, `traffic-threshold`) are parsed and stored but have
+> **no runtime effect** yet.  Full implementation is planned.
 
 ### Enhanced Reconnection Strategy
 
@@ -451,12 +486,12 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `timeouts connection` | `connection_timeout` | `120` |
 | `timeouts registration` | `registration_timeout` | `180` |
 | `timeouts normal-monitoring-interval` | `normal_monitoring_interval` | `30` |
-| `apn` | `apn` | `(empty)` |
-| `authentication username` | `username` | `(empty)` |
-| `authentication password` | `password` | `(empty)` |
-| `auth-type` | `auth_type` | `none` |
-| `pdp-type` | `pdp_type` | `ipv4` |
-| `roaming` | `roaming` | `disabled` |
+| `apn` | `apn` | *(removed — per-SIM only)* |
+| `authentication username` | `username` | *(removed — per-SIM only)* |
+| `authentication password` | `password` | *(removed — per-SIM only)* |
+| `auth-type` | `auth_type` | *(removed — per-SIM only)* |
+| `pdp-type` | `pdp_type` | *(removed — per-SIM only)* |
+| `roaming` | `roaming` | *(removed — per-SIM only)* |
 | `sim pin` | `pin` | *(removed — per-SIM only)* |
 | `sim puk` | `puk` | *(removed — per-SIM only)* |
 | `sim auto-unlock` | `auto_unlock` | *(removed — per-SIM only)* |
