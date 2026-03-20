@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name='interfaces'>
+    <children>
+      <node name='vpp'>
+        <children>
+          <tagNode name="bridge" owner="${vyos_conf_scripts_dir}/vpp_interfaces_bridge.py">
+            <properties>
+              <priority>327</priority>
+              <help>Bridge domain</help>
+              <constraint>
+                <!-- Bridge domain 0 is reserved to vpp default -->
+                <regex>vppbr(?!0$)[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Bridge domain must be named vppbrN and vppbr0 is reserved</constraintErrorMessage>
+              <valueHelp>
+                <format>vppbrN</format>
+                <description>Bridge interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <node name="member">
+                <properties>
+                  <help>Bridge member interfaces</help>
+                </properties>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Member interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      <leafNode name="bvi">
+                        <properties>
+                          <help>Bridge Virtual Interface (BVI)</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

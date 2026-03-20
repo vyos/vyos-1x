@@ -31,7 +31,7 @@ def deps_xconnect_dict(conf) -> dict[str, list[str]]:
     """
     xconn_members_dict: dict[str, list[str]] = {}
     config = conf.get_config_dict(
-        ['vpp', 'interfaces', 'xconnect'],
+        ['interfaces', 'vpp', 'xconnect'],
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
@@ -39,7 +39,7 @@ def deps_xconnect_dict(conf) -> dict[str, list[str]]:
 
     for xconn_name, xconn_config in config.items():
         for member_name in xconn_config.get('member', {}).get('interface', []):
-            xconn_ifaces_list = xconn_members_dict.get(xconn_name, [])
+            xconn_ifaces_list = xconn_members_dict.get(member_name, [])
             xconn_ifaces_list.append(xconn_name)
             xconn_members_dict.update({member_name: xconn_ifaces_list})
 
@@ -61,7 +61,7 @@ def deps_bridge_dict(conf) -> dict[str, list[str]]:
     """
     bridge_members_dict: dict[str, list[str]] = {}
     config = conf.get_config_dict(
-        ['vpp', 'interfaces', 'bridge'],
+        ['interfaces', 'vpp', 'bridge'],
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
@@ -69,8 +69,38 @@ def deps_bridge_dict(conf) -> dict[str, list[str]]:
 
     for bridge_name, bridge_config in config.items():
         for member_name in bridge_config.get('member', {}).get('interface', []):
-            bridge_ifaces_list = bridge_members_dict.get(bridge_name, [])
+            bridge_ifaces_list = bridge_members_dict.get(member_name, [])
             bridge_ifaces_list.append(bridge_name)
             bridge_members_dict.update({member_name: bridge_ifaces_list})
 
     return bridge_members_dict
+
+
+def deps_bond_dict(conf) -> dict[str, list[str]]:
+    """Get a dict of all bonding interface members:
+
+        keys: members
+
+        values: bridge interfaces
+
+    Args:
+        conf (config): VyOS config object
+
+    Returns:
+        dict[str, list[str]]: dict of members
+    """
+    bond_members_dict: dict[str, list[str]] = {}
+    config = conf.get_config_dict(
+        ['interfaces', 'vpp', 'bonding'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
+    for bond_name, bond_config in config.items():
+        for member_name in bond_config.get('member', {}).get('interface', []):
+            bond_ifaces_list = bond_members_dict.get(member_name, [])
+            bond_ifaces_list.append(bond_name)
+            bond_members_dict.update({member_name: bond_ifaces_list})
+
+    return bond_members_dict

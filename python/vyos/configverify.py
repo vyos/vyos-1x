@@ -22,7 +22,11 @@
 # makes use of it!
 
 from vyos import ConfigError
+from vyos.base import Warning
 from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_recursive
+from vyos.utils.network import interface_exists
+
 # pattern re-used in ipsec migration script
 dynamic_interface_pattern = r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+'
 
@@ -100,7 +104,6 @@ def verify_vrf(config):
     Common helper function used by interface implementations to perform
     recurring validation of VRF configuration.
     """
-    from vyos.utils.network import interface_exists
     if 'vrf' in config:
         vrfs = config['vrf']
         if isinstance(vrfs, str):
@@ -177,7 +180,6 @@ def verify_mirror_redirect(config):
 
     It makes no sense to mirror traffic back at yourself!
     """
-    from vyos.utils.network import interface_exists
     if {'mirror', 'redirect'} <= set(config):
         raise ConfigError('Mirror and redirect can not be enabled at the same time!')
 
@@ -197,10 +199,10 @@ def verify_mirror_redirect(config):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
 
-    if ('mirror' in config or 'redirect' in config) and dict_search('traffic_policy.in', config) is not None:
+    if 'qos' in config and ('mirror' in config or 'redirect' in config):
         # XXX: support combination of limiting and redirect/mirror - this is an
         # artificial limitation
-        raise ConfigError('Can not use ingress policy together with mirror or redirect!')
+        raise ConfigError('Can not use QoS together with mirror/redirect!')
 
 def verify_authentication(config):
     """
@@ -247,10 +249,6 @@ def verify_interface_exists(config, ifname, state_required=False, warning_only=F
     if the interface is defined on the CLI, if it's not found we try if
     it exists at the OS level.
     """
-    from vyos.base import Warning
-    from vyos.utils.dict import dict_search_recursive
-    from vyos.utils.network import interface_exists
-
     if not state_required:
         # Check if interface is present in CLI config
         tmp = getattr(config, 'interfaces_root', {})
@@ -267,6 +265,47 @@ def verify_interface_exists(config, ifname, state_required=False, warning_only=F
         return False
     raise ConfigError(message)
 
+def verify_virtual_interface_exists(
+    config, ifname, state_required=False, warning_only=False
+):
+    """
+    Verify the existence of a virtual network interface in the configuration or the Linux kernel.
+
+    This function checks whether a specified virtual interface exists in the provided configuration
+    or in the Linux kernel. It can return a warning or raise an error based on the parameters provided.
+    """
+    physical_ifname, vif_id = ifname.split('.', maxsplit=1)
+
+    if vif_id and '.' in vif_id:
+        vif_s, vif_c = vif_id.split('.', maxsplit=1)
+        vif_id = None
+    else:
+        vif_s = vif_c = None
+
+    if not state_required:
+        # Check if sub-interface is present in CLI config
+        interfaces_root = getattr(config, 'interfaces_root', {})
+
+        if vif_s and vif_c:
+            path = ['ethernet', physical_ifname, 'vif-s', vif_s, 'vif-c']
+            key = vif_c
+        else:
+            path = ['ethernet', physical_ifname, 'vif']
+            key = vif_id
+
+        if bool(list(dict_search_recursive(interfaces_root, key, path=path))):
+            return True
+
+    # Interface not found on CLI, try Linux Kernel
+    if interface_exists(ifname):
+        return True
+
+    message = f'Virtual Interface "{ifname}" does not exist!'
+    if warning_only:
+        Warning(message)
+        return False
+    raise ConfigError(message)
+
 def verify_source_interface(config):
     """
     Common helper function used by interface implementations to
@@ -274,7 +313,6 @@ def verify_source_interface(config):
     required by e.g. peth/MACvlan, MACsec ...
     """
     import re
-    from vyos.utils.network import interface_exists
 
     ifname = config['ifname']
     if 'source_interface' not in config:
@@ -501,7 +539,7 @@ def verify_pki_ca_certificate(config: dict, ca_name: str):
 
     pki_cert = config['pki']['ca'][ca_name]
     if 'certificate' not in pki_cert:
-        raise ConfigError(f'PEM CA certificate for "{cert_name}" missing in configuration!')
+        raise ConfigError(f'PEM CA certificate for "{ca_name}" missing in configuration!')
 
 def verify_pki_dh_parameters(config: dict, dh_name: str, min_key_size: int=0):
     """

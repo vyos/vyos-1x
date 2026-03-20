@@ -376,5 +376,19 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = f'autoignoreprefixes' + ' {'
         self.assertNotIn(tmp, config)
 
+    def test_base_interface(self):
+        self.cli_set(base_path + ['prefix', '::/64'])
+        self.cli_set(base_path + ['prefix', '::/64', 'base-interface', 'eth0'])
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        self.assertIn('Base6Interface eth0;', config)
+
+        self.cli_set(base_path + ['prefix', '2001:db8:1234::/64'])
+        self.cli_set(
+            base_path + ['prefix', '2001:db8:1234::/64', 'base-interface', 'eth0']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

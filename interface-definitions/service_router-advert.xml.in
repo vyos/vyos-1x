@@ -305,6 +305,21 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="base-interface">
+                    <properties>
+                      <help>Prefix will be combined with IPv6 address of specified interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.i>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <leafNode name="preferred-lifetime">
                     <properties>
                       <help>Time in seconds that the prefix will remain preferred</help>

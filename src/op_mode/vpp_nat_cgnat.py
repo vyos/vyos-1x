@@ -120,6 +120,44 @@ def show_interfaces(raw: bool):
 
 
 @_verify
+def show_exclude_rules(raw: bool):
+    """Show CGNAT exclude rules (identity mappings)"""
+    vpp = VPPControl()
+    identity_mappings_dump = vpp.api.det44_identity_mapping_dump()
+    mappings: list[dict] = _get_raw_output(identity_mappings_dump)
+
+    if raw:
+        return mappings
+
+    if not mappings:
+        return "No CGNAT exclude rules configured"
+
+    data_entries = []
+    for m in mappings:
+        proto_map = {0: 'all', 1: 'icmp', 6: 'tcp', 17: 'udp', 255: 'all'}
+        proto_name = proto_map.get(m.get('protocol'), str(m.get('protocol')))
+        port_str = str(m.get('port')) if m.get('port') else 'any'
+
+        # Check if address-only (flag & 1)
+        if m.get('flags', 0) & 1:
+            proto_name = 'all'
+            port_str = 'any'
+
+        tag_raw = m.get('tag')
+        if isinstance(tag_raw, bytes):
+            tag = tag_raw.decode('utf-8', errors='replace').rstrip('\x00')
+        else:
+            tag = str(tag_raw) if tag_raw else ''
+
+        values = [m.get('addr'), proto_name, port_str, m.get('vrf_id', 0), tag]
+        data_entries.append(values)
+
+    headers = ['Address', 'Protocol', 'Port', 'VRF', 'Description']
+    out = sorted(data_entries, key=lambda x: x[0])
+    return tabulate(out, headers=headers, tablefmt='simple')
+
+
+@_verify
 def clear_session(address: str, port: str, ext_address: str, ext_port: str):
     vpp = VPPControl()
     vpp.api.det44_close_session_in(

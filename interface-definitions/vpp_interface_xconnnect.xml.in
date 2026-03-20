@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name='interfaces'>
+    <children>
+      <node name='vpp'>
+        <children>
+          <tagNode name="xconnect" owner="${vyos_conf_scripts_dir}/vpp_interfaces_xconnect.py">
+            <properties>
+              <help>Layer 2 cross-connect</help>
+              <priority>325</priority>
+              <constraint>
+                <regex>vppxcon[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Cross-connect interface must be named vppxconN</constraintErrorMessage>
+              <valueHelp>
+                <format>vppxconN</format>
+                <description>Cross-connect interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <node name="member">
+                <properties>
+                  <help>Cross-connect pair member interfaces</help>
+                </properties>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Member interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

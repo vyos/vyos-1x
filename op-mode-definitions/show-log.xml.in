@@ -587,6 +587,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit nginx.service</command>
           </leafNode>
+          <leafNode name="igmp-proxy">
+            <properties>
+              <help>Show log for IGMP multicast proxy</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit igmpproxy.service</command>
+          </leafNode>
           <tagNode name="image">
             <properties>
               <help>Show contents of master log file for image</help>

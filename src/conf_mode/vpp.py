@@ -29,8 +29,11 @@ from vyos import ConfigError
 from vyos import airbag
 from vyos.base import Warning
 from vyos.config import Config, config_dict_merge
-from vyos.configdep import set_dependents, call_dependents
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.configdict import node_changed
+from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_virtual_interface_exists
 from vyos.ifconfig import Section
 from vyos.logger import getLogger
 from vyos.template import render
@@ -45,9 +48,10 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
 from vyos.vpp import VppNotRunningError
+from vyos.vpp.config_deps import deps_bond_dict
+from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
-    verify_dev_driver,
     verify_vpp_minimum_cpus,
     verify_vpp_minimum_memory,
     verify_vpp_cpu_cores,
@@ -77,8 +81,6 @@ vpp_log = getLogger(
 dependency_interface_type_map = {
     'vpp_interfaces_bonding': 'bonding',
     'vpp_interfaces_bridge': 'bridge',
-    'vpp_interfaces_ethernet': 'ethernet',
-    'vpp_interfaces_geneve': 'geneve',
     'vpp_interfaces_gre': 'gre',
     'vpp_interfaces_ipip': 'ipip',
     'vpp_interfaces_loopback': 'loopback',
@@ -112,6 +114,21 @@ drivers_support_interrupt: dict[str, list] = {
 
 # drivers that require changing channels (half the maximum number of RX/TX queues)
 ethtool_channels_change_drv: list[str] = ['ena', 'gve']
+
+# List of NICs where VPP activation is supported
+SUPPORTED_PCI_IDS = (
+    '15b3:1019',  # Mellanox Technologies MT28800 Family [ConnectX-5 Ex]
+    '15b3:101d',  # Mellanox Technologies MT2892 Family [ConnectX-6 Dx]
+    '15b3:101e',  # Mellanox Technologies ConnectX Family mlx5Gen Virtual Function
+    '8086:1592',  # Intel Corporation Ethernet Controller E810-C for QSFP
+    '1ae0:0042',  # Google, Inc. Compute Engine Virtual Ethernet [gVNIC]
+    '1af4:1000',  # Red Hat, Inc. Virtio network device (legacy ID)
+    '1af4:1041',  # Red Hat, Inc. Virtio network device (modern ID)
+    '1d0f:ec20',  # Amazon.com, Inc. Elastic Network Adapter (ENA)
+)
+SUPPORTED_DRIVERS = (
+    'hv_netvsc',  # Microsoft Hyper-V network interface card
+)
 
 
 def _load_module(module_name: str):
@@ -170,9 +187,14 @@ def _configure_vpp_cpu_settings(config: dict):
 
 def _normalize_buffers(config: dict):
     """Replace 'auto' buffers_per_numa with calculated value"""
-    if config['settings']['buffers']['buffers_per_numa'] == 'auto':
+    if (
+        config['settings']['resource_allocation']['buffers']['buffers_per_numa']
+        == 'auto'
+    ):
         buffers = memory.buffers_required(config['settings'])
-        config['settings']['buffers']['buffers_per_numa'] = str(buffers)
+        config['settings']['resource_allocation']['buffers']['buffers_per_numa'] = str(
+            buffers
+        )
 
 
 def _get_max_xdp_rx_queues(config: dict):
@@ -221,15 +243,38 @@ def _check_removed_interfaces(config: dict, feature_name: str, interfaces_config
             )
 
 
+def _is_device_allowed(config: dict, iface: str):
+    """
+    Determines if a network interface device is allowed to be used
+    with VPP based on its PCI ID or driver.
+    """
+    if 'allow_unsupported_nics' in config['settings']:
+        return True
+
+    persist_config = config['persist_config'][iface]
+
+    pci_id = persist_config.get('pci_id')
+    # PCI ID is sufficient by itself, if presented
+    if pci_id is not None and pci_id in SUPPORTED_PCI_IDS:
+        return True
+
+    # If the PCI ID did not match or does not exist, fall back to a driver
+    original_driver = persist_config.get('original_driver')
+    if original_driver is not None and original_driver in SUPPORTED_DRIVERS:
+        return True
+
+    return False
+
+
 def get_config(config=None):
     # use persistent config to store interfaces data between executions
     # this is required because some interfaces after they are connected
     # to VPP is really hard or impossible to restore without knowing
     # their original parameters (like IDs)
-    persist_config = JSONStorage('vpp_conf')
-    eth_ifaces_persist: dict[str, dict[str, str]] = persist_config.read(
-        'eth_ifaces', {}
-    )
+    with JSONStorage('vpp_conf') as persist_config:
+        eth_ifaces_persist: dict[str, dict[str, str]] = persist_config.read(
+            'eth_ifaces', {}
+        )
 
     if config:
         conf = config
@@ -249,6 +294,8 @@ def get_config(config=None):
     )
 
     xconn_members = deps_xconnect_dict(conf)
+    bridge_members = deps_bridge_dict(conf)
+    bond_members = deps_bond_dict(conf)
 
     removed_ifaces = []
     tmp = node_changed(conf, base_settings + ['interface'])
@@ -274,13 +321,27 @@ def get_config(config=None):
         iface for iface in pppoe_ifaces if iface.split('.')[0] in tmp
     ]
 
+    interfaces_config = conf.get_config_dict(
+        ['interfaces', 'vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_defaults=True,
+        with_recursive_defaults=True,
+    )
+
     if not conf.exists(base):
         if changed_pppoe_ifaces:
             set_dependents('pppoe_server', conf)
         return {
             'removed_ifaces': removed_ifaces,
             'xconn_members': xconn_members,
+            'bridge_members': bridge_members,
+            'bond_members': bond_members,
             'persist_config': eth_ifaces_persist,
+            'interfaces_vpp': interfaces_config,
+            'pppoe_ifaces': pppoe_ifaces,
+            'remove': {},
         }
 
     config = conf.get_config_dict(
@@ -327,6 +388,7 @@ def get_config(config=None):
             }
             eth_ifaces_persist[iface]['bus_id'] = control_host.get_bus_name(iface)
             eth_ifaces_persist[iface]['dev_id'] = control_host.get_dev_id(iface)
+            eth_ifaces_persist[iface]['pci_id'] = control_host.get_pci_id(iface)
             eth_ifaces_persist[iface]['channels'] = control_host.get_eth_channels(iface)
 
     # Return to config dictionary
@@ -417,17 +479,17 @@ def get_config(config=None):
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
         config['xconn_members'] = xconn_members
+        config['bridge_members'] = bridge_members
+        config['bond_members'] = bond_members
+
+    config['interfaces_vpp'] = interfaces_config
 
     # Dependencies
     for dependency, interface_type in dependency_interface_type_map.items():
-        # if conf.exists(base + ['interfaces', interface_type]):
-        if effective_config.get('interfaces', {}).get(interface_type):
-            for iface, iface_config in (
-                config.get('interfaces', {}).get(interface_type, {}).items()
-            ):
-                # filter unsupported config nodes
-                if interface_type == 'ethernet':
-                    iface_filter_eth(conf, iface)
+        if conf.exists(['interfaces', 'vpp', interface_type]):
+            for iface, iface_config in interfaces_config.get(
+                interface_type, {}
+            ).items():
                 set_dependents(dependency, conf, iface)
 
     config['ipoe_conf'] = conf.get_config_dict(
@@ -436,11 +498,6 @@ def get_config(config=None):
         get_first_key=True,
         no_tag_node_value_mangle=True,
     )
-
-    # kernel-interfaces dependency
-    if effective_config.get('kernel_interfaces'):
-        for iface in config.get('kernel_interfaces', {}):
-            set_dependents('vpp_kernel_interface', conf, iface)
 
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
@@ -469,6 +526,7 @@ def get_config(config=None):
     changed_pppoe_ifaces.extend(added_pppoe_ifaces)
     if changed_pppoe_ifaces:
         set_dependents('pppoe_server', conf)
+    config['changed_pppoe_ifaces'] = changed_pppoe_ifaces
 
     return config
 
@@ -479,8 +537,22 @@ def verify(config):
         config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {})
     )
 
+    if config.get('interfaces_vpp') and 'remove' in config:
+        raise ConfigError(
+            'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
+        )
+
+    # Find PPPoE ifaces where the base matches any VPP interface (base or VLAN)
+    pppoe_vpp_ifaces = [
+        iface for iface in config.get('pppoe_ifaces', {}) if iface.startswith('vpp')
+    ]
+    if 'remove' in config and pppoe_vpp_ifaces:
+        raise ConfigError(
+            f'Cannot remove VPP: PPPoE server still uses VPP interface(s): {", ".join(pppoe_vpp_ifaces)}'
+        )
+
     # bail out early - looks like removal from running config
-    if not config or ('removed_ifaces' in config and 'settings' not in config):
+    if not config or 'remove' in config:
         return None
 
     if 'settings' not in config:
@@ -538,10 +610,13 @@ def verify(config):
             not in config.get('effective', {}).get('settings', {}).get('interface', {})
             or 'driver_changed' in iface_config
         ):
-            if not verify_dev_driver(iface_config['driver'], original_driver):
+            if not _is_device_allowed(config, iface):
                 raise ConfigError(
-                    f'Driver {iface_config["driver"]} is not compatible with interface {iface}!'
+                    f'NIC used by "{iface}" is not validated for VPP on VyOS. '
+                    'Using it is unsafe and unsupported and will void support for the entire system. '
+                    'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
                 )
+
         if iface_config['driver'] == 'xdp' and 'xdp_options' in iface_config:
             if iface_config['xdp_options']['num_rx_queues'] != 'all':
                 rx_queues = iface_config['xdp_api_params']['rxq_num']
@@ -554,21 +629,15 @@ def verify(config):
 
                 Warning(f'Not all RX queues will be connected to VPP for {iface}!')
 
-        if iface_config['driver'] == 'xdp' and 'dpdk_options' in iface_config:
-            raise ConfigError('DPDK options are not applicable for XDP driver!')
-
-        if iface_config['driver'] == 'dpdk' and 'xdp_options' in iface_config:
-            raise ConfigError('XDP options are not applicable for DPDK driver!')
-
-        if iface_config['driver'] == 'dpdk' and 'dpdk_options' in iface_config:
-            if 'num_rx_queues' in iface_config['dpdk_options']:
-                rx_queues = int(iface_config['dpdk_options']['num_rx_queues'])
+        if iface_config['driver'] == 'dpdk':
+            if 'num_rx_queues' in iface_config:
+                rx_queues = int(iface_config['num_rx_queues'])
                 verify_vpp_interfaces_dpdk_num_queues(
                     qtype='receive', num_queues=rx_queues, workers=cpu_cores
                 )
 
-            if 'num_tx_queues' in iface_config['dpdk_options']:
-                tx_queues = int(iface_config['dpdk_options']['num_tx_queues'])
+            if 'num_tx_queues' in iface_config:
+                tx_queues = int(iface_config['num_tx_queues'])
                 verify_vpp_interfaces_dpdk_num_queues(
                     qtype='transmit', num_queues=tx_queues, workers=cpu_cores
                 )
@@ -587,61 +656,31 @@ def verify(config):
                     f'RX mode {rx_mode} is not supported for interface {iface}'
                 )
 
-    # check GRE tunnels as part of the bridge, only tunnel-type teb is allowed
-    #   set vpp interfaces bridge br1 member interface gre1
-    #   set vpp interfaces gre gre1 tunnel-type teb
-    if 'interfaces' in config:
-        if 'bridge' in config['interfaces']:
-            for iface, iface_config in config['interfaces']['bridge'].items():
-                if 'member' in iface_config:
-                    for member in iface_config['member'].get('interface', []):
-                        if member.startswith('gre'):
-                            if (
-                                'gre' in config['interfaces']
-                                and config['interfaces']['gre']
-                                .get(member, {})
-                                .get('tunnel_type')
-                                != 'teb'
-                            ):
-                                raise ConfigError(
-                                    f'Only tunnel-type teb is allowed for GRE interfaces in bridge {iface}'
-                                )
-
-        # Only one multipoint GRE tunnel is allowed from the same source address
-        #   set vpp interfaces gre gre0 mode 'point-to-multipoint'
-        #   set vpp interfaces gre gre0 remote '0.0.0.0'
-        #   set vpp interfaces gre gre0 source-address '192.0.2.1'
-        #   set vpp interfaces gre gre1 mode 'point-to-multipoint'
-        #   set vpp interfaces gre gre1 remote '0.0.0.0'
-        #   set vpp interfaces gre gre1 source-address '192.0.2.1'
-        if 'gre' in config['interfaces']:
-            for iface, iface_config in config['interfaces']['gre'].items():
-                if iface_config['mode'] == 'point-to-multipoint':
-                    for other_iface, other_iface_config in config['interfaces'][
-                        'gre'
-                    ].items():
-                        if (
-                            other_iface_config['mode'] == 'point-to-multipoint'
-                            and other_iface_config['source_address']
-                            == iface_config['source_address']
-                            and iface != other_iface
-                        ):
-                            raise ConfigError(
-                                'Only one multipoint GRE tunnel is allowed from the same source address'
-                            )
-
-    # Check if deleted interfaces are not xconnect memebrs
+    # Check if deleted interfaces are not xconnect/bridge/bond members
     for iface_config in config.get('removed_ifaces', []):
         if iface_config['iface_name'] in config.get('xconn_members', {}):
             raise ConfigError(
                 f'Interface {iface_config["iface_name"]} is an xconnect member and cannot be removed'
             )
+        if iface_config['iface_name'] in config.get('bridge_members', {}):
+            raise ConfigError(
+                f'Interface {iface_config["iface_name"]} is a bridge member and cannot be removed'
+            )
+        if iface_config['iface_name'] in config.get('bond_members', {}):
+            raise ConfigError(
+                f'Interface {iface_config["iface_name"]} is a bond member and cannot be removed'
+            )
 
     verify_routes_count(config['settings'])
 
+    for pppoe_iface in config.get('changed_pppoe_ifaces', []):
+        if '.' in pppoe_iface:
+            verify_virtual_interface_exists(config, pppoe_iface)
+        else:
+            verify_interface_exists(config, pppoe_iface)
 
 def generate(config):
-    if not config or ('removed_ifaces' in config and 'settings' not in config):
+    if not config or 'remove' in config:
         # Remove old config and return
         service_conf.unlink(missing_ok=True)
         return None
@@ -693,10 +732,10 @@ def apply(config):
     modules = ('vfio_iommu_type1', 'vfio_pci', 'vfio_pci_core', 'vfio')
     # Open persistent config
     # It is required for operations with interfaces
-    persist_config = JSONStorage('vpp_conf')
-    if not config or ('removed_ifaces' in config and 'settings' not in config):
+    if not config or 'remove' in config:
         # Cleanup persistent config
-        persist_config.delete()
+        with JSONStorage('vpp_conf') as persist_config:
+            persist_config.delete()
         # And stop the service
         call(f'systemctl stop {service_name}.service')
         # Unlod modules (modprobe -r)
@@ -776,20 +815,13 @@ def apply(config):
             vpp_control = VPPControl()
 
             # preconfigure LCP plugin
-            if 'ignore_kernel_routes' in config.get('settings', {}).get('lcp', {}):
+            if 'ignore_kernel_routes' in config['settings']:
                 vpp_control.cli_cmd('lcp param route-no-paths off')
             else:
                 vpp_control.cli_cmd('lcp param route-no-paths on')
             # add interfaces
             iproute = IPRoute()
             for iface, iface_config in config['settings']['interface'].items():
-                # promisc option for DPDK interfaces
-                if iface_config['driver'] == 'dpdk':
-                    if 'promisc' in iface_config['dpdk_options']:
-                        if_index = vpp_control.get_sw_if_index(iface)
-                        vpp_control.api.sw_interface_set_promisc(
-                            sw_if_index=if_index, promisc_on=True
-                        )
                 # add XDP interfaces
                 if iface_config['driver'] == 'xdp':
                     control_host.rename_iface(iface, f'defunct_{iface}')
@@ -875,7 +907,8 @@ def apply(config):
 
     # Save persistent config
     if 'persist_config' in config and config['persist_config']:
-        persist_config.write('eth_ifaces', config['persist_config'])
+        with JSONStorage('vpp_conf') as persist_config:
+            persist_config.write('eth_ifaces', config['persist_config'])
 
     # reinitialize interfaces, but not during the first boot
     if boot_configuration_complete():

@@ -15,28 +15,22 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from .bond import BondInterface
-from .bridge import BridgeInterface
-from .ethernet import EthernetInterface
-from .geneve import GeneveInterface
-from .gre import GREInterface
-from .interface import Interface
-from .ipip import IPIPInterface
-from .loopback import LoopbackInterface
-from .vxlan import VXLANInterface
-from .wireguard import WireguardInterface
-from .xconnect import XconnectInterface
+from .bond import VPPBondInterface
+from .bridge import VPPBridgeInterface
+from .gre import VPPGREInterface
+from .interface import VPPInterface
+from .ipip import VPPIPIPInterface
+from .loopback import VPPLoopbackInterface
+from .vxlan import VPPVXLANInterface
+from .xconnect import VPPXconnectInterface
 
 __all__ = [
-    'BondInterface',
-    'BridgeInterface',
-    'EthernetInterface',
-    'GeneveInterface',
-    'GREInterface',
-    'Interface',
-    'IPIPInterface',
-    'LoopbackInterface',
-    'VXLANInterface',
-    'WireguardInterface',
-    'XconnectInterface',
+    'VPPBondInterface',
+    'VPPBridgeInterface',
+    'VPPGREInterface',
+    'VPPInterface',
+    'VPPIPIPInterface',
+    'VPPLoopbackInterface',
+    'VPPVXLANInterface',
+    'VPPXconnectInterface',
 ]

@@ -13,6 +13,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Note: script is used both in opmode and by build hook `40-init-geoip-database.chroot`
 
 import argparse
 import sys
@@ -26,12 +28,7 @@ from vyos.geoip import db_import_dbip_ranges
 from vyos.geoip import db_import_maxmind_ranges
 from vyos.geoip import geoip_update
 
-def get_config(config=None):
-    if config:
-        conf = config
-    else:
-        conf = ConfigTreeQuery()
-
+def get_config(conf):
     return (
         conf.get_config_dict(['firewall', 'global-options', 'geoip'], key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True, with_defaults=True),
@@ -51,7 +48,13 @@ if __name__ == '__main__':
         db_import_dbip_ranges(delete_file=True)
         sys.exit(0)
 
-    options, firewall, policy = get_config()
+    conf = ConfigTreeQuery()
+
+    if not conf.exists(['system', 'name-server']):
+        print('There are no system name-servers configured')
+        sys.exit(1)
+
+    options, firewall, policy = get_config(conf)
 
     if not db_is_initialised():
         db_initialise()

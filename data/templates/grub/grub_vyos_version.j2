@@ -11,7 +11,7 @@
 {% endif %}
 menuentry "{{ version_name }}" --id {{ version_uuid }} {
     set boot_opts="{{ boot_opts_rendered }}"
-    if [ "${console_type}" == "ttyS" ]; then
+    if [ "${console_type}" == "ttyS" -o "${console_type}" == "ttyAMA" ]; then
         set console_opts="console=${console_type}${console_num},${console_speed}"
     else
         set console_opts="console=${console_type}${console_num}"

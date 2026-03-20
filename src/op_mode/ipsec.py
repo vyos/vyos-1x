@@ -229,6 +229,28 @@ def _get_parent_sa_state(connection_name: str, data: list) -> str:
                 ike_state = 'up'
     return ike_state
 
+def _get_parent_ppk_state(connection_name: str, data: list) -> str:
+    """Get paren PPK state by connection name
+
+    Args:
+        connection_name (str): Connection name
+        data (list): List of current SAs from vici
+
+    Returns:
+        Parent PPK state
+    """
+    ppk_state = 'no'
+    if not data:
+        return ppk_state
+    for sa in data:
+        # check if parent PPK exists
+        for connection, connection_conf in sa.items():
+            if connection_name != connection:
+                continue
+            if 'ppk' in connection_conf and connection_conf['ppk'].lower() == 'yes':
+                ppk_state = 'yes'
+    return ppk_state
+
 
 def _get_child_sa_state(
     connection_name: str, tunnel_name: str, data: list, mode: str
@@ -335,6 +357,17 @@ def _get_raw_data_connections(list_connections: list, list_sas: list) -> list:
             base_list['local_id'] = conn_conf.get('local-1', '').get('id')
             base_list['remote_id'] = conn_conf.get('remote-1', '').get('id')
             base_list['version'] = conn_conf.get('version', 'IKE')
+            if conn_conf.get('ppk_id'):
+                if conn_conf.get('ppk_required') == 'yes':
+                    base_list['ppk'] = 'req/' + _get_parent_ppk_state(
+                        connection, list_sas
+                    )
+                else:
+                    base_list['ppk'] = 'opt/' + _get_parent_ppk_state(
+                        connection, list_sas
+                    )
+            else:
+                base_list['ppk'] = 'none/' + _get_parent_ppk_state(connection, list_sas)
             base_list['children'] = []
             children = conn_conf['children']
             for tunnel, tun_options in children.items():
@@ -400,6 +433,8 @@ def _get_formatted_output_conections(data):
                 f'{entry["ike_proposal"]["hash"]}/'
                 f'{entry["ike_proposal"]["dh"]}'
             )
+        ppk = entry['ppk']
+
         connections.append(
             [
                 ike_name,
@@ -411,6 +446,7 @@ def _get_formatted_output_conections(data):
                 local_id,
                 remote_id,
                 proposal,
+                ppk,
             ]
         )
         for tun in entry['children']:
@@ -428,6 +464,7 @@ def _get_formatted_output_conections(data):
                     f'{tun["esp_proposal"]["hash"]}/'
                     f'{tun["esp_proposal"]["dh"]}'
                 )
+            ppk = '-'
             connections.append(
                 [
                     tun_name,
@@ -439,6 +476,7 @@ def _get_formatted_output_conections(data):
                     local_id,
                     remote_id,
                     proposal,
+                    ppk,
                 ]
             )
     connection_headers = [
@@ -451,8 +489,12 @@ def _get_formatted_output_conections(data):
         'Local id',
         'Remote id',
         'Proposal',
+        'PPK',
     ]
-    output = tabulate(connections, connection_headers, numalign='left')
+    output = (
+        'PPK Codes: none - Not Configured, opt - PPK is Optional, req - PPK is required, no - PPK not negotiated, yes - PPK negotiated\n'
+        + tabulate(connections, connection_headers, numalign='left')
+    )
     return output
 
 

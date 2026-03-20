@@ -1036,6 +1036,8 @@
       <validator name="ip-address"/>
       #include <include/constraint/interface-name.xml.i>
     </constraint>
+    <constraintSilenceOutput/>
+    <constraintErrorMessage>BGP neighbor must be one of: IP address, IPv6 address, or interface name</constraintErrorMessage>
   </properties>
   <children>
     <node name="address-family">

@@ -18,30 +18,12 @@ import sys
 import vyos.opmode
 
 from vyos.ifconfig import WireGuardIf
-from vyos.configquery import ConfigTreeQuery
 
-
-def _verify(func):
-    """Decorator checks if WireGuard interface config exists"""
-    from functools import wraps
-
-    @wraps(func)
-    def _wrapper(*args, **kwargs):
-        config = ConfigTreeQuery()
-        interface = kwargs.get('intf_name')
-        if not config.exists(['interfaces', 'wireguard', interface]):
-            unconf_message = f'WireGuard interface {interface} is not configured'
-            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
-        return func(*args, **kwargs)
-
-    return _wrapper
-
-
-@_verify
+@vyos.opmode.verify_cli_exists(['interfaces', 'wireguard'],
+    'WireGuard interface {interface} is not configured!')
 def show_summary(raw: bool, intf_name: str):
     intf = WireGuardIf(intf_name, create=False, debug=False)
     return intf.operational.show_interface()
-
 
 if __name__ == '__main__':
     try:

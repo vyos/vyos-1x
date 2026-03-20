@@ -34,6 +34,10 @@ class JSONStorage:
         """
         # If a name is not provided, this is a temporary one-time storage
         # this use case is strange, but let's allow this
+
+        # Indicates that the object has already been closed and cannot be used again
+        self.__closed = False
+
         if not name:
             self.__temporary = True
             self.__cache: dict[Any, Any] = {}
@@ -68,17 +72,34 @@ class JSONStorage:
             self.__cache = self.__load_file()
 
     def __del__(self) -> None:
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def close(self):
         """Dump data to persistent storage and unlock it"""
-        if self.__temporary:
+
+        # Do not do anything if it is already closed storage
+        if self.__closed:
             return
-        # dump a cache to storage
-        if self.__cache:
-            self.__dump_file()
-        # or remove a file
-        else:
-            self.__storage.unlink()
-        # unlock a storage
-        self.__lock_file.unlink()
+
+        try:
+            if self.__temporary:
+                return
+            # dump a cache to storage
+            if self.__cache:
+                self.__dump_file()
+            # or remove a file
+            else:
+                self.__storage.unlink(missing_ok=True)
+            # unlock a storage
+            self.__lock_file.unlink(missing_ok=True)
+        finally:
+            self.__closed = True
 
     def __check_types(self, data: Any) -> None:
         """Check if all the data have supported types

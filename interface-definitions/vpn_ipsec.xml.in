@@ -45,10 +45,48 @@
                     <properties>
                       <help>Secret type</help>
                       <completionHelp>
-                        <list>base64 plaintext</list>
+                        <list>base64 hex plaintext</list>
                       </completionHelp>
                       <constraint>
-                        <regex>(base64|plaintext)</regex>
+                        <regex>(base64|hex|plaintext)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>plaintext</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <tagNode name="ppk">
+                <properties>
+                  <help>Post-quantum preshared key name</help>
+                </properties>
+                <children>
+                  <leafNode name="id">
+                    <properties>
+                      <help>ID for PPK</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>ID used for PPK</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="secret">
+                    <properties>
+                      <help>Post-quantum preshared secret key</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Post-quantum preshared secret key</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="secret-type">
+                    <properties>
+                      <help>Secret type</help>
+                      <completionHelp>
+                        <list>base64 hex plaintext</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(base64|hex|plaintext)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>plaintext</defaultValue>
@@ -896,9 +934,11 @@
                         </properties>
                         <defaultValue>x509</defaultValue>
                       </leafNode>
+                      #include <include/ipsec/ppk.xml.i>
                       #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                     </children>
                   </node>
+                  #include <include/ipsec/childless.xml.i>
                   #include <include/generic-description.xml.i>
                   #include <include/generic-disable-node.xml.i>
                   #include <include/ipsec/esp-group.xml.i>
@@ -1113,6 +1153,7 @@
                     </properties>
                     <children>
                       #include <include/ipsec/authentication-id.xml.i>
+                      #include <include/ipsec/ppk.xml.i>
                       #include <include/ipsec/authentication-rsa.xml.i>
                       #include <include/ipsec/authentication-x509.xml.i>
                       <leafNode name="mode">
@@ -1156,6 +1197,7 @@
                       </leafNode>
                     </children>
                   </node>
+                  #include <include/ipsec/childless.xml.i>
                   <leafNode name="connection-type">
                     <properties>
                       <help>Connection type</help>

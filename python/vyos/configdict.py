@@ -472,7 +472,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
 
     # Check if QoS policy applied on this interface - See ifconfig.interface.set_mirror_redirect()
     if config.exists(['qos', 'interface', ifname]):
-        dict.update({'traffic_policy': {}})
+        dict.update({'qos': {}})
 
     address = leaf_node_changed(config, base + [ifname, 'address'])
     if address: dict.update({'address_old' : address})
@@ -531,7 +531,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
 
         if config.exists(['qos', 'interface', f'{ifname}.{vif}']):
-            dict['vif'][vif].update({'traffic_policy': {}})
+            dict['vif'][vif].update({'qos': {}})
 
         if 'deleted' not in dict:
             address = leaf_node_changed(config, base + [ifname, 'vif', vif, 'address'])
@@ -558,7 +558,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
         dict['vif_s'][vif_s].update({'ifname' : f'{ifname}.{vif_s}'})
 
         if config.exists(['qos', 'interface', f'{ifname}.{vif_s}']):
-            dict['vif_s'][vif_s].update({'traffic_policy': {}})
+            dict['vif_s'][vif_s].update({'qos': {}})
 
         if 'deleted' not in dict:
             address = leaf_node_changed(config, base + [ifname, 'vif-s', vif_s, 'address'])
@@ -586,7 +586,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
             dict['vif_s'][vif_s]['vif_c'][vif_c].update({'ifname' : f'{ifname}.{vif_s}.{vif_c}'})
 
             if config.exists(['qos', 'interface', f'{ifname}.{vif_s}.{vif_c}']):
-                dict['vif_s'][vif_s]['vif_c'][vif_c].update({'traffic_policy': {}})
+                dict['vif_s'][vif_s]['vif_c'][vif_c].update({'qos': {}})
 
             if 'deleted' not in dict:
                 address = leaf_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'address'])

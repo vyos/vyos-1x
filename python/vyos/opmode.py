@@ -16,8 +16,9 @@
 import re
 import sys
 import typing
-from humps import decamelize
 
+from humps import decamelize
+from vyos.configquery import ConfigTreeQuery
 
 class Error(Exception):
     """Any error that makes requested operation impossible to complete
@@ -327,3 +328,28 @@ def run(module):
         # Other functions should not return anything,
         # although they may print their own warnings or status messages
         func(**args)
+
+def verify_cli_exists(cli_path: list, error_msg: str=''):
+    """Decorator checks if CLI config exists using a dynamic path and error message"""
+    def decorator(func):
+        from functools import wraps
+
+        @wraps(func)
+        def _wrapper(*args, **kwargs):
+            config = ConfigTreeQuery()
+            interface = kwargs.get('intf_name')
+
+            # Combine the base CLI path with the specific interface name
+            path = cli_path + [interface] if interface else cli_path
+
+            if not config.exists(path):
+                if not error_msg:
+                    unconf_message = f'CLI path [{" ".join(cli_path)}] unconfigured!'
+                else:
+                    # Format the error message dynamically to allow {interface} injection
+                    unconf_message = error_msg.format(interface=interface)
+                raise UnconfiguredSubsystem(unconf_message)
+            return func(*args, **kwargs)
+
+        return _wrapper
+    return decorator

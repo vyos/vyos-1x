@@ -378,6 +378,23 @@ bind_mount_boot ()
     fi
 }
 
+# this is called before migration and bind_mount_slash_config to check for
+# upgrade data installed by legacy image update tools
+copy_legacy_config_path ()
+{
+    if [ -d /config ] ; then
+        if [ -f /config/.upgraded ] ; then
+            rm -f /config/.upgraded
+            cp -a /config /opt/vyatta/etc
+            chgrp -R vyattacfg /opt/vyatta/etc/config
+            chmod -R 775 /opt/vyatta/etc/config
+            chmod 660 /opt/vyatta/etc/config/config.boot
+            touch /opt/vyatta/etc/config/.vyatta_config
+            rm -rf /config
+        fi
+    fi
+}
+
 bind_mount_slash_config ()
 {
     if [ -d /opt/vyatta/etc/config ]
@@ -646,7 +663,9 @@ start ()
     # This is a safety net!
     systemctl start frr.service
 
-    disabled bootfile || init_prod_model_bootfile_and_nodes
+    disabled bootfile || init_prod_model_bootfile_and_nodes # PSL
+
+    disabled copy_legacy_config_path || copy_legacy_config_path
 
     disabled bootfile || init_bootfile
 
