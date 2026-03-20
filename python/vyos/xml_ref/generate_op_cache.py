@@ -89,7 +89,7 @@ def translate_command(s: str, pos: list[str]) -> str:
     s = translate_exec(s)
     s = translate_position(s, pos)
 
-    # If there are any untranslated occurences of '_place_holder_",
+    # If there are any untranslated occurrences of "_place_holder_",
     # it means the command is incorrect,
     # e.g., it references "$6" when it only has five words.
     if re.search(r'_place_holder_', s):
@@ -317,7 +317,7 @@ def main():
     # pylint: disable=global-statement
     global CHECK_XML_CONSISTENCY
 
-    parser = ArgumentParser(description='generate dict from xml defintions')
+    parser = ArgumentParser(description='generate dict from xml definitions')
     parser.add_argument(
         '--xml-dir',
         type=str,

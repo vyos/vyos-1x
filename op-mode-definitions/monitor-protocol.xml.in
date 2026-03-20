@@ -701,7 +701,7 @@
                   </node>
                   <node name="lsa">
                     <properties>
-                      <help>Disable OSPFv3 Link State Advertisments debugging</help>
+                      <help>Disable OSPFv3 Link State Advertisements debugging</help>
                     </properties>
                     <command>vtysh -c "no debug ospf6 ${@:5}"</command>
                     <children>
@@ -956,7 +956,7 @@
                   </node>
                   <node name="lsa">
                     <properties>
-                      <help>Enable OSPFv3 Link State Advertisments debugging</help>
+                      <help>Enable OSPFv3 Link State Advertisements debugging</help>
                     </properties>
                     <command>vtysh -c "debug ospf6 ${@:5}"</command>
                     <children>

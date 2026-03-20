@@ -148,7 +148,7 @@ def _get_formatted_output_rules(data, direction, family):
                 interface = interface[3:]
         for index, match in enumerate(jmespath.search('rule.expr[*].match', rule)):
             if 'payload' in match['left']:
-                # Handle NAT rule containing comma-seperated list of ports
+                # Handle NAT rule containing comma-separated list of ports
                 if (isinstance(match['right'], dict) and
                     ('prefix' in match['right'] or 'set' in match['right'] or
                      'range' in match['right'])):

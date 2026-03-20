@@ -841,7 +841,7 @@ def run():
     rollback = subparsers.add_parser('rollback', help='Rollback to earlier config')
     rollback.add_argument('--rev', type=int, help='Revision number for rollback')
     rollback.add_argument(
-        '-y', dest='no_prompt', action='store_true', help='Excute without prompt'
+        '-y', dest='no_prompt', action='store_true', help='Execute without prompt'
     )
 
     rollback_soft = subparsers.add_parser(

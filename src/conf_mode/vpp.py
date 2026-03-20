@@ -88,7 +88,7 @@ dependency_interface_type_map = {
     'vpp_interfaces_xconnect': 'xconnect',
 }
 
-# dict of drivers that needs to be overrided
+# dict of drivers that needs to be overridden
 override_drivers: dict[str, str] = {
     'hv_netvsc': 'uio_hv_generic',
 }
@@ -139,7 +139,7 @@ def _load_module(module_name: str):
         module_name (str): Name of the module to load.
     """
     if module_name in list_loaded_modules():
-        vpp_log.info(f"Module '{module_name}' is alrady loaded")
+        vpp_log.info(f"Module '{module_name}' is already loaded")
         return
     try:
         check_kmod(module_name)
@@ -888,7 +888,7 @@ def apply(config):
                     )
                     vpp_control.iface_rxmode(lcp_name, rx_mode)
 
-            # Syncronize routes via LCP
+            # Synchronize routes via LCP
             vpp_control.lcp_resync()
 
         except (VPPIOError, VPPValueError, VppNotRunningError) as e:

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# T5681: Firewall re-writing. Simplify cli when mathcing interface
+# T5681: Firewall re-writing. Simplify cli when matching interface
 # From
     # set firewall ... rule <rule> [inbound-interface | outboubd-interface] interface-name <iface>
     # set firewall ... rule <rule> [inbound-interface | outboubd-interface] interface-group <iface_group>

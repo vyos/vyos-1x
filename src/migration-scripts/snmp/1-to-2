@@ -16,7 +16,7 @@
 from vyos.configtree import ConfigTree
 
 # We no longer support hashed values prefixed with '0x' to unclutter
-# CLI and also calculate the hases in advance instead of retrieving
+# CLI and also calculate the hashes in advance instead of retrieving
 # them after service startup - which was always a bad idea
 prefix = '0x'
 

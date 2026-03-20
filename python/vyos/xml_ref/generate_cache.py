@@ -52,7 +52,7 @@ def non_trivial(s):
     return s
 
 def main():
-    parser = ArgumentParser(description='generate and save dict from xml defintions')
+    parser = ArgumentParser(description='generate and save dict from xml definitions')
     parser.add_argument('--xml-dir', type=str, required=True,
                         help='transcluded xml interface-definition directory')
     parser.add_argument('--internal-cache', type=str, required=True,

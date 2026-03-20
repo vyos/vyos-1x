@@ -26,7 +26,7 @@
             <children>
               <leafNode name="alt-subnet">
                 <properties>
-                  <help>Unicast source networks allowed for multicast traffic to be proxyed</help>
+                  <help>Unicast source networks allowed for multicast traffic to be proxied</help>
                   <valueHelp>
                     <format>ipv4net</format>
                     <description>IPv4 network</description>

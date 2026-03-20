@@ -187,7 +187,7 @@ def dict_search_args(dict_object, *path):
     return dict_object
 
 def dict_search_recursive(dict_object, key, path=[]):
-    """ Traverse a dictionary recurisvely and return the value of the key
+    """ Traverse a dictionary recursively and return the value of the key
     we are looking for.
 
     Thankfully copied from https://stackoverflow.com/a/19871956
@@ -380,7 +380,7 @@ def check_mutually_exclusive_options(d, keys, required=False):
 
 class FixedDict(dict):
     """
-    FixedDict: A dictionnary not allowing new keys to be created after initialisation.
+    FixedDict: A dictionary not allowing new keys to be created after initialisation.
 
     >>> f = FixedDict(**{'count':1})
     >>> f['count'] = 2

@@ -56,7 +56,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
               - STDOUT, send the data to be merged with stdout
               - DEVNULL, discard the output
     decode:  specify the expected text encoding (utf-8, ascii, ...)
-             the default is explicitely utf-8 which is python's own default
+             the default is explicitly utf-8 which is python's own default
     vrf:     run command in a VRF context
     netns:   run command in the named network namespace
     buffered: define how process output shall be presented to stdout
@@ -69,7 +69,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     """
 
     # airbag must be left as an import in the function as otherwise we have a
-    # a circual import dependency
+    # a circular import dependency
     from vyos import debug
     from vyos import airbag
 

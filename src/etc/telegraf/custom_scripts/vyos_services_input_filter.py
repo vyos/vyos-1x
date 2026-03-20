@@ -20,7 +20,7 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import process_named_running
 
-# Availible services and prouceses
+# Available services and processes
 # 1 - service
 # 2 - process
 services = {

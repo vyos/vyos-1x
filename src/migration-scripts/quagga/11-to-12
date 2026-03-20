@@ -14,7 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T6747:
-#   - Migrate static BFD configuration to match FRR possibillities
+#   - Migrate static BFD configuration to match FRR possibilities
 #   - Consolidate static multicast routing configuration under a new node
 
 from vyos.configtree import ConfigTree

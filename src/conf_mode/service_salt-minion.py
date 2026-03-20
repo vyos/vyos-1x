@@ -52,7 +52,7 @@ def get_config(config=None):
     if 'id' not in salt:
         salt['id'] = gethostname()
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     salt = conf.merge_defaults(salt, recursive=True)
 
     if not conf.exists(base):

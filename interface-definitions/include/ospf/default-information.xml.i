@@ -1,7 +1,7 @@
 <!-- include start from ospf/intervals.xml.i -->
 <node name="default-information">
   <properties>
-    <help>Default route advertisment settings</help>
+    <help>Default route advertisement settings</help>
   </properties>
   <children>
     <node name="originate">

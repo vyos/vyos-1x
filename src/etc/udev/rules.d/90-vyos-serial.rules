@@ -14,7 +14,7 @@ SUBSYSTEMS=="usb-serial", ENV{.ID_PORT}="$attr{port_number}"
 
 IMPORT{builtin}="path_id", IMPORT{builtin}="usb_id"
 
-# Change the name of the usb id to a "more" human redable format.
+# Change the name of the usb id to a "more" human readable format.
 #
 # - $env{ID_PATH} usually is a name like: "pci-0000:00:10.0-usb-0:2.3.3.4:1.0-port0" so we strip the "pci-*"
 #   portion and only use the usb part

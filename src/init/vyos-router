@@ -490,7 +490,7 @@ start ()
     chmod 775 /var/run/vyatta /var/log/vyatta
 
     log_daemon_msg "Waiting for NICs to settle down"
-    # On boot time udev migth take a long time to reorder nic's, this will ensure that
+    # On boot time udev might take a long time to reorder nic's, this will ensure that
     # all udev activity is completed and all nics presented at boot-time will have their
     # final name before continuing with vyos-router initialization.
     SECONDS=0

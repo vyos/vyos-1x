@@ -100,7 +100,7 @@ _vyatta_op_conv_node_path ()
 
 _vyatta_op_conv_run_cmd ()
 {
-  # Substitue bash positional variables 
+  # Substitute bash positional variables 
   # for the same value in the expanded array
   local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
   shopt -s extglob

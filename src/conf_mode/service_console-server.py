@@ -46,7 +46,7 @@ def get_config(config=None):
     #                              'stop_bits': '2'}}}
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     proxy = conf.merge_defaults(proxy, recursive=True)
 
     return proxy

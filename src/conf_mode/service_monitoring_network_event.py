@@ -43,7 +43,7 @@ def get_config(config=None):
                                       no_tag_node_value_mangle=True)
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     monitoring = conf.merge_defaults(monitoring, recursive=True)
 
     return monitoring

@@ -266,9 +266,9 @@ class WireGuardIf(Interface):
         return public_keys
 
     def update(self, config):
-        """General helper function which works on a dictionary retrived by
+        """General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface."""
 
         # Wireguard base command is identical for every peer

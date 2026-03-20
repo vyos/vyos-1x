@@ -64,7 +64,7 @@ def enabled(flag):
      - command: print command run with result
 
     Having the flag setup on the filesystem is required to have
-    debuging at boot time, however, setting the flag via environment
+    debugging at boot time, however, setting the flag via environment
     does not require a seek to the filesystem and is more efficient
     it can be done on the shell on via .bashrc for the user
 
