@@ -31,6 +31,7 @@ from subprocess import PIPE
 
 from vyos.configsession import ConfigSessionError
 from vyos.configquery import ConfigTreeQuery
+from vyos.utils.auth import DEFAULT_PASSWORD
 from vyos.utils.auth import get_current_user
 from vyos.utils.auth import get_local_passwd_entries
 from vyos.utils.process import cmd
@@ -235,14 +236,22 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'{locked_user} P ', tmp)
 
     def test_system_login_weak_password_warning(self):
+        username = weak_passwd_user[0]
         self.cli_set(base_path + [
-            'user', weak_passwd_user[0], 'authentication',
+            'user', username, 'authentication',
             'plaintext-password', weak_passwd_user[1]
         ])
 
         out = self.cli_commit().strip()
+        self.assertIn(f'WARNING: User "{username}" - The password complexity is too low', out)
 
-        self.assertIn('WARNING: The password complexity is too low', out)
+        self.cli_set(base_path + [
+            'user', username, 'authentication',
+            'plaintext-password', DEFAULT_PASSWORD])
+
+        out = self.cli_commit().strip()
+        self.assertIn(f'WARNING: Default password used for user "{username}"', out)
+
         self.cli_delete(base_path + ['user', weak_passwd_user[0]])
 
     def test_system_login_otp(self):
