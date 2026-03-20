@@ -1,0 +1,502 @@
+# VyOS WWAN Enhanced Interface — `set` Command Reference
+
+This document defines the VyOS CLI `set` commands that map to the
+`my_config.conf` parameters for the enhanced WWAN interface management service.
+
+All commands are under:
+```
+set interfaces wwan <wwanN> ...
+```
+
+The existing upstream VyOS WWAN commands (`apn`, `authentication`, `connect-on-demand`,
+`address`, `mtu`, `vrf`, etc.) are preserved. The new commands extend the hierarchy.
+
+---
+
+## Configuration Tree
+
+```
+interfaces
+  └── wwan <wwanN>
+        ├── apn <name>                                    # (existing) Global fallback APN
+        ├── authentication                                # (existing)
+        │     ├── username <text>
+        │     └── password <text>
+        ├── connect-on-demand                             # (existing, valueless)
+        ├── auth-type <none|pap|chap|both>                # NEW — global default auth type
+        ├── pdp-type <ipv4|ipv6|ipv4v6>                   # NEW — global default PDP type
+        ├── roaming                                       # NEW — enable roaming (valueless)
+        ├── network-mode <auto|lte|5g|3g|2g>              # NEW
+        │
+        ├── sim                                           # NEW — SIM management
+        │     ├── active-slot <1|2>
+        │     │
+        │     ├── slot <1|2>                              #   per-SIM tag node
+        │     │     ├── apn <name>
+        │     │     ├── username <text>
+        │     │     ├── password <text>
+        │     │     ├── auth-type <none|pap|chap|both>
+        │     │     ├── pdp-type <ipv4|ipv6|ipv4v6>
+        │     │     ├── roaming                           #   valueless
+        │     │     ├── pin <4-8 digits>
+        │     │     ├── puk <8 digits>
+        │     │     ├── auto-unlock                       #   valueless
+        │     │     ├── supported-bands <all|LTE|5G|band,band,...>
+        │     │     ├── preferred-carrier <name>
+        │     │     ├── enable-network-scan               #   valueless
+        │     │     └── data-limit
+        │     │           ├── size <bytes>                #   0 = unlimited
+        │     │           ├── action <disable|alert|throttle|block|failover>
+        │     │           └── billing-date <1-28>
+        │     │
+        │     ├── failover                                #   valueless — enable SIM failover
+        │     └── failback
+        │           ├── enable                            #   valueless
+        │           └── check-interval <seconds>          #   default: 600
+        │
+        ├── apn-discovery
+        │     └── android                                 #   valueless — enable Android APN DB
+        │
+        ├── dial-on-demand
+        │     ├── idle-timeout <seconds>                  #   default: 300
+        │     └── traffic-threshold <bytes-per-sec>       #   default: 1024
+        │
+        ├── reconnection
+        │     ├── enhanced                                #   valueless — enable signal-aware reconnection
+        │     ├── signal-threshold <dBm>                  #   default: -85
+        │     ├── retry-interval
+        │     │     ├── good-signal <seconds>             #   default: 15
+        │     │     └── poor-signal <seconds>             #   default: 45
+        │     ├── max-wait-for-signal <seconds>           #   default: 120
+        │     ├── signal-check-interval <seconds>         #   default: 10
+        │     └── signal-strength-buffer <dBm>            #   default: 5
+        │
+        ├── interface-management
+        │     ├── bearer-disconnect-delay <seconds>       #   default: 15
+        │     ├── registration-recovery-delay <seconds>   #   default: 20
+        │     ├── ip-change-delay <seconds>               #   default: 0.5
+        │     ├── ensure-link-up-on-connect               #   valueless, default: on
+        │     ├── monitor-bearer-state                    #   valueless, default: on
+        │     ├── monitor-ip-changes                      #   valueless, default: on
+        │     └── interface-up-timeout <seconds>          #   default: 10
+        │
+        ├── connectivity-monitoring
+        │     ├── enable                                  #   valueless
+        │     ├── interval <seconds>                      #   default: 60
+        │     ├── timeout <seconds>                       #   default: 10
+        │     ├── retry-count <count>                     #   default: 3
+        │     ├── failure-threshold <count>               #   default: 2
+        │     ├── test-ipv4                               #   valueless, default: on
+        │     ├── test-ipv6                               #   valueless
+        │     ├── require-both                            #   valueless
+        │     ├── ipv4-targets <addr,addr,...>            #   default: 8.8.8.8,1.1.1.1
+        │     └── ipv6-targets <addr,addr,...>            #   default: 2001:4860:4860::8888,...
+        │
+        ├── failover
+        │     ├── enable                                  #   valueless
+        │     ├── connect-retries <count>                 #   default: 3
+        │     ├── revert-timer <seconds>                  #   default: 300
+        │     ├── signal-loss-timer <seconds>             #   default: 60
+        │     └── signal-threshold <dBm>                  #   default: -90
+        │
+        ├── data-usage
+        │     ├── monitoring-interval <seconds>           #   default: 30
+        │     └── warning-thresholds <pct,pct,...>        #   default: 75,90,95
+        │
+        ├── hardware-reset
+        │     ├── enable                                  #   valueless, default: on
+        │     ├── max-attempts <count>                    #   default: 3
+        │     └── cooldown <seconds>                      #   default: 300
+        │
+        ├── band
+        │     ├── supported <all|LTE|5G|band,band,...>    #   global default
+        │     └── network-scan
+        │           ├── enable                            #   valueless
+        │           └── timeout <seconds>                 #   default: 60
+        │
+        ├── timeouts
+        │     ├── connection <seconds>                    #   default: 120
+        │     ├── registration <seconds>                  #   default: 180
+        │     └── normal-monitoring-interval <seconds>    #   default: 30
+        │
+        └── logging
+              ├── level <debug|info|warning|error>        #   default: info
+              ├── verbose                                 #   valueless
+              ├── snmp-monitoring                         #   valueless
+              ├── detailed-status                         #   valueless
+              └── health-check-interval <seconds>         #   default: 300
+```
+
+---
+
+## Default Behavior — Zero Configuration
+
+If no `set interfaces wwan wwanN …` commands are issued beyond bringing the
+interface up, the following defaults apply.  The modem will attempt to connect
+automatically using a 4-priority APN discovery chain:
+
+| Feature | Default (nothing configured) | Effect |
+|---|---|---|
+| **Active SIM slot** | `1` | Slot 1 is used |
+| **APN** | `(empty)` — triggers auto-discovery | Priority chain: 1) configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (if enabled), 4) automatic (let the network assign) |
+| **Authentication** | `none`, no username/password | No PPP auth sent to carrier |
+| **PDP type** | `ipv4` | IPv4-only bearer |
+| **Roaming** | `disabled` | Modem will not register on visited networks |
+| **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
+| **SIM PIN** | per-SIM only | No automatic unlock; SIM must already be unlocked or will block at PIN state |
+| **Auto-unlock** | per-SIM, default `true` | If a PIN *is* configured on a slot, the FSM sends it automatically |
+| **SIM failover** | `disabled` | Single-SIM operation; slot 2 is ignored |
+| **SIM failback** | `disabled` | Even if failover fires, no automatic return to primary |
+| **APN discovery (Android)** | `disabled` | Only configured / automatic APNs are tried |
+| **Connect-on-demand** | `disabled` | Modem connects immediately at boot and stays connected |
+| **Enhanced reconnection** | `disabled` | Fixed retry intervals; no signal-quality awareness |
+| **Reconnection retry** | good-signal `15 s`, poor-signal `45 s` | (only effective when enhanced reconnection is enabled) |
+| **Signal threshold** | `-85 dBm` | Boundary between "good" and "poor" reconnection strategies |
+| **Bearer disconnect delay** | `15 s` | Grace period before tearing down a disconnected bearer |
+| **Registration recovery delay** | `20 s` | Debounce for registration-lost flaps |
+| **IP change delay** | `0.5 s` | Settle time after IP re-assignment |
+| **Link / bearer / IP monitoring** | all `enabled` | Interface-up enforcement, bearer-state tracking, IP-change detection all active |
+| **Interface-up timeout** | `10 s` | Max wait for kernel interface to come up after bearer connect |
+| **Connectivity monitoring** | `disabled` | No active ping probes; dead path undetected until bearer drops |
+| **Connectivity ping targets** | IPv4: `8.8.8.8, 1.1.1.1`; IPv6: Google/Cloudflare DNS | (only effective when monitoring is enabled) |
+| **Failover** | `disabled` | No automatic switchover on signal loss or connect failures |
+| **Data limits (per-SIM)** | size `0` (unlimited), action `disable`, billing-date `1` | No data cap enforcement |
+| **Data usage monitoring** | interval `30 s`, thresholds `75%, 90%, 95%` | Counters tracked; warnings logged at thresholds (no action) |
+| **Hardware reset** | `enabled`, max `3` attempts, cooldown `300 s` | Modem power-cycles after repeated unrecoverable failures |
+| **Band selection** | `all` | All modem-supported bands enabled |
+| **Network scan** | `disabled` | No background operator scanning |
+| **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
+| **Registration timeout** | `180 s` | Max wait for network registration |
+| **Normal monitoring interval** | `30 s` | Polling cycle in CONNECTED state |
+| **Logging** | level `info`, verbose `on`, SNMP `on`, detailed-status `on` | Full operational logging enabled by default |
+| **Health-check interval** | `300 s` | Periodic self-diagnostic cycle |
+
+### Minimum Viable Configuration
+
+To connect a single SIM with a known APN and no other features:
+
+```
+set interfaces wwan wwan0 apn 'your.carrier.apn'
+```
+
+Everything else uses the defaults above.  If the carrier requires authentication:
+
+```
+set interfaces wwan wwan0 apn 'your.carrier.apn'
+set interfaces wwan wwan0 authentication username 'user'
+set interfaces wwan wwan0 authentication password 'pass'
+set interfaces wwan wwan0 auth-type 'chap'
+```
+
+If the SIM is PIN-locked:
+
+```
+set interfaces wwan wwan0 sim slot 1 pin '1234'
+set interfaces wwan wwan0 sim slot 1 auto-unlock
+```
+
+---
+
+## Full `set` Command Listing
+
+### Basic / Existing Commands
+
+> **If unconfigured:** No APN set (auto-discovery chain used), no auth, IPv4 only, roaming off, network-mode auto.
+
+```
+set interfaces wwan wwan0 apn 'lteinternet.apn'
+set interfaces wwan wwan0 authentication username ''
+set interfaces wwan wwan0 authentication password ''
+set interfaces wwan wwan0 auth-type 'none'
+set interfaces wwan wwan0 pdp-type 'ipv4'
+set interfaces wwan wwan0 roaming
+set interfaces wwan wwan0 network-mode 'auto'
+```
+
+### SIM Configuration
+
+> **If unconfigured:** Slot 1 active, no failover, single-SIM operation.  PIN/PUK/auto-unlock are per-SIM only (no global default).
+
+```
+set interfaces wwan wwan0 sim active-slot 1
+
+# Per-SIM slot configuration
+set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
+set interfaces wwan wwan0 sim slot 1 username ''
+set interfaces wwan wwan0 sim slot 1 password ''
+set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
+set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
+set interfaces wwan wwan0 sim slot 1 roaming
+set interfaces wwan wwan0 sim slot 1 pin '1234'
+set interfaces wwan wwan0 sim slot 1 puk ''
+set interfaces wwan wwan0 sim slot 1 auto-unlock
+set interfaces wwan wwan0 sim slot 1 supported-bands 'all'
+set interfaces wwan wwan0 sim slot 1 preferred-carrier 'Bell'
+set interfaces wwan wwan0 sim slot 1 enable-network-scan
+set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
+set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
+set interfaces wwan wwan0 sim slot 1 data-limit billing-date 1
+
+set interfaces wwan wwan0 sim slot 2 apn 'backup.apn'
+set interfaces wwan wwan0 sim slot 2 auth-type 'none'
+set interfaces wwan wwan0 sim slot 2 pdp-type 'ipv4'
+set interfaces wwan wwan0 sim slot 2 pin '5678'
+set interfaces wwan wwan0 sim slot 2 auto-unlock
+set interfaces wwan wwan0 sim slot 2 data-limit size 0
+set interfaces wwan wwan0 sim slot 2 data-limit action 'failover'
+set interfaces wwan wwan0 sim slot 2 data-limit billing-date 1
+
+# SIM failover / failback
+set interfaces wwan wwan0 sim failover
+set interfaces wwan wwan0 sim failback enable
+set interfaces wwan wwan0 sim failback check-interval 600
+```
+
+### APN Discovery
+
+> **If unconfigured:** Android APN database lookup is disabled.  Only configured APN, in-memory last-connected APN, and automatic (network-assigned) APN are tried.
+
+```
+set interfaces wwan wwan0 apn-discovery android
+```
+
+### Dial-on-Demand
+
+> **If unconfigured:** Always-on — modem connects at boot and stays connected.  Idle-timeout and traffic-threshold have no effect unless `connect-on-demand` is enabled.
+
+```
+set interfaces wwan wwan0 connect-on-demand
+set interfaces wwan wwan0 dial-on-demand idle-timeout 300
+set interfaces wwan wwan0 dial-on-demand traffic-threshold 1024
+```
+
+> **Note:** The existing `connect-on-demand` (valueless) enables dial-on-demand.
+> The `dial-on-demand` sub-tree holds the tuning parameters.
+
+### Enhanced Reconnection Strategy
+
+> **If unconfigured:** Basic fixed-interval reconnection.  Signal-quality-aware retry spacing only activates when `reconnection enhanced` is set.
+
+```
+set interfaces wwan wwan0 reconnection enhanced
+set interfaces wwan wwan0 reconnection signal-threshold -85
+set interfaces wwan wwan0 reconnection retry-interval good-signal 15
+set interfaces wwan wwan0 reconnection retry-interval poor-signal 45
+set interfaces wwan wwan0 reconnection max-wait-for-signal 120
+set interfaces wwan wwan0 reconnection signal-check-interval 10
+set interfaces wwan wwan0 reconnection signal-strength-buffer 5
+```
+
+### Interface Management
+
+> **If unconfigured:** All monitors active (bearer-state, IP-changes, link-up enforcement).  Delays: bearer-disconnect 15 s, registration-recovery 20 s, IP-change 0.5 s, interface-up timeout 10 s.
+
+```
+set interfaces wwan wwan0 interface-management bearer-disconnect-delay 15
+set interfaces wwan wwan0 interface-management registration-recovery-delay 20
+set interfaces wwan wwan0 interface-management ip-change-delay 0.5
+set interfaces wwan wwan0 interface-management ensure-link-up-on-connect
+set interfaces wwan wwan0 interface-management monitor-bearer-state
+set interfaces wwan wwan0 interface-management monitor-ip-changes
+set interfaces wwan wwan0 interface-management interface-up-timeout 10
+```
+
+### Connectivity Health Monitoring
+
+> **If unconfigured:** Disabled — no active ping probes.  A dead path (e.g. carrier-side routing failure) goes undetected until the bearer itself drops.
+
+```
+set interfaces wwan wwan0 connectivity-monitoring enable
+set interfaces wwan wwan0 connectivity-monitoring interval 60
+set interfaces wwan wwan0 connectivity-monitoring timeout 10
+set interfaces wwan wwan0 connectivity-monitoring retry-count 3
+set interfaces wwan wwan0 connectivity-monitoring failure-threshold 2
+set interfaces wwan wwan0 connectivity-monitoring test-ipv4
+set interfaces wwan wwan0 connectivity-monitoring test-ipv6
+set interfaces wwan wwan0 connectivity-monitoring require-both
+set interfaces wwan wwan0 connectivity-monitoring ipv4-targets '8.8.8.8,1.1.1.1,9.9.9.9'
+set interfaces wwan wwan0 connectivity-monitoring ipv6-targets '2001:4860:4860::8888,2606:4700:4700::1111'
+```
+
+### Interface Failover
+
+> **If unconfigured:** Disabled — no automatic interface-level switchover on sustained signal loss or repeated connect failures.
+
+```
+set interfaces wwan wwan0 failover enable
+set interfaces wwan wwan0 failover connect-retries 3
+set interfaces wwan wwan0 failover revert-timer 300
+set interfaces wwan wwan0 failover signal-loss-timer 60
+set interfaces wwan wwan0 failover signal-threshold -90
+```
+
+### Data Usage Monitoring
+
+> **If unconfigured:** Counters still tracked (30 s interval, thresholds 75/90/95%).  Warnings logged but no enforcement action unless a per-SIM `data-limit` is configured.
+
+```
+set interfaces wwan wwan0 data-usage monitoring-interval 30
+set interfaces wwan wwan0 data-usage warning-thresholds '75,90,95'
+```
+
+### Hardware Reset
+
+> **If unconfigured:** Enabled — up to 3 modem power-cycle attempts with 300 s cooldown on unrecoverable failures.
+
+```
+set interfaces wwan wwan0 hardware-reset enable
+set interfaces wwan wwan0 hardware-reset max-attempts 3
+set interfaces wwan wwan0 hardware-reset cooldown 300
+```
+
+### Band / Carrier / Network Scan
+
+> **If unconfigured:** All bands enabled, network scanning disabled, scan timeout 60 s.
+
+```
+set interfaces wwan wwan0 band supported 'all'
+set interfaces wwan wwan0 band network-scan enable
+set interfaces wwan wwan0 band network-scan timeout 60
+```
+
+### Timeouts
+
+> **If unconfigured:** Connection 120 s, registration 180 s, CONNECTED-state poll every 30 s.
+
+```
+set interfaces wwan wwan0 timeouts connection 120
+set interfaces wwan wwan0 timeouts registration 180
+set interfaces wwan wwan0 timeouts normal-monitoring-interval 30
+```
+
+### Logging and Monitoring
+
+> **If unconfigured:** Level `info`, verbose on, SNMP on, detailed-status on, health-check every 300 s.
+
+```
+set interfaces wwan wwan0 logging level 'info'
+set interfaces wwan wwan0 logging verbose
+set interfaces wwan wwan0 logging snmp-monitoring
+set interfaces wwan wwan0 logging detailed-status
+set interfaces wwan wwan0 logging health-check-interval 300
+```
+
+---
+
+## Config Mapping Reference
+
+| VyOS `set` Command | `my_config.conf` Key | Default |
+|---|---|---|
+| `sim active-slot` | `active_sim_slot` | `1` |
+| `sim failover` | `sim_failover` | `disabled` |
+| `sim failback enable` | `sim_failback_enabled` | `disabled` |
+| `sim failback check-interval` | `sim_failback_check_interval` | `600` |
+| `sim slot N apn` | `sim_slot_N_apn` | `(empty)` |
+| `sim slot N username` | `sim_slot_N_username` | `(empty)` |
+| `sim slot N password` | `sim_slot_N_password` | `(empty)` |
+| `sim slot N auth-type` | `sim_slot_N_auth_type` | `none` |
+| `sim slot N pdp-type` | `sim_slot_N_pdp_type` | `ipv4` |
+| `sim slot N roaming` | `sim_slot_N_roaming` | `disabled` |
+| `sim slot N pin` | `sim_slot_N_pin` | `(empty)` |
+| `sim slot N puk` | `sim_slot_N_puk` | `(empty)` |
+| `sim slot N auto-unlock` | `sim_slot_N_auto_unlock` | `true` |
+| `sim slot N supported-bands` | `sim_slot_N_supported_bands` | `all` |
+| `sim slot N preferred-carrier` | `sim_slot_N_preferred_carrier` | `(empty)` |
+| `sim slot N enable-network-scan` | `sim_slot_N_enable_network_scan` | `false` |
+| `sim slot N data-limit size` | `sim_slot_N_data_limit_size` | `0` |
+| `sim slot N data-limit action` | `sim_slot_N_data_limit_action` | `disable` |
+| `sim slot N data-limit billing-date` | `sim_slot_N_data_limit_billing_date` | `1` |
+| `apn-discovery android` | `android_apn_discovery` | `disabled` |
+| `connect-on-demand` | `on_demand` | `disabled` |
+| `dial-on-demand idle-timeout` | `on_demand_idle_timeout` | `300` |
+| `dial-on-demand traffic-threshold` | `on_demand_traffic_threshold` | `1024` |
+| `reconnection enhanced` | `enhanced_reconnection` | `disabled` |
+| `reconnection signal-threshold` | `reconnection_signal_threshold` | `-85` |
+| `reconnection retry-interval good-signal` | `retry_interval_good_signal` | `15` |
+| `reconnection retry-interval poor-signal` | `retry_interval_poor_signal` | `45` |
+| `reconnection max-wait-for-signal` | `max_wait_for_signal` | `120` |
+| `reconnection signal-check-interval` | `signal_check_interval` | `10` |
+| `reconnection signal-strength-buffer` | `signal_strength_buffer` | `5` |
+| `interface-management bearer-disconnect-delay` | `bearer_disconnect_delay` | `15` |
+| `interface-management registration-recovery-delay` | `registration_recovery_delay` | `20` |
+| `interface-management ip-change-delay` | `ip_change_delay` | `0.5` |
+| `interface-management ensure-link-up-on-connect` | `ensure_link_up_on_connect` | `true` |
+| `interface-management monitor-bearer-state` | `monitor_bearer_state` | `true` |
+| `interface-management monitor-ip-changes` | `monitor_ip_changes` | `true` |
+| `interface-management interface-up-timeout` | `interface_up_timeout` | `10` |
+| `connectivity-monitoring enable` | `connectivity_monitoring_enabled` | `false` |
+| `connectivity-monitoring interval` | `connectivity_monitoring_interval` | `60` |
+| `connectivity-monitoring timeout` | `connectivity_monitoring_timeout` | `10` |
+| `connectivity-monitoring retry-count` | `connectivity_monitoring_retry_count` | `3` |
+| `connectivity-monitoring failure-threshold` | `connectivity_monitoring_failure_threshold` | `2` |
+| `connectivity-monitoring test-ipv4` | `connectivity_monitoring_test_ipv4` | `true` |
+| `connectivity-monitoring test-ipv6` | `connectivity_monitoring_test_ipv6` | `false` |
+| `connectivity-monitoring require-both` | `connectivity_monitoring_require_both` | `false` |
+| `connectivity-monitoring ipv4-targets` | `connectivity_monitoring_ipv4_targets` | `8.8.8.8,1.1.1.1` |
+| `connectivity-monitoring ipv6-targets` | `connectivity_monitoring_ipv6_targets` | `2001:4860:...` |
+| `failover enable` | `failover` | `disabled` |
+| `failover connect-retries` | `failover_connect_retries` | `3` |
+| `failover revert-timer` | `failover_revert_timer` | `300` |
+| `failover signal-loss-timer` | `failover_signal_loss_timer` | `60` |
+| `failover signal-threshold` | `failover_signal_threshold` | `-90` |
+| `data-usage monitoring-interval` | `data_usage_monitoring_interval` | `30` |
+| `data-usage warning-thresholds` | `data_usage_warning_thresholds` | `75,90,95` |
+| `hardware-reset enable` | `hardware_reset_enabled` | `true` |
+| `hardware-reset max-attempts` | `max_hardware_resets` | `3` |
+| `hardware-reset cooldown` | `hardware_reset_cooldown` | `300` |
+| `band supported` | `supported_bands` | `all` |
+| `band network-scan enable` | `enable_network_scan` | `false` |
+| `band network-scan timeout` | `network_scan_timeout` | `60` |
+| `network-mode` | `network_mode` | `auto` |
+| `timeouts connection` | `connection_timeout` | `120` |
+| `timeouts registration` | `registration_timeout` | `180` |
+| `timeouts normal-monitoring-interval` | `normal_monitoring_interval` | `30` |
+| `apn` | `apn` | `(empty)` |
+| `authentication username` | `username` | `(empty)` |
+| `authentication password` | `password` | `(empty)` |
+| `auth-type` | `auth_type` | `none` |
+| `pdp-type` | `pdp_type` | `ipv4` |
+| `roaming` | `roaming` | `disabled` |
+| `sim pin` | `pin` | *(removed — per-SIM only)* |
+| `sim puk` | `puk` | *(removed — per-SIM only)* |
+| `sim auto-unlock` | `auto_unlock` | *(removed — per-SIM only)* |
+| `logging level` | `log_level` | `info` |
+| `logging verbose` | `verbose_logging` | `true` |
+| `logging snmp-monitoring` | `snmp_monitoring` | `true` |
+| `logging detailed-status` | `detailed_status` | `true` |
+| `logging health-check-interval` | `system_health_check_interval` | `300` |
+
+---
+
+## Example: Bell Canada Dual-SIM with Monitoring
+
+```
+set interfaces wwan wwan0 sim active-slot 1
+set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
+set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
+set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
+set interfaces wwan wwan0 sim slot 1 pin '1234'
+set interfaces wwan wwan0 sim slot 1 auto-unlock
+set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
+set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
+set interfaces wwan wwan0 sim slot 1 data-limit billing-date 1
+
+set interfaces wwan wwan0 sim slot 2 pin '5678'
+set interfaces wwan wwan0 sim slot 2 auto-unlock
+set interfaces wwan wwan0 sim slot 2 data-limit action 'failover'
+
+set interfaces wwan wwan0 apn-discovery android
+set interfaces wwan wwan0 reconnection enhanced
+set interfaces wwan wwan0 reconnection signal-threshold -85
+
+set interfaces wwan wwan0 connectivity-monitoring enable
+set interfaces wwan wwan0 connectivity-monitoring interval 60
+set interfaces wwan wwan0 connectivity-monitoring failure-threshold 2
+set interfaces wwan wwan0 connectivity-monitoring ipv4-targets '8.8.8.8,1.1.1.1,9.9.9.9'
+
+set interfaces wwan wwan0 interface-management registration-recovery-delay 20
+set interfaces wwan wwan0 interface-management bearer-disconnect-delay 15
+
+set interfaces wwan wwan0 hardware-reset enable
+set interfaces wwan wwan0 logging level 'info'
+```

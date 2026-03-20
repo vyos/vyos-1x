@@ -122,7 +122,7 @@ async def modem_reset(interface_number: int) -> bool:
     # VM CRASH PROTECTION: Disable hardware resets in VMs
     if _is_running_in_vm():
         logger.warning(f"VM detected - hardware reset disabled for safety (interface {interface_number})")
-        logger.info(f"Using nuclear reset (ModemManager restart) instead of hardware reset")
+        logger.info("Using nuclear reset (ModemManager restart) instead of hardware reset")
         return await modem_reset_nuclear(interface_number)
 
     try:
@@ -164,7 +164,6 @@ async def _try_modemmanager_reset(interface_number: int) -> bool:
     """Try to reset modem using ModemManager"""
     try:
         # Find modem by PhysDevUID
-        physdev_uid = f"modem{interface_number}"
 
         # Use mmcli to find and reset the modem
         find_cmd = ["mmcli", "-L"]

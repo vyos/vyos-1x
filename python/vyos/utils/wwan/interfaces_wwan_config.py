@@ -53,7 +53,7 @@ class ConfigFormatter(_BaseFormatter):
             config_data.append(f'carrier_resolved="{record.carrier_resolved}"')
         if config_data:
             sd_elements.append(f'[config@32473 {" ".join(config_data)}]')
-        origin_data = [f'software="vyos-wwan-config"', f'version="1.0"']
+        origin_data = ['software="vyos-wwan-config"', 'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
         return ''.join(sd_elements) if sd_elements else '-'
 
@@ -181,7 +181,6 @@ class InterfaceConfig(ServiceInterface):
 
         # APN discovery settings
         "android_apn_discovery": "disabled",
-        "apn_caching": "disabled",
 
         # Failover settings
         "failover": "disabled",
@@ -190,10 +189,11 @@ class InterfaceConfig(ServiceInterface):
         "failover_signal_loss_timer": 60,
         "failover_signal_threshold": -90,
 
-        # Data usage settings
-        "data_limit_action": "disable",
-        "data_limit_billing_date": 1,
-        "data_limit_size": 1000000000,
+        # SIM failback settings
+        "sim_failback_enabled": False,
+        "sim_failback_check_interval": 600,
+
+        # Data usage settings (per-SIM only; no global defaults needed)
         "data_usage_monitoring_interval": 30,
         "data_usage_warning_thresholds": [75, 90, 95],
 
@@ -251,7 +251,7 @@ class InterfaceConfig(ServiceInterface):
         "interface_management": {
             "enabled": True,                    # Enable network interface management
             "bearer_disconnect_delay": 15,      # Wait time before link down on bearer loss (seconds)
-            "registration_recovery_delay": 5,   # Debounce delay before acting on registration loss (seconds)
+            "registration_recovery_delay": 20,  # Debounce delay before acting on registration loss (seconds)
             "ip_change_delay": 0.5,            # Brief delay for IP change link cycling (seconds)
             "ensure_link_up_on_connect": True, # Ensure interface UP when entering CONNECTED state
             "monitor_bearer_state": True,      # Monitor ModemManager bearer state changes
@@ -279,7 +279,11 @@ class InterfaceConfig(ServiceInterface):
                 "pin": "",           # SIM PIN
                 "puk": "",           # SIM PUK
                 "new_pin": "",       # New PIN when unlocking with PUK
-                "auto_unlock": True  # Automatically unlock SIM with stored PIN
+                "auto_unlock": True,  # Automatically unlock SIM with stored PIN
+                # Per-SIM data usage limits
+                "data_limit_size": 0,            # Bytes (0 = unlimited)
+                "data_limit_action": "disable",   # disable, alert, throttle, block, failover
+                "data_limit_billing_date": 1      # Day of month (1-28) for usage reset
             },
             {
                 "slot": 2,
@@ -298,7 +302,11 @@ class InterfaceConfig(ServiceInterface):
                 "pin": "",           # SIM PIN
                 "puk": "",           # SIM PUK
                 "new_pin": "",       # New PIN when unlocking with PUK
-                "auto_unlock": True  # Automatically unlock SIM with stored PIN
+                "auto_unlock": True,  # Automatically unlock SIM with stored PIN
+                # Per-SIM data usage limits
+                "data_limit_size": 0,            # Bytes (0 = unlimited)
+                "data_limit_action": "disable",   # disable, alert, throttle, block, failover
+                "data_limit_billing_date": 1      # Day of month (1-28) for usage reset
             }
         ]
     }
@@ -484,7 +492,7 @@ class InterfaceConfig(ServiceInterface):
             return value
 
     @method()
-    async def set_configuration(self, config: 'a{sv}') -> 's':
+    async def set_configuration(self, config: 'a{sv}') -> 's':  # type: ignore[name-defined]  # noqa: F821, F722
         try:
             logger.info("Setting configuration",
                        extra={'interface_number': self.interface_number,
@@ -583,11 +591,17 @@ class InterfaceConfig(ServiceInterface):
                         default_slot[key]
                     )
                 else:
-                    merged_slot[key] = (
-                        new_slot.get(key) if new_slot else None
-                    ) or (
-                        current_slot.get(key) if current_slot else None
-                    ) or default_slot[key]
+                    # Use None-aware merge: prefer new, then current, then default.
+                    # Plain 'or' would treat 0, False, '' as falsy and skip them.
+                    new_val = new_slot.get(key) if new_slot else None
+                    if new_val is not None:
+                        merged_slot[key] = new_val
+                    else:
+                        cur_val = current_slot.get(key) if current_slot else None
+                        if cur_val is not None:
+                            merged_slot[key] = cur_val
+                        else:
+                            merged_slot[key] = default_slot[key]
 
             merged_slots.append(merged_slot)
 
@@ -639,23 +653,6 @@ class InterfaceConfig(ServiceInterface):
                 'auth_type': 'none'
             }
 
-    def _merge_connectivity_monitoring(self, new_monitoring, current_monitoring, default_monitoring):
-        """Merge connectivity monitoring configurations"""
-        if not new_monitoring:
-            return current_monitoring or default_monitoring
-
-        # Start with default
-        merged = default_monitoring.copy()
-
-        # Apply current values
-        if current_monitoring:
-            merged.update(current_monitoring)
-
-        # Apply new values
-        merged.update(new_monitoring)
-
-        return merged
-
     def _merge_enhanced_reconnection(self, new_reconnection, current_reconnection, default_reconnection):
         """Merge enhanced reconnection configurations"""
         if not new_reconnection:
@@ -698,6 +695,27 @@ class InterfaceConfig(ServiceInterface):
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'sim_failover'})
             raise ValueError("sim_failover must be 'enabled' or 'disabled'")
+
+        # Validate SIM failback
+        if 'sim_failback_enabled' in config:
+            val = config['sim_failback_enabled']
+            if val not in [True, False, 'enabled', 'disabled']:
+                logger.warning("Invalid sim_failback_enabled value",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_failback_enabled'})
+                raise ValueError("sim_failback_enabled must be True/False or 'enabled'/'disabled'")
+
+        if 'sim_failback_check_interval' in config:
+            interval = config['sim_failback_check_interval']
+            try:
+                interval = int(interval)
+                if interval < 60:
+                    raise ValueError("sim_failback_check_interval must be at least 60 seconds")
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Invalid sim_failback_check_interval: {e}",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_failback_check_interval'})
+                raise ValueError("sim_failback_check_interval must be an integer >= 60")
 
         # Validate failover
         if 'failover' in config and config['failover'] not in ['enabled', 'disabled']:
@@ -1090,11 +1108,12 @@ class InterfaceConfig(ServiceInterface):
                 raise ValueError("data_limit_billing_date must be an integer between 1 and 28")
 
         # Validate data_limit_action
-        if 'data_limit_action' in config and config['data_limit_action'] not in ['disable', 'throttle', 'block']:
+        valid_data_actions = ['disable', 'throttle', 'block', 'failover', 'alert']
+        if 'data_limit_action' in config and config['data_limit_action'] not in valid_data_actions:
             logger.warning("Invalid data_limit_action",
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'data_limit_action'})
-            raise ValueError("data_limit_action must be 'disable', 'throttle', or 'block'")
+            raise ValueError(f"data_limit_action must be one of: {', '.join(valid_data_actions)}")
 
         # Validate signal threshold
         if 'failover_signal_threshold' in config:
@@ -1105,14 +1124,14 @@ class InterfaceConfig(ServiceInterface):
                                      'validation_field': 'failover_signal_threshold'})
                 raise ValueError("failover_signal_threshold must be between -120 and 0 dBm")
 
-        # Validate data_limit_size
+        # Validate data_limit_size (0 = unlimited, positive = limit in bytes)
         if 'data_limit_size' in config:
             size = config['data_limit_size']
-            if not isinstance(size, int) or size <= 0:
+            if not isinstance(size, int) or size < 0:
                 logger.warning("Invalid data_limit_size",
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'data_limit_size'})
-                raise ValueError("data_limit_size must be a positive integer (bytes)")
+                raise ValueError("data_limit_size must be a non-negative integer (bytes, 0 = unlimited)")
 
         # Validate APN discovery settings
         if 'android_apn_discovery' in config and config['android_apn_discovery'] not in ['enabled', 'disabled']:
@@ -1120,12 +1139,6 @@ class InterfaceConfig(ServiceInterface):
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'android_apn_discovery'})
             raise ValueError("android_apn_discovery must be 'enabled' or 'disabled'")
-
-        if 'apn_caching' in config and config['apn_caching'] not in ['enabled', 'disabled']:
-            logger.warning("Invalid apn_caching",
-                          extra={'interface_number': self.interface_number,
-                                 'validation_field': 'apn_caching'})
-            raise ValueError("apn_caching must be 'enabled' or 'disabled'")
 
         # Validate hardware reset settings
         if 'hardware_reset_enabled' in config and not isinstance(config['hardware_reset_enabled'], bool):
@@ -1432,117 +1445,7 @@ class InterfaceConfig(ServiceInterface):
                           'test_ipv6': test_ipv6})
 
     @method()
-    async def set_active_sim(self, sim_slot: 'i') -> 's':
-        """Switch to a different SIM slot"""
-        try:
-            if sim_slot not in [1, 2]:
-                raise ValueError("SIM slot must be 1 or 2")
-
-            logger.info("Switching active SIM slot",
-                       extra={'interface_number': self.interface_number,
-                              'sim_slot': sim_slot})
-
-            # Update configuration
-            config = getattr(self.fsm, 'config', {})
-            config['active_sim_slot'] = sim_slot
-            self.fsm.apply_config(config)
-
-            return f"Switched to SIM{sim_slot} on interface {self.interface_number}"
-
-        except Exception as e:
-            logger.error("Failed to switch SIM slot",
-                        extra={'interface_number': self.interface_number,
-                               'sim_slot': sim_slot,
-                               'error': str(e)})
-            raise DBusError("com.igos.IgosModemManager.SIMSwitchError", str(e))
-
-    @method()
-    async def unlock_sim(self, sim_slot: 'i', pin: 's') -> 's':
-        """Unlock SIM with PIN"""
-        try:
-            if sim_slot not in [1, 2]:
-                raise ValueError("SIM slot must be 1 or 2")
-
-            if not re.match(r'^\d{4,8}$', pin):
-                raise ValueError("PIN must be 4-8 digits")
-
-            logger.info("Unlocking SIM with PIN",
-                       extra={'interface_number': self.interface_number,
-                              'sim_slot': sim_slot})
-
-            # Store PIN in configuration for future auto-unlock
-            config = getattr(self.fsm, 'config', {})
-            sim_slots = config.get('sim_slots', [])
-
-            # Update the specific SIM slot with the PIN
-            for slot in sim_slots:
-                if slot['slot'] == sim_slot:
-                    slot['pin'] = pin
-                    slot['auto_unlock'] = True
-                    break
-
-            self.fsm.apply_config(config)
-
-            # Trigger SIM unlock in state machine
-            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
-            self.fsm.transition(ModemEvent.SIM_READY)
-
-            return f"SIM{sim_slot} unlock initiated on interface {self.interface_number}"
-
-        except Exception as e:
-            logger.error("Failed to unlock SIM",
-                        extra={'interface_number': self.interface_number,
-                               'sim_slot': sim_slot,
-                               'error': str(e)})
-            raise DBusError("com.igos.IgosModemManager.SIMUnlockError", str(e))
-
-    @method()
-    async def unlock_sim_with_puk(self, sim_slot: 'i', puk: 's', new_pin: 's') -> 's':
-        """Unlock SIM with PUK and set new PIN"""
-        try:
-            if sim_slot not in [1, 2]:
-                raise ValueError("SIM slot must be 1 or 2")
-
-            if not re.match(r'^\d{8}$', puk):
-                raise ValueError("PUK must be exactly 8 digits")
-
-            if not re.match(r'^\d{4,8}$', new_pin):
-                raise ValueError("New PIN must be 4-8 digits")
-
-            logger.info("Unlocking SIM with PUK",
-                       extra={'interface_number': self.interface_number,
-                              'sim_slot': sim_slot})
-
-            # Store PUK and new PIN in configuration
-            config = getattr(self.fsm, 'config', {})
-            sim_slots = config.get('sim_slots', [])
-
-            # Update the specific SIM slot
-            for slot in sim_slots:
-                if slot['slot'] == sim_slot:
-                    slot['puk'] = puk
-                    slot['new_pin'] = new_pin
-                    slot['pin'] = new_pin  # New PIN becomes the active PIN
-                    slot['auto_unlock'] = True
-                    break
-
-            self.fsm.apply_config(config)
-
-            # Trigger SIM unlock in state machine
-            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
-            self.fsm.transition(ModemEvent.SIM_READY)
-
-            return f"SIM{sim_slot} PUK unlock initiated on interface {self.interface_number}"
-
-        except Exception as e:
-            logger.error("Failed to unlock SIM with PUK",
-                        extra={'interface_number': self.interface_number,
-                               'sim_slot': sim_slot,
-                               'error': str(e)})
-            raise DBusError("com.igos.IgosModemManager.PUKUnlockError", str(e))
-
-    @method()
-    async def connect(self) -> 's':
+    async def connect(self) -> 's':  # type: ignore[name-defined]  # noqa: F821
         """Request connection. Always accepted — the service handles state internally.
 
         If the FSM is already in a connectable state, fires the transition
@@ -1601,7 +1504,7 @@ class InterfaceConfig(ServiceInterface):
             raise DBusError("com.igos.IgosModemManager.ConnectionError", str(e))
 
     @method()
-    async def disconnect(self) -> 's':
+    async def disconnect(self) -> 's':  # type: ignore[name-defined]  # noqa: F821
         try:
             logger.info("Disconnecting interface",
                        extra={'interface_number': self.interface_number})
@@ -1645,29 +1548,32 @@ class InterfaceConfig(ServiceInterface):
             raise DBusError("com.igos.IgosModemManager.DisconnectionError", str(e))
 
     @method()
-    async def get_status(self) -> 'a{sv}':
-        """Get current interface status"""
+    async def get_status(self) -> 'a{sv}':  # type: ignore[name-defined]  # noqa: F821, F722
+        """Get comprehensive interface status — everything about this interface.
+
+        Returns a flat D-Bus dict ``a{sv}`` with keys for FSM state, SIM info,
+        modem hardware, signal quality, IP configuration, bearer session stats,
+        per-SIM cumulative data usage, failover/recovery state, per-slot
+        configuration summary, and key feature flags.
+        """
         try:
-            logger.info("Getting interface status",
+            logger.info("Getting comprehensive interface status",
                        extra={'interface_number': self.interface_number})
 
-            config = getattr(self.fsm, 'config', {})
-            active_sim = config.get('active_sim_slot', 1)
+            # Delegate the heavy lifting to the FSM
+            raw = await self.fsm.get_comprehensive_status()
 
-            # Safely get values with proper None handling
-            current_state = getattr(self.fsm.machine, 'current_state', 'UNKNOWN') if hasattr(self.fsm, 'machine') and self.fsm.machine else 'UNKNOWN'
-            modem_path = getattr(self.fsm, 'modem_path', '') or ''
-            bearer_path = getattr(self.fsm, 'bearer_path', '') or ''
-
-            status = {
-                'interface_number': Variant('i', self.interface_number or 0),
-                'current_state': Variant('s', current_state),
-                'modem_path': Variant('s', modem_path),
-                'bearer_path': Variant('s', bearer_path),
-                'config_applied': Variant('b', bool(config)),
-                'active_sim_slot': Variant('i', active_sim or 1),
-                'sim_failover_enabled': Variant('b', config.get('sim_failover', 'disabled') == 'enabled')
-            }
+            # Wrap every value in an appropriate D-Bus Variant
+            status = {}
+            for key, val in raw.items():
+                if isinstance(val, bool):
+                    status[key] = Variant('b', val)
+                elif isinstance(val, int):
+                    status[key] = Variant('x', val)       # int64 covers all sizes
+                elif isinstance(val, float):
+                    status[key] = Variant('d', val)
+                else:
+                    status[key] = Variant('s', str(val))  # fallback to string
 
             return status
 

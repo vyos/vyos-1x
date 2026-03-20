@@ -39,7 +39,7 @@ class ServiceFormatter(_BaseFormatter):
             service_data.append(f'fsm_count="{record.fsm_count}"')
         if service_data:
             sd_elements.append(f'[service@32473 {" ".join(service_data)}]')
-        origin_data = [f'software="vyos-wwan-service"', f'version="1.0"']
+        origin_data = ['software="vyos-wwan-service"', 'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
         return ''.join(sd_elements) if sd_elements else '-'
 
@@ -57,7 +57,7 @@ class ControlInterface(ServiceInterface):
         self.manager = manager
 
     @method()
-    async def AddInterface(self, interface_number: 'i') -> 's':
+    async def AddInterface(self, interface_number: 'i') -> 's':  # noqa: F821
         try:
             logger.info("Adding interface", extra={'interface_number': interface_number})
             await self.manager.add_interface(interface_number)
@@ -68,7 +68,7 @@ class ControlInterface(ServiceInterface):
             raise DBusError("com.igos.IgosModemManager.Error", str(e))
 
     @method()
-    async def RemoveInterface(self, interface_number: 'i') -> 's':
+    async def RemoveInterface(self, interface_number: 'i') -> 's':  # noqa: F821
         try:
             logger.info("Removing interface", extra={'interface_number': interface_number})
             await self.manager.remove_interface(interface_number)

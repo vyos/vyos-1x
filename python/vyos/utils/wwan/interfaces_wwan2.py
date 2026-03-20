@@ -127,12 +127,16 @@ def build_config(raw_cfg):
         'auth_type': raw_cfg.get('sim_slot_1_auth_type', raw_cfg.get('auth_type', 'none')),
         'pdp_type': raw_cfg.get('sim_slot_1_pdp_type', raw_cfg.get('pdp_type', 'ipv4')),
         'roaming': raw_cfg.get('sim_slot_1_roaming', raw_cfg.get('roaming', 'disabled')),
-        'pin': raw_cfg.get('sim_slot_1_pin', raw_cfg.get('pin', '')),
-        'puk': raw_cfg.get('sim_slot_1_puk', raw_cfg.get('puk', '')),
-        'auto_unlock': raw_cfg.get('sim_slot_1_auto_unlock', raw_cfg.get('auto_unlock', True)),
+        'pin': raw_cfg.get('sim_slot_1_pin', ''),
+        'puk': raw_cfg.get('sim_slot_1_puk', ''),
+        'auto_unlock': raw_cfg.get('sim_slot_1_auto_unlock', True),
         'supported_bands': raw_cfg.get('sim_slot_1_supported_bands', raw_cfg.get('supported_bands', 'all')),
         'preferred_carrier': raw_cfg.get('sim_slot_1_preferred_carrier', raw_cfg.get('preferred_carrier', '')),
-        'enable_network_scan': raw_cfg.get('sim_slot_1_enable_network_scan', raw_cfg.get('enable_network_scan', False))
+        'enable_network_scan': raw_cfg.get('sim_slot_1_enable_network_scan', raw_cfg.get('enable_network_scan', False)),
+        # Per-SIM data usage limits (fallback to global config)
+        'data_limit_size': raw_cfg.get('sim_slot_1_data_limit_size', raw_cfg.get('data_limit_size', 0)),
+        'data_limit_action': raw_cfg.get('sim_slot_1_data_limit_action', raw_cfg.get('data_limit_action', 'disable')),
+        'data_limit_billing_date': raw_cfg.get('sim_slot_1_data_limit_billing_date', raw_cfg.get('data_limit_billing_date', 1)),
     }
     sim_slots.append(sim1)
 
@@ -146,12 +150,16 @@ def build_config(raw_cfg):
             'auth_type': raw_cfg.get('sim_slot_2_auth_type', raw_cfg.get('auth_type', 'none')),
             'pdp_type': raw_cfg.get('sim_slot_2_pdp_type', raw_cfg.get('pdp_type', 'ipv4')),
             'roaming': raw_cfg.get('sim_slot_2_roaming', raw_cfg.get('roaming', 'disabled')),
-            'pin': raw_cfg.get('sim_slot_2_pin', raw_cfg.get('pin', '')),
-            'puk': raw_cfg.get('sim_slot_2_puk', raw_cfg.get('puk', '')),
-            'auto_unlock': raw_cfg.get('sim_slot_2_auto_unlock', raw_cfg.get('auto_unlock', True)),
+            'pin': raw_cfg.get('sim_slot_2_pin', ''),
+            'puk': raw_cfg.get('sim_slot_2_puk', ''),
+            'auto_unlock': raw_cfg.get('sim_slot_2_auto_unlock', True),
             'supported_bands': raw_cfg.get('sim_slot_2_supported_bands', raw_cfg.get('supported_bands', 'all')),
             'preferred_carrier': raw_cfg.get('sim_slot_2_preferred_carrier', raw_cfg.get('preferred_carrier', '')),
-            'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', raw_cfg.get('enable_network_scan', False))
+            'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', raw_cfg.get('enable_network_scan', False)),
+            # Per-SIM data usage limits (fallback to global config)
+            'data_limit_size': raw_cfg.get('sim_slot_2_data_limit_size', raw_cfg.get('data_limit_size', 0)),
+            'data_limit_action': raw_cfg.get('sim_slot_2_data_limit_action', raw_cfg.get('data_limit_action', 'disable')),
+            'data_limit_billing_date': raw_cfg.get('sim_slot_2_data_limit_billing_date', raw_cfg.get('data_limit_billing_date', 1)),
         }
         sim_slots.append(sim2)
 
@@ -173,7 +181,7 @@ def build_config(raw_cfg):
     interface_management = {
         'enabled': raw_cfg.get('interface_management_enabled', True),
         'bearer_disconnect_delay': int(raw_cfg.get('bearer_disconnect_delay', 15)),
-        'registration_recovery_delay': int(raw_cfg.get('registration_recovery_delay', 5)),
+        'registration_recovery_delay': int(raw_cfg.get('registration_recovery_delay', 20)),
         'ip_change_delay': float(raw_cfg.get('ip_change_delay', 0.5)),
         'ensure_link_up_on_connect': raw_cfg.get('ensure_link_up_on_connect', True),
         'monitor_bearer_state': raw_cfg.get('monitor_bearer_state', True),
@@ -204,7 +212,6 @@ def build_config(raw_cfg):
 
         # APN discovery settings
         'android_apn_discovery': raw_cfg.get('android_apn_discovery', 'disabled'),
-        'apn_caching': raw_cfg.get('apn_caching', 'disabled'),
 
         # Failover settings
         'failover': raw_cfg.get('failover', 'disabled'),
@@ -213,10 +220,11 @@ def build_config(raw_cfg):
         'failover_signal_loss_timer': raw_cfg.get('failover_signal_loss_timer', 60),
         'failover_signal_threshold': raw_cfg.get('failover_signal_threshold', -90),
 
-        # Data usage settings
-        'data_limit_action': raw_cfg.get('data_limit_action', 'disable'),
-        'data_limit_billing_date': raw_cfg.get('data_limit_billing_date', 1),
-        'data_limit_size': raw_cfg.get('data_limit_size', 0),
+        # SIM failback settings — automatically return to primary SIM after failover
+        'sim_failback_enabled': raw_cfg.get('sim_failback_enabled', 'disabled') == 'enabled',
+        'sim_failback_check_interval': int(raw_cfg.get('sim_failback_check_interval', 600)),
+
+        # Data usage settings (per-SIM only — see sim_slots entries)
         'data_usage_monitoring_interval': raw_cfg.get('data_usage_monitoring_interval', 30),
         'data_usage_warning_thresholds': raw_cfg.get('data_usage_warning_thresholds', [75, 90, 95]),
 

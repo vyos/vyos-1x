@@ -31,7 +31,7 @@ class InterfaceManagementConfig:
     '''Network interface management configuration'''
     enabled: bool = True
     bearer_disconnect_delay: int = 15
-    registration_recovery_delay: int = 5
+    registration_recovery_delay: int = 20
     ip_change_delay: int = 2
     ensure_link_up_on_connect: bool = True
     monitor_bearer_state: bool = True
@@ -153,7 +153,7 @@ class ConfigurationLoader:
         return InterfaceManagementConfig(
             enabled=interface_mgmt.get('enabled', True),
             bearer_disconnect_delay=interface_mgmt.get('bearer_disconnect_delay', 15),
-            registration_recovery_delay=interface_mgmt.get('registration_recovery_delay', 5),
+            registration_recovery_delay=interface_mgmt.get('registration_recovery_delay', 20),
             ip_change_delay=interface_mgmt.get('ip_change_delay', 2),
             ensure_link_up_on_connect=interface_mgmt.get('ensure_link_up_on_connect', True),
             monitor_bearer_state=interface_mgmt.get('monitor_bearer_state', True),

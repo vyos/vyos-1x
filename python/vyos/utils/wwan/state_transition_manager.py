@@ -84,7 +84,7 @@ class StateTransitionManager:
             transitions=[
                 StateTransition("CONFIGURING", "CONNECTING", "CONNECT", "Attempt network connection"),
                 StateTransition("CONNECTING", "CONNECTED", "CONNECTED", "Connection established successfully"),
-                StateTransition("CONNECTED", "USAGE_MONITORING", "USAGE_LIMIT_EXCEEDED", "Monitor data usage"),
+                StateTransition("CONNECTED", "USAGE_MONITORING", "START_USAGE_MONITORING", "Start data usage monitoring"),
             ]
         )
 

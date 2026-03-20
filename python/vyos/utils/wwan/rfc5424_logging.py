@@ -91,7 +91,7 @@ class RFC5424Formatter(logging.Formatter):
         if wwan_data:
             sd_elements.append(f'[wwan@32473 {" ".join(wwan_data)}]')
 
-        origin_data = [f'software="vyos-wwan"', f'version="1.0"']
+        origin_data = ['software="vyos-wwan"', 'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
 
         return ''.join(sd_elements) if sd_elements else '-'

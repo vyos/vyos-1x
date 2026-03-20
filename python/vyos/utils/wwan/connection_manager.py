@@ -31,6 +31,7 @@ class ConnectionManager:
         self.interface_number = interface_number
         self.logger = logging.getLogger(f"{__name__}.Interface{interface_number}")
         self.bearer_path = None
+        self.connected_apn = None  # Store last successful APN config dict
 
     def set_proxy(self, proxy):
         """Set the D-Bus proxy for modem operations"""
@@ -67,8 +68,6 @@ class ConnectionManager:
                                           'attempt_number': i+1,
                                           'total_attempts': len(candidates)})
 
-                    # Cache successful APN for future use
-                    await self._cache_successful_apn(sim_info, apn_config, candidate)
                     return True
 
                 else:
@@ -139,6 +138,7 @@ class ConnectionManager:
                                    extra={'interface_number': self.interface_number,
                                           'apn_name': apn_config['name'],
                                           'bearer_path': bearer_path})
+                    self.connected_apn = apn_config.copy()
                     return True
                 else:
                     self.logger.warning("APN connection created but verification failed",
@@ -288,22 +288,7 @@ class ConnectionManager:
         }
         return auth_mapping.get(auth_type.lower(), 0)  # Default to none
 
-    async def _cache_successful_apn(self, sim_info: Dict[str, Any], apn_config: Dict[str, Any], candidate: Dict[str, Any]):
-        """Cache successful APN configuration for future use"""
-        try:
-            # This could be extended to save to a persistent cache
-            self.logger.info("Caching successful APN configuration",
-                           extra={'interface_number': self.interface_number,
-                                  'apn_name': apn_config['name'],
-                                  'mcc_mnc': sim_info.get('mcc_mnc', 'unknown'),
-                                  'carrier': sim_info.get('operator_name', 'unknown')})
 
-            # For now, just log the successful configuration
-            # In a full implementation, this could save to a database or file
-
-        except Exception as e:
-            self.logger.warning(f"Failed to cache successful APN: {e}",
-                              extra={'interface_number': self.interface_number})
 
     def get_current_bearer_path(self) -> Optional[str]:
         """Get the current bearer path"""

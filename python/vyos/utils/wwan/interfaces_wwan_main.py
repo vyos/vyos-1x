@@ -64,7 +64,7 @@ class ManagerFormatter(_BaseFormatter):
             wwan_data.append(f'version="{record.version}"')
         if wwan_data:
             sd_elements.append(f'[wwan@32473 {" ".join(wwan_data)}]')
-        origin_data = [f'software="vyos-wwan"', f'version="1.0"']
+        origin_data = ['software="vyos-wwan"', 'version="1.0"']
         sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
         return ''.join(sd_elements) if sd_elements else '-'
 
@@ -284,7 +284,7 @@ async def wait_for_modemmanager_dbus():
                     member="GetManagedObjects"
                 )
                 # GetManagedObjects takes no parameters
-                reply = await asyncio.wait_for(bus.call(msg), timeout=5.0)
+                await asyncio.wait_for(bus.call(msg), timeout=5.0)
 
                 logger.info("ModemManager is fully available and responsive on D-Bus")
                 return bus
