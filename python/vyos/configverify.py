@@ -180,8 +180,13 @@ def verify_mirror_redirect(config):
 
     It makes no sense to mirror traffic back at yourself!
     """
-    if {'mirror', 'redirect'} <= set(config):
+    if 'mirror' in config and 'redirect' in config:
         raise ConfigError('Mirror and redirect can not be enabled at the same time!')
+
+    if 'mirror' in config and 'qos' in config:
+        # XXX: support combination of limiting and mirror - this is an artificial
+        # limitation from the past
+        raise ConfigError('Can not use QoS together with mirror!')
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
@@ -198,11 +203,6 @@ def verify_mirror_redirect(config):
         if not interface_exists(redirect_ifname):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
-
-    if 'qos' in config and ('mirror' in config or 'redirect' in config):
-        # XXX: support combination of limiting and redirect/mirror - this is an
-        # artificial limitation
-        raise ConfigError('Can not use QoS together with mirror/redirect!')
 
 def verify_authentication(config):
     """
