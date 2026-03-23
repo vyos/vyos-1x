@@ -37,7 +37,7 @@ interfaces
         │     │     ├── auto-unlock                       #   valueless
         │     │     ├── new-pin <4-8 digits>               #   new PIN when unlocking with PUK
         │     │     ├── supported-bands <all|LTE|5G|band,band,...>
-        │     │     ├── preferred-carrier <name>
+        │     │     ├── preferred-carrier <MCCMNC|name>  #   e.g. '302610' or 'Bell'
         │     │     ├── enable-network-scan               #   valueless
         │     │     └── data-limit
         │     │           ├── size <bytes>                #   0 = unlimited
@@ -106,7 +106,7 @@ interfaces
         │
         ├── band
         │     ├── supported <all|LTE|5G|band,band,...>    #   global default
-        │     ├── preferred-carrier <name>                 #   global fallback for per-SIM
+        │     ├── preferred-carrier <MCCMNC|name>          #   global fallback for per-SIM
         │     └── network-scan
         │           ├── enable                            #   valueless
         │           └── timeout <seconds>                 #   default: 60
@@ -162,7 +162,7 @@ automatically using a 4-priority APN discovery chain:
 | **Data limits (global fallback)** | size `0`, action `disable`, billing-date `1` | Applies when per-SIM values are not set |
 | **Data usage monitoring** | interval `30 s`, thresholds `75%, 90%, 95%` | Counters tracked; warnings logged at thresholds (no action) |
 | **Hardware reset** | `enabled`, max `3` attempts, cooldown `300 s` | Modem power-cycles after repeated unrecoverable failures |
-| **Preferred carrier (global)** | `(empty)` | Fallback for per-SIM preferred-carrier |
+| **Preferred carrier (global)** | `(empty)` | Fallback for per-SIM preferred-carrier; accepts MCCMNC code (e.g. `302610`) or friendly name (e.g. `Bell`) |
 | **Band selection** | `all` | All modem-supported bands enabled |
 | **Network scan** | `disabled` | No background operator scanning |
 | **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
@@ -227,7 +227,7 @@ set interfaces wwan wwan0 sim slot 1 puk ''
 set interfaces wwan wwan0 sim slot 1 auto-unlock
 set interfaces wwan wwan0 sim slot 1 new-pin '0000'
 set interfaces wwan wwan0 sim slot 1 supported-bands 'all'
-set interfaces wwan wwan0 sim slot 1 preferred-carrier 'Bell'
+set interfaces wwan wwan0 sim slot 1 preferred-carrier '302610'
 set interfaces wwan wwan0 sim slot 1 enable-network-scan
 set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
 set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
@@ -394,10 +394,16 @@ set interfaces wwan wwan0 hardware-reset cooldown 300
 ### Band / Carrier / Network Scan
 
 > **If unconfigured:** All bands enabled, network scanning disabled, scan timeout 60 s.
+>
+> `preferred-carrier` accepts two formats:
+> - **MCCMNC code** (e.g. `'302610'` for Bell) — used for direct `Register()`; fast, no scan needed.
+> - **Friendly name** (e.g. `'Bell'`) — matched as a case-insensitive substring against `operator-long` from a network scan; requires `network-scan enable`.
+>
+> MCCMNC is preferred because it avoids the 2+ minute scan delay.
 
 ```
 set interfaces wwan wwan0 band supported 'all'
-set interfaces wwan wwan0 band preferred-carrier 'Bell'
+set interfaces wwan wwan0 band preferred-carrier '302610'
 set interfaces wwan wwan0 band network-scan enable
 set interfaces wwan wwan0 band network-scan timeout 60
 ```
