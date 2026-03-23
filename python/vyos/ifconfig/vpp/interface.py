@@ -71,3 +71,8 @@ class VPPInterface:
         if 'mtu' in config:
             mtu = int(config['mtu'])
             self.set_mtu_vpp(mtu)
+
+        # Set rx-mode
+        rx_mode = config.get('vpp_settings', {}).get('interface_rx_mode')
+        if rx_mode:
+            self.set_rx_mode(rx_mode)
