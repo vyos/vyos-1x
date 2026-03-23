@@ -105,5 +105,8 @@ class VPPIPIPInterface(Interface, VPPInterface):
         if rx_mode:
             self.set_rx_mode(rx_mode)
 
+        # Apply VPP-specific interface settings
+        VPPInterface.update(self, config)
+
         # Apply all settings to the lcp pair (kernel) interface
         super().update(config)

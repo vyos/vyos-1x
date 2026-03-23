@@ -19,10 +19,12 @@
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdep import set_dependents, call_dependents
+from vyos.configverify import verify_mtu_ipv6
 from vyos import ConfigError
 from vyos.utils.assertion import assert_mac
 from vyos.utils.process import is_systemd_service_active
 
+from vyos.ifconfig import Interface
 from vyos.ifconfig.vpp import VPPBondInterface
 from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
@@ -174,6 +176,19 @@ def verify(config):
                 f'it already belongs to bridge interface: {", ".join(bridge_members)}.'
             )
 
+        if mtu := config.get('mtu'):
+            mtu = int(mtu)
+            max_mtu = Interface(iface).get_max_mtu()
+            min_mtu = Interface(iface).get_min_mtu()
+            if mtu > max_mtu:
+                raise ConfigError(
+                    f'Configured MTU is greater than member interface "{iface}" maximum of {max_mtu}!'
+                )
+            if mtu < min_mtu:
+                raise ConfigError(
+                    f'Configured MTU is less than member interface "{iface}" minimum of {min_mtu}!'
+                )
+
     if 'mac' in config:
         mac = config['mac']
         try:
@@ -189,6 +204,8 @@ def verify(config):
             raise ConfigError(
                 f'Cannot remove interface {vif_iface}: it is still in use by the PPPoE server'
             )
+
+    verify_mtu_ipv6(config)
 
 
 def generate(config):

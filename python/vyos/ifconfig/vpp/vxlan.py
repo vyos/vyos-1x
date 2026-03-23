@@ -122,4 +122,6 @@ class VPPVXLANInterface(Interface, VPPInterface):
         if rx_mode:
             self.set_rx_mode(rx_mode)
 
+        VPPInterface.update(self, config)
+
         super().update(config)

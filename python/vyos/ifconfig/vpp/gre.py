@@ -141,4 +141,7 @@ class VPPGREInterface(Interface, VPPInterface):
         if rx_mode:
             self.set_rx_mode(rx_mode)
 
+        # Apply VPP-specific interface settings
+        VPPInterface.update(self, config)
+
         super().update(config)
