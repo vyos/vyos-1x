@@ -128,6 +128,7 @@ class ModemState(str, Enum):
     SIM_DISABLING = "SIM_DISABLING"
     SIM_ENABLING = "SIM_ENABLING"
     SIM_RECONFIGURING = "SIM_RECONFIGURING"
+    REGISTERED_IDLE = "REGISTERED_IDLE"  # Registered on network, no bearer (connect-on-demand)
 
 class ModemEvent(str, Enum):
     START_SCAN = "start_scan"
@@ -153,6 +154,7 @@ class ModemEvent(str, Enum):
     SIM_SWITCHED = "sim_switched"
     SIM_ENABLED = "sim_enabled"
     SIM_SWITCH_COMPLETE = "sim_switch_complete"
+    ENTER_IDLE = "enter_idle"  # Transition to REGISTERED_IDLE (connect-on-demand)
 
 class ModemStateMachine:
     modem_state_machines = {}
@@ -208,6 +210,7 @@ class ModemStateMachine:
         self.registration_handling_in_progress = False  # Prevent concurrent registration handling tasks
         self._registration_loss_timer = None    # Initialize registration loss timer
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
+        self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
 
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
@@ -1195,7 +1198,8 @@ class ModemStateMachine:
             ModemState.CONNECTED.value,
             ModemState.DISCONNECTED.value,
             ModemState.FAILED.value,
-            ModemState.USAGE_MONITORING.value
+            ModemState.USAGE_MONITORING.value,
+            ModemState.REGISTERED_IDLE.value
         ):
             # Normal reconfiguration
             self.transition(ModemEvent.RECONFIGURE)
@@ -1291,6 +1295,9 @@ class ModemStateMachine:
         self._last_known_ip = None
         self._ip_monitoring_task = None
 
+        # Connection mode: always-on | connect-on-demand | dial-on-demand
+        self.connection_mode = self.parsed_config.raw_config.get('connection_mode', 'always-on')
+
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None
         self._bearer_interface = None
@@ -1385,11 +1392,18 @@ class ModemStateMachine:
             logger.info("Initial modem configuration complete",
                        extra={'interface_number': self.interface_number})
 
-            # Automatically proceed to connection since signal handlers are disabled
-            logger.info("Automatically proceeding to connection phase",
-                       extra={'interface_number': self.interface_number})
+            # Check connection mode: park at REGISTERED_IDLE for connect-on-demand
             if self.machine.current_state == ModemState.CONFIGURING.value:
-                self.transition(ModemEvent.CONNECT)
+                if self.connection_mode == 'connect-on-demand':
+                    logger.info("Connect-on-demand active — parking at REGISTERED_IDLE "
+                                "(modem registered, no bearer, SMS available)",
+                               extra={'interface_number': self.interface_number})
+                    self.transition(ModemEvent.ENTER_IDLE)
+                else:
+                    # both always-on and dial-on-demand auto-connect
+                    logger.info("Automatically proceeding to connection phase",
+                               extra={'interface_number': self.interface_number})
+                    self.transition(ModemEvent.CONNECT)
             else:
                 logger.info("Skipping automatic connect transition - FSM already advanced",
                            extra={'interface_number': self.interface_number,
@@ -5083,7 +5097,7 @@ class ModemStateMachine:
 
         # ── 12. Key configuration summary ────────────────────────────────
         if self.config:
-            status['on_demand'] = self.config.get('on_demand', 'disabled')
+            status['connection_mode'] = self.config.get('connection_mode', 'always-on')
             status['android_apn_discovery'] = self.config.get('android_apn_discovery', 'disabled')
             status['enhanced_reconnection'] = (
                 'enabled' if self.config.get('enhanced_reconnection', {}).get('enabled') else 'disabled'

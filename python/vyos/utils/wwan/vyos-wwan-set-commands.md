@@ -18,13 +18,14 @@ The existing upstream VyOS WWAN commands (`apn`, `authentication`, `connect-on-d
 ```
 interfaces
   └── wwan <wwanN>
-        ├── connect-on-demand                             # (existing, valueless)
+        ├── connection-mode <always-on|connect-on-demand|dial-on-demand>  # NEW
         ├── network-mode <auto|lte|5g|3g|2g>              # NEW — modem-level RAT selection
         │
         ├── sim                                           # NEW — SIM management
         │     ├── active-slot <1|2>
         │     │
         │     ├── slot <1|2>                              #   per-SIM tag node
+        │     │     ├── enable                            #   valueless, default: on (slot 1), off (slot 2)
         │     │     ├── apn <name>
         │     │     ├── username <text>
         │     │     ├── password <text>
@@ -34,6 +35,7 @@ interfaces
         │     │     ├── pin <4-8 digits>
         │     │     ├── puk <8 digits>
         │     │     ├── auto-unlock                       #   valueless
+        │     │     ├── new-pin <4-8 digits>               #   new PIN when unlocking with PUK
         │     │     ├── supported-bands <all|LTE|5G|band,band,...>
         │     │     ├── preferred-carrier <name>
         │     │     ├── enable-network-scan               #   valueless
@@ -50,10 +52,6 @@ interfaces
         ├── apn-discovery
         │     └── android                                 #   valueless — enable Android APN DB
         │
-        ├── dial-on-demand
-        │     ├── idle-timeout <seconds>                  #   default: 300
-        │     └── traffic-threshold <bytes-per-sec>       #   default: 1024
-        │
         ├── reconnection
         │     ├── enhanced                                #   valueless — enable signal-aware reconnection
         │     ├── signal-threshold <dBm>                  #   default: -85
@@ -65,6 +63,7 @@ interfaces
         │     └── signal-strength-buffer <dBm>            #   default: 5
         │
         ├── interface-management
+        │     ├── enable                                  #   valueless, default: on
         │     ├── bearer-disconnect-delay <seconds>       #   default: 15
         │     ├── registration-recovery-delay <seconds>   #   default: 20
         │     ├── ip-change-delay <seconds>               #   default: 0.5
@@ -94,7 +93,11 @@ interfaces
         │
         ├── data-usage
         │     ├── monitoring-interval <seconds>           #   default: 30
-        │     └── warning-thresholds <pct,pct,...>        #   default: 75,90,95
+        │     ├── warning-thresholds <pct,pct,...>        #   default: 75,90,95
+        │     └── default-limit                           #   global fallback for per-SIM
+        │           ├── size <bytes>                      #   default: 0 (unlimited)
+        │           ├── action <disable|alert|throttle|block|failover>  #   default: disable
+        │           └── billing-date <1-28>               #   default: 1
         │
         ├── hardware-reset
         │     ├── enable                                  #   valueless, default: on
@@ -103,6 +106,7 @@ interfaces
         │
         ├── band
         │     ├── supported <all|LTE|5G|band,band,...>    #   global default
+        │     ├── preferred-carrier <name>                 #   global fallback for per-SIM
         │     └── network-scan
         │           ├── enable                            #   valueless
         │           └── timeout <seconds>                 #   default: 60
@@ -141,21 +145,24 @@ automatically using a 4-priority APN discovery chain:
 | **SIM failover** | `disabled` | Single-SIM operation; slot 2 is ignored |
 | **SIM failback** | `disabled` | Even if failover fires, no automatic return to primary |
 | **APN discovery (Android)** | `disabled` | Only configured / automatic APNs are tried |
-| **Connect-on-demand** | `disabled` | Modem connects immediately at boot and stays connected |
+| **Connection mode** | `always-on` | Modem connects immediately at boot and stays connected |
 | **Enhanced reconnection** | `disabled` | Fixed retry intervals; no signal-quality awareness |
 | **Reconnection retry** | good-signal `15 s`, poor-signal `45 s` | (only effective when enhanced reconnection is enabled) |
 | **Signal threshold** | `-85 dBm` | Boundary between "good" and "poor" reconnection strategies |
 | **Bearer disconnect delay** | `15 s` | Grace period before tearing down a disconnected bearer |
 | **Registration recovery delay** | `20 s` | Debounce for registration-lost flaps |
 | **IP change delay** | `0.5 s` | Settle time after IP re-assignment |
+| **Interface management** | `enabled` | Master on/off for bearer, registration, IP monitoring subsystem |
 | **Link / bearer / IP monitoring** | all `enabled` | Interface-up enforcement, bearer-state tracking, IP-change detection all active |
 | **Interface-up timeout** | `10 s` | Max wait for kernel interface to come up after bearer connect |
 | **Connectivity monitoring** | `disabled` | No active ping probes; dead path undetected until bearer drops |
 | **Connectivity ping targets** | IPv4: `8.8.8.8, 1.1.1.1`; IPv6: Google/Cloudflare DNS | (only effective when monitoring is enabled) |
 | **Failover** | `disabled` | No automatic switchover on signal loss or connect failures |
 | **Data limits (per-SIM)** | size `0` (unlimited), action `disable`, billing-date `1` | No data cap enforcement |
+| **Data limits (global fallback)** | size `0`, action `disable`, billing-date `1` | Applies when per-SIM values are not set |
 | **Data usage monitoring** | interval `30 s`, thresholds `75%, 90%, 95%` | Counters tracked; warnings logged at thresholds (no action) |
 | **Hardware reset** | `enabled`, max `3` attempts, cooldown `300 s` | Modem power-cycles after repeated unrecoverable failures |
+| **Preferred carrier (global)** | `(empty)` | Fallback for per-SIM preferred-carrier |
 | **Band selection** | `all` | All modem-supported bands enabled |
 | **Network scan** | `disabled` | No background operator scanning |
 | **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
@@ -208,6 +215,7 @@ set interfaces wwan wwan0 network-mode 'auto'
 set interfaces wwan wwan0 sim active-slot 1
 
 # Per-SIM slot configuration
+set interfaces wwan wwan0 sim slot 1 enable
 set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
 set interfaces wwan wwan0 sim slot 1 username ''
 set interfaces wwan wwan0 sim slot 1 password ''
@@ -217,6 +225,7 @@ set interfaces wwan wwan0 sim slot 1 roaming
 set interfaces wwan wwan0 sim slot 1 pin '1234'
 set interfaces wwan wwan0 sim slot 1 puk ''
 set interfaces wwan wwan0 sim slot 1 auto-unlock
+set interfaces wwan wwan0 sim slot 1 new-pin '0000'
 set interfaces wwan wwan0 sim slot 1 supported-bands 'all'
 set interfaces wwan wwan0 sim slot 1 preferred-carrier 'Bell'
 set interfaces wwan wwan0 sim slot 1 enable-network-scan
@@ -247,66 +256,60 @@ set interfaces wwan wwan0 sim failback check-interval 600
 set interfaces wwan wwan0 apn-discovery android
 ```
 
-### Dial-on-Demand
+### Connection Mode
 
-> **If unconfigured:** Always-on — modem connects at boot and stays connected.  Idle-timeout and traffic-threshold have no effect unless `connect-on-demand` is enabled.
+> **If unconfigured:** `always-on` — modem connects at boot and stays connected.
 
 ```
-set interfaces wwan wwan0 connect-on-demand
-set interfaces wwan wwan0 dial-on-demand idle-timeout 300
-set interfaces wwan wwan0 dial-on-demand traffic-threshold 1024
+set interfaces wwan wwan0 connection-mode 'always-on'
 ```
 
-> **Note:** `connect-on-demand` and `dial-on-demand` are **mutually exclusive** modes
-> (plus the default always-on).  See *Design Notes* below.
+### Connection Mode Design Notes
 
-### Connection Mode Design Notes (future implementation)
+Three connection modes are available (choose one):
 
-Three connection modes are planned:
-
-| Mode | Config | Registration | Bearer | Linux interface | Trigger |
-|---|---|---|---|---|---|
-| **always-on** (default) | neither set | yes | yes, auto | up with IP | automatic at boot |
-| **connect-on-demand** | `connect-on-demand` | yes | no | down | external app calls D-Bus `connect` |
-| **dial-on-demand** | `dial-on-demand` | yes | no | present, no IP | traffic detection or D-Bus "dial-connect"; auto-drops on idle |
+| Mode | Startup bearer | D-Bus `connect_bearer()` | D-Bus `disconnect_bearer()` | D-Bus `get_bearer_status()` |
+|---|---|---|---|---|
+| **always-on** (default) | yes, auto | reconnect from FAILED | full disconnect | `"connected"` / `"disconnected"` |
+| **connect-on-demand** | **no** (REGISTERED_IDLE) | bring up bearer | drop bearer → REGISTERED_IDLE | `"connected"` / `"disconnected"` |
+| **dial-on-demand** | **yes**, auto | bring up bearer | drop bearer → REGISTERED_IDLE | `"connected"` / `"disconnected"` |
 
 **always-on** — Current default.  Modem registers, bearer is established, Linux
 interface comes up, and stays connected indefinitely.
 
 **connect-on-demand** — VyOS-compatible explicit mode.  The FSM registers the
 modem on the network but does **not** establish a bearer.  The modem sits idle
-until an external application (or operator) issues a D-Bus `connect` call.
-Once connected, the bearer stays up until an explicit `disconnect` or a failure.
-This is the existing upstream VyOS behaviour.
+at `REGISTERED_IDLE` until an external application issues a D-Bus
+`connect_bearer()` call.  Once connected, the bearer stays up until an explicit
+`disconnect_bearer()` or a failure.  SMS is available while parked at
+`REGISTERED_IDLE`.
 
-**dial-on-demand** — Traffic-aware transparent mode.  The FSM registers the
-modem and waits.  When an application sends a new D-Bus "dial-connect" request
-(or traffic detection triggers), the bearer is established and the Linux
-interface receives an IP.  While traffic flows, the bearer stays up.  When
-traffic drops below `traffic-threshold` bytes/sec for `idle-timeout` seconds,
-the bearer is **silently** torn down — the Linux interface is **not** notified
-and routing is not disturbed.  Only registration loss triggers a real interface
-event visible to the OS.  This keeps the radio attached to the network but
-avoids unnecessary data sessions (important for metered / IoT SIMs).
+**dial-on-demand** — Auto-connect with external bearer management.  The FSM
+registers the modem **and** establishes the bearer automatically at startup
+(identical to always-on).  An external application can then:
 
-**FSM states needed:**
-- `REGISTERED_IDLE` — registered on network, no bearer, waiting for trigger
-- `DIAL_CONNECTING` — bearer being established on demand
-- `DIAL_CONNECTED` — bearer up, traffic flowing, idle timer running
-- `DIAL_DISCONNECTING` — idle timeout expired, silently tearing down bearer
+1. Call D-Bus `disconnect_bearer()` → bearer drops, modem parks at
+   `REGISTERED_IDLE` (registered, SMS available, no data).
+2. Call D-Bus `connect_bearer()` → bearer is re-established.
+3. Poll D-Bus `get_bearer_status()` → returns `"connected"` or `"disconnected"`.
 
-**Silent disconnect behaviour:**
+All three bearer methods (`connect_bearer`, `disconnect_bearer`,
+`get_bearer_status`) are always available regardless of connection mode.
+`connect_bearer()` and `disconnect_bearer()` always return `"accepted"`;
+the caller polls `get_bearer_status()` to observe the actual state.
+
+The legacy `connect()` and `disconnect()` D-Bus methods also remain.  In
+`connect-on-demand` and `dial-on-demand` modes they behave identically to
+the bearer methods (fire-and-forget `"accepted"` responses).
+
+**Silent disconnect behaviour (both on-demand modes):**
 - Bearer is released via MM `Simple.Disconnect()`
 - Linux interface stays present (link-layer up, no IP or stale IP)
 - No routing withdrawal — upstream apps see the interface as "available"
-- Next traffic burst or dial-connect re-establishes the bearer transparently
+- Next `connect_bearer()` re-establishes the bearer transparently
 - Registration-loss events still propagate normally (interface goes down)
 
-> **Status:** Only the `connect-on-demand` gate is implemented today
-> ([interfaces_wwan2.py line 442](python/vyos/utils/wwan/interfaces_wwan2.py#L442) —
-> skips auto-connect if enabled).  The `dial-on-demand` parameters
-> (`idle-timeout`, `traffic-threshold`) are parsed and stored but have
-> **no runtime effect** yet.  Full implementation is planned.
+> **Status:** All three connection modes are **fully implemented**.
 
 ### Enhanced Reconnection Strategy
 
@@ -327,6 +330,7 @@ set interfaces wwan wwan0 reconnection signal-strength-buffer 5
 > **If unconfigured:** All monitors active (bearer-state, IP-changes, link-up enforcement).  Delays: bearer-disconnect 15 s, registration-recovery 20 s, IP-change 0.5 s, interface-up timeout 10 s.
 
 ```
+set interfaces wwan wwan0 interface-management enable
 set interfaces wwan wwan0 interface-management bearer-disconnect-delay 15
 set interfaces wwan wwan0 interface-management registration-recovery-delay 20
 set interfaces wwan wwan0 interface-management ip-change-delay 0.5
@@ -372,6 +376,9 @@ set interfaces wwan wwan0 failover signal-threshold -90
 ```
 set interfaces wwan wwan0 data-usage monitoring-interval 30
 set interfaces wwan wwan0 data-usage warning-thresholds '75,90,95'
+set interfaces wwan wwan0 data-usage default-limit size 0
+set interfaces wwan wwan0 data-usage default-limit action 'disable'
+set interfaces wwan wwan0 data-usage default-limit billing-date 1
 ```
 
 ### Hardware Reset
@@ -390,6 +397,7 @@ set interfaces wwan wwan0 hardware-reset cooldown 300
 
 ```
 set interfaces wwan wwan0 band supported 'all'
+set interfaces wwan wwan0 band preferred-carrier 'Bell'
 set interfaces wwan wwan0 band network-scan enable
 set interfaces wwan wwan0 band network-scan timeout 60
 ```
@@ -441,10 +449,10 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `sim slot N data-limit size` | `sim_slot_N_data_limit_size` | `0` |
 | `sim slot N data-limit action` | `sim_slot_N_data_limit_action` | `disable` |
 | `sim slot N data-limit billing-date` | `sim_slot_N_data_limit_billing_date` | `1` |
+| `sim slot N enable` | *(D-Bus only)* | slot 1: `true`, slot 2: `false` |
+| `sim slot N new-pin` | *(D-Bus only)* | `(empty)` |
 | `apn-discovery android` | `android_apn_discovery` | `disabled` |
-| `connect-on-demand` | `on_demand` | `disabled` |
-| `dial-on-demand idle-timeout` | `on_demand_idle_timeout` | `300` |
-| `dial-on-demand traffic-threshold` | `on_demand_traffic_threshold` | `1024` |
+| `connection-mode` | `connection_mode` | `always-on` |
 | `reconnection enhanced` | `enhanced_reconnection` | `disabled` |
 | `reconnection signal-threshold` | `reconnection_signal_threshold` | `-85` |
 | `reconnection retry-interval good-signal` | `retry_interval_good_signal` | `15` |
@@ -452,6 +460,7 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `reconnection max-wait-for-signal` | `max_wait_for_signal` | `120` |
 | `reconnection signal-check-interval` | `signal_check_interval` | `10` |
 | `reconnection signal-strength-buffer` | `signal_strength_buffer` | `5` |
+| `interface-management enable` | `interface_management_enabled` | `true` |
 | `interface-management bearer-disconnect-delay` | `bearer_disconnect_delay` | `15` |
 | `interface-management registration-recovery-delay` | `registration_recovery_delay` | `20` |
 | `interface-management ip-change-delay` | `ip_change_delay` | `0.5` |
@@ -476,10 +485,14 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `failover signal-threshold` | `failover_signal_threshold` | `-90` |
 | `data-usage monitoring-interval` | `data_usage_monitoring_interval` | `30` |
 | `data-usage warning-thresholds` | `data_usage_warning_thresholds` | `75,90,95` |
+| `data-usage default-limit size` | `data_limit_size` | `0` |
+| `data-usage default-limit action` | `data_limit_action` | `disable` |
+| `data-usage default-limit billing-date` | `data_limit_billing_date` | `1` |
 | `hardware-reset enable` | `hardware_reset_enabled` | `true` |
 | `hardware-reset max-attempts` | `max_hardware_resets` | `3` |
 | `hardware-reset cooldown` | `hardware_reset_cooldown` | `300` |
 | `band supported` | `supported_bands` | `all` |
+| `band preferred-carrier` | `preferred_carrier` | `(empty)` |
 | `band network-scan enable` | `enable_network_scan` | `false` |
 | `band network-scan timeout` | `network_scan_timeout` | `60` |
 | `network-mode` | `network_mode` | `auto` |

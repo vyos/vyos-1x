@@ -175,7 +175,7 @@ class InterfaceConfig(ServiceInterface):
     # Centralized default configuration values
     DEFAULT_CONFIG = {
         # Interface-level settings
-        "on_demand": "disabled",
+        "connection_mode": "always-on",  # always-on | connect-on-demand | dial-on-demand
         "active_sim_slot": 1,  # Which SIM slot to use (1 or 2)
         "sim_failover": "disabled",  # Auto-switch SIMs on failure
 
@@ -196,10 +196,6 @@ class InterfaceConfig(ServiceInterface):
         # Data usage settings (per-SIM only; no global defaults needed)
         "data_usage_monitoring_interval": 30,
         "data_usage_warning_thresholds": [75, 90, 95],
-
-        # On-demand configuration
-        "on_demand_idle_timeout": 300,
-        "on_demand_traffic_threshold": 1024,
 
         # Hardware management settings
         "hardware_reset_enabled": True,
@@ -674,11 +670,12 @@ class InterfaceConfig(ServiceInterface):
         """Validate configuration parameters before applying"""
 
         # Validate interface-level settings
-        if 'on_demand' in config and config['on_demand'] not in ['enabled', 'disabled']:
-            logger.warning("Invalid on_demand value",
+        valid_modes = ['always-on', 'connect-on-demand', 'dial-on-demand']
+        if 'connection_mode' in config and config['connection_mode'] not in valid_modes:
+            logger.warning("Invalid connection_mode value",
                           extra={'interface_number': self.interface_number,
-                                 'validation_field': 'on_demand'})
-            raise ValueError("on_demand must be 'enabled' or 'disabled'")
+                                 'validation_field': 'connection_mode'})
+            raise ValueError(f"connection_mode must be one of {valid_modes}")
 
         # Validate active SIM slot
         if 'active_sim_slot' in config:
@@ -1245,23 +1242,6 @@ class InterfaceConfig(ServiceInterface):
                                  'validation_field': 'detailed_status'})
             raise ValueError("detailed_status must be true or false")
 
-        # Validate on-demand settings
-        if 'on_demand_idle_timeout' in config:
-            timeout = config['on_demand_idle_timeout']
-            if not isinstance(timeout, int) or timeout < 60 or timeout > 7200:
-                logger.warning("Invalid on_demand_idle_timeout",
-                              extra={'interface_number': self.interface_number,
-                                     'validation_field': 'on_demand_idle_timeout'})
-                raise ValueError("on_demand_idle_timeout must be between 60 and 7200 seconds")
-
-        if 'on_demand_traffic_threshold' in config:
-            threshold = config['on_demand_traffic_threshold']
-            if not isinstance(threshold, int) or threshold < 100 or threshold > 1000000:
-                logger.warning("Invalid on_demand_traffic_threshold",
-                              extra={'interface_number': self.interface_number,
-                                     'validation_field': 'on_demand_traffic_threshold'})
-                raise ValueError("on_demand_traffic_threshold must be between 100 and 1000000 bytes/second")
-
         # Validate data usage warning thresholds
         if 'data_usage_warning_thresholds' in config:
             thresholds = config['data_usage_warning_thresholds']
@@ -1452,6 +1432,9 @@ class InterfaceConfig(ServiceInterface):
         immediately.  Otherwise, sets a ``connect_requested`` flag on the FSM
         so that connection proceeds automatically as soon as the modem is ready.
         The caller never needs to know or care about FSM state.
+
+        In on-demand / dial-on-demand modes the response is a simple
+        ``"accepted"``; the caller polls ``get_bearer_status()`` separately.
         """
         try:
             current_state = (
@@ -1464,13 +1447,18 @@ class InterfaceConfig(ServiceInterface):
                        extra={'interface_number': self.interface_number,
                               'current_state': current_state})
 
+            # Fire-and-forget shorthand for on-demand modes
+            fire_and_forget = self.fsm.connection_mode != 'always-on'
+
             # States where CONNECT transition is valid right now
-            connectable_states = {'FAILED'}
+            connectable_states = {'FAILED', 'REGISTERED_IDLE'}
             # States where we are already connected / on the way
             already_connected_states = {'CONNECTED', 'CONNECTING', 'USAGE_MONITORING'}
 
             if current_state == 'CONFIGURING':
                 self.fsm.connect_requested = True
+                if fire_and_forget:
+                    return "accepted"
                 msg = (f"Connect request queued for interface {self.interface_number} "
                        f"while configuration is still in progress.")
                 logger.info(msg, extra={'interface_number': self.interface_number,
@@ -1478,6 +1466,8 @@ class InterfaceConfig(ServiceInterface):
                 return msg
 
             if current_state in already_connected_states:
+                if fire_and_forget:
+                    return "accepted"
                 msg = (f"Interface {self.interface_number} is already "
                        f"in state {current_state} — no action needed")
                 logger.info(msg, extra={'interface_number': self.interface_number})
@@ -1486,10 +1476,14 @@ class InterfaceConfig(ServiceInterface):
             if current_state in connectable_states:
                 from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent
                 self.fsm.transition(ModemEvent.CONNECT)
+                if fire_and_forget:
+                    return "accepted"
                 return f"connect() on {self.interface_number}"
 
             # Not ready yet — queue the request so FSM connects when it can
             self.fsm.connect_requested = True
+            if fire_and_forget:
+                return "accepted"
             msg = (f"Connect request queued for interface {self.interface_number} "
                    f"(current state: {current_state}). "
                    f"Connection will proceed automatically when modem is ready.")
@@ -1512,6 +1506,9 @@ class InterfaceConfig(ServiceInterface):
 
             current_state = self.fsm.machine.current_state if hasattr(self.fsm, 'machine') and self.fsm.machine else 'UNKNOWN'
 
+            # Fire-and-forget shorthand for on-demand modes
+            fire_and_forget = self.fsm.connection_mode != 'always-on'
+
             # States where disconnect is a no-op (already disconnected or not connected)
             already_disconnected = {
                 ModemState.DISCONNECTED.value,
@@ -1520,8 +1517,11 @@ class InterfaceConfig(ServiceInterface):
                 ModemState.WAITING_FOR_CONFIG.value,
                 ModemState.MODEM_FOUND.value,
                 ModemState.WAITING_FOR_SIM.value,
+                ModemState.REGISTERED_IDLE.value,
             }
             if current_state in already_disconnected:
+                if fire_and_forget:
+                    return "accepted"
                 msg = f"Interface {self.interface_number} not connected (state: {current_state})"
                 logger.info(msg, extra={'interface_number': self.interface_number})
                 return msg
@@ -1533,16 +1533,116 @@ class InterfaceConfig(ServiceInterface):
                 ModemState.SIM_SWITCHING.value,
             }
             if current_state in disconnectable:
+                # On-demand / dial-on-demand: drop bearer but keep registration
+                if fire_and_forget:
+                    self.fsm.transition(ModemEvent.ENTER_IDLE)
+                    return "accepted"
                 self.fsm.transition(ModemEvent.DISCONNECT)
                 return f"disconnect() on {self.interface_number}"
 
             # Transitional states — log and return gracefully rather than error
+            if fire_and_forget:
+                return "accepted"
             msg = f"Interface {self.interface_number} in transitional state {current_state}, disconnect queued"
             logger.info(msg, extra={'interface_number': self.interface_number,
                                     'current_state': current_state})
             return msg
         except Exception as e:
             logger.error("Disconnect failed",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
+            raise DBusError("com.igos.IgosModemManager.DisconnectionError", str(e))
+
+    @method()
+    async def get_bearer_status(self) -> 's':  # type: ignore[name-defined]  # noqa: F821
+        """Lightweight bearer status poll.
+
+        Returns ``"connected"`` when the data bearer is up, or
+        ``"disconnected"`` otherwise.  Designed for dial-on-demand callers
+        who need to poll bearer state without the overhead of full status.
+        """
+        try:
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemState
+            current_state = (
+                self.fsm.machine.current_state
+                if hasattr(self.fsm, 'machine') and self.fsm.machine
+                else 'UNKNOWN'
+            )
+            bearer_up_states = {
+                ModemState.CONNECTED.value,
+                ModemState.USAGE_MONITORING.value,
+            }
+            status = "connected" if current_state in bearer_up_states else "disconnected"
+            logger.info("Bearer status polled",
+                       extra={'interface_number': self.interface_number,
+                              'bearer_status': status,
+                              'fsm_state': current_state})
+            return status
+        except Exception as e:
+            logger.error("Bearer status check failed",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
+            raise DBusError("com.igos.IgosModemManager.StatusError", str(e))
+
+    @method()
+    async def connect_bearer(self) -> 's':  # type: ignore[name-defined]  # noqa: F821
+        """Request bearer establishment.  Always returns ``"accepted"``.
+
+        If the FSM is at ``REGISTERED_IDLE``, fires ``CONNECT`` immediately.
+        Otherwise queues ``connect_requested`` so the bearer comes up when
+        the modem is ready.  The caller polls ``get_bearer_status()`` to
+        observe the result.
+        """
+        try:
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent, ModemState
+            current_state = (
+                self.fsm.machine.current_state
+                if hasattr(self.fsm, 'machine') and self.fsm.machine
+                else 'UNKNOWN'
+            )
+            logger.info("Bearer connect requested",
+                       extra={'interface_number': self.interface_number,
+                              'current_state': current_state})
+
+            if current_state == ModemState.REGISTERED_IDLE.value:
+                self.fsm.transition(ModemEvent.CONNECT)
+            elif current_state not in {ModemState.CONNECTED.value,
+                                        ModemState.CONNECTING.value,
+                                        ModemState.USAGE_MONITORING.value}:
+                self.fsm.connect_requested = True
+            return "accepted"
+        except Exception as e:
+            logger.error("Bearer connect failed",
+                        extra={'interface_number': self.interface_number,
+                               'error': str(e)})
+            raise DBusError("com.igos.IgosModemManager.ConnectionError", str(e))
+
+    @method()
+    async def disconnect_bearer(self) -> 's':  # type: ignore[name-defined]  # noqa: F821
+        """Request bearer teardown.  Always returns ``"accepted"``.
+
+        Drops the data bearer but keeps the modem registered on the network
+        (transitions to ``REGISTERED_IDLE``).  SMS remains available.  If the
+        bearer is already down the call is a harmless no-op.  The caller polls
+        ``get_bearer_status()`` to observe the result.
+        """
+        try:
+            from vyos.utils.wwan.interfaces_wwan_state_machine import ModemEvent, ModemState
+            current_state = (
+                self.fsm.machine.current_state
+                if hasattr(self.fsm, 'machine') and self.fsm.machine
+                else 'UNKNOWN'
+            )
+            logger.info("Bearer disconnect requested",
+                       extra={'interface_number': self.interface_number,
+                              'current_state': current_state})
+
+            bearer_up = {ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value}
+            if current_state in bearer_up:
+                self.fsm.transition(ModemEvent.ENTER_IDLE)
+            return "accepted"
+        except Exception as e:
+            logger.error("Bearer disconnect failed",
                         extra={'interface_number': self.interface_number,
                                'error': str(e)})
             raise DBusError("com.igos.IgosModemManager.DisconnectionError", str(e))

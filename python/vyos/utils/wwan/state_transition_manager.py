@@ -83,8 +83,10 @@ class StateTransitionManager:
             description="Network connection establishment and monitoring",
             transitions=[
                 StateTransition("CONFIGURING", "CONNECTING", "CONNECT", "Attempt network connection"),
+                StateTransition("CONFIGURING", "REGISTERED_IDLE", "ENTER_IDLE", "Park at registered-idle (connect-on-demand)"),
                 StateTransition("CONNECTING", "CONNECTED", "CONNECTED", "Connection established successfully"),
                 StateTransition("CONNECTED", "USAGE_MONITORING", "START_USAGE_MONITORING", "Start data usage monitoring"),
+                StateTransition("REGISTERED_IDLE", "CONNECTING", "CONNECT", "D-Bus connect from on-demand idle"),
             ]
         )
 
@@ -96,6 +98,8 @@ class StateTransitionManager:
                 StateTransition("CONNECTED", "DISCONNECTING", "DISCONNECT", "User or system disconnect"),
                 StateTransition("USAGE_MONITORING", "DISCONNECTING", "DISCONNECT", "Disconnect from monitoring"),
                 StateTransition("DISCONNECTING", "DISCONNECTED", "DISCONNECTED", "Disconnection completed"),
+                StateTransition("CONNECTED", "REGISTERED_IDLE", "ENTER_IDLE", "On-demand disconnect: drop bearer, keep registration"),
+                StateTransition("USAGE_MONITORING", "REGISTERED_IDLE", "ENTER_IDLE", "On-demand disconnect from monitoring"),
             ]
         )
 
@@ -110,6 +114,7 @@ class StateTransitionManager:
                 # SIM missing detection
                 StateTransition("DISCONNECTED", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while disconnected"),
                 StateTransition("CONFIGURING", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed during config"),
+                StateTransition("REGISTERED_IDLE", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while idle"),
 
                 # SIM switching transitions
                 StateTransition("CONNECTED", "SIM_SWITCHING", "SWITCH_SIM", "Initiate SIM switch"),
@@ -117,6 +122,7 @@ class StateTransitionManager:
                 StateTransition("CONFIGURING", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from config"),
                 StateTransition("DISCONNECTED", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch when disconnected"),
                 StateTransition("FAILED", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from failed state"),
+                StateTransition("REGISTERED_IDLE", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from on-demand idle"),
 
                 # SIM switch process — events match what the code actually fires:
                 #   _execute_sim_switch  -> SIM_DISCONNECTED
@@ -164,6 +170,7 @@ class StateTransitionManager:
                 StateTransition("DISCONNECTED", "CONFIGURING", "RECONFIGURE", "Reconfigure disconnected modem"),
                 StateTransition("FAILED", "CONFIGURING", "RECONFIGURE", "Reconfigure failed modem"),
                 StateTransition("USAGE_MONITORING", "CONFIGURING", "RECONFIGURE", "Reconfigure from monitoring"),
+                StateTransition("REGISTERED_IDLE", "CONFIGURING", "RECONFIGURE", "Reconfigure from on-demand idle"),
             ]
         )
 
@@ -189,6 +196,7 @@ class StateTransitionManager:
                 StateTransition("SIM_DISABLING", "SCANNING", "START_SCAN", "Modem removed during SIM disable"),
                 StateTransition("SIM_ENABLING", "SCANNING", "START_SCAN", "Modem removed during SIM enable"),
                 StateTransition("SIM_RECONFIGURING", "SCANNING", "START_SCAN", "Modem removed during SIM reconfig"),
+                StateTransition("REGISTERED_IDLE", "SCANNING", "START_SCAN", "Modem removed while idle (on-demand)"),
             ]
         )
 

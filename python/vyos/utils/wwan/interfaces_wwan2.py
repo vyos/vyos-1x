@@ -205,7 +205,7 @@ def build_config(raw_cfg):
         # Basic interface settings
         'active_sim_slot': raw_cfg.get('active_sim_slot', 1),
         'sim_failover': raw_cfg.get('sim_failover', 'disabled'),
-        'on_demand': raw_cfg.get('on_demand', 'disabled'),
+        'connection_mode': raw_cfg.get('connection_mode', 'always-on'),
 
         # Enhanced reconnection strategy
         'enhanced_reconnection': enhanced_reconnection,
@@ -227,10 +227,6 @@ def build_config(raw_cfg):
         # Data usage settings (per-SIM only — see sim_slots entries)
         'data_usage_monitoring_interval': raw_cfg.get('data_usage_monitoring_interval', 30),
         'data_usage_warning_thresholds': raw_cfg.get('data_usage_warning_thresholds', [75, 90, 95]),
-
-        # On-demand configuration
-        'on_demand_idle_timeout': raw_cfg.get('on_demand_idle_timeout', 300),
-        'on_demand_traffic_threshold': raw_cfg.get('on_demand_traffic_threshold', 1024),
 
         # Hardware management settings
         'hardware_reset_enabled': raw_cfg.get('hardware_reset_enabled', True),
@@ -438,13 +434,9 @@ async def configure_interface(config):
             logger.info("Configuration applied",
                        extra={'interface_number': interface_number, 'result': result})
 
-            # Optional: Start connection if not on-demand
-            if config.get('on_demand', 'disabled') == 'disabled':
-                logger.info("Starting connection",
-                           extra={'interface_number': interface_number})
-                connect_result = await asyncio.wait_for(cfg_iface.call_connect(), timeout=15.0)
-                logger.info("Connection result",
-                           extra={'interface_number': interface_number, 'result': connect_result})
+            # Connection is managed by the FSM based on connection_mode:
+            # always-on / dial-on-demand: auto-connects after configuration
+            # connect-on-demand: parks at REGISTERED_IDLE, waits for D-Bus connect()
 
             return True
 
