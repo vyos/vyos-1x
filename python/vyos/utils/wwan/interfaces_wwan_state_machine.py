@@ -212,6 +212,15 @@ class ModemStateMachine:
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
         self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
 
+        # SIM PIN/PUK unlock safety — try only once per boot cycle
+        self._pin_unlock_attempted = False    # True after first PIN attempt (success or failure)
+        self._puk_unlock_attempted = False    # True after first PUK attempt (success or failure)
+        self._pin_unlock_failed = False       # True if PIN unlock failed (wrong PIN)
+        self._puk_unlock_failed = False       # True if PUK unlock failed (wrong PUK)
+        self._sim_permanently_locked = False  # True if PUK retries exhausted — SIM destroyed
+        self._pin_retries_remaining = -1      # Last known PIN retries (-1 = unknown)
+        self._puk_retries_remaining = -1      # Last known PUK retries (-1 = unknown)
+
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
         self.parsed_config = None  # Will store WWANConfiguration object
@@ -1618,11 +1627,48 @@ class ModemStateMachine:
         finally:
             self.initial_configuration_in_progress = False
 
+    async def _get_unlock_retries(self):
+        """Read SIM unlock retry counters from ModemManager.
+
+        Returns a dict mapping lock type to remaining retries, e.g.
+        ``{1: 3, 2: 10}`` where key 1 = PIN retries, key 2 = PUK retries.
+        Returns empty dict on failure.
+        """
+        try:
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            retries_variant = await props.call_get(MODEM_INTERFACE, "UnlockRetries")
+            retries_raw = retries_variant.value if retries_variant else {}
+            # Normalise: dbus_next may wrap each value in a Variant
+            retries = {}
+            for k, v in retries_raw.items():
+                key = k.value if hasattr(k, 'value') else int(k)
+                val = v.value if hasattr(v, 'value') else int(v)
+                retries[key] = val
+            return retries
+        except Exception as e:
+            logger.warning(f"Could not read UnlockRetries: {e}",
+                          extra={'interface_number': self.interface_number})
+            return {}
+
     async def _unlock_sim_if_needed(self):
-        """Unlock SIM with PIN/PUK if required"""
+        """Unlock SIM with PIN/PUK if required.
+
+        Safety rules (headless router protection):
+        - PIN unlock is attempted at most once per boot cycle.
+        - If PIN fails, PUK auto-recovery is tried (once) if PUK is configured.
+        - If PIN retries <= 1 before attempting, skip PIN and go to PUK recovery.
+        - PUK unlock is attempted at most once per boot cycle.
+        - If PUK retries <= 1, refuse to try — log CRITICAL.
+        """
         try:
             if not self.config:
                 return
+
+            # If we already know the SIM is permanently destroyed, stop immediately
+            if self._sim_permanently_locked:
+                logger.critical("SIM is permanently locked (PUK exhausted) — cannot unlock",
+                               extra={'interface_number': self.interface_number})
+                raise Exception("SIM permanently locked — PUK retries exhausted")
 
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
             state_variant = await props.call_get(MODEM_INTERFACE, "State")
@@ -1638,17 +1684,27 @@ class ModemStateMachine:
                 unlock_required_variant = await props.call_get(MODEM_INTERFACE, "UnlockRequired")
                 unlock_required = unlock_required_variant.value
 
+                # Read retry counters from SIM EEPROM
+                retries = await self._get_unlock_retries()
+                self._pin_retries_remaining = retries.get(1, -1)  # key 1 = SIM-PIN
+                self._puk_retries_remaining = retries.get(2, -1)  # key 2 = SIM-PUK
+
                 logger.info("SIM is locked, checking unlock requirement",
                            extra={'interface_number': self.interface_number,
-                                  'unlock_required': unlock_required})
+                                  'unlock_required': unlock_required,
+                                  'pin_retries': self._pin_retries_remaining,
+                                  'puk_retries': self._puk_retries_remaining})
 
                 active_sim_slot = self.config.get('active_sim_slot', 1)
                 sim_slots = self.config.get('sim_slots', [])
-                active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
+                active_sim_config = next(
+                    (sim for sim in sim_slots if sim['slot'] == active_sim_slot), {}
+                )
 
                 if unlock_required == 1:  # MM_MODEM_LOCK_SIM_PIN
                     await self._unlock_with_pin(active_sim_config)
                 elif unlock_required == 2:  # MM_MODEM_LOCK_SIM_PUK
+                    # SIM is PUK-locked (PIN retries exhausted)
                     await self._unlock_with_puk(active_sim_config)
                 else:
                     logger.warning("Unknown unlock requirement",
@@ -1686,6 +1742,8 @@ class ModemStateMachine:
             if "No SIM card present" in str(e):
                 # Re-raise SIM missing - this should stop the connection flow
                 raise
+            if "SIM permanently locked" in str(e):
+                raise
             logger.error(f"SIM unlock check failed: {e}",
                         extra={'interface_number': self.interface_number})
             # Don't fail the entire configuration for SIM unlock issues
@@ -1693,91 +1751,226 @@ class ModemStateMachine:
                           extra={'interface_number': self.interface_number})
 
     async def _unlock_with_pin(self, sim_config):
-        """Unlock SIM with PIN"""
+        """Unlock SIM with PIN — tried at most once per boot cycle.
+
+        Safety logic:
+        1. If already attempted this boot cycle, refuse.
+        2. If PIN retries <= 1, skip PIN and attempt PUK recovery instead.
+        3. Send PIN once.  On failure, attempt PUK recovery if PUK is configured.
+        """
         try:
             pin = sim_config.get('pin', '')
-            auto_unlock = sim_config.get('auto_unlock', True)
 
-            if pin and auto_unlock:
-                logger.info("Unlocking SIM with stored PIN",
+            if not pin:
+                logger.warning("PIN required but not configured",
+                              extra={'interface_number': self.interface_number})
+                raise Exception("PIN required but not configured")
+
+            # ── Guard: only one attempt per boot cycle ────────────────────
+            if self._pin_unlock_attempted:
+                if self._pin_unlock_failed:
+                    logger.error("PIN unlock already failed this boot cycle — "
+                                 "will not retry to protect remaining SIM retries",
+                                extra={'interface_number': self.interface_number,
+                                       'pin_retries': self._pin_retries_remaining})
+                    raise Exception("PIN unlock already failed this boot cycle")
+                # PIN succeeded previously — nothing to do
+                logger.info("PIN unlock already succeeded this boot cycle",
+                           extra={'interface_number': self.interface_number})
+                return
+
+            # ── Guard: check retry counter before sending ─────────────────
+            if 0 < self._pin_retries_remaining <= 1:
+                logger.critical("PIN retries dangerously low (%d) — skipping PIN, "
+                                "attempting PUK recovery to avoid permanent lock",
+                               self._pin_retries_remaining,
+                               extra={'interface_number': self.interface_number,
+                                      'pin_retries': self._pin_retries_remaining})
+                self._pin_unlock_attempted = True
+                self._pin_unlock_failed = True
+                # Escalate to PUK recovery
+                await self._unlock_with_puk(sim_config)
+                return
+
+            # ── Send PIN (one attempt) ────────────────────────────────────
+            self._pin_unlock_attempted = True
+            logger.info("Sending PIN to unlock SIM (one attempt, retries=%s)",
+                       self._pin_retries_remaining,
+                       extra={'interface_number': self.interface_number,
+                              'pin_retries': self._pin_retries_remaining})
+
+            iface = self.proxy.get_interface(MODEM_INTERFACE)
+            await iface.call_send_pin(pin)
+
+            # Wait for unlock to process
+            await asyncio.sleep(3)
+
+            # Verify unlock was successful
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            state_variant = await props.call_get(MODEM_INTERFACE, "State")
+            state = state_variant.value
+
+            if state != 2:  # No longer locked
+                self._pin_unlock_failed = False
+                # Refresh retry counters after success (they reset to max)
+                retries = await self._get_unlock_retries()
+                self._pin_retries_remaining = retries.get(1, -1)
+                logger.info("SIM unlocked with PIN successfully",
                            extra={'interface_number': self.interface_number,
-                                  'auto_unlock': auto_unlock})
-
-                iface = self.proxy.get_interface(MODEM_INTERFACE)
-                await iface.call_send_pin(pin)
-
-                # Wait a moment for unlock to process
-                await asyncio.sleep(3)
-
-                # Verify unlock was successful
-                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-                state_variant = await props.call_get(MODEM_INTERFACE, "State")
-                state = state_variant.value
-
-                if state != 2:  # No longer locked
-                    logger.info("SIM unlocked with PIN successfully",
-                               extra={'interface_number': self.interface_number})
-                else:
-                    logger.error("SIM unlock with PIN failed - still locked",
-                                extra={'interface_number': self.interface_number})
-                    raise Exception("PIN unlock failed - SIM still locked")
-
+                                  'pin_retries_after': self._pin_retries_remaining})
             else:
-                logger.warning("PIN required but not configured or auto_unlock disabled",
-                              extra={'interface_number': self.interface_number,
-                                     'has_pin': bool(pin),
-                                     'auto_unlock': auto_unlock})
-                raise Exception("PIN required but not available for auto-unlock")
+                self._pin_unlock_failed = True
+                # Re-read retries to see how many are left
+                retries = await self._get_unlock_retries()
+                self._pin_retries_remaining = retries.get(1, -1)
+                self._puk_retries_remaining = retries.get(2, -1)
+                logger.error("PIN unlock failed — SIM still locked "
+                             "(retries remaining: PIN=%s, PUK=%s)",
+                            self._pin_retries_remaining,
+                            self._puk_retries_remaining,
+                            extra={'interface_number': self.interface_number,
+                                   'pin_retries': self._pin_retries_remaining,
+                                   'puk_retries': self._puk_retries_remaining})
+                # Attempt PUK recovery if PUK is configured
+                puk = sim_config.get('puk', '')
+                if puk:
+                    logger.info("PIN failed — attempting PUK recovery to reset PIN",
+                               extra={'interface_number': self.interface_number})
+                    await self._unlock_with_puk(sim_config)
+                else:
+                    logger.critical("PIN failed and no PUK configured — SIM cannot be "
+                                    "unlocked. Remaining PIN retries: %s",
+                                   self._pin_retries_remaining,
+                                   extra={'interface_number': self.interface_number,
+                                          'pin_retries': self._pin_retries_remaining})
+                    raise Exception("PIN unlock failed — no PUK configured for recovery")
 
         except Exception as e:
+            if "already failed this boot cycle" in str(e):
+                raise
+            if "already succeeded this boot cycle" in str(e):
+                return
+            if "PUK" in str(e):
+                raise  # Let PUK errors propagate
             logger.error(f"PIN unlock failed: {e}",
                         extra={'interface_number': self.interface_number})
             raise
 
     async def _unlock_with_puk(self, sim_config):
-        """Unlock SIM with PUK and new PIN"""
+        """Unlock SIM with PUK, resetting PIN to the configured value.
+
+        Uses SendPuk(puk, pin) where pin is the configured PIN — no separate
+        new_pin field needed.  Tried at most once per boot cycle.
+
+        Safety logic:
+        1. If already attempted this boot cycle, refuse.
+        2. If PUK retries <= 1, refuse — log CRITICAL (risk of permanent SIM destruction).
+        3. Send PUK + PIN once.
+        """
         try:
             puk = sim_config.get('puk', '')
-            new_pin = sim_config.get('new_pin', '')
-            auto_unlock = sim_config.get('auto_unlock', True)
+            pin = sim_config.get('pin', '')
 
-            if puk and new_pin and auto_unlock:
-                logger.info("Unlocking SIM with PUK",
-                           extra={'interface_number': self.interface_number,
-                                  'has_puk': bool(puk),
-                                  'has_new_pin': bool(new_pin)})
-
-                iface = self.proxy.get_interface(MODEM_INTERFACE)
-                await iface.call_send_puk(puk, new_pin)
-
-                # Wait a moment for unlock to process
-                await asyncio.sleep(5)
-
-                # Verify unlock was successful
-                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-                state_variant = await props.call_get(MODEM_INTERFACE, "State")
-                state = state_variant.value
-
-                if state != 2:  # No longer locked
-                    # Update stored PIN to new PIN for future use
-                    sim_config['pin'] = new_pin
-
-                    logger.info("SIM unlocked with PUK and new PIN set successfully",
+            if not puk:
+                logger.critical("SIM is PUK-locked but no PUK configured — "
+                                "cannot recover. Configure PUK to enable auto-recovery.",
                                extra={'interface_number': self.interface_number})
-                else:
-                    logger.error("SIM unlock with PUK failed - still locked",
-                                extra={'interface_number': self.interface_number})
-                    raise Exception("PUK unlock failed - SIM still locked")
+                raise Exception("PUK required but not configured")
+            if not pin:
+                logger.critical("SIM is PUK-locked — PUK is configured but no PIN "
+                                "to reset to. Configure both PUK and PIN.",
+                               extra={'interface_number': self.interface_number})
+                raise Exception("PUK recovery requires a PIN to reset to")
 
+            # ── Guard: only one attempt per boot cycle ────────────────────
+            if self._puk_unlock_attempted:
+                if self._puk_unlock_failed:
+                    logger.critical("PUK unlock already failed this boot cycle — "
+                                    "will not retry to protect remaining PUK retries",
+                                   extra={'interface_number': self.interface_number,
+                                          'puk_retries': self._puk_retries_remaining})
+                    raise Exception("PUK unlock already failed this boot cycle")
+                logger.info("PUK unlock already succeeded this boot cycle",
+                           extra={'interface_number': self.interface_number})
+                return
+
+            # ── Guard: check PUK retry counter ────────────────────────────
+            if 0 < self._puk_retries_remaining <= 1:
+                self._puk_unlock_attempted = True
+                self._puk_unlock_failed = True
+                self._sim_permanently_locked = True
+                logger.critical(
+                    "PUK retries critically low (%d) — refusing to attempt PUK unlock. "
+                    "SIM will be permanently destroyed if this last attempt fails. "
+                    "Manual intervention required (mmcli or physical SIM removal).",
+                    self._puk_retries_remaining,
+                    extra={'interface_number': self.interface_number,
+                           'puk_retries': self._puk_retries_remaining})
+                raise Exception("PUK retries too low — refusing to risk permanent SIM destruction")
+
+            # ── Send PUK + PIN (one attempt) ──────────────────────────────
+            self._puk_unlock_attempted = True
+            logger.info("Sending PUK to unlock SIM and reset PIN (one attempt, "
+                        "PUK retries=%s)",
+                       self._puk_retries_remaining,
+                       extra={'interface_number': self.interface_number,
+                              'puk_retries': self._puk_retries_remaining})
+
+            iface = self.proxy.get_interface(MODEM_INTERFACE)
+            await iface.call_send_puk(puk, pin)
+
+            # Wait for unlock to process
+            await asyncio.sleep(5)
+
+            # Verify unlock was successful
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            state_variant = await props.call_get(MODEM_INTERFACE, "State")
+            state = state_variant.value
+
+            if state != 2:  # No longer locked
+                self._puk_unlock_failed = False
+                # Reset the PIN-failed flag too — PUK recovery restored PIN
+                self._pin_unlock_failed = False
+                self._pin_unlock_attempted = False
+                # Refresh retry counters (they reset to max after PUK success)
+                retries = await self._get_unlock_retries()
+                self._pin_retries_remaining = retries.get(1, -1)
+                self._puk_retries_remaining = retries.get(2, -1)
+                logger.info("SIM unlocked with PUK — PIN reset to configured value "
+                            "(PIN retries=%s, PUK retries=%s)",
+                           self._pin_retries_remaining,
+                           self._puk_retries_remaining,
+                           extra={'interface_number': self.interface_number,
+                                  'pin_retries': self._pin_retries_remaining,
+                                  'puk_retries': self._puk_retries_remaining})
             else:
-                logger.warning("PUK/new PIN required but not configured or auto_unlock disabled",
-                              extra={'interface_number': self.interface_number,
-                                     'has_puk': bool(puk),
-                                     'has_new_pin': bool(new_pin),
-                                     'auto_unlock': auto_unlock})
-                raise Exception("PUK and new PIN required but not available for auto-unlock")
+                self._puk_unlock_failed = True
+                # Re-read retries
+                retries = await self._get_unlock_retries()
+                self._puk_retries_remaining = retries.get(2, -1)
+                if self._puk_retries_remaining == 0:
+                    self._sim_permanently_locked = True
+                    logger.critical(
+                        "PUK unlock failed and PUK retries exhausted — "
+                        "SIM is permanently destroyed",
+                        extra={'interface_number': self.interface_number})
+                else:
+                    logger.critical(
+                        "PUK unlock failed — SIM still locked "
+                        "(PUK retries remaining: %s)",
+                        self._puk_retries_remaining,
+                        extra={'interface_number': self.interface_number,
+                               'puk_retries': self._puk_retries_remaining})
+                raise Exception("PUK unlock failed — SIM still locked")
 
         except Exception as e:
+            if "already failed this boot cycle" in str(e):
+                raise
+            if "already succeeded this boot cycle" in str(e):
+                return
+            if ("not configured" in str(e) or "too low" in str(e) or
+                    "permanently destroyed" in str(e) or "still locked" in str(e)):
+                raise
             logger.error(f"PUK unlock failed: {e}",
                         extra={'interface_number': self.interface_number})
             raise
@@ -4915,6 +5108,26 @@ class ModemStateMachine:
         status['sim_iccid'] = sim.get('sim_identifier', '')
         status['sim_operator'] = sim.get('operator_name', '')
         status['sim_mcc_mnc'] = sim.get('mcc_mnc', '')
+
+        # ── 2a. SIM PIN/PUK unlock status ────────────────────────────────
+        status['pin_unlock_attempted'] = self._pin_unlock_attempted
+        status['pin_unlock_failed'] = self._pin_unlock_failed
+        status['puk_unlock_attempted'] = self._puk_unlock_attempted
+        status['puk_unlock_failed'] = self._puk_unlock_failed
+        status['sim_permanently_locked'] = self._sim_permanently_locked
+        status['pin_retries_remaining'] = self._pin_retries_remaining
+        status['puk_retries_remaining'] = self._puk_retries_remaining
+        # Live retry counters from SIM EEPROM (if modem is present)
+        try:
+            if self.proxy:
+                retries = await self._get_unlock_retries()
+                if retries:
+                    self._pin_retries_remaining = retries.get(1, self._pin_retries_remaining)
+                    self._puk_retries_remaining = retries.get(2, self._puk_retries_remaining)
+                    status['pin_retries_remaining'] = self._pin_retries_remaining
+                    status['puk_retries_remaining'] = self._puk_retries_remaining
+        except Exception:
+            pass  # Keep cached values
 
         # ── 3. Live SIM details (query D-Bus if modem present) ───────────
         try:

@@ -272,10 +272,8 @@ class InterfaceConfig(ServiceInterface):
                     "password": "",          # Optional password for authentication
                     "auth_type": "none"      # "none", "pap", "chap", or "pap-chap"
                 },
-                "pin": "",           # SIM PIN
-                "puk": "",           # SIM PUK
-                "new_pin": "",       # New PIN when unlocking with PUK
-                "auto_unlock": True,  # Automatically unlock SIM with stored PIN
+                "pin": "",           # SIM PIN (if set, FSM auto-unlocks)
+                "puk": "",           # SIM PUK (used with PIN for auto-recovery)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
                 "data_limit_action": "disable",   # disable, alert, throttle, block, failover
@@ -295,10 +293,8 @@ class InterfaceConfig(ServiceInterface):
                     "password": "",
                     "auth_type": "none"
                 },
-                "pin": "",           # SIM PIN
-                "puk": "",           # SIM PUK
-                "new_pin": "",       # New PIN when unlocking with PUK
-                "auto_unlock": True,  # Automatically unlock SIM with stored PIN
+                "pin": "",           # SIM PIN (if set, FSM auto-unlocks)
+                "puk": "",           # SIM PUK (used with PIN for auto-recovery)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
                 "data_limit_action": "disable",   # disable, alert, throttle, block, failover
@@ -931,45 +927,20 @@ class InterfaceConfig(ServiceInterface):
                                      'sim_slot': slot_num})
                 raise ValueError(f"SIM{slot_num} puk must be exactly 8 digits")
 
-        # Validate new PIN (for PUK unlock)
-        if 'new_pin' in sim_slot:
-            new_pin = sim_slot['new_pin']
-            if not isinstance(new_pin, str):
-                logger.warning("Invalid SIM new_pin type",
-                              extra={'interface_number': self.interface_number,
-                                     'validation_field': 'sim_slots',
-                                     'sim_slot': slot_num})
-                raise ValueError(f"SIM{slot_num} new_pin must be a string")
-
-            if new_pin and not re.match(r'^\d{4,8}$', new_pin):
-                logger.warning("Invalid SIM new_pin format",
-                              extra={'interface_number': self.interface_number,
-                                     'validation_field': 'sim_slots',
-                                     'sim_slot': slot_num})
-                raise ValueError(f"SIM{slot_num} new_pin must be 4-8 digits")
-
-        # Validate auto_unlock flag
-        if 'auto_unlock' in sim_slot and not isinstance(sim_slot['auto_unlock'], bool):
-            logger.warning("Invalid SIM auto_unlock flag",
+        # Cross-validation: if PUK is provided, pin must also be provided
+        # (PUK recovery uses SendPuk(puk, pin) to reset the SIM PIN)
+        if sim_slot.get('puk') and not sim_slot.get('pin'):
+            logger.warning("PUK provided without pin",
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'sim_slots',
                                  'sim_slot': slot_num})
-            raise ValueError(f"SIM{slot_num} auto_unlock must be true or false")
-
-        # Cross-validation: if PUK is provided, new_pin should also be provided
-        if sim_slot.get('puk') and not sim_slot.get('new_pin'):
-            logger.warning("PUK provided without new_pin",
-                          extra={'interface_number': self.interface_number,
-                                 'validation_field': 'sim_slots',
-                                 'sim_slot': slot_num})
-            raise ValueError(f"SIM{slot_num}: when puk is provided, new_pin must also be provided")
+            raise ValueError(f"SIM{slot_num}: when puk is provided, pin must also be provided")
 
         logger.info("SIM configuration validation passed",
                    extra={'interface_number': self.interface_number,
                           'sim_slot': slot_num,
                           'has_pin': bool(sim_slot.get('pin')),
                           'has_puk': bool(sim_slot.get('puk')),
-                          'auto_unlock': sim_slot.get('auto_unlock', True),
                           'has_carrier': bool(sim_slot.get('preferred_carrier')),
                           'scan_enabled': sim_slot.get('enable_network_scan', False)})
 

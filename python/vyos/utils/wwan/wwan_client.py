@@ -325,7 +325,7 @@ class WWANClient:
             ``sim_slots`` — list of per-SIM dicts, each with:
             ``slot``, ``enabled``, ``apn`` (str or ``{name, username,
             password, auth_type}``), ``pdp_type``, ``roaming``, ``pin``,
-            ``puk``, ``new_pin``, ``auto_unlock``, ``supported_bands``,
+            ``puk``, ``supported_bands``,
             ``preferred_carrier``, ``enable_network_scan``,
             ``data_limit_size``, ``data_limit_action``,
             ``data_limit_billing_date``.
@@ -474,11 +474,23 @@ class WWANClient:
         Returns
         -------
         dict
-            Keys include (among many others): ``state``, ``signal_quality``,
-            ``connection_mode``, ``active_sim_slot``, ``ip_address``,
-            ``bearer_connected``, ``modem_model``, ``imei``, ``operator``,
-            ``access_technology``, ``session_bytes_rx``, ``session_bytes_tx``,
-            ``sim1_cumulative_bytes_rx``, ``sim1_cumulative_bytes_tx``, etc.
+            Keys include (among many others): ``fsm_state``,
+            ``modem_model``, ``modem_imei``, ``signal_percent``,
+            ``signal_dbm``, ``access_technology_name``,
+            ``operator_name``, ``operator_code``,
+            ``registration_state``, ``connection_mode``,
+            ``active_sim_slot``, ``configured_sim_slot``,
+            ``is_on_failover_sim``, ``sim_imsi``, ``sim_iccid``,
+            ``ipv4_address``, ``ipv6_address``, ``ipv4_gateway``,
+            ``session_rx_bytes``, ``session_tx_bytes``,
+            ``cumulative_bytes``, ``data_usage_percent``,
+            ``connected_apn``, ``network_mode``.
+
+            **SIM PIN/PUK unlock status** —
+            ``pin_unlock_attempted``, ``pin_unlock_failed``,
+            ``puk_unlock_attempted``, ``puk_unlock_failed``,
+            ``sim_permanently_locked``,
+            ``pin_retries_remaining``, ``puk_retries_remaining``.
         """
         iface = await self._get_iface(interface_number)
         try:

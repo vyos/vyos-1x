@@ -32,10 +32,8 @@ interfaces
         │     │     ├── auth-type <none|pap|chap|both>
         │     │     ├── pdp-type <ipv4|ipv6|ipv4v6>
         │     │     ├── roaming                           #   valueless
-        │     │     ├── pin <4-8 digits>
-        │     │     ├── puk <8 digits>
-        │     │     ├── auto-unlock                       #   valueless
-        │     │     ├── new-pin <4-8 digits>               #   new PIN when unlocking with PUK
+        │     │     ├── pin <4-8 digits>                  #   if set, SIM is auto-unlocked
+        │     │     ├── puk <8 digits>                     #   PUK for auto-recovery (resets PIN)
         │     │     ├── supported-bands <all|LTE|5G|band,band,...>
         │     │     ├── preferred-carrier <MCCMNC|name>  #   e.g. '302610' or 'Bell'
         │     │     ├── enable-network-scan               #   valueless
@@ -140,8 +138,7 @@ automatically using a 4-priority APN discovery chain:
 | **PDP type** | per-SIM only, default `ipv4` | IPv4-only bearer per slot unless overridden |
 | **Roaming** | per-SIM only, default `disabled` | Modem will not register on visited networks unless enabled per slot |
 | **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
-| **SIM PIN** | per-SIM only | No automatic unlock; SIM must already be unlocked or will block at PIN state |
-| **Auto-unlock** | per-SIM, default `true` | If a PIN *is* configured on a slot, the FSM sends it automatically |
+| **SIM PIN** | per-SIM only | If a PIN is configured, the FSM always sends it automatically when the SIM is locked |
 | **SIM failover** | `disabled` | Single-SIM operation; slot 2 is ignored |
 | **SIM failback** | `disabled` | Even if failover fires, no automatic return to primary |
 | **APN discovery (Android)** | `disabled` | Only configured / automatic APNs are tried |
@@ -192,7 +189,6 @@ If the SIM is PIN-locked:
 
 ```
 set interfaces wwan wwan0 sim slot 1 pin '1234'
-set interfaces wwan wwan0 sim slot 1 auto-unlock
 ```
 
 ---
@@ -209,7 +205,7 @@ set interfaces wwan wwan0 network-mode 'auto'
 
 ### SIM Configuration
 
-> **If unconfigured:** Slot 1 active, no failover, single-SIM operation.  PIN/PUK/auto-unlock are per-SIM only (no global default).
+> **If unconfigured:** Slot 1 active, no failover, single-SIM operation.  PIN/PUK are per-SIM only (no global default).
 
 ```
 set interfaces wwan wwan0 sim active-slot 1
@@ -223,9 +219,7 @@ set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
 set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
 set interfaces wwan wwan0 sim slot 1 roaming
 set interfaces wwan wwan0 sim slot 1 pin '1234'
-set interfaces wwan wwan0 sim slot 1 puk ''
-set interfaces wwan wwan0 sim slot 1 auto-unlock
-set interfaces wwan wwan0 sim slot 1 new-pin '0000'
+set interfaces wwan wwan0 sim slot 1 puk '12345678'
 set interfaces wwan wwan0 sim slot 1 supported-bands 'all'
 set interfaces wwan wwan0 sim slot 1 preferred-carrier '302610'
 set interfaces wwan wwan0 sim slot 1 enable-network-scan
@@ -237,7 +231,6 @@ set interfaces wwan wwan0 sim slot 2 apn 'backup.apn'
 set interfaces wwan wwan0 sim slot 2 auth-type 'none'
 set interfaces wwan wwan0 sim slot 2 pdp-type 'ipv4'
 set interfaces wwan wwan0 sim slot 2 pin '5678'
-set interfaces wwan wwan0 sim slot 2 auto-unlock
 set interfaces wwan wwan0 sim slot 2 data-limit size 0
 set interfaces wwan wwan0 sim slot 2 data-limit action 'failover'
 set interfaces wwan wwan0 sim slot 2 data-limit billing-date 1
@@ -448,7 +441,6 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `sim slot N roaming` | `sim_slot_N_roaming` | `disabled` |
 | `sim slot N pin` | `sim_slot_N_pin` | `(empty)` |
 | `sim slot N puk` | `sim_slot_N_puk` | `(empty)` |
-| `sim slot N auto-unlock` | `sim_slot_N_auto_unlock` | `true` |
 | `sim slot N supported-bands` | `sim_slot_N_supported_bands` | `all` |
 | `sim slot N preferred-carrier` | `sim_slot_N_preferred_carrier` | `(empty)` |
 | `sim slot N enable-network-scan` | `sim_slot_N_enable_network_scan` | `false` |
@@ -456,7 +448,6 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `sim slot N data-limit action` | `sim_slot_N_data_limit_action` | `disable` |
 | `sim slot N data-limit billing-date` | `sim_slot_N_data_limit_billing_date` | `1` |
 | `sim slot N enable` | *(D-Bus only)* | slot 1: `true`, slot 2: `false` |
-| `sim slot N new-pin` | *(D-Bus only)* | `(empty)` |
 | `apn-discovery android` | `android_apn_discovery` | `disabled` |
 | `connection-mode` | `connection_mode` | `always-on` |
 | `reconnection enhanced` | `enhanced_reconnection` | `disabled` |
@@ -513,7 +504,6 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `roaming` | `roaming` | *(removed — per-SIM only)* |
 | `sim pin` | `pin` | *(removed — per-SIM only)* |
 | `sim puk` | `puk` | *(removed — per-SIM only)* |
-| `sim auto-unlock` | `auto_unlock` | *(removed — per-SIM only)* |
 | `logging level` | `log_level` | `info` |
 | `logging verbose` | `verbose_logging` | `true` |
 | `logging snmp-monitoring` | `snmp_monitoring` | `true` |
@@ -530,13 +520,11 @@ set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
 set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
 set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
 set interfaces wwan wwan0 sim slot 1 pin '1234'
-set interfaces wwan wwan0 sim slot 1 auto-unlock
 set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
 set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
 set interfaces wwan wwan0 sim slot 1 data-limit billing-date 1
 
 set interfaces wwan wwan0 sim slot 2 pin '5678'
-set interfaces wwan wwan0 sim slot 2 auto-unlock
 set interfaces wwan wwan0 sim slot 2 data-limit action 'failover'
 
 set interfaces wwan wwan0 apn-discovery android
