@@ -49,19 +49,17 @@ from vyos.system import raid
 from vyos.system import SYSTEM_CFG_VER
 from vyos.system import grub_util
 from vyos.template import render
-from vyos.utils.auth import (
-    DEFAULT_PASSWORD,
-    EPasswdStrength,
-    evaluate_strength
-)
+from vyos.utils.auth import DEFAULT_PASSWORD
+from vyos.utils.auth import EPasswdStrength
+from vyos.utils.auth import evaluate_strength
+from vyos.utils.auth import get_local_users
+from vyos.utils.auth import get_user_home_dir
 from vyos.utils.dict import dict_search
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import cmd, run, rc_cmd
-from vyos.utils.auth import get_local_users
-from vyos.utils.auth import get_user_home_dir
 from vyos.version import get_version_data
 from vyos.config_mgmt import unsaved_commits
 
