@@ -41,3 +41,23 @@ def list_strip(lst: list, sub: list, right: bool = False) -> list:
                 sub = []
 
     return lst
+
+
+def list_contains_sublist(lst: list, sub: list) -> bool:
+    """
+    Check if any sublist in lst contains any element from list sub.
+
+    Parameters:
+        lst (list of list): A list of sublists to be searched.
+        sub (list): A list of elements to search for.
+
+    Returns:
+        bool: True if any element from sub is found in any sublist of lst, otherwise False.
+    """
+
+    for sublist in lst:
+        if len(sub) == len(sublist):
+            # Ensure all elements the same and position in right position
+            if all(a == b for a, b in zip(sub, sublist, strict=True)):
+                return True
+    return False
