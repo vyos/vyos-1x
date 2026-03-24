@@ -294,15 +294,18 @@ class WWANClient:
 
             **Top-level scalars:**
             ``connection_mode``, ``active_sim_slot``, ``sim_failover``,
-            ``android_apn_discovery``, ``network_mode``, ``connection_timeout``,
+            ``android_apn_discovery``, ``network_mode``, ``radio_technology``
+            (global modem-level: ``all``, ``2G``, ``3G``, ``LTE``, ``5G``;
+            specific band names belong in per-SIM ``supported_bands``),
+            ``network_scan_timeout``, ``connection_timeout``,
             ``registration_timeout``, ``network_scan_timeout``,
             ``normal_monitoring_interval``, ``system_health_check_interval``,
             ``verbose_logging``, ``log_level``, ``snmp_monitoring``,
             ``detailed_status``, ``hardware_reset_enabled``,
             ``max_hardware_resets``, ``hardware_reset_cooldown``,
-            ``data_usage_monitoring_interval``, ``failover``,
-            ``failover_connect_retries``, ``failover_revert_timer``,
-            ``failover_signal_loss_timer``, ``failover_signal_threshold``,
+            ``data_usage_monitoring_interval``,
+            ``sim_failover_connect_retries``, ``sim_failover_revert_timer``,
+            ``sim_failover_signal_loss_timer``, ``sim_failover_signal_threshold``,
             ``sim_failback_enabled``, ``sim_failback_check_interval``.
 
             **Nested dicts:**
@@ -325,8 +328,13 @@ class WWANClient:
             ``sim_slots`` — list of per-SIM dicts, each with:
             ``slot``, ``enabled``, ``apn`` (str or ``{name, username,
             password, auth_type}``), ``pdp_type``, ``roaming``, ``pin``,
-            ``puk``, ``supported_bands``,
-            ``preferred_carrier``, ``enable_network_scan``,
+            ``puk``, ``supported_bands`` (per-SIM: ``all`` or specific
+            band names only — technology groups belong in the top-level
+            ``radio_technology``),
+            ``preferred_carrier`` (MCCMNC code or friendly name —
+            per-SIM only, each SIM has its own carrier),
+            ``enable_network_scan`` (diagnostic scan — results appear
+            in status ``available_networks``; per-SIM only),
             ``data_limit_size``, ``data_limit_action``,
             ``data_limit_billing_date``.
 
@@ -491,6 +499,14 @@ class WWANClient:
             ``puk_unlock_attempted``, ``puk_unlock_failed``,
             ``sim_permanently_locked``,
             ``pin_retries_remaining``, ``puk_retries_remaining``.
+
+            **Network scan results** (present when a scan has been
+            performed, either automatically for a friendly-name
+            ``preferred_carrier`` or via ``enable_network_scan``) —
+            ``available_networks``: list of dicts, each with
+            ``operator_name``, ``operator_short``, ``operator_code``
+            (MCCMNC), ``status`` (available/current/forbidden),
+            ``access_technology`` (e.g. LTE, 5GNR).
         """
         iface = await self._get_iface(interface_number)
         try:

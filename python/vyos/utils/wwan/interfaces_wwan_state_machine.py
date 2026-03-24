@@ -190,6 +190,7 @@ class ModemStateMachine:
         self.is_on_failover_sim = False          # True when running on non-primary SIM after failover
         self.primary_sim_slot = None             # Configured active_sim_slot (set from config)
         self.failback_task = None                # Periodic failback check task
+        self.failback_suppressed_by_data_limit = False  # Sticky failover: suppress failback until billing reset
 
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
@@ -211,6 +212,7 @@ class ModemStateMachine:
         self._registration_loss_timer = None    # Initialize registration loss timer
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
         self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
+        self.last_scan_results = []          # Cached network scan results for status reporting
 
         # SIM PIN/PUK unlock safety — try only once per boot cycle
         self._pin_unlock_attempted = False    # True after first PIN attempt (success or failure)
@@ -1987,14 +1989,18 @@ class ModemStateMachine:
             active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
 
             preferred_carrier = active_sim_config.get('preferred_carrier', '')
-            if not preferred_carrier:
-                logger.info("No preferred carrier configured, using automatic registration",
+            enable_network_scan = active_sim_config.get('enable_network_scan', False)
+
+            if not preferred_carrier and not enable_network_scan:
+                logger.info("No preferred carrier configured and network scan disabled, "
+                           "using automatic registration",
                            extra={'interface_number': self.interface_number})
                 return
 
-            logger.info("Checking for preferred carrier configuration",
+            logger.info("Checking carrier/scan configuration",
                        extra={'interface_number': self.interface_number,
-                              'preferred_carrier': preferred_carrier})
+                              'preferred_carrier': preferred_carrier or '(none)',
+                              'enable_network_scan': enable_network_scan})
 
             # Get 3GPP interface
             try:
@@ -2007,58 +2013,88 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
                 return
 
-            # Check if already on preferred carrier (avoid scanning)
-            try:
-                current_operator_name_variant = await props.call_get("org.freedesktop.ModemManager1.Modem.Modem3gpp", "OperatorName")
-                current_operator_name = current_operator_name_variant.value
-                if preferred_carrier.lower() in current_operator_name.lower():
-                    logger.info("Already registered to preferred carrier",
-                               extra={'interface_number': self.interface_number,
-                                      'current_operator': current_operator_name})
-                    return
-            except Exception:
-                pass
-
-            # Try direct registration first (faster than scanning)
-            if preferred_carrier.isdigit() and len(preferred_carrier) >= 5:
-                logger.info("Attempting direct registration using operator code",
-                           extra={'interface_number': self.interface_number,
-                                  'operator_code': preferred_carrier})
+            if preferred_carrier:
+                # ── Preferred carrier path ───────────────────────────────
+                # Check if already on preferred carrier (avoid scanning)
                 try:
-                    await gpp_iface.call_register(preferred_carrier)
-                    await asyncio.sleep(10)
-                    logger.info("Direct registration completed",
-                               extra={'interface_number': self.interface_number})
-                    return
+                    current_operator_name_variant = await props.call_get(
+                        "org.freedesktop.ModemManager1.Modem.Modem3gpp", "OperatorName")
+                    current_operator_name = current_operator_name_variant.value
+                    if preferred_carrier.lower() in current_operator_name.lower():
+                        logger.info("Already registered to preferred carrier",
+                                   extra={'interface_number': self.interface_number,
+                                          'current_operator': current_operator_name})
+                        # Still do a diagnostic scan if enabled
+                        if enable_network_scan:
+                            await self._perform_diagnostic_scan(gpp_iface, props)
+                        return
                 except Exception:
-                    logger.info("Direct registration failed, checking scan option",
-                               extra={'interface_number': self.interface_number})
+                    pass
 
-            # Only scan if explicitly enabled
-            enable_network_scan = active_sim_config.get('enable_network_scan', False)
-            if not enable_network_scan:
-                logger.info("Network scanning disabled for performance, using automatic registration",
-                           extra={'interface_number': self.interface_number,
-                                  'suggestion': 'Set enable_network_scan: true to enable scanning'})
-                return
+                # Try direct registration first (faster than scanning)
+                if preferred_carrier.isdigit() and len(preferred_carrier) >= 5:
+                    logger.info("Attempting direct registration using operator code",
+                               extra={'interface_number': self.interface_number,
+                                      'operator_code': preferred_carrier})
+                    try:
+                        await gpp_iface.call_register(preferred_carrier)
+                        await asyncio.sleep(10)
+                        logger.info("Direct registration completed",
+                                   extra={'interface_number': self.interface_number})
+                        # Still do a diagnostic scan if enabled
+                        if enable_network_scan:
+                            await self._perform_diagnostic_scan(gpp_iface, props)
+                        return
+                    except Exception:
+                        logger.info("Direct registration failed, falling back to network scan",
+                                   extra={'interface_number': self.interface_number})
 
-            # Full network scan (slow but comprehensive)
-            logger.warning("Performing full network scan - this may take 2+ minutes",
-                          extra={'interface_number': self.interface_number})
-
-            try:
-                scan_timeout = self.config.get('network_scan_timeout', 60)
-                operators = await asyncio.wait_for(gpp_iface.call_scan(), timeout=float(scan_timeout))
-                await self._process_scan_results(operators, preferred_carrier, gpp_iface, props)
-            except asyncio.TimeoutError:
-                logger.warning("Network scan timed out, using automatic registration",
+                # Friendly name requires a scan to resolve MCCMNC — always scan
+                logger.warning("Performing network scan to resolve preferred carrier name "
+                              "- this may take 2+ minutes",
                               extra={'interface_number': self.interface_number,
-                                     'timeout_seconds': scan_timeout})
+                                     'preferred_carrier': preferred_carrier})
+
+                try:
+                    scan_timeout = self.config.get('network_scan_timeout', 60)
+                    operators = await asyncio.wait_for(gpp_iface.call_scan(), timeout=float(scan_timeout))
+                    await self._process_scan_results(operators, preferred_carrier, gpp_iface, props)
+                except asyncio.TimeoutError:
+                    logger.warning("Network scan timed out, using automatic registration",
+                                  extra={'interface_number': self.interface_number,
+                                         'timeout_seconds': scan_timeout})
+
+            elif enable_network_scan:
+                # ── Diagnostic scan only (no preferred carrier) ──────────
+                await self._perform_diagnostic_scan(gpp_iface, props)
 
         except Exception as e:
             logger.info("Carrier selection not supported, using automatic registration",
                        extra={'interface_number': self.interface_number,
                               'error': str(e)})
+
+    async def _perform_diagnostic_scan(self, gpp_iface, props):
+        """Perform a network scan for status/diagnostic purposes only.
+
+        Results are cached in ``self.last_scan_results`` and appear in the
+        ``available_networks`` field of the status output.  No registration
+        change is made.
+        """
+        logger.info("Performing diagnostic network scan for status reporting "
+                    "- this may take 2+ minutes",
+                    extra={'interface_number': self.interface_number})
+        try:
+            scan_timeout = self.config.get('network_scan_timeout', 60)
+            operators = await asyncio.wait_for(gpp_iface.call_scan(), timeout=float(scan_timeout))
+            await self._process_scan_results(operators, None, gpp_iface, props)
+        except asyncio.TimeoutError:
+            logger.warning("Diagnostic network scan timed out",
+                          extra={'interface_number': self.interface_number,
+                                 'timeout_seconds': scan_timeout})
+        except Exception as e:
+            logger.warning("Diagnostic network scan failed",
+                          extra={'interface_number': self.interface_number,
+                                 'error': str(e)})
 
     async def _process_scan_results(self, operators, preferred_carrier, gpp_iface, props):
         """Process network scan results and register to preferred operator.
@@ -2072,28 +2108,48 @@ class ModemStateMachine:
 
         Status values:
             0 = Unknown, 1 = Available, 2 = Current, 3 = Forbidden
+
+        Results are cached in ``self.last_scan_results`` for status reporting.
         """
+        status_labels = {0: 'unknown', 1: 'available', 2: 'current', 3: 'forbidden'}
         target_code = None
         target_name = None
+        parsed_results = []
 
         for op in operators:
             try:
                 # Each op is a dict[str, Variant]; unwrap Variant values
                 operator_code = op.get('operator-code')
                 operator_name = op.get('operator-long')
+                operator_short = op.get('operator-short')
                 status = op.get('status')
+                access_tech = op.get('access-technology')
 
                 # Unwrap Variant objects (dbus_next wraps a{sv} values as Variant)
                 if hasattr(operator_code, 'value'):
                     operator_code = operator_code.value
                 if hasattr(operator_name, 'value'):
                     operator_name = operator_name.value
+                if hasattr(operator_short, 'value'):
+                    operator_short = operator_short.value
                 if hasattr(status, 'value'):
                     status = status.value
+                if hasattr(access_tech, 'value'):
+                    access_tech = access_tech.value
 
                 operator_code = operator_code or ''
                 operator_name = operator_name or ''
+                operator_short = operator_short or ''
                 status = status if isinstance(status, int) else 0
+                access_tech = access_tech if isinstance(access_tech, int) else 0
+
+                parsed_results.append({
+                    'operator_name': operator_name,
+                    'operator_short': operator_short,
+                    'operator_code': operator_code,
+                    'status': status_labels.get(status, f'unknown({status})'),
+                    'access_technology': self._access_tech_to_string(access_tech),
+                })
 
                 logger.info("Found operator",
                            extra={'interface_number': self.interface_number,
@@ -2103,7 +2159,8 @@ class ModemStateMachine:
 
                 # Match preferred carrier by name or MCCMNC code
                 # Status 1 = Available, 2 = Current (already registered)
-                if (preferred_carrier.lower() in operator_name.lower() or
+                if preferred_carrier and (
+                    preferred_carrier.lower() in operator_name.lower() or
                     preferred_carrier == operator_code) and status in [1, 2]:
                     target_code = operator_code
                     target_name = operator_name
@@ -2116,6 +2173,12 @@ class ModemStateMachine:
             except Exception:
                 continue
 
+        # Cache results for status reporting
+        self.last_scan_results = parsed_results
+        logger.info("Network scan complete",
+                   extra={'interface_number': self.interface_number,
+                          'operators_found': len(parsed_results)})
+
         # Register() takes an MCCMNC operator code string (e.g. "310260")
         if target_code:
             logger.info("Registering to preferred carrier from scan",
@@ -2124,7 +2187,7 @@ class ModemStateMachine:
                               'operator_code': target_code})
             await gpp_iface.call_register(target_code)
             await asyncio.sleep(15)
-        else:
+        elif preferred_carrier:
             logger.warning("Preferred carrier not found in scan, using automatic",
                           extra={'interface_number': self.interface_number})
 
@@ -2351,6 +2414,16 @@ class ModemStateMachine:
             logger.error(f"SIM slot configuration error: {e}",
                         extra={'interface_number': self.interface_number})
 
+    def _is_sim_failover_enabled(self) -> bool:
+        """Check if SIM failover is enabled.
+
+        SIM failover is a global setting under the ``sim`` tree,
+        at the same level as ``failback``.
+        """
+        if not self.config:
+            return False
+        return self.config.get('sim_failover', 'disabled') == 'enabled'
+
     def _is_failover_allowed(self) -> bool:
         """Check if SIM failover is allowed (not in cooldown / backoff)"""
         current_time = time.time()
@@ -2417,6 +2490,13 @@ class ModemStateMachine:
         if not self.config.get('sim_failback_enabled', False):
             logger.debug("SIM failback disabled in config",
                         extra={'interface_number': self.interface_number})
+            return
+
+        # Suppress failback when sticky failover is active (data-limit triggered)
+        if self.failback_suppressed_by_data_limit:
+            logger.info("SIM failback suppressed by data-limit sim-failover-sticky — "
+                       "will resume after billing cycle resets",
+                       extra={'interface_number': self.interface_number})
             return
 
         # Don't start duplicate tasks
@@ -2918,10 +2998,9 @@ class ModemStateMachine:
             if not self.config:
                 return False
 
-            # Check if failover is enabled
-            sim_failover = self.config.get('sim_failover', 'disabled')
-            if sim_failover != 'enabled':
-                logger.info("SIM failover disabled, waiting for configured SIM",
+            # Check if failover is enabled for the active SIM
+            if not self._is_sim_failover_enabled():
+                logger.info("SIM failover disabled for active slot, waiting for configured SIM",
                            extra={'interface_number': self.interface_number,
                                   'config_sim': self.config_active_sim})
                 return False
@@ -3110,12 +3189,12 @@ class ModemStateMachine:
 
             if not sim_inserted:
                 # Still no configured SIM - check for any available SIM
-                if self.config.get('sim_failover') == 'enabled':
+                if self._is_sim_failover_enabled():
                     logger.info("No configured SIM found, checking for failover options",
                                extra={'interface_number': self.interface_number})
                     await self._handle_sim_missing_failover()
                 else:
-                    logger.info("No configured SIM found and failover disabled",
+                    logger.info("No configured SIM found and sim-failover disabled for active slot",
                                extra={'interface_number': self.interface_number})
 
         except Exception as e:
@@ -3386,24 +3465,50 @@ class ModemStateMachine:
             raise
 
     async def _configure_supported_bands(self):
-        """Configure supported bands while modem is disabled"""
+        """Configure supported bands while modem is disabled.
+
+        Band resolution uses two layers:
+        1. Global ``radio_technology`` (modem-level) — accepts technology-group
+           keywords (2G, 3G, LTE, 5G) as well as ``all``.
+           This controls which radio technologies the modem hardware
+           is allowed to use.
+        2. Per-SIM ``supported_bands`` — accepts ``all`` or specific band names
+           only (e.g. eutran-7, ngran-78).  Technology-group keywords here are
+           ignored with a warning because radio technology is a modem-level
+           setting, not a SIM-level setting.
+
+        The final band set is the intersection of (global-expanded bands) ∩
+        (per-SIM bands) ∩ (modem-supported bands).  If either layer is ``all``
+        it is treated as "no restriction" for that layer.
+        """
         try:
             if not self.config:
                 logger.info("No configuration available for band setup",
                            extra={'interface_number': self.interface_number})
                 return
 
-            # Get active SIM configuration
+            # ── Read both layers ────────────────────────────────────────
+            global_bands_raw = self.config.get('supported_bands', 'all')
+            if isinstance(global_bands_raw, str):
+                global_bands_cfg = [b.strip() for b in global_bands_raw.split(',') if b.strip()]
+            else:
+                global_bands_cfg = list(global_bands_raw)
+
             active_sim_slot = self.config.get('active_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
             active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
 
-            configured_bands = active_sim_config.get('supported_bands', ['all'])
+            per_sim_bands_raw = active_sim_config.get('supported_bands', 'all')
+            if isinstance(per_sim_bands_raw, str):
+                per_sim_bands_cfg = [b.strip() for b in per_sim_bands_raw.split(',') if b.strip()]
+            else:
+                per_sim_bands_cfg = list(per_sim_bands_raw)
 
             logger.info("Configuring supported bands while disabled",
                        extra={'interface_number': self.interface_number,
                               'active_sim_slot': active_sim_slot,
-                              'configured_bands': configured_bands})
+                              'global_bands': global_bands_cfg,
+                              'per_sim_bands': per_sim_bands_cfg})
 
             # Get what bands the modem actually supports (MM returns numeric constants)
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
@@ -3429,87 +3534,105 @@ class ModemStateMachine:
                                   'modem_supported_constants': modem_bands_list,
                                   'current_enabled_bands': current_band_names,
                                   'current_enabled_constants': current_bands_list,
-                                  'configured_bands': configured_bands})
+                                  'global_bands': global_bands_cfg,
+                                  'per_sim_bands': per_sim_bands_cfg})
 
-                # Handle 'all' bands configuration
-                if configured_bands == ['all'] or not configured_bands:
-                    logger.info("Configuration requests all bands",
-                               extra={'interface_number': self.interface_number})
+                # ── Step 1: Resolve global bands (technology groups ONLY) ────
+                global_is_all = (global_bands_cfg == ['all'] or not global_bands_cfg)
+                global_band_constants = []
 
-                    # Check if all supported bands are already enabled
-                    if set(current_bands_list) == set(modem_bands_list):
-                        logger.info("All supported bands already enabled",
-                                   extra={'interface_number': self.interface_number,
-                                          'enabled_bands': len(current_bands_list),
-                                          'total_supported': len(modem_bands_list)})
-                        return
-                    else:
-                        # Enable all supported bands
-                        target_bands = modem_bands_list
-                        target_band_names = modem_band_names
-                        logger.info("Enabling all modem-supported bands",
-                                   extra={'interface_number': self.interface_number,
-                                          'target_bands': target_band_names,
-                                          'target_constants': target_bands})
-                else:
-                    # Handle specific band configuration - use intersection logic
-                    logger.info("Configuration requests specific bands",
-                               extra={'interface_number': self.interface_number,
-                                      'requested_bands': configured_bands})
+                if not global_is_all:
+                    global_invalid = []
+                    for band_name in global_bands_cfg:
+                        # Global level accepts ONLY technology-group keywords
+                        group_constants = self._expand_technology_group(band_name)
+                        if group_constants:
+                            global_band_constants.extend(group_constants)
+                            logger.info("Expanded global technology group to individual bands",
+                                       extra={'interface_number': self.interface_number,
+                                              'group': band_name,
+                                              'expanded_count': len(group_constants)})
+                        else:
+                            # Specific band names are per-SIM only
+                            global_invalid.append(band_name)
+                    if global_invalid:
+                        logger.warning("Specific band names ignored at global level — "
+                                      "use per-SIM supported-bands instead",
+                                      extra={'interface_number': self.interface_number,
+                                             'ignored_bands': global_invalid,
+                                             'valid_global_values': ['all', '2G', '3G', 'LTE', '5G']})
 
-                    # Convert config band names to MM constants
-                    requested_band_constants = []
-                    invalid_band_names = []
+                # ── Step 2: Resolve per-SIM bands (specific bands only) ──────
+                per_sim_is_all = (per_sim_bands_cfg == ['all'] or not per_sim_bands_cfg)
+                per_sim_band_constants = []
 
-                    for band_name in configured_bands:
+                if not per_sim_is_all:
+                    per_sim_invalid = []
+                    per_sim_tech_groups = []
+                    for band_name in per_sim_bands_cfg:
                         mm_constant = self._band_name_to_mm_constant(band_name)
                         if mm_constant is not None:
-                            requested_band_constants.append(mm_constant)
+                            per_sim_band_constants.append(mm_constant)
+                        elif self._expand_technology_group(band_name) is not None:
+                            # Technology group in per-SIM config — warn and ignore
+                            per_sim_tech_groups.append(band_name)
                         else:
-                            invalid_band_names.append(band_name)
-
-                    if invalid_band_names:
-                        logger.warning("Some band names could not be converted to MM constants",
+                            per_sim_invalid.append(band_name)
+                    if per_sim_tech_groups:
+                        logger.warning("Technology groups (2G/3G/LTE/5G) are modem-level settings "
+                                      "and cannot be set per-SIM — use global 'radio-technology' instead. "
+                                      "These entries are ignored.",
                                       extra={'interface_number': self.interface_number,
-                                             'invalid_bands': invalid_band_names,
-                                             'valid_formats': ['eutran-1', 'ngran-78', 'umts-1', 'gsm-850']})
-
-                    if not requested_band_constants:
-                        logger.warning("No valid band constants found, using all bands",
+                                             'ignored_groups': per_sim_tech_groups,
+                                             'sim_slot': active_sim_slot})
+                    if per_sim_invalid:
+                        logger.warning("Invalid per-SIM band names ignored",
                                       extra={'interface_number': self.interface_number,
-                                             'invalid_bands': configured_bands})
-                        target_bands = modem_bands_list
-                        target_band_names = modem_band_names
-                    else:
-                        # Find intersection of requested and modem-supported bands
-                        valid_band_constants = [band for band in requested_band_constants if band in modem_bands_list]
-                        invalid_band_constants = [band for band in requested_band_constants if band not in modem_bands_list]
+                                             'invalid_bands': per_sim_invalid,
+                                             'valid_formats': ['all', 'eutran-1', 'ngran-78', 'umts-1', 'gsm-850']})
 
-                        # Log any bands that were requested but not supported by modem
-                        if invalid_band_constants:
-                            invalid_supported_names = [self._mm_constant_to_band_name(band) for band in invalid_band_constants]
-                            logger.warning("Some requested bands are not supported by this modem",
-                                          extra={'interface_number': self.interface_number,
-                                                 'unsupported_bands': invalid_supported_names,
-                                                 'unsupported_constants': invalid_band_constants,
-                                                 'modem_supported': modem_band_names})
+                # ── Step 3: Compute target = global ∩ per-SIM ∩ modem ────────
+                if global_is_all and per_sim_is_all:
+                    # Both layers unrestricted — use all modem bands
+                    target_bands = modem_bands_list
+                    target_band_names = modem_band_names
+                    logger.info("Both global and per-SIM bands are 'all' — enabling all modem bands",
+                               extra={'interface_number': self.interface_number,
+                                      'count': len(target_bands)})
+                elif global_is_all:
+                    # Only per-SIM restricts
+                    target_bands = [b for b in per_sim_band_constants if b in modem_bands_list]
+                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
+                    logger.info("Global bands unrestricted, applying per-SIM filter",
+                               extra={'interface_number': self.interface_number,
+                                      'per_sim_bands': [self._mm_constant_to_band_name(b) for b in per_sim_band_constants],
+                                      'result_bands': target_band_names})
+                elif per_sim_is_all:
+                    # Only global restricts
+                    target_bands = [b for b in global_band_constants if b in modem_bands_list]
+                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
+                    logger.info("Per-SIM bands unrestricted, applying global filter",
+                               extra={'interface_number': self.interface_number,
+                                      'global_bands': [self._mm_constant_to_band_name(b) for b in global_band_constants],
+                                      'result_bands': target_band_names})
+                else:
+                    # Both restrict — intersection of all three
+                    combined = set(global_band_constants) & set(per_sim_band_constants) & set(modem_bands_list)
+                    target_bands = list(combined)
+                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
+                    logger.info("Applying global ∩ per-SIM ∩ modem band intersection",
+                               extra={'interface_number': self.interface_number,
+                                      'global_count': len(global_band_constants),
+                                      'per_sim_count': len(per_sim_band_constants),
+                                      'modem_count': len(modem_bands_list),
+                                      'result_bands': target_band_names})
 
-                        if not valid_band_constants:
-                            logger.warning("No requested bands are supported by this modem - using all bands",
-                                          extra={'interface_number': self.interface_number,
-                                                 'requested_bands': configured_bands,
-                                                 'modem_supported': modem_band_names})
-                            target_bands = modem_bands_list
-                            target_band_names = modem_band_names
-                        else:
-                            # Use intersection of requested and supported bands
-                            target_bands = valid_band_constants
-                            target_band_names = [self._mm_constant_to_band_name(band) for band in valid_band_constants]
-
-                            logger.info("Using intersection of requested and supported bands",
-                                       extra={'interface_number': self.interface_number,
-                                              'valid_bands': target_band_names,
-                                              'valid_constants': target_bands})
+                # Fall back to all modem bands if intersection is empty
+                if not target_bands:
+                    logger.warning("Band intersection is empty — falling back to all modem-supported bands",
+                                  extra={'interface_number': self.interface_number})
+                    target_bands = modem_bands_list
+                    target_band_names = modem_band_names
 
                     # Check if target bands are already enabled
                     if set(current_bands_list) == set(target_bands):
@@ -3557,7 +3680,8 @@ class ModemStateMachine:
                 logger.info("Band configuration not supported by this modem or driver",
                            extra={'interface_number': self.interface_number,
                                   'error': str(band_e),
-                                  'configured_bands': configured_bands})
+                                  'global_bands': global_bands_cfg,
+                                  'per_sim_bands': per_sim_bands_cfg})
 
         except Exception as e:
             logger.error(f"Band configuration error: {e}",
@@ -3741,6 +3865,22 @@ class ModemStateMachine:
         mapping = self._get_band_name_to_constant_mapping()
         return mapping.get(band_name.lower().strip())
 
+    def _expand_technology_group(self, group_name):
+        """Expand a technology-group keyword (2G, 3G, LTE, 5G) into individual
+        MM band constants.  Returns a list of constants, or None if *group_name*
+        is not a recognised technology keyword."""
+        mapping = self._get_band_name_to_constant_mapping()
+        prefix_map = {
+            '2g':  'gsm-',
+            '3g':  'umts-',
+            'lte': 'eutran-',
+            '5g':  'ngran-',
+        }
+        prefix = prefix_map.get(group_name.lower().strip())
+        if prefix is None:
+            return None
+        return [v for k, v in mapping.items() if k.startswith(prefix)]
+
     def _mm_constant_to_band_name(self, mm_constant):
         """Convert MM constant back to human-readable band name"""
         mapping = self._get_band_name_to_constant_mapping()
@@ -3757,6 +3897,7 @@ class ModemStateMachine:
             'active_sim_slot',
             'sim_slots',  # APN, auth, roaming changes within sim_slots
             'supported_bands',
+            'radio_technology',
             'network_mode'
         ]
 
@@ -4490,8 +4631,13 @@ class ModemStateMachine:
                                                     'limit_gb': data_limit / (1024*1024*1024),
                                                     'action': data_action})
 
-                                if data_action == 'failover':
+                                if data_action in ('sim-failover', 'sim-failover-sticky'):
                                     # Switch to alternative SIM
+                                    if data_action == 'sim-failover-sticky':
+                                        self.failback_suppressed_by_data_limit = True
+                                        logger.info("Sticky failover: failback suppressed until billing cycle resets",
+                                                   extra={'interface_number': self.interface_number,
+                                                          'active_sim': self.current_active_sim})
                                     await self._handle_data_limit_failover()
                                     break
                                 elif data_action in ('disconnect', 'disable'):
@@ -4500,7 +4646,7 @@ class ModemStateMachine:
                                 elif data_action == 'alert':
                                     logger.warning("Data usage limit exceeded - alerting only",
                                                   extra={'interface_number': self.interface_number})
-                                # 'throttle' / 'block' could be handled here in future
+                                # 'block' could be handled here in future
                         else:
                             logger.debug("Bearer statistics not available",
                                        extra={'interface_number': self.interface_number})
@@ -4524,9 +4670,8 @@ class ModemStateMachine:
     async def _handle_data_limit_failover(self):
         """Handle SIM failover triggered by data limit exceeded on current SIM."""
         try:
-            sim_failover = self.config.get('sim_failover', 'disabled') if self.config else 'disabled'
-            if sim_failover != 'enabled':
-                logger.warning("Data limit failover requested but sim_failover is disabled, disconnecting instead",
+            if not self._is_sim_failover_enabled():
+                logger.warning("Data limit sim-failover requested but sim_failover is disabled for active slot, disconnecting instead",
                               extra={'interface_number': self.interface_number})
                 self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
                 return
@@ -4607,6 +4752,13 @@ class ModemStateMachine:
                                       'sim_slot': slot_key,
                                       'previous_bytes': stored_bytes,
                                       'billing_date': billing_date})
+                    # Clear sticky failover hold when billing cycle resets
+                    if self.failback_suppressed_by_data_limit:
+                        self.failback_suppressed_by_data_limit = False
+                        logger.info("Billing cycle reset lifted sim-failover-sticky hold — "
+                                   "failback may resume",
+                                   extra={'interface_number': self.interface_number,
+                                          'sim_slot': slot_key})
                     self._persist_usage(0)
                     return 0
         except Exception:
@@ -5095,9 +5247,7 @@ class ModemStateMachine:
         status['is_on_configured_sim'] = (self.current_active_sim == self.config_active_sim)
         status['is_on_failover_sim'] = self.is_on_failover_sim
         status['sim_switch_reason'] = self.sim_switch_reason or ''
-        status['sim_failover_enabled'] = (
-            self.config.get('sim_failover', 'disabled') == 'enabled' if self.config else False
-        )
+        status['sim_failover_enabled'] = self._is_sim_failover_enabled()
         status['sim_failback_enabled'] = (
             self.config.get('sim_failback_enabled', False) if self.config else False
         )
@@ -5324,6 +5474,10 @@ class ModemStateMachine:
             status['network_mode'] = self.config.get('network_mode', 'auto')
             status['verbose_logging'] = self.config.get('verbose_logging', False)
 
+        # ── 13. Network scan results (if available) ──────────────────────
+        if self.last_scan_results:
+            status['available_networks'] = self.last_scan_results
+
         return status
 
     @staticmethod
@@ -5485,9 +5639,8 @@ class ModemStateMachine:
                                   extra={'interface_number': self.interface_number,
                                          'modem_state': mm_state})
 
-                    # Check if SIM failover is enabled
-                    sim_failover = self.config.get('sim_failover', 'disabled')
-                    if sim_failover == 'enabled':
+                    # Check if SIM failover is enabled for the active slot
+                    if self._is_sim_failover_enabled():
                         # Attempt SIM failover
                         failover_success = await self._handle_sim_missing_failover()
                         if not failover_success:
@@ -5822,9 +5975,8 @@ class ModemStateMachine:
             await asyncio.sleep(5)
 
             # Check if we should escalate to SIM failover
-            sim_failover = self.config.get('sim_failover', 'disabled') if self.config else 'disabled'
             if (self.connectivity_recovery_attempts >= self.max_recovery_before_sim_switch
-                    and sim_failover == 'enabled'
+                    and self._is_sim_failover_enabled()
                     and self._is_failover_allowed()):
 
                 logger.warning("Connectivity recovery exhausted on current SIM, escalating to SIM failover",

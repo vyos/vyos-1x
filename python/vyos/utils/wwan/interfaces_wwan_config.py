@@ -177,17 +177,16 @@ class InterfaceConfig(ServiceInterface):
         # Interface-level settings
         "connection_mode": "always-on",  # always-on | connect-on-demand | dial-on-demand
         "active_sim_slot": 1,  # Which SIM slot to use (1 or 2)
-        "sim_failover": "disabled",  # Auto-switch SIMs on failure
 
         # APN discovery settings
         "android_apn_discovery": "disabled",
 
-        # Failover settings
-        "failover": "disabled",
-        "failover_connect_retries": 3,
-        "failover_revert_timer": 300,
-        "failover_signal_loss_timer": 60,
-        "failover_signal_threshold": -90,
+        # SIM failover settings (global enable + policy)
+        "sim_failover": "disabled",
+        "sim_failover_connect_retries": 3,
+        "sim_failover_revert_timer": 300,
+        "sim_failover_signal_loss_timer": 60,
+        "sim_failover_signal_threshold": -90,
 
         # SIM failback settings
         "sim_failback_enabled": False,
@@ -276,7 +275,7 @@ class InterfaceConfig(ServiceInterface):
                 "puk": "",           # SIM PUK (used with PIN for auto-recovery)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
-                "data_limit_action": "disable",   # disable, alert, throttle, block, failover
+                "data_limit_action": "disable",   # disable, alert, block, sim-failover, sim-failover-sticky
                 "data_limit_billing_date": 1      # Day of month (1-28) for usage reset
             },
             {
@@ -297,7 +296,7 @@ class InterfaceConfig(ServiceInterface):
                 "puk": "",           # SIM PUK (used with PIN for auto-recovery)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
-                "data_limit_action": "disable",   # disable, alert, throttle, block, failover
+                "data_limit_action": "disable",   # disable, alert, block, sim-failover, sim-failover-sticky
                 "data_limit_billing_date": 1      # Day of month (1-28) for usage reset
             }
         ]
@@ -710,12 +709,7 @@ class InterfaceConfig(ServiceInterface):
                                      'validation_field': 'sim_failback_check_interval'})
                 raise ValueError("sim_failback_check_interval must be an integer >= 60")
 
-        # Validate failover
-        if 'failover' in config and config['failover'] not in ['enabled', 'disabled']:
-            logger.warning("Invalid failover value",
-                          extra={'interface_number': self.interface_number,
-                                 'validation_field': 'failover'})
-            raise ValueError("failover must be 'enabled' or 'disabled'")
+        # Validate sim-failover policy
 
         # Validate SIM slots configuration
         if 'sim_slots' in config:
@@ -730,7 +724,7 @@ class InterfaceConfig(ServiceInterface):
         if 'connectivity_monitoring' in config:
             self._validate_connectivity_monitoring(config['connectivity_monitoring'])
 
-        # Validate other parameters (failover timers, data limits, etc.)
+        # Validate other parameters (sim-failover timers, data limits, etc.)
         self._validate_other_parameters(config)
 
         logger.info("Configuration validation passed",
@@ -1039,32 +1033,32 @@ class InterfaceConfig(ServiceInterface):
     def _validate_other_parameters(self, config):
         """Validate non-SIM configuration parameters"""
 
-        # Validate failover_connect_retries
-        if 'failover_connect_retries' in config:
-            retries = config['failover_connect_retries']
+        # Validate sim_failover_connect_retries
+        if 'sim_failover_connect_retries' in config:
+            retries = config['sim_failover_connect_retries']
             if not isinstance(retries, int) or retries < 0 or retries > 100:
-                logger.warning("Invalid failover_connect_retries",
+                logger.warning("Invalid sim_failover_connect_retries",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'failover_connect_retries'})
-                raise ValueError("failover_connect_retries must be an integer between 0 and 100")
+                                     'validation_field': 'sim_failover_connect_retries'})
+                raise ValueError("sim_failover_connect_retries must be an integer between 0 and 100")
 
-        # Validate failover_revert_timer
-        if 'failover_revert_timer' in config:
-            timer = config['failover_revert_timer']
+        # Validate sim_failover_revert_timer
+        if 'sim_failover_revert_timer' in config:
+            timer = config['sim_failover_revert_timer']
             if not isinstance(timer, int) or timer < 0 or timer > 86400:
-                logger.warning("Invalid failover_revert_timer",
+                logger.warning("Invalid sim_failover_revert_timer",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'failover_revert_timer'})
-                raise ValueError("failover_revert_timer must be an integer between 0 and 86400 seconds")
+                                     'validation_field': 'sim_failover_revert_timer'})
+                raise ValueError("sim_failover_revert_timer must be an integer between 0 and 86400 seconds")
 
-        # Validate failover_signal_loss_timer
-        if 'failover_signal_loss_timer' in config:
-            timer = config['failover_signal_loss_timer']
+        # Validate sim_failover_signal_loss_timer
+        if 'sim_failover_signal_loss_timer' in config:
+            timer = config['sim_failover_signal_loss_timer']
             if not isinstance(timer, int) or timer < 1 or timer > 3600:
-                logger.warning("Invalid failover_signal_loss_timer",
+                logger.warning("Invalid sim_failover_signal_loss_timer",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'failover_signal_loss_timer'})
-                raise ValueError("failover_signal_loss_timer must be an integer between 1 and 3600 seconds")
+                                     'validation_field': 'sim_failover_signal_loss_timer'})
+                raise ValueError("sim_failover_signal_loss_timer must be an integer between 1 and 3600 seconds")
 
         # Validate data_limit_billing_date
         if 'data_limit_billing_date' in config:
@@ -1076,7 +1070,7 @@ class InterfaceConfig(ServiceInterface):
                 raise ValueError("data_limit_billing_date must be an integer between 1 and 28")
 
         # Validate data_limit_action
-        valid_data_actions = ['disable', 'throttle', 'block', 'failover', 'alert']
+        valid_data_actions = ['disable', 'block', 'sim-failover', 'sim-failover-sticky', 'alert']
         if 'data_limit_action' in config and config['data_limit_action'] not in valid_data_actions:
             logger.warning("Invalid data_limit_action",
                           extra={'interface_number': self.interface_number,
@@ -1084,13 +1078,13 @@ class InterfaceConfig(ServiceInterface):
             raise ValueError(f"data_limit_action must be one of: {', '.join(valid_data_actions)}")
 
         # Validate signal threshold
-        if 'failover_signal_threshold' in config:
-            threshold = config['failover_signal_threshold']
+        if 'sim_failover_signal_threshold' in config:
+            threshold = config['sim_failover_signal_threshold']
             if not isinstance(threshold, int) or threshold < -120 or threshold > 0:
-                logger.warning("Invalid failover_signal_threshold",
+                logger.warning("Invalid sim_failover_signal_threshold",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'failover_signal_threshold'})
-                raise ValueError("failover_signal_threshold must be between -120 and 0 dBm")
+                                     'validation_field': 'sim_failover_signal_threshold'})
+                raise ValueError("sim_failover_signal_threshold must be between -120 and 0 dBm")
 
         # Validate data_limit_size (0 = unlimited, positive = limit in bytes)
         if 'data_limit_size' in config:
@@ -1624,7 +1618,7 @@ class InterfaceConfig(ServiceInterface):
 
         Returns a flat D-Bus dict ``a{sv}`` with keys for FSM state, SIM info,
         modem hardware, signal quality, IP configuration, bearer session stats,
-        per-SIM cumulative data usage, failover/recovery state, per-slot
+        per-SIM cumulative data usage, sim-failover/recovery state, per-slot
         configuration summary, and key feature flags.
         """
         try:

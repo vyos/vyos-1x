@@ -117,7 +117,7 @@ async def example_full_config():
                 "apn": {"name": "backup.apn", "auth_type": "none"},
                 "pdp_type": "ipv4",
                 "pin": "5678",
-                "data_limit_action": "failover",
+                "data_limit_action": "sim-failover",
             },
         ],
 

@@ -34,18 +34,24 @@ interfaces
         │     │     ├── roaming                           #   valueless
         │     │     ├── pin <4-8 digits>                  #   if set, SIM is auto-unlocked
         │     │     ├── puk <8 digits>                     #   PUK for auto-recovery (resets PIN)
-        │     │     ├── supported-bands <all|LTE|5G|band,band,...>
+        │     │     ├── supported-bands <all|band,band,...>
         │     │     ├── preferred-carrier <MCCMNC|name>  #   e.g. '302610' or 'Bell'
-        │     │     ├── enable-network-scan               #   valueless
+        │     │     ├── enable-network-scan               #   valueless — diagnostic scan; results in status
         │     │     └── data-limit
         │     │           ├── size <bytes>                #   0 = unlimited
-        │     │           ├── action <disable|alert|throttle|block|failover>
+        │     │           ├── action <disable|alert|block|sim-failover|sim-failover-sticky>
         │     │           └── billing-date <1-28>
         │     │
-        │     ├── failover                                #   valueless — enable SIM failover
-        │     └── failback
+        │     ├── sim-failback
+        │     |     ├── enable                            #   valueless
+        │     |     └── check-interval <seconds>          #   default: 600
+        │     │
+        │     └── sim-failover
         │           ├── enable                            #   valueless
-        │           └── check-interval <seconds>          #   default: 600
+        │           ├── connect-retries <count>           #   default: 3
+        │           ├── revert-timer <seconds>            #   default: 300
+        │           ├── signal-loss-timer <seconds>       #   default: 60
+        │           └── signal-threshold <dBm>            #   default: -90
         │
         ├── apn-discovery
         │     └── android                                 #   valueless — enable Android APN DB
@@ -82,19 +88,12 @@ interfaces
         │     ├── ipv4-targets <addr,addr,...>            #   default: 8.8.8.8,1.1.1.1
         │     └── ipv6-targets <addr,addr,...>            #   default: 2001:4860:4860::8888,...
         │
-        ├── failover
-        │     ├── enable                                  #   valueless
-        │     ├── connect-retries <count>                 #   default: 3
-        │     ├── revert-timer <seconds>                  #   default: 300
-        │     ├── signal-loss-timer <seconds>             #   default: 60
-        │     └── signal-threshold <dBm>                  #   default: -90
-        │
         ├── data-usage
         │     ├── monitoring-interval <seconds>           #   default: 30
         │     ├── warning-thresholds <pct,pct,...>        #   default: 75,90,95
         │     └── default-limit                           #   global fallback for per-SIM
         │           ├── size <bytes>                      #   default: 0 (unlimited)
-        │           ├── action <disable|alert|throttle|block|failover>  #   default: disable
+        │           ├── action <disable|alert|block|sim-failover|sim-failover-sticky>  #   default: disable
         │           └── billing-date <1-28>               #   default: 1
         │
         ├── hardware-reset
@@ -102,12 +101,10 @@ interfaces
         │     ├── max-attempts <count>                    #   default: 3
         │     └── cooldown <seconds>                      #   default: 300
         │
-        ├── band
-        │     ├── supported <all|LTE|5G|band,band,...>    #   global default
-        │     ├── preferred-carrier <MCCMNC|name>          #   global fallback for per-SIM
-        │     └── network-scan
-        │           ├── enable                            #   valueless
-        │           └── timeout <seconds>                 #   default: 60
+        ├── radio-technology <all|2G|3G|LTE|5G>              #   global modem-level
+        │
+        ├── network-scan
+        │     └── timeout <seconds>                       #   default: 60
         │
         ├── timeouts
         │     ├── connection <seconds>                    #   default: 120
@@ -139,8 +136,8 @@ automatically using a 4-priority APN discovery chain:
 | **Roaming** | per-SIM only, default `disabled` | Modem will not register on visited networks unless enabled per slot |
 | **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
 | **SIM PIN** | per-SIM only | If a PIN is configured, the FSM always sends it automatically when the SIM is locked |
-| **SIM failover** | `disabled` | Single-SIM operation; slot 2 is ignored |
-| **SIM failback** | `disabled` | Even if failover fires, no automatic return to primary |
+| **SIM failover** | per-SIM, `disabled` | Enable per slot: allows automatic switch to another SIM on failure |
+| **SIM failback** | `disabled` | Even if sim-failover fires, no automatic return to primary |
 | **APN discovery (Android)** | `disabled` | Only configured / automatic APNs are tried |
 | **Connection mode** | `always-on` | Modem connects immediately at boot and stays connected |
 | **Enhanced reconnection** | `disabled` | Fixed retry intervals; no signal-quality awareness |
@@ -154,14 +151,13 @@ automatically using a 4-priority APN discovery chain:
 | **Interface-up timeout** | `10 s` | Max wait for kernel interface to come up after bearer connect |
 | **Connectivity monitoring** | `disabled` | No active ping probes; dead path undetected until bearer drops |
 | **Connectivity ping targets** | IPv4: `8.8.8.8, 1.1.1.1`; IPv6: Google/Cloudflare DNS | (only effective when monitoring is enabled) |
-| **Failover** | `disabled` | No automatic switchover on signal loss or connect failures |
+| **SIM Failover** | `disabled` | No automatic switchover on signal loss or connect failures |
 | **Data limits (per-SIM)** | size `0` (unlimited), action `disable`, billing-date `1` | No data cap enforcement |
 | **Data limits (global fallback)** | size `0`, action `disable`, billing-date `1` | Applies when per-SIM values are not set |
 | **Data usage monitoring** | interval `30 s`, thresholds `75%, 90%, 95%` | Counters tracked; warnings logged at thresholds (no action) |
 | **Hardware reset** | `enabled`, max `3` attempts, cooldown `300 s` | Modem power-cycles after repeated unrecoverable failures |
-| **Preferred carrier (global)** | `(empty)` | Fallback for per-SIM preferred-carrier; accepts MCCMNC code (e.g. `302610`) or friendly name (e.g. `Bell`) |
-| **Band selection** | `all` | All modem-supported bands enabled |
-| **Network scan** | `disabled` | No background operator scanning |
+| **Band selection** | `all` | All modem-supported radio technologies enabled |
+| **Network scan timeout** | `60 s` | Max wait for network scan completion |
 | **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
 | **Registration timeout** | `180 s` | Max wait for network registration |
 | **Normal monitoring interval** | `30 s` | Polling cycle in CONNECTED state |
@@ -205,7 +201,7 @@ set interfaces wwan wwan0 network-mode 'auto'
 
 ### SIM Configuration
 
-> **If unconfigured:** Slot 1 active, no failover, single-SIM operation.  PIN/PUK are per-SIM only (no global default).
+> **If unconfigured:** Slot 1 active, no sim-failover, single-SIM operation.  PIN/PUK are per-SIM only (no global default).
 
 ```
 set interfaces wwan wwan0 sim active-slot 1
@@ -232,13 +228,19 @@ set interfaces wwan wwan0 sim slot 2 auth-type 'none'
 set interfaces wwan wwan0 sim slot 2 pdp-type 'ipv4'
 set interfaces wwan wwan0 sim slot 2 pin '5678'
 set interfaces wwan wwan0 sim slot 2 data-limit size 0
-set interfaces wwan wwan0 sim slot 2 data-limit action 'failover'
+set interfaces wwan wwan0 sim slot 2 data-limit action 'sim-failover'
 set interfaces wwan wwan0 sim slot 2 data-limit billing-date 1
 
-# SIM failover / failback
-set interfaces wwan wwan0 sim failover
-set interfaces wwan wwan0 sim failback enable
-set interfaces wwan wwan0 sim failback check-interval 600
+# SIM failback
+set interfaces wwan wwan0 sim sim-failback enable
+set interfaces wwan wwan0 sim sim-failback check-interval 600
+
+# SIM failover
+set interfaces wwan wwan0 sim sim-failover enable
+set interfaces wwan wwan0 sim sim-failover connect-retries 3
+set interfaces wwan wwan0 sim sim-failover revert-timer 300
+set interfaces wwan wwan0 sim sim-failover signal-loss-timer 60
+set interfaces wwan wwan0 sim sim-failover signal-threshold -90
 ```
 
 ### APN Discovery
@@ -350,21 +352,30 @@ set interfaces wwan wwan0 connectivity-monitoring ipv4-targets '8.8.8.8,1.1.1.1,
 set interfaces wwan wwan0 connectivity-monitoring ipv6-targets '2001:4860:4860::8888,2606:4700:4700::1111'
 ```
 
-### Interface Failover
+### SIM Failover Policy
 
-> **If unconfigured:** Disabled — no automatic interface-level switchover on sustained signal loss or repeated connect failures.
+> **If unconfigured:** Disabled — no automatic SIM switchover on sustained signal loss or repeated connect failures.
 
 ```
-set interfaces wwan wwan0 failover enable
-set interfaces wwan wwan0 failover connect-retries 3
-set interfaces wwan wwan0 failover revert-timer 300
-set interfaces wwan wwan0 failover signal-loss-timer 60
-set interfaces wwan wwan0 failover signal-threshold -90
+set interfaces wwan wwan0 sim sim-failover enable
+set interfaces wwan wwan0 sim sim-failover connect-retries 3
+set interfaces wwan wwan0 sim sim-failover revert-timer 300
+set interfaces wwan wwan0 sim sim-failover signal-loss-timer 60
+set interfaces wwan wwan0 sim sim-failover signal-threshold -90
 ```
 
 ### Data Usage Monitoring
 
 > **If unconfigured:** Counters still tracked (30 s interval, thresholds 75/90/95%).  Warnings logged but no enforcement action unless a per-SIM `data-limit` is configured.
+
+**Data-limit actions:**
+| Action | Behaviour |
+|---|---|
+| `disable` | Disconnect bearer when limit hit |
+| `alert` | Log warning only — no enforcement |
+| `block` | *(reserved for future use)* |
+| `sim-failover` | Switch to backup SIM; failback resumes normally when `sim-failback` is enabled |
+| `sim-failover-sticky` | Switch to backup SIM **and suppress failback** until the billing cycle resets — avoids overage charges on the primary SIM |
 
 ```
 set interfaces wwan wwan0 data-usage monitoring-interval 30
@@ -384,22 +395,118 @@ set interfaces wwan wwan0 hardware-reset max-attempts 3
 set interfaces wwan wwan0 hardware-reset cooldown 300
 ```
 
-### Band / Carrier / Network Scan
+### Radio Technology / Carrier / Network Scan
 
-> **If unconfigured:** All bands enabled, network scanning disabled, scan timeout 60 s.
+> **If unconfigured:** All radio technologies enabled, network scanning disabled, scan timeout 60 s.
+>
+> **Global vs Per-SIM selection:**
+> The global `radio-technology` setting accepts **only** `all` or technology-group
+> keywords (`2G`, `3G`, `LTE`, `5G`).  These are **modem-level** settings — the
+> radio hardware uses one set of active technologies regardless of which SIM
+> slot is active.  Specific band names (e.g. `eutran-7`, `ngran-78`) are
+> **per-SIM only** because different carriers use different frequencies.
+> Use per-SIM `supported-bands` for carrier-specific band restrictions.
+> The final active band set is: global ∩ per-SIM ∩ modem-supported.
+>
+> `preferred-carrier` and `enable-network-scan` are **per-SIM only** settings
+> because each SIM has its own carrier.  Configure them under
+> `sim slot N preferred-carrier` and `sim slot N enable-network-scan`.
 >
 > `preferred-carrier` accepts two formats:
 > - **MCCMNC code** (e.g. `'302610'` for Bell) — used for direct `Register()`; fast, no scan needed.
-> - **Friendly name** (e.g. `'Bell'`) — matched as a case-insensitive substring against `operator-long` from a network scan; requires `network-scan enable`.
+> - **Friendly name** (e.g. `'Bell'`) — matched as a case-insensitive substring against `operator-long` from a network scan.  A scan is performed **automatically** when a friendly name is used; no separate `network-scan enable` is required.
 >
 > MCCMNC is preferred because it avoids the 2+ minute scan delay.
+>
+> **Network scan behaviour:**
+> - **`preferred-carrier` with a friendly name** → scan runs automatically to resolve the name to an MCCMNC code for registration.
+> - **`preferred-carrier` with an MCCMNC code** → direct `Register()`, no scan.
+> - **`network-scan enable` (with or without preferred-carrier)** → a diagnostic scan is performed and the results are cached in the status output under `available_networks`.  Each entry includes operator name, MCCMNC code, availability status, and access technology.
+> - If both a friendly name **and** `network-scan enable` are set, a single scan serves both purposes.
 
 ```
-set interfaces wwan wwan0 band supported 'all'
-set interfaces wwan wwan0 band preferred-carrier '302610'
-set interfaces wwan wwan0 band network-scan enable
-set interfaces wwan wwan0 band network-scan timeout 60
+set interfaces wwan wwan0 radio-technology 'all'
+set interfaces wwan wwan0 network-scan timeout 60
 ```
+
+#### Band Name Reference
+
+Band names use the **3GPP band number** (the industry-standard number from
+Wikipedia / carrier specs) prefixed with the technology.  The code translates
+these to ModemManager `MM_MODEM_BAND_*` uint32 constants internally — users
+never type the MM constant directly.
+
+The prefix is required because the same band number can exist across
+technologies (e.g. Band 1 exists in UMTS, LTE, and 5G NR).
+
+**Example:** `set interfaces wwan wwan0 sim slot 1 supported-bands 'eutran-7,eutran-28,ngran-78'`
+
+| Technology | Band Name | MM Constant | Frequency |
+|---|---|---|---|
+| **2G (GSM)** | `gsm-850` | 1 | 850 MHz |
+| | `gsm-900` | 2 | 900 MHz |
+| | `gsm-1800` | 3 | 1800 MHz |
+| | `gsm-1900` | 4 | 1900 MHz |
+| **3G (UMTS)** | `umts-1` | 5 | 2100 MHz |
+| | `umts-2` | 6 | 1900 MHz PCS |
+| | `umts-3` | 7 | 1800 MHz DCS |
+| | `umts-4` | 8 | 1700/2100 MHz AWS |
+| | `umts-5` | 9 | 850 MHz |
+| | `umts-6` | 10 | 800 MHz |
+| | `umts-7` | 11 | 2600 MHz |
+| | `umts-8` | 12 | 900 MHz |
+| | `umts-9` | 13 | 1700 MHz |
+| | `umts-10` | 14 | 1700/2100 MHz |
+| **LTE (EUTRAN)** | `eutran-1` | 31 | 2100 MHz |
+| | `eutran-2` | 32 | 1900 MHz PCS |
+| | `eutran-3` | 33 | 1800 MHz DCS |
+| | `eutran-4` | 34 | 1700/2100 MHz AWS |
+| | `eutran-5` | 35 | 850 MHz |
+| | `eutran-6` | 36 | 800 MHz |
+| | `eutran-7` | 37 | 2600 MHz |
+| | `eutran-8` | 38 | 900 MHz |
+| | `eutran-9` | 39 | 1800 MHz |
+| | `eutran-10` | 40 | 1700/2100 MHz |
+| | `eutran-11` | 41 | 1500 MHz |
+| | `eutran-12` | 42 | 700 MHz a |
+| | `eutran-13` | 43 | 700 MHz c |
+| | `eutran-14` | 44 | 700 MHz PS |
+| | `eutran-17` | 47 | 700 MHz b |
+| | `eutran-18` | 48 | 800 MHz |
+| | `eutran-19` | 49 | 800 MHz |
+| | `eutran-20` | 50 | 800 MHz DD |
+| | `eutran-21` | 51 | 1500 MHz |
+| | `eutran-25` | 55 | 1900 MHz+ |
+| | `eutran-26` | 56 | 850 MHz+ |
+| | `eutran-28` | 58 | 700 MHz APT |
+| | `eutran-41` | 71 | 2500 MHz |
+| | `eutran-66` | 96 | 1700/2100 MHz |
+| | `eutran-71` | 101 | 600 MHz |
+| **5G NR (NGRAN)** | `ngran-1` | 128 | 2100 MHz |
+| | `ngran-2` | 129 | 1900 MHz |
+| | `ngran-3` | 130 | 1800 MHz |
+| | `ngran-5` | 132 | 850 MHz |
+| | `ngran-7` | 134 | 2600 MHz |
+| | `ngran-8` | 135 | 900 MHz |
+| | `ngran-12` | 139 | 700 MHz |
+| | `ngran-20` | 147 | 800 MHz |
+| | `ngran-25` | 152 | 1900 MHz |
+| | `ngran-28` | 155 | 700 MHz |
+| | `ngran-41` | 168 | 2500 MHz |
+| | `ngran-66` | 193 | 1700/2100 MHz |
+| | `ngran-71` | 198 | 600 MHz |
+| | `ngran-77` | 204 | 3700 MHz |
+| | `ngran-78` | 205 | 3500 MHz |
+| | `ngran-79` | 206 | 4700 MHz |
+
+**Technology-group shortcuts** (global `radio-technology` only, not per-SIM):
+
+| Keyword | Expands to |
+|---|---|
+| `2G` | All `gsm-*` bands |
+| `3G` | All `umts-*` bands |
+| `LTE` | All `eutran-*` bands |
+| `5G` | All `ngran-*` bands |
 
 ### Timeouts
 
@@ -430,9 +537,13 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | VyOS `set` Command | `my_config.conf` Key | Default |
 |---|---|---|
 | `sim active-slot` | `active_sim_slot` | `1` |
-| `sim failover` | `sim_failover` | `disabled` |
-| `sim failback enable` | `sim_failback_enabled` | `disabled` |
-| `sim failback check-interval` | `sim_failback_check_interval` | `600` |
+| `sim sim-failback enable` | `sim_failback_enabled` | `disabled` |
+| `sim sim-failback check-interval` | `sim_failback_check_interval` | `600` |
+| `sim sim-failover enable` | `sim_failover` | `disabled` |
+| `sim sim-failover connect-retries` | `sim_failover_connect_retries` | `3` |
+| `sim sim-failover revert-timer` | `sim_failover_revert_timer` | `300` |
+| `sim sim-failover signal-loss-timer` | `sim_failover_signal_loss_timer` | `60` |
+| `sim sim-failover signal-threshold` | `sim_failover_signal_threshold` | `-90` |
 | `sim slot N apn` | `sim_slot_N_apn` | `(empty)` |
 | `sim slot N username` | `sim_slot_N_username` | `(empty)` |
 | `sim slot N password` | `sim_slot_N_password` | `(empty)` |
@@ -475,11 +586,6 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `connectivity-monitoring require-both` | `connectivity_monitoring_require_both` | `false` |
 | `connectivity-monitoring ipv4-targets` | `connectivity_monitoring_ipv4_targets` | `8.8.8.8,1.1.1.1` |
 | `connectivity-monitoring ipv6-targets` | `connectivity_monitoring_ipv6_targets` | `2001:4860:...` |
-| `failover enable` | `failover` | `disabled` |
-| `failover connect-retries` | `failover_connect_retries` | `3` |
-| `failover revert-timer` | `failover_revert_timer` | `300` |
-| `failover signal-loss-timer` | `failover_signal_loss_timer` | `60` |
-| `failover signal-threshold` | `failover_signal_threshold` | `-90` |
 | `data-usage monitoring-interval` | `data_usage_monitoring_interval` | `30` |
 | `data-usage warning-thresholds` | `data_usage_warning_thresholds` | `75,90,95` |
 | `data-usage default-limit size` | `data_limit_size` | `0` |
@@ -488,10 +594,8 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `hardware-reset enable` | `hardware_reset_enabled` | `true` |
 | `hardware-reset max-attempts` | `max_hardware_resets` | `3` |
 | `hardware-reset cooldown` | `hardware_reset_cooldown` | `300` |
-| `band supported` | `supported_bands` | `all` |
-| `band preferred-carrier` | `preferred_carrier` | `(empty)` |
-| `band network-scan enable` | `enable_network_scan` | `false` |
-| `band network-scan timeout` | `network_scan_timeout` | `60` |
+| `radio-technology` | `radio_technology` | `all` |
+| `network-scan timeout` | `network_scan_timeout` | `60` |
 | `network-mode` | `network_mode` | `auto` |
 | `timeouts connection` | `connection_timeout` | `120` |
 | `timeouts registration` | `registration_timeout` | `180` |
@@ -520,12 +624,14 @@ set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
 set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
 set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
 set interfaces wwan wwan0 sim slot 1 pin '1234'
+set interfaces wwan wwan0 sim slot 1 sim-failover
 set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
 set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
 set interfaces wwan wwan0 sim slot 1 data-limit billing-date 1
 
 set interfaces wwan wwan0 sim slot 2 pin '5678'
-set interfaces wwan wwan0 sim slot 2 data-limit action 'failover'
+set interfaces wwan wwan0 sim slot 2 sim-failover
+set interfaces wwan wwan0 sim slot 2 data-limit action 'sim-failover'
 
 set interfaces wwan wwan0 apn-discovery android
 set interfaces wwan wwan0 reconnection enhanced
