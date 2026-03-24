@@ -49,9 +49,18 @@ def get_config(config=None):
     # We should only terminate the PPPoE session if critical parameters change.
     # All parameters that can be changed on-the-fly (like interface description)
     # should not lead to a reconnect!
-    for options in ['access-concentrator', 'connect-on-demand', 'service-name',
-                    'source-interface', 'vrf', 'no-default-route',
-                    'authentication', 'host_uniq']:
+    for options in [
+        'access-concentrator',
+        'connect-on-demand',
+        'service-name',
+        'source-interface',
+        'vrf',
+        'no-default-route',
+        'authentication',
+        'host-uniq',
+        'dhcpv6-options',
+        'ipv6',
+    ]:
         if is_node_changed(conf, base + [ifname, options]):
             pppoe.update({'shutdown_required': {}})
             # bail out early - no need to further process other nodes
