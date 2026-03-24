@@ -21,6 +21,7 @@ from vyos import ConfigError
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdep import set_dependents, call_dependents
+from vyos.configverify import verify_mtu_ipv6
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig.vpp import VPPGREInterface
@@ -127,6 +128,8 @@ def verify(config):
     verify_vpp_tunnel_source_address(config)
     if config.get('source_address') == config.get('remote'):
         raise ConfigError('Remote address must not be the same as source address')
+
+    verify_mtu_ipv6(config)
 
     # Disable checks as point-to-multipoint mode does not work without 'teib' feature that is not implemented yet
     # # check multipoint mode

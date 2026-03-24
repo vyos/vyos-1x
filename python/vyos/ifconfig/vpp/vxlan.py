@@ -117,9 +117,6 @@ class VPPVXLANInterface(Interface, VPPInterface):
         # Add vxlan interface
         self.add_vxlan()
 
-        # Set rx-mode
-        rx_mode = config.get('vpp_settings', {}).get('interface_rx_mode')
-        if rx_mode:
-            self.set_rx_mode(rx_mode)
+        VPPInterface.update(self, config)
 
         super().update(config)

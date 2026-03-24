@@ -159,8 +159,10 @@ def verify(vxlan):
 
         lower_mtu = Interface(vxlan['source_interface']).get_mtu()
         if lower_mtu < (int(vxlan['mtu']) + vxlan_overhead):
-            raise ConfigError(f'Underlaying device MTU is to small ({lower_mtu} '\
-                              f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)')
+            Warning(
+                f'Underlying device MTU is too small ({lower_mtu} '
+                f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)'
+            )
 
     # Check for mixed IPv4 and IPv6 addresses
     protocol = None
