@@ -543,6 +543,19 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertRegex(out, r'\s*eth1\s+\d+\s+\d+')
         self.assertRegex(out, r'\s*vxlan_tunnel23\s+\d+\s+\d+')
 
+        # Cannot add members of bridge interface to cross-connect
+        # expect raise ConfigError
+        self.cli_set(
+            interfaces_path + ['xconnect', 'vppxcon1', 'member', 'interface', interface]
+        )
+        self.cli_set(
+            interfaces_path
+            + ['xconnect', 'vppxcon1', 'member', 'interface', interface_vxlan]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(interfaces_path + ['xconnect'])
+
         # Add Loopback BVI to the bridge
         self.cli_set(interfaces_path + ['loopback', f'vpplo{vni}'])
         self.cli_set(
@@ -652,6 +665,16 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         ]
         for required_string in required_str_list:
             self.assertIn(required_string, out)
+
+        # Cannot add members of cross-connect interface to bond/bridge
+        # expect raise ConfigError
+        self.cli_set(
+            interfaces_path
+            + ['bonding', 'vppbond1', 'member', 'interface', interface_vxlan]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(interfaces_path + ['bonding'])
 
         # delete xconnect interface
         self.cli_delete(xconn_path + [interface_xconnect])

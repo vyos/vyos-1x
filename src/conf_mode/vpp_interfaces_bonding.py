@@ -27,6 +27,7 @@ from vyos.ifconfig.vpp import VPPBondInterface
 from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
+from vyos.vpp.config_verify import verify_member_conflicts
 from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
 from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
 from vyos.vpp.utils import cli_ifaces_list
@@ -166,13 +167,7 @@ def verify(config):
                 f'Interface {iface} cannot be a member of multiple bonding interfaces: {", ".join(bond_members)}'
             )
 
-        # Interface cannot be a member of a bridge and a bond at the same time
-        bridge_members = config['bridge_members'].get(iface)
-        if bridge_members:
-            raise ConfigError(
-                f'Interface {iface} cannot be a member of a bond because '
-                f'it already belongs to bridge interface: {", ".join(bridge_members)}.'
-            )
+        verify_member_conflicts(iface, config, 'bond')
 
     if 'mac' in config:
         mac = config['mac']
