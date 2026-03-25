@@ -688,10 +688,14 @@ class InterfaceConfig(ServiceInterface):
                                  'validation_field': 'sim_failover'})
             raise ValueError("sim_failover must be 'enabled' or 'disabled'")
 
-        # Validate SIM failback
+        # Validate and normalize SIM failback to boolean
         if 'sim_failback_enabled' in config:
             val = config['sim_failback_enabled']
-            if val not in [True, False, 'enabled', 'disabled']:
+            if val in (True, 'enabled'):
+                config['sim_failback_enabled'] = True
+            elif val in (False, 'disabled'):
+                config['sim_failback_enabled'] = False
+            else:
                 logger.warning("Invalid sim_failback_enabled value",
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'sim_failback_enabled'})
@@ -1418,7 +1422,7 @@ class InterfaceConfig(ServiceInterface):
             # States where CONNECT transition is valid right now
             connectable_states = {'FAILED', 'REGISTERED_IDLE'}
             # States where we are already connected / on the way
-            already_connected_states = {'CONNECTED', 'CONNECTING', 'USAGE_MONITORING'}
+            already_connected_states = {'CONNECTED', 'CONNECTING'}
 
             if current_state == 'CONFIGURING':
                 self.fsm.connect_requested = True
@@ -1494,7 +1498,6 @@ class InterfaceConfig(ServiceInterface):
             # States where disconnect is valid
             disconnectable = {
                 ModemState.CONNECTED.value,
-                ModemState.USAGE_MONITORING.value,
                 ModemState.SIM_SWITCHING.value,
             }
             if current_state in disconnectable:
@@ -1535,7 +1538,6 @@ class InterfaceConfig(ServiceInterface):
             )
             bearer_up_states = {
                 ModemState.CONNECTED.value,
-                ModemState.USAGE_MONITORING.value,
             }
             status = "connected" if current_state in bearer_up_states else "disconnected"
             logger.info("Bearer status polled",
@@ -1569,11 +1571,13 @@ class InterfaceConfig(ServiceInterface):
                        extra={'interface_number': self.interface_number,
                               'current_state': current_state})
 
+            # Always clear user-disconnect hold so auto-recovery can resume
+            self.fsm.user_disconnected = False
+
             if current_state == ModemState.REGISTERED_IDLE.value:
                 self.fsm.transition(ModemEvent.CONNECT)
             elif current_state not in {ModemState.CONNECTED.value,
-                                        ModemState.CONNECTING.value,
-                                        ModemState.USAGE_MONITORING.value}:
+                                        ModemState.CONNECTING.value}:
                 self.fsm.connect_requested = True
             return "accepted"
         except Exception as e:
@@ -1600,9 +1604,18 @@ class InterfaceConfig(ServiceInterface):
             )
             logger.info("Bearer disconnect requested",
                        extra={'interface_number': self.interface_number,
-                              'current_state': current_state})
+                              'current_state': current_state,
+                              'connection_mode': getattr(self.fsm, 'connection_mode', 'unknown')})
 
-            bearer_up = {ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value}
+            # In dial-on-demand mode, flag this as a user-initiated disconnect
+            # so the FSM does not auto-reconnect.  The flag is cleared by
+            # connect_bearer(), service restart, or modem reset.
+            if getattr(self.fsm, 'connection_mode', '') == 'dial-on-demand':
+                self.fsm.user_disconnected = True
+                logger.info("Dial-on-demand: bearer held down until connect_bearer()",
+                           extra={'interface_number': self.interface_number})
+
+            bearer_up = {ModemState.CONNECTED.value}
             if current_state in bearer_up:
                 self.fsm.transition(ModemEvent.ENTER_IDLE)
             return "accepted"

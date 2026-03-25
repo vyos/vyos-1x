@@ -236,9 +236,6 @@ def build_config(raw_cfg):
         'network_scan_timeout': raw_cfg.get('network_scan_timeout', 60),
         'network_mode': raw_cfg.get('network_mode', 'auto'),
 
-        # Global modem-level radio technology selection (2G, 3G, LTE, 5G, all)
-        'radio_technology': raw_cfg.get('radio_technology', 'all'),
-
         # Monitoring intervals
         'normal_monitoring_interval': raw_cfg.get('normal_monitoring_interval', 30),
         'system_health_check_interval': raw_cfg.get('system_health_check_interval', 300),

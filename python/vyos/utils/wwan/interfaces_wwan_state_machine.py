@@ -106,6 +106,30 @@ OBJECT_MANAGER_INTERFACE = "org.freedesktop.DBus.ObjectManager"
 BEARER_INTERFACE = "org.freedesktop.ModemManager1.Bearer"
 SIMPLE_INTERFACE = "org.freedesktop.ModemManager1.Modem.Simple"
 
+# ── Central defaults ────────────────────────────────────────────────────────
+# Single source of truth for configuration defaults.  Every code path that
+# needs a fallback value should reference these dicts rather than hard-coding
+# its own magic constants.
+
+DEFAULT_DATA_CONFIG = {
+    'data_limit_size': 0,              # bytes; 0 = no limit
+    'data_limit_action': 'disable',    # disable | alert | block | sim-failover | sim-failover-sticky
+    'data_limit_billing_date': 1,      # day of month (1-28)
+}
+
+DEFAULT_CONNECTIVITY_CONFIG = {
+    'enabled': False,
+    'interval': 60,                    # seconds between tests (min 30)
+    'timeout': 10,                     # per-ping timeout (min 5)
+    'retry_count': 3,                  # pings per test (min 1)
+    'failure_threshold': 2,            # consecutive failures before recovery (min 1)
+    'test_ipv4': True,
+    'test_ipv6': False,
+    'require_both': False,             # require both v4 + v6 to pass
+    'ipv4_targets': ['8.8.8.8', '1.1.1.1'],
+    'ipv6_targets': ['2001:4860:4860::8888', '2606:4700:4700::1111'],
+}
+
 # Enums for clarity
 class ModemState(str, Enum):
     INITIAL = "INITIAL"
@@ -119,9 +143,6 @@ class ModemState(str, Enum):
     DISCONNECTED = "DISCONNECTED"
     WAITING_FOR_SIM = "WAITING_FOR_SIM"
     FAILED = "FAILED"
-    USAGE_MONITORING = "USAGE_MONITORING"
-    USAGE_THRESHOLD = "USAGE_THRESHOLD"
-    USAGE_RESETTING = "USAGE_RESETTING"
     # SIM switch states
     SIM_SWITCHING = "SIM_SWITCHING"
     SIM_DISCONNECTING = "SIM_DISCONNECTING"
@@ -144,9 +165,7 @@ class ModemEvent(str, Enum):
     RECONFIGURE = "reconfigure"
     SIM_READY = "sim_ready"
     CONNECTED = "connected"
-    START_USAGE_MONITORING = "start_usage_monitoring"
     USAGE_LIMIT_EXCEEDED = "usage_limit_exceeded"
-    RESET_USAGE = "reset_usage"
     # SIM switch events
     SWITCH_SIM = "switch_sim"
     SIM_DISCONNECTED = "sim_disconnected"
@@ -191,6 +210,7 @@ class ModemStateMachine:
         self.primary_sim_slot = None             # Configured active_sim_slot (set from config)
         self.failback_task = None                # Periodic failback check task
         self.failback_suppressed_by_data_limit = False  # Sticky failover: suppress failback until billing reset
+        self._sticky_failover_timestamp = None            # When sticky hold was activated
 
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
@@ -706,10 +726,12 @@ class ModemStateMachine:
                         self.current_active_sim = 1
 
                 # Get signal quality if available
+                # SignalQuality is (uint32 percent, bool recently_updated)
                 signal_quality = None
                 try:
                     signal_quality_variant = await props.call_get(MODEM_INTERFACE, "SignalQuality")
-                    signal_quality = signal_quality_variant.value
+                    sq = signal_quality_variant.value
+                    signal_quality = sq[0] if isinstance(sq, (list, tuple)) and sq else sq
                 except Exception:
                     pass
 
@@ -747,26 +769,17 @@ class ModemStateMachine:
         if not self.proxy:
             return
 
-        # Set up signal handlers for ModemManager state changes using dbus_next
+        # Set up a single PropertiesChanged handler for all interfaces on this proxy.
+        # dbus_next delivers all PropertiesChanged signals through one callback;
+        # registering multiple callbacks on the same interface may replace or
+        # stack depending on the version, so we use one dispatcher instead.
         try:
-            # Subscribe to PropertiesChanged signals to detect State property changes
             modem_properties_iface = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-            # Use the correct dbus_next method for PropertiesChanged signals
-            modem_properties_iface.on_properties_changed(self._handle_modem_properties_changed)
-            logger.info("ModemManager PropertiesChanged signal monitoring enabled",
+            modem_properties_iface.on_properties_changed(self._dispatch_properties_changed)
+            logger.info("PropertiesChanged signal monitoring enabled (Modem + 3GPP)",
                        extra={'interface_number': self.interface_number})
         except Exception as e:
             logger.error(f"Failed to set up signal handlers: {e}",
-                        extra={'interface_number': self.interface_number})
-
-        # Set up 3GPP interface signals for network events
-        try:
-            modem_3gpp_properties_iface = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-            modem_3gpp_properties_iface.on_properties_changed(self.handle_3gpp_properties)
-            logger.debug("3GPP signal handlers enabled",
-                        extra={'interface_number': self.interface_number})
-        except Exception as e:
-            logger.debug(f"3GPP interface not available: {e}",
                         extra={'interface_number': self.interface_number})
 
         logger.info("Modem signal handlers registered - checking for configuration",
@@ -789,6 +802,14 @@ class ModemStateMachine:
         # Start periodic SIM check if we transition to WAITING_FOR_SIM
         if self.machine.current_state == ModemState.WAITING_FOR_SIM.value:
             self._safe_create_task(self._periodic_sim_check())
+
+    def _dispatch_properties_changed(self, interface_name, changed_properties, invalidated_properties):
+        """Unified PropertiesChanged dispatcher.
+
+        Routes signals to the appropriate handler based on D-Bus interface name.
+        """
+        self._handle_modem_properties_changed(interface_name, changed_properties, invalidated_properties)
+        self.handle_3gpp_properties(interface_name, changed_properties, invalidated_properties)
 
     def _handle_modem_properties_changed(self, interface_name, changed_properties, invalidated_properties):
         """Handle ModemManager PropertiesChanged D-Bus signal for State changes"""
@@ -872,11 +893,13 @@ class ModemStateMachine:
                           'changed_properties': list(changed_properties.keys())})
 
         # Handle specific property changes
+        # SignalQuality is (uint32 percent, bool recently_updated)
         if 'SignalQuality' in changed_properties:
-            signal_quality = changed_properties['SignalQuality'].value
+            sq = changed_properties['SignalQuality'].value
+            signal_percent = sq[0] if isinstance(sq, (list, tuple)) and sq else sq
             logger.info("Signal strength changed",
                        extra={'interface_number': self.interface_number,
-                              'signal_strength': signal_quality})
+                              'signal_percent': signal_percent})
 
         # Handle SIM slot changes
         if 'PrimarySimSlot' in changed_properties:
@@ -945,7 +968,7 @@ class ModemStateMachine:
 
         elif mm_state == 3:  # DISABLED
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
-                                    ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+                                    ModemState.CONNECTED.value]:
                 # Don't trigger SIM missing if this is service-initiated or we're in reset grace period
                 if not self.service_initiated_disable and not self._is_in_reset_grace_period():
                     self.transition(ModemEvent.SIM_MISSING)
@@ -1000,7 +1023,7 @@ class ModemStateMachine:
                     self._safe_create_task(self.apply_modem_configuration())
 
         elif mm_state == 9:  # DISCONNECTING
-            if current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+            if current_fsm_state in [ModemState.CONNECTED.value]:
                 # Connection being terminated - stop network interface monitoring and trigger enhanced reconnection
                 logger.warning("ModemManager disconnecting - starting enhanced reconnection",
                               extra={'interface_number': self.interface_number})
@@ -1051,7 +1074,7 @@ class ModemStateMachine:
                                    extra={'interface_number': self.interface_number,
                                           'limit_gb': sim_data_cfg['data_limit_size'] / (1024*1024*1024),
                                           'sim_slot': self.current_active_sim})
-                        # Don't transition to USAGE_MONITORING state - just start the monitoring task
+                        # Don't transition — just start the monitoring task
                         if not self.usage_monitor_task or self.usage_monitor_task.done():
                             self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
                     else:
@@ -1072,7 +1095,7 @@ class ModemStateMachine:
 
         elif mm_state in [-1, 0]:  # FAILED or UNKNOWN
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
-                                    ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+                                    ModemState.CONNECTED.value]:
                 # Failure during active operation
                 logger.error("Modem entered failed/unknown state",
                             extra={'interface_number': self.interface_number,
@@ -1108,7 +1131,7 @@ class ModemStateMachine:
         # Track user-initiated disconnects and stop network interface monitoring
         if event == ModemEvent.DISCONNECT:
             # Check if this is from user or ModemManager
-            if current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+            if current_state in [ModemState.CONNECTED.value]:
                 # Stop network interface monitoring when leaving connected state
                 try:
                     self._safe_create_task(self._stop_network_interface_monitoring())
@@ -1209,7 +1232,6 @@ class ModemStateMachine:
             ModemState.CONNECTED.value,
             ModemState.DISCONNECTED.value,
             ModemState.FAILED.value,
-            ModemState.USAGE_MONITORING.value,
             ModemState.REGISTERED_IDLE.value
         ):
             # Normal reconfiguration
@@ -1411,8 +1433,11 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number})
                     self.transition(ModemEvent.ENTER_IDLE)
                 else:
-                    # both always-on and dial-on-demand auto-connect
-                    logger.info("Automatically proceeding to connection phase",
+                    # always-on: auto-connect and stay connected (auto-reconnect on failure)
+                    # dial-on-demand: auto-connect at boot, bearer toggleable via
+                    #   connect_bearer() / disconnect_bearer(); no auto-reconnect
+                    #   after manual disconnect_bearer()
+                    logger.info(f"{self.connection_mode} active — proceeding to connection phase",
                                extra={'interface_number': self.interface_number})
                     self.transition(ModemEvent.CONNECT)
             else:
@@ -2493,11 +2518,12 @@ class ModemStateMachine:
             return
 
         # Suppress failback when sticky failover is active (data-limit triggered)
+        # Note: we still start the monitor loop so it can detect when the
+        # billing cycle resets and lift the suppression automatically.
         if self.failback_suppressed_by_data_limit:
-            logger.info("SIM failback suppressed by data-limit sim-failover-sticky — "
-                       "will resume after billing cycle resets",
+            logger.info("SIM failback currently suppressed by data-limit sim-failover-sticky — "
+                       "monitor will check for billing cycle reset",
                        extra={'interface_number': self.interface_number})
-            return
 
         # Don't start duplicate tasks
         if self.failback_task and not self.failback_task.done():
@@ -2545,10 +2571,35 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number})
                     break
 
+                # Check if sticky failover hold should be lifted (billing cycle crossed)
+                if self.failback_suppressed_by_data_limit:
+                    try:
+                        now = datetime.datetime.now()
+                        # Get billing date from the primary SIM's data config
+                        sim_slots = self.config.get('sim_slots', []) if self.config else []
+                        primary_cfg = next((s for s in sim_slots if s.get('slot') == primary), {})
+                        billing_date = primary_cfg.get('data_limit_billing_date', 1)
+                        # Use the timestamp when sticky was activated as the reference
+                        sticky_set_time = getattr(self, '_sticky_failover_timestamp', None)
+                        if sticky_set_time and self._billing_cycle_crossed(sticky_set_time, now, billing_date):
+                            self.failback_suppressed_by_data_limit = False
+                            self._sticky_failover_timestamp = None
+                            logger.info("Billing cycle crossed — sim-failover-sticky hold lifted, "
+                                       "failback may resume",
+                                       extra={'interface_number': self.interface_number,
+                                              'billing_date': billing_date})
+                        else:
+                            logger.debug("Sticky failover still active, skipping failback check",
+                                        extra={'interface_number': self.interface_number})
+                            continue
+                    except Exception as e:
+                        logger.debug(f"Could not check billing cycle for sticky hold: {e}",
+                                    extra={'interface_number': self.interface_number})
+                        continue
+
                 # Guard: only check while connected
                 current_state = self.machine.current_state
-                if current_state not in (ModemState.CONNECTED.value,
-                                         ModemState.USAGE_MONITORING.value):
+                if current_state != ModemState.CONNECTED.value:
                     logger.debug("Not in connected state, skipping failback check",
                                 extra={'interface_number': self.interface_number,
                                        'state': current_state})
@@ -3467,19 +3518,13 @@ class ModemStateMachine:
     async def _configure_supported_bands(self):
         """Configure supported bands while modem is disabled.
 
-        Band resolution uses two layers:
-        1. Global ``radio_technology`` (modem-level) — accepts technology-group
-           keywords (2G, 3G, LTE, 5G) as well as ``all``.
-           This controls which radio technologies the modem hardware
-           is allowed to use.
-        2. Per-SIM ``supported_bands`` — accepts ``all`` or specific band names
-           only (e.g. eutran-7, ngran-78).  Technology-group keywords here are
-           ignored with a warning because radio technology is a modem-level
-           setting, not a SIM-level setting.
+        Per-SIM ``supported_bands`` accepts ``all`` or specific band names
+        (e.g. eutran-7, ngran-78).  Technology-group keywords (2G, 3G, LTE, 5G)
+        are ignored with a warning — use ``network-mode`` to control which
+        radio technologies the modem hardware is allowed to use.
 
-        The final band set is the intersection of (global-expanded bands) ∩
-        (per-SIM bands) ∩ (modem-supported bands).  If either layer is ``all``
-        it is treated as "no restriction" for that layer.
+        The final band set is: per-SIM bands ∩ modem-supported bands.
+        If per-SIM is ``all`` it is treated as "no restriction".
         """
         try:
             if not self.config:
@@ -3487,13 +3532,7 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
                 return
 
-            # ── Read both layers ────────────────────────────────────────
-            global_bands_raw = self.config.get('supported_bands', 'all')
-            if isinstance(global_bands_raw, str):
-                global_bands_cfg = [b.strip() for b in global_bands_raw.split(',') if b.strip()]
-            else:
-                global_bands_cfg = list(global_bands_raw)
-
+            # ── Read per-SIM band configuration ─────────────────────────
             active_sim_slot = self.config.get('active_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
             active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
@@ -3507,7 +3546,6 @@ class ModemStateMachine:
             logger.info("Configuring supported bands while disabled",
                        extra={'interface_number': self.interface_number,
                               'active_sim_slot': active_sim_slot,
-                              'global_bands': global_bands_cfg,
                               'per_sim_bands': per_sim_bands_cfg})
 
             # Get what bands the modem actually supports (MM returns numeric constants)
@@ -3534,35 +3572,9 @@ class ModemStateMachine:
                                   'modem_supported_constants': modem_bands_list,
                                   'current_enabled_bands': current_band_names,
                                   'current_enabled_constants': current_bands_list,
-                                  'global_bands': global_bands_cfg,
                                   'per_sim_bands': per_sim_bands_cfg})
 
-                # ── Step 1: Resolve global bands (technology groups ONLY) ────
-                global_is_all = (global_bands_cfg == ['all'] or not global_bands_cfg)
-                global_band_constants = []
-
-                if not global_is_all:
-                    global_invalid = []
-                    for band_name in global_bands_cfg:
-                        # Global level accepts ONLY technology-group keywords
-                        group_constants = self._expand_technology_group(band_name)
-                        if group_constants:
-                            global_band_constants.extend(group_constants)
-                            logger.info("Expanded global technology group to individual bands",
-                                       extra={'interface_number': self.interface_number,
-                                              'group': band_name,
-                                              'expanded_count': len(group_constants)})
-                        else:
-                            # Specific band names are per-SIM only
-                            global_invalid.append(band_name)
-                    if global_invalid:
-                        logger.warning("Specific band names ignored at global level — "
-                                      "use per-SIM supported-bands instead",
-                                      extra={'interface_number': self.interface_number,
-                                             'ignored_bands': global_invalid,
-                                             'valid_global_values': ['all', '2G', '3G', 'LTE', '5G']})
-
-                # ── Step 2: Resolve per-SIM bands (specific bands only) ──────
+                # ── Resolve per-SIM bands (specific bands only) ──────────
                 per_sim_is_all = (per_sim_bands_cfg == ['all'] or not per_sim_bands_cfg)
                 per_sim_band_constants = []
 
@@ -3573,14 +3585,14 @@ class ModemStateMachine:
                         mm_constant = self._band_name_to_mm_constant(band_name)
                         if mm_constant is not None:
                             per_sim_band_constants.append(mm_constant)
-                        elif self._expand_technology_group(band_name) is not None:
+                        elif self._is_technology_group(band_name):
                             # Technology group in per-SIM config — warn and ignore
                             per_sim_tech_groups.append(band_name)
                         else:
                             per_sim_invalid.append(band_name)
                     if per_sim_tech_groups:
                         logger.warning("Technology groups (2G/3G/LTE/5G) are modem-level settings "
-                                      "and cannot be set per-SIM — use global 'radio-technology' instead. "
+                                      "and cannot be set per-SIM — use 'network-mode' instead. "
                                       "These entries are ignored.",
                                       extra={'interface_number': self.interface_number,
                                              'ignored_groups': per_sim_tech_groups,
@@ -3591,40 +3603,21 @@ class ModemStateMachine:
                                              'invalid_bands': per_sim_invalid,
                                              'valid_formats': ['all', 'eutran-1', 'ngran-78', 'umts-1', 'gsm-850']})
 
-                # ── Step 3: Compute target = global ∩ per-SIM ∩ modem ────────
-                if global_is_all and per_sim_is_all:
-                    # Both layers unrestricted — use all modem bands
+                # ── Compute target = per-SIM ∩ modem ────────────────────
+                if per_sim_is_all:
+                    # Per-SIM unrestricted — use all modem bands
                     target_bands = modem_bands_list
                     target_band_names = modem_band_names
-                    logger.info("Both global and per-SIM bands are 'all' — enabling all modem bands",
+                    logger.info("Per-SIM bands are 'all' — enabling all modem bands",
                                extra={'interface_number': self.interface_number,
                                       'count': len(target_bands)})
-                elif global_is_all:
-                    # Only per-SIM restricts
+                else:
+                    # Per-SIM restricts — intersect with modem-supported
                     target_bands = [b for b in per_sim_band_constants if b in modem_bands_list]
                     target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
-                    logger.info("Global bands unrestricted, applying per-SIM filter",
+                    logger.info("Applying per-SIM ∩ modem band filter",
                                extra={'interface_number': self.interface_number,
                                       'per_sim_bands': [self._mm_constant_to_band_name(b) for b in per_sim_band_constants],
-                                      'result_bands': target_band_names})
-                elif per_sim_is_all:
-                    # Only global restricts
-                    target_bands = [b for b in global_band_constants if b in modem_bands_list]
-                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
-                    logger.info("Per-SIM bands unrestricted, applying global filter",
-                               extra={'interface_number': self.interface_number,
-                                      'global_bands': [self._mm_constant_to_band_name(b) for b in global_band_constants],
-                                      'result_bands': target_band_names})
-                else:
-                    # Both restrict — intersection of all three
-                    combined = set(global_band_constants) & set(per_sim_band_constants) & set(modem_bands_list)
-                    target_bands = list(combined)
-                    target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
-                    logger.info("Applying global ∩ per-SIM ∩ modem band intersection",
-                               extra={'interface_number': self.interface_number,
-                                      'global_count': len(global_band_constants),
-                                      'per_sim_count': len(per_sim_band_constants),
-                                      'modem_count': len(modem_bands_list),
                                       'result_bands': target_band_names})
 
                 # Fall back to all modem bands if intersection is empty
@@ -3680,7 +3673,6 @@ class ModemStateMachine:
                 logger.info("Band configuration not supported by this modem or driver",
                            extra={'interface_number': self.interface_number,
                                   'error': str(band_e),
-                                  'global_bands': global_bands_cfg,
                                   'per_sim_bands': per_sim_bands_cfg})
 
         except Exception as e:
@@ -3865,21 +3857,11 @@ class ModemStateMachine:
         mapping = self._get_band_name_to_constant_mapping()
         return mapping.get(band_name.lower().strip())
 
-    def _expand_technology_group(self, group_name):
-        """Expand a technology-group keyword (2G, 3G, LTE, 5G) into individual
-        MM band constants.  Returns a list of constants, or None if *group_name*
-        is not a recognised technology keyword."""
-        mapping = self._get_band_name_to_constant_mapping()
-        prefix_map = {
-            '2g':  'gsm-',
-            '3g':  'umts-',
-            'lte': 'eutran-',
-            '5g':  'ngran-',
-        }
-        prefix = prefix_map.get(group_name.lower().strip())
-        if prefix is None:
-            return None
-        return [v for k, v in mapping.items() if k.startswith(prefix)]
+    @staticmethod
+    def _is_technology_group(name):
+        """Return True if *name* is a technology-group keyword (2G/3G/LTE/5G)
+        rather than a specific band name."""
+        return name.lower().strip() in {'2g', '3g', 'lte', '5g'}
 
     def _mm_constant_to_band_name(self, mm_constant):
         """Convert MM constant back to human-readable band name"""
@@ -3896,8 +3878,6 @@ class ModemStateMachine:
         connection_params = [
             'active_sim_slot',
             'sim_slots',  # APN, auth, roaming changes within sim_slots
-            'supported_bands',
-            'radio_technology',
             'network_mode'
         ]
 
@@ -3952,7 +3932,7 @@ class ModemStateMachine:
         old_config = getattr(self, '_previous_config', {})
         needs_disconnect = self._requires_disconnection(old_config, self.config)
 
-        if needs_disconnect and self.machine.current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+        if needs_disconnect and self.machine.current_state == ModemState.CONNECTED.value:
             logger.info("Disconnecting for connection parameter changes",
                        extra={'interface_number': self.interface_number})
             await self._disconnect_bearer()
@@ -4544,11 +4524,14 @@ class ModemStateMachine:
         # Per-SIM values take priority; fall back to global config then defaults
         return {
             'data_limit_size': sim_config.get('data_limit_size',
-                                              self.config.get('data_limit_size', 0) if self.config else 0),
+                                              self.config.get('data_limit_size',
+                                                              DEFAULT_DATA_CONFIG['data_limit_size']) if self.config else DEFAULT_DATA_CONFIG['data_limit_size']),
             'data_limit_action': sim_config.get('data_limit_action',
-                                                self.config.get('data_limit_action', 'alert') if self.config else 'alert'),
+                                                self.config.get('data_limit_action',
+                                                                DEFAULT_DATA_CONFIG['data_limit_action']) if self.config else DEFAULT_DATA_CONFIG['data_limit_action']),
             'data_limit_billing_date': sim_config.get('data_limit_billing_date',
-                                                      self.config.get('data_limit_billing_date', 1) if self.config else 1),
+                                                      self.config.get('data_limit_billing_date',
+                                                                      DEFAULT_DATA_CONFIG['data_limit_billing_date']) if self.config else DEFAULT_DATA_CONFIG['data_limit_billing_date']),
         }
 
     async def monitor_data_usage(self):
@@ -4584,8 +4567,8 @@ class ModemStateMachine:
         cumulative_bytes = self._load_persisted_usage()
 
         try:
-            # Monitor while in CONNECTED or USAGE_MONITORING states
-            while self.machine.current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+            # Monitor while connected
+            while self.machine.current_state == ModemState.CONNECTED.value:
                 try:
                     # Check data usage statistics from bearer
                     introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.bearer_path)
@@ -4635,6 +4618,7 @@ class ModemStateMachine:
                                     # Switch to alternative SIM
                                     if data_action == 'sim-failover-sticky':
                                         self.failback_suppressed_by_data_limit = True
+                                        self._sticky_failover_timestamp = datetime.datetime.now()
                                         logger.info("Sticky failover: failback suppressed until billing cycle resets",
                                                    extra={'interface_number': self.interface_number,
                                                           'active_sim': self.current_active_sim})
@@ -4671,7 +4655,7 @@ class ModemStateMachine:
         """Handle SIM failover triggered by data limit exceeded on current SIM."""
         try:
             if not self._is_sim_failover_enabled():
-                logger.warning("Data limit sim-failover requested but sim_failover is disabled for active slot, disconnecting instead",
+                logger.warning("Data limit sim-failover requested but sim_failover is globally disabled, disconnecting instead",
                               extra={'interface_number': self.interface_number})
                 self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
                 return
@@ -4820,12 +4804,6 @@ class ModemStateMachine:
             return False  # Shouldn't happen with billing_day 1-28
 
         return last_dt < boundary <= now_dt
-
-    async def monitor_usage(self):
-        """Legacy method - now redirects to data usage monitoring"""
-        logger.warning("monitor_usage() is deprecated - connection monitoring now event-driven",
-                      extra={'interface_number': self.interface_number})
-        await self.monitor_data_usage()
 
     async def _recover_bearer_connection(self):
         """Attempt to recover bearer connection with enhanced signal validation"""
@@ -5007,14 +4985,14 @@ class ModemStateMachine:
 
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
 
-            # Get signal quality percentage (for backwards compatibility)
+            # Get signal quality percentage
+            # SignalQuality is (uint32 percent, bool recently_updated)
             signal_percent = 0
             try:
                 signal_quality_variant = await props.call_get(MODEM_INTERFACE, "SignalQuality")
                 if signal_quality_variant and signal_quality_variant.value:
-                    # SignalQuality is a dict with 'signal-quality' and 'recent' keys
-                    signal_data = signal_quality_variant.value
-                    signal_percent = signal_data.get('signal-quality', 0) if isinstance(signal_data, dict) else signal_data
+                    sq = signal_quality_variant.value
+                    signal_percent = sq[0] if isinstance(sq, (list, tuple)) and sq else sq
             except Exception as e:
                 logger.debug(f"Could not get signal quality percentage: {e}",
                            extra={'interface_number': self.interface_number})
@@ -5571,13 +5549,6 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
                 return
 
-            # 🆕 Check if this was triggered by connectivity monitoring
-            if hasattr(self, 'connectivity_triggered_reconnect') and self.connectivity_triggered_reconnect:
-                logger.info("Connectivity-triggered recovery in progress",
-                           extra={'interface_number': self.interface_number})
-                # Reset flag
-                self.connectivity_triggered_reconnect = False
-
             # Clear bearer path since connection is gone
             self.bearer_path = None
 
@@ -5688,20 +5659,20 @@ class ModemStateMachine:
 
         connectivity_config = self.config.get('connectivity_monitoring', {})
 
-        # Configuration with defaults
-        interval = connectivity_config.get('interval', 60)  # Check every 60 seconds
-        timeout = connectivity_config.get('timeout', 10)    # 10 second ping timeout
-        retry_count = connectivity_config.get('retry_count', 3)  # 3 retries before failure
-        failure_threshold = connectivity_config.get('failure_threshold', 2)  # 2 consecutive failures = restart
+        # Configuration with defaults from central dict
+        interval = connectivity_config.get('interval', DEFAULT_CONNECTIVITY_CONFIG['interval'])
+        timeout = connectivity_config.get('timeout', DEFAULT_CONNECTIVITY_CONFIG['timeout'])
+        retry_count = connectivity_config.get('retry_count', DEFAULT_CONNECTIVITY_CONFIG['retry_count'])
+        failure_threshold = connectivity_config.get('failure_threshold', DEFAULT_CONNECTIVITY_CONFIG['failure_threshold'])
 
         # Ping targets
-        ipv4_targets = connectivity_config.get('ipv4_targets', ['8.8.8.8', '1.1.1.1'])
-        ipv6_targets = connectivity_config.get('ipv6_targets', ['2001:4860:4860::8888', '2606:4700:4700::1111'])
+        ipv4_targets = connectivity_config.get('ipv4_targets', DEFAULT_CONNECTIVITY_CONFIG['ipv4_targets'])
+        ipv6_targets = connectivity_config.get('ipv6_targets', DEFAULT_CONNECTIVITY_CONFIG['ipv6_targets'])
 
         # Test configuration
-        test_ipv4 = connectivity_config.get('test_ipv4', True)
-        test_ipv6 = connectivity_config.get('test_ipv6', False)  # IPv6 off by default
-        require_both = connectivity_config.get('require_both', False)  # Both IPv4 and IPv6 must work
+        test_ipv4 = connectivity_config.get('test_ipv4', DEFAULT_CONNECTIVITY_CONFIG['test_ipv4'])
+        test_ipv6 = connectivity_config.get('test_ipv6', DEFAULT_CONNECTIVITY_CONFIG['test_ipv6'])
+        require_both = connectivity_config.get('require_both', DEFAULT_CONNECTIVITY_CONFIG['require_both'])
 
         consecutive_failures = 0
 
@@ -5713,9 +5684,9 @@ class ModemStateMachine:
                           'require_both': require_both,
                           'failure_threshold': failure_threshold})
 
-        while self.machine.current_state == ModemState.USAGE_MONITORING.value:
+        while self.machine.current_state == ModemState.CONNECTED.value:
             try:
-                # Only test if we have a bearer connection
+                # Only test if we have a bearer connection (guard against brief state gaps)
                 if not self.bearer_path:
                     logger.debug("No bearer connection, skipping connectivity test",
                                extra={'interface_number': self.interface_number})
@@ -5763,10 +5734,7 @@ class ModemStateMachine:
                                            'consecutive_failures': consecutive_failures,
                                            'failure_threshold': failure_threshold})
 
-                        # Set flag to prevent auto-recovery interference
-                        self.connectivity_triggered_reconnect = True
-
-                        # Trigger disconnection and recovery
+                        # Trigger disconnection and recovery via FSM
                         await self._trigger_connectivity_recovery()
                         break
 
@@ -5780,6 +5748,14 @@ class ModemStateMachine:
                 logger.error(f"Connectivity monitoring error: {e}",
                             extra={'interface_number': self.interface_number})
                 await asyncio.sleep(interval)  # Continue monitoring despite errors
+
+        # Log when the loop exits because the FSM left CONNECTED (e.g. reconfig,
+        # disconnect, SIM switch).  The monitoring task will be restarted
+        # automatically when the FSM re-enters CONNECTED.
+        if self.machine.current_state != ModemState.CONNECTED.value:
+            logger.info("Connectivity monitoring stopped — FSM left CONNECTED state",
+                       extra={'interface_number': self.interface_number,
+                              'current_state': self.machine.current_state})
 
     async def _get_bearer_interface_name(self):
         """Get network interface name from bearer for source binding"""
@@ -5931,6 +5907,10 @@ class ModemStateMachine:
     async def _trigger_connectivity_recovery(self):
         """Trigger recovery due to connectivity failure, with SIM escalation.
 
+        Delegates all bearer teardown and task cleanup to the normal FSM
+        paths (handle_disconnection_recovery / _execute_sim_switch) so that
+        this method does not duplicate their logic.
+
         On first failures, attempt normal reconnection on the current SIM.
         After max_recovery_before_sim_switch consecutive failures, escalate
         to a SIM failover if enabled and allowed.
@@ -5943,36 +5923,6 @@ class ModemStateMachine:
                                  'current_state': self.machine.current_state,
                                  'recovery_attempt': self.connectivity_recovery_attempts,
                                  'max_before_sim_switch': self.max_recovery_before_sim_switch})
-
-            # Cancel usage monitoring to prevent conflicts
-            if self.usage_monitor_task and not self.usage_monitor_task.done():
-                self.usage_monitor_task.cancel()
-                self.usage_monitor_task = None
-
-            # Cancel our own connectivity monitoring
-            if hasattr(self, 'connectivity_monitor_task') and self.connectivity_monitor_task:
-                self.connectivity_monitor_task.cancel()
-                self.connectivity_monitor_task = None
-
-            # Cancel failback monitoring
-            if self.failback_task and not self.failback_task.done():
-                self.failback_task.cancel()
-                self.failback_task = None
-
-            # Disconnect current bearer
-            if self.bearer_path and self.proxy:
-                try:
-                    simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
-                    await simple_iface.call_disconnect(self.bearer_path)
-                    self.bearer_path = None
-                    logger.info("Bearer disconnected for connectivity recovery",
-                               extra={'interface_number': self.interface_number})
-                except Exception as e:
-                    logger.warning(f"Error disconnecting bearer for recovery: {e}",
-                                  extra={'interface_number': self.interface_number})
-
-            # Wait a moment for disconnection to complete
-            await asyncio.sleep(5)
 
             # Check if we should escalate to SIM failover
             if (self.connectivity_recovery_attempts >= self.max_recovery_before_sim_switch
@@ -5987,14 +5937,12 @@ class ModemStateMachine:
                 # Reset recovery counter (will be set again if new SIM also fails)
                 self.connectivity_recovery_attempts = 0
 
-                # Find alternative SIM and switch
+                # Set up failover metadata
                 self.sim_switch_reason = 'connectivity_failure_escalation'
                 fallback_sim = 2 if self.current_active_sim == 1 else 1
                 self.target_sim_slot = fallback_sim
 
                 self._record_failover()
-
-                # Emit event for observability
                 self._emit_failover_event(
                     event_type='failover',
                     from_sim=self.current_active_sim,
@@ -6003,14 +5951,16 @@ class ModemStateMachine:
                     trigger='_trigger_connectivity_recovery',
                     extra_data={'recovery_attempts': self.connectivity_recovery_attempts})
 
+                # FSM: CONNECTED → SIM_SWITCHING; _execute_sim_switch handles
+                # bearer disconnect, task teardown, and the full switch sequence.
                 self.transition(ModemEvent.SWITCH_SIM)
                 await self._execute_sim_switch()
                 return
 
-            # Normal recovery: transition to disconnected and retry on same SIM
-            self.transition(ModemEvent.DISCONNECTED)
-
-            # Trigger the normal disconnection recovery process
+            # Normal recovery: use the standard disconnect → recovery path.
+            # handle_disconnection_recovery already cancels monitoring tasks,
+            # clears the bearer, and attempts reconnection.
+            self.transition(ModemEvent.DISCONNECT)
             await self.handle_disconnection_recovery()
 
         except Exception as e:
@@ -6021,19 +5971,19 @@ class ModemStateMachine:
     def _normalize_connectivity_config(self, config):
         """Normalize connectivity monitoring configuration with defaults"""
         if not isinstance(config, dict):
-            return {'enabled': False}
+            return dict(DEFAULT_CONNECTIVITY_CONFIG, enabled=False)
 
         return {
-            'enabled': config.get('enabled', False),
-            'interval': max(30, config.get('interval', 60)),  # Minimum 30 seconds
-            'timeout': max(5, config.get('timeout', 10)),     # Minimum 5 seconds
-            'retry_count': max(1, config.get('retry_count', 3)),  # Minimum 1 retry
-            'failure_threshold': max(1, config.get('failure_threshold', 2)),  # Minimum 1 failure
-            'test_ipv4': config.get('test_ipv4', True),
-            'test_ipv6': config.get('test_ipv6', False),
-            'require_both': config.get('require_both', False),
-            'ipv4_targets': config.get('ipv4_targets', ['8.8.8.8', '1.1.1.1']),
-            'ipv6_targets': config.get('ipv6_targets', ['2001:4860:4860::8888', '2606:4700:4700::1111'])
+            'enabled': config.get('enabled', DEFAULT_CONNECTIVITY_CONFIG['enabled']),
+            'interval': max(30, config.get('interval', DEFAULT_CONNECTIVITY_CONFIG['interval'])),
+            'timeout': max(5, config.get('timeout', DEFAULT_CONNECTIVITY_CONFIG['timeout'])),
+            'retry_count': max(1, config.get('retry_count', DEFAULT_CONNECTIVITY_CONFIG['retry_count'])),
+            'failure_threshold': max(1, config.get('failure_threshold', DEFAULT_CONNECTIVITY_CONFIG['failure_threshold'])),
+            'test_ipv4': config.get('test_ipv4', DEFAULT_CONNECTIVITY_CONFIG['test_ipv4']),
+            'test_ipv6': config.get('test_ipv6', DEFAULT_CONNECTIVITY_CONFIG['test_ipv6']),
+            'require_both': config.get('require_both', DEFAULT_CONNECTIVITY_CONFIG['require_both']),
+            'ipv4_targets': config.get('ipv4_targets', DEFAULT_CONNECTIVITY_CONFIG['ipv4_targets']),
+            'ipv6_targets': config.get('ipv6_targets', DEFAULT_CONNECTIVITY_CONFIG['ipv6_targets'])
         }
 
     # ============================================================================
@@ -6824,26 +6774,6 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"IP monitoring failed: {e}",
                         extra={'interface_number': self.interface_number})
-
-    async def _check_bearer_connected(self):
-        """Check if ModemManager bearer is connected"""
-        try:
-            if not self.proxy or not self.bearer_path:
-                return False
-
-            # Get bearer proxy
-            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.bearer_path)
-            bearer_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.bearer_path, introspect)
-            bearer_iface = bearer_proxy.get_interface("org.freedesktop.ModemManager1.Bearer")
-
-            # Check Connected property
-            connected_property = await bearer_iface.get_connected()
-            return connected_property.value if connected_property else False
-
-        except Exception as e:
-            logger.debug(f"Error checking bearer state: {e}",
-                        extra={'interface_number': self.interface_number})
-            return False
 
     async def _handle_bearer_disconnect(self):
         """Handle bearer disconnect with configurable delay"""

@@ -294,9 +294,7 @@ class WWANClient:
 
             **Top-level scalars:**
             ``connection_mode``, ``active_sim_slot``, ``sim_failover``,
-            ``android_apn_discovery``, ``network_mode``, ``radio_technology``
-            (global modem-level: ``all``, ``2G``, ``3G``, ``LTE``, ``5G``;
-            specific band names belong in per-SIM ``supported_bands``),
+            ``android_apn_discovery``, ``network_mode``,
             ``network_scan_timeout``, ``connection_timeout``,
             ``registration_timeout``, ``network_scan_timeout``,
             ``normal_monitoring_interval``, ``system_health_check_interval``,
@@ -328,9 +326,8 @@ class WWANClient:
             ``sim_slots`` — list of per-SIM dicts, each with:
             ``slot``, ``enabled``, ``apn`` (str or ``{name, username,
             password, auth_type}``), ``pdp_type``, ``roaming``, ``pin``,
-            ``puk``, ``supported_bands`` (per-SIM: ``all`` or specific
-            band names only — technology groups belong in the top-level
-            ``radio_technology``),
+            ``puk``, ``supported_bands`` (``all`` or specific band names
+            — use ``network-mode`` for technology-level control),
             ``preferred_carrier`` (MCCMNC code or friendly name —
             per-SIM only, each SIM has its own carrier),
             ``enable_network_scan`` (diagnostic scan — results appear
@@ -459,8 +456,8 @@ class WWANClient:
         Returns
         -------
         str
-            ``"connected"`` when Bearer is active (FSM in CONNECTED or
-            USAGE_MONITORING), ``"disconnected"`` otherwise.
+            ``"connected"`` when Bearer is active (FSM in CONNECTED),
+            ``"disconnected"`` otherwise.
         """
         iface = await self._get_iface(interface_number)
         try:

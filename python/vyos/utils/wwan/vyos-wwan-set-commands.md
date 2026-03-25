@@ -101,8 +101,6 @@ interfaces
         │     ├── max-attempts <count>                    #   default: 3
         │     └── cooldown <seconds>                      #   default: 300
         │
-        ├── radio-technology <all|2G|3G|LTE|5G>              #   global modem-level
-        │
         ├── network-scan
         │     └── timeout <seconds>                       #   default: 60
         │
@@ -395,18 +393,18 @@ set interfaces wwan wwan0 hardware-reset max-attempts 3
 set interfaces wwan wwan0 hardware-reset cooldown 300
 ```
 
-### Radio Technology / Carrier / Network Scan
+### Carrier / Network Scan
 
-> **If unconfigured:** All radio technologies enabled, network scanning disabled, scan timeout 60 s.
+> **If unconfigured:** Network-mode auto (all technologies), network scanning disabled, scan timeout 60 s.
 >
-> **Global vs Per-SIM selection:**
-> The global `radio-technology` setting accepts **only** `all` or technology-group
-> keywords (`2G`, `3G`, `LTE`, `5G`).  These are **modem-level** settings — the
-> radio hardware uses one set of active technologies regardless of which SIM
-> slot is active.  Specific band names (e.g. `eutran-7`, `ngran-78`) are
-> **per-SIM only** because different carriers use different frequencies.
+> **Network-mode vs Per-SIM bands:**
+> The `network-mode` setting (see Basic Commands above) controls which radio
+> technologies (2G/3G/LTE/5G) the modem hardware is allowed to use via the
+> ModemManager `SetCurrentModes` API.  This is a modem-level setting.
+> Specific band names (e.g. `eutran-7`, `ngran-78`) are **per-SIM only**
+> because different carriers use different frequencies.
 > Use per-SIM `supported-bands` for carrier-specific band restrictions.
-> The final active band set is: global ∩ per-SIM ∩ modem-supported.
+> The final active band set is: per-SIM ∩ modem-supported.
 >
 > `preferred-carrier` and `enable-network-scan` are **per-SIM only** settings
 > because each SIM has its own carrier.  Configure them under
@@ -425,7 +423,6 @@ set interfaces wwan wwan0 hardware-reset cooldown 300
 > - If both a friendly name **and** `network-scan enable` are set, a single scan serves both purposes.
 
 ```
-set interfaces wwan wwan0 radio-technology 'all'
 set interfaces wwan wwan0 network-scan timeout 60
 ```
 
@@ -498,15 +495,6 @@ technologies (e.g. Band 1 exists in UMTS, LTE, and 5G NR).
 | | `ngran-77` | 204 | 3700 MHz |
 | | `ngran-78` | 205 | 3500 MHz |
 | | `ngran-79` | 206 | 4700 MHz |
-
-**Technology-group shortcuts** (global `radio-technology` only, not per-SIM):
-
-| Keyword | Expands to |
-|---|---|
-| `2G` | All `gsm-*` bands |
-| `3G` | All `umts-*` bands |
-| `LTE` | All `eutran-*` bands |
-| `5G` | All `ngran-*` bands |
 
 ### Timeouts
 
@@ -594,9 +582,8 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `hardware-reset enable` | `hardware_reset_enabled` | `true` |
 | `hardware-reset max-attempts` | `max_hardware_resets` | `3` |
 | `hardware-reset cooldown` | `hardware_reset_cooldown` | `300` |
-| `radio-technology` | `radio_technology` | `all` |
-| `network-scan timeout` | `network_scan_timeout` | `60` |
 | `network-mode` | `network_mode` | `auto` |
+| `network-scan timeout` | `network_scan_timeout` | `60` |
 | `timeouts connection` | `connection_timeout` | `120` |
 | `timeouts registration` | `registration_timeout` | `180` |
 | `timeouts normal-monitoring-interval` | `normal_monitoring_interval` | `30` |
@@ -624,14 +611,14 @@ set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
 set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
 set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
 set interfaces wwan wwan0 sim slot 1 pin '1234'
-set interfaces wwan wwan0 sim slot 1 sim-failover
 set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
 set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
 set interfaces wwan wwan0 sim slot 1 data-limit billing-date 1
 
 set interfaces wwan wwan0 sim slot 2 pin '5678'
-set interfaces wwan wwan0 sim slot 2 sim-failover
 set interfaces wwan wwan0 sim slot 2 data-limit action 'sim-failover'
+
+set interfaces wwan wwan0 sim sim-failover enable
 
 set interfaces wwan wwan0 apn-discovery android
 set interfaces wwan wwan0 reconnection enhanced
