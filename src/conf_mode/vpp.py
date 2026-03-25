@@ -39,6 +39,7 @@ from vyos.logger import getLogger
 from vyos.template import render
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.cpu import get_available_cpus
+from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import list_loaded_modules
@@ -251,7 +252,7 @@ def _is_device_allowed(config: dict, iface: str):
     if 'allow_unsupported_nics' in config['settings']:
         return True
 
-    persist_config = config['persist_config'][iface]
+    persist_config = dict_search('persist_config.iface', config)
 
     pci_id = persist_config.get('pci_id')
     # PCI ID is sufficient by itself, if presented
@@ -602,20 +603,12 @@ def verify(config):
 
     # ensure DPDK/XDP settings are properly configured
     for iface, iface_config in config['settings']['interface'].items():
-        # check if selected driver is supported, but only for new interfaces
-        # or if driver was changed
-        original_driver = config['persist_config'][iface]['original_driver']
-        if (
-            iface
-            not in config.get('effective', {}).get('settings', {}).get('interface', {})
-            or 'driver_changed' in iface_config
-        ):
-            if not _is_device_allowed(config, iface):
-                raise ConfigError(
-                    f'NIC used by "{iface}" is not validated for VPP on VyOS. '
-                    'Using it is unsafe and unsupported and will void support for the entire system. '
-                    'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
-                )
+        if not _is_device_allowed(config, iface):
+            raise ConfigError(
+                f'NIC used by "{iface}" is not validated for VPP on VyOS. '
+                'Using it is unsafe and unsupported and will void support for the entire system. '
+                'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
+            )
 
         if iface_config['driver'] == 'xdp' and 'xdp_options' in iface_config:
             if iface_config['xdp_options']['num_rx_queues'] != 'all':
