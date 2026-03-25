@@ -1031,6 +1031,7 @@ def kea_shared_network_json(shared_networks):
 
             if 'bootfile_name' in config['option']:
                 network['boot-file-name'] = config['option']['bootfile_name']
+                network['option-data'].append({"name": "boot-file-name", "data": config['option']['bootfile_name']})
 
             if 'bootfile_server' in config['option']:
                 network['next-server'] = config['option']['bootfile_server']
