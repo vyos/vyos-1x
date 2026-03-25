@@ -194,8 +194,14 @@ def migrate(config: ConfigTree) -> None:
 
                         pg_base = base + ['name', name, 'rule', rule, direction, 'group', 'port-group']
                         proto_base = base + ['name', name, 'rule', rule, 'protocol']
-                        if config.exists(pg_base) and not config.exists(proto_base):
-                            config.set(proto_base, value='tcp_udp')
+                        if config.exists(pg_base):
+                            if config.exists(proto_base):
+                                proto_name = config.return_value(proto_base)
+                                set_as_tcp_udp = proto_name == 'all'
+                            else:
+                                set_as_tcp_udp = False
+                            if set_as_tcp_udp:
+                                config.set(proto_base, value='tcp_udp')
 
             if '+' in name:
                 replacement_string = "_"
@@ -291,8 +297,14 @@ def migrate(config: ConfigTree) -> None:
 
                         pg_base = base + ['ipv6-name', name, 'rule', rule, direction, 'group', 'port-group']
                         proto_base = base + ['ipv6-name', name, 'rule', rule, 'protocol']
-                        if config.exists(pg_base) and not config.exists(proto_base):
-                            config.set(proto_base, value='tcp_udp')
+                        if config.exists(pg_base):
+                            if config.exists(proto_base):
+                                proto_name = config.return_value(proto_base)
+                                set_as_tcp_udp = proto_name == 'all'
+                            else:
+                                set_as_tcp_udp = False
+                            if set_as_tcp_udp:
+                                config.set(proto_base, value='tcp_udp')
 
             if '+' in name:
                 replacement_string = "_"
