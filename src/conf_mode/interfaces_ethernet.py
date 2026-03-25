@@ -138,7 +138,7 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
     if config:
@@ -200,11 +200,11 @@ def verify_speed_duplex(ethernet: dict, ethtool: Ethtool):
     if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
             (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
         raise ConfigError(
-            'Speed/Duplex missmatch. Must be both auto or manually configured')
+            'Speed/Duplex mismatch. Must be both auto or manually configured')
 
     if ethernet['speed'] != 'auto' and ethernet['duplex'] != 'auto':
         # We need to verify if the requested speed and duplex setting is
-        # supported by the underlaying NIC.
+        # supported by the underlying NIC.
         speed = ethernet['speed']
         duplex = ethernet['duplex']
         if not ethtool.check_speed_duplex(speed, duplex):
@@ -287,7 +287,7 @@ def verify_offload(ethernet: dict, ethtool: Ethtool):
     """
     if dict_search('offload.rps', ethernet) != None:
         if not os.path.exists(f'/sys/class/net/{ethernet["ifname"]}/queues/rx-0/rps_cpus'):
-            raise ConfigError('Interface does not suport RPS!')
+            raise ConfigError('Interface does not support RPS!')
     driver = ethtool.get_driver_name()
     # T3342 - Xen driver requires special treatment
     if driver == 'vif':
@@ -308,7 +308,7 @@ def verify_mac_change(ethernet: dict, ethtool: Ethtool):
     if 'mac' not in ethernet:
         return None
     if not ethtool.check_mac_change():
-        raise ConfigError(f'Driver does not suport changing MAC address!')
+        raise ConfigError(f'Driver does not support changing MAC address!')
 
 def verify_allowedbond_changes(ethernet: dict):
     """

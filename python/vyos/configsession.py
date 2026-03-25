@@ -219,7 +219,7 @@ class ConfigSession(object):
                 )
                 if output:
                     print(
-                        'cli-shell-api teardownSession output for sesion {0}: {1}'.format(
+                        'cli-shell-api teardownSession output for session {0}: {1}'.format(
                             self.__session_id, output
                         ),
                         file=sys.stderr,

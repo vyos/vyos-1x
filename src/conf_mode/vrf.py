@@ -177,7 +177,7 @@ def verify(vrf):
         for name, vrf_config in vrf['name'].items():
             # Reserved VRF names
             if name in reserved_names:
-                raise ConfigError(f'VRF name "{name}" is reserved and connot be used!')
+                raise ConfigError(f'VRF name "{name}" is reserved and cannot be used!')
 
             # table id is mandatory
             if 'table' not in vrf_config:
@@ -249,7 +249,7 @@ def apply(vrf):
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if interface_exists(tmp):
             # T5492: deleting a VRF instance may leafe processes running
-            # (e.g. dhclient) as there is a depedency ordering issue in the CLI.
+            # (e.g. dhclient) as there is a dependency ordering issue in the CLI.
             # We need to ensure that we stop the dhclient processes first so
             # a proper DHCLP RELEASE message is sent
             for interface in get_vrf_members(tmp):
@@ -342,7 +342,7 @@ def apply(vrf):
             cmd(f'nft {nft_add_element}')
 
         # Only call into nftables as long as there is nothing setup to avoid wasting
-        # CPU time and thus lenghten the commit process
+        # CPU time and thus lengthen the commit process
         if not nft_vrf_zone_rule_setup:
             nft_vrf_zone_rule_setup = is_nft_vrf_zone_rule_setup()
         # Install nftables conntrack rules only once

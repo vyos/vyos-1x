@@ -178,7 +178,7 @@ def get_interface_address(interface):
 
 def get_interface_namespace(interface: str):
     """
-       Returns wich netns the interface belongs to
+       Returns which netns the interface belongs to
     """
     # Bail out early if netns does not exist
     tmp = cmd(f'ip --json netns ls')

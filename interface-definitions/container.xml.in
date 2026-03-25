@@ -55,7 +55,7 @@
               </valueHelp>
               <valueHelp>
                 <format>sys-admin</format>
-                <description>Administation operations (quotactl, mount, sethostname, setdomainame)</description>
+                <description>Administration operations (quotactl, mount, sethostname, setdomainname)</description>
               </valueHelp>
               <valueHelp>
                 <format>sys-module</format>

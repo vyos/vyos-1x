@@ -33,7 +33,7 @@ server_config = """WireGuard client configuration for interface: {{ interface }}
 
 To enable this configuration on a VyOS router you can use the following commands:
 
-=== VyOS (server) configurtation ===
+=== VyOS (server) configuration ===
 
 {% for addr in address if address is defined %}
 set interfaces wireguard {{ interface }} peer {{ name }} allowed-ips '{{ addr }}'

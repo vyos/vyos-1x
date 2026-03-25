@@ -111,7 +111,7 @@ class VyconfSession:
 
     def exit_config_mode(self):
         if self.session_changed():
-            return 'Uncommited changes', Errnum.UNCOMMITED_CHANGES
+            return 'Uncommitted changes', Errnum.UNCOMMITED_CHANGES
         out = vyconf_client.send_request('exit_configuration_mode', token=self.__token)
         return self.output(out), out.status
 

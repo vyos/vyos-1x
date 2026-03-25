@@ -26,7 +26,7 @@ def migrate(config: ConfigTree) -> None:
             # Nothing to do
             continue
 
-        # list all individual interface isntance
+        # list all individual interface instance
         for i in config.list_nodes(base):
             iface = base + [i]
             if config.exists(iface + ['link']):

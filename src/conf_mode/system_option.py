@@ -283,7 +283,7 @@ def generate(options):
 
     # XXX: This code path and if statements must be kept in sync with the Kernel
     # option handling in image_installer.py:get_cli_kernel_options(). This
-    # occurance is used for having the appropriate options passed to GRUB
+    # occurrence is used for having the appropriate options passed to GRUB
     # when re-configuring options on the CLI.
     cmdline_options = []
     kernel_opts = options.get('kernel', {})

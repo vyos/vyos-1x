@@ -83,7 +83,7 @@ def _get_raw_data_fdb(bridge):
 
 
 def _get_raw_data_mdb(bridge):
-    """Get MAC-address multicast gorup for the bridge brX
+    """Get MAC-address multicast group for the bridge brX
     :return list
     """
     json_data = cmd(f'bridge --json  mdb show br {bridge}')

@@ -405,9 +405,9 @@ class BondIf(Interface):
         return self.set_interface('bond_system_mac', mac)
 
     def update(self, config):
-        """ General helper function which works on a dictionary retrived by
+        """ General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface. """
 
         # Use ref-counting function to place an interface into admin down state.
@@ -435,7 +435,7 @@ class BondIf(Interface):
         # administratively down
         #
         # We can not move the upper "shutdown_required" code path here - as this
-        # would break initial bond creation and inital mode assignment during
+        # would break initial bond creation and initial mode assignment during
         # interface creation!
         if self.get_admin_state() == 'down':
             # Bonding policy/mode - default value, always present
@@ -460,10 +460,10 @@ class BondIf(Interface):
                 # result in the following exception:  OSError: [Errno 22] Invalid argument.
                 #
                 # We remove ALL addresses prior to adding new ones, this will remove
-                # addresses manually added by the user too - but as we are limited to 16 adresses
+                # addresses manually added by the user too - but as we are limited to 16 addresses
                 # from the kernel side this looks valid to me. We won't run into an error
-                # when a user added manual adresses which would result in having more
-                # then 16 adresses in total.
+                # when a user added manual addresses which would result in having more
+                # then 16 addresses in total.
                 arp_tgt_addr = list(map(str, self.get_arp_ip_target().split()))
                 for addr in arp_tgt_addr:
                     self.set_arp_ip_target('-' + addr)
@@ -503,7 +503,7 @@ class BondIf(Interface):
                 self.set_mac(tmp_if.get_mac())
                 is_first = False
 
-            # Assign underlaying interface to logical bond
+            # Assign underlying interface to logical bond
             self.add_port(interface)
             bond_members.append(interface)
 

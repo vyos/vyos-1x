@@ -105,7 +105,7 @@ def migrate(config: ConfigTree) -> None:
         for rule in config.list_nodes(base + [route_map, 'rule']):
             base_rule: list[str] = base + [route_map, 'rule', rule, 'set']
 
-            # IF additive presents in coummunity then comm-list is redundant
+            # IF additive presents in community then comm-list is redundant
             isAdditive: bool = True
             #### Change Set community ########
             if config.exists(base_rule + ['community']):

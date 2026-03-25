@@ -55,7 +55,7 @@
                               <help>Pattern to skip from the HTTP(S) respose</help>
                               <valueHelp>
                                 <format>txt</format>
-                                <description>Pattern to skip from the HTTP(S) respose to extract the external IP address</description>
+                                <description>Pattern to skip from the HTTP(S) response to extract the external IP address</description>
                               </valueHelp>
                             </properties>
                           </leafNode>

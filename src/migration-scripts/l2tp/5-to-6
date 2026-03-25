@@ -28,7 +28,7 @@ def migrate(config: ConfigTree) -> None:
                    value=config.return_value(idle_path))
         config.delete(idle_path)
 
-    #migrate mppe from authentication to ppp-otion
+    #migrate mppe from authentication to ppp-options
     mppe_path = base + ['authentication', 'mppe']
     if config.exists(mppe_path):
         config.set(base + ['ppp-options', 'mppe'],

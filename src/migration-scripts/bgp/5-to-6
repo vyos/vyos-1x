@@ -25,7 +25,7 @@ def migrate(config: ConfigTree) -> None:
         return
 
     for address_family in ['ipv4-unicast', 'ipv6-unicast']:
-        # there is no non-main routing table beeing redistributed under this addres family
+        # there is no non-main routing table being redistributed under this address family
         # bail out early and continue with next AFI
         table_path = bgp_base + ['address-family', address_family, 'redistribute', 'table']
         if not config.exists(table_path):

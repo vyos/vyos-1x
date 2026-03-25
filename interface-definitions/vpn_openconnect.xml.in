@@ -65,7 +65,7 @@
                   </leafNode>
                   <leafNode name="radius">
                     <properties>
-                      <help>Use RADIUS server for user autentication</help>
+                      <help>Use RADIUS server for user authentication</help>
                       <valueless/>
                     </properties>
                   </leafNode>
@@ -247,7 +247,7 @@
                   #include <include/radius-timeout.xml.i>
                   <leafNode name="groupconfig">
                     <properties>
-                      <help>If the groupconfig option is set, then config-per-user will be overriden, and all configuration will be read from RADIUS.</help>
+                      <help>If the groupconfig option is set, then config-per-user will be overridden, and all configuration will be read from RADIUS.</help>
                     </properties>
                   </leafNode>
                 </children>

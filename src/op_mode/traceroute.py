@@ -85,7 +85,7 @@ options = {
         'help': 'Use TCP SYN for tracerouting (default port is 80)'
     },
     'tos': {
-        'traceroute': '{commad} -t {value}',
+        'traceroute': '{command} -t {value}',
         'type': '<tos>',
         'help': 'Mark packets with specified TOS'
     },

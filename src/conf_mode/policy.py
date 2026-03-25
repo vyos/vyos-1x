@@ -131,7 +131,7 @@ def verify(config_dict):
             if 'rule' not in instance_config:
                 continue
 
-            # human readable instance name (hypen instead of underscore)
+            # human readable instance name (hyphen instead of underscore)
             policy_hr = policy_type.replace('_', '-')
             entries = []
             for rule, rule_config in instance_config['rule'].items():

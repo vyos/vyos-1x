@@ -99,7 +99,7 @@ def info(q: Annotated[InfoQueryParams, Query()]):
         res.update(banner=banner)
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 

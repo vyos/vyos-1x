@@ -34,7 +34,7 @@ def migrate(config: ConfigTree) -> None:
         if config.exists(['interfaces', 'ethernet', intf, 'bond-group']):
             # get configured bond interface
             bond = config.return_value(['interfaces', 'ethernet', intf, 'bond-group'])
-            # delete old interface asigned (nested) bond group
+            # delete old interface assigned (nested) bond group
             config.delete(['interfaces', 'ethernet', intf, 'bond-group'])
             # create new bond member interface
             config.set(base + [bond, 'member', 'interface'], value=intf, replace=False)
@@ -42,7 +42,7 @@ def migrate(config: ConfigTree) -> None:
     #
     # some combinations were allowed in the past from a CLI perspective
     # but the kernel overwrote them - remove from CLI to not confuse the users.
-    # In addition new consitency checks are in place so users can't repeat the
+    # In addition new consistency checks are in place so users can't repeat the
     # mistake. One of those nice issues is https://vyos.dev/T532
     for bond in config.list_nodes(base):
         if config.exists(base + [bond, 'arp-monitor', 'interval']) and config.exists(base + [bond, 'mode']):

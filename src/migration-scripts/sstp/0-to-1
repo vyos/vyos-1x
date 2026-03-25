@@ -15,7 +15,7 @@
 
 # - migrate from "service sstp-server" to "vpn sstp"
 # - remove primary/secondary identifier from nameserver
-# - migrate RADIUS configuration to a more uniform syntax accross the system
+# - migrate RADIUS configuration to a more uniform syntax across the system
 #   - authentication radius-server x.x.x.x to authentication radius server x.x.x.x
 #   - authentication radius-settings to authentication radius
 #   - do not migrate radius server req-limit, use default of unlimited

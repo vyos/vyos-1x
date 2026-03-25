@@ -28,7 +28,7 @@ from vyos.utils.process import cmd
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
-# Maximim UID used when adding system users
+# Maximum UID used when adding system users
 MAX_USER_UID: int = 59999
 # List of local user accounts that must be preserved
 SYSTEM_USER_SKIP_LIST: frozenset = {
