@@ -31,7 +31,7 @@ from vyos.base import Warning
 from vyos.config import Config, config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
-from vyos.configdict import node_changed
+from vyos.configdict import node_changed, is_member
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_virtual_interface_exists
 from vyos.ifconfig import Section
@@ -66,6 +66,7 @@ from vyos.vpp.config_resource_checks import memory
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
+from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 from vyos.vpp.configdb import JSONStorage
 
 airbag.enable()
@@ -394,6 +395,9 @@ def get_config(config=None):
     # Return to config dictionary
     config['persist_config'] = eth_ifaces_persist
 
+    # list of all Ethernet interfaces with vifs
+    ifaces_with_vifs = cli_ethernet_with_vifs_ifaces(conf, include_nested_vifs=True)
+
     if 'settings' in config:
         if 'interface' in config['settings']:
             interface_rx_mode = config['settings'].get('interface_rx_mode')
@@ -425,6 +429,26 @@ def get_config(config=None):
                 #             'driver': 'dpdk',
                 #         }
                 #     )
+
+                # Collect memberships as sets for uniqueness
+                bond_member = is_member(conf, iface, 'bonding')
+                bridge_member = is_member(conf, iface, 'bridge')
+
+                # Look for VLAN interfaces of this parent
+                vlans = [
+                    vlan_iface
+                    for vlan_iface in ifaces_with_vifs
+                    if vlan_iface.startswith(f'{iface}.')
+                ]
+                for vlan_iface in vlans:
+                    bond_member.update(is_member(conf, vlan_iface, 'bonding'))
+                    bridge_member.update(is_member(conf, vlan_iface, 'bridge'))
+
+                # Store as lists
+                if bond_member:
+                    iface_config['bond_member'] = list(bond_member)
+                if bridge_member:
+                    iface_config['bridge_member'] = list(bridge_member)
 
                 # Get PCI address or device ID
                 if iface_config['driver'] == 'dpdk':
@@ -617,6 +641,18 @@ def verify(config):
                     'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
                 )
 
+        err_message = f'Cannot add {iface} to VPP - '
+        if 'bond_member' in iface_config:
+            raise ConfigError(
+                err_message
+                + f'interface (or its VLAN) is a member of bond(s): {", ".join(iface_config["bond_member"])}'
+            )
+        if 'bridge_member' in iface_config:
+            raise ConfigError(
+                err_message
+                + f'interface (or its VLAN) is a member of bridge(s): {", ".join(iface_config["bridge_member"])}'
+            )
+
         if iface_config['driver'] == 'xdp' and 'xdp_options' in iface_config:
             if iface_config['xdp_options']['num_rx_queues'] != 'all':
                 rx_queues = iface_config['xdp_api_params']['rxq_num']
@@ -678,6 +714,7 @@ def verify(config):
             verify_virtual_interface_exists(config, pppoe_iface)
         else:
             verify_interface_exists(config, pppoe_iface)
+
 
 def generate(config):
     if not config or 'remove' in config:

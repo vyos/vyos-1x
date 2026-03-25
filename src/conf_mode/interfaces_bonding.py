@@ -44,6 +44,7 @@ from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
+from vyos.vpp.utils import cli_ifaces_list
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -170,6 +171,8 @@ def get_config(config=None):
     if 'static_arp' in bond:
         set_dependents('static_arp', conf)
 
+    bond['vpp_ifaces'] = cli_ifaces_list(conf)
+
     return bond
 
 
@@ -205,7 +208,7 @@ def verify(bond):
     bond_name = bond['ifname']
     if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
-            error_msg = f'Can not add interface "{interface}" to bond, '
+            error_msg = f'Cannot add interface "{interface}" to bond, '
 
             if interface == 'lo':
                 raise ConfigError('Loopback interface "lo" can not be added to a bond')
@@ -238,6 +241,12 @@ def verify(bond):
                     if option_path in BondIf.get_inherit_bond_options():
                         continue
                     raise ConfigError(error_msg + f'it has a "{option_path.replace(".", " ")}" assigned!')
+
+            iface_base = interface.split('.')[0]  # get the parent interface name
+            if iface_base in bond['vpp_ifaces']:
+                raise ConfigError(
+                    error_msg + 'it is already configured as VPP interface'
+                )
 
             if mtu := bond.get('mtu'):
                 mtu = int(mtu)
