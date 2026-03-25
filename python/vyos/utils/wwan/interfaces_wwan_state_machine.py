@@ -150,6 +150,10 @@ class ModemState(str, Enum):
     SIM_ENABLING = "SIM_ENABLING"
     SIM_RECONFIGURING = "SIM_RECONFIGURING"
     REGISTERED_IDLE = "REGISTERED_IDLE"  # Registered on network, no bearer (connect-on-demand)
+    # Usage monitoring states
+    USAGE_MONITORING = "USAGE_MONITORING"
+    USAGE_THRESHOLD = "USAGE_THRESHOLD"
+    USAGE_RESETTING = "USAGE_RESETTING"
 
 class ModemEvent(str, Enum):
     START_SCAN = "start_scan"
@@ -174,6 +178,9 @@ class ModemEvent(str, Enum):
     SIM_ENABLED = "sim_enabled"
     SIM_SWITCH_COMPLETE = "sim_switch_complete"
     ENTER_IDLE = "enter_idle"  # Transition to REGISTERED_IDLE (connect-on-demand)
+    # Usage monitoring events
+    START_USAGE_MONITORING = "start_usage_monitoring"
+    RESET_USAGE = "reset_usage"
 
 class ModemStateMachine:
     modem_state_machines = {}
@@ -233,6 +240,20 @@ class ModemStateMachine:
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
         self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
         self.last_scan_results = []          # Cached network scan results for status reporting
+
+        # Modem removal flag — lets CancelledError handlers log the right reason
+        self._modem_removed = False
+
+        # SIM switch in-progress flag — suppresses modem-removed handler during
+        # expected modem disappearance caused by SetPrimarySimSlot (Telit LN920
+        # resets the USB device when switching SIM slots)
+        self._sim_switch_in_progress = False
+
+        # SIM failover reentrancy guard — prevents multiple concurrent failover
+        # attempts when the SIM is rapidly inserted/removed ("nasty user" scenario).
+        # Protected via asyncio.Lock so only one failover runs at a time.
+        self._sim_failover_lock = asyncio.Lock()
+        self._sim_failover_in_progress = False
 
         # SIM PIN/PUK unlock safety — try only once per boot cycle
         self._pin_unlock_attempted = False    # True after first PIN attempt (success or failure)
@@ -403,9 +424,27 @@ class ModemStateMachine:
 
             # Check if this is our current modem
             if hasattr(self, 'modem_path') and self.modem_path and path == self.modem_path:
+
+                # During SIM switch, modem disappearance is EXPECTED (Telit LN920
+                # resets when SetPrimarySimSlot is called).  Clear the proxy but
+                # do NOT transition to SCANNING — the SIM switch code will rescan
+                # for the modem itself once the hardware comes back.
+                if self._sim_switch_in_progress:
+                    logger.info("Modem disappeared during SIM switch (expected hardware reset)",
+                               extra={'interface_number': self.interface_number,
+                                      'modem_path': path})
+                    # Invalidate the proxy — it points to a stale D-Bus path
+                    self.proxy = None
+                    self.modem_path = None
+                    self.bearer_path = None
+                    return   # ← skip all the normal removal cleanup / state change
+
                 logger.warning("Current modem removed via signal, transitioning to scanning",
                               extra={'interface_number': self.interface_number,
                                      'modem_path': path})
+
+                # Set removal flag so CancelledError handlers log the right reason
+                self._modem_removed = True
 
                 # Store original state for logging
                 original_state = self.machine.current_state
@@ -423,7 +462,7 @@ class ModemStateMachine:
                                extra={'interface_number': self.interface_number})
                 self.initial_configuration_in_progress = False
 
-                # Cancel any ongoing tasks
+                # Cancel ALL ongoing tasks and timers for prompt cleanup
                 if hasattr(self, 'usage_monitor_task') and self.usage_monitor_task and not self.usage_monitor_task.done():
                     self.usage_monitor_task.cancel()
                     logger.info("Cancelled usage monitoring task due to modem removal",
@@ -433,6 +472,43 @@ class ModemStateMachine:
                     self.failback_task = None
                     logger.info("Cancelled failback monitor due to modem removal",
                                extra={'interface_number': self.interface_number})
+
+                # Cancel bearer disconnect timer (no point waiting if modem is gone)
+                if hasattr(self, '_bearer_disconnect_timer') and self._bearer_disconnect_timer and not self._bearer_disconnect_timer.done():
+                    self._bearer_disconnect_timer.cancel()
+                    self._bearer_disconnect_timer = None
+                    logger.info("Cancelled bearer disconnect timer due to modem removal",
+                               extra={'interface_number': self.interface_number})
+
+                # Cancel registration debounce timer (modem gone, debounce is moot)
+                if hasattr(self, '_registration_debounce_timer') and self._registration_debounce_timer and not self._registration_debounce_timer.done():
+                    self._registration_debounce_timer.cancel()
+                    self._registration_debounce_timer = None
+                    logger.info("Cancelled registration debounce timer due to modem removal",
+                               extra={'interface_number': self.interface_number})
+
+                # Cancel connectivity monitoring (ping tests are pointless without modem)
+                if hasattr(self, 'connectivity_monitor_task') and self.connectivity_monitor_task and not self.connectivity_monitor_task.done():
+                    self.connectivity_monitor_task.cancel()
+                    self.connectivity_monitor_task = None
+                    logger.info("Cancelled connectivity monitoring due to modem removal",
+                               extra={'interface_number': self.interface_number})
+
+                # Cancel IP monitoring task
+                if hasattr(self, '_ip_monitoring_task') and self._ip_monitoring_task and not self._ip_monitoring_task.done():
+                    self._ip_monitoring_task.cancel()
+                    self._ip_monitoring_task = None
+                    logger.info("Cancelled IP monitoring due to modem removal",
+                               extra={'interface_number': self.interface_number})
+
+                # Set interface DOWN immediately (modem is gone, don't wait)
+                try:
+                    await self._set_interface_down()
+                    logger.info("Interface set DOWN immediately due to modem removal",
+                               extra={'interface_number': self.interface_number})
+                except Exception as e:
+                    logger.debug(f"Could not set interface DOWN on removal (may already be down): {e}",
+                                extra={'interface_number': self.interface_number})
 
                 # For hardware removal, force transition to SCANNING from ANY state
                 # With the enhanced transition table, we can go directly to SCANNING from any state
@@ -556,6 +632,9 @@ class ModemStateMachine:
 
                                 # Enable signal monitoring for accurate dBm readings
                                 await self._enable_signal_monitoring()
+
+                                # Clear modem removal flag now that we have a modem again
+                                self._modem_removed = False
 
                                 logger.info("Modem found and matched by Device property",
                                            extra={'interface_number': self.interface_number,
@@ -959,6 +1038,17 @@ class ModemStateMachine:
                           'current_fsm_state': self.machine.current_state})
 
         current_fsm_state = self.machine.current_state
+
+        # ── Suppress modem state events during SIM switch ────────────
+        # When a SIM switch is in progress the modem will cycle through
+        # DISABLED → LOCKED → ENABLED → SEARCHING → REGISTERED states.
+        # None of these should trigger failover, insertion checks, or
+        # connection attempts — the SIM switch flow handles everything.
+        if self._sim_switch_in_progress:
+            logger.debug(f"Modem state {mm_state} ignored during SIM switch",
+                        extra={'interface_number': self.interface_number,
+                               'modem_state': mm_state})
+            return
 
         # Enhanced SIM hot-swap detection
         if mm_state == 2:  # LOCKED (SIM missing or PIN required)
@@ -2398,19 +2488,31 @@ class ModemStateMachine:
                                   'needs_switch': actual_sim != config_sim_slot})
 
                 if actual_sim != config_sim_slot:
-                    # Simple SIM slot change while disabled
+                    # Simple SIM slot change while disabled.
+                    # On Telit LN920, SetPrimarySimSlot causes a modem reset /
+                    # USB re-enumeration — protect from the on_modem_removed handler.
                     logger.info("Setting SIM slot while modem disabled",
                                extra={'interface_number': self.interface_number,
                                       'from_sim': actual_sim,
                                       'to_sim': config_sim_slot})
 
-                    # Set primary SIM slot
-                    await props.call_set(MODEM_INTERFACE, "PrimarySimSlot", Variant('u', config_sim_slot))
+                    # Suppress modem-removed handler during the switch
+                    self._sim_switch_in_progress = True
+                    try:
+                        # Set primary SIM slot using the SetPrimarySimSlot method
+                        # (not the property setter, which is read-only on some modems like Telit LN920)
+                        iface = self.proxy.get_interface(MODEM_INTERFACE)
+                        await iface.call_set_primary_sim_slot(config_sim_slot)
 
-                    # Brief wait for hardware switch
-                    await asyncio.sleep(3)
+                        # Modem will likely disappear — wait for it to come back
+                        logger.info("SIM slot command sent — waiting for modem to re-appear",
+                                   extra={'interface_number': self.interface_number})
+                        await self._rescan_after_sim_switch()
+                    finally:
+                        self._sim_switch_in_progress = False
 
-                    # Verify the switch
+                    # Verify the switch with the new proxy
+                    props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
                     new_sim_variant = await props.call_get(MODEM_INTERFACE, "PrimarySimSlot")
                     new_sim = new_sim_variant.value
                     self.current_active_sim = new_sim
@@ -2635,10 +2737,11 @@ class ModemStateMachine:
         """Check if the primary SIM slot has a usable SIM card.
 
         Queries the ModemManager SimSlots property to get the D-Bus path of
-        the SIM in the given slot.  Then reads OperatorName or Imsi to confirm
-        the SIM is present and readable (not just an empty slot).
+        the SIM in the given slot.  Uses a three-tier detection strategy
+        (IMSI → ICCID → D-Bus object existence) because non-active slots
+        may not have IMSI/ICCID populated until the modem powers them.
 
-        Returns True if the SIM appears operational, False otherwise.
+        Returns True if the SIM appears present, False otherwise.
         """
         try:
             if not self.proxy:
@@ -2673,19 +2776,39 @@ class ModemStateMachine:
 
             SIM_INTERFACE = "org.freedesktop.ModemManager1.Sim"
 
-            # Read IMSI — if the SIM is physically present and read-able, this
-            # will be a non-empty string
-            imsi_variant = await sim_props.call_get(SIM_INTERFACE, "Imsi")
-            imsi = imsi_variant.value if imsi_variant else ""
+            # Tier 1: IMSI — most reliable indicator
+            try:
+                imsi_variant = await sim_props.call_get(SIM_INTERFACE, "Imsi")
+                imsi = imsi_variant.value if imsi_variant else ""
+                if imsi:
+                    logger.debug("Primary SIM IMSI read successfully",
+                                extra={'interface_number': self.interface_number,
+                                       'primary_slot': primary_slot,
+                                       'imsi_prefix': imsi[:6] + '...' if len(imsi) > 6 else imsi})
+                    return True
+            except Exception:
+                pass
 
-            if imsi:
-                logger.debug("Primary SIM IMSI read successfully",
-                            extra={'interface_number': self.interface_number,
-                                   'primary_slot': primary_slot,
-                                   'imsi_prefix': imsi[:6] + '...' if len(imsi) > 6 else imsi})
-                return True
-            else:
-                return False
+            # Tier 2: ICCID (SimIdentifier) — may be available when IMSI is not
+            try:
+                iccid_variant = await sim_props.call_get(SIM_INTERFACE, "SimIdentifier")
+                iccid = iccid_variant.value if iccid_variant else ""
+                if iccid:
+                    logger.debug("Primary SIM ICCID read (IMSI empty — non-active slot)",
+                                extra={'interface_number': self.interface_number,
+                                       'primary_slot': primary_slot})
+                    return True
+            except Exception:
+                pass
+
+            # Tier 3: D-Bus object exists — SIM is physically there but slot
+            # is not powered, so no IMSI/ICCID yet.  Still counts as present.
+            logger.debug("Primary SIM has D-Bus object but no IMSI/ICCID "
+                        "(non-active slot not yet powered) — treating as available",
+                        extra={'interface_number': self.interface_number,
+                               'primary_slot': primary_slot,
+                               'sim_path': sim_path})
+            return True
 
         except Exception as e:
             logger.debug(f"Could not query primary SIM status: {e}",
@@ -2826,11 +2949,23 @@ class ModemStateMachine:
                           extra={'interface_number': self.interface_number,
                                  'original_sim': original_sim})
 
+            # If proxy is gone (modem disappeared during switch), try to rescan first
+            if not self.proxy:
+                logger.info("Proxy is None during cleanup — attempting to rescan for modem",
+                           extra={'interface_number': self.interface_number})
+                try:
+                    await self._rescan_after_sim_switch()
+                except Exception as rescan_e:
+                    logger.error(f"Could not find modem for cleanup: {rescan_e}",
+                                extra={'interface_number': self.interface_number})
+                    return  # Nothing we can do without a proxy
+
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
 
-            # Try to set back to original SIM
+            # Try to set back to original SIM using the SetPrimarySimSlot method
             try:
-                await props.call_set(MODEM_INTERFACE, "PrimarySimSlot", Variant('u', original_sim))
+                iface = self.proxy.get_interface(MODEM_INTERFACE)
+                await iface.call_set_primary_sim_slot(original_sim)
                 await asyncio.sleep(3)
                 logger.info("Restored original SIM slot",
                            extra={'interface_number': self.interface_number,
@@ -2881,6 +3016,12 @@ class ModemStateMachine:
         Check the UnlockRequired property to determine which case we're in.
         """
         try:
+            # Skip during SIM switch or active failover
+            if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                logger.debug("Locked-state detection skipped — SIM switch/failover in progress",
+                            extra={'interface_number': self.interface_number})
+                return
+
             if not self.proxy:
                 self.transition(ModemEvent.SIM_MISSING)
                 self._safe_create_task(self._handle_sim_missing_failover())
@@ -2946,6 +3087,10 @@ class ModemStateMachine:
         # Save original SIM for potential rollback
         self.previous_sim_slot = self.current_active_sim
 
+        # Set the flag BEFORE we start — this tells on_modem_removed to
+        # stay out of the way when the modem disappears during the switch
+        self._sim_switch_in_progress = True
+
         try:
             logger.info("Starting SIM switch process",
                        extra={'interface_number': self.interface_number,
@@ -2970,6 +3115,9 @@ class ModemStateMachine:
             if self.previous_sim_slot is not None:
                 await self._sim_switch_cleanup(self.previous_sim_slot)
             self.transition(ModemEvent.CONNECTION_FAILED)
+        finally:
+            # Always clear the flag when the switch process ends
+            self._sim_switch_in_progress = False
 
     async def _sim_switch_disconnect(self):
         """Step 1: Disconnect from network for SIM switch"""
@@ -3044,9 +3192,48 @@ class ModemStateMachine:
                     raise
 
     async def _handle_sim_missing_failover(self):
-        """Handle SIM missing by attempting failover to available SIM"""
+        """Handle SIM missing by attempting failover to available SIM.
+
+        Protected by _sim_failover_lock to prevent multiple concurrent failover
+        attempts when the SIM tray is rapidly pushed in and out.  If a failover
+        or SIM switch is already running, additional calls are silently skipped.
+        """
+        try:
+            # ── Reentrancy guard ─────────────────────────────────────────
+            if self._sim_failover_in_progress or self._sim_switch_in_progress:
+                logger.info("SIM failover skipped — already in progress",
+                           extra={'interface_number': self.interface_number,
+                                  'failover_in_progress': self._sim_failover_in_progress,
+                                  'switch_in_progress': self._sim_switch_in_progress})
+                return False
+
+            if self._sim_failover_lock.locked():
+                logger.info("SIM failover skipped — lock held by another task",
+                           extra={'interface_number': self.interface_number})
+                return False
+
+            async with self._sim_failover_lock:
+                self._sim_failover_in_progress = True
+                try:
+                    return await self._handle_sim_missing_failover_locked()
+                finally:
+                    self._sim_failover_in_progress = False
+
+        except Exception as e:
+            logger.error(f"SIM failover attempt failed (outer): {e}",
+                        extra={'interface_number': self.interface_number})
+            return False
+
+    async def _handle_sim_missing_failover_locked(self):
+        """Inner implementation of SIM failover — always called under _sim_failover_lock."""
         try:
             if not self.config:
+                return False
+
+            # Proxy may have disappeared between the guard check and lock acquisition
+            if not self.proxy:
+                logger.warning("Proxy gone before SIM failover could query SIM slots",
+                              extra={'interface_number': self.interface_number})
                 return False
 
             # Check if failover is enabled for the active SIM
@@ -3083,11 +3270,35 @@ class ModemStateMachine:
                         sim_props = sim_proxy.get_interface("org.freedesktop.DBus.Properties")
 
                         sim_interface = "org.freedesktop.ModemManager1.Sim"
-                        imsi_variant = await sim_props.call_get(sim_interface, "Imsi")
-                        imsi = imsi_variant.value
 
-                        if imsi:  # SIM is present and readable
-                            available_sims.append(slot_num)
+                        # Try IMSI first (most reliable indicator)
+                        try:
+                            imsi_variant = await sim_props.call_get(sim_interface, "Imsi")
+                            imsi = imsi_variant.value
+                            if imsi:
+                                available_sims.append(slot_num)
+                                continue
+                        except Exception:
+                            pass
+
+                        # IMSI may be empty for non-active slots — check SimIdentifier (ICCID)
+                        try:
+                            iccid_variant = await sim_props.call_get(sim_interface, "SimIdentifier")
+                            iccid = iccid_variant.value
+                            if iccid:
+                                available_sims.append(slot_num)
+                                continue
+                        except Exception:
+                            pass
+
+                        # SIM object exists on D-Bus but has no IMSI/ICCID — still
+                        # treat it as available (non-active slot may not be powered)
+                        logger.info(f"SIM in slot {slot_num} has D-Bus object but no IMSI/ICCID "
+                                   f"(non-active slot not yet powered) — treating as available",
+                                   extra={'interface_number': self.interface_number,
+                                          'slot': slot_num,
+                                          'sim_path': slot_path})
+                        available_sims.append(slot_num)
 
                     except Exception:
                         continue  # SIM not available
@@ -3184,6 +3395,12 @@ class ModemStateMachine:
     async def _check_sim_insertion(self):
         """Check if a SIM was inserted in the configured slot"""
         try:
+            # Skip during SIM switch or active failover
+            if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                logger.debug("SIM insertion check skipped — SIM switch/failover in progress",
+                            extra={'interface_number': self.interface_number})
+                return False
+
             if not self.proxy or not self.config:
                 return
 
@@ -3232,6 +3449,12 @@ class ModemStateMachine:
     async def _handle_potential_sim_insertion(self):
         """Handle potential SIM insertion when modem becomes enabled"""
         try:
+            # Skip during SIM switch or active failover
+            if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                logger.debug("SIM insertion handling skipped — SIM switch/failover in progress",
+                            extra={'interface_number': self.interface_number})
+                return
+
             # Wait a moment for SIM to fully initialize
             await asyncio.sleep(3)
 
@@ -3393,23 +3616,37 @@ class ModemStateMachine:
             raise
 
     async def _sim_switch_hardware(self):
-        """Step 3: Perform actual SIM slot switch"""
+        """Step 3: Perform actual SIM slot switch.
+
+        On Telit LN920 (and similar modems), calling SetPrimarySimSlot causes
+        the modem to reset and temporarily disappear from D-Bus.  The
+        on_modem_removed handler is suppressed via _sim_switch_in_progress,
+        so we must rescan for the modem ourselves after the hardware switch.
+        """
         try:
             logger.info("Switching SIM slot hardware",
                        extra={'interface_number': self.interface_number,
                               'target_sim': self.target_sim_slot})
 
-            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            # Set the primary SIM slot using the SetPrimarySimSlot method
+            # (not the property setter, which is read-only on some modems like Telit LN920)
+            iface = self.proxy.get_interface(MODEM_INTERFACE)
+            await iface.call_set_primary_sim_slot(self.target_sim_slot)
 
-            # Set the primary SIM slot while modem is disabled
-            await props.call_set(MODEM_INTERFACE, "PrimarySimSlot", Variant('u', self.target_sim_slot))
-
-            # Wait a moment for hardware switch
-            await asyncio.sleep(3)
-
-            logger.info("SIM slot hardware switch completed",
+            # The modem will likely disappear from D-Bus now (USB re-enumeration).
+            # Wait for it to come back by rescanning.  The on_modem_removed handler
+            # has already cleared self.proxy for us if the signal fired.
+            logger.info("SIM slot command sent — waiting for modem to re-appear",
                        extra={'interface_number': self.interface_number,
                               'target_sim': self.target_sim_slot})
+
+            # Wait for modem re-enumeration then rescan
+            await self._rescan_after_sim_switch()
+
+            logger.info("SIM slot hardware switch completed — modem back on D-Bus",
+                       extra={'interface_number': self.interface_number,
+                              'target_sim': self.target_sim_slot,
+                              'new_modem_path': self.modem_path})
 
             # Transition to enable step
             self.transition(ModemEvent.SIM_SWITCHED)
@@ -3422,6 +3659,84 @@ class ModemStateMachine:
             if self.previous_sim_slot is not None:
                 await self._sim_switch_cleanup(self.previous_sim_slot)
             raise
+
+    async def _rescan_after_sim_switch(self):
+        """Wait for modem to reappear after a SIM slot switch.
+
+        Shorter initial wait than _rescan_after_reset because the modem
+        just needs to re-enumerate on USB, not do a full cold boot.
+        """
+        logger.info("Waiting for modem to reappear after SIM switch",
+                   extra={'interface_number': self.interface_number})
+
+        # The proxy is already None (cleared by on_modem_removed or us)
+        self.proxy = None
+        self.modem_path = None
+
+        # Initial wait for USB re-enumeration (typically 5-15s for Telit LN920)
+        await asyncio.sleep(5)
+
+        target_modem_id = f"modem{self.interface_number}"
+        max_attempts = 30  # Up to ~60 seconds total
+        for attempt in range(1, max_attempts + 1):
+            try:
+                msg = Message(
+                    destination=MODEM_MANAGER_SERVICE,
+                    path=MODEM_MANAGER_PATH,
+                    interface=OBJECT_MANAGER_INTERFACE,
+                    member="GetManagedObjects"
+                )
+                reply = await self.bus.call(msg)
+
+                if reply.message_type.name == "METHOD_RETURN":
+                    managed_objects = reply.body[0]
+                    paths = [
+                        path for path, interfaces in managed_objects.items()
+                        if MODEM_INTERFACE in interfaces
+                    ]
+
+                    for path in paths:
+                        try:
+                            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, path)
+                            proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, path, introspect)
+                            props = proxy.get_interface("org.freedesktop.DBus.Properties")
+
+                            device_variant = await props.call_get(MODEM_INTERFACE, "Device")
+                            physdev_uid = device_variant.value
+
+                            if physdev_uid == target_modem_id:
+                                self.proxy = proxy
+                                self.modem_path = path
+                                self.connection_manager.set_proxy(proxy)
+
+                                # Re-enable signal monitoring
+                                await self._enable_signal_monitoring()
+
+                                # Re-register PropertiesChanged handler on the new proxy
+                                try:
+                                    new_props_iface = proxy.get_interface("org.freedesktop.DBus.Properties")
+                                    new_props_iface.on_properties_changed(self._dispatch_properties_changed)
+                                except Exception as sig_e:
+                                    logger.warning(f"Could not re-register signal handlers after SIM switch: {sig_e}",
+                                                  extra={'interface_number': self.interface_number})
+
+                                logger.info("Modem re-found after SIM switch",
+                                           extra={'interface_number': self.interface_number,
+                                                  'modem_path': path,
+                                                  'attempts': attempt})
+                                return
+
+                        except Exception:
+                            continue
+
+            except Exception as e:
+                logger.debug(f"D-Bus error during SIM switch rescan attempt {attempt}: {e}",
+                           extra={'interface_number': self.interface_number})
+
+            if attempt < max_attempts:
+                await asyncio.sleep(2)
+
+        raise Exception("Modem not found after SIM switch - exhausted all attempts")
 
     async def _sim_switch_enable(self):
         """Step 4: Re-enable modem after SIM switch"""
@@ -3505,10 +3820,83 @@ class ModemStateMachine:
             # SIM switch complete - transition back to normal configuration
             self.transition(ModemEvent.SIM_SWITCH_COMPLETE)
 
-            logger.info("SIM switch process completed successfully",
+            logger.info("SIM switch process completed — now establishing connection on new SIM",
                        extra={'interface_number': self.interface_number,
                               'new_sim': self.current_active_sim,
                               'switch_reason': self.sim_switch_reason})
+
+            # ── Establish connection on the new SIM ──────────────────────
+            # Registration recovery is suppressed during SIM switch, so we
+            # must explicitly connect and apply IP configuration here.
+            # Wait briefly for the modem to settle after band reconfiguration
+            await asyncio.sleep(3)
+
+            # Safety: bail out if proxy disappeared (SIM yanked during reconfigure)
+            if not self.proxy:
+                logger.warning("Proxy lost during SIM reconfigure — cannot establish connection",
+                              extra={'interface_number': self.interface_number})
+                return
+
+            # Check if bearer is already connected (unlikely now that reg recovery is suppressed
+            # during SIM switch, but handle defensively)
+            is_connected = await self._is_bearer_connected()
+            if not is_connected:
+                if not self.proxy:
+                    logger.warning("Proxy lost before APN configuration",
+                                  extra={'interface_number': self.interface_number})
+                    return
+                logger.info("Establishing connection on new SIM via APN configuration",
+                           extra={'interface_number': self.interface_number})
+                await self.apply_modem_configuration()
+
+                # Verify connection was established
+                await asyncio.sleep(2)
+                is_connected = await self._is_bearer_connected()
+
+            if is_connected:
+                logger.info("Bearer connected on new SIM — applying IP configuration",
+                           extra={'interface_number': self.interface_number})
+
+                # Transition FSM to CONNECTED
+                try:
+                    if self.machine.current_state == ModemState.CONFIGURING.value:
+                        self.transition(ModemEvent.CONNECT)
+                    if self.machine.current_state == ModemState.CONNECTING.value:
+                        self.transition(ModemEvent.CONNECTED)
+                except Exception as trans_e:
+                    logger.warning(f"FSM transition after SIM switch connection: {trans_e}",
+                                 extra={'interface_number': self.interface_number,
+                                        'current_state': self.machine.current_state})
+
+                # Apply bearer IP configuration to the network interface
+                await self._apply_bearer_ip_configuration()
+
+                # Start network interface monitoring
+                try:
+                    if getattr(self, 'ensure_link_up_on_connect', True):
+                        self._safe_create_task(self._ensure_interface_up())
+                    self._safe_create_task(self._start_network_interface_monitoring())
+                except RuntimeError:
+                    pass
+
+                # Reset failover counters — connection is stable on new SIM
+                self._reset_failover_counters()
+
+                # Start connectivity monitoring if configured
+                self._safe_create_task(self.start_connectivity_monitoring())
+
+                # Start failback monitor if we're on the failover SIM
+                self._start_failback_monitor()
+
+                logger.info("SIM switch completed with active connection",
+                           extra={'interface_number': self.interface_number,
+                                  'new_sim': self.current_active_sim,
+                                  'fsm_state': self.machine.current_state})
+            else:
+                logger.warning("Could not establish connection on new SIM after switch — "
+                              "FSM will retry via event-driven handler",
+                             extra={'interface_number': self.interface_number,
+                                    'new_sim': self.current_active_sim})
 
         except Exception as e:
             logger.error(f"Failed to reconfigure after SIM switch: {e}",
@@ -4903,6 +5291,10 @@ class ModemStateMachine:
             if success:
                 logger.info("✅ Bearer reconnection successful after registration recovery",
                            extra={'interface_number': self.interface_number})
+                # Apply bearer IP configuration to the network interface
+                # (the reconnection path through apply_modem_configuration does NOT
+                #  call _apply_bearer_ip_configuration when going through APN discovery)
+                await self._apply_bearer_ip_configuration()
             else:
                 logger.warning("⚠️ Bearer reconnection failed after registration recovery",
                               extra={'interface_number': self.interface_number})
@@ -5741,8 +6133,12 @@ class ModemStateMachine:
                 await asyncio.sleep(interval)
 
             except asyncio.CancelledError:
-                logger.info("Connectivity monitoring cancelled",
-                           extra={'interface_number': self.interface_number})
+                if self._modem_removed:
+                    logger.info("Connectivity monitoring cancelled - modem removed",
+                               extra={'interface_number': self.interface_number})
+                else:
+                    logger.info("Connectivity monitoring cancelled",
+                               extra={'interface_number': self.interface_number})
                 break
             except Exception as e:
                 logger.error(f"Connectivity monitoring error: {e}",
@@ -6467,6 +6863,16 @@ class ModemStateMachine:
                                   'reason': 'initial_configuration_in_progress'})
                 return
 
+            # Skip during SIM switch - the SIM switch flow handles its own connection setup
+            # Running registration recovery concurrently with SIM switch would race with
+            # band reconfiguration and cause incomplete connection state
+            if getattr(self, '_sim_switch_in_progress', False):
+                logger.debug(f"Registration state changed to {reg_state} ({reg_state_name}) during SIM switch - skipping",
+                           extra={'interface_number': self.interface_number,
+                                  'registration_state': f"{reg_state} ({reg_state_name})",
+                                  'reason': 'sim_switch_in_progress'})
+                return
+
             # Define states that indicate good network connectivity
             connected_states = {1, 5}  # HOME, ROAMING
             disconnected_states = {0, 2, 3, 4}  # IDLE, SEARCHING, DENIED, UNKNOWN
@@ -6769,8 +7175,12 @@ class ModemStateMachine:
                     await asyncio.sleep(30)
 
         except asyncio.CancelledError:
-            logger.debug("IP monitoring cancelled",
-                        extra={'interface_number': self.interface_number})
+            if self._modem_removed:
+                logger.debug("IP monitoring cancelled - modem removed",
+                            extra={'interface_number': self.interface_number})
+            else:
+                logger.debug("IP monitoring cancelled",
+                            extra={'interface_number': self.interface_number})
         except Exception as e:
             logger.error(f"IP monitoring failed: {e}",
                         extra={'interface_number': self.interface_number})
@@ -6795,9 +7205,12 @@ class ModemStateMachine:
             self._bearer_disconnect_timer = None
 
         except asyncio.CancelledError:
-            # Timer was cancelled - bearer came back
-            logger.info("Bearer disconnect timer cancelled - bearer recovered",
-                       extra={'interface_number': self.interface_number})
+            if self._modem_removed:
+                logger.info("Bearer disconnect timer cancelled - modem removed",
+                           extra={'interface_number': self.interface_number})
+            else:
+                logger.info("Bearer disconnect timer cancelled - bearer recovered",
+                           extra={'interface_number': self.interface_number})
         except Exception as e:
             logger.error(f"Bearer disconnect handling error: {e}",
                         extra={'interface_number': self.interface_number})

@@ -123,6 +123,7 @@ class StateTransitionManager:
                 StateTransition("DISCONNECTED", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch when disconnected"),
                 StateTransition("FAILED", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from failed state"),
                 StateTransition("REGISTERED_IDLE", "SIM_SWITCHING", "SWITCH_SIM", "SIM switch from on-demand idle"),
+                StateTransition("WAITING_FOR_SIM", "SIM_SWITCHING", "SWITCH_SIM", "SIM failover from missing SIM"),
 
                 # SIM switch process — events match what the code actually fires:
                 #   _execute_sim_switch  -> SIM_DISCONNECTED
@@ -157,6 +158,8 @@ class StateTransitionManager:
                 StateTransition("SCANNING", "FAILED", "CONNECTION_FAILED", "Modem scan failed"),
                 StateTransition("FAILED", "SCANNING", "START_SCAN", "Retry modem scanning"),
                 StateTransition("FAILED", "CONNECTING", "CONNECT", "Retry connection"),
+                # Recovery: when modem is found again after a failure (e.g. post-reset)
+                StateTransition("FAILED", "MODEM_FOUND", "MODEM_FOUND", "Modem re-discovered after failure"),
             ]
         )
 
