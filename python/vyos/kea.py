@@ -165,7 +165,7 @@ def kea_parse_subnet(subnet, config):
 
         if 'bootfile_name' in config['option']:
             out['boot-file-name'] = config['option']['bootfile_name']
-            out['option-data'].append({"name": "boot-file-name", "data": config['option']['bootfile_name']})
+            out['option-data'].append({'name': 'boot-file-name', 'data': config['option']['bootfile_name']})
 
         if 'bootfile_server' in config['option']:
             out['next-server'] = config['option']['bootfile_server']
@@ -196,8 +196,8 @@ def kea_parse_subnet(subnet, config):
                     pool['boot-file-name'] = range_config['option']['bootfile_name']
                     pool['option-data'].append(
                         {
-                            "name": "boot-file-name",
-                            "data": range_config['option']['bootfile_name']
+                            'name': 'boot-file-name',
+                            'data': range_config['option']['bootfile_name']
                         }
                     )
 
@@ -238,8 +238,8 @@ def kea_parse_subnet(subnet, config):
                     ]
                     reservation['option-data'].append(
                         {
-                            "name": "boot-file-name",
-                            "data": host_config['option']['bootfile_name']
+                            'name': 'boot-file-name',
+                            'data': host_config['option']['bootfile_name']
                         }
                     )
 
