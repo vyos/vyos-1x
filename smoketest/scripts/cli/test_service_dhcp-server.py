@@ -384,6 +384,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_object(
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+            {'name': 'boot-file-name', 'data': bootfile_name},
+        )
+        self.verify_config_object(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
             {'name': 'domain-name', 'data': domain_name},
         )
         self.verify_config_object(
