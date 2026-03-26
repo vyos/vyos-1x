@@ -15,6 +15,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from vyos.base import Warning
 from vyos.config import Config
 
 
@@ -42,7 +43,10 @@ def iface_filter_eth(config: Config, iface: str) -> None:
         'vrf',
     ]
 
-    # get list of config nides in a session configuration
+    if not config._session_config.exists(['interfaces', 'ethernet', iface]):
+        return
+
+    # get list of config nodes in a session configuration
     iface_nodes = config._session_config.list_nodes(['interfaces', 'ethernet', iface])
 
     # clean cached session config
@@ -53,6 +57,6 @@ def iface_filter_eth(config: Config, iface: str) -> None:
     for cfg_node in iface_nodes:
         if cfg_node not in allowed_nodes:
             config._session_config.delete(['interfaces', 'ethernet', iface, cfg_node])
-            print(
-                f'WARNING: {cfg_node} option in {iface} settings is not supported by VPP interfaces. It will be ignored.'
+            Warning(
+                f'{cfg_node} option in {iface} settings is not supported by VPP interfaces. It will be ignored.'
             )
