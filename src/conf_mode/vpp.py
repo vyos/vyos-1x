@@ -252,7 +252,7 @@ def _is_device_allowed(config: dict, iface: str):
     if 'allow_unsupported_nics' in config['settings']:
         return True
 
-    persist_config = dict_search('persist_config.iface', config)
+    persist_config = dict_search(f'persist_config.{iface}', config, default={})
 
     pci_id = persist_config.get('pci_id')
     # PCI ID is sufficient by itself, if presented
