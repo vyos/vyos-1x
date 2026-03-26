@@ -47,7 +47,7 @@ kea4_options = {
     'captive_portal': 'v4-captive-portal',
     'capwap_controller': 'capwap-ac-v4',
     'interface_mtu': 'interface-mtu',
-    'bootfile_name': 'boot-file-name'
+    'bootfile_name': 'boot-file-name',
 }
 
 kea6_options = {
