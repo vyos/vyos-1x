@@ -62,6 +62,35 @@ def verify_vpp_tunnel_source_address(config: dict):
     )
 
 
+def verify_member_conflicts(iface, config, current_type):
+    """
+    Check that a member interface is not already used by another interface type.
+
+    Args:
+        iface (str): interface name to check
+        config (dict): configuration dictionary
+        current_type (str): the membership type being assigned
+            to the interface ('bridge', 'bond', or 'xconn')
+
+    Raises:
+        ConfigError: If the interface is already a member of a conflicting interface type.
+    """
+    iface_type_map = {
+        'bridge': 'bridge',
+        'bond': 'bonding',
+        'xconn': 'xconnect',
+    }
+    for iface_type, label in iface_type_map.items():
+        if iface_type == current_type:
+            continue
+        members = config.get(f'{iface_type}_members', {}).get(iface)
+        if members:
+            raise ConfigError(
+                f'Interface {iface} cannot be a member of {iface_type_map[current_type]} '
+                f'because it already belongs to {label} interface(s): {", ".join(members)}.'
+            )
+
+
 def create_cpu_error_message(cpus_required: int, cpus_available: int = None) -> str:
     cpu_info = get_cpus()
     logical_cores = sum(

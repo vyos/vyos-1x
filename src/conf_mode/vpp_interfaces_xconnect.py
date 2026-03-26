@@ -22,7 +22,10 @@ from vyos.configdict import get_interface_dict
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig.vpp import VPPXconnectInterface
+from vyos.vpp.config_deps import deps_bond_dict
+from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
+from vyos.vpp.config_verify import verify_member_conflicts
 from vyos.vpp.utils import cli_ifaces_list
 
 
@@ -59,6 +62,8 @@ def get_config(config=None) -> dict:
     if effective_config:
         config.update({'effective': effective_config})
 
+    config['bond_members'] = deps_bond_dict(conf)
+    config['bridge_members'] = deps_bridge_dict(conf)
     config['xconn_members'] = deps_xconnect_dict(conf)
     config['vpp_ifaces'] = cli_ifaces_list(conf, 'candidate')
 
@@ -78,7 +83,7 @@ def verify(config):
     if len(config.get('member', {}).get('interface')) != 2:
         raise ConfigError('Cross connect requires 2 members')
 
-    not_allowed_prefixes = ('vppbond', 'vppbridge', 'vpplo')
+    not_allowed_prefixes = ('vppbond', 'vppbr', 'vpplo')
     for iface in config.get('member', {}).get('interface', []):
         # Ensure the interface is allowed as xconnect member
         if iface.startswith(not_allowed_prefixes):
@@ -93,6 +98,8 @@ def verify(config):
             raise ConfigError(
                 f'Interface {iface} added to more than one xconnect: {", ".join(xconn_members)}'
             )
+
+        verify_member_conflicts(iface, config, 'xconn')
 
 
 def generate(config):

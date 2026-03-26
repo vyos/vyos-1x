@@ -24,6 +24,8 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.ifconfig.vpp import VPPBridgeInterface
 from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
+from vyos.vpp.config_deps import deps_xconnect_dict
+from vyos.vpp.config_verify import verify_member_conflicts
 
 
 def get_config(config=None) -> dict:
@@ -67,6 +69,7 @@ def get_config(config=None) -> dict:
 
     config['bond_members'] = deps_bond_dict(conf)
     config['bridge_members'] = deps_bridge_dict(conf)
+    config['xconn_members'] = deps_xconnect_dict(conf)
 
     return config
 
@@ -104,13 +107,7 @@ def verify(config):
                     f'Interface {member} is added to more than one bridge: {", ".join(bridge_members)}'
                 )
 
-            # Interface cannot be a member of a bridge and a bond at the same time
-            bond_members = config['bond_members'].get(member)
-            if bond_members:
-                raise ConfigError(
-                    f'Interface {member} cannot be a member of a bridge '
-                    f'because it already belongs to bonding interface: {", ".join(bond_members)}.'
-                )
+            verify_member_conflicts(member, config, 'bridge')
 
             # Check if BVI is already defined, only one BVI per bridge domain is allowed
             if 'bvi' in member_config:
