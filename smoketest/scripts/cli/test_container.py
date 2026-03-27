@@ -297,7 +297,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         n = cmd_to_json(f'sudo podman network inspect {net_name}')
         self.assertEqual(n['subnets'][0]['subnet'], prefix)
 
-        # skipt first container, it was never created
+        # skip first container, it was never created
         for ii in range(2, 6):
             name = f'{base_name}-{ii}'
             c = cmd_to_json(f'sudo podman container inspect {name}')
@@ -343,7 +343,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         n = cmd_to_json(f'sudo podman network inspect {net_name}')
         self.assertEqual(n['subnets'][0]['subnet'], prefix)
 
-        # skipt first container, it was never created
+        # skip first container, it was never created
         for ii in range(2, 6):
             name = f'{base_name}-{ii}'
             c = cmd_to_json(f'sudo podman container inspect {name}')
@@ -403,7 +403,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(n['subnets'][0]['subnet'], prefix4)
         self.assertEqual(n['subnets'][1]['subnet'], prefix6)
 
-        # skipt first container, it was never created
+        # skip first container, it was never created
         for ii in range(2, 6):
             name = f'{base_name}-{ii}'
             c = cmd_to_json(f'sudo podman container inspect {name}')

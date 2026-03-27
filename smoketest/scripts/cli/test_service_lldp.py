@@ -126,7 +126,7 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
     def test_06_lldp_snmp(self):
         self.cli_set(base_path + ['snmp'])
 
-        # verify - can not start lldp snmp without snmp beeing configured
+        # verify - can not start lldp snmp without snmp being configured
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(['service', 'snmp'])

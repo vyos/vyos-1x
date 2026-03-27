@@ -1,5 +1,5 @@
 [Unit]
-Description=VyOS system udpate-check service
+Description=VyOS system update-check service
 After=network.target vyos-router.service
 
 [Service]

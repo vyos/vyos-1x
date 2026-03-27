@@ -909,7 +909,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_0_start = inc_ip(subnet, 10)
         range_0_stop = inc_ip(subnet, 100)
 
-        # the DHCP exclude addresse is blanked out of the range which is done
+        # the DHCP exclude address is blanked out of the range which is done
         # by slicing one range into two ranges
         exclude_addr = inc_ip(range_0_start, 20)
         range_0_stop_excl = dec_ip(exclude_addr, 1)

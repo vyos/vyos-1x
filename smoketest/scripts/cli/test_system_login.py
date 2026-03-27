@@ -585,7 +585,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(err)
         self.assertEqual(out, self.ssh_test_command_result)
 
-        # Cancel pending reboot - we do wan't to preceed with the remaining tests
+        # Cancel pending reboot - we do want to proceed with the remaining tests
         self.op_mode(['reboot', 'cancel'])
 
 if __name__ == '__main__':

@@ -141,7 +141,7 @@ function ip () {
         return $?
     fi
 
-    # pass comand to system `ip` if this is not related to routes change
+    # pass command to system `ip` if this is not related to routes change
     if [ "$2" != "route" ] ; then
         logmsg info "Passing command to /usr/sbin/ip: \"$@\""
         /usr/sbin/ip $@

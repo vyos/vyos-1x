@@ -15,7 +15,7 @@
               <constraint>
                 <regex>[[:alnum:]\-_!@*#]{1,100}</regex>
               </constraint>
-              <constraintErrorMessage>Community string is limited to alphanumerical characters, -, _, !, @, *, and # with a total lenght of 100</constraintErrorMessage>
+              <constraintErrorMessage>Community string is limited to alphanumerical characters, -, _, !, @, *, and # with a total length of 100</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="authorization">

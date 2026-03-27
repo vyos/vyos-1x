@@ -75,7 +75,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             for opt, value in details.items():
                 self.cli_set(name_path + [svc, opt, value])
 
-            # 'zone' option is supported by 'cloudfare' and 'zoneedit1', but not 'freedns'
+            # 'zone' option is supported by 'cloudflare' and 'zoneedit1', but not 'freedns'
             self.cli_set(name_path + [svc, 'zone', zone])
             if details['protocol'] in ['cloudflare', 'zoneedit1']:
                 pass
@@ -85,7 +85,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
                     self.cli_commit()
                 self.cli_delete(name_path + [svc, 'zone'])
 
-            # 'ttl' option is supported by 'cloudfare', but not 'freedns' and 'zoneedit'
+            # 'ttl' option is supported by 'cloudflare', but not 'freedns' and 'zoneedit'
             self.cli_set(name_path + [svc, 'ttl', ttl])
             if details['protocol'] == 'cloudflare':
                 pass
@@ -174,7 +174,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             for opt, value in details.items():
                 self.cli_set(name_path + [name, opt, value])
 
-            # Dual stack is supported by 'cloudfare' and 'freedns' but not 'googledomains'
+            # Dual stack is supported by 'cloudflare' and 'freedns' but not 'googledomains'
             # exception is raised for unsupported ones
             self.cli_set(name_path + [name, 'ip-version', ip_version])
             if details['protocol'] not in ['cloudflare', 'freedns']:

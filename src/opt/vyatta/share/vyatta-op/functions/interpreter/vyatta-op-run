@@ -20,7 +20,7 @@
 
 _vyatta_op_init ()
 {
-    # empty and default line compeletion
+    # empty and default line completion
     complete -E -F _vyatta_op_expand
     complete -D -F _vyatta_op_default_expand
 

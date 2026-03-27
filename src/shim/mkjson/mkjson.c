@@ -279,7 +279,7 @@ char *mkjson( enum mkjson_container_type otype, int count, ... )
 			for ( i = 0; i < count; i++ )
 			{
 				// Add separators:
-				// - not on the begining
+				// - not on the beginning
 				// - always after valid chunk
 				// - between two valid chunks
 				// - between valid and ignored chunk if the latter isn't the last one
@@ -304,4 +304,3 @@ char *mkjson( enum mkjson_container_type otype, int count, ... )
 
 	return json;
 }
-
