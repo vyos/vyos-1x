@@ -51,7 +51,7 @@ async def example_basic():
         # Apply a simple config — connect-on-demand so we control the bearer
         await client.set_configuration(INTERFACE, {
             "connection_mode": "connect-on-demand",
-            "active_sim_slot": 1,
+            "primary_sim_slot": 1,
         })
         log.info("Configuration applied")
 
@@ -87,7 +87,7 @@ async def example_full_config():
 
     config = {
         "connection_mode": "always-on",
-        "active_sim_slot": 1,
+        "primary_sim_slot": 1,
         "sim_failover": "enabled",
         "network_mode": "auto",
         "android_apn_discovery": "enabled",
@@ -168,7 +168,7 @@ async def example_dial_on_demand():
         await client.add_interface(INTERFACE)
         await client.set_configuration(INTERFACE, {
             "connection_mode": "dial-on-demand",
-            "active_sim_slot": 1,
+            "primary_sim_slot": 1,
         })
 
         # Bearer comes up automatically — wait for it

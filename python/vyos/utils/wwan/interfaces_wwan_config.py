@@ -176,25 +176,28 @@ class InterfaceConfig(ServiceInterface):
     DEFAULT_CONFIG = {
         # Interface-level settings
         "connection_mode": "always-on",  # always-on | connect-on-demand | dial-on-demand
-        "active_sim_slot": 1,  # Which SIM slot to use (1 or 2)
+        "primary_sim_slot": 1,  # Which SIM slot to use (1 or 2)
+
+        # MTU settings (0 = not set / use network value)
+        "mtu_override": 0,   # If > 0, always force this MTU regardless of network
+        "mtu_fallback": 1420, # Used when the network/bearer does not provide an MTU
 
         # APN discovery settings
         "android_apn_discovery": "disabled",
 
         # SIM failover settings (global enable + policy)
-        "sim_failover": "disabled",
+        "sim_failover": "enabled",
         "sim_failover_connect_retries": 3,
         "sim_failover_revert_timer": 300,
         "sim_failover_signal_loss_timer": 60,
         "sim_failover_signal_threshold": -90,
 
         # SIM failback settings
-        "sim_failback_enabled": False,
+        "sim_failback_enabled": True,
         "sim_failback_check_interval": 600,
 
         # Data usage settings (per-SIM only; no global defaults needed)
         "data_usage_monitoring_interval": 30,
-        "data_usage_warning_thresholds": [75, 90, 95],
 
         # Hardware management settings
         "hardware_reset_enabled": True,
@@ -219,7 +222,7 @@ class InterfaceConfig(ServiceInterface):
 
         # Enhanced reconnection settings
         "enhanced_reconnection": {
-            "enabled": False,
+            "enabled": True,
             "signal_threshold": -85,
             "retry_interval_good_signal": 15,
             "retry_interval_poor_signal": 45,
@@ -230,7 +233,7 @@ class InterfaceConfig(ServiceInterface):
 
         # Connectivity monitoring settings
         "connectivity_monitoring": {
-            "enabled": False,
+            "enabled": True,
             "interval": 60,
             "timeout": 10,
             "retry_count": 3,
@@ -247,7 +250,9 @@ class InterfaceConfig(ServiceInterface):
             "enabled": True,                    # Enable network interface management
             "bearer_disconnect_delay": 15,      # Wait time before link down on bearer loss (seconds)
             "registration_recovery_delay": 20,  # Debounce delay before acting on registration loss (seconds)
-            "ip_change_delay": 0.5,            # Brief delay for IP change link cycling (seconds)
+            "registration_flap_count": 5,          # Number of registration losses within window to trigger SIM failover
+            "registration_flap_window": 360,        # Time window (seconds) in which flap_count losses trigger failover
+            "ip_change_delay": 500,            # Brief delay for IP change link cycling (milliseconds)
             "ensure_link_up_on_connect": True, # Ensure interface UP when entering CONNECTED state
             "monitor_bearer_state": True,      # Monitor ModemManager bearer state changes
             "monitor_ip_changes": True,        # Monitor for carrier IP address reassignments
@@ -273,9 +278,11 @@ class InterfaceConfig(ServiceInterface):
                 },
                 "pin": "",           # SIM PIN (if set, FSM auto-unlocks)
                 "puk": "",           # SIM PUK (used with PIN for auto-recovery)
+                "iccid": "",         # Expected ICCID — if set, slot rejects any other SIM (tamper lock)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
-                "data_limit_action": "disable",   # disable, alert, block, sim-failover, sim-failover-sticky
+                "data_limit_action": "none",      # none, disable, sim-failover, sim-failover-sticky
+                "data_limit_warning": [],          # Pct thresholds, e.g. [75, 90, 95] (empty = no warnings)
                 "data_limit_billing_date": 1      # Day of month (1-28) for usage reset
             },
             {
@@ -294,9 +301,11 @@ class InterfaceConfig(ServiceInterface):
                 },
                 "pin": "",           # SIM PIN (if set, FSM auto-unlocks)
                 "puk": "",           # SIM PUK (used with PIN for auto-recovery)
+                "iccid": "",         # Expected ICCID — if set, slot rejects any other SIM (tamper lock)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
-                "data_limit_action": "disable",   # disable, alert, block, sim-failover, sim-failover-sticky
+                "data_limit_action": "none",      # none, disable, sim-failover, sim-failover-sticky
+                "data_limit_warning": [],          # Pct thresholds, e.g. [75, 90, 95] (empty = no warnings)
                 "data_limit_billing_date": 1      # Day of month (1-28) for usage reset
             }
         ]
@@ -538,8 +547,8 @@ class InterfaceConfig(ServiceInterface):
             logger.info("Configuration applied successfully",
                        extra={'interface_number': self.interface_number,
                               'config_keys': list(cfg.keys()),
-                              'active_sim': cfg.get('active_sim_slot', 1),
-                              'connectivity_monitoring': cfg.get('connectivity_monitoring', {}).get('enabled', False)})
+                              'active_sim': cfg.get('primary_sim_slot', 1),
+                              'connectivity_monitoring': cfg.get('connectivity_monitoring', {}).get('enabled', True)})
             return f"Configuration applied to interface {self.interface_number}"
 
         except ValueError as e:
@@ -673,13 +682,41 @@ class InterfaceConfig(ServiceInterface):
             raise ValueError(f"connection_mode must be one of {valid_modes}")
 
         # Validate active SIM slot
-        if 'active_sim_slot' in config:
-            slot = config['active_sim_slot']
+        if 'primary_sim_slot' in config:
+            slot = config['primary_sim_slot']
             if not isinstance(slot, int) or slot not in [1, 2]:
-                logger.warning("Invalid active_sim_slot",
+                logger.warning("Invalid primary_sim_slot",
                               extra={'interface_number': self.interface_number,
-                                     'validation_field': 'active_sim_slot'})
-                raise ValueError("active_sim_slot must be 1 or 2")
+                                     'validation_field': 'primary_sim_slot'})
+                raise ValueError("primary_sim_slot must be 1 or 2")
+
+        # Validate MTU override (0 = disabled, positive integer = forced MTU)
+        if 'mtu_override' in config:
+            mtu = config['mtu_override']
+            if not isinstance(mtu, int) or mtu < 0:
+                raise ValueError("mtu_override must be a non-negative integer (0 = disabled)")
+            if mtu > 0 and (mtu < 576 or mtu > 9000):
+                raise ValueError("mtu_override must be 0 (disabled) or between 576 and 9000")
+
+        # Validate MTU fallback (used when network does not provide MTU)
+        if 'mtu_fallback' in config:
+            mtu = config['mtu_fallback']
+            if not isinstance(mtu, int) or mtu < 576 or mtu > 9000:
+                raise ValueError("mtu_fallback must be an integer between 576 and 9000")
+
+        # Validate registration flap detection parameters
+        if 'interface_management' in config and isinstance(config['interface_management'], dict):
+            im = config['interface_management']
+            if 'registration_flap_count' in im:
+                val = int(im['registration_flap_count'])
+                if val < 0:
+                    raise ValueError("registration_flap_count must be >= 0 (0 = disabled)")
+                im['registration_flap_count'] = val
+            if 'registration_flap_window' in im:
+                val = int(im['registration_flap_window'])
+                if val < 1:
+                    raise ValueError("registration_flap_window must be >= 1 second")
+                im['registration_flap_window'] = val
 
         # Validate SIM failover
         if 'sim_failover' in config and config['sim_failover'] not in ['enabled', 'disabled']:
@@ -723,6 +760,8 @@ class InterfaceConfig(ServiceInterface):
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'sim_slots'})
                 raise ValueError("sim_slots must be a list")
+            for sim_slot in sim_slots:
+                self._validate_sim_slot(sim_slot)
 
        # Validate connectivity monitoring configuration
         if 'connectivity_monitoring' in config:
@@ -934,6 +973,70 @@ class InterfaceConfig(ServiceInterface):
                                  'sim_slot': slot_num})
             raise ValueError(f"SIM{slot_num}: when puk is provided, pin must also be provided")
 
+        # Validate ICCID lock (empty = no lock; if set, must be 19-20 digit string)
+        if 'iccid' in sim_slot:
+            iccid = sim_slot['iccid']
+            if not isinstance(iccid, str):
+                logger.warning("Invalid SIM ICCID type",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_slots',
+                                     'sim_slot': slot_num})
+                raise ValueError(f"SIM{slot_num} iccid must be a string")
+            if iccid and not re.match(r'^\d{19,20}$', iccid):
+                logger.warning("Invalid SIM ICCID format",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_slots',
+                                     'sim_slot': slot_num,
+                                     'iccid_length': len(iccid)})
+                raise ValueError(f"SIM{slot_num} iccid must be 19-20 digits")
+
+        # Validate per-SIM data_limit_warning (list of pct thresholds 1-100)
+        if 'data_limit_warning' in sim_slot:
+            thresholds = sim_slot['data_limit_warning']
+            if not isinstance(thresholds, list):
+                logger.warning(f"Invalid SIM data_limit_warning type",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_slots',
+                                     'sim_slot': slot_num})
+                raise ValueError(f"SIM{slot_num} data_limit_warning must be a list of percentages")
+            for t in thresholds:
+                if not isinstance(t, (int, float)) or t < 1 or t > 100:
+                    logger.warning(f"Invalid SIM data_limit_warning value",
+                                  extra={'interface_number': self.interface_number,
+                                         'validation_field': 'sim_slots',
+                                         'sim_slot': slot_num})
+                    raise ValueError(f"SIM{slot_num} each data_limit_warning threshold must be between 1 and 100")
+
+        # Validate per-SIM data_limit_action
+        if 'data_limit_action' in sim_slot:
+            valid_data_actions = ['none', 'disable', 'sim-failover', 'sim-failover-sticky']
+            if sim_slot['data_limit_action'] not in valid_data_actions:
+                logger.warning(f"Invalid SIM data_limit_action",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_slots',
+                                     'sim_slot': slot_num})
+                raise ValueError(f"SIM{slot_num} data_limit_action must be one of: {', '.join(valid_data_actions)}")
+
+        # Validate per-SIM data_limit_billing_date (1-28)
+        if 'data_limit_billing_date' in sim_slot:
+            date = sim_slot['data_limit_billing_date']
+            if not isinstance(date, int) or date < 1 or date > 28:
+                logger.warning(f"Invalid SIM data_limit_billing_date",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_slots',
+                                     'sim_slot': slot_num})
+                raise ValueError(f"SIM{slot_num} data_limit_billing_date must be an integer between 1 and 28")
+
+        # Validate per-SIM data_limit_size (0 = unlimited, positive = bytes)
+        if 'data_limit_size' in sim_slot:
+            size = sim_slot['data_limit_size']
+            if not isinstance(size, (int, float)) or size < 0:
+                logger.warning(f"Invalid SIM data_limit_size",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'sim_slots',
+                                     'sim_slot': slot_num})
+                raise ValueError(f"SIM{slot_num} data_limit_size must be a non-negative number")
+
         logger.info("SIM configuration validation passed",
                    extra={'interface_number': self.interface_number,
                           'sim_slot': slot_num,
@@ -1074,12 +1177,27 @@ class InterfaceConfig(ServiceInterface):
                 raise ValueError("data_limit_billing_date must be an integer between 1 and 28")
 
         # Validate data_limit_action
-        valid_data_actions = ['disable', 'block', 'sim-failover', 'sim-failover-sticky', 'alert']
+        valid_data_actions = ['none', 'disable', 'sim-failover', 'sim-failover-sticky']
         if 'data_limit_action' in config and config['data_limit_action'] not in valid_data_actions:
             logger.warning("Invalid data_limit_action",
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'data_limit_action'})
             raise ValueError(f"data_limit_action must be one of: {', '.join(valid_data_actions)}")
+
+        # Validate data_limit_warning (list of pct thresholds 1-100)
+        if 'data_limit_warning' in config:
+            thresholds = config['data_limit_warning']
+            if not isinstance(thresholds, list):
+                logger.warning("Invalid data_limit_warning type",
+                              extra={'interface_number': self.interface_number,
+                                     'validation_field': 'data_limit_warning'})
+                raise ValueError("data_limit_warning must be a list of percentages")
+            for t in thresholds:
+                if not isinstance(t, (int, float)) or t < 1 or t > 100:
+                    logger.warning("Invalid data_limit_warning threshold value",
+                                  extra={'interface_number': self.interface_number,
+                                         'validation_field': 'data_limit_warning'})
+                    raise ValueError("Each data_limit_warning threshold must be between 1 and 100 percent")
 
         # Validate signal threshold
         if 'sim_failover_signal_threshold' in config:
@@ -1211,32 +1329,16 @@ class InterfaceConfig(ServiceInterface):
                                  'validation_field': 'detailed_status'})
             raise ValueError("detailed_status must be true or false")
 
-        # Validate data usage warning thresholds
-        if 'data_usage_warning_thresholds' in config:
-            thresholds = config['data_usage_warning_thresholds']
-            if not isinstance(thresholds, list):
-                logger.warning("Invalid data_usage_warning_thresholds type",
-                              extra={'interface_number': self.interface_number,
-                                     'validation_field': 'data_usage_warning_thresholds'})
-                raise ValueError("data_usage_warning_thresholds must be a list")
-
-            for threshold in thresholds:
-                if not isinstance(threshold, (int, float)) or threshold < 1 or threshold > 100:
-                    logger.warning("Invalid data usage warning threshold value",
-                                  extra={'interface_number': self.interface_number,
-                                         'validation_field': 'data_usage_warning_thresholds'})
-                    raise ValueError("Each data usage warning threshold must be between 1 and 100 percent")
-
     def _normalize_connectivity_monitoring(self, config_data):
         """Normalize connectivity monitoring configuration"""
         connectivity = config_data.get('connectivity_monitoring', {})
 
         if not isinstance(connectivity, dict):
-            return {'enabled': False}
+            return {'enabled': True}
 
         # Normalize with safe defaults
         normalized = {
-            'enabled': connectivity.get('enabled', False),
+            'enabled': connectivity.get('enabled', True),
             'interval': max(30, connectivity.get('interval', 60)),
             'timeout': max(5, connectivity.get('timeout', 10)),
             'retry_count': max(1, connectivity.get('retry_count', 3)),
@@ -1388,7 +1490,7 @@ class InterfaceConfig(ServiceInterface):
 
         logger.info("Connectivity monitoring validation passed",
                    extra={'interface_number': self.interface_number,
-                          'enabled': connectivity_config.get('enabled', False),
+                          'enabled': connectivity_config.get('enabled', True),
                           'interval': connectivity_config.get('interval', 60),
                           'test_ipv4': test_ipv4,
                           'test_ipv6': test_ipv6})

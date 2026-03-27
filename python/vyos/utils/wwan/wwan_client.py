@@ -293,8 +293,10 @@ class WWANClient:
             Configuration dictionary.  Accepted keys include:
 
             **Top-level scalars:**
-            ``connection_mode``, ``active_sim_slot``, ``sim_failover``,
+            ``connection_mode``, ``primary_sim_slot``, ``sim_failover``,
             ``android_apn_discovery``, ``network_mode``,
+            ``mtu_override`` (0 = disabled; if > 0 always force this MTU),
+            ``mtu_fallback`` (MTU when network doesn't provide one; default 1420),
             ``network_scan_timeout``, ``connection_timeout``,
             ``registration_timeout``, ``network_scan_timeout``,
             ``normal_monitoring_interval``, ``system_health_check_interval``,
@@ -319,21 +321,30 @@ class WWANClient:
 
             ``interface_management`` — keys: ``enabled``,
             ``bearer_disconnect_delay``, ``registration_recovery_delay``,
+            ``registration_flap_count`` (0 = disabled; if this many
+            debounced registration losses occur within
+            ``registration_flap_window`` seconds, SIM failover is
+            triggered), ``registration_flap_window``,
             ``ip_change_delay``, ``ensure_link_up_on_connect``,
             ``monitor_bearer_state``, ``monitor_ip_changes``,
             ``interface_up_timeout``.
 
             ``sim_slots`` — list of per-SIM dicts, each with:
-            ``slot``, ``enabled``, ``apn`` (str or ``{name, username,
+            ``slot``, ``enabled`` (bool, default True — both slots enabled;
+            VyOS ``disable`` command maps to False), ``apn`` (str or ``{name, username,
             password, auth_type}``), ``pdp_type``, ``roaming``, ``pin``,
-            ``puk``, ``supported_bands`` (``all`` or specific band names
-            — use ``network-mode`` for technology-level control),
+            ``puk``, ``iccid`` (ICCID lock — 19-20 digit string; if set,
+            only the SIM with this ICCID is accepted in the slot — empty
+            string means no lock), ``supported_bands`` (``all`` or specific
+            band names — use ``network-mode`` for technology-level control),
             ``preferred_carrier`` (MCCMNC code or friendly name —
             per-SIM only, each SIM has its own carrier),
             ``enable_network_scan`` (diagnostic scan — results appear
             in status ``available_networks``; per-SIM only),
             ``data_limit_size``, ``data_limit_action``,
-            ``data_limit_billing_date``.
+            ``data_limit_billing_date``,
+            ``data_limit_warning`` (comma-separated pct thresholds,
+            e.g. ``[75, 90, 95]``; empty list = no warnings).
 
         Returns
         -------
@@ -490,6 +501,39 @@ class WWANClient:
             ``session_rx_bytes``, ``session_tx_bytes``,
             ``cumulative_bytes``, ``data_usage_percent``,
             ``connected_apn``, ``network_mode``.
+
+            **Connection failure information** (populated when FSM is
+            in ``FAILED`` state) —
+            ``failure_reason``: human-readable description of why
+            the connection failed,
+            ``failure_time``: ISO-8601 timestamp of the failure,
+            ``failed_apn``: the APN that was in use when the failure
+            occurred,
+            ``configured_apn_rejected``: ``True`` when the user's
+            explicitly configured APN was rejected by the network.
+
+            **Failback suppression** —
+            ``failback_suppressed_by_connection_failure``: ``True``
+            when the primary SIM's APN cascade failed and automatic
+            failback is suppressed until a new configuration event.
+
+            **Per-slot SIM identity** — for each physical SIM slot
+            ``N`` (1-based): ``sim_slot_N_present``,
+            ``sim_slot_N_imsi``, ``sim_slot_N_iccid``,
+            ``sim_slot_N_operator``, ``sim_slot_N_mcc_mnc``,
+            ``sim_slot_N_data_limit_warning`` (list of pct thresholds).
+            The active slot uses live D-Bus data; inactive slots
+            are probed via D-Bus with a cache fallback.
+
+            **Active SIM data config** —
+            ``active_data_limit_size`` (bytes),
+            ``active_data_limit_action`` (none/disable/sim-failover/
+            sim-failover-sticky),
+            ``active_data_limit_billing_date`` (1-28),
+            ``active_data_limit_warning`` (list of pct thresholds;
+            empty = disabled).
+            Shows the effective data-limit config for the currently
+            active SIM (per-SIM → global fallback → defaults).
 
             **SIM PIN/PUK unlock status** —
             ``pin_unlock_attempted``, ``pin_unlock_failed``,

@@ -113,12 +113,13 @@ SIMPLE_INTERFACE = "org.freedesktop.ModemManager1.Modem.Simple"
 
 DEFAULT_DATA_CONFIG = {
     'data_limit_size': 0,              # bytes; 0 = no limit
-    'data_limit_action': 'disable',    # disable | alert | block | sim-failover | sim-failover-sticky
+    'data_limit_action': 'none',       # none | disable | sim-failover | sim-failover-sticky
+    'data_limit_warning': [],           # list of pct thresholds (e.g. [75, 90, 95]); empty = no warnings
     'data_limit_billing_date': 1,      # day of month (1-28)
 }
 
 DEFAULT_CONNECTIVITY_CONFIG = {
-    'enabled': False,
+    'enabled': True,
     'interval': 60,                    # seconds between tests (min 30)
     'timeout': 10,                     # per-ping timeout (min 5)
     'retry_count': 3,                  # pings per test (min 1)
@@ -214,15 +215,26 @@ class ModemStateMachine:
 
         # SIM failback tracking — automatically return to primary SIM when possible
         self.is_on_failover_sim = False          # True when running on non-primary SIM after failover
-        self.primary_sim_slot = None             # Configured active_sim_slot (set from config)
+        self.primary_sim_slot = None             # Configured primary_sim_slot (set from config)
         self.failback_task = None                # Periodic failback check task
         self.failback_suppressed_by_data_limit = False  # Sticky failover: suppress failback until billing reset
         self._sticky_failover_timestamp = None            # When sticky hold was activated
+        self.failback_suppressed_by_connection_failure = False  # Suppress failback when primary SIM's APN cascade failed
 
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
         self.sim_changed = False            # Flag to indicate SIM card change detected
         self.connected_apn = None           # Last successful APN config dict (for reconnection & status)
+
+        # Per-slot SIM identity cache — stores physical SIM details (IMSI, ICCID,
+        # operator) for each slot as we observe them.  ModemManager only exposes
+        # full details for the active SIM, so we cache what we learn whenever a
+        # slot becomes active.  The inactive slot's ICCID may be readable from
+        # its D-Bus object even when not powered.
+        self.sim_slot_info_cache = {}       # {slot_number: {imsi, iccid, operator, mcc_mnc}}
+
+        # ICCID lock state — set by _validate_sim_iccid()
+        self.iccid_mismatch = False         # True when inserted SIM doesn't match configured ICCID
 
         # Reset cooldown tracking to prevent cascading failures
         self.last_reset_time = 0            # Timestamp of last hardware reset
@@ -237,6 +249,8 @@ class ModemStateMachine:
         self.reset_timeout_task = None      # Task to clear reset flag on timeout
         self.registration_handling_in_progress = False  # Prevent concurrent registration handling tasks
         self._registration_loss_timer = None    # Initialize registration loss timer
+        self._registration_flap_timestamps = []  # Timestamps of registration loss events for flap detection
+        self._registration_flap_failover_triggered = False  # Whether flap detection has triggered a failover
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
         self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
         self.last_scan_results = []          # Cached network scan results for status reporting
@@ -263,6 +277,14 @@ class ModemStateMachine:
         self._sim_permanently_locked = False  # True if PUK retries exhausted — SIM destroyed
         self._pin_retries_remaining = -1      # Last known PIN retries (-1 = unknown)
         self._puk_retries_remaining = -1      # Last known PUK retries (-1 = unknown)
+
+        # Connection failure tracking — records WHY the modem is in FAILED state
+        # so status queries and operators can see the reason without digging through logs.
+        # Cleared on successful connection or when new configuration is applied.
+        self.last_failure_reason = ''         # Human-readable failure description
+        self.last_failure_time = 0            # Timestamp of when failure occurred
+        self.last_failed_apn = ''             # The APN name that was last tried when failure occurred
+        self.configured_apn_rejected = False  # True when the user's explicitly configured APN was rejected
 
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
@@ -1254,6 +1276,16 @@ class ModemStateMachine:
                               'event': event.value,
                               'current_state': new_state,
                               'previous_state': old_state})
+
+            # Log detailed failure info when entering FAILED state
+            if new_state == ModemState.FAILED.value and old_state != ModemState.FAILED.value:
+                logger.error("Modem entered FAILED state",
+                            extra={'interface_number': self.interface_number,
+                                   'failure_reason': self.last_failure_reason or 'unspecified',
+                                   'failed_apn': self.last_failed_apn or 'none',
+                                   'configured_apn_rejected': self.configured_apn_rejected,
+                                   'trigger_event': event.value,
+                                   'from_state': old_state})
         except Exception as e:
             logger.error(f"FSM transition error on event '{event.value}': {e}",
                         extra={'interface_number': self.interface_number,
@@ -1288,15 +1320,15 @@ class ModemStateMachine:
         # 🔄 Extract configuration loading using safe extraction framework
         self._load_configuration_safe(config)
 
-        active_sim_slot = config.get('active_sim_slot', 1)
+        primary_sim_slot = config.get('primary_sim_slot', 1)
         # Track the configured primary SIM for failback decisions
         if self.primary_sim_slot is None:
-            self.primary_sim_slot = active_sim_slot
+            self.primary_sim_slot = primary_sim_slot
         logger.info("Configuration applied",
                    extra={'interface_number': self.interface_number,
                           'config_keys': list(config.keys()) if config else [],
-                          'active_sim': active_sim_slot,
-                          'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', False),
+                          'active_sim': primary_sim_slot,
+                          'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', True),
                           'enhanced_reconnection': self.enhanced_reconnection,
                           'signal_threshold': self.reconnection_signal_threshold,
                           'current_state': self.machine.current_state})
@@ -1324,6 +1356,22 @@ class ModemStateMachine:
             ModemState.FAILED.value,
             ModemState.REGISTERED_IDLE.value
         ):
+            # Clear failure tracking — new configuration means a fresh attempt
+            self.last_failure_reason = ''
+            self.last_failure_time = 0
+            self.last_failed_apn = ''
+            self.configured_apn_rejected = False
+            # Lift failback suppression — the user may have fixed the primary
+            # SIM's APN/parameters so failback should be allowed again.
+            if self.failback_suppressed_by_connection_failure:
+                logger.info("New configuration received — lifting failback "
+                           "suppression for primary SIM",
+                           extra={'interface_number': self.interface_number})
+                self.failback_suppressed_by_connection_failure = False
+            if current == ModemState.FAILED.value:
+                logger.info("New configuration received while in FAILED state — "
+                           "retrying connection",
+                           extra={'interface_number': self.interface_number})
             # Normal reconfiguration
             self.transition(ModemEvent.RECONFIGURE)
             self._safe_create_task(self._reconfigure_modem())
@@ -1378,12 +1426,12 @@ class ModemStateMachine:
             )
 
         # Log configuration applied
-        active_sim_slot = config.get('active_sim_slot', 1)
+        primary_sim_slot = config.get('primary_sim_slot', 1)
         logger.info("Configuration applied",
                    extra={'interface_number': self.interface_number,
                           'config_keys': list(config.keys()) if config else [],
-                          'active_sim': active_sim_slot,
-                          'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', False),
+                          'active_sim': primary_sim_slot,
+                          'connectivity_monitoring': config.get('connectivity_monitoring', {}).get('enabled', True),
                           'enhanced_reconnection': self.parsed_config.enhanced_reconnection.enabled,
                           'signal_threshold': self.parsed_config.enhanced_reconnection.signal_threshold,
                           'current_state': self.machine.current_state})
@@ -1406,6 +1454,8 @@ class ModemStateMachine:
         self.interface_management_enabled = self.parsed_config.interface_management.enabled
         self.bearer_disconnect_delay = self.parsed_config.interface_management.bearer_disconnect_delay
         self.registration_recovery_delay = self.parsed_config.interface_management.registration_recovery_delay
+        self.registration_flap_count = self.parsed_config.interface_management.registration_flap_count
+        self.registration_flap_window = self.parsed_config.interface_management.registration_flap_window
         self.ip_change_delay = self.parsed_config.interface_management.ip_change_delay
         self.ensure_link_up_on_connect = self.parsed_config.interface_management.ensure_link_up_on_connect
         self.monitor_bearer_state = self.parsed_config.interface_management.monitor_bearer_state
@@ -1509,6 +1559,9 @@ class ModemStateMachine:
             # Step 5: Unlock SIM if needed after enabling
             await self._unlock_sim_if_needed()
 
+            # Step 5.5: Validate ICCID lock (SIM must be enabled + unlocked for identity to be readable)
+            await self._validate_sim_iccid()
+
             # Step 6: 🆕 Configure preferred carrier if specified
             await self._configure_preferred_carrier()
 
@@ -1551,7 +1604,7 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number})
 
             # Get SIM config for connection parameters
-            active_slot = self.config.get('active_sim_slot', 1) if self.config else 1
+            active_slot = self.config.get('primary_sim_slot', 1) if self.config else 1
             sim_config = {'pdp_type': 'ipv4', 'roaming': 'disabled'}  # defaults
 
             if self.config and 'sim_slots' in self.config:
@@ -1670,6 +1723,12 @@ class ModemStateMachine:
                 logger.info("Connection established successfully, transitioning to CONNECTED state",
                            extra={'interface_number': self.interface_number})
 
+                # Clear any previous failure tracking — connection is now good
+                self.last_failure_reason = ''
+                self.last_failure_time = 0
+                self.last_failed_apn = ''
+                self.configured_apn_rejected = False
+
                 # Store the connected APN for fast reconnection and status reporting
                 cm_apn = getattr(self.connection_manager, 'connected_apn', None)
                 if cm_apn:
@@ -1682,8 +1741,18 @@ class ModemStateMachine:
                 if sim_info:
                     self.last_known_sim_info = sim_info.copy()
                     self.sim_changed = False
+                    # Cache per-slot SIM identity so status can report both SIMs
+                    slot = self.current_active_sim or active_slot
+                    self.sim_slot_info_cache[slot] = {
+                        'imsi': sim_info.get('imsi', ''),
+                        'iccid': sim_info.get('sim_identifier', ''),
+                        'operator': sim_info.get('operator_name', ''),
+                        'mcc_mnc': sim_info.get('mcc_mnc', ''),
+                        'spn': sim_info.get('spn', ''),
+                    }
                     logger.debug("Updated stored SIM info after successful connection",
                                 extra={'interface_number': self.interface_number,
+                                       'sim_slot': slot,
                                        'operator': sim_info.get('operator_name', 'Unknown'),
                                        'mcc_mnc': sim_info.get('mcc_mnc', 'Unknown')})
 
@@ -1731,13 +1800,79 @@ class ModemStateMachine:
                 # Start failback monitor if we're on the failover SIM
                 self._start_failback_monitor()
             else:
+                # --- Connection failure handling ---
+                # Record which APN was configured by the user (if any)
+                user_apn_name = apn_config.get('name', '') if apn_config else ''
+                self.configured_apn_rejected = bool(user_apn_name)
+                self.last_failed_apn = user_apn_name or '(auto-discovery)'
+                self.last_failure_time = time.time()
+
+                if user_apn_name:
+                    self.last_failure_reason = (
+                        f"Connection failed using customer-configured APN '{user_apn_name}'. "
+                        f"All fallback methods (discovery, auto-assign) also failed. "
+                        f"Please verify the APN, username, password, and PDP type are correct "
+                        f"for your carrier and SIM card. "
+                        f"A new configuration must be applied to retry."
+                    )
+                else:
+                    self.last_failure_reason = (
+                        "All automatic APN connection methods failed (discovery and auto-assign). "
+                        "No customer APN was configured. Consider configuring the correct APN "
+                        "for your carrier and SIM card."
+                    )
+
                 logger.error("All APN connection methods failed",
-                           extra={'interface_number': self.interface_number})
-                self.transition(ModemEvent.CONNECTION_FAILED)
+                           extra={'interface_number': self.interface_number,
+                                  'configured_apn_rejected': self.configured_apn_rejected,
+                                  'failed_apn': self.last_failed_apn,
+                                  'failure_reason': self.last_failure_reason})
+
+                # For dual-SIM: attempt failover to the other SIM if enabled
+                if (self._is_sim_failover_enabled()
+                        and self._is_failover_allowed()):
+                    fallback_sim = 2 if self.current_active_sim == 1 else 1
+                    logger.warning(
+                        "Initial connection failed on current SIM, "
+                        "attempting failover to alternate SIM",
+                        extra={'interface_number': self.interface_number,
+                               'current_sim': self.current_active_sim,
+                               'target_sim': fallback_sim,
+                               'reason': 'initial_connection_failure'})
+                    self.sim_switch_reason = 'initial_connection_failure'
+                    self.target_sim_slot = fallback_sim
+                    # Suppress failback to primary until new config arrives —
+                    # the primary SIM's APN/parameters are known-bad so there is
+                    # no point switching back only to fail again.
+                    self.failback_suppressed_by_connection_failure = True
+                    self._record_failover()
+                    self._emit_failover_event(
+                        event_type='failover',
+                        from_sim=self.current_active_sim,
+                        to_sim=fallback_sim,
+                        reason='initial_connection_failure',
+                        trigger='_configure_modem_initial',
+                        extra_data={'configured_apn_rejected': self.configured_apn_rejected,
+                                    'failed_apn': self.last_failed_apn})
+                    self.transition(ModemEvent.SWITCH_SIM)
+                    self._safe_create_task(self._execute_sim_switch())
+                else:
+                    # Single SIM or failover not allowed — park in FAILED and
+                    # wait for the user to push corrected configuration.
+                    logger.error(
+                        "No SIM failover available — parking in FAILED state. "
+                        "Apply new configuration via SetConfiguration() to retry.",
+                        extra={'interface_number': self.interface_number,
+                               'sim_failover_enabled': self._is_sim_failover_enabled(),
+                               'failure_reason': self.last_failure_reason})
+                    self.transition(ModemEvent.CONNECTION_FAILED)
 
         except Exception as e:
             logger.error(f"Initial modem configuration failed: {e}",
                         extra={'interface_number': self.interface_number})
+            # Record the exception as the failure reason
+            self.last_failure_reason = f"Modem configuration error: {e}"
+            self.last_failure_time = time.time()
             # Don't override SIM_MISSING transition with CONNECTION_FAILED
             if self.machine.current_state != ModemState.WAITING_FOR_SIM.value:
                 self.transition(ModemEvent.CONNECTION_FAILED)
@@ -1812,10 +1947,10 @@ class ModemStateMachine:
                                   'pin_retries': self._pin_retries_remaining,
                                   'puk_retries': self._puk_retries_remaining})
 
-                active_sim_slot = self.config.get('active_sim_slot', 1)
+                primary_sim_slot = self.config.get('primary_sim_slot', 1)
                 sim_slots = self.config.get('sim_slots', [])
                 active_sim_config = next(
-                    (sim for sim in sim_slots if sim['slot'] == active_sim_slot), {}
+                    (sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {}
                 )
 
                 if unlock_required == 1:  # MM_MODEM_LOCK_SIM_PIN
@@ -2099,9 +2234,9 @@ class ModemStateMachine:
                 return
 
             # Get active SIM configuration
-            active_sim_slot = self.config.get('active_sim_slot', 1)
+            primary_sim_slot = self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
+            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
 
             preferred_carrier = active_sim_config.get('preferred_carrier', '')
             enable_network_scan = active_sim_config.get('enable_network_scan', False)
@@ -2467,7 +2602,7 @@ class ModemStateMachine:
             if not self.config:
                 return
 
-            config_sim_slot = self.config.get('active_sim_slot', 1)
+            config_sim_slot = self.config.get('primary_sim_slot', 1)
             self.config_active_sim = config_sim_slot
 
             logger.info("Configuring SIM slot while disabled",
@@ -2541,6 +2676,74 @@ class ModemStateMachine:
             logger.error(f"SIM slot configuration error: {e}",
                         extra={'interface_number': self.interface_number})
 
+    async def _validate_sim_iccid(self):
+        """Validate that the inserted SIM matches the configured ICCID lock.
+
+        Called after the modem is enabled and the SIM is unlocked so that the
+        ICCID (SimIdentifier) is readable via D-Bus.  If the configured ICCID
+        is empty the check is skipped (no lock).
+
+        On mismatch the method raises ``Exception`` which causes
+        ``_configure_modem_initial()`` to abort — the FSM will not connect
+        with a non-matching SIM.
+        """
+        if not self.config:
+            return
+
+        active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+        sim_slots = self.config.get('sim_slots', [])
+        slot_cfg = None
+        for s in sim_slots:
+            if s.get('slot') == active_slot:
+                slot_cfg = s
+                break
+
+        if not slot_cfg:
+            return
+
+        expected_iccid = slot_cfg.get('iccid', '')
+        if not expected_iccid:
+            # No ICCID lock configured — allow any SIM
+            return
+
+        # Read the actual ICCID from the inserted SIM via D-Bus
+        actual_iccid = ''
+        try:
+            probed = await self._probe_sim_slot_info(active_slot)
+            actual_iccid = probed.get('iccid', '')
+        except Exception as e:
+            logger.error(f"Cannot read SIM ICCID for lock validation: {e}",
+                        extra={'interface_number': self.interface_number,
+                               'slot': active_slot})
+
+        if not actual_iccid:
+            # SIM present but ICCID unreadable — treat as mismatch
+            logger.critical("ICCID lock: cannot read ICCID from SIM — rejecting slot",
+                           extra={'interface_number': self.interface_number,
+                                  'slot': active_slot,
+                                  'expected_iccid': expected_iccid})
+            self.iccid_mismatch = True
+            raise Exception(f"SIM slot {active_slot}: ICCID unreadable — ICCID lock rejects this SIM")
+
+        if actual_iccid != expected_iccid:
+            logger.critical("ICCID lock MISMATCH — SIM in slot does not match configured ICCID",
+                           extra={'interface_number': self.interface_number,
+                                  'slot': active_slot,
+                                  'expected_iccid': expected_iccid,
+                                  'actual_iccid': actual_iccid})
+            self.iccid_mismatch = True
+            raise Exception(
+                f"SIM slot {active_slot}: ICCID mismatch — "
+                f"expected {expected_iccid}, got {actual_iccid}"
+            )
+
+        # Match — clear any prior mismatch flag
+        self.iccid_mismatch = False
+        logger.info("ICCID lock validated — SIM identity matches",
+                   extra={'interface_number': self.interface_number,
+                          'slot': active_slot,
+                          'iccid': actual_iccid})
+
     def _is_sim_failover_enabled(self) -> bool:
         """Check if SIM failover is enabled.
 
@@ -2548,8 +2751,8 @@ class ModemStateMachine:
         at the same level as ``failback``.
         """
         if not self.config:
-            return False
-        return self.config.get('sim_failover', 'disabled') == 'enabled'
+            return True
+        return self.config.get('sim_failover', 'enabled') == 'enabled'
 
     def _is_failover_allowed(self) -> bool:
         """Check if SIM failover is allowed (not in cooldown / backoff)"""
@@ -2614,7 +2817,7 @@ class ModemStateMachine:
             return
         if not self.config:
             return
-        if not self.config.get('sim_failback_enabled', False):
+        if not self.config.get('sim_failback_enabled', True):
             logger.debug("SIM failback disabled in config",
                         extra={'interface_number': self.interface_number})
             return
@@ -2672,6 +2875,17 @@ class ModemStateMachine:
                     logger.info("No longer on failover SIM, stopping failback monitor",
                                extra={'interface_number': self.interface_number})
                     break
+
+                # Suppress failback when primary SIM left due to connection failure
+                # (wrong APN / parameters).  Only a new configuration event clears
+                # this flag — there is no point switching back to known-bad config.
+                if self.failback_suppressed_by_connection_failure:
+                    logger.debug(
+                        "Failback suppressed — primary SIM connection parameters "
+                        "failed; waiting for new configuration before retrying",
+                        extra={'interface_number': self.interface_number,
+                               'primary_sim': primary})
+                    continue
 
                 # Check if sticky failover hold should be lifted (billing cycle crossed)
                 if self.failback_suppressed_by_data_limit:
@@ -2732,6 +2946,60 @@ class ModemStateMachine:
                             extra={'interface_number': self.interface_number})
                 # Continue monitoring despite errors
                 await asyncio.sleep(check_interval)
+
+    async def _probe_sim_slot_info(self, slot_number: int) -> dict:
+        """Read whatever SIM identity is available from a specific slot's D-Bus object.
+
+        For the active slot this returns full info (IMSI, ICCID, operator).
+        For an inactive slot ModemManager may only expose ICCID or just confirm
+        physical presence — the modem doesn't power the inactive slot.
+
+        Returns a dict with whatever was readable, or empty dict on failure.
+        """
+        info = {}
+        try:
+            if not self.proxy:
+                return info
+
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            sim_slots_variant = await props.call_get(MODEM_INTERFACE, "SimSlots")
+            sim_slots = sim_slots_variant.value
+
+            slot_index = slot_number - 1
+            if slot_index < 0 or slot_index >= len(sim_slots):
+                return info
+
+            sim_path = sim_slots[slot_index]
+            if not sim_path or sim_path == "/":
+                info['present'] = False
+                return info
+
+            info['present'] = True
+
+            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, sim_path)
+            sim_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, sim_path, introspect)
+            sim_props = sim_proxy.get_interface("org.freedesktop.DBus.Properties")
+            SIM_INTERFACE = "org.freedesktop.ModemManager1.Sim"
+
+            for prop, key in [("Imsi", "imsi"), ("SimIdentifier", "iccid"),
+                              ("OperatorName", "operator")]:
+                try:
+                    v = await sim_props.call_get(SIM_INTERFACE, prop)
+                    val = v.value if v else ""
+                    if val:
+                        info[key] = val
+                except Exception:
+                    pass
+
+            # Derive MCC/MNC from IMSI if available
+            imsi = info.get('imsi', '')
+            if imsi and len(imsi) >= 5:
+                info['mcc_mnc'] = imsi[:6] if len(imsi) >= 6 and imsi[5].isdigit() else imsi[:5]
+
+        except Exception as e:
+            logger.debug(f"Could not probe SIM slot {slot_number}: {e}",
+                        extra={'interface_number': self.interface_number})
+        return info
 
     async def _check_primary_sim_available(self, primary_slot: int) -> bool:
         """Check if the primary SIM slot has a usable SIM card.
@@ -3364,7 +3632,7 @@ class ModemStateMachine:
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
             sim_slots_variant = await props.call_get(MODEM_INTERFACE, "SimSlots")
             sim_slots = sim_slots_variant.value  # Extract array from Variant
-            config_sim_slot = self.config.get('active_sim_slot', 1)
+            config_sim_slot = self.config.get('primary_sim_slot', 1)
 
             # Check if configured SIM slot has a SIM
             if len(sim_slots) >= config_sim_slot:
@@ -3407,7 +3675,7 @@ class ModemStateMachine:
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
             sim_slots_variant = await props.call_get(MODEM_INTERFACE, "SimSlots")
             sim_slots = sim_slots_variant.value  # Extract array from Variant
-            config_sim_slot = self.config.get('active_sim_slot', 1)
+            config_sim_slot = self.config.get('primary_sim_slot', 1)
 
             # Check if configured SIM slot now has a SIM
             if len(sim_slots) >= config_sim_slot:
@@ -3803,13 +4071,13 @@ class ModemStateMachine:
                               'active_sim': self.current_active_sim})
 
             # Get the NEW SIM's configuration
-            active_sim_slot = self.current_active_sim
+            current_slot = self.current_active_sim
             sim_slots = self.config.get('sim_slots', [])
-            new_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
+            new_sim_config = next((sim for sim in sim_slots if sim['slot'] == current_slot), {})
 
             logger.info("Using new SIM configuration",
                        extra={'interface_number': self.interface_number,
-                              'sim_slot': active_sim_slot,
+                              'sim_slot': current_slot,
                               'apn': new_sim_config.get('apn', ''),
                               'bands': new_sim_config.get('supported_bands', [])})
 
@@ -3921,9 +4189,9 @@ class ModemStateMachine:
                 return
 
             # ── Read per-SIM band configuration ─────────────────────────
-            active_sim_slot = self.config.get('active_sim_slot', 1)
+            primary_sim_slot = self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
+            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
 
             per_sim_bands_raw = active_sim_config.get('supported_bands', 'all')
             if isinstance(per_sim_bands_raw, str):
@@ -3933,7 +4201,7 @@ class ModemStateMachine:
 
             logger.info("Configuring supported bands while disabled",
                        extra={'interface_number': self.interface_number,
-                              'active_sim_slot': active_sim_slot,
+                              'primary_sim_slot': primary_sim_slot,
                               'per_sim_bands': per_sim_bands_cfg})
 
             # Get what bands the modem actually supports (MM returns numeric constants)
@@ -3984,7 +4252,7 @@ class ModemStateMachine:
                                       "These entries are ignored.",
                                       extra={'interface_number': self.interface_number,
                                              'ignored_groups': per_sim_tech_groups,
-                                             'sim_slot': active_sim_slot})
+                                             'sim_slot': primary_sim_slot})
                     if per_sim_invalid:
                         logger.warning("Invalid per-SIM band names ignored",
                                       extra={'interface_number': self.interface_number,
@@ -4264,7 +4532,7 @@ class ModemStateMachine:
 
         # Connection-affecting parameters that require disconnection
         connection_params = [
-            'active_sim_slot',
+            'primary_sim_slot',
             'sim_slots',  # APN, auth, roaming changes within sim_slots
             'network_mode'
         ]
@@ -4385,9 +4653,9 @@ class ModemStateMachine:
                     self.transition(ModemEvent.CONNECTED)
                 return
             # Get active SIM configuration
-            active_sim_slot = self.config.get('active_sim_slot', 1)
+            primary_sim_slot = self.config.get('primary_sim_slot', 1)
             sim_slots = self.config.get('sim_slots', [])
-            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == active_sim_slot), {})
+            active_sim_config = next((sim for sim in sim_slots if sim['slot'] == primary_sim_slot), {})
 
             # Get normalized APN configuration
             apn_config = self._normalize_apn_config(active_sim_config.get('apn', ''))
@@ -4411,7 +4679,7 @@ class ModemStateMachine:
             # 🎯 NEW: Auto-discovery flow
             logger.info("Starting APN auto-discovery",
                        extra={'interface_number': self.interface_number,
-                              'active_sim_slot': active_sim_slot,
+                              'primary_sim_slot': primary_sim_slot,
                               'library_available': APN_LOOKUP_AVAILABLE})
 
             # Get SIM information for lookup
@@ -4709,6 +4977,15 @@ class ModemStateMachine:
                                   'mcc_mnc': current_sim_info.get('mcc_mnc', 'Unknown')})
                 self.last_known_sim_info = current_sim_info.copy()
                 self.sim_changed = False
+                # Cache per-slot identity
+                slot = self.current_active_sim or 1
+                self.sim_slot_info_cache[slot] = {
+                    'imsi': current_sim_info.get('imsi', ''),
+                    'iccid': current_sim_info.get('sim_identifier', ''),
+                    'operator': current_sim_info.get('operator_name', ''),
+                    'mcc_mnc': current_sim_info.get('mcc_mnc', ''),
+                    'spn': current_sim_info.get('spn', ''),
+                }
                 return False
 
             # Compare key SIM identifiers
@@ -4749,6 +5026,15 @@ class ModemStateMachine:
                 self.last_known_sim_info = current_sim_info.copy()
                 self.sim_changed = True
                 self.connected_apn = None  # Invalidate — new SIM needs fresh discovery
+                # Cache per-slot identity for the new SIM
+                slot = self.current_active_sim or 1
+                self.sim_slot_info_cache[slot] = {
+                    'imsi': current_sim_info.get('imsi', ''),
+                    'iccid': current_sim_info.get('sim_identifier', ''),
+                    'operator': current_sim_info.get('operator_name', ''),
+                    'mcc_mnc': current_sim_info.get('mcc_mnc', ''),
+                    'spn': current_sim_info.get('spn', ''),
+                }
                 return True
             else:
                 logger.debug("SIM unchanged since last connection",
@@ -4906,7 +5192,7 @@ class ModemStateMachine:
         Returns per-SIM data config if available, falls back to global config.
         """
         sim_slots = self.config.get('sim_slots', []) if self.config else []
-        active_slot = self.current_active_sim or self.config.get('active_sim_slot', 1)
+        active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
         sim_config = next((s for s in sim_slots if s['slot'] == active_slot), {})
 
         # Per-SIM values take priority; fall back to global config then defaults
@@ -4917,6 +5203,9 @@ class ModemStateMachine:
             'data_limit_action': sim_config.get('data_limit_action',
                                                 self.config.get('data_limit_action',
                                                                 DEFAULT_DATA_CONFIG['data_limit_action']) if self.config else DEFAULT_DATA_CONFIG['data_limit_action']),
+            'data_limit_warning': sim_config.get('data_limit_warning',
+                                                 self.config.get('data_limit_warning',
+                                                                 DEFAULT_DATA_CONFIG['data_limit_warning']) if self.config else list(DEFAULT_DATA_CONFIG['data_limit_warning'])),
             'data_limit_billing_date': sim_config.get('data_limit_billing_date',
                                                       self.config.get('data_limit_billing_date',
                                                                       DEFAULT_DATA_CONFIG['data_limit_billing_date']) if self.config else DEFAULT_DATA_CONFIG['data_limit_billing_date']),
@@ -4926,7 +5215,7 @@ class ModemStateMachine:
         """Monitor data usage limits per-SIM with failover support.
 
         Reads data limits from the active SIM's per-slot config (falls back to
-        global config). Supports actions: alert, disconnect, disable, failover.
+        global config). Supports actions: none, disable, sim-failover, sim-failover-sticky.
         """
         if not self.bearer_path:
             return
@@ -4935,6 +5224,7 @@ class ModemStateMachine:
         data_cfg = self._get_active_sim_data_config()
         data_limit = data_cfg['data_limit_size']
         data_action = data_cfg['data_limit_action']
+        data_warning_thresholds = sorted(data_cfg.get('data_limit_warning', []))
         billing_date = data_cfg['data_limit_billing_date']
 
         logger.info("Starting per-SIM data usage monitoring",
@@ -4943,6 +5233,7 @@ class ModemStateMachine:
                           'active_sim': self.current_active_sim,
                           'data_limit_gb': data_limit / (1024*1024*1024) if data_limit else 0,
                           'action': data_action,
+                          'warning_thresholds': data_warning_thresholds,
                           'billing_date': billing_date})
 
         if not data_limit:
@@ -4953,6 +5244,8 @@ class ModemStateMachine:
 
         # Load persisted cumulative usage for this SIM
         cumulative_bytes = self._load_persisted_usage()
+        warnings_logged = set()   # tracks which pct thresholds have been logged
+        limit_logged = False
 
         try:
             # Monitor while connected
@@ -4983,24 +5276,33 @@ class ModemStateMachine:
                             # Persist current usage periodically
                             self._persist_usage(total_bytes)
 
-                            # Check warning thresholds
-                            thresholds = self.config.get('data_usage_warning_thresholds', [75, 90, 95]) if self.config else [75, 90, 95]
                             usage_pct = (total_bytes / data_limit) * 100 if data_limit > 0 else 0
-                            for threshold in thresholds:
-                                if usage_pct >= threshold:
-                                    logger.warning(f"Data usage at {usage_pct:.1f}% (threshold: {threshold}%)",
-                                                  extra={'interface_number': self.interface_number,
-                                                         'active_sim': self.current_active_sim,
-                                                         'usage_pct': usage_pct})
+
+                            # Check per-SIM data-limit warning thresholds
+                            for threshold in data_warning_thresholds:
+                                if usage_pct >= threshold and threshold not in warnings_logged:
+                                    warnings_logged.add(threshold)
+                                    logger.warning(
+                                        f"Data usage warning: {usage_pct:.1f}% of limit reached "
+                                        f"(warning threshold: {threshold}%)",
+                                        extra={'interface_number': self.interface_number,
+                                               'active_sim': self.current_active_sim,
+                                               'usage_pct': round(usage_pct, 1),
+                                               'warning_threshold': threshold,
+                                               'total_mb': total_bytes / (1024*1024),
+                                               'limit_gb': data_limit / (1024*1024*1024)})
 
                             # Check if limit exceeded
                             if total_bytes >= data_limit:
-                                logger.warning("Data usage limit exceeded",
-                                             extra={'interface_number': self.interface_number,
-                                                    'active_sim': self.current_active_sim,
-                                                    'usage_gb': total_bytes / (1024*1024*1024),
-                                                    'limit_gb': data_limit / (1024*1024*1024),
-                                                    'action': data_action})
+                                if not limit_logged:
+                                    limit_logged = True
+                                    logger.warning(
+                                        "Data usage limit reached",
+                                        extra={'interface_number': self.interface_number,
+                                               'active_sim': self.current_active_sim,
+                                               'usage_gb': total_bytes / (1024*1024*1024),
+                                               'limit_gb': data_limit / (1024*1024*1024),
+                                               'action': data_action})
 
                                 if data_action in ('sim-failover', 'sim-failover-sticky'):
                                     # Switch to alternative SIM
@@ -5015,10 +5317,7 @@ class ModemStateMachine:
                                 elif data_action in ('disconnect', 'disable'):
                                     self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
                                     break
-                                elif data_action == 'alert':
-                                    logger.warning("Data usage limit exceeded - alerting only",
-                                                  extra={'interface_number': self.interface_number})
-                                # 'block' could be handled here in future
+                                # 'none' (default) — log warning but take no action
                         else:
                             logger.debug("Bearer statistics not available",
                                        extra={'interface_number': self.interface_number})
@@ -5097,7 +5396,7 @@ class ModemStateMachine:
             {"1": {"bytes": 123456789, "billing_date": 1, "last_updated": "..."}, "2": ...}
         Handles billing-cycle resets automatically.
         """
-        slot_key = str(self.current_active_sim or self.config.get('active_sim_slot', 1))
+        slot_key = str(self.current_active_sim or self.config.get('primary_sim_slot', 1))
         data_cfg = self._get_active_sim_data_config()
         billing_date = data_cfg['data_limit_billing_date']
 
@@ -5142,7 +5441,7 @@ class ModemStateMachine:
 
     def _persist_usage(self, total_bytes: int):
         """Persist cumulative usage for the current active SIM to disk."""
-        slot_key = str(self.current_active_sim or self.config.get('active_sim_slot', 1))
+        slot_key = str(self.current_active_sim or self.config.get('primary_sim_slot', 1))
         data_cfg = self._get_active_sim_data_config()
         path = self._usage_file_path()
 
@@ -5610,6 +5909,19 @@ class ModemStateMachine:
         status['user_disconnected'] = self.user_disconnected
         status['connect_requested'] = self.connect_requested
 
+        # ── 1a. Connection failure details ───────────────────────────────
+        # These fields explain WHY the modem is in FAILED state so that
+        # operators / monitoring tools can see the reason without parsing logs.
+        status['failure_reason'] = self.last_failure_reason if current_state == ModemState.FAILED.value else ''
+        status['failure_time'] = (
+            datetime.datetime.fromtimestamp(self.last_failure_time).isoformat()
+            if self.last_failure_time and current_state == ModemState.FAILED.value else ''
+        )
+        status['failed_apn'] = self.last_failed_apn if current_state == ModemState.FAILED.value else ''
+        status['configured_apn_rejected'] = (
+            self.configured_apn_rejected if current_state == ModemState.FAILED.value else False
+        )
+
         # ── 2. SIM status ────────────────────────────────────────────────
         status['active_sim_slot'] = self.current_active_sim or 0
         status['configured_sim_slot'] = self.config_active_sim or 0
@@ -5619,8 +5931,9 @@ class ModemStateMachine:
         status['sim_switch_reason'] = self.sim_switch_reason or ''
         status['sim_failover_enabled'] = self._is_sim_failover_enabled()
         status['sim_failback_enabled'] = (
-            self.config.get('sim_failback_enabled', False) if self.config else False
+            self.config.get('sim_failback_enabled', True) if self.config else True
         )
+        status['failback_suppressed_by_connection_failure'] = self.failback_suppressed_by_connection_failure
 
         # Cached SIM identifiers
         sim = self.last_known_sim_info or {}
@@ -5756,6 +6069,29 @@ class ModemStateMachine:
             for k in ('ipv4_gateway', 'ipv4_dns', 'ipv6_gateway', 'ipv6_dns', 'mtu'):
                 status[k] = ''
 
+        # MTU override / fallback config summary
+        if self.config:
+            mtu_override = self.config.get('mtu_override', 0)
+            mtu_fallback = self.config.get('mtu_fallback', 1500)
+            network_mtu = status.get('mtu', '')
+            if mtu_override and mtu_override > 0:
+                status['mtu_effective'] = str(mtu_override)
+                status['mtu_source'] = 'override'
+            elif network_mtu:
+                status['mtu_effective'] = str(network_mtu)
+                status['mtu_source'] = 'network'
+            elif mtu_fallback and mtu_fallback > 0:
+                status['mtu_effective'] = str(mtu_fallback)
+                status['mtu_source'] = 'fallback'
+            else:
+                status['mtu_effective'] = ''
+                status['mtu_source'] = 'none'
+            status['mtu_override'] = mtu_override
+            status['mtu_fallback'] = mtu_fallback
+        else:
+            for k in ('mtu_effective', 'mtu_source', 'mtu_override', 'mtu_fallback'):
+                status[k] = ''
+
         # ── 8. Bearer stats (session data, uptime) ───────────────────────
         try:
             if self.bearer_path:
@@ -5791,7 +6127,8 @@ class ModemStateMachine:
             status['cumulative_plus_session'] = cumulative + status.get('session_total_bytes', 0)
             data_cfg = self._get_active_sim_data_config()
             status['data_limit_bytes'] = data_cfg.get('data_limit_size', 0)
-            status['data_limit_action'] = data_cfg.get('data_limit_action', 'disable')
+            status['data_limit_action'] = data_cfg.get('data_limit_action', 'none')
+            status['data_limit_warning'] = data_cfg.get('data_limit_warning', [])
             status['data_limit_billing_date'] = data_cfg.get('data_limit_billing_date', 1)
             limit = status['data_limit_bytes']
             total = status['cumulative_plus_session']
@@ -5799,8 +6136,10 @@ class ModemStateMachine:
         except Exception:
             for k in ('cumulative_bytes', 'cumulative_plus_session',
                       'data_limit_bytes', 'data_limit_action',
-                      'data_limit_billing_date', 'data_usage_percent'):
+                      'data_limit_billing_date',
+                      'data_usage_percent'):
                 status.setdefault(k, 0)
+            status.setdefault('data_limit_warning', [])
 
         # ── 10. Failover / recovery stats ────────────────────────────────
         status['failover_count'] = self.failover_count
@@ -5815,18 +6154,59 @@ class ModemStateMachine:
             if self.last_reset_time else ''
         )
 
-        # ── 11. SIM slot details from config ─────────────────────────────
+        # ── 11. SIM slot details from config + physical SIM identity ────
         if self.config:
             sim_slots = self.config.get('sim_slots', [])
             for i, slot in enumerate(sim_slots):
-                prefix = f"sim_slot_{i+1}"
-                status[f"{prefix}_enabled"] = slot.get('enabled', False)
+                slot_num = i + 1
+                prefix = f"sim_slot_{slot_num}"
+                # Config
+                status[f"{prefix}_enabled"] = slot.get('enabled', True)
                 status[f"{prefix}_roaming"] = slot.get('roaming', 'disabled')
                 status[f"{prefix}_pdp_type"] = slot.get('pdp_type', 'ipv4')
                 status[f"{prefix}_apn"] = slot.get('apn', {}).get('name', '')
                 status[f"{prefix}_preferred_carrier"] = slot.get('preferred_carrier', '')
                 status[f"{prefix}_data_limit_bytes"] = slot.get('data_limit_size', 0)
-                status[f"{prefix}_data_limit_action"] = slot.get('data_limit_action', 'disable')
+                status[f"{prefix}_data_limit_action"] = slot.get('data_limit_action', 'none')
+                status[f"{prefix}_data_limit_warning"] = slot.get('data_limit_warning', [])
+
+                # ICCID lock status
+                configured_iccid = slot.get('iccid', '')
+                status[f"{prefix}_configured_iccid"] = configured_iccid
+                if slot_num == (self.current_active_sim or 0):
+                    status[f"{prefix}_iccid_mismatch"] = self.iccid_mismatch if configured_iccid else False
+                else:
+                    status[f"{prefix}_iccid_mismatch"] = False
+
+                # Physical SIM identity — start from cache, refresh from D-Bus
+                cached = self.sim_slot_info_cache.get(slot_num, {})
+                if slot_num == (self.current_active_sim or 0):
+                    # Active slot: use live SIM info (section 3 already queried it)
+                    status[f"{prefix}_imsi"] = status.get('sim_imsi', cached.get('imsi', ''))
+                    status[f"{prefix}_iccid"] = status.get('sim_iccid', cached.get('iccid', ''))
+                    status[f"{prefix}_operator"] = status.get('sim_operator', cached.get('operator', ''))
+                    status[f"{prefix}_mcc_mnc"] = status.get('sim_mcc_mnc', cached.get('mcc_mnc', ''))
+                    status[f"{prefix}_present"] = True
+                else:
+                    # Inactive slot: try D-Bus probe, fall back to cache
+                    try:
+                        probed = await self._probe_sim_slot_info(slot_num)
+                        # Merge: probed D-Bus values win, then cache, then empty
+                        status[f"{prefix}_present"] = probed.get('present', cached.get('present', False))
+                        status[f"{prefix}_imsi"] = probed.get('imsi', cached.get('imsi', ''))
+                        status[f"{prefix}_iccid"] = probed.get('iccid', cached.get('iccid', ''))
+                        status[f"{prefix}_operator"] = probed.get('operator', cached.get('operator', ''))
+                        status[f"{prefix}_mcc_mnc"] = probed.get('mcc_mnc', cached.get('mcc_mnc', ''))
+                        # Update cache with any new info from probe
+                        if probed:
+                            merged = {**cached, **{k: v for k, v in probed.items() if v}}
+                            self.sim_slot_info_cache[slot_num] = merged
+                    except Exception:
+                        status[f"{prefix}_present"] = cached.get('present', False)
+                        status[f"{prefix}_imsi"] = cached.get('imsi', '')
+                        status[f"{prefix}_iccid"] = cached.get('iccid', '')
+                        status[f"{prefix}_operator"] = cached.get('operator', '')
+                        status[f"{prefix}_mcc_mnc"] = cached.get('mcc_mnc', '')
 
         # ── 12. Key configuration summary ────────────────────────────────
         if self.config:
@@ -5841,6 +6221,19 @@ class ModemStateMachine:
             status['interface_management'] = (
                 'enabled' if self.config.get('interface_management', {}).get('enabled') else 'disabled'
             )
+
+            # Registration flap detection status
+            import time
+            flap_window = getattr(self, 'registration_flap_window', 360)
+            flap_count = getattr(self, 'registration_flap_count', 5)
+            now = time.monotonic()
+            cutoff = now - flap_window
+            recent_flaps = [t for t in self._registration_flap_timestamps if t > cutoff]
+            status['registration_flap_count_configured'] = flap_count
+            status['registration_flap_window_configured'] = flap_window
+            status['registration_flap_events_in_window'] = len(recent_flaps)
+            status['registration_flap_failover_triggered'] = self._registration_flap_failover_triggered
+
             status['network_mode'] = self.config.get('network_mode', 'auto')
             status['verbose_logging'] = self.config.get('verbose_logging', False)
 
@@ -6031,7 +6424,7 @@ class ModemStateMachine:
 
         # Check if connectivity monitoring is enabled
         connectivity_config = self.config.get('connectivity_monitoring', {})
-        if not connectivity_config.get('enabled', False):
+        if not connectivity_config.get('enabled', True):
             logger.info("Connectivity monitoring disabled",
                        extra={'interface_number': self.interface_number})
             return
@@ -6966,6 +7359,55 @@ class ModemStateMachine:
                          extra={'interface_number': self.interface_number,
                                 'registration_state': f"{reg_state} ({reg_state_name})",
                                 'current_registration_state': current_reg_state})
+
+            # ── Registration flap detection ──────────────────────────────
+            # Record this confirmed registration loss and check if the network
+            # has been bouncing repeatedly within the configured window.
+            import time
+            now = time.monotonic()
+            flap_count = getattr(self, 'registration_flap_count', 5)
+            flap_window = getattr(self, 'registration_flap_window', 360)
+
+            if flap_count > 0:
+                self._registration_flap_timestamps.append(now)
+                # Prune events older than the window
+                cutoff = now - flap_window
+                self._registration_flap_timestamps = [
+                    t for t in self._registration_flap_timestamps if t > cutoff
+                ]
+                flap_events = len(self._registration_flap_timestamps)
+
+                logger.info(f"📡📊 Registration flap count: {flap_events}/{flap_count} in last {flap_window}s",
+                           extra={'interface_number': self.interface_number,
+                                  'flap_events': flap_events,
+                                  'flap_threshold': flap_count,
+                                  'flap_window_seconds': flap_window})
+
+                if flap_events >= flap_count and not self._registration_flap_failover_triggered:
+                    # Threshold exceeded — trigger SIM failover if available
+                    if hasattr(self, '_is_sim_failover_enabled') and self._is_sim_failover_enabled():
+                        self._registration_flap_failover_triggered = True
+                        logger.warning(
+                            f"📡🔀 Registration flap threshold reached ({flap_events} losses in {flap_window}s) "
+                            f"— triggering SIM failover",
+                            extra={'interface_number': self.interface_number,
+                                   'flap_events': flap_events,
+                                   'flap_threshold': flap_count,
+                                   'flap_window_seconds': flap_window,
+                                   'action': 'sim_failover_flap_detection'})
+                        # Clear the flap timestamps to avoid re-triggering after failover
+                        self._registration_flap_timestamps.clear()
+                        self._safe_create_task(self._initiate_sim_failover(
+                            reason=f"registration_flap_{flap_events}_in_{flap_window}s"))
+                        return  # Skip normal registration loss handling — failover takes over
+                    else:
+                        logger.warning(
+                            f"📡⚠️ Registration flap threshold reached ({flap_events} losses in {flap_window}s) "
+                            f"but SIM failover not available — continuing with normal recovery",
+                            extra={'interface_number': self.interface_number,
+                                   'flap_events': flap_events,
+                                   'action': 'flap_detected_no_failover'})
+
             await self._handle_registration_loss_immediate(reg_state, reg_state_name)
 
         except asyncio.CancelledError:
@@ -7045,6 +7487,47 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"Error in registration loss handler: {e}",
                         extra={'interface_number': self.interface_number})
+
+    async def _initiate_sim_failover(self, reason='registration_flap'):
+        """Initiate SIM failover due to registration flap detection.
+
+        Follows the same pattern as _handle_data_limit_failover: check cooldown,
+        set switch reason, record the event, and trigger the SIM switch.
+        """
+        try:
+            if not self._is_failover_allowed():
+                logger.warning("Registration flap failover blocked by cooldown — skipping",
+                              extra={'interface_number': self.interface_number,
+                                     'reason': reason})
+                return
+
+            fallback_sim = 2 if self.current_active_sim == 1 else 1
+            logger.warning(f"📡🔀 Initiating SIM failover SIM{self.current_active_sim}→SIM{fallback_sim} "
+                          f"(reason: {reason})",
+                          extra={'interface_number': self.interface_number,
+                                 'from_sim': self.current_active_sim,
+                                 'to_sim': fallback_sim,
+                                 'reason': reason})
+
+            self.sim_switch_reason = reason
+            self.target_sim_slot = fallback_sim
+
+            self._record_failover()
+            self._emit_failover_event(
+                event_type='registration_flap_failover',
+                from_sim=self.current_active_sim,
+                to_sim=fallback_sim,
+                reason=reason,
+                trigger='_initiate_sim_failover')
+
+            self.transition(ModemEvent.SWITCH_SIM)
+            await self._execute_sim_switch()
+
+        except Exception as e:
+            logger.error(f"Registration flap failover failed: {e}",
+                        extra={'interface_number': self.interface_number,
+                               'reason': reason})
+            self.transition(ModemEvent.CONNECTION_FAILED)
 
     async def _set_interface_down(self):
         """Set the network interface DOWN"""
@@ -7232,7 +7715,7 @@ class ModemStateMachine:
 
             # Brief interface down/up cycle to trigger DHCP renewal
             await self._set_interface_down()
-            await asyncio.sleep(self.ip_change_delay)
+            await asyncio.sleep(self.ip_change_delay / 1000)
             await self._set_interface_up()
 
             logger.info("IP change interface cycling completed",
@@ -7255,7 +7738,7 @@ class ModemStateMachine:
 
             # Interface down/up cycle to synchronize with bearer configuration
             await self._set_interface_down()
-            await asyncio.sleep(self.ip_change_delay * 2)  # Longer delay for IP sync
+            await asyncio.sleep(self.ip_change_delay * 2 / 1000)  # Longer delay for IP sync
             await self._set_interface_up()
 
             # Wait a bit for DHCP/configuration to complete
@@ -7485,21 +7968,40 @@ class ModemStateMachine:
                     logger.warning(f"Failed to add IPv4 address: {stderr.decode()}",
                                  extra={'interface_number': self.interface_number})
 
-                # Set MTU if provided
-                if ipv4_mtu:
+                # Set MTU — priority: mtu_override > network-provided > mtu_fallback
+                mtu_override = self.config.get('mtu_override', 0) if self.config else 0
+                mtu_fallback = self.config.get('mtu_fallback', 1420) if self.config else 1420
+
+                if mtu_override and mtu_override > 0:
+                    effective_mtu = str(mtu_override)
+                    mtu_source = 'override'
+                elif ipv4_mtu:
+                    effective_mtu = ipv4_mtu
+                    mtu_source = 'network'
+                elif mtu_fallback and mtu_fallback > 0:
+                    effective_mtu = str(mtu_fallback)
+                    mtu_source = 'fallback'
+                else:
+                    effective_mtu = None
+                    mtu_source = 'none'
+
+                if effective_mtu:
                     result = await asyncio.create_subprocess_exec(
-                        'ip', 'link', 'set', 'dev', interface_name, 'mtu', ipv4_mtu,
+                        'ip', 'link', 'set', 'dev', interface_name, 'mtu', effective_mtu,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await result.communicate()
 
                     if result.returncode != 0:
-                        logger.warning(f"Failed to set MTU {ipv4_mtu}: {stderr.decode()}",
+                        logger.warning(f"Failed to set MTU {effective_mtu} ({mtu_source}): {stderr.decode()}",
                                      extra={'interface_number': self.interface_number})
                     else:
-                        logger.debug(f"Set interface MTU to {ipv4_mtu}",
-                                   extra={'interface_number': self.interface_number})
+                        logger.info(f"Set interface MTU to {effective_mtu} (source: {mtu_source})",
+                                   extra={'interface_number': self.interface_number,
+                                          'mtu': effective_mtu,
+                                          'mtu_source': mtu_source,
+                                          'network_mtu': ipv4_mtu or 'not provided'})
 
                 # Add IPv4 default route if gateway provided
                 if ipv4_gateway:

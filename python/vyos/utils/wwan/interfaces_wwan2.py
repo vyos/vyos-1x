@@ -129,12 +129,14 @@ def build_config(raw_cfg):
         'roaming': raw_cfg.get('sim_slot_1_roaming', 'disabled'),
         'pin': raw_cfg.get('sim_slot_1_pin', ''),
         'puk': raw_cfg.get('sim_slot_1_puk', ''),
+        'iccid': raw_cfg.get('sim_slot_1_iccid', ''),
         'supported_bands': raw_cfg.get('sim_slot_1_supported_bands', 'all'),
         'preferred_carrier': raw_cfg.get('sim_slot_1_preferred_carrier', ''),
         'enable_network_scan': raw_cfg.get('sim_slot_1_enable_network_scan', False),
         # Per-SIM data usage limits (fallback to global config)
         'data_limit_size': raw_cfg.get('sim_slot_1_data_limit_size', raw_cfg.get('data_limit_size', 0)),
-        'data_limit_action': raw_cfg.get('sim_slot_1_data_limit_action', raw_cfg.get('data_limit_action', 'disable')),
+        'data_limit_action': raw_cfg.get('sim_slot_1_data_limit_action', raw_cfg.get('data_limit_action', 'none')),
+        'data_limit_warning': [int(x) for x in str(raw_cfg.get('sim_slot_1_data_limit_warning', raw_cfg.get('data_limit_warning', ''))).split(',') if x.strip()] if raw_cfg.get('sim_slot_1_data_limit_warning', raw_cfg.get('data_limit_warning', '')) else [],
         'data_limit_billing_date': raw_cfg.get('sim_slot_1_data_limit_billing_date', raw_cfg.get('data_limit_billing_date', 1)),
     }
     sim_slots.append(sim1)
@@ -151,19 +153,21 @@ def build_config(raw_cfg):
             'roaming': raw_cfg.get('sim_slot_2_roaming', 'disabled'),
             'pin': raw_cfg.get('sim_slot_2_pin', ''),
             'puk': raw_cfg.get('sim_slot_2_puk', ''),
+            'iccid': raw_cfg.get('sim_slot_2_iccid', ''),
             'supported_bands': raw_cfg.get('sim_slot_2_supported_bands', 'all'),
             'preferred_carrier': raw_cfg.get('sim_slot_2_preferred_carrier', ''),
             'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', False),
             # Per-SIM data usage limits (fallback to global config)
             'data_limit_size': raw_cfg.get('sim_slot_2_data_limit_size', raw_cfg.get('data_limit_size', 0)),
-            'data_limit_action': raw_cfg.get('sim_slot_2_data_limit_action', raw_cfg.get('data_limit_action', 'disable')),
+            'data_limit_action': raw_cfg.get('sim_slot_2_data_limit_action', raw_cfg.get('data_limit_action', 'none')),
+            'data_limit_warning': [int(x) for x in str(raw_cfg.get('sim_slot_2_data_limit_warning', raw_cfg.get('data_limit_warning', ''))).split(',') if x.strip()] if raw_cfg.get('sim_slot_2_data_limit_warning', raw_cfg.get('data_limit_warning', '')) else [],
             'data_limit_billing_date': raw_cfg.get('sim_slot_2_data_limit_billing_date', raw_cfg.get('data_limit_billing_date', 1)),
         }
         sim_slots.append(sim2)
 
     # Build connectivity monitoring configuration
     connectivity_monitoring = {
-        'enabled': raw_cfg.get('connectivity_monitoring_enabled', False),
+        'enabled': raw_cfg.get('connectivity_monitoring_enabled', True),
         'interval': raw_cfg.get('connectivity_monitoring_interval', 60),
         'timeout': raw_cfg.get('connectivity_monitoring_timeout', 10),
         'retry_count': raw_cfg.get('connectivity_monitoring_retry_count', 3),
@@ -180,7 +184,9 @@ def build_config(raw_cfg):
         'enabled': raw_cfg.get('interface_management_enabled', True),
         'bearer_disconnect_delay': int(raw_cfg.get('bearer_disconnect_delay', 15)),
         'registration_recovery_delay': int(raw_cfg.get('registration_recovery_delay', 20)),
-        'ip_change_delay': float(raw_cfg.get('ip_change_delay', 0.5)),
+        'registration_flap_count': int(raw_cfg.get('registration_flap_count', 5)),
+        'registration_flap_window': int(raw_cfg.get('registration_flap_window', 360)),
+        'ip_change_delay': int(raw_cfg.get('ip_change_delay', 500)),
         'ensure_link_up_on_connect': raw_cfg.get('ensure_link_up_on_connect', True),
         'monitor_bearer_state': raw_cfg.get('monitor_bearer_state', True),
         'monitor_ip_changes': raw_cfg.get('monitor_ip_changes', True),
@@ -189,7 +195,7 @@ def build_config(raw_cfg):
 
     # Build enhanced reconnection configuration
     enhanced_reconnection = {
-        'enabled': raw_cfg.get('enhanced_reconnection', 'disabled') == 'enabled',
+        'enabled': raw_cfg.get('enhanced_reconnection', 'enabled') == 'enabled',
         'signal_threshold': raw_cfg.get('reconnection_signal_threshold', -85),
         'retry_interval_good_signal': raw_cfg.get('retry_interval_good_signal', 15),
         'retry_interval_poor_signal': raw_cfg.get('retry_interval_poor_signal', 45),
@@ -201,8 +207,12 @@ def build_config(raw_cfg):
     # Build complete configuration
     config = {
         # Basic interface settings
-        'active_sim_slot': raw_cfg.get('active_sim_slot', 1),
+        'primary_sim_slot': raw_cfg.get('primary_sim_slot', 1),
         'connection_mode': raw_cfg.get('connection_mode', 'always-on'),
+
+        # MTU settings
+        'mtu_override': int(raw_cfg.get('mtu_override', 0)),
+        'mtu_fallback': int(raw_cfg.get('mtu_fallback', 1420)),
 
         # Enhanced reconnection strategy
         'enhanced_reconnection': enhanced_reconnection,
@@ -211,19 +221,18 @@ def build_config(raw_cfg):
         'android_apn_discovery': raw_cfg.get('android_apn_discovery', 'disabled'),
 
         # SIM failover settings (global enable + policy)
-        'sim_failover': raw_cfg.get('sim_failover', 'disabled'),
+        'sim_failover': raw_cfg.get('sim_failover', 'enabled'),
         'sim_failover_connect_retries': raw_cfg.get('sim_failover_connect_retries', 3),
         'sim_failover_revert_timer': raw_cfg.get('sim_failover_revert_timer', 300),
         'sim_failover_signal_loss_timer': raw_cfg.get('sim_failover_signal_loss_timer', 60),
         'sim_failover_signal_threshold': raw_cfg.get('sim_failover_signal_threshold', -90),
 
         # SIM failback settings — automatically return to primary SIM after sim-failover
-        'sim_failback_enabled': raw_cfg.get('sim_failback_enabled', 'disabled') == 'enabled',
+        'sim_failback_enabled': raw_cfg.get('sim_failback_enabled', 'enabled') == 'enabled',
         'sim_failback_check_interval': int(raw_cfg.get('sim_failback_check_interval', 600)),
 
         # Data usage settings (per-SIM only — see sim_slots entries)
         'data_usage_monitoring_interval': raw_cfg.get('data_usage_monitoring_interval', 30),
-        'data_usage_warning_thresholds': raw_cfg.get('data_usage_warning_thresholds', [75, 90, 95]),
 
         # Hardware management settings
         'hardware_reset_enabled': raw_cfg.get('hardware_reset_enabled', True),
@@ -501,7 +510,7 @@ async def main():
     logger.info("Configuration summary",
                extra={
                    'interface_number': interface_number,
-                   'active_sim_slot': config['active_sim_slot'],
+                   'primary_sim_slot': config['primary_sim_slot'],
                    'connectivity_monitoring': config['connectivity_monitoring']['enabled']
                })
 

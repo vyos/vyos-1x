@@ -32,7 +32,9 @@ class InterfaceManagementConfig:
     enabled: bool = True
     bearer_disconnect_delay: int = 15
     registration_recovery_delay: int = 20
-    ip_change_delay: int = 2
+    registration_flap_count: int = 5
+    registration_flap_window: int = 360
+    ip_change_delay: int = 500
     ensure_link_up_on_connect: bool = True
     monitor_bearer_state: bool = True
     monitor_ip_changes: bool = True
@@ -42,7 +44,7 @@ class InterfaceManagementConfig:
 @dataclass
 class WWANConfiguration:
     '''Complete WWAN configuration structure'''
-    active_sim_slot: int = 1
+    primary_sim_slot: int = 1
     enhanced_reconnection: EnhancedReconnectionConfig = None
     interface_management: InterfaceManagementConfig = None
     connectivity_monitoring: Dict[str, Any] = None
@@ -93,12 +95,12 @@ class ConfigurationLoader:
             # Parse connectivity monitoring configuration
             connectivity_monitoring = self._parse_connectivity_monitoring_config(config)
 
-            # Get active SIM slot
-            active_sim_slot = config.get('active_sim_slot', 1)
+            # Get primary SIM slot
+            primary_sim_slot = config.get('primary_sim_slot', 1)
 
             # Create complete configuration
             wwan_config = WWANConfiguration(
-                active_sim_slot=active_sim_slot,
+                primary_sim_slot=primary_sim_slot,
                 enhanced_reconnection=enhanced_reconnection,
                 interface_management=interface_management,
                 connectivity_monitoring=connectivity_monitoring,
@@ -107,8 +109,8 @@ class ConfigurationLoader:
 
             self.logger.info('Configuration loaded successfully',
                            extra={'interface_number': self.interface_number,
-                                  'active_sim': active_sim_slot,
-                                  'connectivity_monitoring_enabled': connectivity_monitoring.get('enabled', False),
+                                  'primary_sim': primary_sim_slot,
+                                  'connectivity_monitoring_enabled': connectivity_monitoring.get('enabled', True),
                                   'enhanced_reconnection_enabled': enhanced_reconnection.enabled,
                                   'signal_threshold': enhanced_reconnection.signal_threshold})
 
@@ -154,6 +156,8 @@ class ConfigurationLoader:
             enabled=interface_mgmt.get('enabled', True),
             bearer_disconnect_delay=interface_mgmt.get('bearer_disconnect_delay', 15),
             registration_recovery_delay=interface_mgmt.get('registration_recovery_delay', 20),
+            registration_flap_count=int(interface_mgmt.get('registration_flap_count', 5)),
+            registration_flap_window=int(interface_mgmt.get('registration_flap_window', 360)),
             ip_change_delay=interface_mgmt.get('ip_change_delay', 2),
             ensure_link_up_on_connect=interface_mgmt.get('ensure_link_up_on_connect', True),
             monitor_bearer_state=interface_mgmt.get('monitor_bearer_state', True),
@@ -189,8 +193,8 @@ class ConfigurationLoader:
         '''
         try:
             # Validate SIM slot
-            if config.active_sim_slot not in [1, 2]:
-                self.logger.error(f'Invalid SIM slot: {config.active_sim_slot}',
+            if config.primary_sim_slot not in [1, 2]:
+                self.logger.error(f'Invalid SIM slot: {config.primary_sim_slot}',
                                 extra={'interface_number': self.interface_number})
                 return False
 
