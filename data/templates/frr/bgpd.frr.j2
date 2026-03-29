@@ -259,7 +259,7 @@
 {# j2lint: disable=jinja-statements-delimeter #}
 {%- endmacro -%}
 !
-router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
+router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }} {{ 'as-notation ' ~ parameters.as_notation | replace('as', '') if parameters.as_notation is vyos_defined }}
 {% if parameters.ebgp_requires_policy is vyos_defined %}
  bgp ebgp-requires-policy
 {% else %}
