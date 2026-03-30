@@ -42,11 +42,24 @@ class InterfaceManagementConfig:
 
 
 @dataclass
+class FailedRetryConfig:
+    '''Failed-state periodic retry configuration'''
+    enabled: bool = True
+    intervals: list = None  # Backoff intervals in seconds, e.g. [300, 600, 1200, 1800]
+    max_interval: int = 1800  # Cap once intervals list is exhausted
+
+    def __post_init__(self):
+        if self.intervals is None:
+            self.intervals = [300, 600, 1200, 1800]
+
+
+@dataclass
 class WWANConfiguration:
     '''Complete WWAN configuration structure'''
     primary_sim_slot: int = 1
     enhanced_reconnection: EnhancedReconnectionConfig = None
     interface_management: InterfaceManagementConfig = None
+    failed_retry: FailedRetryConfig = None
     connectivity_monitoring: Dict[str, Any] = None
     raw_config: Dict[str, Any] = None
 
@@ -55,6 +68,8 @@ class WWANConfiguration:
             self.enhanced_reconnection = EnhancedReconnectionConfig()
         if self.interface_management is None:
             self.interface_management = InterfaceManagementConfig()
+        if self.failed_retry is None:
+            self.failed_retry = FailedRetryConfig()
         if self.connectivity_monitoring is None:
             self.connectivity_monitoring = {}
 
@@ -95,6 +110,9 @@ class ConfigurationLoader:
             # Parse connectivity monitoring configuration
             connectivity_monitoring = self._parse_connectivity_monitoring_config(config)
 
+            # Parse failed-state retry configuration
+            failed_retry = self._parse_failed_retry_config(config)
+
             # Get primary SIM slot
             primary_sim_slot = config.get('primary_sim_slot', 1)
 
@@ -103,6 +121,7 @@ class ConfigurationLoader:
                 primary_sim_slot=primary_sim_slot,
                 enhanced_reconnection=enhanced_reconnection,
                 interface_management=interface_management,
+                failed_retry=failed_retry,
                 connectivity_monitoring=connectivity_monitoring,
                 raw_config=config.copy()
             )
@@ -180,6 +199,24 @@ class ConfigurationLoader:
                 return connectivity_config
 
         return {}
+
+    def _parse_failed_retry_config(self, config: Dict[str, Any]) -> FailedRetryConfig:
+        '''Parse failed-state periodic retry configuration'''
+        failed_retry = config.get('failed_retry', {})
+
+        enabled = failed_retry.get('enabled', True)
+        if isinstance(enabled, str):
+            enabled = enabled.lower() in ('true', 'enabled', '1')
+
+        intervals = failed_retry.get('intervals', [300, 600, 1200, 1800])
+        if isinstance(intervals, str):
+            intervals = [int(x.strip()) for x in intervals.split(',') if x.strip()]
+
+        return FailedRetryConfig(
+            enabled=bool(enabled),
+            intervals=[int(x) for x in intervals],
+            max_interval=int(failed_retry.get('max_interval', 1800))
+        )
 
     def validate_configuration(self, config: WWANConfiguration) -> bool:
         '''

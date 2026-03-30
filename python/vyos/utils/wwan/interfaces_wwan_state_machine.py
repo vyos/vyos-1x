@@ -212,6 +212,7 @@ class ModemStateMachine:
         # Connectivity recovery tracking for SIM escalation
         self.connectivity_recovery_attempts = 0  # Consecutive recovery attempts on same SIM
         self.max_recovery_before_sim_switch = 3  # Attempts before escalating to SIM switch
+        self.disconnection_recovery_attempts = 0  # Consecutive bearer-drop recovery attempts on same SIM
 
         # SIM failback tracking — automatically return to primary SIM when possible
         self.is_on_failover_sim = False          # True when running on non-primary SIM after failover
@@ -254,6 +255,15 @@ class ModemStateMachine:
         self.connect_requested = False      # Queued connect from D-Bus client, honored when FSM is ready
         self.connection_mode = 'always-on'   # 'always-on' | 'connect-on-demand' | 'dial-on-demand'
         self.last_scan_results = []          # Cached network scan results for status reporting
+
+        # Failed-state periodic retry — automatically reattempt connection from
+        # FAILED state using exponential backoff.  Covers data-plan top-up,
+        # monthly rollover, carrier provisioning delay, and transient errors.
+        self._failed_retry_task = None       # Background asyncio task
+        self._failed_retry_attempt = 0       # Current attempt number for backoff calc
+        self._failed_retry_enabled = True    # Overridden by config in _apply_parsed_configuration
+        self._failed_retry_intervals = [300, 600, 1200, 1800]  # 5, 10, 20, 30 min
+        self._failed_retry_max_interval = 1800  # Cap at 30 min
 
         # Modem removal flag — lets CancelledError handlers log the right reason
         self._modem_removed = False
@@ -410,6 +420,150 @@ class ModemStateMachine:
             return False
 
         return False
+
+    # ------------------------------------------------------------------
+    # Failed-state periodic retry (exponential backoff)
+    # ------------------------------------------------------------------
+    def _start_failed_retry(self):
+        """Launch background retry loop when FSM enters FAILED.
+
+        Uses exponential backoff (5, 10, 20, 30, 30, 30 ... min) to
+        reattempt the APN connection cascade.  Covers:
+        - Data plan topped up / monthly rollover
+        - Carrier provisioning delay for new SIM
+        - Transient network-side errors
+        """
+        if not self._failed_retry_enabled:
+            logger.info("Failed-state retry disabled by configuration",
+                       extra={'interface_number': self.interface_number})
+            return
+        self._cancel_failed_retry()  # Prevent duplicate tasks
+        self._failed_retry_attempt = 0
+        self._failed_retry_task = self._safe_create_task(
+            self._failed_retry_loop(), name='failed_retry_loop')
+        logger.info("Started failed-state periodic retry",
+                   extra={'interface_number': self.interface_number,
+                          'intervals': self._failed_retry_intervals})
+
+    def _cancel_failed_retry(self):
+        """Cancel a running failed-state retry task (if any)."""
+        if self._failed_retry_task and not self._failed_retry_task.done():
+            self._failed_retry_task.cancel()
+            logger.info("Cancelled failed-state retry task",
+                       extra={'interface_number': self.interface_number,
+                              'attempt_reached': self._failed_retry_attempt})
+        self._failed_retry_task = None
+
+    async def _failed_retry_loop(self):
+        """Periodically reattempt connection from FAILED state.
+
+        Each cycle:
+          1. Sleep for the current backoff interval.
+          2. Verify we are still in FAILED (exit if state changed).
+          3. Transition FAILED → CONNECTING via CONNECT event.
+          4. Call apply_modem_configuration() for a full APN cascade.
+          5. If still not connected, CONNECTION_FAILED puts us back in
+             FAILED and the loop continues with increased backoff.
+        """
+        try:
+            while self.machine.current_state == ModemState.FAILED.value:
+                # Determine backoff interval
+                if self._failed_retry_attempt < len(self._failed_retry_intervals):
+                    interval = self._failed_retry_intervals[self._failed_retry_attempt]
+                else:
+                    interval = self._failed_retry_max_interval
+                self._failed_retry_attempt += 1
+
+                logger.info(
+                    f"Failed-state retry #{self._failed_retry_attempt} "
+                    f"scheduled in {interval}s",
+                    extra={'interface_number': self.interface_number,
+                           'attempt': self._failed_retry_attempt,
+                           'interval_seconds': interval})
+
+                await asyncio.sleep(interval)
+
+                # Re-check — state may have changed while sleeping
+                if self.machine.current_state != ModemState.FAILED.value:
+                    logger.info(
+                        "FSM left FAILED during retry wait — aborting retry loop",
+                        extra={'interface_number': self.interface_number,
+                               'current_state': self.machine.current_state})
+                    return
+
+                # Verify modem is still accessible and registered
+                if not self.proxy:
+                    logger.warning(
+                        "No modem proxy — skipping retry, will try next interval",
+                        extra={'interface_number': self.interface_number})
+                    continue
+
+                try:
+                    props = self.proxy.get_interface(
+                        "org.freedesktop.DBus.Properties")
+                    mm_state_variant = await props.call_get(
+                        MODEM_INTERFACE, "State")
+                    mm_state = mm_state_variant.value
+                except Exception as e:
+                    logger.warning(
+                        f"Cannot read modem state for retry: {e}",
+                        extra={'interface_number': self.interface_number})
+                    continue
+
+                if mm_state < 6:  # DISABLED or worse — modem not ready
+                    logger.info(
+                        f"Modem not ready (state {mm_state}), "
+                        "deferring retry to next interval",
+                        extra={'interface_number': self.interface_number,
+                               'modem_state': mm_state})
+                    continue
+
+                # Attempt connection
+                logger.info(
+                    f"Failed-state retry #{self._failed_retry_attempt}: "
+                    "attempting connection",
+                    extra={'interface_number': self.interface_number,
+                           'modem_state': mm_state})
+
+                # Clear stale failure reason before retry
+                self.last_failure_reason = ''
+                self.last_failed_apn = ''
+                self.configured_apn_rejected = False
+
+                # FAILED → CONNECTING
+                self.transition(ModemEvent.CONNECT)
+                await self.apply_modem_configuration()
+
+                # Give connection time to establish
+                await asyncio.sleep(10)
+
+                # Check result
+                if self.machine.current_state == ModemState.CONNECTED.value:
+                    logger.info(
+                        f"Failed-state retry #{self._failed_retry_attempt} "
+                        "succeeded — connected",
+                        extra={'interface_number': self.interface_number})
+                    return
+
+                if self.machine.current_state != ModemState.FAILED.value:
+                    logger.info(
+                        "FSM moved to %s after retry — exiting retry loop",
+                        self.machine.current_state,
+                        extra={'interface_number': self.interface_number})
+                    return
+
+                # Still FAILED — loop continues with next backoff
+                logger.warning(
+                    f"Failed-state retry #{self._failed_retry_attempt} "
+                    "did not succeed, will retry",
+                    extra={'interface_number': self.interface_number})
+
+        except asyncio.CancelledError:
+            logger.info("Failed-state retry loop cancelled",
+                       extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.error(f"Failed-state retry loop error: {e}",
+                        extra={'interface_number': self.interface_number})
 
     async def setup_modem_manager_monitoring(self):
         """Setup ModemManager signal monitoring for instant modem add/remove detection"""
@@ -1080,9 +1234,10 @@ class ModemStateMachine:
 
         elif mm_state == 3:  # DISABLED
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
-                                    ModemState.CONNECTED.value]:
+                                    ModemState.CONNECTED.value, ModemState.FAILED.value]:
                 # Don't trigger SIM missing if this is service-initiated or we're in reset grace period
                 if not self.service_initiated_disable and not self._is_in_reset_grace_period():
+                    self._cancel_failed_retry()  # SIM event supersedes retry
                     self.transition(ModemEvent.SIM_MISSING)
                     self._safe_create_task(self._handle_sim_missing_failover())
                 else:
@@ -1097,10 +1252,13 @@ class ModemStateMachine:
                 self._safe_create_task(self._check_sim_insertion())
 
         elif mm_state == 6:  # ENABLED - Could indicate SIM insertion
-            if current_fsm_state == ModemState.WAITING_FOR_SIM.value:
-                # SIM might have been inserted!
-                logger.info("Modem enabled while waiting for SIM - checking for insertion",
+            if current_fsm_state in [ModemState.WAITING_FOR_SIM.value,
+                                     ModemState.FAILED.value]:
+                # SIM might have been inserted (or re-inserted after eject/insert cycle)
+                logger.info("Modem enabled while in %s - checking for SIM insertion",
+                           current_fsm_state,
                            extra={'interface_number': self.interface_number})
+                self._cancel_failed_retry()  # SIM event supersedes retry
                 self._safe_create_task(self._handle_potential_sim_insertion())
             elif current_fsm_state == ModemState.CONFIGURING.value:
                 # Modem enabled successfully during configuration - can proceed
@@ -1286,6 +1444,19 @@ class ModemStateMachine:
                                    'configured_apn_rejected': self.configured_apn_rejected,
                                    'trigger_event': event.value,
                                    'from_state': old_state})
+                # Start periodic retry from FAILED state — but not if the
+                # retry loop itself caused the re-entry (it manages its own
+                # continuation).
+                current_task = asyncio.current_task()
+                if current_task is not self._failed_retry_task:
+                    self._start_failed_retry()
+
+            # Cancel retry task when leaving FAILED state
+            # (but not when the retry loop itself triggers the transition)
+            if old_state == ModemState.FAILED.value and new_state != ModemState.FAILED.value:
+                current_task = asyncio.current_task()
+                if current_task is not self._failed_retry_task:
+                    self._cancel_failed_retry()
         except Exception as e:
             logger.error(f"FSM transition error on event '{event.value}': {e}",
                         extra={'interface_number': self.interface_number,
@@ -1356,6 +1527,8 @@ class ModemStateMachine:
             ModemState.FAILED.value,
             ModemState.REGISTERED_IDLE.value
         ):
+            # Cancel failed-state retry — new config supersedes it
+            self._cancel_failed_retry()
             # Clear failure tracking — new configuration means a fresh attempt
             self.last_failure_reason = ''
             self.last_failure_time = 0
@@ -1470,6 +1643,11 @@ class ModemStateMachine:
 
         # Connection mode: always-on | connect-on-demand | dial-on-demand
         self.connection_mode = self.parsed_config.raw_config.get('connection_mode', 'always-on')
+
+        # Failed-state periodic retry configuration
+        self._failed_retry_enabled = self.parsed_config.failed_retry.enabled
+        self._failed_retry_intervals = list(self.parsed_config.failed_retry.intervals)
+        self._failed_retry_max_interval = self.parsed_config.failed_retry.max_interval
 
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None
@@ -1617,6 +1795,66 @@ class ModemStateMachine:
                         break
 
             connection_successful = False
+
+            # ── Pre-connection roaming check ──────────────────────────────
+            # If the modem has registered on a roaming network but the SIM's
+            # roaming policy is 'disabled', every APN attempt will be rejected
+            # by ModemManager with "roaming not allowed".  Detect this early
+            # and skip straight to failover / FAILED instead of burning
+            # through all APN candidates for no reason.
+            try:
+                gpp_iface = "org.freedesktop.ModemManager1.Modem.Modem3gpp"
+                reg_v = await props.call_get(gpp_iface, "RegistrationState")
+                current_reg_state = reg_v.value if reg_v else 0
+            except Exception:
+                current_reg_state = 0  # Unknown — proceed normally
+
+            if current_reg_state == 5 and sim_config.get('roaming', 'disabled') == 'disabled':
+                logger.warning(
+                    "Modem registered on roaming network but roaming is disabled "
+                    "for this SIM — skipping APN connection attempts",
+                    extra={'interface_number': self.interface_number,
+                           'registration_state': 'ROAMING',
+                           'roaming_policy': 'disabled',
+                           'active_slot': active_slot})
+                self.last_failure_reason = (
+                    "SIM is registered on a roaming network but roaming is disabled. "
+                    "Enable roaming for this SIM slot or insert a SIM with a home "
+                    "network registration."
+                )
+                self.last_failure_time = time.time()
+
+                # Attempt SIM failover if available
+                if (self._is_sim_failover_enabled()
+                        and self._is_failover_allowed()):
+                    fallback_sim = 2 if self.current_active_sim == 1 else 1
+                    if self._is_target_sim_enabled(fallback_sim):
+                        logger.warning(
+                            "Roaming mismatch on current SIM — "
+                            "attempting failover to alternate SIM",
+                            extra={'interface_number': self.interface_number,
+                                   'target_sim': fallback_sim})
+                        self.sim_switch_reason = 'roaming_not_allowed'
+                        self.target_sim_slot = fallback_sim
+                        self.failback_suppressed_by_connection_failure = True
+                        self._record_failover()
+                        self._emit_failover_event(
+                            event_type='failover',
+                            from_sim=self.current_active_sim,
+                            to_sim=fallback_sim,
+                            reason='roaming_not_allowed',
+                            trigger='_configure_modem_initial')
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                        self.transition(ModemEvent.SWITCH_SIM)
+                        self._safe_create_task(self._execute_sim_switch())
+                        return
+
+                # No failover available — park in FAILED
+                logger.error(
+                    "No SIM failover available for roaming mismatch — parking in FAILED",
+                    extra={'interface_number': self.interface_number})
+                self.transition(ModemEvent.CONNECTION_FAILED)
+                return
 
             # Get current SIM information and check for SIM changes
             sim_info = await self._get_sim_information()
@@ -1832,30 +2070,41 @@ class ModemStateMachine:
                 if (self._is_sim_failover_enabled()
                         and self._is_failover_allowed()):
                     fallback_sim = 2 if self.current_active_sim == 1 else 1
-                    logger.warning(
-                        "Initial connection failed on current SIM, "
-                        "attempting failover to alternate SIM",
-                        extra={'interface_number': self.interface_number,
-                               'current_sim': self.current_active_sim,
-                               'target_sim': fallback_sim,
-                               'reason': 'initial_connection_failure'})
-                    self.sim_switch_reason = 'initial_connection_failure'
-                    self.target_sim_slot = fallback_sim
-                    # Suppress failback to primary until new config arrives —
-                    # the primary SIM's APN/parameters are known-bad so there is
-                    # no point switching back only to fail again.
-                    self.failback_suppressed_by_connection_failure = True
-                    self._record_failover()
-                    self._emit_failover_event(
-                        event_type='failover',
-                        from_sim=self.current_active_sim,
-                        to_sim=fallback_sim,
-                        reason='initial_connection_failure',
-                        trigger='_configure_modem_initial',
-                        extra_data={'configured_apn_rejected': self.configured_apn_rejected,
-                                    'failed_apn': self.last_failed_apn})
-                    self.transition(ModemEvent.SWITCH_SIM)
-                    self._safe_create_task(self._execute_sim_switch())
+
+                    if not self._is_target_sim_enabled(fallback_sim):
+                        logger.warning(
+                            f"SIM failover target slot {fallback_sim} is disabled in config — "
+                            "parking in FAILED state",
+                            extra={'interface_number': self.interface_number,
+                                   'target_sim': fallback_sim})
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                    else:
+                        logger.warning(
+                            "Initial connection failed on current SIM, "
+                            "attempting failover to alternate SIM",
+                            extra={'interface_number': self.interface_number,
+                                   'current_sim': self.current_active_sim,
+                                   'target_sim': fallback_sim,
+                                   'reason': 'initial_connection_failure'})
+                        self.sim_switch_reason = 'initial_connection_failure'
+                        self.target_sim_slot = fallback_sim
+                        # Suppress failback to primary until new config arrives —
+                        # the primary SIM's APN/parameters are known-bad so there is
+                        # no point switching back only to fail again.
+                        self.failback_suppressed_by_connection_failure = True
+                        self._record_failover()
+                        self._emit_failover_event(
+                            event_type='failover',
+                            from_sim=self.current_active_sim,
+                            to_sim=fallback_sim,
+                            reason='initial_connection_failure',
+                            trigger='_configure_modem_initial',
+                            extra_data={'configured_apn_rejected': self.configured_apn_rejected,
+                                        'failed_apn': self.last_failed_apn})
+                        # Transition to FAILED first so SWITCH_SIM has a valid source state
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+                        self.transition(ModemEvent.SWITCH_SIM)
+                        self._safe_create_task(self._execute_sim_switch())
                 else:
                     # Single SIM or failover not allowed — park in FAILED and
                     # wait for the user to push corrected configuration.
@@ -2782,6 +3031,19 @@ class ModemStateMachine:
 
         return True
 
+    def _is_target_sim_enabled(self, target_slot: int) -> bool:
+        """Check if the target SIM slot is enabled in the configuration.
+
+        Returns False if the target slot is explicitly disabled, preventing
+        pointless failover attempts to a slot the user has turned off.
+        """
+        if not self.config or 'sim_slots' not in self.config:
+            return True  # No config to check — assume enabled
+        for slot in self.config['sim_slots']:
+            if slot.get('slot') == target_slot:
+                return slot.get('enabled', True)
+        return True  # Slot not found in config — assume enabled
+
     def _record_failover(self):
         """Record that a SIM failover was performed"""
         self.last_failover_time = time.time()
@@ -3582,6 +3844,14 @@ class ModemStateMachine:
                 if sim_num != self.config_active_sim:
                     fallback_sim = sim_num
                     break
+
+            if fallback_sim and not self._is_target_sim_enabled(fallback_sim):
+                logger.warning(
+                    f"SIM failover target slot {fallback_sim} is disabled in config — "
+                    "not failing over",
+                    extra={'interface_number': self.interface_number,
+                           'target_sim': fallback_sim})
+                return False
 
             if fallback_sim:
                 logger.warning("Performing automatic SIM failover",
@@ -5353,12 +5623,22 @@ class ModemStateMachine:
                 self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
                 return
 
+            fallback_sim = 2 if self.current_active_sim == 1 else 1
+
+            if not self._is_target_sim_enabled(fallback_sim):
+                logger.warning(
+                    f"Data limit failover skipped — target slot {fallback_sim} "
+                    "is disabled in config, disconnecting instead",
+                    extra={'interface_number': self.interface_number,
+                           'target_sim': fallback_sim})
+                self.transition(ModemEvent.USAGE_LIMIT_EXCEEDED)
+                return
+
             logger.warning("Data limit exceeded - initiating SIM failover",
                           extra={'interface_number': self.interface_number,
                                  'current_sim': self.current_active_sim})
 
             self.sim_switch_reason = 'data_limit_exceeded'
-            fallback_sim = 2 if self.current_active_sim == 1 else 1
             self.target_sim_slot = fallback_sim
 
             self._record_failover()
@@ -6322,8 +6602,24 @@ class ModemStateMachine:
         logger.info("FSM shutdown complete",
                    extra={'interface_number': self.interface_number})
 
-    async def handle_disconnection_recovery(self):
-        """Handle automatic reconnection after network disconnection"""
+    async def handle_disconnection_recovery(self, escalate=True,
+                                              connectivity_triggered=False):
+        """Handle automatic reconnection after network disconnection.
+
+        When *escalate* is True (default, used for bearer-drop recovery),
+        the modem-registered branch retries up to max_recovery_before_sim_switch
+        times and then escalates to SIM failover if available.
+
+        When *escalate* is False (used by _trigger_connectivity_recovery which
+        has its own escalation counter), only a single reconnection attempt is
+        made so that the caller controls retry/escalation.
+
+        When *connectivity_triggered* is True, the caller has already
+        determined (via ping tests) that the data path is dead.  If
+        ModemManager still reports state 11 (CONNECTED), we treat it as
+        a stale bearer: force-disconnect and re-establish rather than
+        trusting ModemManager's state.
+        """
         try:
             logger.info("Network disconnection detected, starting recovery",
                        extra={'interface_number': self.interface_number,
@@ -6335,7 +6631,8 @@ class ModemStateMachine:
                            extra={'interface_number': self.interface_number})
                 return
 
-            # Clear bearer path since connection is gone
+            # Save bearer path before clearing (needed for stale bearer teardown)
+            saved_bearer_path = self.bearer_path
             self.bearer_path = None
 
             # Stop monitoring tasks if still running
@@ -6368,23 +6665,189 @@ class ModemStateMachine:
                                   'modem_state': mm_state})
 
                 if mm_state == 11:  # Already CONNECTED
-                    logger.info("Modem automatically reconnected",
-                               extra={'interface_number': self.interface_number})
-                    # ModemManager will trigger handle_modem_event with state 11
-                    return
+                    if not connectivity_triggered:
+                        logger.info(
+                            "Modem automatically reconnected",
+                            extra={'interface_number': self.interface_number})
+                        # ModemManager will trigger handle_modem_event
+                        # with state 11
+                        return
 
-                elif mm_state == 8:  # REGISTERED but not connected
-                    logger.info("Modem registered, attempting enhanced reconnection",
-                               extra={'interface_number': self.interface_number})
-                    # Use enhanced reconnection strategy for better reliability
+                    # Stale bearer: MM says CONNECTED but pings prove
+                    # the data path is dead.  Force-disconnect the bearer
+                    # and re-establish the connection.
+                    logger.warning(
+                        "Stale bearer detected: MM reports CONNECTED "
+                        "but connectivity checks failed — "
+                        "force-disconnecting",
+                        extra={
+                            'interface_number': self.interface_number,
+                            'saved_bearer_path': saved_bearer_path})
+                    try:
+                        if self.proxy:
+                            simple_iface = self.proxy.get_interface(
+                                SIMPLE_INTERFACE)
+                            # Use saved path or '/' to disconnect all
+                            disconnect_path = saved_bearer_path or '/'
+                            await asyncio.wait_for(
+                                simple_iface.call_disconnect(
+                                    disconnect_path),
+                                timeout=30)
+                            logger.info(
+                                "Stale bearer disconnected",
+                                extra={
+                                    'interface_number':
+                                        self.interface_number})
+                    except asyncio.TimeoutError:
+                        logger.error(
+                            "Force-disconnect timed out after 30s",
+                            extra={
+                                'interface_number':
+                                    self.interface_number})
+                    except Exception as e:
+                        logger.error(
+                            f"Force-disconnect failed: {e}",
+                            extra={
+                                'interface_number':
+                                    self.interface_number})
+
+                    # Wait for MM to process the disconnect
+                    await asyncio.sleep(3)
+
+                    # Attempt reconnection after stale bearer teardown
+                    logger.info(
+                        "Attempting reconnection after stale bearer "
+                        "teardown",
+                        extra={
+                            'interface_number': self.interface_number})
                     if self.enhanced_reconnection:
-                        success = await self._enhanced_reconnection_attempt()
+                        success = await (
+                            self._enhanced_reconnection_attempt())
                         if not success:
-                            logger.warning("Enhanced reconnection failed, falling back to standard",
-                                         extra={'interface_number': self.interface_number})
+                            logger.warning(
+                                "Enhanced reconnection failed after "
+                                "stale bearer, falling back to "
+                                "standard",
+                                extra={
+                                    'interface_number':
+                                        self.interface_number})
                             await self.apply_modem_configuration()
                     else:
                         await self.apply_modem_configuration()
+
+                elif mm_state == 8:  # REGISTERED but not connected
+                    if escalate:
+                        # Retry loop with SIM failover escalation
+                        for attempt in range(1, self.max_recovery_before_sim_switch + 1):
+                            self.disconnection_recovery_attempts = attempt
+                            logger.info(
+                                "Disconnection recovery attempt "
+                                f"{attempt}/{self.max_recovery_before_sim_switch}",
+                                extra={'interface_number': self.interface_number,
+                                       'attempt': attempt,
+                                       'max_attempts': self.max_recovery_before_sim_switch})
+
+                            # Attempt reconnection
+                            if self.enhanced_reconnection:
+                                success = await self._enhanced_reconnection_attempt()
+                                if not success:
+                                    logger.warning(
+                                        "Enhanced reconnection failed, falling back to standard",
+                                        extra={'interface_number': self.interface_number,
+                                               'attempt': attempt})
+                                    await self.apply_modem_configuration()
+                            else:
+                                await self.apply_modem_configuration()
+
+                            # Allow time for connection to establish
+                            await asyncio.sleep(10)
+
+                            # Re-check modem state
+                            mm_state_variant = await props.call_get(MODEM_INTERFACE, "State")
+                            mm_state_now = mm_state_variant.value
+
+                            if mm_state_now == 11:  # CONNECTED
+                                logger.info(
+                                    "Disconnection recovery succeeded",
+                                    extra={'interface_number': self.interface_number,
+                                           'attempt': attempt})
+                                self.disconnection_recovery_attempts = 0
+                                return
+
+                            if mm_state_now not in [8, 6, 7]:  # Left recoverable state
+                                logger.warning(
+                                    "Modem left recoverable state during recovery",
+                                    extra={'interface_number': self.interface_number,
+                                           'modem_state': mm_state_now,
+                                           'attempt': attempt})
+                                break
+
+                            # Backoff before next attempt
+                            if attempt < self.max_recovery_before_sim_switch:
+                                backoff = min(10 * attempt, 30)
+                                logger.info(
+                                    f"Waiting {backoff}s before next recovery attempt",
+                                    extra={'interface_number': self.interface_number,
+                                           'backoff': backoff})
+                                await asyncio.sleep(backoff)
+
+                        # All retries exhausted — escalate to SIM failover
+                        logger.warning(
+                            "Disconnection recovery exhausted on current SIM",
+                            extra={'interface_number': self.interface_number,
+                                   'attempts': self.disconnection_recovery_attempts,
+                                   'current_sim': self.current_active_sim})
+
+                        if (self._is_sim_failover_enabled()
+                                and self._is_failover_allowed()):
+                            fallback_sim = 2 if self.current_active_sim == 1 else 1
+                            if self._is_target_sim_enabled(fallback_sim):
+                                logger.warning(
+                                    "Escalating to SIM failover after "
+                                    "disconnection recovery failure",
+                                    extra={'interface_number': self.interface_number,
+                                           'from_sim': self.current_active_sim,
+                                           'to_sim': fallback_sim})
+                                self.disconnection_recovery_attempts = 0
+                                self.sim_switch_reason = 'disconnection_recovery_exhausted'
+                                self.target_sim_slot = fallback_sim
+                                self._record_failover()
+                                self._emit_failover_event(
+                                    event_type='failover',
+                                    from_sim=self.current_active_sim,
+                                    to_sim=fallback_sim,
+                                    reason='disconnection_recovery_exhausted',
+                                    trigger='handle_disconnection_recovery',
+                                    extra_data={
+                                        'recovery_attempts':
+                                            self.max_recovery_before_sim_switch})
+                                self.transition(ModemEvent.SWITCH_SIM)
+                                await self._execute_sim_switch()
+                                return
+                            else:
+                                logger.warning(
+                                    f"SIM failover skipped — target slot "
+                                    f"{fallback_sim} disabled in config",
+                                    extra={'interface_number': self.interface_number,
+                                           'target_sim': fallback_sim})
+
+                        # No SIM failover available
+                        self.transition(ModemEvent.CONNECTION_FAILED)
+
+                    else:
+                        # Single attempt — caller handles escalation
+                        logger.info("Modem registered, attempting reconnection",
+                                   extra={'interface_number': self.interface_number})
+                        if self.enhanced_reconnection:
+                            success = await self._enhanced_reconnection_attempt()
+                            if not success:
+                                logger.warning(
+                                    "Enhanced reconnection failed, "
+                                    "falling back to standard",
+                                    extra={'interface_number': self.interface_number})
+                                await self.apply_modem_configuration()
+                        else:
+                            await self.apply_modem_configuration()
 
                 elif mm_state in [6, 7]:  # ENABLED or SEARCHING
                     logger.info("Modem searching for network, will use enhanced reconnection when ready",
@@ -6728,30 +7191,43 @@ class ModemStateMachine:
                 self.connectivity_recovery_attempts = 0
 
                 # Set up failover metadata
-                self.sim_switch_reason = 'connectivity_failure_escalation'
                 fallback_sim = 2 if self.current_active_sim == 1 else 1
-                self.target_sim_slot = fallback_sim
 
-                self._record_failover()
-                self._emit_failover_event(
-                    event_type='failover',
-                    from_sim=self.current_active_sim,
-                    to_sim=fallback_sim,
-                    reason='connectivity_failure_escalation',
-                    trigger='_trigger_connectivity_recovery',
-                    extra_data={'recovery_attempts': self.connectivity_recovery_attempts})
+                if not self._is_target_sim_enabled(fallback_sim):
+                    logger.warning(
+                        f"Connectivity failover skipped — target slot {fallback_sim} "
+                        "is disabled in config, falling back to normal recovery",
+                        extra={'interface_number': self.interface_number,
+                               'target_sim': fallback_sim})
+                    # Fall through to normal recovery below
+                else:
+                    self.sim_switch_reason = 'connectivity_failure_escalation'
+                    self.target_sim_slot = fallback_sim
 
-                # FSM: CONNECTED → SIM_SWITCHING; _execute_sim_switch handles
-                # bearer disconnect, task teardown, and the full switch sequence.
-                self.transition(ModemEvent.SWITCH_SIM)
-                await self._execute_sim_switch()
-                return
+                    self._record_failover()
+                    self._emit_failover_event(
+                        event_type='failover',
+                        from_sim=self.current_active_sim,
+                        to_sim=fallback_sim,
+                        reason='connectivity_failure_escalation',
+                        trigger='_trigger_connectivity_recovery',
+                        extra_data={'recovery_attempts': self.connectivity_recovery_attempts})
+
+                    # FSM: CONNECTED → SIM_SWITCHING; _execute_sim_switch handles
+                    # bearer disconnect, task teardown, and the full switch sequence.
+                    self.transition(ModemEvent.SWITCH_SIM)
+                    await self._execute_sim_switch()
+                    return
 
             # Normal recovery: use the standard disconnect → recovery path.
             # handle_disconnection_recovery already cancels monitoring tasks,
             # clears the bearer, and attempts reconnection.
+            # Pass escalate=False so that only a single attempt is made;
+            # _trigger_connectivity_recovery handles retry counting and
+            # SIM escalation itself.
             self.transition(ModemEvent.DISCONNECT)
-            await self.handle_disconnection_recovery()
+            await self.handle_disconnection_recovery(
+                escalate=False, connectivity_triggered=True)
 
         except Exception as e:
             logger.error(f"Connectivity recovery failed: {e}",
@@ -7503,6 +7979,15 @@ class ModemStateMachine:
                 return
 
             fallback_sim = 2 if self.current_active_sim == 1 else 1
+
+            if not self._is_target_sim_enabled(fallback_sim):
+                logger.warning(
+                    f"Registration flap failover skipped — target slot {fallback_sim} "
+                    "is disabled in config",
+                    extra={'interface_number': self.interface_number,
+                           'target_sim': fallback_sim,
+                           'reason': reason})
+                return
             logger.warning(f"📡🔀 Initiating SIM failover SIM{self.current_active_sim}→SIM{fallback_sim} "
                           f"(reason: {reason})",
                           extra={'interface_number': self.interface_number,

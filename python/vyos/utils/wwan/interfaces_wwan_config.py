@@ -259,6 +259,13 @@ class InterfaceConfig(ServiceInterface):
             "interface_up_timeout": 10,        # Timeout for interface up/down operations (seconds)
         },
 
+        # Failed-state periodic retry settings
+        "failed_retry": {
+            "enabled": True,                          # Enable automatic retry from FAILED state
+            "intervals": [300, 600, 1200, 1800],      # Backoff intervals in seconds (5, 10, 20, 30 min)
+            "max_interval": 1800,                      # Cap interval once list is exhausted (seconds)
+        },
+
         # SIM configurations - array of SIM configs
         "sim_slots": [
             {

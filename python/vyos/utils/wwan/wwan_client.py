@@ -329,6 +329,12 @@ class WWANClient:
             ``monitor_bearer_state``, ``monitor_ip_changes``,
             ``interface_up_timeout``.
 
+            ``failed_retry`` — keys: ``enabled`` (bool, default True),
+            ``intervals`` (list of ints in seconds, default
+            ``[300, 600, 1200, 1800]`` — stepped backoff from FAILED
+            state), ``max_interval`` (int, cap once list exhausted,
+            default 1800).
+
             ``sim_slots`` — list of per-SIM dicts, each with:
             ``slot``, ``enabled`` (bool, default True — both slots enabled;
             VyOS ``disable`` command maps to False), ``apn`` (str or ``{name, username,

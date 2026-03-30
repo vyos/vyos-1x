@@ -204,6 +204,21 @@ def build_config(raw_cfg):
         'signal_strength_buffer': raw_cfg.get('signal_strength_buffer', 5)
     }
 
+    # Build failed-state retry configuration
+    failed_retry_intervals_raw = raw_cfg.get('failed_retry_intervals', '300,600,1200,1800')
+    if isinstance(failed_retry_intervals_raw, str):
+        failed_retry_intervals = [int(x.strip()) for x in failed_retry_intervals_raw.split(',') if x.strip()]
+    elif isinstance(failed_retry_intervals_raw, list):
+        failed_retry_intervals = [int(x) for x in failed_retry_intervals_raw]
+    else:
+        failed_retry_intervals = [300, 600, 1200, 1800]
+
+    failed_retry = {
+        'enabled': raw_cfg.get('failed_retry_enabled', True),
+        'intervals': failed_retry_intervals,
+        'max_interval': int(raw_cfg.get('failed_retry_max_interval', 1800)),
+    }
+
     # Build complete configuration
     config = {
         # Basic interface settings
@@ -258,7 +273,8 @@ def build_config(raw_cfg):
         # SIM slots, connectivity monitoring, and interface management
         'sim_slots': sim_slots,
         'connectivity_monitoring': connectivity_monitoring,
-        'interface_management': interface_management
+        'interface_management': interface_management,
+        'failed_retry': failed_retry
     }
 
     return config

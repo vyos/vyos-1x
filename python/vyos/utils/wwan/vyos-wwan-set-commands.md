@@ -106,6 +106,11 @@ interfaces
         │     ├── max-attempts <count>                    #   default: 3
         │     └── cooldown <seconds>                      #   default: 300
         │
+        ├── failed-retry
+        │     ├── disable                                 #   valueless — turn off periodic retry from FAILED state (on by default)
+        │     ├── intervals <sec,sec,...>                  #   default: 300,600,1200,1800  (5, 10, 20, 30 min)
+        │     └── max-interval <seconds>                  #   default: 1800  (cap once list exhausted)
+        │
         ├── network-scan
         │     └── timeout <seconds>                       #   default: 60
         │
@@ -162,6 +167,7 @@ automatically using a 4-priority APN discovery chain:
 | **Data limits (global fallback)** | size `0`, action `none`, billing-date `1`, warning `(empty)` | Applies when per-SIM values are not set |
 | **Data usage monitoring** | interval `30 s` | Counters tracked per billing cycle |
 | **Hardware reset** | `enabled`, max `3` attempts, cooldown `300 s` | Modem power-cycles after repeated unrecoverable failures; use `disable` to turn off |
+| **Failed-state retry** | `enabled`, intervals `300,600,1200,1800`, cap `1800 s` | Periodically reattempts connection from FAILED state (data-plan top-up, carrier provisioning, transient errors) |
 | **Band selection** | `all` | All modem-supported radio technologies enabled |
 | **Network scan timeout** | `60 s` | Max wait for network scan completion |
 | **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
@@ -417,6 +423,23 @@ set interfaces wwan wwan0 hardware-reset max-attempts 3
 set interfaces wwan wwan0 hardware-reset cooldown 300
 ```
 
+### Failed-State Retry
+
+> **If unconfigured:** Enabled — backoff intervals 5, 10, 20, 30 minutes; capped at 30 minutes indefinitely.
+>
+> When the FSM enters the FAILED state (e.g. data plan exhausted, carrier
+> provisioning delay for a new SIM, transient network-side error), it
+> automatically retries the APN connection cascade using stepped backoff.
+> This covers scenarios where the user tops up their data plan, the monthly
+> billing cycle resets, or the carrier completes provisioning.
+
+```
+# Failed-state retry is enabled by default — to disable:
+# set interfaces wwan wwan0 failed-retry disable
+set interfaces wwan wwan0 failed-retry intervals '300,600,1200,1800'
+set interfaces wwan wwan0 failed-retry max-interval 1800
+```
+
 ### Carrier / Network Scan
 
 > **If unconfigured:** Network-mode auto (all technologies), network scanning disabled, scan timeout 60 s.
@@ -610,6 +633,9 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `hardware-reset disable` | `hardware_reset_enabled` | `true` |
 | `hardware-reset max-attempts` | `max_hardware_resets` | `3` |
 | `hardware-reset cooldown` | `hardware_reset_cooldown` | `300` |
+| `failed-retry disable` | `failed_retry_enabled` | `true` |
+| `failed-retry intervals` | `failed_retry_intervals` | `300,600,1200,1800` |
+| `failed-retry max-interval` | `failed_retry_max_interval` | `1800` |
 | `network-mode` | `network_mode` | `auto` |
 | `mtu-override` | `mtu_override` | `0` |
 | `mtu-fallback` | `mtu_fallback` | `1420` |
