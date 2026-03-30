@@ -18,6 +18,7 @@ import json
 import typing
 from pathlib import Path
 
+from vyos.base import Warning as Warn
 from vyos.defaults import activation_list
 from vyos.defaults import activation_init
 from vyos.defaults import activation_hint
@@ -101,3 +102,17 @@ def refresh_activation_list():
         obj = new_obj
 
     orig_list_path.write_text(json.dumps(obj))
+
+
+first_installed_boot_file = '/run/first_installed_boot'
+
+
+def set_first_installed_boot():
+    try:
+        Path(first_installed_boot_file).touch(exist_ok=False)
+    except FileExistsError:
+        Warn('redundant set of first_installed_boot')
+
+
+def is_first_installed_boot():
+    return Path(first_installed_boot_file).exists()
