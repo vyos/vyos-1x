@@ -116,3 +116,11 @@ def set_first_installed_boot():
 
 def is_first_installed_boot():
     return Path(first_installed_boot_file).exists()
+
+
+def set_config_path_hint():
+    """The config hint allows subsequent installs to find previous disk
+    resident config data. It is traditionally added as part of the image
+    install procedure, however, for raw image builds an alternative is
+    needed."""
+    Path(directories['config']).joinpath('.vyatta_config').touch(exist_ok=True)
