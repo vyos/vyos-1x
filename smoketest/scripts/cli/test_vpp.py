@@ -38,11 +38,14 @@ from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 
 PROCESS_NAME = 'vpp_main'
+VPP_EXPORTER_PROCESS_NAME = 'vpp_prometheus_export'
 VPP_CONF = '/run/vpp/vpp.conf'
 base_path = ['vpp']
+prometheus_base_path = ['service', 'monitoring', 'prometheus']
 resource_path = base_path + ['settings', 'resource-allocation']
 interfaces_path = ['interfaces', 'vpp']
 interface = 'eth1'
+vpp_exporter_service_file = '/etc/systemd/system/vpp_exporter.service'
 
 
 def get_vpp_config():
@@ -119,6 +122,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             # Ensure these cleanup operations always run
             self.cli_delete(base_path)
             self.cli_delete(interfaces_path)
+            self.cli_delete(prometheus_base_path)
             self.cli_commit()
 
             # delete address for Ethernet interface
@@ -776,6 +780,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
             conf = get_vpp_config()
             self.assertEqual(conf['memory']['main-heap-page-size'], size)
 
+    def test_11_4_statseg_per_node_counters(self):
+        self.cli_set(resource_path + ['memory', 'stats', 'per-node-counters'])
+        self.cli_commit()
+
+        conf = get_vpp_config()
+        self.assertEqual(conf['statseg']['per-node-counters'], 'on')
+
     def test_12_vpp_ipsec_xfrm_nl(self):
         rx_buffer_zise = default_resource_map.get('netlink_rx_buffer_size')
 
@@ -1400,6 +1411,45 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_22_vpp_exporter(self):
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+
+        # commit changes
+        self.cli_commit()
+
+        file_content = read_file(vpp_exporter_service_file)
+        self.assertIn('port 9482', file_content)
+        self.assertIn('socket-name /run/vpp/stats.sock', file_content)
+        self.assertIn('^/interfaces', file_content)
+        self.assertIn('^/err', file_content)
+        self.assertIn('^/buffer-pools', file_content)
+        self.assertIn('^/sys', file_content)
+        self.assertIn('^/workers', file_content)
+        self.assertIn('^/mem', file_content)
+        self.assertIn('PartOf=vpp.service', file_content)
+        self.assertIn('BindsTo=vpp.service', file_content)
+        self.assertIn('WantedBy=vpp.service', file_content)
+
+        # Check for running process
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
+
+    def test_23_vpp_exporter_group_and_custom_patterns(self):
+        self.cli_set(prometheus_base_path + ['vpp-exporter'])
+        self.cli_set(
+            prometheus_base_path + ['vpp-exporter', 'stat-group', 'interfaces']
+        )
+        self.cli_set(prometheus_base_path + ['vpp-exporter', 'stat-pattern', '^/sys'])
+
+        # commit changes
+        self.cli_commit()
+
+        file_content = read_file(vpp_exporter_service_file)
+        self.assertIn('^/interfaces', file_content)
+        self.assertIn('^/sys', file_content)
+
+        # Check for running process
+        self.assertTrue(process_named_running(VPP_EXPORTER_PROCESS_NAME))
 
 
 if __name__ == '__main__':
