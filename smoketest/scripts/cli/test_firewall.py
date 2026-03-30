@@ -292,6 +292,33 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_ipv4_time_weekdays(self):
+        name = 'v4-time-weekdays-test'
+        rule_base = ['firewall', 'ipv4', 'name', name, 'rule', '10']
+
+        self.cli_set(rule_base + ['action', 'accept'])
+        self.cli_set(rule_base + ['time', 'weekdays', 'mon,friday'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'chain NAME_{name}'],
+            ['meta day { "Monday", "Friday" }'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+        self.cli_set(rule_base + ['time', 'weekdays', 'Monday, Sat'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'chain NAME_{name}'],
+            ['meta day { "Monday", "Saturday" }'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
     def test_ipv4_advanced(self):
         name = 'smoketest-adv'
         name2 = 'smoketest-adv2'
@@ -536,6 +563,33 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state established', 'accept'],
             ['ct state invalid', 'drop'],
             ['ct state related', 'accept']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+    def test_ipv6_time_weekdays(self):
+        name = 'v6-time-weekdays-test'
+        rule_base = ['firewall', 'ipv6', 'name', name, 'rule', '10']
+
+        self.cli_set(rule_base + ['action', 'accept'])
+        self.cli_set(rule_base + ['time', 'weekdays', 'mon,friday'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'chain NAME6_{name}'],
+            ['meta day { "Monday", "Friday" }'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        self.cli_set(rule_base + ['time', 'weekdays', 'Monday, Sat'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'chain NAME6_{name}'],
+            ['meta day { "Monday", "Saturday" }'],
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
