@@ -78,7 +78,7 @@ vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json
 
 .PHONY: copyright
 copyright:
@@ -129,6 +129,10 @@ deb:
 .PHONY: generate-configd-include-json
 generate-configd-include-json:
 	@scripts/generate-configd-include-json.py
+
+.PHONY: generate-activation-scripts-json
+generate-activation-scripts-json:
+	@scripts/generate-activation-scripts-json.py
 
 .PHONY: schema
 schema:
