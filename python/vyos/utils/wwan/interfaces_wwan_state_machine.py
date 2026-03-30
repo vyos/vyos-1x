@@ -2052,7 +2052,7 @@ class ModemStateMachine:
                               'pin_retries': self._pin_retries_remaining})
 
             iface = self.proxy.get_interface(MODEM_INTERFACE)
-            await iface.call_send_pin(pin)
+            await iface.call_send_pin(str(pin))
 
             # Wait for unlock to process
             await asyncio.sleep(3)
@@ -2169,7 +2169,7 @@ class ModemStateMachine:
                               'puk_retries': self._puk_retries_remaining})
 
             iface = self.proxy.get_interface(MODEM_INTERFACE)
-            await iface.call_send_puk(puk, pin)
+            await iface.call_send_puk(str(puk), str(pin))
 
             # Wait for unlock to process
             await asyncio.sleep(5)
@@ -6164,7 +6164,8 @@ class ModemStateMachine:
                 status[f"{prefix}_enabled"] = slot.get('enabled', True)
                 status[f"{prefix}_roaming"] = slot.get('roaming', 'disabled')
                 status[f"{prefix}_pdp_type"] = slot.get('pdp_type', 'ipv4')
-                status[f"{prefix}_apn"] = slot.get('apn', {}).get('name', '')
+                apn_val = slot.get('apn', '')
+                status[f"{prefix}_apn"] = apn_val.get('name', '') if isinstance(apn_val, dict) else str(apn_val)
                 status[f"{prefix}_preferred_carrier"] = slot.get('preferred_carrier', '')
                 status[f"{prefix}_data_limit_bytes"] = slot.get('data_limit_size', 0)
                 status[f"{prefix}_data_limit_action"] = slot.get('data_limit_action', 'none')

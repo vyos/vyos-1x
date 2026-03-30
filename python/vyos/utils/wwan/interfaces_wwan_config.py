@@ -423,20 +423,34 @@ class InterfaceConfig(ServiceInterface):
 
             # Apply the restored configuration
             from dbus_next import Variant  # pylint: disable=import-error
-            dbus_config = {}
-            for key, value in saved_config.items():
-                # Convert back to D-Bus variants
-                if isinstance(value, bool):
-                    dbus_config[key] = Variant('b', value)
-                elif isinstance(value, int):
-                    dbus_config[key] = Variant('i', value)
-                elif isinstance(value, str):
-                    dbus_config[key] = Variant('s', value)
-                elif isinstance(value, list):
-                    # Handle lists - assume string arrays for now
-                    dbus_config[key] = Variant('as', value)
-                else:
-                    dbus_config[key] = Variant('s', str(value))
+
+            def _to_variant(val):
+                """Recursively convert Python values to D-Bus Variants."""
+                if isinstance(val, dict):
+                    return Variant('a{sv}', {k: _to_variant(v) for k, v in val.items()})
+                if isinstance(val, list):
+                    if not val:
+                        return Variant('as', [])
+                    if all(isinstance(x, str) for x in val):
+                        return Variant('as', val)
+                    if all(isinstance(x, int) and not isinstance(x, bool) for x in val):
+                        return Variant('ai', val)
+                    if all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in val):
+                        return Variant('ad', [float(x) for x in val])
+                    return Variant('av', [_to_variant(x) for x in val])
+                if isinstance(val, bool):
+                    return Variant('b', val)
+                if isinstance(val, int):
+                    if -2_147_483_648 <= val <= 2_147_483_647:
+                        return Variant('i', val)
+                    return Variant('x', val)
+                if isinstance(val, float):
+                    return Variant('d', val)
+                if isinstance(val, str):
+                    return Variant('s', val)
+                return Variant('s', str(val))
+
+            dbus_config = {k: _to_variant(v) for k, v in saved_config.items()}
 
             # Apply configuration asynchronously
             import asyncio

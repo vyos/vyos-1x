@@ -121,17 +121,17 @@ def build_config(raw_cfg):
     # SIM Slot 1
     sim1 = {
         'slot': 1,
-        'apn': raw_cfg.get('sim_slot_1_apn', ''),
-        'username': raw_cfg.get('sim_slot_1_username', ''),
-        'password': raw_cfg.get('sim_slot_1_password', ''),
+        'apn': str(raw_cfg.get('sim_slot_1_apn', '')),
+        'username': str(raw_cfg.get('sim_slot_1_username', '')),
+        'password': str(raw_cfg.get('sim_slot_1_password', '')),
         'auth_type': raw_cfg.get('sim_slot_1_auth_type', 'none'),
         'pdp_type': raw_cfg.get('sim_slot_1_pdp_type', 'ipv4'),
         'roaming': raw_cfg.get('sim_slot_1_roaming', 'disabled'),
-        'pin': raw_cfg.get('sim_slot_1_pin', ''),
-        'puk': raw_cfg.get('sim_slot_1_puk', ''),
-        'iccid': raw_cfg.get('sim_slot_1_iccid', ''),
-        'supported_bands': raw_cfg.get('sim_slot_1_supported_bands', 'all'),
-        'preferred_carrier': raw_cfg.get('sim_slot_1_preferred_carrier', ''),
+        'pin': str(raw_cfg.get('sim_slot_1_pin', '')),
+        'puk': str(raw_cfg.get('sim_slot_1_puk', '')),
+        'iccid': str(raw_cfg.get('sim_slot_1_iccid', '')),
+        'supported_bands': [b.strip() for b in str(raw_cfg.get('sim_slot_1_supported_bands', 'all')).split(',')],
+        'preferred_carrier': str(raw_cfg.get('sim_slot_1_preferred_carrier', '')),
         'enable_network_scan': raw_cfg.get('sim_slot_1_enable_network_scan', False),
         # Per-SIM data usage limits (fallback to global config)
         'data_limit_size': raw_cfg.get('sim_slot_1_data_limit_size', raw_cfg.get('data_limit_size', 0)),
@@ -145,17 +145,17 @@ def build_config(raw_cfg):
     if any(key.startswith('sim_slot_2_') for key in raw_cfg.keys()):
         sim2 = {
             'slot': 2,
-            'apn': raw_cfg.get('sim_slot_2_apn', ''),
-            'username': raw_cfg.get('sim_slot_2_username', ''),
-            'password': raw_cfg.get('sim_slot_2_password', ''),
+            'apn': str(raw_cfg.get('sim_slot_2_apn', '')),
+            'username': str(raw_cfg.get('sim_slot_2_username', '')),
+            'password': str(raw_cfg.get('sim_slot_2_password', '')),
             'auth_type': raw_cfg.get('sim_slot_2_auth_type', 'none'),
             'pdp_type': raw_cfg.get('sim_slot_2_pdp_type', 'ipv4'),
             'roaming': raw_cfg.get('sim_slot_2_roaming', 'disabled'),
-            'pin': raw_cfg.get('sim_slot_2_pin', ''),
-            'puk': raw_cfg.get('sim_slot_2_puk', ''),
-            'iccid': raw_cfg.get('sim_slot_2_iccid', ''),
-            'supported_bands': raw_cfg.get('sim_slot_2_supported_bands', 'all'),
-            'preferred_carrier': raw_cfg.get('sim_slot_2_preferred_carrier', ''),
+            'pin': str(raw_cfg.get('sim_slot_2_pin', '')),
+            'puk': str(raw_cfg.get('sim_slot_2_puk', '')),
+            'iccid': str(raw_cfg.get('sim_slot_2_iccid', '')),
+            'supported_bands': [b.strip() for b in str(raw_cfg.get('sim_slot_2_supported_bands', 'all')).split(',')],
+            'preferred_carrier': str(raw_cfg.get('sim_slot_2_preferred_carrier', '')),
             'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', False),
             # Per-SIM data usage limits (fallback to global config)
             'data_limit_size': raw_cfg.get('sim_slot_2_data_limit_size', raw_cfg.get('data_limit_size', 0)),
@@ -276,10 +276,10 @@ def python_to_dbus_variant(value):
         elif all(isinstance(x, str) for x in value):
             # String array
             return Variant('as', value)
-        elif all(isinstance(x, int) for x in value):
+        elif all(isinstance(x, int) and not isinstance(x, bool) for x in value):
             # Integer array
             return Variant('ai', value)
-        elif all(isinstance(x, (int, float)) for x in value):
+        elif all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in value):
             # Number array (convert to doubles)
             return Variant('ad', [float(x) for x in value])
         else:
