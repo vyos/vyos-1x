@@ -112,11 +112,14 @@ def cli_ifaces_list(config_instance, mode: str = 'candidate') -> list[str]:
     return vpp_ifaces
 
 
-def cli_ethernet_with_vifs_ifaces(config_instance) -> list[str]:
+def cli_ethernet_with_vifs_ifaces(
+    config_instance, include_nested_vifs=False
+) -> list[str]:
     """List of all VPP Ethernet interfaces with VIFs
 
     Args:
         config_instance (VyOS Config): VyOS Config instance
+        include_nested_vifs (bool): Include Q-in-Q/customer VIFs if True
 
     Returns:
         list[str]: list of interfaces
@@ -135,16 +138,25 @@ def cli_ethernet_with_vifs_ifaces(config_instance) -> list[str]:
     ifaces: list[str] = []
 
     # Get a list of Ethernet interfaces
-    for iface in config.get('settings', {}).get('interface', {}).keys():
-        ifaces.append(iface)
+    parent_ifaces = list(config.get('settings', {}).get('interface', {}).keys())
 
     # Add Ethernet interfaces with VIFs
-    for iface in ifaces:
+    for iface in parent_ifaces:
+        ifaces.append(iface)
         _, iface_config = get_interface_dict(
             config_instance, ['interfaces', 'ethernet'], ifname=iface
         )
         ifaces.extend([f'{iface}.{vif}' for vif in iface_config.get('vif', {})])
         ifaces.extend([f'{iface}.{vif_s}' for vif_s in iface_config.get('vif_s', {})])
+
+        if include_nested_vifs:
+            for vif_s, vif_s_config in iface_config.get('vif_s', {}).items():
+                ifaces.extend(
+                    [
+                        f'{iface}.{vif_s}.{vif_c}'
+                        for vif_c in vif_s_config.get('vif_c', {})
+                    ]
+                )
 
     return ifaces
 

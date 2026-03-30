@@ -1401,6 +1401,45 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_22_no_vpp_kernel_bridge_cross_membership(self):
+        vlan = '123'
+        member = f'{interface}.{vlan}'
+        bridge_iface = 'br1'
+
+        self.cli_commit()
+
+        # Ensure that VPP process is active
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # Attempt to add a VPP interface VLAN as a bridge member
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_set(
+            ['interfaces', 'bridge', bridge_iface, 'member', 'interface', member]
+        )
+
+        # Adding a VPP interface (or its VLAN) as a bridge member is not allowed
+        # expect raise ConfigError
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # Ensure interface is a member of bridge
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{bridge_iface}/lower_{member}'))
+
+        # Adding a bridge member as a VPP interface is not allowed
+        # expect raise ConfigError
+        self.cli_set(base_path + ['settings', 'interface', interface])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['interfaces', 'bridge'])
+        self.cli_commit()
+
+        # Ensure that VPP process is active
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
