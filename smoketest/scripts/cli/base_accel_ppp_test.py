@@ -70,7 +70,7 @@ class BasicAccelPPPTest:
         def basic_protocol_specific_config(self):
             """
             An astract method.
-            Initialize protocol scpecific configureations.
+            Initialize protocol specific configurations.
             """
             self.assertFalse(True, msg="Function must be defined")
 
@@ -126,7 +126,7 @@ class BasicAccelPPPTest:
             """
             Return part of configuration from line
             where the first injection of start keyword to the line
-            where the first injection of end keyowrd
+            where the first injection of end keyword
             :param start: start keyword
             :type start: str
             :param end: end keyword

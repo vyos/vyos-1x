@@ -48,6 +48,6 @@ if __name__ == '__main__':
         print("Invalid community format")
         exit(1)
 
-    # fail if none of validators catched the value
+    # fail if none of validators caught the value
     print("Invalid community format")
     exit(1)

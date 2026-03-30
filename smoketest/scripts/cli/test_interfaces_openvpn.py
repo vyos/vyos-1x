@@ -290,7 +290,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'remote {remote_host}', config)
         self.assertIn(f'persist-tun', config)
 
-        # IPv4 only: client usees udp4 protocol
+        # IPv4 only: client uses udp4 protocol
         self.cli_set(path + ['ip-version', 'ipv4'])
         self.cli_commit()
 
@@ -319,7 +319,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         interface = 'vtun5000'
         path = base_path + [interface]
 
-        # check validate() - must speciy operating mode
+        # check validate() - must specify operating mode
         self.cli_set(path)
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
@@ -559,7 +559,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'lport {port}', config)
         self.assertIn(f'push "redirect-gateway def1"', config)
 
-        # IPv4 only: server usees udp4 protocol
+        # IPv4 only: server uses udp4 protocol
         self.cli_set(path + ['ip-version', 'ipv4'])
         self.cli_commit()
 
@@ -799,7 +799,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'lport {port}', config)
         self.assertIn(f'rport {port}', config)
 
-        # IPv4 only: server usees udp4 protocol
+        # IPv4 only: server uses udp4 protocol
         self.cli_set(path + ['ip-version', 'ipv4'])
         self.cli_commit()
 

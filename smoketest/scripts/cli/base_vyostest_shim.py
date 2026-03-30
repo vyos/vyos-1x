@@ -43,7 +43,7 @@ save_config = '/tmp/vyos-smoketest-save'
 class VyOSUnitTestSHIM:
     class TestCase(unittest.TestCase):
         # If enabled, print out each and every set/del command on stdout.
-        # This is usefull to grap all the commands required to trigger the
+        # This is useful to grab all the commands required to trigger the
         # certain failure condition.
         debug = False
         mgmt_daemon_pid = 0

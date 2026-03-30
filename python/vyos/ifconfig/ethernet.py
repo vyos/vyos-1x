@@ -518,7 +518,7 @@ class EthernetIf(Interface):
         cmd = f'ethtool --set-channels {ifname} {rx_tx_comb} {queues}'
         output, code = self._popen(cmd)
         # ethtool error codes:
-        #  80 - value already setted
+        #  80 - value already set
         #  81 - does not possible to set value
         if code and code != 80:
             print(f'could not set "{rx_tx_comb}" channel for {ifname}')

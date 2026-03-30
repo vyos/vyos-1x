@@ -8,7 +8,7 @@
     </valueHelp>
     <valueHelp>
       <format>radius</format>
-      <description>Use RADIUS server for user autentication</description>
+      <description>Use RADIUS server for user authentication</description>
     </valueHelp>
     <valueHelp>
       <format>noauth</format>

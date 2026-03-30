@@ -102,9 +102,9 @@ class PPPoEIf(Interface):
         self.set_interface('accept_ra_defrtr', enable)
 
     def update(self, config):
-        """ General helper function which works on a dictionary retrived by
+        """ General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface. """
 
         # Cache the configuration - it will be reused inside e.g. DHCP handler

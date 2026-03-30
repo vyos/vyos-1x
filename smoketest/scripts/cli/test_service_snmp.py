@@ -101,7 +101,7 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
 
         # verify listen address, it will be returned as
         # ['unix:/run/snmpd.socket,udp:127.0.0.1:161,udp6:[::1]:161']
-        # thus we need to transfor this into a proper list
+        # thus we need to transform this into a proper list
         config = get_config_value('agentaddress')
         expected = 'unix:/run/snmpd.socket'
         self.assertIn(expected, config)
@@ -202,7 +202,7 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['v3', 'user', 'vyos', 'group', snmpv3_group])
 
         self.cli_set(base_path + ['v3', 'group', snmpv3_group, 'mode', 'ro'])
-        # check validate() - a view must be created before this can be comitted
+        # check validate() - a view must be created before this can be committed
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 

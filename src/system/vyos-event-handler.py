@@ -134,7 +134,7 @@ if __name__ == '__main__':
         )
         exit(1)
 
-    # Prepare for proper exitting
+    # Prepare for proper exiting
     signal(SIGTERM, handle_signal)
     signal(SIGINT, handle_signal)
 
