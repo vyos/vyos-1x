@@ -19,7 +19,8 @@ from vyos.system import image
 from vyos.system import compat
 
 @compat.grub_cfg_update
-def set_console_speed(console_speed: str, root_dir: str = '') -> None:
+def set_serial_console(console_type: str, console_num: str,
+                       console_speed: str, root_dir: str = '') -> None:
     """Write default console speed to GRUB configuration
 
     Args:
@@ -30,10 +31,11 @@ def set_console_speed(console_speed: str, root_dir: str = '') -> None:
     if not root_dir:
         root_dir = disk.find_persistence()
 
-    grub.set_console_speed(console_speed, root_dir)
+    grub.set_serial_console(console_type, console_num, console_speed, root_dir)
 
 @image.if_not_live_boot
-def update_console_speed(console_speed: str, root_dir: str = '') -> None:
+def update_serial_console(console_type: str, console_num: str,
+                          console_speed: str, root_dir: str = '') -> None:
     """Update console_speed if different from current value"""
 
     if not root_dir:
@@ -41,9 +43,15 @@ def update_console_speed(console_speed: str, root_dir: str = '') -> None:
 
     vars_file: str = f'{root_dir}/{grub.CFG_VYOS_VARS}'
     vars_current: dict[str, str] = grub.vars_read(vars_file)
-    console_speed_current = vars_current.get('console_speed', None)
-    if console_speed != console_speed_current:
-        set_console_speed(console_speed, root_dir)
+
+    console_type_current = vars_current.get('console_type')
+    console_num_current = vars_current.get('console_num')
+    console_speed_current = vars_current.get('console_speed')
+
+    if console_type != console_type_current or \
+       console_num != console_num_current or \
+       console_speed != console_speed_current:
+        set_serial_console(console_type, console_num, console_speed, root_dir)
 
 @compat.grub_cfg_update
 def set_kernel_cmdline_options(cmdline_options: str, version: str = '',

@@ -42,8 +42,10 @@ from psutil import disk_partitions
 
 from vyos.base import Warning
 from vyos.configtree import ConfigTree
+from vyos.config_mgmt import unsaved_commits
 from vyos.defaults import base_dir
 from vyos.defaults import directories
+from vyos.flavor import get_image_serial_console
 from vyos.remote import download
 from vyos.system import disk
 from vyos.system import grub
@@ -69,7 +71,6 @@ from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.utils.process import rc_cmd
 from vyos.version import get_version_data
-from vyos.config_mgmt import unsaved_commits
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -143,15 +144,16 @@ ISO_DOWNLOAD_PATH: str = ''
 external_download_script: str = f'{base_dir}/simple-download.py'
 external_latest_image_url_script: str = f'{base_dir}/latest-image-url.py'
 
+(flavor_sercon_type, flavor_sercon_num, flavor_sercon_speed) = get_image_serial_console()
+
 # default boot variables
 DEFAULT_BOOT_VARS: dict[str, str] = {
     'timeout': '5',
     'console_type': 'tty',
-    'console_num': '0',
-    'console_speed': '115200',
+    'console_num': flavor_sercon_num,
+    'console_speed': flavor_sercon_speed,
     'bootmode': 'normal'
 }
-
 
 def bytes_to_gb(size: int) -> float:
     """Convert Bytes to GBytes, rounded to 1 decimal number
@@ -767,11 +769,12 @@ def console_hint() -> str:
         path = '/dev/tty'
 
     name = Path(path).name
-    if name in ['ttyS0', 'ttyAMA0']:
+    if name in ['ttyS0']:
         return 'S'
+    elif name in ['ttyAMA0']:
+        return 'A'
     else:
         return 'K'
-
 
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
     """Clean up after installation
@@ -921,10 +924,14 @@ def install_image() -> None:
         print(MSG_WARN_PASSWORD_CONFIRM)
 
     # ask for default console
+    console_dict: dict[str, str] = {'K': 'tty'}
+    if flavor_sercon_type:
+        tmp: str = flavor_sercon_type[-1] # get "S" from "ttyS" and "A" from "ttyAMA"
+        console_dict.update({tmp: flavor_sercon_type})
+
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
                                   default=console_hint(),
-                                  valid_responses=['K', 'S'])
-    console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS'}
+                                  valid_responses=console_dict.keys())
 
     config_boot_list = [f'{DIR_CONFIG}/config.boot',
                         '/opt/vyatta/etc/config.boot.default']

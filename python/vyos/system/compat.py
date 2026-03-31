@@ -134,11 +134,15 @@ def parse_entry(entry: tuple) -> dict:
         entry_dict['bootmode'] = 'pw_reset'
     else:
         entry_dict['bootmode'] = 'normal'
+    (_, _, default_speed) = get_image_serial_console()
     # find console type and number
     regex_filter = compile(REGEX_CONSOLE)
     entry_dict.update(regex_filter.match(entry[1]).groupdict())
+    # Set new or default console speed - this line must always be present to
+    # keep backward compatibility. It is needed to boot into old images and
+    # use the serial console speed
     speed = entry_dict.get('console_speed', None)
-    entry_dict['console_speed'] = speed if speed is not None else '115200'
+    entry_dict['console_speed'] = speed if speed is not None else default_speed
     entry_dict['boot_opts'] = sanitize_boot_opts(entry[1])
 
     return entry_dict

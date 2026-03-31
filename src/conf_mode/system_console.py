@@ -68,7 +68,7 @@ def verify(console):
             # and it can not be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
                 raise ConfigError(f'Device {device} does not support being used as tty')
-        if not is_tty(device):
+        if not is_tty(device, warning=True):
             Warning(f'Device "{device}" used for console is not a TTY!')
 
     return None
@@ -82,6 +82,7 @@ def generate(console):
                 os.unlink(os.path.join(root, basename))
 
     if not console or 'device' not in console:
+        grub_util.update_serial_console('', '', '')
         return None
 
     # replace keys in the config for ttyUSB items to use them in `apply()` later
@@ -112,14 +113,17 @@ def generate(console):
         render(config_file, 'getty/serial-getty.service.j2', device_config)
         os.symlink(config_file, getty_wants_symlink)
 
-    # GRUB
-    # For existing serial line change speed (if necessary)
-    # Only applies to ttyS0
-    if 'ttyS0' not in console['device']:
-        return None
+    # GRUB - use first defined serial console to populate Kernel console= parameter
+    device = None
+    if 'device' in console and len(console['device']) > 0:
+        # We use the first device for the Kernel console
+        console_device = next(iter(console['device']))
+        console_speed = console['device'][console_device]['speed']
 
-    speed = console['device']['ttyS0']['speed']
-    grub_util.update_console_speed(speed)
+        # get console type ("ttyS" or "ttyAMA") from console_device (e.g. "ttyS0")
+        console_type = console_device.translate(str.maketrans('', '', '0123456789'))
+        console_num = ''.join(ch for ch in console_device if ch.isdigit())
+        grub_util.update_serial_console(console_type, console_num, console_speed)
 
     return None
 
@@ -127,9 +131,9 @@ def apply(console):
     # Reset screen blanking
     call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
 
-    # Service control moved to vyos.utils.serial to unify checks and prompts. 
-    # If users are connected, we want to show an informational message on completing 
-    # the process, but not halt configuration processing with an interactive prompt. 
+    # Service control moved to vyos.utils.serial to unify checks and prompts.
+    # If users are connected, we want to show an informational message on completing
+    # the process, but not halt configuration processing with an interactive prompt.
     restart_login_consoles(prompt_user=False, quiet=False)
 
     if not console:
