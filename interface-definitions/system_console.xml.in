@@ -12,12 +12,16 @@
             <properties>
               <help>Serial console device name</help>
               <completionHelp>
-                <script>ls -1 /dev | grep -e ttyS -e hvc</script>
+                <script>ls -1 /dev | grep -e ttyS -e ttyAMA -e hvc</script>
                 <script>if [ -d /dev/serial/by-bus ]; then ls -1 /dev/serial/by-bus; fi</script>
               </completionHelp>
               <valueHelp>
                 <format>ttySN</format>
-                <description>TTY device name, regular serial port</description>
+                <description>TTY device name, ttyS based</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ttyAMAN</format>
+                <description>TTY device name, ttyAMA based</description>
               </valueHelp>
               <valueHelp>
                 <format>usbNbXpY</format>
@@ -28,7 +32,7 @@
                 <description>Xen console</description>
               </valueHelp>
               <constraint>
-                  <regex>(ttyS[0-9]+|ttyAMA[0-9]+|hvc[0-9]+|usb[0-9]+b.*)</regex>
+                <regex>(ttyS[0-9]+|ttyAMA[0-9]+|hvc[0-9]+|usb[0-9]+b.*)</regex>
               </constraint>
             </properties>
             <children>
