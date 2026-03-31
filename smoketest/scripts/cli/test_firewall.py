@@ -966,6 +966,20 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
         self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
 
+        # Test error on offload from local zone
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'state', 'established'])
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1', 'state', 'related'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['firewall', 'flowtable', 'smoketest'])
+        self.cli_delete(['firewall', 'ipv4', 'name', 'smoketest', 'rule', '1'])
+
         self.cli_commit()
 
         nftables_search = [

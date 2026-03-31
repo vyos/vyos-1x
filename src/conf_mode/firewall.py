@@ -249,6 +249,8 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
 
         if not dict_search_args(firewall, 'flowtable', offload_target):
             raise ConfigError(f'Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
+    elif 'offload_target' in rule_conf:
+        Warning('offload-target is specified but action is not set to "offload"')
 
     if rule_conf['action'] != 'synproxy' and 'synproxy' in rule_conf:
         raise ConfigError('"synproxy" option allowed only for action synproxy')
@@ -532,6 +534,9 @@ def verify(firewall):
                 if 'url' not in group:
                     raise ConfigError(f'remote-group {group_name} must have a url configured')
 
+    offload_chains_v4 = set()
+    offload_chains_v6 = set()
+
     for family in ['ipv4', 'ipv6', 'bridge']:
         if family in firewall:
             for chain in ['name','forward','input','output', 'prerouting']:
@@ -550,6 +555,12 @@ def verify(firewall):
                         if 'rule' in priority_conf:
                             for rule_id, rule_conf in priority_conf['rule'].items():
                                 verify_rule(firewall, family, chain, priority, rule_id, rule_conf)
+
+                                if chain == 'name' and rule_conf['action'] == 'offload':
+                                    if family == 'ipv4':
+                                        offload_chains_v4.add(priority)
+                                    elif family == 'ipv6':
+                                        offload_chains_v6.add(priority)
 
     local_zone = False
     zone_interfaces = []
@@ -624,6 +635,11 @@ def verify(firewall):
                     if v6_name and not dict_search_args(firewall, 'ipv6', 'name', v6_name):
                         raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
 
+                    if 'local_zone' in zone_conf or 'local_zone' in firewall['zone'][from_zone]:
+                        if (v4_name and v4_name in offload_chains_v4) or \
+                            (v6_name and v6_name in offload_chains_v6):
+                            raise ConfigError('Cannot use a firewall chain with offloading on local zone')
+
             if 'default_firewall' in zone_conf:
                 v4_name = dict_search_args(zone_conf, 'default_firewall', 'name')
                 if v4_name and not dict_search_args(firewall, 'ipv4', 'name', v4_name):
@@ -635,6 +651,10 @@ def verify(firewall):
 
                 if not v4_name and not v6_name:
                     raise ConfigError('No firewall names specified for default-firewall')
+
+                if (v4_name and v4_name in offload_chains_v4) or \
+                    (v6_name and v6_name in offload_chains_v6):
+                    raise ConfigError('Cannot use a chain with offloading for zone default-firewall')
 
     return None
 
