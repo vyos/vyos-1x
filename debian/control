@@ -422,7 +422,6 @@ Package: vyos-1x-smoketest
 Architecture: all
 Depends:
  skopeo,
- snmp,
  vyos-1x,
  vmtouch
 Description: VyOS build sanity checking toolkit
@@ -460,15 +459,12 @@ Depends:
   lsof,
   minicom,
   nano,
-  ndisc6,
   netcat-openbsd,
   nmap,
   numactl,
   openssh-client,
   screen,
   sipcalc,
-  socat,
-  ssl-cert,
-  whois
+  socat
 Description: VyOS user utilities metapackage
  Installs utilities that are provided for the users but not used by VyOS scripts.
