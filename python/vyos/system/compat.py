@@ -14,12 +14,18 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from pathlib import Path
-from re import compile, MULTILINE, DOTALL
+from re import compile
+from re import MULTILINE
+from re import DOTALL
 from functools import wraps
 from copy import deepcopy
 from typing import Union
 
-from vyos.system import disk, grub, image, SYSTEM_CFG_VER
+from vyos.flavor import get_image_serial_console
+from vyos.system import disk
+from vyos.system import grub
+from vyos.system import image
+from vyos.system import SYSTEM_CFG_VER
 from vyos.template import render
 
 TMPL_GRUB_COMPAT: str = 'grub/grub_compat.j2'

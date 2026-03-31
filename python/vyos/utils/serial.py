@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, re, json
+import os
+import re
+import json
 from typing import List
 
 from vyos.base import Warning

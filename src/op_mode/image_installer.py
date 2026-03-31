@@ -19,7 +19,11 @@
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from shutil import copy, chown, rmtree, copytree, disk_usage
+from shutil import copy
+from shutil import chown
+from shutil import rmtree
+from shutil import copytree
+from shutil import disk_usage
 from glob import glob
 from sys import exit
 from os import environ
@@ -55,11 +59,15 @@ from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_local_users
 from vyos.utils.auth import get_user_home_dir
 from vyos.utils.dict import dict_search
-from vyos.utils.io import ask_input, ask_yes_no, select_entry
+from vyos.utils.io import ask_input
+from vyos.utils.io import ask_yes_no
+from vyos.utils.io import select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
-from vyos.utils.process import cmd, run, rc_cmd
+from vyos.utils.process import cmd
+from vyos.utils.process import run
+from vyos.utils.process import rc_cmd
 from vyos.version import get_version_data
 from vyos.config_mgmt import unsaved_commits
 

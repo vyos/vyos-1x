@@ -16,13 +16,17 @@
 import platform
 
 from pathlib import Path
-from re import MULTILINE, compile as re_compile
+from re import MULTILINE
+from re import compile as re_compile
 from shutil import copy2
-from uuid import uuid5, NAMESPACE_URL, UUID
+from uuid import uuid5
+from uuid import NAMESPACE_URL
+from uuid import UUID
 
-from vyos.template import render
-from vyos.utils.process import cmd, rc_cmd
 from vyos.system import disk
+from vyos.template import render
+from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 
 # Define variables
 GRUB_DIR_MAIN: str = '/boot/grub'
