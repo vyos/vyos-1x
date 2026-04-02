@@ -27,6 +27,7 @@ from vyos.utils.network import get_protocol_by_name
 
 from vyos.vpp.utils import cli_ifaces_list
 from vyos.vpp.acl import Acl
+from vyos.vpp.config_verify import verify_vpp_interface_not_a_member
 
 
 # TCP flag names to bit values
@@ -190,6 +191,14 @@ def get_config(config=None) -> dict:
     if effective_config:
         config.update({'effective': effective_config})
 
+    # VPP interface membership data for member-conflict checks
+    config['interfaces_vpp'] = conf.get_config_dict(
+        ['interfaces', 'vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     return config
 
 
@@ -217,6 +226,7 @@ def verify(config):
                     raise ConfigError(
                         f'{iface} must be a VPP interface for ACL interface'
                     )
+                verify_vpp_interface_not_a_member(iface, config)
 
     if 'ip' in config:
         acl = config.get('ip')

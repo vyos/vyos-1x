@@ -32,6 +32,8 @@ from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_member_conflicts
 from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
 from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
+from vyos.vpp.config_verify import verify_vpp_remove_interface
+from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 from vyos.vpp.utils import cli_ifaces_list
 
 
@@ -98,6 +100,13 @@ def get_config(config=None) -> dict:
         get_first_key=True,
         no_tag_node_value_mangle=True,
     )
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
 
     config['bond_members'] = deps_bond_dict(conf)
 
@@ -150,6 +159,7 @@ def verify(config):
     verify_vpp_remove_bridge_interface(config)
 
     if 'deleted' in config:
+        verify_vpp_remove_interface(ifname, config.get('vpp'), match_vlans=True)
         return None
 
     if not is_systemd_service_active('vpp.service'):
@@ -170,6 +180,7 @@ def verify(config):
             )
 
         verify_member_conflicts(iface, config, 'bond')
+        verify_vpp_interface_not_in_feature(iface, config.get('vpp'))
 
         if mtu := config.get('mtu'):
             mtu = int(mtu)
@@ -199,6 +210,7 @@ def verify(config):
             raise ConfigError(
                 f'Cannot remove interface {vif_iface}: it is still in use by the PPPoE server'
             )
+        verify_vpp_remove_interface(vif_iface, config.get('vpp'))
 
     verify_mtu_ipv6(config)
 
