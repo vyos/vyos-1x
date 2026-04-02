@@ -30,6 +30,8 @@ airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
 
+default_tty_console = ('tty', '0', '')
+
 def get_config(config=None):
     if config:
         conf = config
@@ -57,7 +59,8 @@ def verify(console):
     if not console or 'device' not in console:
         return None
 
-    for device in console['device']:
+    kernel_consoles: list = []
+    for device, device_config in console['device'].items():
         if device.startswith('usb'):
             # It is much easiert to work with the native ttyUSBn name when using
             # getty, but that name may change across reboots - depending on the
@@ -70,6 +73,11 @@ def verify(console):
                 raise ConfigError(f'Device {device} does not support being used as tty')
         if not is_tty(device, warning=True):
             Warning(f'Device "{device}" used for console is not a TTY!')
+        if 'kernel' in device_config:
+            kernel_consoles.append(device)
+
+    if len(kernel_consoles) > 1:
+        raise ConfigError('Only one device can be used as Kernel output console!')
 
     return None
 
@@ -82,7 +90,7 @@ def generate(console):
                 os.unlink(os.path.join(root, basename))
 
     if not console or 'device' not in console:
-        grub_util.update_serial_console('', '', '')
+        grub_util.update_serial_console(*default_tty_console)
         return None
 
     # replace keys in the config for ttyUSB items to use them in `apply()` later
@@ -102,6 +110,7 @@ def generate(console):
             else:
                 raise ConfigError(f'Device {device} does not support being used as tty')
 
+    use_serial_console = False
     for device, device_config in console['device'].items():
         # Do not render getty configuration if specified device is not a TTY.
         if not is_tty(device):
@@ -113,17 +122,15 @@ def generate(console):
         render(config_file, 'getty/serial-getty.service.j2', device_config)
         os.symlink(config_file, getty_wants_symlink)
 
-    # GRUB - use first defined serial console to populate Kernel console= parameter
-    device = None
-    if 'device' in console and len(console['device']) > 0:
-        # We use the first device for the Kernel console
-        console_device = next(iter(console['device']))
-        console_speed = console['device'][console_device]['speed']
+        if 'kernel' in device_config:
+            # get console type ("ttyS" or "ttyAMA") from device (e.g. "ttyS0")
+            console_type = device.rstrip('0123456789')
+            console_num = device[len(console_type):]
+            grub_util.update_serial_console(console_type, console_num, device_config['speed'])
+            use_serial_console = True
 
-        # get console type ("ttyS" or "ttyAMA") from console_device (e.g. "ttyS0")
-        console_type = console_device.translate(str.maketrans('', '', '0123456789'))
-        console_num = ''.join(ch for ch in console_device if ch.isdigit())
-        grub_util.update_serial_console(console_type, console_num, console_speed)
+        if not use_serial_console:
+            grub_util.update_serial_console(*default_tty_console)
 
     return None
 

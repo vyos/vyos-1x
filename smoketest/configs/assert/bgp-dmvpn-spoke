@@ -49,6 +49,7 @@ set system conntrack modules pptp
 set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system host-name 'cpe-1'
 set system login user vyos authentication encrypted-password '$6$r/Yw/07NXNY$/ZB.Rjf9jxEV.BYoDyLdH.kH14rU52pOBtrX.4S34qlPt77chflCHvpTCq9a6huLzwaMR50rEICzA5GoIRZlM0'

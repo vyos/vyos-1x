@@ -11,6 +11,7 @@ set interfaces ethernet eth3
 set interfaces ethernet eth4 description 'Bonding'
 set interfaces loopback lo
 set system config-management commit-revisions '100'
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system host-name 'r16'
 set system login user vyos authentication encrypted-password '$6$rounds=656000$FZBlGpWsmSrV2Rvq$YPNAPtk4k6u99FAMxR6cw4DUPCgOomwCgRZRSO5rAoJK8RlMSCkVAFVF3ozL/3mZMfxcuCnwvd5HX6f9V5KzO.'

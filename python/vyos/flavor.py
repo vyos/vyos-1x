@@ -21,7 +21,8 @@ convenient interface to reading it.
 
 Example of the version data dict::
   {
-   'console_type': 'ttyS0',
+   'console_type': 'ttyS',
+   'console_num': '0',
    'console_speed': '115200'
   }
 """

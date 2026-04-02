@@ -17,7 +17,8 @@
 # You should have received a copy of the GNU General Public License along with
 # VyOS. If not, see <https://www.gnu.org/licenses/>.
 
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
+from argparse import Namespace
 from pathlib import Path
 from shutil import copy
 from shutil import chown
@@ -616,6 +617,49 @@ def configure_authentication(config_file: str, password: str) -> None:
     with open(config_file, 'w') as f:
         f.write(config.to_string())
 
+def configure_serial_console(config_file: str, console_type: str) -> None:
+    """Apply serial console settings to config.boot from kernel cmdline.
+
+    This overlaps with 05-serial_console.py activation logic, but that script
+    only runs during live boot. During installation, the user may pick a
+    different source config, so serial console settings must be written to
+    the final target config explicitly.
+
+    Behavior:
+    - Reads the kernel serial console device/speed from the current boot cmdline.
+    - If the detected device is a valid tty, writes:
+        system console device <TTY> speed <rate>
+    - If "console_type == 'S'", also writes:
+        system console device <TTY> kernel
+
+    Args:
+        config_file (str): path of target config file
+        console_type (str): 'K' (KVM/tty) or 'S' (serial)
+    """
+    from vyos.utils.serial import is_tty
+    from vyos.utils.kernel import get_kernel_serial_console
+
+    # Parse current kernel cmdline and continue only for valid serial console
+    # data. Prevent writing incomplete/invalid console settings to config.boot.
+    k_console_type, k_console_num, k_console_speed = get_kernel_serial_console()
+    device = f'{k_console_type}{k_console_num}'
+    if not is_tty(device) or not k_console_speed:
+        return
+
+    base = ['system', 'console', 'device']
+    config_string = read_file(config_file)
+    config = ConfigTree(config_string)
+    config.set(base + [device, 'speed'], value=k_console_speed)
+    config.set_tag(base)
+
+    # Only mark this device as kernel boot console when console_type 'S' for
+    # serial was defined by user.
+    if console_type == 'S':
+        config.set(base + [device, 'kernel'])
+
+    with open(config_file, 'w') as f:
+        f.write(config.to_string())
+
 def validate_signature(file_path: str, sign_type: str) -> None:
     """Validate a file by signature and delete a signature file
 
@@ -769,10 +813,8 @@ def console_hint() -> str:
         path = '/dev/tty'
 
     name = Path(path).name
-    if name in ['ttyS0']:
+    if name.startswith(('ttyS', 'ttyAMA')):
         return 'S'
-    elif name in ['ttyAMA0']:
-        return 'A'
     else:
         return 'K'
 
@@ -924,11 +966,7 @@ def install_image() -> None:
         print(MSG_WARN_PASSWORD_CONFIRM)
 
     # ask for default console
-    console_dict: dict[str, str] = {'K': 'tty'}
-    if flavor_sercon_type:
-        tmp: str = flavor_sercon_type[-1] # get "S" from "ttyS" and "A" from "ttyAMA"
-        console_dict.update({tmp: flavor_sercon_type})
-
+    console_dict: dict[str, str] = {'K': 'tty', 'S': flavor_sercon_type}
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
                                   default=console_hint(),
                                   valid_responses=console_dict.keys())
@@ -977,6 +1015,8 @@ def install_image() -> None:
         copy(default_config, f'{target_config_dir}/config.boot')
         configure_authentication(f'{target_config_dir}/config.boot',
                                  user_password)
+        configure_serial_console(f'{target_config_dir}/config.boot',
+                                 console_type)
         Path(f'{target_config_dir}/.vyatta_config').touch()
 
         # create a persistence.conf

@@ -24,6 +24,7 @@ set system conntrack modules sqlnet
 set system conntrack modules tftp
 set system conntrack table-size '262144'
 set system conntrack timeout
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system domain-name 'vyos.net'
 set system host-name 'vyos'

@@ -25,6 +25,7 @@ set interfaces ethernet eth0
 set interfaces ethernet eth1
 set interfaces ethernet eth2
 set interfaces loopback lo
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system host-name 'vyos'
 set system login user vyos authentication encrypted-password '$6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0'

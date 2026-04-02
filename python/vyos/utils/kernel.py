@@ -14,11 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from typing import Tuple
+from typing import Optional
 
 # A list of used Kernel constants
 # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/drivers/net/wireguard/messages.h?h=linux-6.6.y#n45
 WIREGUARD_REKEY_AFTER_TIME = 120
-
 
 def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
     """Load a kernel module via modprobe.
@@ -38,7 +39,6 @@ def load_module(name: str, quiet: bool = True, dry_run: bool = False) -> int:
         cmd.append('-q')
     cmd.append(name)
     return run(cmd)
-
 
 def unload_module(name: str) -> int:
     """Unload a kernel module via rmmod.
@@ -150,3 +150,25 @@ def lsmod():
     for m in list_loaded_modules():
         mods_data.append(get_module_data(m))
     return mods_data
+
+def get_kernel_serial_console() -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Extract the serial console type, number, and speed setting from the kernel
+    command line which was used during system boot.
+    """
+    import re
+    from vyos.utils.file import read_file
+
+    cmdline_console_re = re.compile(
+        r'(?:^|\s)console=(?P<console_type>tty(?:S|AMA))(?P<console_num>\d+),(?P<console_speed>\d+)(?=\s|$)'
+    )
+
+    kernel_cmdline = read_file('/proc/cmdline')
+    if m := cmdline_console_re.search(kernel_cmdline):
+        return (
+            m.group('console_type'),
+            m.group('console_num'),
+            m.group('console_speed'),
+        )
+
+    return (None, None, None)

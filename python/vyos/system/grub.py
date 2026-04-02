@@ -390,7 +390,7 @@ def set_console_type(console_type: str, root_dir: str = '') -> None:
     """Write default console type to GRUB configuration
 
     Args:
-        console_type (str): a default console type
+        console_type (str): GRUB default console type, e.g. tty, ttyS or ttyAMA
         root_dir (str, optional): an optional path to the root directory.
         Defaults to empty.
     """

@@ -829,6 +829,7 @@ set system conntrack modules pptp
 set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system flow-accounting netflow interface 'eth0.4088'
 set system flow-accounting netflow interface 'eth0.4089'
