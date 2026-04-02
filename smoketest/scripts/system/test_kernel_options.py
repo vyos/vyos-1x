@@ -178,10 +178,18 @@ class TestKernelModules(unittest.TestCase):
         if not IS_ARM64:
             self.skipTest('Not an arm64 platform')
 
-        # Marvell CN9130: CONFIG_MVPP2
+        # Marvell CN9130: CONFIG_MVPP2, CN10308
         required_options = [
             'CONFIG_MVPP2',
             'CONFIG_USB_XHCI_PLATFORM',
+            'CONFIG_OCTEONTX2_AF',
+            'CONFIG_OCTEONTX2_PF',
+            'CONFIG_I2C_THUNDERX',
+            'CONFIG_GPIO_PCA953X',
+            'CONFIG_MMC_SDHCI_CADENCE',
+            'CONFIG_LEDS_PCA955X_GPIO',
+            'CONFIG_RTC_DRV_EFI',
+            'CONFIG_RTC_DRV_PL031',
         ]
 
         for option in required_options:
