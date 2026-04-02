@@ -376,6 +376,8 @@ Depends:
   iperf,
   iperf3,
 # End "run monitor bandwidth-test"
+# For "run reset openvpn client"
+  socat,
 # For "run wake-on-lan"
   etherwake,
 # For "run force ipv6-nd"
@@ -421,7 +423,6 @@ Package: vyos-1x-smoketest
 Architecture: all
 Depends:
  skopeo,
- snmp,
  vyos-1x,
  vmtouch
 Description: VyOS build sanity checking toolkit
@@ -433,3 +434,37 @@ Depends:
  open-vm-tools
 Description: VyOS configuration scripts and data for VMware
  Adds configuration files required for VyOS running on VMware hosts.
+
+Package: vyos-user-utils
+Architecture: all
+Depends:
+  aptitude,
+  arpwatch,
+  atop,
+  bgpq3,
+  dnsdist,
+  dnsutils,
+  exfat-fuse,
+  exfatprogs,
+  fancontrol,
+  grepcidr,
+  haveged,
+  htop,
+  iftop,
+  iotop,
+  ipcalc,
+  ipmitool,
+  jq,
+  libnss-myhostname,
+  localepurge,
+  lsof,
+  minicom,
+  nano,
+  netcat-openbsd,
+  nmap,
+  numactl,
+  openssh-client,
+  screen,
+  sipcalc
+Description: VyOS user utilities metapackage
+ Installs utilities that are provided for the users but not used by VyOS scripts.
