@@ -48,6 +48,7 @@ jobs:
       test_vpp_runner: ${{ steps.config.outputs.test_vpp_runner }}
       install_build_deps: ${{ steps.config.outputs.install_build_deps }}
       mirror_enabled: ${{ steps.config.outputs.mirror_enabled }}
+      vyos_build_ref: ${{ steps.determine-ref.outputs.vyos_build_ref }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -82,6 +83,38 @@ jobs:
           echo "install_build_deps=$(echo $CONFIG | jq -r .install_build_deps)" >> $GITHUB_OUTPUT
           echo "mirror_enabled=$(echo $CONFIG | jq -r .mirror_enabled)" >> $GITHUB_OUTPUT
 
+      - name: Determine vyos-build ref
+        id: determine-ref
+        run: |
+          BRANCH="${{ steps.config.outputs.branch }}"
+          VYOS_BUILD_REPO="${{ steps.config.outputs.vyos_build_repo }}"
+
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+            PR_HEAD_REF="${{ github.event.pull_request.head.ref }}"
+
+            # Extract owner/repo from vyos_build_repo URL (e.g., https://github.com/vyos/vyos-build -> vyos/vyos-build)
+            REPO_PATH=$(echo "$VYOS_BUILD_REPO" | sed 's|.*/\([^/]*\)/\([^/]*\)$|\1/\2|' | sed 's|\.git$||')
+
+            # Get creation date from 30 days ago
+            CREATED_AFTER=$(date -u -d "30 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+
+            # Query GitHub API for open PRs in vyos-build created in last 30 days and check if PR head ref matches
+            MATCHING_PR_MERGE_SHA=$(gh api repos/$REPO_PATH/pulls \
+              --jq ".[] | select(.created_at > \"$CREATED_AFTER\" and .head.ref == \"$PR_HEAD_REF\") | .merge_commit_sha" 2>/dev/null | head -1)
+
+            if [ -n "$MATCHING_PR_MERGE_SHA" ] && [ "$MATCHING_PR_MERGE_SHA" != "null" ]; then
+              # Use the merge commit SHA - this is what the code would look like if merged
+              echo "vyos_build_ref=$MATCHING_PR_MERGE_SHA" >> $GITHUB_OUTPUT
+              echo "Found matching open PR in vyos-build with branch '$PR_HEAD_REF', using merge commit: $MATCHING_PR_MERGE_SHA"
+            else
+              echo "vyos_build_ref=$BRANCH" >> $GITHUB_OUTPUT
+              echo "No matching open PR found in vyos-build for branch '$PR_HEAD_REF', falling back to '$BRANCH'"
+            fi
+          else
+            echo "vyos_build_ref=$BRANCH" >> $GITHUB_OUTPUT
+            echo "Using configured branch '$BRANCH'"
+          fi
+
   build_iso:
     needs: set_config
     runs-on: ${{ fromJson(needs.set_config.outputs.build_runner) }}
@@ -98,7 +131,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - name: Clone vyos-1x source code
         uses: actions/checkout@v4
@@ -164,7 +197,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -198,7 +231,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -231,7 +264,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -264,7 +297,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -298,7 +331,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -331,7 +364,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -365,7 +398,7 @@ jobs:
         with:
           repository: ${{ needs.set_config.outputs.vyos_build_repo }}
           token: ${{ needs.set_config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.set_config.outputs.branch }}
+          ref: ${{ needs.set_config.outputs.vyos_build_ref }}
 
       - uses: actions/download-artifact@v4
         with:
