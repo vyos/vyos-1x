@@ -377,6 +377,8 @@ Depends:
   iperf,
   iperf3,
 # End "run monitor bandwidth-test"
+# For "run reset openvpn client"
+  socat,
 # For "run wake-on-lan"
   etherwake,
 # For "run force ipv6-nd"
@@ -464,7 +466,6 @@ Depends:
   numactl,
   openssh-client,
   screen,
-  sipcalc,
-  socat
+  sipcalc
 Description: VyOS user utilities metapackage
  Installs utilities that are provided for the users but not used by VyOS scripts.
