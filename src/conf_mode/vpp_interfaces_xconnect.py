@@ -26,6 +26,7 @@ from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_member_conflicts
+from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 from vyos.vpp.utils import cli_ifaces_list
 
 
@@ -67,6 +68,14 @@ def get_config(config=None) -> dict:
     config['xconn_members'] = deps_xconnect_dict(conf)
     config['vpp_ifaces'] = cli_ifaces_list(conf, 'candidate')
 
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     return config
 
 
@@ -100,6 +109,7 @@ def verify(config):
             )
 
         verify_member_conflicts(iface, config, 'xconn')
+        verify_vpp_interface_not_in_feature(iface, config.get('vpp'))
 
 
 def generate(config):

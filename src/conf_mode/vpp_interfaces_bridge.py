@@ -26,6 +26,7 @@ from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import verify_member_conflicts
+from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 
 
 def get_config(config=None) -> dict:
@@ -71,6 +72,14 @@ def get_config(config=None) -> dict:
     config['bridge_members'] = deps_bridge_dict(conf)
     config['xconn_members'] = deps_xconnect_dict(conf)
 
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     return config
 
 
@@ -108,6 +117,7 @@ def verify(config):
                 )
 
             verify_member_conflicts(member, config, 'bridge')
+            verify_vpp_interface_not_in_feature(member, config.get('vpp'))
 
             # Check if BVI is already defined, only one BVI per bridge domain is allowed
             if 'bvi' in member_config:

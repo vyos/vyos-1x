@@ -49,10 +49,8 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
 from vyos.vpp import VppNotRunningError
-from vyos.vpp.config_deps import deps_bond_dict
-from vyos.vpp.config_deps import deps_bridge_dict
-from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
+    verify_vpp_remove_interface,
     verify_vpp_minimum_cpus,
     verify_vpp_minimum_memory,
     verify_vpp_cpu_cores,
@@ -218,33 +216,6 @@ def _get_max_xdp_rx_queues(config: dict):
     return 1
 
 
-def _check_removed_interfaces(config: dict, feature_name: str, interfaces_config: dict):
-    """
-    Check if removed interfaces are used in any feature configuration
-
-    Args:
-        config: The main configuration dictionary
-        feature_name: Human-readable feature name for error messages
-        interfaces_config: The interfaces dictionary from the feature config
-    Example:
-        _check_removed_interfaces(config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {}))
-    """
-    if (
-        'removed_ifaces' not in config
-        or not config['removed_ifaces']
-        or not interfaces_config
-    ):
-        return
-
-    for removed_iface in config['removed_ifaces']:
-        iface_name = removed_iface.get('iface_name')
-        if iface_name and iface_name in interfaces_config:
-            raise ConfigError(
-                f'Cannot remove interface {iface_name} - it is currently configured for {feature_name}. '
-                f'Remove it from {feature_name} configuration first.'
-            )
-
-
 def _is_device_allowed(config: dict, iface: str):
     """
     Determines if a network interface device is allowed to be used
@@ -295,10 +266,6 @@ def get_config(config=None):
         no_tag_node_value_mangle=True,
     )
 
-    xconn_members = deps_xconnect_dict(conf)
-    bridge_members = deps_bridge_dict(conf)
-    bond_members = deps_bond_dict(conf)
-
     removed_ifaces = []
     tmp = node_changed(conf, base_settings + ['interface'])
     if tmp:
@@ -337,9 +304,6 @@ def get_config(config=None):
             set_dependents('pppoe_server', conf)
         return {
             'removed_ifaces': removed_ifaces,
-            'xconn_members': xconn_members,
-            'bridge_members': bridge_members,
-            'bond_members': bond_members,
             'persist_config': eth_ifaces_persist,
             'interfaces_vpp': interfaces_config,
             'pppoe_ifaces': pppoe_ifaces,
@@ -503,9 +467,6 @@ def get_config(config=None):
 
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
-        config['xconn_members'] = xconn_members
-        config['bridge_members'] = bridge_members
-        config['bond_members'] = bond_members
 
     config['interfaces_vpp'] = interfaces_config
 
@@ -557,11 +518,6 @@ def get_config(config=None):
 
 
 def verify(config):
-    # Check remove VPP interface that used in IPFIX
-    _check_removed_interfaces(
-        config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {})
-    )
-
     if config.get('interfaces_vpp') and 'remove' in config:
         raise ConfigError(
             'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
@@ -579,6 +535,12 @@ def verify(config):
     # bail out early - looks like removal from running config
     if not config or 'remove' in config:
         return None
+
+    # Check removed interfaces (and their VLANs) against all VPP features
+    for removed_iface in config.get('removed_ifaces', []):
+        verify_vpp_remove_interface(
+            removed_iface['iface_name'], config, match_vlans=True
+        )
 
     if 'settings' not in config:
         raise ConfigError('"settings interface" is required but not set!')
@@ -684,21 +646,6 @@ def verify(config):
                 raise ConfigError(
                     f'RX mode {rx_mode} is not supported for interface {iface}'
                 )
-
-    # Check if deleted interfaces are not xconnect/bridge/bond members
-    for iface_config in config.get('removed_ifaces', []):
-        if iface_config['iface_name'] in config.get('xconn_members', {}):
-            raise ConfigError(
-                f'Interface {iface_config["iface_name"]} is an xconnect member and cannot be removed'
-            )
-        if iface_config['iface_name'] in config.get('bridge_members', {}):
-            raise ConfigError(
-                f'Interface {iface_config["iface_name"]} is a bridge member and cannot be removed'
-            )
-        if iface_config['iface_name'] in config.get('bond_members', {}):
-            raise ConfigError(
-                f'Interface {iface_config["iface_name"]} is a bond member and cannot be removed'
-            )
 
     verify_routes_count(config['settings'])
 

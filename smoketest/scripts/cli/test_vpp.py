@@ -873,6 +873,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         lines = out.split('\n')
         self.assertTrue(len(lines) == 3)
 
+        # Cannot remove inside/outside interface from vpp while it is used in the feature
+        # expect raise ConfigError
+        self.cli_delete(base_bond + [iface_bond, 'vif', vif_1])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
     def test_14_vpp_nat44(self):
         base_nat = base_path + ['nat', 'nat44']
         exclude_local_addr = '100.64.0.52'
@@ -1017,6 +1024,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         for expected_entry in expected_entries:
             self.assertIn(expected_entry, out)
+
+        # Cannot remove interface from vpp while it is used in the feature
+        # expect raise ConfigError
+        self.cli_delete(base_path + ['settings', 'interface', iface_2])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
 
         # cannot delete system sFlow configuration if VPP sFlow is configured
         # expect raise ConfigError
