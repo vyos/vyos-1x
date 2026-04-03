@@ -34,6 +34,7 @@ from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import cmd
 from vyos.utils.process import run
+from vyos.utils.system import sysctl_read
 
 airbag.enable()
 
@@ -92,6 +93,12 @@ def verify(nat64) -> None:
         # nothing left to do
         return
 
+    # https://nicmx.github.io/Jool/en/usr-flags-pool4.html#port-range
+    # Jool is incapable of ensuring pool4 does not intersect with other defined
+    # port ranges; this validation is the operator’s responsibility.
+    tmp = sysctl_read('net.ipv4.ip_local_port_range')
+    ephemeral_port_min, ephemeral_port_max = map(int, tmp.split())
+
     if dict_search('source.rule', nat64):
         # Ensure only 1 netfilter instance per namespace
         nf_rules = filter(
@@ -123,17 +130,28 @@ def verify(nat64) -> None:
             pools = dict_search('translation.pool', instance)
             if pools:
                 for num, pool in pools.items():
+                    error_msg = f'Source NAT64 rule {rule} translation pool {num}'
                     if 'address' not in pool:
-                        raise ConfigError(
-                            f'Source NAT64 rule {rule} translation pool '
-                            f'{num} missing address/prefix'
-                        )
+                        raise ConfigError(f'{error_msg} missing address/prefix')
                     if 'port' not in pool:
-                        raise ConfigError(
-                            f'Source NAT64 rule {rule} translation pool '
-                            f'{num} missing port(-range)'
-                        )
+                        raise ConfigError(f'{error_msg} missing port(-range)')
+                    # Split the provided ports, it's either a single port or start-end
+                    tmp = pool['port'].split('-')
+                    if len(tmp) == 1: # single port
+                        pool_min = pool_max = int(tmp[0])
+                    elif len(tmp) == 2: # port range with start-stop
+                        pool_min, pool_max = map(int, tmp)
+                    else:
+                        raise ConfigError('Invalid port range, this should not happen!')
 
+                    # Inclusive overlap check between nat64 translation ports and
+                    # the Linux Kernel ephemeral port range
+                    # overlap if pool_min <= ephemeral_port_max and ephemeral_port_min <= pool_max
+                    if pool_min <= ephemeral_port_max and ephemeral_port_min <= pool_max:
+                        raise ConfigError(
+                            f'{error_msg} port range {pool_min}-{pool_max} overlaps with '
+                            f'local ephemeral range {ephemeral_port_min}-{ephemeral_port_max}'
+                        )
 
 def generate(nat64) -> None:
     if not nat64:
