@@ -305,7 +305,9 @@ def mac2eui64(mac, prefix=None):
         except:  # pylint: disable=bare-except
             return
 
-def check_port_availability(address: str=None, port: int=0, protocol: str='tcp') -> bool:
+
+def check_port_availability(address: str = None, port: int = 0,
+                            protocol: str = 'tcp', vrf: str = None) -> bool:
     """
     Check if given port is available and not used by any service.
 
@@ -315,7 +317,9 @@ def check_port_availability(address: str=None, port: int=0, protocol: str='tcp')
     Args:
       address: IPv4 or IPv6 address - if None, checks on all interfaces
       port:  TCP/UDP port number.
-
+      vrf:   VRF name to test the bind in - when set, the socket is bound
+             to the VRF master device via SO_BINDTODEVICE so that the
+             port check runs in the correct L3 domain.
 
     Returns:
       False if a port is busy or IP address does not exists
@@ -348,12 +352,15 @@ def check_port_availability(address: str=None, port: int=0, protocol: str='tcp')
         try:
             with socket.socket(family, socktype, proto) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # When a VRF is specified, bind the socket to the VRF master
+                # device so the address is resolved in that VRF's L3 domain.
+                if vrf:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE,
+                                 (vrf + '\0').encode())
                 s.bind(sockaddr)
-                # port is free to use
-                return True
+                return True # port is free to use
         except OSError:
-            # port is already in use
-            return False
+            return False # port is already in use
 
     # if we reach this point, no socket was tested and we assume the port is
     # already in use - better safe then sorry

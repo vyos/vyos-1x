@@ -113,11 +113,17 @@ def verify(https):
     if 'listen_address' in https:
         listen_address = https['listen_address']
 
-    for address in listen_address:
-        if not check_port_availability(address, port, 'tcp') and not is_listen_port_bind_service(port, 'nginx'):
-            raise ConfigError(f'TCP port "{port}" is used by another service!')
-
     verify_vrf(https)
+
+    vrf = https.get('vrf', None)
+    for address in listen_address:
+        if (not check_port_availability(address, port, 'tcp', vrf=vrf)
+            and not is_listen_port_bind_service(port, 'nginx')):
+            vrf_error_msg = ''
+            if vrf:
+                vrf_error_msg = f' in vrf "{vrf}"'
+            raise ConfigError(f'TCP port "{port}"{vrf_error_msg} is already ' \
+                               'used by another service!')
 
     # Verify API server settings, if present
     if 'api' in https:

@@ -28,6 +28,7 @@ from base_vyostest_shim import ignore_warning
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import call
+from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.xml_ref import default_value
 
@@ -176,6 +177,35 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
                 res.add(c.laddr.ip)
 
         self.assertEqual(res, set(test_addr))
+
+    def test_listen_address_vrf(self):
+        # Verify that HTTPS service can be configured with a listen-address
+        # inside a VRF.  Regression test: the port availability check used to
+        # fail because it ran in the default namespace where the VRF address
+        # is unreachable.
+        vrf = 'mgmt'
+        vrf_table = '1337'
+        test_addr = '192.0.2.1'
+        test_prefix = f'{test_addr}/26'
+        interface = 'dum0'
+
+        self.cli_set(['interfaces', 'dummy', interface, 'address', test_prefix])
+        self.cli_set(['interfaces', 'dummy', interface, 'vrf', vrf])
+        self.cli_set(['vrf', 'name', vrf, 'table', vrf_table])
+
+        self.cli_set(
+            base_path + ['api', 'keys', 'id', 'key-01', 'key', 'MySuperSecretVyOS']
+        )
+        self.cli_set(base_path + ['listen-address', test_addr])
+        self.cli_set(base_path + ['vrf', vrf])
+        self.cli_commit()
+
+        # Verify nginx is running inside the VRF
+        tmp = cmd(f'ip vrf pids {vrf}')
+        self.assertIn(PROCESS_NAME, tmp)
+
+        self.cli_delete(['interfaces', 'dummy', interface])
+        self.cli_delete(['vrf', 'name', vrf])
 
     def test_certificate(self):
         cert_name = 'test_https'
