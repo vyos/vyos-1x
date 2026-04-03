@@ -5,6 +5,9 @@
 # Global definitions configuration block
 global_defs {
     dynamic_interfaces
+{% if vrrp.snmp.trap is vyos_defined %}
+    enable_traps
+{% endif %}
     script_user root
 {% if vrrp.global_parameters.startup_delay is vyos_defined %}
     vrrp_startup_delay {{ vrrp.global_parameters.startup_delay }}
