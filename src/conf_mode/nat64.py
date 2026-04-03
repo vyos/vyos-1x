@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=empty-docstring,missing-module-docstring
-
 import csv
 import os
 import re
@@ -57,8 +55,6 @@ def get_config(config: Config | None = None) -> ConfigDict:
 
 
 def verify(nat64) -> None:
-    # pylint: disable=too-many-branches
-
     config_diff = getattr(nat64, 'config_diff')
 
     check_kmod(['jool'])
@@ -139,13 +135,11 @@ def verify(nat64) -> None:
 
 
 def generate(nat64) -> None:
-    # pylint: disable=too-many-branches
     if not nat64:
         return
 
     os.makedirs(JOOL_CONFIG_DIR, exist_ok=True)
 
-    # pylint: disable=too-many-nested-blocks
     if dict_search('source.rule', nat64):
         for rule, instance in nat64['source']['rule'].items():
             if 'deleted' in instance:
