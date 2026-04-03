@@ -19,7 +19,8 @@ import os
 import re
 import sys
 
-from ipaddress import IPv6Network, IPv6Address
+from ipaddress import IPv6Network
+from ipaddress import IPv6Address
 from json import dumps as json_write
 
 from vyos import ConfigError
@@ -38,14 +39,14 @@ airbag.enable()
 
 INSTANCE_REGEX = re.compile(r'instance-(\d+)')
 JOOL_CONFIG_DIR = '/run/jool'
-
+base = ['nat64']
 
 def get_config(config: Config | None = None) -> ConfigDict:
     if config is None:
         config = Config()
 
-    base = ['nat64']
-    nat64 = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    nat64 = config.get_config_dict(base, key_mangling=('-', '_'),
+                                   get_first_key=True)
 
     config_diff = get_config_diff(config)
     # get_config_dict returns an instance of ConfigDict
@@ -55,10 +56,10 @@ def get_config(config: Config | None = None) -> ConfigDict:
 
 
 def verify(nat64) -> None:
+    check_kmod(['jool'])
     config_diff = getattr(nat64, 'config_diff')
 
-    check_kmod(['jool'])
-    base_src = ['nat64', 'source', 'rule']
+    base_rule = base + ['source', 'rule']
 
     # Load in existing instances so we can destroy any unknown
     lines = cmd('jool instance display --csv').splitlines()
@@ -77,13 +78,13 @@ def verify(nat64) -> None:
 
         # If the user changes the mode, recreate the instance else Jool fails with:
         # Jool error: Sorry; you can't change an instance's framework for now.
-        if config_diff.is_node_changed(base_src + [f'instance-{num}', 'mode']):
+        if config_diff.is_node_changed(base_rule + [f'instance-{num}', 'mode']):
             rules[num]['recreate'] = True
 
         # If the user changes the pool6, recreate the instance else Jool fails with:
         # Jool error: Sorry; you can't change a NAT64 instance's pool6 for now.
         if dict_search('source.prefix', rules[num]) and config_diff.is_node_changed(
-            base_src + [num, 'source', 'prefix'],
+            base_rule + [num, 'source', 'prefix'],
         ):
             rules[num]['recreate'] = True
 
