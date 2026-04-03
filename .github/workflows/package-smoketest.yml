@@ -85,6 +85,8 @@ jobs:
 
       - name: Determine vyos-build ref
         id: determine-ref
+        env:
+          GH_TOKEN: ${{ steps.config.outputs.use_pat == 'true' && secrets.PAT || secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="${{ steps.config.outputs.branch }}"
           VYOS_BUILD_REPO="${{ steps.config.outputs.vyos_build_repo }}"
@@ -92,17 +94,22 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
             PR_HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
-            # Extract owner/repo from vyos_build_repo URL (e.g., https://github.com/vyos/vyos-build -> vyos/vyos-build)
-            REPO_PATH=$(echo "$VYOS_BUILD_REPO" | sed 's|.*/\([^/]*\)/\([^/]*\)$|\1/\2|' | sed 's|\.git$||')
+            # VYOS_BUILD_REPO is in owner/repo format from config
+            REPO_PATH="$VYOS_BUILD_REPO"
 
-            # Get creation date from 30 days ago
-            CREATED_AFTER=$(date -u -d "30 days ago" +"%Y-%m-%dT%H:%M:%SZ")
+            # Get creation date from 90 days ago
+            CREATED_AFTER=$(date -u -d "90 days ago" +"%Y-%m-%dT%H:%M:%SZ")
 
-            # Query GitHub API for open PRs in vyos-build created in last 30 days and check if PR head ref matches
+            echo "Looking for PR in $REPO_PATH with branch '$PR_HEAD_REF' created after $CREATED_AFTER"
+
+            # Query GitHub API for matching PR with merge commit SHA
             MATCHING_PR_MERGE_SHA=$(gh api repos/$REPO_PATH/pulls \
-              --jq ".[] | select(.created_at > \"$CREATED_AFTER\" and .head.ref == \"$PR_HEAD_REF\") | .merge_commit_sha" 2>/dev/null | head -1)
+              --jq ".[] | select(.created_at > \"$CREATED_AFTER\" and .head.ref == \"$PR_HEAD_REF\") | .merge_commit_sha" 2>&1 | grep -v '^{' | head -1)
 
-            if [ -n "$MATCHING_PR_MERGE_SHA" ] && [ "$MATCHING_PR_MERGE_SHA" != "null" ]; then
+            echo "Merge commit SHA: $MATCHING_PR_MERGE_SHA"
+
+            # Check if response is a valid SHA (40-char hex) or an error
+            if [[ $MATCHING_PR_MERGE_SHA =~ ^[a-f0-9]{40}$ ]]; then
               # Use the merge commit SHA - this is what the code would look like if merged
               echo "vyos_build_ref=$MATCHING_PR_MERGE_SHA" >> $GITHUB_OUTPUT
               echo "Found matching open PR in vyos-build with branch '$PR_HEAD_REF', using merge commit: $MATCHING_PR_MERGE_SHA"
