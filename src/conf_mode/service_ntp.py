@@ -22,6 +22,7 @@ from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
 from vyos.utils.process import call
+from vyos.utils.permission import chown
 from vyos.utils.permission import chmod_750
 from vyos.utils.network import get_interface_config
 from vyos.template import render
@@ -32,6 +33,7 @@ airbag.enable()
 
 config_file = r'/run/chrony/chrony.conf'
 systemd_override = r'/run/systemd/system/chrony.service.d/override.conf'
+nts_dump_dir = r'/var/lib/chrony'
 user_group = '_chrony'
 
 def get_config(config=None):
@@ -45,6 +47,7 @@ def get_config(config=None):
 
     ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     ntp['config_file'] = config_file
+    ntp['nts_dump_dir'] = nts_dump_dir
     ntp['user'] = user_group
 
     tmp = is_node_changed(conf, base + ['vrf'])
@@ -114,6 +117,10 @@ def generate(ntp):
 
     render(config_file, 'chrony/chrony.conf.j2', ntp, user=user_group, group=user_group)
     render(systemd_override, 'chrony/override.conf.j2', ntp, user=user_group, group=user_group)
+
+    os.makedirs(nts_dump_dir, exist_ok=True)
+    chown(nts_dump_dir, user=user_group, group=user_group)
+    chmod_750(nts_dump_dir)
 
     # Ensure proper permission for chrony command socket
     config_dir = os.path.dirname(config_file)

@@ -17,7 +17,7 @@ clientloglimit 1048576
 
 driftfile /run/chrony/drift
 dumpdir /run/chrony
-ntsdumpdir /run/chrony
+ntsdumpdir {{ nts_dump_dir }}
 pidfile {{ config_file | replace('.conf', '.pid') }}
 
 # Determine when will the next leap second occur and what is the current offset
