@@ -14,21 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import ipaddress
 import os
-import re
 import sys
 import shutil
 import typing
 import tabulate
 
-from pathlib import Path
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
 import vyos.opmode
 
-from vyos.config import Config
 from vyos.utils.io import ask_input
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import rc_cmd
@@ -607,7 +603,7 @@ def show_kpair(
     kpairs = get_tpm_list('kpair')
     if kpairs:
         for item in kpairs:
-            if name and name != kpair:
+            if name and name != item:
                 continue
 
             if name and pem:

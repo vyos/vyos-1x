@@ -15,12 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-from pathlib import Path
 
 from vyos.config import Config
 from vyos.tpm import tpm_enabled
 from vyos.tpm_pki import get_tpm_list
-from vyos.tpm_pki import get_tpm_pki_dir
 
 def get_pki_certificates():
     config = Config()

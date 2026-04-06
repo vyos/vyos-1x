@@ -320,15 +320,19 @@ def cleanup_primary_handle(handle=None, on_error=False):
     TPM_PRIMARY_CTX.unlink(missing_ok=True)
     TMP_TPM_PRIMARY_PUBKEY.unlink(missing_ok=True)
     if on_error:
+        if not handle and TPM_PRIMARY_HANDLE.exists():
+            handle = TPM_PRIMARY_HANDLE.read_text().strip()
+
+        if handle:
+            cmd = f'tpm2_evictcontrol -C o -c {handle}'
+            clear_tpm_lockout()
+            code, output = rc_cmd(cmd)
+            if code != 0:
+                if isinstance(output, str) and output.strip():
+                    print(f'Error: {output.splitlines()[0]}')
+                return False
         TPM_PRIMARY_HANDLE.unlink(missing_ok=True)
         TPM_PRIMARY_PUBKEY.unlink(missing_ok=True)
-        cmd = f'tpm2_evictcontrol -C o -c {handle}'
-        clear_tpm_lockout()
-        code, output = rc_cmd(cmd)
-        if code != 0:
-            if isinstance(output, str) and output.strip():
-                print(f'Error: {output.splitlines()[0]}')
-            return False
 
 def ensure_persistent_primary_handle():
     if not TPM_PRIMARY_HANDLE.exists():
@@ -484,7 +488,7 @@ def remove_all_tpm_pki_handle_and_files():
         saved_handle = TPM_PRIMARY_HANDLE.read_text().strip()
         if not saved_handle:
             print(f'TPM primary handle file at {TPM_PRIMARY_HANDLE} is empty')
-            cleanup_primary_handle(handle, on_error=True)
+            cleanup_primary_handle(saved_handle, on_error=True)
             return False
 
         cmd = f'tpm2_evictcontrol -C o -c {saved_handle}'
