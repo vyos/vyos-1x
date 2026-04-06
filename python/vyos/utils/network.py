@@ -14,6 +14,8 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import hashlib
+
+from json import loads
 from socket import AF_INET
 from socket import AF_INET6
 from vyos.utils.process import cmd
@@ -107,8 +109,6 @@ def gen_mac(name: str, addr: str, ident: str) -> str:
     return ":".join(f"{x:02x}" for x in b)
 
 def get_netns_all() -> list:
-    from json import loads
-    from vyos.utils.process import cmd
     tmp = loads(cmd('ip --json netns ls'))
     return [ netns['name'] for netns in tmp ]
 
@@ -118,14 +118,12 @@ def get_vrf_members(vrf: str) -> list:
     :param vrf: str
     :return: list
     """
-    import json
-    from vyos.utils.process import cmd
     interfaces = []
     try:
         if not interface_exists(vrf):
             raise ValueError(f'VRF "{vrf}" does not exist!')
         output = cmd(f'ip --json --brief link show vrf {vrf}')
-        answer = json.loads(output)
+        answer = loads(output)
         for data in answer:
             if 'ifname' in data:
                 # Skip PIM interfaces which appears in VRF
@@ -166,8 +164,6 @@ def get_interface_config(interface):
     """
     if not interface_exists(interface):
         return None
-    from json import loads
-    from vyos.utils.process import cmd
     tmp = loads(cmd(f'ip --detail --json link show dev {interface}'))[0]
     return tmp
 
@@ -177,8 +173,6 @@ def get_interface_address(interface):
     """
     if not interface_exists(interface):
         return None
-    from json import loads
-    from vyos.utils.process import cmd
     tmp = loads(cmd(f'ip --detail --json addr show dev {interface}'))[0]
     return tmp
 
@@ -186,9 +180,6 @@ def get_interface_namespace(interface: str):
     """
        Returns wich netns the interface belongs to
     """
-    from json import loads
-    from vyos.utils.process import cmd
-
     # Bail out early if netns does not exist
     tmp = cmd(f'ip --json netns ls')
     if not tmp: return None
@@ -216,14 +207,13 @@ def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
     Returns:
         bool: True if the IPv6 address is tentative, False otherwise.
     """
-    import json
     from vyos.utils.process import rc_cmd
 
     rc, out = rc_cmd(f'ip -6 --json address show dev {iface}')
     if rc:
         return False
 
-    data = json.loads(out)
+    data = loads(out)
     for addr_info in data[0]['addr_info']:
         if (
             addr_info.get('local') == ipv6_address and
@@ -235,9 +225,7 @@ def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
 def is_wwan_connected(interface):
     """ Determine if a given WWAN interface, e.g. wwan0 is connected to the
     carrier network or not """
-    import json
     from vyos.utils.dict import dict_search
-    from vyos.utils.process import cmd
     from vyos.utils.process import is_systemd_service_active
 
     if not interface.startswith('wwan'):
@@ -251,7 +239,7 @@ def is_wwan_connected(interface):
     modem = interface.lstrip('wwan')
 
     tmp = cmd(f'mmcli --modem {modem} --output-json')
-    tmp = json.loads(tmp)
+    tmp = loads(tmp)
 
     # return True/False if interface is in connected state
     return dict_search('modem.generic.state', tmp) == 'connected'
@@ -260,15 +248,11 @@ def get_bridge_fdb(interface):
     """ Returns the forwarding database entries for a given interface """
     if not interface_exists(interface):
         return None
-    from json import loads
-    from vyos.utils.process import cmd
     tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
     return tmp
 
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
-    from json import loads
-    from vyos.utils.process import cmd
     tmp = loads(cmd('ip --json vrf list'))
     # Result is of type [{"name":"red","table":1000},{"name":"blue","table":2000}]
     # so we will re-arrange it to a more nicer representation:
@@ -286,7 +270,6 @@ def interface_list() -> list:
     :rtype: list
     """
     return Section.interfaces()
-
 
 def vrf_list() -> list:
     """
@@ -432,7 +415,6 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
     address 192.0.2.1/24.
     """
-    import json
     import jmespath
 
     from vyos.utils.process import rc_cmd
@@ -441,7 +423,7 @@ def is_intf_addr_assigned(ifname: str, addr: str, netns: str=None) -> bool:
     netns_cmd = f'ip netns exec {netns}' if netns else ''
     rc, out = rc_cmd(f'{netns_cmd} ip --json address show dev {ifname}')
     if rc == 0:
-        json_out = json.loads(out)
+        json_out = loads(out)
         addresses = jmespath.search("[].addr_info[].{family: family, address: local, prefixlen: prefixlen}", json_out)
         for address_info in addresses:
             family = address_info['family']
@@ -471,7 +453,6 @@ def is_wireguard_key_pair(private_key: str, public_key:str) -> bool:
     :return: If public/private keys are keypair returns True else False
     :rtype: bool
     """
-    from vyos.utils.process import cmd
     gen_public_key = cmd('wg pubkey', input=private_key)
     if gen_public_key == public_key:
         return True
@@ -488,8 +469,6 @@ def get_wireguard_peers(ifname: str) -> list:
     """
     if not interface_exists(ifname):
         return []
-
-    from vyos.utils.process import cmd
     peers = cmd(f'wg show {ifname} peers')
     return peers.splitlines()
 
@@ -557,9 +536,6 @@ def is_afi_configured(interface: str, afi):
 
 def get_vxlan_vlan_tunnels(interface: str) -> list:
     """ Return a list of strings with VLAN IDs configured in the Kernel """
-    from json import loads
-    from vyos.utils.process import cmd
-
     if not interface.startswith('vxlan'):
         raise ValueError('Only applicable for VXLAN interfaces!')
 
@@ -600,9 +576,6 @@ def get_vxlan_vlan_tunnels(interface: str) -> list:
 
 def get_vxlan_vni_filter(interface: str) -> list:
     """ Return a list of strings with VNIs configured in the Kernel"""
-    from json import loads
-    from vyos.utils.process import cmd
-
     if not interface.startswith('vxlan'):
         raise ValueError('Only applicable for VXLAN interfaces!')
 
@@ -673,9 +646,8 @@ def get_nft_vrf_zone_mapping() -> dict:
               {'interface': 'eth2', 'vrf_tableid': 1000},
               {'interface': 'blue', 'vrf_tableid': 2000}]
     """
-    from json import loads
     from jmespath import search
-    from vyos.utils.process import cmd
+
     output = []
     tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
     # {'nftables': [{'metainfo': {'json_schema_version': 1,

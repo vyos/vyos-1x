@@ -27,84 +27,25 @@ from vyos.vpp.config_resource_checks.resource_defaults import default_resource_m
 from vyos.vpp.utils import human_memory_to_bytes, bytes_to_human_memory
 
 
-def verify_vpp_remove_kernel_interface(config: dict):
-    """Common verify for removed kernel-interfaces.
-    Verify that removed kernel interface are not used in 'vpp kernel-interfaces'.
-
-    Example:
-      delete vpp interfaces gre|vxlan <tag>X kernel-interface vpp-tunX
-      set vpp kernel-interface vpp-tunX
-    """
-    if (
-        'remove' in config
-        and 'kernel_interface_removed' in config
-        and 'vpp_kernel_interfaces' in config
-    ):
-        removed_interfaces = config['kernel_interface_removed']
-        used_interfaces = config['vpp_kernel_interfaces']
-
-        for interface in removed_interfaces:
-            if interface in used_interfaces:
-                raise ConfigError(
-                    f'"{interface}" is still in use within "vpp kernel-interfaces". '
-                    'Please remove it before proceeding.'
-                )
-
-
-def verify_vpp_change_kernel_interface(config: dict):
-    """Common verify for changed kernel-interface
-
-    Example:
-      set vpp interfaces gre|vxlan <tag> kernel-interface vpp-tunX'
-      commit
-      set vpp interfaces gre|vxlan <tag> kernel-interface vpp-tunY'
-      commit
-
-    check if we have kernel interface config 'vpp kernel-interface vpp-tunX'
-    """
-    kernel_interface_removed = config.get('kernel_interface_removed', [])
-    vpp_kernel_interfaces = config.get('vpp_kernel_interfaces', {})
-
-    for interface in kernel_interface_removed:
-        if interface in vpp_kernel_interfaces:
-            raise ConfigError(
-                f'interface "{interface}" is still in use within "vpp kernel-interfaces". '
-                f'Please remove it "vpp kernel-interface {interface}" before proceeding.'
-            )
-
-
-def verify_vpp_exists_kernel_interface(config: dict):
-    """Verify is a kernel-interface already created by another VPP LCP pair
-
-    Example:
-      set vpp interfaces vxlan vxlan10 kernel-interface vpp-tun10'
-      commit
-      set vpp interfaces vxlan vxlan20 kernel-interface vpp-tun10'
-      commit
-    """
-    kernel_interface = config.get('kernel_interface', '')
-    vpp_interface = config.get('ifname', '')
-    candidate_kernel_interfaces = config.get('candidate_kernel_interfaces', [])
-
-    for candidate_kernel_iface in candidate_kernel_interfaces:
-        if (
-            vpp_interface != candidate_kernel_iface[0]
-            and kernel_interface == candidate_kernel_iface[1]
-        ):
-            raise ConfigError(
-                f'Kernel interface "{kernel_interface}" is already configured for {candidate_kernel_iface[0]}. '
-                'Duplicates are not allowed.'
-            )
-
-
 def verify_vpp_remove_xconnect_interface(config: dict):
-    if not config.get('remove'):
+    if not 'deleted' in config:
         return
     for xconn_member, xconn_iface in config.get('xconn_members').items():
         if xconn_member == config.get('ifname'):
             raise ConfigError(
-                f'interface "{xconn_member}" is still in use within "vpp interfaces xconnect". '
-                f'Please remove it from "vpp interface xconnect {xconn_iface}" before proceeding.'
+                f'interface "{xconn_member}" is still in use within "interfaces vpp xconnect". '
+                f'Please remove it from "interfaces vpp xconnect {xconn_iface}" before proceeding.'
+            )
+
+
+def verify_vpp_remove_bridge_interface(config: dict):
+    if not 'deleted' in config:
+        return
+    for bridge_member, bridge_iface in config.get('bridge_members').items():
+        if bridge_member == config.get('ifname'):
+            raise ConfigError(
+                f'interface "{bridge_member}" is still in use within "interfaces vpp bridge". '
+                f'Please remove it from "interfaces vpp bridge {bridge_iface}" before proceeding.'
             )
 
 
@@ -119,68 +60,6 @@ def verify_vpp_tunnel_source_address(config: dict):
     raise ConfigError(
         f'Source address "{address}" is not assigned on any Ethernet or VIF interface!'
     )
-
-
-def verify_dev_driver(driver_type: str, driver: str) -> bool:
-    # Lists of drivers compatible with DPDK and XDP
-    drivers_dpdk: list[str] = [
-        'atlantic',
-        'bnx2x',
-        'e1000',
-        'ena',
-        'gve',
-        'hv_netvsc',
-        'i40e',
-        'ice',
-        'igc',
-        'ixgbe',
-        'ixgbevf',
-        'liquidio',
-        'mlx4_core',
-        'mlx5_core',
-        'qede',
-        'sfc',
-        'tap',
-        'tun',
-        'virtio_net',
-        'vmxnet3',
-    ]
-
-    drivers_xdp: list[str] = [
-        'atlantic',
-        'ena',
-        'gve',
-        'hv_netvsc',
-        'i40e',
-        'ice',
-        'igb',
-        'igc',
-        'ixgbe',
-        'mlx4_core',
-        'mlx5_core',
-        'qede',
-        'sfc',
-        'tap',
-        'tun',
-        'virtio_net',
-        'vmxnet3',
-    ]
-
-    if driver_type == 'dpdk':
-        if driver in drivers_dpdk:
-            return True
-    # XDP support is intentionally disabled (T8202).
-    # XDP is no longer configurable via the CLI.
-    # This logic is kept commented out to make it easy
-    # to reintroduce XDP if there is a clear need in the future.
-    #
-    # elif driver_type == 'xdp':
-    #     if driver in drivers_xdp:
-    #         return True
-    else:
-        raise ConfigError(f'"Driver type {driver_type} is wrong')
-
-    return False
 
 
 def create_cpu_error_message(cpus_required: int, cpus_available: int = None) -> str:
@@ -335,16 +214,16 @@ def verify_vpp_cpu_cores(cpu_cores: int):
 def verify_vpp_statseg_size(settings: dict):
     statseg_size = mem_checks.statseg_size(settings)
 
-    if 'size' in settings.get('statseg'):
+    if 'size' in settings['resource_allocation']['memory']['stats']:
         if statseg_size < 128 << 20:
-            raise ConfigError('The statseg size must be greater than or equal to 128M')
+            raise ConfigError('The "stats size" must be greater than or equal to 128M')
 
-    if 'page_size' in settings['statseg']:
+    if 'page_size' in settings['resource_allocation']['memory']['stats']:
         statseg_page_size = mem_checks.statseg_page_size(settings)
         if statseg_page_size > statseg_size:
             readable_statseg_page = bytes_to_human_memory(statseg_page_size, 'K')
             raise ConfigError(
-                f'The statseg size must be greater than or equal to page-size ({readable_statseg_page})'
+                f'The "stats size" must be greater than or equal to page-size ({readable_statseg_page})'
             )
 
 
@@ -370,9 +249,9 @@ def verify_routes_count(settings: dict):
     bytes = 16  # each counter consumes 16 bytes
     statseg_scale = 2
     cpu_cores = int(settings['resource_allocation']['cpu_cores'])
-    statseg_size = settings['statseg']['size']
+    statseg_size = settings['resource_allocation']['memory']['stats']['size']
     statseg_size_in_bytes = human_memory_to_bytes(statseg_size)
-    main_heap = settings['memory']['main_heap_size']
+    main_heap = settings['resource_allocation']['memory']['main_heap_size']
     main_heap_in_gb = human_memory_to_bytes(main_heap) >> 30
 
     formula = cpu_cores * counters * bytes * statseg_scale
@@ -389,12 +268,38 @@ def verify_routes_count(settings: dict):
 
 
 def verify_vpp_buffers(settings: dict):
-    buffers_configured = int(settings['buffers']['buffers_per_numa'])
+    buffers_configured = int(
+        settings['resource_allocation']['buffers']['buffers_per_numa']
+    )
 
     buffers_required = mem_checks.buffers_required(settings)
 
     if buffers_required > buffers_configured:
         raise ConfigError(
             'Not enough buffers to initialize RX/TX queues for interfaces. '
-            f'Set "vpp settings buffers buffers-per-numa" to {buffers_required} or higher'
+            f'Set "vpp settings resource-allocation buffers buffers-per-numa" to {buffers_required} or higher'
         )
+
+
+def verify_nat_interfaces(config: dict, feature_name: str):
+    """
+    Verify that interfaces are not already used in the selected NAT feature.
+    Example:
+        verify_nat_interfaces(config, 'nat44')
+        verify_nat_interfaces(config, 'cgnat')
+    """
+    directions = ['inside', 'outside']
+    interfaces = config.get('interface', {})
+    nat_interfaces = config.get(f'{feature_name}_config', {}).get('interface', {})
+
+    for direction in directions:
+        for iface in interfaces.get(direction, []):
+            # Check if iface is used in any nat44/cgnat direction
+            nat_dir = next(
+                (d for d in directions if iface in nat_interfaces.get(d, [])), None
+            )
+            if nat_dir:
+                raise ConfigError(
+                    f'Cannot use {iface} as {direction} interface: '
+                    f'it is already configured as {nat_dir} interface in {feature_name.upper()}'
+                )

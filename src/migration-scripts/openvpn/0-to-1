@@ -17,6 +17,8 @@
 
 from vyos.configtree import ConfigTree
 
+updated_cipher='3des'
+
 def migrate(config: ConfigTree) -> None:
     if not config.exists(['interfaces', 'openvpn']):
         # Nothing to do
@@ -25,6 +27,7 @@ def migrate(config: ConfigTree) -> None:
     ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
     for	i in ovpn_intfs:
         # Remove DES and Blowfish from 'encryption cipher'
+        # Support for these insecure ciphers will be removed in OpenVPN 2.6.
         cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'cipher']
         if config.exists(cipher_path):
             cipher = config.return_value(cipher_path)
@@ -41,3 +44,11 @@ def migrate(config: ConfigTree) -> None:
         if config.exists(['interfaces', 'openvpn', i, 'encryption']) and \
            (config.list_nodes(['interfaces', 'openvpn', i, 'encryption']) == []):
             config.delete(['interfaces', 'openvpn', i, 'encryption'])
+
+        # We need to take care about site-to-site tunnels which had an implicit
+        # OpenVPN default cipher (BF-CBC) with block size less than 128 bit (64 bit).
+        mode_path = ['interfaces', 'openvpn', i, 'mode']
+        if config.exists(mode_path) and config.return_value(mode_path) == 'site-to-site':
+            # if no explicit cipher is defined, we will "upgrade" to 3DES at least
+            if not config.exists(cipher_path):
+                config.set(cipher_path, value=updated_cipher)

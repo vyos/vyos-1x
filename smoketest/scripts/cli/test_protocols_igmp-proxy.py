@@ -19,11 +19,12 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.defaults import config_files
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'igmpproxy'
-IGMP_PROXY_CONF = '/etc/igmpproxy.conf'
+IGMP_PROXY_CONF = config_files['igmp_proxy']
 base_path = ['protocols', 'igmp-proxy']
 upstream_if = 'eth1'
 downstream_if = 'eth2'

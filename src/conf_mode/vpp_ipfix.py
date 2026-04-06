@@ -20,6 +20,7 @@ from vyos.config import Config
 from vyos.vpp.ipfix import IPFIX
 from vyos.vpp.utils import cli_ifaces_list
 from vyos.vpp.utils import vpp_iface_name_transform
+from vyos.vpp.control_vpp import VPPControl
 
 
 def get_config(config=None) -> dict:
@@ -73,8 +74,10 @@ def verify(config):
         )
 
     # Verify that all interfaces specified exist in VPP
+    vpp = VPPControl()
     for interface in config['interface']:
-        if interface not in config['vpp_ifaces']:
+        vpp_iface_name = vpp_iface_name_transform(interface)
+        if vpp.get_sw_if_index(vpp_iface_name) is None:
             raise ConfigError(
                 f'{interface} must be a VPP interface for IPFIX monitoring'
             )

@@ -158,6 +158,23 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
             if 'usid' in locator_config:
                 self.assertIn('    behavior usid', frrconfig)
 
+    def test_srv6_encap_source_addr(self):
+        # Set an IPv6 address for SRv6 encapsulation source
+        source6 = '2001:db8::1'
+
+        # SRv6 must be enabled on at least one interface
+        for interface in Section.interfaces('ethernet', vlan=False):
+            self.cli_set(base_path + ['interface', interface, 'srv6'])
+
+        self.cli_set(base_path + ['srv6', 'encapsulation', 'source-address', source6])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('segment-routing', stop_section='^exit')
+        self.assertIn('segment-routing', frrconfig)
+        self.assertIn(' srv6', frrconfig)
+        self.assertIn('  encapsulation', frrconfig)
+        self.assertIn(f'   source-address {source6}', frrconfig)
+
     def test_srv6_sysctl(self):
         interfaces = Section.interfaces('ethernet', vlan=False)
 

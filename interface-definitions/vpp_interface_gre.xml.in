@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name='interfaces'>
+    <children>
+      <node name='vpp'>
+        <children>
+          <tagNode name="gre" owner="${vyos_conf_scripts_dir}/vpp_interfaces_gre.py">
+            <properties>
+              <priority>325</priority>
+              <help>Generic Network Encapsulation (GRE) Interface</help>
+              <constraint>
+                <regex>vppgre[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>GRE interface must be named vppgreN</constraintErrorMessage>
+              <valueHelp>
+                <format>vppgreN</format>
+                <description>GRE interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <!-- Disable as point-to-multipoint mode does not work without 'teib' feature that is not implemented yet -->
+              <!-- <leafNode name="mode">
+              <leafNode name="mode">
+                <properties>
+                  <help>GRE tunnel mode</help>
+                  <completionHelp>
+                    <list>point-to-point point-to-multipoint</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>point-to-point</format>
+                    <description>Point to point mode</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>point-to-multipoint</format>
+                    <description>Point to multipoint mode</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(point-to-point|point-to-multipoint)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid mode, must be one of: point-to-point or point-to-multipoint</constraintErrorMessage>
+                </properties>
+                <defaultValue>point-to-point</defaultValue>
+              </leafNode> -->
+              #include <include/interface/parameters-key.xml.i>
+              <leafNode name="key">
+                <defaultValue>0</defaultValue>
+              </leafNode>
+              <leafNode name="tunnel-type">
+                <properties>
+                  <help>GRE tunnel type</help>
+                  <completionHelp>
+                    <list>erspan l3 teb</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>erspan</format>
+                    <description>Encapsulated Remote Switched Port Analyzer</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>l3</format>
+                    <description>Generic Routing Encapsulation (network layer)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>teb</format>
+                    <description>L2 Transparent Ethernet Bridge</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(erspan|l3|teb)</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid encapsulation, must be one of: l3, teb or erspan</constraintErrorMessage>
+                </properties>
+                <defaultValue>l3</defaultValue>
+              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/interface/address-ipv4-ipv6.xml.i>
+              #include <include/interface/mtu-68-16000.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

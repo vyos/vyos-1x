@@ -314,7 +314,6 @@
           <description>OSPF area in dotted decimal notation</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
           <validator name="ip-address"/>
         </constraint>
       </properties>

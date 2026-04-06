@@ -3,6 +3,15 @@
 {% set ike = ike_group[rw_conf.ike_group] %}
 {% set esp = esp_group[rw_conf.esp_group] %}
     ra-{{ name }} {
+{% if rw_conf.authentication.ppk.id is vyos_defined %}
+        ppk_id = {{ rw_conf.authentication.ppk.id }}
+{% endif %}
+{% if rw_conf.authentication.ppk.required is vyos_defined %}
+        ppk_required = yes
+{% endif %}
+{% if rw_conf.childless is vyos_defined %}
+        childless = {{ rw_conf.childless }}
+{% endif %}
         remote_addrs = %any
         local_addrs = {{ rw_conf.local_address if rw_conf.local_address is not vyos_defined('any') else '%any' }} # dhcp:{{ rw_conf.dhcp_interface if rw_conf.dhcp_interface is vyos_defined else 'no' }}
         proposals = {{ ike_group[rw_conf.ike_group] | get_esp_ike_cipher | join(',') }}
@@ -70,7 +79,7 @@
 {% endif %}
 {% set local_prefix = rw_conf.local.prefix if rw_conf.local.prefix is vyos_defined else ['0.0.0.0/0', '::/0'] %}
 {% set local_port = rw_conf.local.port if rw_conf.local.port is vyos_defined else '' %}
-{% set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}
+{% set local_suffix = '[%any/{port}]'.format(port=local_port) if local_port else '' %}
                 local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
 {% if rw_conf.bind is vyos_defined %}
 {#     The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}

@@ -12,7 +12,7 @@
 {% macro console_name(type) -%}
 {% if type == 'tty' -%}
     KVM
-{%- elif type == 'ttyS' -%}
+{%- elif type == 'ttyS' or type == 'ttyAMA' -%}
     Serial
 {%- else -%}
     Unknown
@@ -23,6 +23,8 @@
     console=ttyS0,{{ console_speed }} console=tty0
 {%- elif type == 'ttyS' -%}
     console=tty0 console=ttyS0,{{ console_speed }}
+{%- elif type == 'ttyAMA' -%}
+    console=tty0 console=ttyAMA0,{{ console_speed }}
 {%- else -%}
     console=tty0 console=ttyS0,{{ console_speed }}
 {%- endif %}

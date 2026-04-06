@@ -261,6 +261,13 @@ def verify(config_dict):
             f'max-lsp-lifetime must be greater or equal to lsp-refresh-interval + 300'
         )
 
+    # Check IS-IS SRv6
+    if dict_search('segment_routing.srv6', isis):
+        # The interface used to install SRv6 SIDs in the Linux data plane.
+        # https://docs.frrouting.org/en/stable-10.2/isisd.html#clicmd-interface-NAME
+        if not dict_search('segment_routing.srv6.interface', isis):
+            raise ConfigError('Missing interface used for installing SRv6 SIDs')
+
     return None
 
 def generate(config_dict):

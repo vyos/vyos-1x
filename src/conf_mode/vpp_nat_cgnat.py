@@ -25,6 +25,14 @@ from vyos.vpp.utils import vpp_iface_name_transform
 
 from vyos.vpp.nat.det44 import Det44
 from vyos.vpp.control_vpp import VPPControl
+from vyos.vpp.config_verify import verify_nat_interfaces
+
+protocol_map = {
+    'all': 0,
+    'icmp': 1,
+    'tcp': 6,
+    'udp': 17,
+}
 
 
 def get_config(config=None) -> dict:
@@ -80,14 +88,31 @@ def get_config(config=None) -> dict:
         expand_nodes=Diff.DELETE | Diff.ADD,
     )
 
+    changed_exclude_rules = node_changed(
+        conf,
+        base + ['exclude', 'rule'],
+        key_mangling=('-', '_'),
+        recursive=True,
+        expand_nodes=Diff.DELETE | Diff.ADD,
+    )
+
     if not config_changed:
         changed_rules = list(config.get('rule', {}).keys())
+        changed_exclude_rules = list(config.get('exclude', {}).get('rule', {}).keys())
 
     config.update(
         {
             'changed_rules': changed_rules,
+            'changed_exclude_rules': changed_exclude_rules,
             'vpp_ifaces': cli_ifaces_list(conf),
         }
+    )
+
+    config['nat44_config'] = conf.get_config_dict(
+        ['vpp', 'nat', 'nat44'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
     )
 
     if effective_config:
@@ -122,6 +147,8 @@ def verify(config):
             f'Please choose a side for: {", ".join(conflict_ifaces)} '
         )
 
+    verify_nat_interfaces(config, 'nat44')
+
     vpp = VPPControl()
     for direction in ['inside', 'outside']:
         for interface in config['interface'][direction]:
@@ -139,6 +166,46 @@ def verify(config):
                 f'Both inside-prefix and outside-prefix must be configured in rule {rule}. '
                 f'Please add: {", ".join(missing_keys).replace("_", "-")}'
             )
+
+    # Verify exclude rules (identity mappings)
+    if 'exclude' in config:
+        # Track identity mappings to detect duplicates
+        seen_mappings = {}
+
+        for rule, rule_config in config['exclude'].get('rule', {}).items():
+            error_msg = f'Exclude rule {rule}:'
+
+            if 'local_address' not in rule_config:
+                raise ConfigError(f'{error_msg} local-address must be specified')
+
+            has_protocol = (
+                'protocol' in rule_config and rule_config.get('protocol') != 'all'
+            )
+            has_port = 'local_port' in rule_config
+
+            # Either both protocol and local-port are set, or neither
+            if has_protocol != has_port:
+                raise ConfigError(
+                    f'{error_msg} protocol and local-port must either both be specified or both omitted'
+                )
+
+            # Check for duplicate identity mappings
+            # VPP identifies identity mappings by (address, protocol, port) tuple
+            local_addr = rule_config['local_address']
+            protocol = rule_config.get('protocol', 'all')
+            port = rule_config.get('local_port', 0)
+
+            mapping_key = (local_addr, protocol, port)
+
+            if mapping_key in seen_mappings:
+                duplicate_rule = seen_mappings[mapping_key]
+                raise ConfigError(
+                    f'{error_msg} duplicate identity mapping - '
+                    f'address {local_addr}, protocol {protocol}, port {port} '
+                    f'already configured in exclude rule {duplicate_rule}'
+                )
+
+            seen_mappings[mapping_key] = rule
 
 
 def generate(config):
@@ -175,6 +242,16 @@ def apply(config):
                     out_addr=out_addr,
                     out_plen=int(out_plen),
                 )
+        # Delete CGNAT exclude rules
+        for rule in config['changed_exclude_rules']:
+            if rule in remove_config.get('exclude', {}).get('rule', {}):
+                rule_config = remove_config['exclude']['rule'][rule]
+                cgnat.delete_det44_identity_mapping(
+                    ip_address=rule_config.get('local_address'),
+                    protocol=protocol_map[rule_config.get('protocol', 'all')],
+                    port=int(rule_config.get('local_port', 0)),
+                    tag=rule_config.get('description', ''),
+                )
 
     # Add DET44
     cgnat.enable_det44_plugin()
@@ -197,6 +274,16 @@ def apply(config):
                 in_plen=int(in_plen),
                 out_addr=out_addr,
                 out_plen=int(out_plen),
+            )
+    # Add CGNAT exclude rules
+    for rule in config['changed_exclude_rules']:
+        if rule in config.get('exclude', {}).get('rule', {}):
+            rule_config = config['exclude']['rule'][rule]
+            cgnat.add_det44_identity_mapping(
+                ip_address=rule_config.get('local_address'),
+                protocol=protocol_map[rule_config.get('protocol', 'all')],
+                port=int(rule_config.get('local_port', 0)),
+                tag=rule_config.get('description', ''),
             )
     # Set CGNAT timeouts
     cgnat.set_det44_timeouts(

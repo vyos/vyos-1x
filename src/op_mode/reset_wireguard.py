@@ -16,34 +16,15 @@
 
 import sys
 import typing
-
 import vyos.opmode
 
 from vyos.ifconfig import WireGuardIf
-from vyos.configquery import ConfigTreeQuery
 
-
-def _verify(func):
-    """Decorator checks if WireGuard interface config exists"""
-    from functools import wraps
-
-    @wraps(func)
-    def _wrapper(*args, **kwargs):
-        config = ConfigTreeQuery()
-        interface = kwargs.get('interface')
-        if not config.exists(['interfaces', 'wireguard', interface]):
-            unconf_message = f'WireGuard interface {interface} is not configured'
-            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
-        return func(*args, **kwargs)
-
-    return _wrapper
-
-
-@_verify
+@vyos.opmode.verify_cli_exists(['interfaces', 'wireguard'],
+    'WireGuard interface {interface} is not configured!')
 def reset_peer(interface: str, peer: typing.Optional[str] = None):
     intf = WireGuardIf(interface, create=False, debug=False)
     return intf.operational.reset_peer(peer)
-
 
 if __name__ == '__main__':
     try:

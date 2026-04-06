@@ -555,7 +555,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                     timeout_value = side_conf['timeout']
                     output.append(f'set update ip{def_suffix} {prefix}addr timeout {timeout_value} @DA{def_suffix}_{dyn_group}')
                 else:
-                    output.append(f'set update ip{def_suffix} saddr @DA{def_suffix}_{dyn_group}')
+                    output.append(f'set update ip{def_suffix} {prefix}addr @DA{def_suffix}_{dyn_group}')
 
     set_table = False
     if 'set' in rule_conf:

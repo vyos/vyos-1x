@@ -16,12 +16,13 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import os
-
 from vyos.config import Config
 from vyos import ConfigError
+from vyos.configdict import get_interface_dict
+from vyos.utils.process import is_systemd_service_active
+
+from vyos.ifconfig.vpp import VPPXconnectInterface
 from vyos.vpp.config_deps import deps_xconnect_dict
-from vyos.vpp.interface import XconnectInterface
 from vyos.vpp.utils import cli_ifaces_list
 
 
@@ -38,26 +39,15 @@ def get_config(config=None) -> dict:
     else:
         conf = Config()
 
-    base = ['vpp', 'interfaces', 'xconnect']
-    vpp_interfaces = ['vpp', 'settings', 'interface']
+    base = ['interfaces', 'vpp', 'xconnect']
 
-    ifname = os.environ['VYOS_TAGNODE_VALUE']
+    ifname, config = get_interface_dict(conf, base)
 
-    # Get config_dict with default values
-    config = conf.get_config_dict(
-        base + [ifname],
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-        with_defaults=True,
-        with_recursive_defaults=True,
-    )
-
-    if not conf.exists(['vpp']):
+    if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
 
-    # Get effective config as we need full dicitonary per interface delete
+    # Get effective config as we need full dictionary per interface delete
     effective_config = conf.get_config_dict(
         base + [ifname],
         key_mangling=('-', '_'),
@@ -66,46 +56,42 @@ def get_config(config=None) -> dict:
         no_tag_node_value_mangle=True,
     )
 
-    if not config:
-        config['remove'] = True
-
     if effective_config:
         config.update({'effective': effective_config})
 
-    # Get global vpp interfaces for verify
-    config['vpp_interfaces'] = conf.get_config_dict(
-        vpp_interfaces,
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        no_tag_node_value_mangle=True,
-    )
-
     config['xconn_members'] = deps_xconnect_dict(conf)
     config['vpp_ifaces'] = cli_ifaces_list(conf, 'candidate')
-
-    config['ifname'] = ifname
 
     return config
 
 
 def verify(config):
-    if 'remove' in config or 'remove_vpp' in config:
+    if 'deleted' in config or 'remove_vpp' in config:
         return None
+
+    if not is_systemd_service_active('vpp.service'):
+        raise ConfigError(
+            'Cannot configure layer 2 cross-connect: vpp.service is not running'
+        )
 
     # Xconnect requires 2 members
     if len(config.get('member', {}).get('interface')) != 2:
         raise ConfigError('Cross connect requires 2 members')
 
-    # Member must belong to VPP
+    not_allowed_prefixes = ('vppbond', 'vppbridge', 'vpplo')
     for iface in config.get('member', {}).get('interface', []):
+        # Ensure the interface is allowed as xconnect member
+        if iface.startswith(not_allowed_prefixes):
+            raise ConfigError(f'{iface} cannot be configured as xconnect member')
+        # Member must belong to VPP
         if iface not in config['vpp_ifaces']:
             raise ConfigError(f'{iface} must be a VPP interface for xconnect')
 
-    # Each interface can belong only to one xconnect
-    for xconn_member, xconn_ifaces in config['xconn_members'].items():
-        if len(xconn_ifaces) > 1:
+        # Each interface can belong only to one xconnect
+        xconn_members = config['xconn_members'][iface]
+        if len(xconn_members) > 1:
             raise ConfigError(
-                f'Interface {xconn_member} added to more than one xconnect: {xconn_ifaces}'
+                f'Interface {iface} added to more than one xconnect: {", ".join(xconn_members)}'
             )
 
 
@@ -118,22 +104,19 @@ def apply(config):
         return None
 
     ifname = config.get('ifname')
+    xconnect = VPPXconnectInterface(ifname)
 
     # Delete xconnect
     if 'effective' in config:
         remove_config = config.get('effective')
-        members = remove_config.get('member', {}).get('interface')
-        i = XconnectInterface(ifname, members=members)
-        i.del_l2_xconnect()
+        members = remove_config['member']['interface']
+        xconnect.remove(members)
 
-    if 'remove' in config:
+    if 'deleted' in config:
         return None
 
     # Add xconnect
-    members = config.get('member', {}).get('interface')
-    state = 'up' if 'disable' not in config else 'down'
-    i = XconnectInterface(ifname, members=members, state=state)
-    i.add_l2_xconnect()
+    xconnect.update(config)
 
     return None
 

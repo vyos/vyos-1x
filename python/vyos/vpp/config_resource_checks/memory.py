@@ -91,30 +91,32 @@ def get_numa_count():
 
 
 def buffer_page_size(settings: dict) -> int:
-    page_size = settings.get('buffers', {}).get('page_size')
+    page_size = settings['resource_allocation']['buffers']['page_size']
     return human_memory_to_bytes(page_size)
 
 
 def buffer_size(settings: dict) -> int:
     numa_count = get_numa_count()
-    buffers_per_numa = int(settings.get('buffers').get('buffers_per_numa'))
-    data_size = int(settings.get('buffers').get('data_size'))
+    buffers_per_numa = int(
+        settings['resource_allocation']['buffers']['buffers_per_numa']
+    )
+    data_size = int(settings['resource_allocation']['buffers']['data_size'])
     buffers_memory = buffers_per_numa * data_size * numa_count
     return buffers_memory
 
 
 def main_heap_page_size(settings: dict) -> int:
-    heap_page_size = settings.get('memory').get('main_heap_page_size')
+    heap_page_size = settings['resource_allocation']['memory']['main_heap_page_size']
     return human_memory_to_bytes(heap_page_size)
 
 
 def memory_main_heap(settings: dict) -> int:
-    heap_size = settings.get('memory').get('main_heap_size')
+    heap_size = settings['resource_allocation']['memory']['main_heap_size']
     return human_memory_to_bytes(heap_size)
 
 
 def ipv6_heap_size(settings: dict) -> int:
-    heap_size = settings.get('ipv6').get('heap_size')
+    heap_size = settings['resource_allocation']['ipv6']['heap_size']
     return human_memory_to_bytes(heap_size)
 
 
@@ -123,12 +125,12 @@ def total_heap_size(heap_size: int, heap_page_size: int) -> int:
 
 
 def statseg_size(settings: dict) -> int:
-    statseg_memory = settings.get('statseg').get('size')
+    statseg_memory = settings['resource_allocation']['memory']['stats']['size']
     return human_memory_to_bytes(statseg_memory)
 
 
 def statseg_page_size(settings: dict) -> int:
-    page_size = settings.get('statseg').get('page_size')
+    page_size = settings['resource_allocation']['memory']['stats']['page_size']
     return human_memory_to_bytes(page_size)
 
 
@@ -141,16 +143,7 @@ def total_memory_required(settings: dict) -> dict:
 
     mem_stats = {
         'memory_buffers': (buffer_size(settings), buffer_page_size(settings)),
-        'netlink_buffer_size': (
-            int(
-                settings.get('lcp', {})
-                .get('netlink', {})
-                .get(
-                    'rx_buffer_size', default_resource_map.get('netlink_rx_buffer_size')
-                )
-            ),
-            0,
-        ),
+        'netlink_buffer_size': (default_resource_map.get('netlink_rx_buffer_size'), 0),
         'heap_size': (
             total_heap_size(
                 heap_size=memory_main_heap(settings),
@@ -189,12 +182,11 @@ def buffers_required(settings: dict) -> int:
         # if iface_config.get('driver') == 'xdp':
         #     continue
 
-        dpdk_options = iface_config.get('dpdk_options', {})
-        rx_queues = int(dpdk_options.get('num_rx_queues', 1))
-        rx_desc = int(dpdk_options.get('num_rx_desc'))
+        rx_queues = int(iface_config.get('num_rx_queues', 1))
+        rx_desc = int(iface_config.get('num_rx_desc'))
         # default TX queues is equal to number of worker threads
-        tx_queues = int(dpdk_options.get('num_tx_queues', workers))
-        tx_desc = int(dpdk_options.get('num_tx_desc'))
+        tx_queues = int(iface_config.get('num_tx_queues', workers))
+        tx_desc = int(iface_config.get('num_tx_desc'))
 
         # buffers for RX/TX queues for interface
         buffers_total += rx_queues * rx_desc + tx_queues * tx_desc

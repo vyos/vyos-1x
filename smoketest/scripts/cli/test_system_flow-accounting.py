@@ -280,5 +280,19 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         )
 
 
+    def test_netflow_v5(self):
+        version = '5'
+        netflow_server = '203.0.113.27'
+
+        for interface in Section.interfaces('ethernet'):
+            self.cli_set(base_path + ['netflow', 'interface', interface])
+
+        self.cli_set(base_path + ['netflow', 'version', version])
+        self.cli_set(base_path + ['netflow', 'server', netflow_server])
+
+        # commit changes
+        self.cli_commit()
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

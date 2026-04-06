@@ -7,7 +7,7 @@ fi
 # create and activate serial console
 function setup_serial {
     # initialize the first serial port by default
-    if [ "${console_type}" == "ttyS" ]; then
+    if [ "${console_type}" == "ttyS" -o "${console_type}" == "ttyAMA" ]; then
         if [ "${console_num}" == "0" ]; then
           serial --unit=0 --speed=${console_speed}
         else

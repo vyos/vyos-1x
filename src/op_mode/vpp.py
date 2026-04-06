@@ -20,34 +20,11 @@ import typing
 
 from tabulate import tabulate
 from vyos.vpp import VPPControl
+from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.configquery import ConfigTreeQuery
 import vyos.opmode
 
-
 NO_INDEX = 0xFFFFFFFF
-
-
-def _verify(target: typing.Optional[str]):
-    """Decorator checks if config for VPP feature exists"""
-    from functools import wraps
-
-    target = target.split() if target else []
-
-    def _verify_target(func):
-        @wraps(func)
-        def _wrapper(*args, **kwargs):
-            config = ConfigTreeQuery()
-            path = ['vpp'] + target
-            if not config.exists(path):
-                raise vyos.opmode.UnconfiguredSubsystem(
-                    f'"{" ".join(path)}" is not configured'
-                )
-            return func(*args, **kwargs)
-
-        return _wrapper
-
-    return _verify_target
-
 
 class VPPShow:
     RX_STATES = {
@@ -66,6 +43,21 @@ class VPPShow:
         3: 'COLLECTING_DISTRIBUTING',
     }
     PTX_STATES = {0: 'NO_PERIODIC', 1: 'FAST', 2: 'SLOW', 3: 'PERIODIC_TX'}
+    BOND_MODE = {
+        1: 'round-robin',
+        2: 'active-backup',
+        3: 'xor',
+        4: 'broadcast',
+        5: 'lacp',
+    }
+    BOND_LB = {
+        0: 'layer2',
+        1: 'layer3+4',
+        2: 'layer2+3',
+        3: 'round-robin',
+        4: 'broadcast',
+        5: 'active-backup',
+    }
 
     def __init__(self):
         self.config = ConfigTreeQuery()
@@ -183,7 +175,7 @@ class VPPShow:
         return data if raw else self._show_ipfix_table_formatted()
 
     # -----------------------------
-    # LACP information
+    # Bonding information
     # -----------------------------
     def _get_raw_output(self, data_dump: typing.List[dict]) -> list[dict]:
         data = [json.loads(json.dumps(d._asdict(), default=str)) for d in data_dump]
@@ -250,8 +242,54 @@ class VPPShow:
                 f'PTX-state: {self.PTX_STATES[d["ptx_state"]]}'
             )
 
+    def _get_bond_raw(self, index: typing.Optional[str]) -> list[dict]:
+        bond_dump = self.vpp.api.sw_bond_interface_dump(sw_if_index=index)
+
+        result = []
+        for bond in bond_dump:
+            bond_info = {
+                'interface_name': bond.interface_name,
+                'sw_if_index': bond.sw_if_index,
+                'mode': self.BOND_MODE[bond.mode],
+                'hash_policy': self.BOND_LB[bond.lb],
+                'active_members': bond.active_members,
+                'members': {},
+            }
+            members = self.vpp.api.sw_member_interface_dump(
+                sw_if_index=bond.sw_if_index
+            )
+            for member in members:
+                bond_info['members'][member.interface_name] = {
+                    'sw_if_index': member.sw_if_index,
+                    'is_passive': member.is_passive,
+                    'is_long_timeout': member.is_long_timeout,
+                    'is_local_numa': member.is_local_numa,
+                    'weight': member.weight,
+                }
+            result.append(bond_info)
+
+        return result
+
+    def _show_bond_info_formatted(self, data: typing.List[dict]) -> str:
+        table_data = [
+            {
+                'Interface': d['interface_name'],
+                'Mode': d['mode'],
+                'Hash': d['hash_policy'],
+                'Members': '\n'.join(sorted(d['members'].keys())),
+                'Active members': d['active_members'],
+            }
+            for d in data
+        ]
+        return tabulate(table_data, headers='keys', tablefmt='simple', numalign='left')
+
     def lacp_info(self, raw: bool, ifname: typing.Optional[str]):
         data = self._get_lacp_raw(ifname)
+
+        if not data:
+            raise vyos.opmode.DataUnavailable(
+                'No VPP interface is configured with LACP (802.3ad) mode'
+            )
 
         if raw:
             return data
@@ -271,6 +309,31 @@ class VPPShow:
 
         return data.reply
 
+    def bond_info(self, raw: bool, ifname: typing.Optional[str]) -> str:
+        index = NO_INDEX
+        if ifname:
+            if not ifname.startswith('vppbond') or not ifname[7:].isdigit():
+                raise vyos.opmode.IncorrectValue(
+                    f'"{ifname}" is not a valid bonding interface name (expected vppbondN)'
+                )
+
+            ifname_vpp = vpp_iface_name_transform(ifname)
+            index = self.vpp.get_sw_if_index(ifname_vpp)
+            if index is None:
+                raise vyos.opmode.IncorrectValue(
+                    f'Bonding interface {ifname} does not exist in VPP'
+                )
+
+        data = self._get_bond_raw(index)
+
+        return data if raw else self._show_bond_info_formatted(data)
+
+    def bond_details(self, raw: bool) -> str:
+        # VPP API call is not so informative -> use CLI command
+        cmd_command = 'show bond details'
+        data = self.vpp.cli_cmd(cmd_command)
+        return [data.reply] if raw else data.reply
+
     # -----------------------------
     # Bridge-domain information
     # -----------------------------
@@ -278,17 +341,17 @@ class VPPShow:
         if ifname is None:
             return None
 
-        if not ifname.startswith('br') and not ifname[2:].isdigit():
+        if not ifname.startswith('vppbr') and not ifname[5:].isdigit():
             raise vyos.opmode.IncorrectValue(
-                f'"{ifname}" is not a valid bridge interface name (expected brN)'
+                f'"{ifname}" is not a valid bridge interface name (expected vppbrN)'
             )
 
-        if not self.config.exists(['vpp', 'interfaces', 'bridge', ifname]):
+        if not self.config.exists(['interfaces', 'vpp', 'bridge', ifname]):
             raise vyos.opmode.IncorrectValue(
                 f'Bridge interface {ifname} does not exist'
             )
 
-        return int(ifname[2:])
+        return int(ifname[5:])
 
     def _get_bridge_domain_raw(
         self, bd_id: typing.Optional[int] = None
@@ -367,49 +430,89 @@ class VPPShow:
 
         return data.reply
 
+    # -----------------------------
+    # Runtime table
+    # -----------------------------
+    def _get_runtime_raw(self):
+        # VPP does not have API call to get this data
+        data = self.vpp.cli_cmd('show runtime')
+        return [data.reply]
+
+    def _show_runtime_formatted(self) -> str:
+        data = self.vpp.cli_cmd('show runtime')
+        return data.reply
+
+    def runtime(self, raw: bool):
+        data = self._get_runtime_raw()
+        return data if raw else self._show_runtime_formatted()
+
+    # -----------------------------
+    # Interfaces mode
+    # -----------------------------
+    def mode(self, raw: bool):
+        # VPP does not have API call to get this data
+        data = self.vpp.cli_cmd('show mode')
+        return [data.reply] if raw else data.reply
+
 
 # -----------------------------
 # VyOS IPFIX op-mode entries
 # -----------------------------
-@_verify('ipfix interface')
+@vyos.opmode.verify_cli_exists(['vpp', 'ipfix', 'interface'])
 def show_ipfix_interfaces(raw: bool):
     return VPPShow().ipfix_interfaces(raw)
 
-
-@_verify('ipfix collector')
+@vyos.opmode.verify_cli_exists(['vpp', 'ipfix', 'collector'])
 def show_ipfix_collectors(raw: bool):
     return VPPShow().ipfix_collectors(raw)
 
-
-@_verify('ipfix')
+@vyos.opmode.verify_cli_exists(['vpp', 'ipfix'])
 def show_ipfix_table(raw: bool):
     return VPPShow().ipfix_table(raw)
 
-
 # -----------------------------
-# VPP LACP information
+# VPP Bonding information
 # -----------------------------
-@_verify('interfaces bonding')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bonding'])
 def show_lacp(raw: bool, ifname: typing.Optional[str]):
     return VPPShow().lacp_info(raw, ifname)
 
-
-@_verify('interfaces bonding')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bonding'])
 def show_lacp_details(raw: bool, ifname: typing.Optional[str]):
     return VPPShow().lacp_details(raw, ifname)
 
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bonding'])
+def show_bond(raw: bool, ifname: typing.Optional[str]):
+    return VPPShow().bond_info(raw, ifname)
+
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bonding'])
+def show_bond_details(raw: bool):
+    return VPPShow().bond_details(raw)
 
 # -----------------------------
-# Bridge op-mode entries
+# Bridge op-mode entrie
 # -----------------------------
-@_verify('interfaces bridge')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bridge'])
 def show_bridge(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain(raw, ifname)
 
-
-@_verify('interfaces bridge')
+@vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bridge'])
 def show_bridge_details(raw: bool, ifname: typing.Optional[str] = None):
     return VPPShow().bridge_domain_details(raw, ifname)
+
+# -----------------------------
+# show runtime
+# -----------------------------
+@vyos.opmode.verify_cli_exists(['vpp'])
+def show_runtime(raw: bool):
+    return VPPShow().runtime(raw)
+
+# -----------------------------
+# show mode
+# -----------------------------
+@vyos.opmode.verify_cli_exists(['vpp'])
+def show_mode(raw: bool):
+    return VPPShow().mode(raw)
 
 
 if __name__ == '__main__':

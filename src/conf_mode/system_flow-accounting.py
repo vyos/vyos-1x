@@ -183,11 +183,12 @@ def apply(flow_config):
         if 'enable_egress' in flow_config:
             egress_interfaces = ingress_interfaces
 
+    enable_ipv6 = flow_config['netflow']['version'] != '5'
     if need_reload:
-        ipt_netflow.start(ingress_interfaces, egress_interfaces)
+        ipt_netflow.start(ingress_interfaces, egress_interfaces, ipv6=enable_ipv6)
     else:
         ipt_netflow.set_watched_iptables_interfaces(
-            ingress_interfaces, egress_interfaces
+            ingress_interfaces, egress_interfaces, ipv6=enable_ipv6
         )
 
 

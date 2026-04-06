@@ -642,6 +642,12 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
 
+        # check validate() - Must define "encryption cipher" or "encryption
+        # data-ciphers-fallback" for site-to-site encryption
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(path + ['encryption', 'cipher', '3des'])
+
         self.cli_commit()
 
     def test_openvpn_options(self):

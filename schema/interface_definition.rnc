@@ -96,6 +96,7 @@ properties = element properties
     constraintGroup* &
     valueHelp* &
     (element constraintErrorMessage { text })? &
+    (element constraintSilenceOutput { empty })? &
     completionHelp* &
     
     # "docs" is used to store documentation for a node in a structured format

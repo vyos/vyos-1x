@@ -281,7 +281,7 @@ table ip6 vyos_filter {
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('OUT', prior, rule_id, 'ip6') }}
 {%                     if rule_conf.recent is vyos_defined %}
-{%                         set ns.sets = ns.sets + ['OUT_ ' + prior + '_' + rule_id] %}
+{%                         set ns.sets = ns.sets + ['OUT_' + prior + '_' + rule_id] %}
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}

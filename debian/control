@@ -53,9 +53,9 @@ Standards-Version: 3.9.6
 Package: vyos-1x
 Architecture: amd64 arm64
 Pre-Depends:
-  libpam-runtime [amd64],
-  libnss-tacplus [amd64],
-  libpam-tacplus [amd64],
+  libpam-runtime,
+  libnss-tacplus,
+  libpam-tacplus,
   vyos-libpam-radius-auth,
   vyos-libnss-mapuser,
   tzdata (>= 2025b)

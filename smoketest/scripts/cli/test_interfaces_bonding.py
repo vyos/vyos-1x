@@ -30,7 +30,6 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._base_path = ['interfaces', 'bonding']
-        cls._mirror_interfaces = ['dum21354']
         cls._members = []
 
         # we need to filter out VLAN interfaces identified by a dot (.)

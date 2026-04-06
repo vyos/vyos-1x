@@ -140,14 +140,18 @@ def _iptables_config_v4_and_v6(configured_ifaces, direction):
         _iptables_config(command, configured_ifaces, direction)
 
 
-def set_watched_iptables_interfaces(ingress_interfaces, egress_interfaces):
+def set_watched_iptables_interfaces(ingress_interfaces, egress_interfaces, ipv6=True):
     """
     Update iptables and ip6tables rules so that ipt_NETFLOW watches
     exact list of interfaces in ingress_interfaces for ingress table/chain
     and egress_interfaces for egress table/chain
     """
-    _iptables_config_v4_and_v6(ingress_interfaces, 'ingress')
-    _iptables_config_v4_and_v6(egress_interfaces, 'egress')
+    commands = ['iptables']
+    if ipv6:
+        commands.append('ip6tables')
+    for command in commands:
+        _iptables_config(command, ingress_interfaces, 'ingress')
+        _iptables_config(command, egress_interfaces, 'egress')
 
 
 def stop():
@@ -160,7 +164,7 @@ def stop():
     unload_kmod(module_name)
 
 
-def start(ingress_interfaces, egress_interfaces):
+def start(ingress_interfaces, egress_interfaces, ipv6=True):
     """
     Start ipt_NETFLOW:
 
@@ -171,4 +175,4 @@ def start(ingress_interfaces, egress_interfaces):
 
     check_kmod(module_name)
 
-    set_watched_iptables_interfaces(ingress_interfaces, egress_interfaces)
+    set_watched_iptables_interfaces(ingress_interfaces, egress_interfaces, ipv6=ipv6)

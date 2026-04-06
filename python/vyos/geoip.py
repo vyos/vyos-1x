@@ -229,10 +229,13 @@ def geoip_update(firewall=None, policy=None):
                 set_name = f'GEOIP_CC{vprefix}_{path[0]}_{path[1]}_{path[3]}'
                 policy_sets[f'v{version}'][set_name] = db_return_ranges(codes, version)
 
-        render(nftables_geoip_conf, 'firewall/nftables-geoip-update.j2', {
-            'firewall_sets': firewall_sets,
-            'policy_sets': policy_sets
-        })
+        render(
+            nftables_geoip_conf,
+            'firewall/nftables-geoip-update.j2',
+            {'firewall_sets': firewall_sets, 'policy_sets': policy_sets},
+            group='vyattacfg',
+            permission=0o664,
+        )
 
         result = run(f'nft --file {nftables_geoip_conf}')
         if result != 0:

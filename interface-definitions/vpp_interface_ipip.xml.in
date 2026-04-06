@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name='interfaces'>
+    <children>
+      <node name='vpp'>
+        <children>
+          <tagNode name="ipip" owner="${vyos_conf_scripts_dir}/vpp_interfaces_ipip.py">
+            <properties>
+              <priority>325</priority>
+              <help>IP encapsulation tunnel interface</help>
+              <constraint>
+                <regex>vppipip[0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>IPIP tunnel interface must be named vppipipN</constraintErrorMessage>
+              <valueHelp>
+                <format>vppipipN</format>
+                <description>IPIP tunnel interface name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/interface/address-ipv4-ipv6.xml.i>
+              #include <include/interface/mtu-68-16000.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

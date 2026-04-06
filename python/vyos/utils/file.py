@@ -339,3 +339,18 @@ def file_compare(file1: str, file2: str) -> bool:
             return False
 
         return True
+
+
+def get_name_from_path(path) -> str:
+    """
+    Extracts the base name (without extension) from a file path.
+
+    Args:
+        path (str | pathlib.Path): The file path to extract the name from.
+
+    Returns:
+        str: The base name without file extension.
+    """
+    base = os.path.basename(path)
+    name, _ = base.split('.', maxsplit=1)
+    return name

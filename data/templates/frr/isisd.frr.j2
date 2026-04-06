@@ -107,7 +107,7 @@ advertise-passive-only
  metric-style {{ metric_style }}
 {% endif %}
 {% if domain_password.md5 is vyos_defined %}
- domain-password md5 {{ domain_password.plaintext_password }}
+ domain-password md5 {{ domain_password.md5 }}
 {% elif domain_password.plaintext_password is vyos_defined %}
  domain-password clear {{ domain_password.plaintext_password }}
 {% endif %}
@@ -152,9 +152,30 @@ advertise-passive-only
 {%     if segment_routing.maximum_label_depth is vyos_defined %}
  segment-routing node-msd {{ segment_routing.maximum_label_depth }}
 {%     endif %}
-{%     if segment_routing.srv6.locator is vyos_defined %}
+{%     if segment_routing.srv6 is vyos_defined %}
  segment-routing srv6
+{%         if segment_routing.srv6.locator is vyos_defined %}
   locator {{ segment_routing.srv6.locator }}
+{%         endif %}
+{%         if segment_routing.srv6.node_msd is vyos_defined %}
+  node-msd
+{%             if segment_routing.srv6.node_msd.max_end_d is vyos_defined %}
+   max-end-d {{ segment_routing.srv6.node_msd.max_end_d }}
+{%             endif %}
+{%             if segment_routing.srv6.node_msd.max_end_pop is vyos_defined %}
+   max-end-pop {{ segment_routing.srv6.node_msd.max_end_pop }}
+{%             endif %}
+{%             if segment_routing.srv6.node_msd.max_h_encaps is vyos_defined %}
+   max-h-encaps {{ segment_routing.srv6.node_msd.max_h_encaps }}
+{%             endif %}
+{%             if segment_routing.srv6.node_msd.max_segs_left is vyos_defined %}
+   max-segs-left {{ segment_routing.srv6.node_msd.max_segs_left }}
+{%             endif %}
+  exit
+{%         endif %}
+{%         if segment_routing.srv6.interface is vyos_defined %}
+  interface {{ segment_routing.srv6.interface }}
+{%         endif %}
  exit
 {%     endif %}
 {%     if segment_routing.global_block is vyos_defined %}
