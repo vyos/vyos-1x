@@ -3,7 +3,6 @@
 # Copyright 2026 Perle Systems Limited
 
 import os
-import shutil
 import argparse
 from pathlib import Path
 from shutil import copy, copytree, rmtree
