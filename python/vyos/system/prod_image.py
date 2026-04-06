@@ -24,14 +24,12 @@ DEFAULT_BOOT_VARS: dict[str, str] = {
     'bootmode': 'normal'
 }
 
-TARGET_P1 = "/mnt/p2"
 TARGET_P2 = "/mnt/p3"
 ROOTFS = "/"
 ISO = "/mnt/iso"
 
 SRC_DTB = f"{ISO}/boot/dtb"
 LIVE = f"{ISO}/live"
-BOOT_EFI = f"{TARGET_P1}/boot"
 BOOT = f"{TARGET_P2}/boot"
 DST_DTB = f"{TARGET_P2}/boot/dtb"
 
