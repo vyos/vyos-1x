@@ -506,7 +506,7 @@ def show_csr(
                 ]
             )
 
-    print('Certificate Signing Request:')
+    print('Certificate Signing Requests:')
     print(tabulate.tabulate(data, headers))
 
 def show_certificate(
