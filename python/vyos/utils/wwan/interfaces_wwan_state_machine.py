@@ -264,6 +264,7 @@ class ModemStateMachine:
         self._failed_retry_enabled = True    # Overridden by config in _apply_parsed_configuration
         self._failed_retry_intervals = [300, 600, 1200, 1800]  # 5, 10, 20, 30 min
         self._failed_retry_max_interval = 1800  # Cap at 30 min
+        self._failed_retry_escalation_threshold = 3  # Disable/enable cycle after N failures (0=never)
 
         # Modem removal flag — lets CancelledError handlers log the right reason
         self._modem_removed = False
@@ -518,12 +519,54 @@ class ModemStateMachine:
                                'modem_state': mm_state})
                     continue
 
-                # Attempt connection
+                # Attempt connection — first clear any stale bearer context.
+                # Carrier-side EPS context deactivation (e.g. esm-sync-up-with-nw)
+                # leaves a stale bearer in ModemManager that will cause repeated
+                # Simple.Connect() failures unless explicitly disconnected first.
                 logger.info(
                     f"Failed-state retry #{self._failed_retry_attempt}: "
-                    "attempting connection",
+                    "clearing stale bearer before reconnect",
                     extra={'interface_number': self.interface_number,
-                           'modem_state': mm_state})
+                           'modem_state': mm_state,
+                           'attempt': self._failed_retry_attempt})
+
+                try:
+                    simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                    if self.bearer_path:
+                        await simple_iface.call_disconnect(self.bearer_path)
+                        self.bearer_path = None
+                        logger.info("Disconnected stale bearer for retry",
+                                   extra={'interface_number': self.interface_number})
+                    else:
+                        # No bearer path — disconnect all bearers on this modem
+                        await simple_iface.call_disconnect('/')
+                        logger.info("Disconnected all bearers for retry (no bearer path)",
+                                   extra={'interface_number': self.interface_number})
+                    await asyncio.sleep(2)
+                except Exception as disc_e:
+                    logger.debug(f"Bearer disconnect before retry (non-fatal): {disc_e}",
+                                extra={'interface_number': self.interface_number})
+
+                # Escalate: on 3rd+ consecutive failure, cycle disable/enable to
+                # force a complete EPS detach/reattach.  This clears network-side
+                # state that Simple.Disconnect alone cannot reset.
+                if self._failed_retry_escalation_threshold > 0 and self._failed_retry_attempt >= self._failed_retry_escalation_threshold:
+                    logger.warning(
+                        f"Failed-state retry #{self._failed_retry_attempt}: "
+                        "escalating to modem disable/enable cycle",
+                        extra={'interface_number': self.interface_number})
+                    try:
+                        modem_iface = self.proxy.get_interface(MODEM_INTERFACE)
+                        await modem_iface.call_enable(False)
+                        await asyncio.sleep(5)
+                        await modem_iface.call_enable(True)
+                        await asyncio.sleep(5)
+                        logger.info("Modem disable/enable cycle complete",
+                                   extra={'interface_number': self.interface_number})
+                    except Exception as cycle_e:
+                        logger.warning(
+                            f"Modem disable/enable cycle failed: {cycle_e}",
+                            extra={'interface_number': self.interface_number})
 
                 # Clear stale failure reason before retry
                 self.last_failure_reason = ''
@@ -1678,6 +1721,7 @@ class ModemStateMachine:
         self._failed_retry_enabled = self.parsed_config.failed_retry.enabled
         self._failed_retry_intervals = list(self.parsed_config.failed_retry.intervals)
         self._failed_retry_max_interval = self.parsed_config.failed_retry.max_interval
+        self._failed_retry_escalation_threshold = self.parsed_config.failed_retry.escalation_threshold
 
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None

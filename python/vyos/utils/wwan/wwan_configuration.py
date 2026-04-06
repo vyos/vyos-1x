@@ -47,6 +47,7 @@ class FailedRetryConfig:
     enabled: bool = True
     intervals: list = None  # Backoff intervals in seconds, e.g. [300, 600, 1200, 1800]
     max_interval: int = 1800  # Cap once intervals list is exhausted
+    escalation_threshold: int = 3  # After N consecutive failures, escalate to disable/enable cycle (0 = never)
 
     def __post_init__(self):
         if self.intervals is None:
@@ -215,7 +216,8 @@ class ConfigurationLoader:
         return FailedRetryConfig(
             enabled=bool(enabled),
             intervals=[int(x) for x in intervals],
-            max_interval=int(failed_retry.get('max_interval', 1800))
+            max_interval=int(failed_retry.get('max_interval', 1800)),
+            escalation_threshold=int(failed_retry.get('escalation_threshold', 3))
         )
 
     def validate_configuration(self, config: WWANConfiguration) -> bool:

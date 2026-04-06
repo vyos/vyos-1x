@@ -264,6 +264,7 @@ class InterfaceConfig(ServiceInterface):
             "enabled": True,                          # Enable automatic retry from FAILED state
             "intervals": [300, 600, 1200, 1800],      # Backoff intervals in seconds (5, 10, 20, 30 min)
             "max_interval": 1800,                      # Cap interval once list is exhausted (seconds)
+            "escalation_threshold": 3,                 # Consecutive failures before disable/enable cycle (0 = disabled)
         },
 
         # SIM configurations - array of SIM configs

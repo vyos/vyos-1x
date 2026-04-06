@@ -332,7 +332,10 @@ class WWANClient:
             ``intervals`` (list of ints in seconds, default
             ``[300, 600, 1200, 1800]`` — stepped backoff from FAILED
             state), ``max_interval`` (int, cap once list exhausted,
-            default 1800).
+            default 1800), ``escalation_threshold`` (int, default 3 —
+            after this many consecutive failed retries, escalate to a
+            modem disable/enable cycle to force EPS detach/reattach;
+            0 disables escalation).
 
             ``sim_slots`` — list of per-SIM dicts, each with:
             ``slot``, ``enabled`` (bool, default True — both slots enabled;

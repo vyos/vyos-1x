@@ -219,6 +219,7 @@ def build_config(raw_cfg):
         'enabled': raw_cfg.get('failed_retry_enabled', True),
         'intervals': failed_retry_intervals,
         'max_interval': int(raw_cfg.get('failed_retry_max_interval', 1800)),
+        'escalation_threshold': int(raw_cfg.get('failed_retry_escalation_threshold', 3)),
     }
 
     # Build complete configuration
