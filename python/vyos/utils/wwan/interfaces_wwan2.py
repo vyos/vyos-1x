@@ -133,6 +133,7 @@ def build_config(raw_cfg):
         'supported_bands': [b.strip() for b in str(raw_cfg.get('sim_slot_1_supported_bands', 'all')).split(',')],
         'preferred_carrier': str(raw_cfg.get('sim_slot_1_preferred_carrier', '')),
         'enable_network_scan': raw_cfg.get('sim_slot_1_enable_network_scan', False),
+        'mtu': int(raw_cfg.get('sim_slot_1_mtu', 0)),
         # Per-SIM data usage limits (fallback to global config)
         'data_limit_size': raw_cfg.get('sim_slot_1_data_limit_size', raw_cfg.get('data_limit_size', 0)),
         'data_limit_action': raw_cfg.get('sim_slot_1_data_limit_action', raw_cfg.get('data_limit_action', 'none')),
@@ -157,6 +158,7 @@ def build_config(raw_cfg):
             'supported_bands': [b.strip() for b in str(raw_cfg.get('sim_slot_2_supported_bands', 'all')).split(',')],
             'preferred_carrier': str(raw_cfg.get('sim_slot_2_preferred_carrier', '')),
             'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', False),
+            'mtu': int(raw_cfg.get('sim_slot_2_mtu', 0)),
             # Per-SIM data usage limits (fallback to global config)
             'data_limit_size': raw_cfg.get('sim_slot_2_data_limit_size', raw_cfg.get('data_limit_size', 0)),
             'data_limit_action': raw_cfg.get('sim_slot_2_data_limit_action', raw_cfg.get('data_limit_action', 'none')),
@@ -222,12 +224,12 @@ def build_config(raw_cfg):
     # Build complete configuration
     config = {
         # Basic interface settings
+        'interface_disabled': str(raw_cfg.get('interface_disabled', 'false')).lower() == 'true',
         'primary_sim_slot': raw_cfg.get('primary_sim_slot', 1),
         'connection_mode': raw_cfg.get('connection_mode', 'always-on'),
 
         # MTU settings
-        'mtu_override': int(raw_cfg.get('mtu_override', 0)),
-        'mtu_fallback': int(raw_cfg.get('mtu_fallback', 1420)),
+        'mtu': int(raw_cfg.get('mtu', 1420)),
 
         # Enhanced reconnection strategy
         'enhanced_reconnection': enhanced_reconnection,

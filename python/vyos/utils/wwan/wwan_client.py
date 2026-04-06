@@ -295,8 +295,7 @@ class WWANClient:
             **Top-level scalars:**
             ``connection_mode``, ``primary_sim_slot``, ``sim_failover``,
             ``android_apn_discovery``, ``network_mode``,
-            ``mtu_override`` (0 = disabled; if > 0 always force this MTU),
-            ``mtu_fallback`` (MTU when network doesn't provide one; default 1420),
+            ``mtu`` (interface MTU ceiling / fallback; default 1420),
             ``network_scan_timeout``, ``connection_timeout``,
             ``registration_timeout``, ``network_scan_timeout``,
             ``normal_monitoring_interval``, ``system_health_check_interval``,
@@ -350,7 +349,8 @@ class WWANClient:
             ``data_limit_size``, ``data_limit_action``,
             ``data_limit_billing_date``,
             ``data_limit_warning`` (comma-separated pct thresholds,
-            e.g. ``[75, 90, 95]``; empty list = no warnings).
+            e.g. ``[75, 90, 95]``; empty list = no warnings),
+            ``mtu`` (per-SIM MTU override; 0 = use interface ``mtu``).
 
         Returns
         -------

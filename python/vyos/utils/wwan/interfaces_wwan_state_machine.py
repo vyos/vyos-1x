@@ -1228,13 +1228,16 @@ class ModemStateMachine:
 
         # Enhanced SIM hot-swap detection
         if mm_state == 2:  # LOCKED (SIM missing or PIN required)
-            if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value]:
+            if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
+                                    ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Distinguish between PIN-locked and actually missing SIM
                 self._safe_create_task(self._handle_locked_state_detection())
 
         elif mm_state == 3:  # DISABLED
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
-                                    ModemState.CONNECTED.value, ModemState.FAILED.value]:
+                                    ModemState.CONNECTED.value, ModemState.FAILED.value,
+                                    ModemState.USAGE_MONITORING.value, ModemState.DISCONNECTED.value,
+                                    ModemState.REGISTERED_IDLE.value, ModemState.DISCONNECTING.value]:
                 # Don't trigger SIM missing if this is service-initiated or we're in reset grace period
                 if not self.service_initiated_disable and not self._is_in_reset_grace_period():
                     self._cancel_failed_retry()  # SIM event supersedes retry
@@ -1293,7 +1296,7 @@ class ModemStateMachine:
                     self._safe_create_task(self.apply_modem_configuration())
 
         elif mm_state == 9:  # DISCONNECTING
-            if current_fsm_state in [ModemState.CONNECTED.value]:
+            if current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Connection being terminated - stop network interface monitoring and trigger enhanced reconnection
                 logger.warning("ModemManager disconnecting - starting enhanced reconnection",
                               extra={'interface_number': self.interface_number})
@@ -1365,7 +1368,7 @@ class ModemStateMachine:
 
         elif mm_state in [-1, 0]:  # FAILED or UNKNOWN
             if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
-                                    ModemState.CONNECTED.value]:
+                                    ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Failure during active operation
                 logger.error("Modem entered failed/unknown state",
                             extra={'interface_number': self.interface_number,
@@ -1482,6 +1485,33 @@ class ModemStateMachine:
 
     def apply_config(self, config: dict):
         """Apply configuration - handles all states properly"""
+        # ── Admin disable / enable transitions ──────────────────────────────
+        was_disabled = getattr(self, '_admin_disabled', False)
+        is_disabled = config.get('interface_disabled', False)
+
+        if is_disabled:
+            # Store config and flag; skip normal state processing
+            if hasattr(self, 'config') and self.config:
+                self._previous_config = self.config.copy()
+            self.config = config
+            self._admin_disabled = True
+            if not was_disabled:
+                logger.info("Interface administratively disabled",
+                           extra={'interface_number': self.interface_number})
+                self._safe_create_task(self._admin_disable())
+            else:
+                logger.info("Interface remains disabled, configuration stored",
+                           extra={'interface_number': self.interface_number})
+            return
+
+        if was_disabled and not is_disabled:
+            self._admin_disabled = False
+            logger.info("Interface re-enabled from admin-disabled state",
+                       extra={'interface_number': self.interface_number})
+            # Fall through to normal apply logic — will trigger
+            # RECONFIGURE or initial config depending on current state.
+
+        # ── Normal configuration path ───────────────────────────────────────
         # Store previous config for selective disconnection logic
         if hasattr(self, 'config') and self.config:
             self._previous_config = self.config.copy()
@@ -6349,27 +6379,31 @@ class ModemStateMachine:
             for k in ('ipv4_gateway', 'ipv4_dns', 'ipv6_gateway', 'ipv6_dns', 'mtu'):
                 status[k] = ''
 
-        # MTU override / fallback config summary
+        # MTU config summary
         if self.config:
-            mtu_override = self.config.get('mtu_override', 0)
-            mtu_fallback = self.config.get('mtu_fallback', 1500)
+            interface_mtu = self.config.get('mtu', 1420)
             network_mtu = status.get('mtu', '')
-            if mtu_override and mtu_override > 0:
-                status['mtu_effective'] = str(mtu_override)
-                status['mtu_source'] = 'override'
+
+            # Look up per-SIM MTU for active slot
+            sim_mtu = 0
+            sim_slots = self.config.get('sim_slots', [])
+            active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+            sim_config = next((s for s in sim_slots if s['slot'] == active_slot), {})
+            sim_mtu = sim_config.get('mtu', 0)
+
+            if sim_mtu and sim_mtu > 0:
+                status['mtu_effective'] = str(sim_mtu)
+                status['mtu_source'] = 'per-sim'
             elif network_mtu:
-                status['mtu_effective'] = str(network_mtu)
-                status['mtu_source'] = 'network'
-            elif mtu_fallback and mtu_fallback > 0:
-                status['mtu_effective'] = str(mtu_fallback)
-                status['mtu_source'] = 'fallback'
+                status['mtu_effective'] = str(min(int(network_mtu), interface_mtu))
+                status['mtu_source'] = 'network' if int(network_mtu) <= interface_mtu else 'network-capped'
             else:
-                status['mtu_effective'] = ''
-                status['mtu_source'] = 'none'
-            status['mtu_override'] = mtu_override
-            status['mtu_fallback'] = mtu_fallback
+                status['mtu_effective'] = str(interface_mtu)
+                status['mtu_source'] = 'interface'
+            status['mtu_interface'] = interface_mtu
+            status['mtu_per_sim'] = sim_mtu
         else:
-            for k in ('mtu_effective', 'mtu_source', 'mtu_override', 'mtu_fallback'):
+            for k in ('mtu_effective', 'mtu_source', 'mtu_interface', 'mtu_per_sim'):
                 status[k] = ''
 
         # ── 8. Bearer stats (session data, uptime) ───────────────────────
@@ -6601,6 +6635,61 @@ class ModemStateMachine:
 
         logger.info("FSM shutdown complete",
                    extra={'interface_number': self.interface_number})
+
+    async def _admin_disable(self):
+        """Administratively disable the interface.
+
+        Disconnects the bearer, cancels all monitoring and retry tasks,
+        and stops network interface monitoring.  The FSM stays in memory
+        so it can be re-enabled later via a config update with
+        ``interface_disabled: False``.
+        """
+        try:
+            # Cancel failed-state retry timer
+            self._cancel_failed_retry()
+
+            # Cancel usage monitoring
+            if self.usage_monitor_task and not self.usage_monitor_task.done():
+                self.usage_monitor_task.cancel()
+                self.usage_monitor_task = None
+
+            # Cancel connectivity monitoring
+            if hasattr(self, 'connectivity_monitor_task') and self.connectivity_monitor_task and not self.connectivity_monitor_task.done():
+                self.connectivity_monitor_task.cancel()
+                self.connectivity_monitor_task = None
+
+            # Stop network interface monitoring (bearer signal, IP change, etc.)
+            await self._stop_network_interface_monitoring()
+
+            # Cancel failback check task
+            if self.failback_task and not self.failback_task.done():
+                self.failback_task.cancel()
+                self.failback_task = None
+
+            # Cancel any in-progress initial configuration task
+            if self._initial_config_task and not self._initial_config_task.done():
+                self._initial_config_task.cancel()
+                self._initial_config_task = None
+
+            # Disconnect bearer if connected
+            if self.bearer_path and self.proxy:
+                try:
+                    simple_iface = self.proxy.get_interface(SIMPLE_INTERFACE)
+                    await simple_iface.call_disconnect(self.bearer_path)
+                    logger.info("Bearer disconnected for admin disable",
+                               extra={'interface_number': self.interface_number})
+                except Exception as e:
+                    logger.error(f"Error disconnecting bearer during admin disable: {e}",
+                               extra={'interface_number': self.interface_number})
+                self.bearer_path = None
+
+            logger.info("Interface admin-disabled — modem idle, all tasks cancelled",
+                       extra={'interface_number': self.interface_number,
+                              'previous_state': self.machine.current_state})
+
+        except Exception as e:
+            logger.error(f"Error during admin disable: {e}",
+                       extra={'interface_number': self.interface_number})
 
     async def handle_disconnection_recovery(self, escalate=True,
                                               connectivity_triggered=False):
@@ -8454,22 +8543,26 @@ class ModemStateMachine:
                     logger.warning(f"Failed to add IPv4 address: {stderr.decode()}",
                                  extra={'interface_number': self.interface_number})
 
-                # Set MTU — priority: mtu_override > network-provided > mtu_fallback
-                mtu_override = self.config.get('mtu_override', 0) if self.config else 0
-                mtu_fallback = self.config.get('mtu_fallback', 1420) if self.config else 1420
+                # Set MTU — priority: per-SIM mtu > min(bearer, interface) > interface mtu
+                interface_mtu = self.config.get('mtu', 1420) if self.config else 1420
 
-                if mtu_override and mtu_override > 0:
-                    effective_mtu = str(mtu_override)
-                    mtu_source = 'override'
+                # Check per-SIM MTU override for the active SIM
+                sim_mtu = 0
+                if self.config:
+                    sim_slots = self.config.get('sim_slots', [])
+                    active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+                    sim_config = next((s for s in sim_slots if s['slot'] == active_slot), {})
+                    sim_mtu = sim_config.get('mtu', 0)
+
+                if sim_mtu and sim_mtu > 0:
+                    effective_mtu = str(sim_mtu)
+                    mtu_source = 'per-sim'
                 elif ipv4_mtu:
-                    effective_mtu = ipv4_mtu
-                    mtu_source = 'network'
-                elif mtu_fallback and mtu_fallback > 0:
-                    effective_mtu = str(mtu_fallback)
-                    mtu_source = 'fallback'
+                    effective_mtu = str(min(int(ipv4_mtu), interface_mtu))
+                    mtu_source = 'network' if int(ipv4_mtu) <= interface_mtu else 'network-capped'
                 else:
-                    effective_mtu = None
-                    mtu_source = 'none'
+                    effective_mtu = str(interface_mtu)
+                    mtu_source = 'interface'
 
                 if effective_mtu:
                     result = await asyncio.create_subprocess_exec(

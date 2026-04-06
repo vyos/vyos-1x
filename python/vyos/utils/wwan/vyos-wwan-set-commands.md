@@ -8,8 +8,12 @@ All commands are under:
 set interfaces wwan <wwanN> ...
 ```
 
-The existing upstream VyOS WWAN commands (`apn`, `authentication`, `connect-on-demand`,
-`address`, `mtu`, `vrf`, etc.) are preserved. The new commands extend the hierarchy.
+This definition replaces the upstream VyOS WWAN tree.  The legacy per-interface
+`apn`, `authentication`, `connect-on-demand`, `address`, and `dhcp-options`
+nodes are removed — those functions are handled per-SIM by the enhanced service.
+`dhcpv6-options` is retained for DHCPv6 Prefix Delegation (PD).  VyOS
+infrastructure features (`description`, `disable`, `vrf`, `ip`, `ipv6`,
+`dhcpv6-options`, `mirror`, `redirect`, `mtu`) are retained.
 
 ---
 
@@ -18,12 +22,47 @@ The existing upstream VyOS WWAN commands (`apn`, `authentication`, `connect-on-d
 ```
 interfaces
   └── wwan <wwanN>
-        ├── connection-mode <always-on|connect-on-demand|dial-on-demand>  # NEW
-        ├── network-mode <auto|lte|5g|3g|2g>              # NEW — modem-level RAT selection
-        ├── mtu-override <bytes>                          # NEW — force this MTU (0 = use network value)
-        ├── mtu-fallback <bytes>                          # NEW — MTU when network doesn't provide one (default: 1420)
+        ├── description <text>                            # max 255 characters
+        ├── disable                                       # valueless — admin shutdown
+        ├── mtu <576-1500>                                # fallback MTU if carrier does not provide one (default: 1420); also ceiling
+        ├── vrf <name>                                    # VRF instance name
+        ├── redirect <interface>                          # redirect incoming packets to interface
+        ├── connection-mode <always-on|connect-on-demand|dial-on-demand>
+        ├── network-mode <auto|lte|5g|3g|2g>              # modem-level RAT selection
         │
-        ├── sim                                           # NEW — SIM management
+        ├── ip                                            # IPv4 routing parameters (kernel-level)
+        │     ├── adjust-mss <bytes|clamp-mss-to-pmtu>
+        │     ├── disable-forwarding                      # valueless
+        │     └── source-validation <strict|loose|disable>
+        │
+        ├── ipv6                                          # IPv6 routing parameters (kernel-level)
+        │     ├── adjust-mss <bytes|clamp-mss-to-pmtu>
+        │     ├── disable-forwarding                      # valueless
+        │     ├── accept-dad <0|1|2>
+        │     ├── dup-addr-detect-transmits <count>
+        │     ├── source-validation <strict|loose|disable>
+        │     └── address
+        │           └── no-default-link-local             # valueless
+        │
+        ├── dhcpv6-options                                # DHCPv6 client (prefix delegation)
+        │     ├── duid <DUID>                              # DHCP unique identifier
+        │     ├── parameters-only                          # valueless — request PD only, no address (recommended)
+        │     ├── rapid-commit                             # valueless
+        │     ├── no-release                               # valueless — don't send Release on shutdown
+        │     ├── temporary                                # valueless — request temporary address
+        │     ├── no-request-domain-name                   # valueless
+        │     ├── no-request-dns                           # valueless
+        │     └── pd <instance>                            # prefix delegation instance (0, 1, ...)
+        │           ├── length <32-64>                     # requested prefix length (default: 64)
+        │           └── interface <name>                   # delegate to this LAN interface
+        │                 ├── address <id>                 # interface address within delegated prefix
+        │                 └── sla-id <0-65535>             # site-level aggregation ID
+        │
+        ├── mirror                                        # packet mirroring
+        │     ├── ingress <interface>
+        │     └── egress <interface>
+        │
+        ├── sim                                           # SIM management
         │     ├── primary-slot <1|2>
         │     │
         │     ├── slot <1|2>                              #   per-SIM tag node
@@ -40,6 +79,7 @@ interfaces
         │     │     ├── supported-bands <all|band,band,...>
         │     │     ├── preferred-carrier <MCCMNC|name>  #   e.g. '302610' or 'Bell'
         │     │     ├── enable-network-scan               #   valueless — diagnostic scan; results in status
+        │     │     ├── mtu <bytes>                       #   per-SIM MTU override (0 = use interface mtu)
         │     │     └── data-limit
         │     │           ├── size <bytes>                #   0 = unlimited
         │     │           ├── action <none|disable|sim-failover|sim-failover-sticky>
@@ -137,14 +177,22 @@ automatically using a 4-priority APN discovery chain:
 
 | Feature | Default (nothing configured) | Effect |
 |---|---|---|
+| **Description** | `(empty)` | No interface description |
+| **Disable** | not set | Interface is admin-up |
+| **VRF** | not set | Interface is in the default VRF |
+| **Redirect** | not set | No packet redirect |
+| **Mirror** | not set | No ingress/egress mirroring |
+| **IPv4 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
+| **IPv6 options** | VyOS defaults | Forwarding enabled, DAD enabled (accept-dad 1), default link-local assigned |
+| **DHCPv6 PD** | not configured | No prefix delegation; configure `dhcpv6-options pd` to request a delegated prefix from the carrier; use `parameters-only` to avoid requesting an address |
 | **Active SIM slot** | `1` | Slot 1 is used |
 | **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (if enabled), 4) automatic (let the network assign) |
 | **Authentication** | per-SIM only, default `none` | No PPP auth; auth-type/username/password configured per SIM slot |
 | **PDP type** | per-SIM only, default `ipv4` | IPv4-only bearer per slot unless overridden |
 | **Roaming** | per-SIM only, default `disabled` | Modem will not register on visited networks unless enabled per slot |
 | **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
-| **MTU override** | `0` (disabled) | Not set — network-provided MTU is used when available |
-| **MTU fallback** | `1420` | Applied when the network/bearer does not provide an MTU value |
+| **MTU** | `1420` (fallback) | Carrier-negotiated bearer MTU is used when available; 1420 is used only if the carrier does not provide one; also acts as a ceiling; per-SIM `mtu` overrides when active |
+| **Per-SIM MTU** | `0` (use interface mtu) | Optional per-SIM override; when the SIM is active, this value is used instead |
 | **SIM PIN** | per-SIM only | If a PIN is configured, the FSM always sends it automatically when the SIM is locked |
 | **SIM failover** | per-SIM, `enabled` | Automatic switch to backup SIM on failure; use `disable` to turn off |
 | **SIM failback** | `enabled` | After sim-failover fires, automatic return to primary SIM; use `disable` to turn off |
@@ -203,18 +251,92 @@ set interfaces wwan wwan0 sim slot 1 pin '1234'
 
 ## Full `set` Command Listing
 
-### Basic / Existing Commands
+### Interface Parameters
 
-> **If unconfigured:** Network-mode auto.  APN, auth-type, PDP-type, roaming, username/password are all per-SIM only.
+> **If unconfigured:** Network-mode auto, MTU from carrier (fallback 1420 if carrier does not provide one).  APN, auth-type, PDP-type, roaming, username/password are all per-SIM only.
 
 ```
+# Interface description (friendly name, max 255 characters)
+set interfaces wwan wwan0 description 'Primary LTE uplink — Bell Canada'
+
+# Admin shutdown — presence disables the interface
+# set interfaces wwan wwan0 disable
+
+# VRF binding
+set interfaces wwan wwan0 vrf 'CELLULAR'
+
+# Redirect all incoming packets to another interface
+# set interfaces wwan wwan0 redirect 'eth0'
+
+# Network mode — modem RAT selection
 set interfaces wwan wwan0 network-mode 'auto'
 
-# MTU settings (both optional)
-# mtu-override: if set (> 0), always force this MTU regardless of what the network provides
-# mtu-fallback: used only when the network/bearer does not provide an MTU (default: 1420)
-set interfaces wwan wwan0 mtu-override 0
-set interfaces wwan wwan0 mtu-fallback 1420
+# MTU — fallback if carrier does not provide one; also ceiling (per-SIM mtu overrides when that SIM is active)
+set interfaces wwan wwan0 mtu 1420
+```
+
+### IPv4 Options
+
+> **If unconfigured:** VyOS kernel defaults — forwarding enabled, source-validation disabled.
+
+```
+set interfaces wwan wwan0 ip adjust-mss '1380'
+# set interfaces wwan wwan0 ip disable-forwarding
+set interfaces wwan wwan0 ip source-validation 'strict'
+```
+
+### IPv6 Options
+
+> **If unconfigured:** VyOS kernel defaults — forwarding enabled, DAD enabled (accept-dad 1), default link-local address assigned.
+
+```
+set interfaces wwan wwan0 ipv6 adjust-mss '1380'
+# set interfaces wwan wwan0 ipv6 disable-forwarding
+set interfaces wwan wwan0 ipv6 accept-dad '1'
+set interfaces wwan wwan0 ipv6 dup-addr-detect-transmits 1
+set interfaces wwan wwan0 ipv6 source-validation 'strict'
+# set interfaces wwan wwan0 ipv6 address no-default-link-local
+```
+
+### DHCPv6 Options (Prefix Delegation)
+
+> **If unconfigured:** No DHCPv6 client runs — no prefix delegation.  The FSM
+> handles WAN address assignment from the bearer directly; DHCPv6 is only needed
+> here for prefix delegation to LAN interfaces.
+>
+> **Recommended:** Set `parameters-only` so the DHCPv6 client requests only PD
+> (IA_PD), not an address (IA_NA).  Requesting an address via DHCPv6 conflicts
+> with the FSM's bearer-assigned WAN address.
+>
+> **Carrier support:** Not all carriers support DHCPv6-PD on cellular.  Enterprise
+> and IoT plans are more likely to support it.  If the carrier does not support PD,
+> the DHCPv6 Solicit will go unanswered and the bearer still works normally for
+> outbound traffic (NAT44/NAT64).
+
+```
+# Request a /56 prefix and delegate to eth0 (LAN)
+set interfaces wwan wwan0 dhcpv6-options parameters-only
+set interfaces wwan wwan0 dhcpv6-options pd 0 length '56'
+set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 address '1'
+set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
+
+# Optional: delegate a second subnet to a different LAN
+set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth1 address '1'
+set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth1 sla-id '1'
+
+# Optional DHCPv6 client tuning
+# set interfaces wwan wwan0 dhcpv6-options rapid-commit
+# set interfaces wwan wwan0 dhcpv6-options no-release
+# set interfaces wwan wwan0 dhcpv6-options duid '00:01:00:01:...'
+```
+
+### Packet Mirroring
+
+> **If unconfigured:** No mirroring — neither ingress nor egress traffic is copied.
+
+```
+set interfaces wwan wwan0 mirror ingress 'eth2'
+set interfaces wwan wwan0 mirror egress 'eth2'
 ```
 
 ### SIM Configuration
@@ -237,6 +359,7 @@ set interfaces wwan wwan0 sim slot 1 iccid '89302610123456789012'
 set interfaces wwan wwan0 sim slot 1 supported-bands 'all'
 set interfaces wwan wwan0 sim slot 1 preferred-carrier '302610'
 set interfaces wwan wwan0 sim slot 1 enable-network-scan
+set interfaces wwan wwan0 sim slot 1 mtu 1500
 set interfaces wwan wwan0 sim slot 1 data-limit size 5000000000
 set interfaces wwan wwan0 sim slot 1 data-limit action 'disable'
 set interfaces wwan wwan0 sim slot 1 data-limit billing-date 1
@@ -569,8 +692,39 @@ set interfaces wwan wwan0 logging health-check-interval 300
 
 ## Config Mapping Reference
 
+> Parameters marked *(VyOS conf_mode)* are handled by the VyOS configuration
+> script directly (kernel sysctl / ip commands) and do not appear in
+> `my_config.conf`.
+
 | VyOS `set` Command | `my_config.conf` Key | Default |
 |---|---|---|
+| **VyOS Infrastructure** | | |
+| `description` | *(VyOS conf_mode)* | `(empty)` |
+| `disable` | `interface_disabled` | `false` (admin-up) |
+| `vrf` | *(VyOS conf_mode)* | not set (default VRF) |
+| `redirect` | *(VyOS conf_mode)* | not set |
+| `mirror ingress` | *(VyOS conf_mode)* | not set |
+| `mirror egress` | *(VyOS conf_mode)* | not set |
+| `ip adjust-mss` | *(VyOS conf_mode)* | not set |
+| `ip disable-forwarding` | *(VyOS conf_mode)* | not set (forwarding on) |
+| `ip source-validation` | *(VyOS conf_mode)* | `disable` |
+| `ipv6 adjust-mss` | *(VyOS conf_mode)* | not set |
+| `ipv6 disable-forwarding` | *(VyOS conf_mode)* | not set (forwarding on) |
+| `ipv6 accept-dad` | *(VyOS conf_mode)* | `1` |
+| `ipv6 dup-addr-detect-transmits` | *(VyOS conf_mode)* | kernel default |
+| `ipv6 source-validation` | *(VyOS conf_mode)* | `disable` |
+| `ipv6 address no-default-link-local` | *(VyOS conf_mode)* | not set (link-local assigned) |
+| `dhcpv6-options parameters-only` | *(VyOS conf_mode)* | not set |
+| `dhcpv6-options rapid-commit` | *(VyOS conf_mode)* | not set |
+| `dhcpv6-options no-release` | *(VyOS conf_mode)* | not set |
+| `dhcpv6-options temporary` | *(VyOS conf_mode)* | not set |
+| `dhcpv6-options duid` | *(VyOS conf_mode)* | auto-generated |
+| `dhcpv6-options no-request-domain-name` | *(VyOS conf_mode)* | not set |
+| `dhcpv6-options no-request-dns` | *(VyOS conf_mode)* | not set |
+| `dhcpv6-options pd N length` | *(VyOS conf_mode)* | `64` |
+| `dhcpv6-options pd N interface X address` | *(VyOS conf_mode)* | EUI-64 |
+| `dhcpv6-options pd N interface X sla-id` | *(VyOS conf_mode)* | not set |
+| **WWAN Service** | | |
 | `sim primary-slot` | `primary_sim_slot` | `1` |
 | `sim sim-failback disable` | `sim_failback_enabled` | `enabled` |
 | `sim sim-failback check-interval` | `sim_failback_check_interval` | `600` |
@@ -591,6 +745,7 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `sim slot N supported-bands` | `sim_slot_N_supported_bands` | `all` |
 | `sim slot N preferred-carrier` | `sim_slot_N_preferred_carrier` | `(empty)` |
 | `sim slot N enable-network-scan` | `sim_slot_N_enable_network_scan` | `false` |
+| `sim slot N mtu` | `sim_slot_N_mtu` | `0` (use interface mtu) |
 | `sim slot N data-limit size` | `sim_slot_N_data_limit_size` | `0` |
 | `sim slot N data-limit action` | `sim_slot_N_data_limit_action` | `none` |
 | `sim slot N data-limit billing-date` | `sim_slot_N_data_limit_billing_date` | `1` |
@@ -637,20 +792,11 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `failed-retry intervals` | `failed_retry_intervals` | `300,600,1200,1800` |
 | `failed-retry max-interval` | `failed_retry_max_interval` | `1800` |
 | `network-mode` | `network_mode` | `auto` |
-| `mtu-override` | `mtu_override` | `0` |
-| `mtu-fallback` | `mtu_fallback` | `1420` |
+| `mtu` | `mtu` | `1420` |
 | `network-scan timeout` | `network_scan_timeout` | `60` |
 | `timeouts connection` | `connection_timeout` | `120` |
 | `timeouts registration` | `registration_timeout` | `180` |
 | `timeouts normal-monitoring-interval` | `normal_monitoring_interval` | `30` |
-| `apn` | `apn` | *(removed — per-SIM only)* |
-| `authentication username` | `username` | *(removed — per-SIM only)* |
-| `authentication password` | `password` | *(removed — per-SIM only)* |
-| `auth-type` | `auth_type` | *(removed — per-SIM only)* |
-| `pdp-type` | `pdp_type` | *(removed — per-SIM only)* |
-| `roaming` | `roaming` | *(removed — per-SIM only)* |
-| `sim pin` | `pin` | *(removed — per-SIM only)* |
-| `sim puk` | `puk` | *(removed — per-SIM only)* |
 | `logging level` | `log_level` | `info` |
 | `logging verbose` | `verbose_logging` | `true` |
 | `logging snmp-monitoring` | `snmp_monitoring` | `true` |
@@ -662,6 +808,9 @@ set interfaces wwan wwan0 logging health-check-interval 300
 ## Example: Bell Canada Dual-SIM with Monitoring
 
 ```
+set interfaces wwan wwan0 description 'Primary LTE uplink — Bell Canada'
+set interfaces wwan wwan0 mtu 1420
+
 set interfaces wwan wwan0 sim primary-slot 1
 set interfaces wwan wwan0 sim slot 1 apn 'pda.bell.ca'
 set interfaces wwan wwan0 sim slot 1 auth-type 'chap'

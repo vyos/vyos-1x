@@ -175,12 +175,12 @@ class InterfaceConfig(ServiceInterface):
     # Centralized default configuration values
     DEFAULT_CONFIG = {
         # Interface-level settings
+        "interface_disabled": False,  # Admin disable — disconnect modem and suppress all activity
         "connection_mode": "always-on",  # always-on | connect-on-demand | dial-on-demand
         "primary_sim_slot": 1,  # Which SIM slot to use (1 or 2)
 
-        # MTU settings (0 = not set / use network value)
-        "mtu_override": 0,   # If > 0, always force this MTU regardless of network
-        "mtu_fallback": 1420, # Used when the network/bearer does not provide an MTU
+        # MTU settings — interface-level ceiling/default; per-SIM override in sim_slots
+        "mtu": 1420,  # Interface MTU ceiling; also used as fallback when bearer provides none
 
         # APN discovery settings
         "android_apn_discovery": "disabled",
@@ -286,6 +286,7 @@ class InterfaceConfig(ServiceInterface):
                 "pin": "",           # SIM PIN (if set, FSM auto-unlocks)
                 "puk": "",           # SIM PUK (used with PIN for auto-recovery)
                 "iccid": "",         # Expected ICCID — if set, slot rejects any other SIM (tamper lock)
+                "mtu": 0,            # Per-SIM MTU override (0 = use interface mtu)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
                 "data_limit_action": "none",      # none, disable, sim-failover, sim-failover-sticky
@@ -309,6 +310,7 @@ class InterfaceConfig(ServiceInterface):
                 "pin": "",           # SIM PIN (if set, FSM auto-unlocks)
                 "puk": "",           # SIM PUK (used with PIN for auto-recovery)
                 "iccid": "",         # Expected ICCID — if set, slot rejects any other SIM (tamper lock)
+                "mtu": 0,            # Per-SIM MTU override (0 = use interface mtu)
                 # Per-SIM data usage limits
                 "data_limit_size": 0,            # Bytes (0 = unlimited)
                 "data_limit_action": "none",      # none, disable, sim-failover, sim-failover-sticky
@@ -711,19 +713,11 @@ class InterfaceConfig(ServiceInterface):
                                      'validation_field': 'primary_sim_slot'})
                 raise ValueError("primary_sim_slot must be 1 or 2")
 
-        # Validate MTU override (0 = disabled, positive integer = forced MTU)
-        if 'mtu_override' in config:
-            mtu = config['mtu_override']
-            if not isinstance(mtu, int) or mtu < 0:
-                raise ValueError("mtu_override must be a non-negative integer (0 = disabled)")
-            if mtu > 0 and (mtu < 576 or mtu > 9000):
-                raise ValueError("mtu_override must be 0 (disabled) or between 576 and 9000")
-
-        # Validate MTU fallback (used when network does not provide MTU)
-        if 'mtu_fallback' in config:
-            mtu = config['mtu_fallback']
+        # Validate interface-level MTU (ceiling / default)
+        if 'mtu' in config:
+            mtu = config['mtu']
             if not isinstance(mtu, int) or mtu < 576 or mtu > 9000:
-                raise ValueError("mtu_fallback must be an integer between 576 and 9000")
+                raise ValueError("mtu must be an integer between 576 and 9000")
 
         # Validate registration flap detection parameters
         if 'interface_management' in config and isinstance(config['interface_management'], dict):
@@ -1058,6 +1052,14 @@ class InterfaceConfig(ServiceInterface):
                                      'sim_slot': slot_num})
                 raise ValueError(f"SIM{slot_num} data_limit_size must be a non-negative number")
 
+        # Validate per-SIM MTU (0 = use interface default, or 576-9000)
+        if 'mtu' in sim_slot:
+            mtu = sim_slot['mtu']
+            if not isinstance(mtu, int) or mtu < 0:
+                raise ValueError(f"SIM{slot_num} mtu must be a non-negative integer (0 = use interface default)")
+            if mtu > 0 and (mtu < 576 or mtu > 9000):
+                raise ValueError(f"SIM{slot_num} mtu must be 0 (interface default) or between 576 and 9000")
+
         logger.info("SIM configuration validation passed",
                    extra={'interface_number': self.interface_number,
                           'sim_slot': slot_num,
@@ -1237,6 +1239,13 @@ class InterfaceConfig(ServiceInterface):
                               extra={'interface_number': self.interface_number,
                                      'validation_field': 'data_limit_size'})
                 raise ValueError("data_limit_size must be a non-negative integer (bytes, 0 = unlimited)")
+
+        # Validate interface_disabled
+        if 'interface_disabled' in config and not isinstance(config['interface_disabled'], bool):
+            logger.warning("Invalid interface_disabled",
+                          extra={'interface_number': self.interface_number,
+                                 'validation_field': 'interface_disabled'})
+            raise ValueError("interface_disabled must be true or false")
 
         # Validate APN discovery settings
         if 'android_apn_discovery' in config and config['android_apn_discovery'] not in ['enabled', 'disabled']:

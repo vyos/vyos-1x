@@ -116,6 +116,10 @@ class StateTransitionManager:
                 StateTransition("CONFIGURING", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed during config"),
                 StateTransition("REGISTERED_IDLE", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while idle"),
                 StateTransition("FAILED", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while in failed state"),
+                StateTransition("CONNECTED", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while connected"),
+                StateTransition("USAGE_MONITORING", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed during usage monitoring"),
+                StateTransition("CONNECTING", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed while connecting"),
+                StateTransition("DISCONNECTING", "WAITING_FOR_SIM", "SIM_MISSING", "SIM removed during disconnect"),
 
                 # SIM switching transitions
                 StateTransition("CONNECTED", "SIM_SWITCHING", "SWITCH_SIM", "Initiate SIM switch"),
