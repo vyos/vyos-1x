@@ -1,0 +1,287 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <properties>
+      <help>Generate an object/key</help>
+    </properties>
+    <children>
+      <node name="tpm">
+        <properties>
+          <help>Generate tpm backed files</help>
+        </properties>
+        <children>
+          <node name="csr">
+            <properties>
+              <help>Generate certificate request and tpm private key pair</help>
+            </properties>
+            <children>
+              <tagNode name="file">
+                <properties>
+                  <help>Write generated csr and tpm private key into the specified filename</help>
+                  <completionHelp>
+                    <list>&lt;filename&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tpm_pki.py generate_tpm --tpm-pki-type csr --name "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+          <node name="certificate">
+            <properties>
+              <help>Generate certificate and tpm private key pair</help>
+            </properties>
+            <children>
+              <node name="self-signed">
+                <properties>
+                  <help>Generate self-signed certificate and tpm private key pair</help>
+                </properties>
+                <children>
+                  <tagNode name="file">
+                    <properties>
+                      <help>Write generated self-signed certificate and tpm private key into the specified filename</help>
+                      <completionHelp>
+                        <list>&lt;filename&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/tpm_pki.py generate_tpm --tpm-pki-type cert --name "$6" --self-sign</command>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="key-pair">
+            <properties>
+              <help>Generate public key and tpm private key pair</help>
+            </properties>
+            <children>
+              <tagNode name="file">
+                <properties>
+                  <help>Write generated public and tpm private key into the specified filename</help>
+                  <completionHelp>
+                    <list>&lt;filename&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tpm_pki.py generate_tpm --tpm-pki-type kpair --name "$5"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="import">
+    <properties>
+      <help>Import an object</help>
+    </properties>
+    <children>
+      <node name="tpm">
+        <properties>
+          <help>Import existing cryptographic file to TPM format</help>
+        </properties>
+        <children>
+          <node name="csr">
+            <properties>
+              <help>Import certificate request and private key pair</help>
+            </properties>
+            <children>
+              <tagNode name="name">
+                <properties>
+                  <help>Write imported csr and tpm private key into the specified filename</help>
+                  <completionHelp>
+                    <list>&lt;filename&gt;</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="file">
+                    <properties>
+                      <help>Absolute path to CSR file</help>
+                      <completionHelp>
+                        <list>&lt;filename&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                          <help>Absolute path to private key file</help>
+                          <completionHelp>
+                            <list>&lt;filename&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/tpm_pki.py import_tpm --tpm-pki-type csr --name "$5" --path "$7" --kpath "$9"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <node name="certificate">
+            <properties>
+              <help>Import certificate and private key pair</help>
+            </properties>
+            <children>
+              <tagNode name="name">
+                <properties>
+                  <help>Write imported certificate and tpm private key into the specified filename</help>
+                  <completionHelp>
+                    <list>&lt;filename&gt;</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="file">
+                    <properties>
+                      <help>Absolute path to certificate file</help>
+                      <completionHelp>
+                        <list>&lt;filename&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                          <help>Absolute path to private key file</help>
+                          <completionHelp>
+                            <list>&lt;filename&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/tpm_pki.py import_tpm --tpm-pki-type cert --name "$5" --path "$7" --kpath "$9"</command>
+                      </tagNode>
+                      <tagNode name="tpm-key-file">
+                        <properties>
+                          <help>Absolute path to TPM backed private key file</help>
+                          <completionHelp>
+                            <list>&lt;filename&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/tpm_pki.py import_tpm --tpm-pki-type cert_with_tpm --name "$5" --path "$7" --kpath "$9"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <node name="key-pair">
+            <properties>
+              <help>Import public key and private key pair</help>
+            </properties>
+            <children>
+              <tagNode name="name">
+                <properties>
+                  <help>Write imported public key and tpm private key into the specified filename</help>
+                  <completionHelp>
+                    <list>&lt;filename&gt;</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="file">
+                    <properties>
+                      <help>Absolute path to public key file</help>
+                      <completionHelp>
+                        <list>&lt;filename&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="key-file">
+                        <properties>
+                          <help>Absolute path to private key file</help>
+                          <completionHelp>
+                            <list>&lt;filename&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/tpm_pki.py import_tpm --tpm-pki-type kpair --name "$5" --path "$7" --kpath "$9"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="tpm">
+        <properties>
+          <help>Show x509 certificates paired with TPM backed private-key</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/tpm_pki.py show_all</command>
+        <children>
+          <tagNode name="csr">
+            <properties>
+              <help>Show x509 Certificate Signing Request by name</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_pki_with_tpm.py --selector csr</script>
+              </completionHelp>
+            </properties>
+            <standalone>
+              <help>Show x509 Certificate Signing Requests</help>
+              <command>${vyos_op_scripts_dir}/tpm_pki.py show_csr</command>
+            </standalone>
+            <command>${vyos_op_scripts_dir}/tpm_pki.py show_csr --name "$4"</command>
+            <children>
+              <leafNode name="pem">
+                <properties>
+                  <help>Show x509 Certificate Signing Request in PEM format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tpm_pki.py show_csr --name "$4" --pem</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="certificate">
+            <properties>
+              <help>Show x509 certificate by name</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_pki_with_tpm.py --selector cert</script>
+              </completionHelp>
+            </properties>
+            <standalone>
+              <help>Show x509 certificates</help>
+              <command>${vyos_op_scripts_dir}/tpm_pki.py show_certificate</command>
+            </standalone>
+            <command>${vyos_op_scripts_dir}/tpm_pki.py show_certificate --name "$4"</command>
+            <children>
+              <leafNode name="pem">
+                <properties>
+                  <help>Show x509 certificate in PEM format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tpm_pki.py show_certificate --name "$4" --pem</command>
+              </leafNode>
+              <tagNode name="fingerprint">
+                <properties>
+                  <help>Show x509 certificate fingerprint</help>
+                  <completionHelp>
+                    <list>sha256 sha384 sha512</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tpm_pki.py show_certificate --name "$4" --fingerprint "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="key-pair">
+            <properties>
+              <help>Show key-pair by name</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_pki_with_tpm.py --selector kpair</script>
+              </completionHelp>
+            </properties>
+            <standalone>
+              <help>Show x509 key-pairs</help>
+              <command>${vyos_op_scripts_dir}/tpm_pki.py show_kpair</command>
+            </standalone>
+            <command>${vyos_op_scripts_dir}/tpm_pki.py show_kpair --name "$4"</command>
+            <children>
+              <leafNode name="pem">
+                <properties>
+                  <help>Show x509 public key in PEM format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/tpm_pki.py show_kpair --name "$4" --pem</command>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
