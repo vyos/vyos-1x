@@ -43,6 +43,8 @@ from ftplib import error_reply
 from ftplib import parse150
 from requests import Session
 from requests.adapters import HTTPAdapter
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 from urllib3 import PoolManager
 from urllib3.connection import HTTPConnection
 
@@ -614,7 +616,10 @@ def upload(local_path, urlstring, progressbar=False,
         progressbar = progressbar and is_interactive()
         urlc(urlstring, progressbar, False, source_host, source_port, timeout, vrf).upload(local_path)
     except Exception as err:
-        print_error(f'Unable to upload "{urlstring}": {err}')
+        url = urlsplit(urlstring)
+        _, _, netloc = url.netloc.rpartition('@')
+        redacted_location = urlunsplit(url._replace(netloc=netloc))
+        print_error(f'Unable to upload "{redacted_location}": {err}')
         sys.exit(1)
     except KeyboardInterrupt:
         print_error('\nUpload aborted by user.')
