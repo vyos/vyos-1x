@@ -1338,6 +1338,22 @@ class ModemStateMachine:
                     # Trigger connection configuration
                     self._safe_create_task(self.apply_modem_configuration())
 
+            elif current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+                # Modem dropped from CONNECTED to REGISTERED without going through
+                # DISCONNECTING (state 9).  This can happen with "Regular deactivation"
+                # where the carrier drops the bearer but the modem stays registered.
+                if not self.user_disconnected:
+                    logger.warning("Modem dropped to REGISTERED while FSM CONNECTED — bearer lost, triggering reconnection",
+                                  extra={'interface_number': self.interface_number,
+                                         'modem_state': mm_state,
+                                         'fsm_state': current_fsm_state})
+                    try:
+                        self._safe_create_task(self._stop_network_interface_monitoring())
+                    except RuntimeError:
+                        pass
+                    self.transition(ModemEvent.DISCONNECT)
+                    self._safe_create_task(self.handle_disconnection_recovery())
+
         elif mm_state == 9:  # DISCONNECTING
             if current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Connection being terminated - stop network interface monitoring and trigger enhanced reconnection
@@ -8288,7 +8304,14 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
 
     async def _handle_bearer_disconnect(self):
-        """Handle bearer disconnect with configurable delay"""
+        """Handle bearer disconnect with configurable delay and automatic reconnection.
+
+        After the debounce timer expires without the bearer reconnecting,
+        sets the interface DOWN and triggers the FSM recovery path so the
+        connection is re-established automatically.  This covers the
+        'Regular deactivation' scenario where the carrier drops the bearer
+        but the modem stays registered on the network.
+        """
         try:
             # Start disconnect timer
             self._bearer_disconnect_timer = self._safe_create_task(
@@ -8305,6 +8328,18 @@ class ModemStateMachine:
 
             # Clear timer
             self._bearer_disconnect_timer = None
+
+            # Trigger reconnection recovery — the bearer was deactivated
+            # (e.g. "Regular deactivation" from carrier) and did not
+            # reconnect within the debounce window.  Transition the FSM
+            # and attempt to re-establish the connection.
+            if (self.machine.current_state == ModemState.CONNECTED.value
+                    and not self.user_disconnected):
+                logger.warning("Bearer lost while FSM still CONNECTED — triggering reconnection recovery",
+                              extra={'interface_number': self.interface_number,
+                                     'current_state': self.machine.current_state})
+                self.transition(ModemEvent.DISCONNECT)
+                self._safe_create_task(self.handle_disconnection_recovery())
 
         except asyncio.CancelledError:
             if self._modem_removed:
