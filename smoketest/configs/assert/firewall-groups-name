@@ -1,0 +1,18 @@
+set firewall group network-group TEST_GROUP_ network '192.168.1.0/24'
+set firewall group network-group TEST_GROUP__ network '192.168.0.0/24'
+set firewall ipv4 name TEST1 default-action 'drop'
+set firewall ipv4 name TEST1 rule 10 action 'return'
+set firewall ipv4 name TEST1 rule 10 source group network-group 'TEST_GROUP__'
+set firewall ipv4 name TEST1 rule 20 action 'drop'
+set firewall ipv4 name TEST1 rule 20 source group network-group '!TEST_GROUP__'
+set firewall ipv4 name TEST2 default-action 'drop'
+set firewall ipv4 name TEST2 rule 10 action 'return'
+set firewall ipv4 name TEST2 rule 10 source group network-group 'TEST_GROUP_'
+set firewall ipv4 name TEST2 rule 20 action 'drop'
+set firewall ipv4 name TEST2 rule 20 source group network-group '!TEST_GROUP_'
+set interfaces ethernet eth0
+set interfaces loopback lo
+set system console device ttyS0 speed '115200'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$QxPS.uk6mfo$9QBSo8u1FkH16gMyAVhus6fU3LOzvLR9Z9.82m3tiHFAxTtIkhaZSWssSgzt4v4dGAL8rhVQxTg0oAG9/q11h/'
+set system login user vyos authentication plaintext-password ''
