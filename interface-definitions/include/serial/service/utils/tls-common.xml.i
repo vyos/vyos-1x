@@ -9,7 +9,7 @@
   <properties>
     <help>Certificate</help>
     <completionHelp>
-      <path>pki certificate</path>
+      <script>${vyos_completion_dir}/list_pki_with_tpm.py --selector cert</script>
     </completionHelp>
     <valueHelp>
       <format>txt</format>

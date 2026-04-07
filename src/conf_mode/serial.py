@@ -33,6 +33,8 @@ from vyos.utils.serial import find_active_ttyS_devices
 from vyos.utils.serial import print_global_change_warning
 from vyos import ConfigError
 from vyos.tpm import tpm_enabled
+from vyos.tpm_pki import get_path_str
+from vyos.tpm_pki import validate_certificate_against_tpm_priv_key
 
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
@@ -126,19 +128,27 @@ def verify(proxy):
                 service_class = outbound_multihost_service_mapping.get(service)
                 if dict_search('multihost.mode', device_conf['service_setting'][service_class]) == 'all-hosts':
                     if dict_search('multihost_list.host', device_conf) == None:
-                        raise ConfigError(f'Must config hostname and hostport in multihost-list for multihost mode all-hosts!')
+                        raise ConfigError(f'Must configure hostname and hostport in multihost-list for multihost mode all-hosts!')
                     for host_id, host_conf in dict_search('multihost_list.host', device_conf).items():
                         if (dict_search('name', device_conf['multihost_list']['host'][host_id]) == None
                             or dict_search('port', device_conf['multihost_list']['host'][host_id]) == None):
-                            raise ConfigError(f'Must config hostname and hostport in multihost-list for host {host_id}!')
+                            raise ConfigError(f'Must configure hostname and hostport in multihost-list for host {host_id}!')
                 else:
                     if (dict_search('main_hostname', device_conf['service_setting'][service_class]) == None
                         or dict_search('main_hostport', device_conf['service_setting'][service_class]) == None):
-                        raise ConfigError(f'Must config main hostname and hostport for service {service}!')
+                        raise ConfigError(f'Must configure main hostname and hostport for service {service}!')
                     if dict_search('multihost.mode', device_conf['service_setting'][service_class]) == 'backup-failover':
                         if (dict_search('multihost.backup_hostname', device_conf['service_setting'][service_class]) == None
                             or dict_search('multihost.backup_hostport', device_conf['service_setting'][service_class]) == None):
-                            raise ConfigError(f'Must config backup hostname and hostport for multihost mode backup-failover!')
+                            raise ConfigError(f'Must configure backup hostname and hostport for multihost mode backup-failover!')
+
+            if 'tls' in device_conf:
+                if 'enabled' in device_conf['tls']:
+                    if device_conf['tls']['enabled'] != 0:
+                        if 'certificate' not in device_conf['tls']:
+                            raise ConfigError(f'Must configure certificate to enable tls on {device}!')
+                        if tpm_enabled() and not validate_certificate_against_tpm_priv_key(get_path_str('cert', 'pem', device_conf['tls']['certificate']), get_path_str('cert', 'key', device_conf['tls']['certificate'])):
+                            raise ConfigError(f'Configured certificate and key are invalid or do not match')
 
     return None
 
