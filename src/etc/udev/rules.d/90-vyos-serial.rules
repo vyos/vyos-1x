@@ -22,8 +22,9 @@ IMPORT{builtin}="path_id", IMPORT{builtin}="usb_id"
 #   (tr -d -) does the replacement
 # - Replace the first group after ":" to represent the bus relation (sed -e 0,/:/s//b/) indicated by "b"
 # - Replace the next group after ":" to represent the port relation (sed -e 0,/:/s//p/) indicated by "p"
-ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="",  PROGRAM="/bin/sh -c 'echo $env{ID_PATH} | cut -d- -f3- | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/$result"
-ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="0", PROGRAM="/bin/sh -c 'echo $env{ID_PATH} | cut -d- -f3- | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/$result"
-ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="?*", ENV{.ID_PORT}!="0", PROGRAM="/bin/sh -c 'echo $env{ID_PATH} | cut -d- -f3- | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/%cp%E{.ID_PORT}"
+ENV{ID_PATH}=="?*", PROGRAM="/bin/sh -c 'echo $env{ID_PATH} | cut -d- -f3- | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", ENV{.BY_BUS}="%c"
+ENV{.BY_BUS}=="?*", ENV{.ID_PORT}=="",  SYMLINK+="serial/by-bus/%E{.BY_BUS}"
+ENV{.BY_BUS}=="?*", ENV{.ID_PORT}=="0", SYMLINK+="serial/by-bus/%E{.BY_BUS}"
+ENV{.BY_BUS}=="?*", ENV{.ID_PORT}=="?*", ENV{.ID_PORT}!="0", SYMLINK+="serial/by-bus/%E{.BY_BUS}p%E{.ID_PORT}"
 
 LABEL="serial_end"
