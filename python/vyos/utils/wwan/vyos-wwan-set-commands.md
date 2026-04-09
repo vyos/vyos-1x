@@ -11,9 +11,9 @@ set interfaces wwan <wwanN> ...
 This definition replaces the upstream VyOS WWAN tree.  The legacy per-interface
 `apn`, `authentication`, `connect-on-demand`, `address`, and `dhcp-options`
 nodes are removed — those functions are handled per-SIM by the enhanced service.
-`dhcpv6-options` is retained for DHCPv6 Prefix Delegation (PD).  VyOS
-infrastructure features (`description`, `disable`, `vrf`, `ip`, `ipv6`,
-`dhcpv6-options`, `mirror`, `redirect`, `mtu`) are retained.
+`pd` is a direct child of the wwan interface for IPv6 Prefix Delegation
+(FSM-native, no dhcp6c).  VyOS infrastructure features (`description`,
+`disable`, `vrf`, `ip`, `ipv6`, `mirror`, `redirect`, `mtu`) are retained.
 
 ---
 
@@ -38,25 +38,15 @@ interfaces
         ├── ipv6                                          # IPv6 routing parameters (kernel-level)
         │     ├── adjust-mss <bytes|clamp-mss-to-pmtu>
         │     ├── disable-forwarding                      # valueless
-        │     ├── accept-dad <0|1|2>
-        │     ├── dup-addr-detect-transmits <count>
-        │     ├── source-validation <strict|loose|disable>
-        │     └── address
-        │           └── no-default-link-local             # valueless
+        │     └── source-validation <strict|loose|disable>
         │
-        ├── dhcpv6-options                                # DHCPv6 client (prefix delegation)
-        │     ├── duid <DUID>                              # DHCP unique identifier
-        │     ├── parameters-only                          # valueless — request PD only, no address (recommended)
-        │     ├── rapid-commit                             # valueless
-        │     ├── no-release                               # valueless — don't send Release on shutdown
-        │     ├── temporary                                # valueless — request temporary address
-        │     ├── no-request-domain-name                   # valueless
-        │     ├── no-request-dns                           # valueless
-        │     └── pd <instance>                            # prefix delegation instance (0, 1, ...)
-        │           ├── length <32-64>                     # requested prefix length (default: 64)
-        │           └── interface <name>                   # delegate to this LAN interface
-        │                 ├── address <id>                 # interface address within delegated prefix
-        │                 └── sla-id <0-65535>             # site-level aggregation ID
+        ├── pd <instance>                                # IPv6 prefix delegation (FSM-native, no dhcp6c)
+        │     └── interface <name>                        # delegate to this LAN interface
+        │           ├── address <id>                      # interface address within delegated prefix
+        │           ├── sla-id <0-65535>                  # site-level aggregation ID
+        │           └── sla-len <0-64>                    # bits for SLA subdivision (default: 64 − carrier prefix; 0 = whole prefix)
+        │
+        ├── pd-reconciliation-interval <seconds>          # safety-net timer for late-appearing LAN interfaces (default: 10)
         │
         ├── mirror                                        # packet mirroring
         │     ├── ingress <interface>
@@ -184,8 +174,9 @@ automatically using a 4-priority APN discovery chain:
 | **Redirect** | not set | No packet redirect |
 | **Mirror** | not set | No ingress/egress mirroring |
 | **IPv4 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
-| **IPv6 options** | VyOS defaults | Forwarding enabled, DAD enabled (accept-dad 1), default link-local assigned |
-| **DHCPv6 PD** | not configured | No prefix delegation; configure `dhcpv6-options pd` to request a delegated prefix from the carrier; use `parameters-only` to avoid requesting an address |
+| **IPv6 options** | VyOS defaults | Forwarding enabled, source-validation disabled |
+| **IPv6 PD** | not configured | No prefix delegation; configure `pd` to have the FSM subdivide the carrier prefix and delegate to LAN interfaces |
+| **PD reconciliation** | `10 s` | Safety-net timer re-checks pending LAN interfaces; netlink watch provides instant detection |
 | **Active SIM slot** | `1` | Slot 1 is used |
 | **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (if enabled), 4) automatic (let the network assign) |
 | **Authentication** | per-SIM only, default `none` | No PPP auth; auth-type/username/password configured per SIM slot |
@@ -288,47 +279,80 @@ set interfaces wwan wwan0 ip source-validation 'strict'
 
 ### IPv6 Options
 
-> **If unconfigured:** VyOS kernel defaults — forwarding enabled, DAD enabled (accept-dad 1), default link-local address assigned.
+> **If unconfigured:** VyOS kernel defaults — forwarding enabled, source-validation disabled.
+> DAD and `address no-default-link-local` are omitted — DAD is meaningless on
+> a /128 point-to-point carrier link, and suppressing the fe80:: link-local
+> would break IPv6 NDP routing on wwan.
 
 ```
 set interfaces wwan wwan0 ipv6 adjust-mss '1380'
 # set interfaces wwan wwan0 ipv6 disable-forwarding
-set interfaces wwan wwan0 ipv6 accept-dad '1'
-set interfaces wwan wwan0 ipv6 dup-addr-detect-transmits 1
 set interfaces wwan wwan0 ipv6 source-validation 'strict'
-# set interfaces wwan wwan0 ipv6 address no-default-link-local
 ```
 
-### DHCPv6 Options (Prefix Delegation)
+### IPv6 Prefix Delegation
 
-> **If unconfigured:** No DHCPv6 client runs — no prefix delegation.  The FSM
-> handles WAN address assignment from the bearer directly; DHCPv6 is only needed
-> here for prefix delegation to LAN interfaces.
+> **If unconfigured:** No prefix delegation.  The FSM applies the bearer's
+> IPv6 address directly; `pd` tells the FSM to subdivide the carrier prefix
+> and delegate sub-prefixes to LAN interfaces.  No DHCPv6 client (dhcp6c) is
+> involved — the FSM performs PD math natively using the bearer's `Ip6Config`
+> prefix.
 >
-> **Recommended:** Set `parameters-only` so the DHCPv6 client requests only PD
-> (IA_PD), not an address (IA_NA).  Requesting an address via DHCPv6 conflicts
-> with the FSM's bearer-assigned WAN address.
+> **How it works:** The carrier assigns a prefix (e.g. /56) via the bearer.
+> The FSM reads the actual prefix length from the bearer's `Ip6Config` —
+> there is no `length` knob because the carrier decides the prefix size,
+> not the user.  The FSM applies a /128 on wwan0 (point-to-point) and
+> delegates address space to LAN interfaces using the SLA-ID and SLA-LEN.
+> The delegated prefix length is `carrier_prefix_len + sla-len`.  By
+> default `sla-len` is `64 − carrier_prefix_len`, which produces /64
+> subnets.  Set `sla-len 0` to delegate the entire carrier prefix to a
+> single interface.
 >
-> **Carrier support:** Not all carriers support DHCPv6-PD on cellular.  Enterprise
-> and IoT plans are more likely to support it.  If the carrier does not support PD,
-> the DHCPv6 Solicit will go unanswered and the bearer still works normally for
-> outbound traffic (NAT44/NAT64).
+> If the carrier prefix is /64 (and default sla-len), only one LAN
+> interface can be delegated.  If the carrier prefix is /128, no
+> delegation is possible (address-only mode).
+>
+> **SLA-LEN examples (carrier /56):**
+>
+> | `sla-len` | Delegated prefix | Subnets | Use case |
+> |---|---|---|---|
+> | `8` (default) | /64 | 256 | One /64 per LAN — standard SLAAC |
+> | `4` | /60 | 16 | Each LAN gets 16 /64s |
+> | `0` | /56 | 1 | Entire prefix to one interface |
+>
+> **Late-appearing LAN interfaces:**  A delegated LAN interface (e.g. `br0`)
+> may not exist when the bearer connects and PD is first applied.  The FSM
+> handles this with two mechanisms:
+>
+> 1. **Netlink watch** — an asyncio task listens for `RTM_NEWLINK` events.
+>    When a pending interface appears, its delegated prefix is applied
+>    instantly.  Always active when any `pd` instance is configured.
+> 2. **Periodic reconciliation** — a safety-net timer (`pd-reconciliation-interval`,
+>    default 10 s) re-checks the pending set on each tick.  Catches edge
+>    cases the netlink watch might miss (e.g. interface destroyed and
+>    re-created between events).
+>
+> Interfaces that are destroyed (`RTM_DELLINK`) have their delegated prefix
+> moved back to the pending set and are re-applied when the interface
+> reappears.  Bearer disconnect removes all delegated prefixes; bearer
+> reconnect re-applies them (or pends them if the LAN interface is gone).
 
 ```
-# Request a /56 prefix and delegate to eth0 (LAN)
-set interfaces wwan wwan0 dhcpv6-options parameters-only
-set interfaces wwan wwan0 dhcpv6-options pd 0 length '56'
-set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 address '1'
-set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth0 sla-id '0'
+# Split carrier prefix into /64s (default sla-len, most common)
+set interfaces wwan wwan0 pd 0 interface eth0 address '1'
+set interfaces wwan wwan0 pd 0 interface eth0 sla-id '0'
 
-# Optional: delegate a second subnet to a different LAN
-set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth1 address '1'
-set interfaces wwan wwan0 dhcpv6-options pd 0 interface eth1 sla-id '1'
+# Second LAN gets the next /64
+set interfaces wwan wwan0 pd 0 interface eth1 address '1'
+set interfaces wwan wwan0 pd 0 interface eth1 sla-id '1'
 
-# Optional DHCPv6 client tuning
-# set interfaces wwan wwan0 dhcpv6-options rapid-commit
-# set interfaces wwan wwan0 dhcpv6-options no-release
-# set interfaces wwan wwan0 dhcpv6-options duid '00:01:00:01:...'
+# Delegate the whole carrier prefix to br0 — no subdivision
+set interfaces wwan wwan0 pd 0 interface br0 address '1'
+set interfaces wwan wwan0 pd 0 interface br0 sla-id '0'
+set interfaces wwan wwan0 pd 0 interface br0 sla-len '0'
+
+# Reconciliation interval — safety-net for late-appearing interfaces (default 10 s)
+set interfaces wwan wwan0 pd-reconciliation-interval 10
 ```
 
 ### Packet Mirroring
@@ -712,20 +736,11 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `ip source-validation` | *(VyOS conf_mode)* | `disable` |
 | `ipv6 adjust-mss` | *(VyOS conf_mode)* | not set |
 | `ipv6 disable-forwarding` | *(VyOS conf_mode)* | not set (forwarding on) |
-| `ipv6 accept-dad` | *(VyOS conf_mode)* | `1` |
-| `ipv6 dup-addr-detect-transmits` | *(VyOS conf_mode)* | kernel default |
 | `ipv6 source-validation` | *(VyOS conf_mode)* | `disable` |
-| `ipv6 address no-default-link-local` | *(VyOS conf_mode)* | not set (link-local assigned) |
-| `dhcpv6-options parameters-only` | *(VyOS conf_mode)* | not set |
-| `dhcpv6-options rapid-commit` | *(VyOS conf_mode)* | not set |
-| `dhcpv6-options no-release` | *(VyOS conf_mode)* | not set |
-| `dhcpv6-options temporary` | *(VyOS conf_mode)* | not set |
-| `dhcpv6-options duid` | *(VyOS conf_mode)* | auto-generated |
-| `dhcpv6-options no-request-domain-name` | *(VyOS conf_mode)* | not set |
-| `dhcpv6-options no-request-dns` | *(VyOS conf_mode)* | not set |
-| `dhcpv6-options pd N length` | *(VyOS conf_mode)* | `64` |
-| `dhcpv6-options pd N interface X address` | *(VyOS conf_mode)* | EUI-64 |
-| `dhcpv6-options pd N interface X sla-id` | *(VyOS conf_mode)* | not set |
+| `pd N interface X address` | *(FSM native PD)* | EUI-64 |
+| `pd N interface X sla-id` | *(FSM native PD)* | not set |
+| `pd N interface X sla-len` | *(FSM native PD)* | `64 − carrier prefix len` (→ /64s) |
+| `pd-reconciliation-interval` | `pd_reconciliation_interval` | `10` |
 | **WWAN Service** | | |
 | `sim primary-slot` | `primary_sim_slot` | `1` |
 | `sim sim-failback disable` | `sim_failback_enabled` | `enabled` |

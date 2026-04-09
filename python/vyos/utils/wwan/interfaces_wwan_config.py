@@ -267,6 +267,10 @@ class InterfaceConfig(ServiceInterface):
             "escalation_threshold": 3,                 # Consecutive failures before disable/enable cycle (0 = disabled)
         },
 
+        # IPv6 Prefix Delegation — FSM-native (no dhcp6c)
+        "pd": {},                              # Empty = disabled; populated by conf_mode
+        "pd_reconciliation_interval": 10,      # Seconds between PD safety-net re-checks
+
         # SIM configurations - array of SIM configs
         "sim_slots": [
             {

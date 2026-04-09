@@ -111,6 +111,36 @@ def parse_config(config_path):
                     extra={'config_path': abs_path, 'error': str(e)})
         return {}
 
+
+def _parse_pd_config(raw_cfg):
+    """Parse the 'pd' key from raw config into the nested dict the FSM expects.
+
+    Accepts either:
+      - A dict (already parsed, e.g. from JSON restore)
+      - A JSON string from the flat my_config.conf, e.g.:
+          pd={"0": {"interface": {"eth0": {"address": "1", "sla_id": "0"}}}}
+      - Empty/missing → returns {} (PD disabled)
+    """
+    pd_raw = raw_cfg.get('pd', {})
+    if isinstance(pd_raw, dict):
+        return pd_raw
+    if isinstance(pd_raw, str):
+        pd_raw = pd_raw.strip()
+        if not pd_raw or pd_raw == '{}':
+            return {}
+        try:
+            import json as _json
+            parsed = _json.loads(pd_raw)
+            if isinstance(parsed, dict):
+                return parsed
+            logger.warning("pd config is not a JSON object, ignoring: %s", type(parsed).__name__)
+            return {}
+        except Exception as e:
+            logger.error("Failed to parse pd JSON from config: %s", e)
+            return {}
+    return {}
+
+
 # ─── build_config() ─────────────────────────────────────────────────────────
 def build_config(raw_cfg):
     """Build configuration dictionary in the format expected by your D-Bus service"""
@@ -277,7 +307,11 @@ def build_config(raw_cfg):
         'sim_slots': sim_slots,
         'connectivity_monitoring': connectivity_monitoring,
         'interface_management': interface_management,
-        'failed_retry': failed_retry
+        'failed_retry': failed_retry,
+
+        # IPv6 Prefix Delegation
+        'pd': _parse_pd_config(raw_cfg),
+        'pd_reconciliation_interval': int(raw_cfg.get('pd_reconciliation_interval', 10)),
     }
 
     return config

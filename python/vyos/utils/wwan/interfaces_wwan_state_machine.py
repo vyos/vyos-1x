@@ -5,6 +5,9 @@ import time
 import os
 import json
 import datetime
+import ipaddress
+import socket
+import struct
 from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
@@ -296,6 +299,16 @@ class ModemStateMachine:
         self.last_failure_time = 0            # Timestamp of when failure occurred
         self.last_failed_apn = ''             # The APN name that was last tried when failure occurred
         self.configured_apn_rejected = False  # True when the user's explicitly configured APN was rejected
+
+        # ── IPv6 Prefix Delegation (PD) state ──────────────────────────────
+        self._pd_config = {}               # Desired PD state from config (parsed pd dict)
+        self._pd_applied = {}              # Currently applied: {iface: {'prefix': str, 'addr': str}}
+        self._pd_pending = set()           # Interface names not yet present (awaiting netlink)
+        self._pd_netlink_task = None       # asyncio task: netlink RTM_NEWLINK/DELLINK watch
+        self._pd_reconciliation_task = None  # asyncio task: periodic safety-net re-check
+        self._pd_reconciliation_interval = 10  # Seconds between re-checks (configurable)
+        self._pd_carrier_prefix = None     # Carrier-assigned prefix as IPv6Network
+        self._pd_carrier_prefix_len = None  # Carrier prefix length (int), e.g. 56
 
         # Initialize configuration loader
         self.config_loader = ConfigurationLoader(interface_number)
@@ -1730,6 +1743,13 @@ class ModemStateMachine:
         self._last_known_ip = None
         self._ip_monitoring_task = None
 
+        # Source address enforcement state — prevents stale-source packets
+        # from leaking to carriers that enforce source validation (e.g. Verizon)
+        self._current_bearer_ipv4 = None      # Last applied IPv4 address (bare, no prefix)
+        self._current_bearer_ipv6 = None      # Last applied IPv6 address (bare, no prefix)
+        self._current_bearer_ipv6_prefix = None  # e.g. '64' — length of the carrier prefix
+        self._ipv6_egress_filter_active = False  # True when ip6tables whitelist chain is installed
+
         # Connection mode: always-on | connect-on-demand | dial-on-demand
         self.connection_mode = self.parsed_config.raw_config.get('connection_mode', 'always-on')
 
@@ -1742,6 +1762,16 @@ class ModemStateMachine:
         # Bearer D-Bus signal monitoring state
         self._bearer_proxy = None
         self._bearer_interface = None
+
+        # IPv6 Prefix Delegation configuration
+        self._pd_config = self.parsed_config.raw_config.get('pd', {})
+        self._pd_reconciliation_interval = int(
+            self.parsed_config.raw_config.get('pd_reconciliation_interval', 10)
+        )
+        if self._pd_config:
+            logger.info("PD configuration loaded: %d instance(s), reconciliation interval %ds",
+                       len(self._pd_config), self._pd_reconciliation_interval,
+                       extra={'interface_number': self.interface_number})
 
     async def _configure_modem_initial(self):
         """Initial modem configuration - configure SIM/bands/carrier BEFORE network operations"""
@@ -7730,6 +7760,20 @@ class ModemStateMachine:
             self._ip_monitoring_task.cancel()
             self._ip_monitoring_task = None
 
+        # Remove IPv6 egress prefix filter (interface is going down)
+        interface_name = f"wwan{self.interface_number}"
+        await self._remove_ipv6_egress_filter(interface_name)
+
+        # Stop PD background tasks and remove delegated prefixes from LAN interfaces
+        self._pd_stop_background_tasks()
+        await self._pd_remove_all()
+
+        # Clear tracked IPs so first post-reconnect apply doesn't see a
+        # phantom "change" from the old session
+        self._current_bearer_ipv4 = None
+        self._current_bearer_ipv6 = None
+        self._current_bearer_ipv6_prefix = None
+
     async def _setup_bearer_signal_monitoring(self):
         """Set up D-Bus signal monitoring for bearer state changes"""
         try:
@@ -8381,24 +8425,22 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number})
 
     async def _handle_ip_mismatch(self, bearer_ips, interface_ips):
-        """Handle IP address mismatch between bearer and interface with interface cycling"""
+        """Handle IP address mismatch between bearer and interface.
+
+        Re-applies bearer IP configuration (which includes source address
+        enforcement) rather than doing a naive interface down/up cycle.
+        """
         try:
-            logger.warning("🔧 Handling IP mismatch - bearer vs interface",
+            logger.warning("🔧 Handling IP mismatch - re-applying bearer config with source enforcement",
                           extra={'interface_number': self.interface_number,
                                  'bearer_ips': bearer_ips,
                                  'interface_ips': interface_ips,
-                                 'action': 'interface_cycle_for_ip_fix',
-                                 'delay': self.ip_change_delay})
+                                 'action': 'reapply_bearer_ip_config'})
 
-            # Interface down/up cycle to synchronize with bearer configuration
-            await self._set_interface_down()
-            await asyncio.sleep(self.ip_change_delay * 2 / 1000)  # Longer delay for IP sync
-            await self._set_interface_up()
+            await self._apply_bearer_ip_configuration()
 
-            # Wait a bit for DHCP/configuration to complete
-            await asyncio.sleep(5)
-
-            # Verify fix
+            # Wait briefly for configuration to settle, then verify
+            await asyncio.sleep(2)
             new_interface_ips = await self._get_current_ip()
             logger.info("🔧 IP mismatch fix completed",
                        extra={'interface_number': self.interface_number,
@@ -8561,6 +8603,502 @@ class ModemStateMachine:
             logger.error(f"Error in reset timeout handler: {e}",
                         extra={'interface_number': self.interface_number})
 
+    # ── Source address enforcement helpers ──────────────────────────────
+    #
+    # IPv4: During IP swap, briefly block all egress on wwan, flush conntrack
+    #        entries for the old source, apply new IP, then unblock.
+    # IPv6: Maintain a persistent ip6tables FORWARD chain that only allows
+    #        packets whose source falls within the current carrier prefix.
+    #        This prevents LAN hosts with stale globally-routable addresses
+    #        from leaking traffic after a prefix change.
+
+    async def _run_ipcmd(self, *args):
+        """Run an ip/iptables/conntrack command; log on failure but don't raise."""
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            logger.debug(
+                f"Command failed ({proc.returncode}): {' '.join(args)} — {stderr.decode().strip()}",
+                extra={'interface_number': self.interface_number},
+            )
+        return proc.returncode, stdout.decode(), stderr.decode()
+
+    async def _block_egress_ipv4(self, interface_name):
+        """Insert iptables rules to DROP all IPv4 egress on the WWAN interface."""
+        await self._run_ipcmd('iptables', '-I', 'OUTPUT', '1', '-o', interface_name, '-j', 'DROP')
+        await self._run_ipcmd('iptables', '-I', 'FORWARD', '1', '-o', interface_name, '-j', 'DROP')
+        logger.info("IPv4 egress blocked on %s", interface_name,
+                    extra={'interface_number': self.interface_number})
+
+    async def _unblock_egress_ipv4(self, interface_name):
+        """Remove the temporary IPv4 egress DROP rules."""
+        await self._run_ipcmd('iptables', '-D', 'OUTPUT', '-o', interface_name, '-j', 'DROP')
+        await self._run_ipcmd('iptables', '-D', 'FORWARD', '-o', interface_name, '-j', 'DROP')
+        logger.info("IPv4 egress unblocked on %s", interface_name,
+                    extra={'interface_number': self.interface_number})
+
+    async def _flush_conntrack_ipv4(self, old_ipv4):
+        """Flush conntrack entries that used `old_ipv4` as source (SNAT reply)."""
+        if not old_ipv4:
+            return
+        # -q = reply source (post-NAT), covers SNAT/masquerade
+        rc, _, _ = await self._run_ipcmd('conntrack', '-D', '-q', old_ipv4)
+        # also flush by original source for locally-originated traffic
+        await self._run_ipcmd('conntrack', '-D', '-s', old_ipv4)
+        logger.info("Flushed conntrack entries for old IPv4 %s", old_ipv4,
+                    extra={'interface_number': self.interface_number})
+
+    def _ipv6_chain_name(self, interface_name):
+        """Return the ip6tables chain name for source address enforcement."""
+        # e.g. "WWAN0_SRC_ENFORCE" — 28 chars max
+        return f"{interface_name.upper()}_SRC_ENFORCE"
+
+    async def _install_ipv6_egress_filter(self, interface_name, ipv6_addr, prefix_len):
+        """Install or update a persistent ip6tables FORWARD chain that only
+        allows packets whose IPv6 source falls within the current carrier prefix.
+
+        The chain structure:
+          FORWARD → -o <iface> -j <CHAIN>
+          <CHAIN>:
+            -s <prefix>::/<len> -j RETURN   (allow current prefix)
+            -s fe80::/10 -j RETURN          (allow link-local)
+            -j DROP                          (drop everything else)
+        """
+        chain = self._ipv6_chain_name(interface_name)
+        import ipaddress
+        network = ipaddress.IPv6Network(f"{ipv6_addr}/{prefix_len}", strict=False)
+        prefix_cidr = str(network)  # e.g. "2605:b100:116:4a63::/64"
+
+        if self._ipv6_egress_filter_active:
+            # Chain already exists — flush and repopulate with new prefix
+            await self._run_ipcmd('ip6tables', '-F', chain)
+        else:
+            # First time: create chain + jump rule from FORWARD
+            await self._run_ipcmd('ip6tables', '-N', chain)
+            await self._run_ipcmd(
+                'ip6tables', '-I', 'FORWARD', '1',
+                '-o', interface_name, '-j', chain,
+            )
+            self._ipv6_egress_filter_active = True
+
+        # Populate chain rules
+        await self._run_ipcmd('ip6tables', '-A', chain, '-s', prefix_cidr, '-j', 'RETURN')
+        await self._run_ipcmd('ip6tables', '-A', chain, '-s', 'fe80::/10', '-j', 'RETURN')
+        await self._run_ipcmd('ip6tables', '-A', chain, '-j', 'DROP')
+
+        logger.info(
+            "IPv6 egress filter updated: allow %s on %s", prefix_cidr, interface_name,
+            extra={'interface_number': self.interface_number},
+        )
+
+    async def _remove_ipv6_egress_filter(self, interface_name):
+        """Remove the persistent ip6tables FORWARD chain entirely."""
+        if not self._ipv6_egress_filter_active:
+            return
+        chain = self._ipv6_chain_name(interface_name)
+        # Remove jump rule from FORWARD, then flush + delete chain
+        await self._run_ipcmd(
+            'ip6tables', '-D', 'FORWARD', '-o', interface_name, '-j', chain,
+        )
+        await self._run_ipcmd('ip6tables', '-F', chain)
+        await self._run_ipcmd('ip6tables', '-X', chain)
+        self._ipv6_egress_filter_active = False
+        logger.info("IPv6 egress filter removed from %s", interface_name,
+                    extra={'interface_number': self.interface_number})
+
+    async def _kill_stale_ipv6_sockets(self, old_ipv6):
+        """Kill locally-originated sockets still bound to the old IPv6 address."""
+        if not old_ipv6:
+            return
+        await self._run_ipcmd('ss', '--kill', '-6', 'src', old_ipv6)
+        logger.debug("Killed stale IPv6 sockets bound to %s", old_ipv6,
+                     extra={'interface_number': self.interface_number})
+
+    # ── IPv6 Prefix Delegation (PD) ────────────────────────────────────
+    #
+    # The carrier assigns a prefix via the bearer's Ip6Config.  The FSM
+    # applies a /128 on wwan and delegates sub-prefixes to LAN interfaces
+    # using SLA-ID / SLA-LEN math (RFC 6603).  No DHCPv6 client is used.
+    #
+    # Two background tasks keep delegated addresses in sync:
+    #   1. Netlink watch  — instant RTM_NEWLINK/DELLINK notification
+    #   2. Reconciliation — periodic safety-net re-check
+
+    def _pd_compute_delegated_address(self, carrier_net, carrier_prefix_len,
+                                       sla_id, sla_len, address_id):
+        """Compute the full IPv6 address for a delegated LAN interface.
+
+        Returns (address_str, prefix_len) or (None, None) on error.
+
+        carrier_net        : ipaddress.IPv6Network — the carrier-assigned prefix
+        carrier_prefix_len : int — e.g. 56
+        sla_id             : int — which sub-prefix (0-65535)
+        sla_len            : int — bits dedicated to the SLA-ID
+        address_id         : int — host identifier within the delegated prefix
+        """
+        delegated_prefix_len = carrier_prefix_len + sla_len
+
+        if delegated_prefix_len > 128:
+            logger.error("PD delegated prefix /%d exceeds /128 (carrier /%d + sla-len %d)",
+                        delegated_prefix_len, carrier_prefix_len, sla_len,
+                        extra={'interface_number': self.interface_number})
+            return None, None
+
+        if sla_len > 0 and sla_id >= (1 << sla_len):
+            logger.error("PD sla-id %d does not fit in sla-len %d (%d max)",
+                        sla_id, sla_len, (1 << sla_len) - 1,
+                        extra={'interface_number': self.interface_number})
+            return None, None
+
+        if sla_len == 0 and sla_id != 0:
+            logger.error("PD sla-len 0 requires sla-id 0, got %d",
+                        sla_id,
+                        extra={'interface_number': self.interface_number})
+            return None, None
+
+        carrier_int = int(carrier_net.network_address)
+        # Place sla_id in the bits immediately following the carrier prefix
+        if sla_len > 0:
+            delegated_network_int = carrier_int | (sla_id << (128 - delegated_prefix_len))
+        else:
+            delegated_network_int = carrier_int
+
+        # Place the host identifier (address_id) in the lower bits
+        full_addr_int = delegated_network_int | address_id
+        full_addr = ipaddress.IPv6Address(full_addr_int)
+
+        return str(full_addr), delegated_prefix_len
+
+    def _pd_build_desired_state(self, carrier_net, carrier_prefix_len):
+        """Parse self._pd_config and build a dict of desired PD assignments.
+
+        Returns: {iface_name: {'addr': str, 'prefix_len': int, 'pd_instance': str}}
+        """
+        desired = {}
+        for pd_instance, pd_data in self._pd_config.items():
+            interfaces = pd_data.get('interface', {})
+            for iface_name, iface_cfg in interfaces.items():
+                sla_id = int(iface_cfg.get('sla_id', 0))
+                # Default sla_len: 64 - carrier_prefix_len (produces /64 subnets)
+                default_sla_len = max(0, 64 - carrier_prefix_len)
+                sla_len_raw = iface_cfg.get('sla_len')
+                if sla_len_raw is not None:
+                    sla_len = int(sla_len_raw)
+                else:
+                    sla_len = default_sla_len
+
+                address_raw = iface_cfg.get('address', '1')
+                address_id = int(address_raw)
+
+                addr, prefix_len = self._pd_compute_delegated_address(
+                    carrier_net, carrier_prefix_len, sla_id, sla_len, address_id
+                )
+                if addr is not None:
+                    desired[iface_name] = {
+                        'addr': addr,
+                        'prefix_len': prefix_len,
+                        'pd_instance': pd_instance,
+                    }
+                    logger.debug("PD desired: %s/%d on %s (instance %s, sla-id %d, sla-len %d)",
+                                addr, prefix_len, iface_name, pd_instance, sla_id, sla_len,
+                                extra={'interface_number': self.interface_number})
+        return desired
+
+    def _pd_interface_exists(self, iface_name):
+        """Check if a network interface exists."""
+        return os.path.isdir(f"/sys/class/net/{iface_name}")
+
+    async def _pd_apply_to_interface(self, iface_name, addr, prefix_len):
+        """Add a delegated IPv6 address to a LAN interface."""
+        cidr = f"{addr}/{prefix_len}"
+        rc, _, stderr = await self._run_ipcmd('ip', '-6', 'addr', 'add', cidr, 'dev', iface_name)
+        if rc == 0 or 'exists' in stderr:
+            logger.info("PD applied %s on %s", cidr, iface_name,
+                       extra={'interface_number': self.interface_number})
+            return True
+        else:
+            logger.warning("PD failed to apply %s on %s: %s", cidr, iface_name, stderr.strip(),
+                          extra={'interface_number': self.interface_number})
+            return False
+
+    async def _pd_remove_from_interface(self, iface_name, addr, prefix_len):
+        """Remove a delegated IPv6 address from a LAN interface."""
+        cidr = f"{addr}/{prefix_len}"
+        if not self._pd_interface_exists(iface_name):
+            logger.debug("PD skip remove %s from %s (interface gone)", cidr, iface_name,
+                        extra={'interface_number': self.interface_number})
+            return
+        rc, _, stderr = await self._run_ipcmd('ip', '-6', 'addr', 'del', cidr, 'dev', iface_name)
+        if rc == 0 or 'Cannot assign' in stderr:
+            logger.info("PD removed %s from %s", cidr, iface_name,
+                       extra={'interface_number': self.interface_number})
+        else:
+            logger.debug("PD remove %s from %s: %s", cidr, iface_name, stderr.strip(),
+                        extra={'interface_number': self.interface_number})
+
+    async def _pd_apply_all(self, carrier_net, carrier_prefix_len):
+        """Compute desired PD state and apply to every present LAN interface.
+
+        Interfaces that don't exist yet are added to _pd_pending.
+        Starts netlink watch and reconciliation timer if any PD is configured.
+        """
+        if not self._pd_config:
+            return
+
+        if carrier_prefix_len >= 128:
+            logger.info("PD skipped: carrier prefix /%d is address-only, no space to delegate",
+                       carrier_prefix_len,
+                       extra={'interface_number': self.interface_number})
+            return
+
+        self._pd_carrier_prefix = carrier_net
+        self._pd_carrier_prefix_len = carrier_prefix_len
+
+        desired = self._pd_build_desired_state(carrier_net, carrier_prefix_len)
+        self._pd_pending = set()
+        self._pd_applied = {}
+
+        for iface_name, info in desired.items():
+            if self._pd_interface_exists(iface_name):
+                ok = await self._pd_apply_to_interface(
+                    iface_name, info['addr'], info['prefix_len']
+                )
+                if ok:
+                    self._pd_applied[iface_name] = {
+                        'prefix': f"{info['addr']}/{info['prefix_len']}",
+                        'addr': info['addr'],
+                        'prefix_len': info['prefix_len'],
+                    }
+            else:
+                self._pd_pending.add(iface_name)
+                logger.info("PD pending: %s not present yet (will apply when it appears)",
+                           iface_name,
+                           extra={'interface_number': self.interface_number})
+
+        # Start background tasks for late-appearing interfaces
+        if desired:
+            self._pd_start_background_tasks()
+
+        logger.info("PD apply complete: %d applied, %d pending",
+                   len(self._pd_applied), len(self._pd_pending),
+                   extra={'interface_number': self.interface_number})
+
+    async def _pd_remove_all(self):
+        """Remove all delegated prefixes from LAN interfaces and clear PD state."""
+        for iface_name, info in list(self._pd_applied.items()):
+            await self._pd_remove_from_interface(
+                iface_name, info['addr'], info['prefix_len']
+            )
+        self._pd_applied.clear()
+        self._pd_pending.clear()
+        self._pd_carrier_prefix = None
+        self._pd_carrier_prefix_len = None
+        logger.info("PD: all delegated prefixes removed",
+                   extra={'interface_number': self.interface_number})
+
+    def _pd_start_background_tasks(self):
+        """Start netlink watch and reconciliation timer tasks."""
+        # Netlink watch — instant notification for interface create/destroy
+        if not self._pd_netlink_task or self._pd_netlink_task.done():
+            self._pd_netlink_task = self._safe_create_task(
+                self._pd_netlink_watch(), name='pd-netlink-watch'
+            )
+
+        # Reconciliation timer — safety-net periodic re-check
+        if not self._pd_reconciliation_task or self._pd_reconciliation_task.done():
+            self._pd_reconciliation_task = self._safe_create_task(
+                self._pd_reconciliation_loop(), name='pd-reconciliation'
+            )
+
+    def _pd_stop_background_tasks(self):
+        """Cancel PD background tasks."""
+        if self._pd_netlink_task and not self._pd_netlink_task.done():
+            self._pd_netlink_task.cancel()
+            self._pd_netlink_task = None
+
+        if self._pd_reconciliation_task and not self._pd_reconciliation_task.done():
+            self._pd_reconciliation_task.cancel()
+            self._pd_reconciliation_task = None
+
+    async def _pd_reconciliation_loop(self):
+        """Periodically re-check pending interfaces and reconcile applied state."""
+        try:
+            while True:
+                await asyncio.sleep(self._pd_reconciliation_interval)
+
+                if not self._pd_carrier_prefix or not self._pd_config:
+                    continue
+
+                desired = self._pd_build_desired_state(
+                    self._pd_carrier_prefix, self._pd_carrier_prefix_len
+                )
+
+                # Apply to any newly-appeared pending interfaces
+                newly_applied = []
+                for iface_name in list(self._pd_pending):
+                    if iface_name in desired and self._pd_interface_exists(iface_name):
+                        info = desired[iface_name]
+                        ok = await self._pd_apply_to_interface(
+                            iface_name, info['addr'], info['prefix_len']
+                        )
+                        if ok:
+                            self._pd_applied[iface_name] = {
+                                'prefix': f"{info['addr']}/{info['prefix_len']}",
+                                'addr': info['addr'],
+                                'prefix_len': info['prefix_len'],
+                            }
+                            newly_applied.append(iface_name)
+
+                for iface_name in newly_applied:
+                    self._pd_pending.discard(iface_name)
+
+                # Detect interfaces that were destroyed and move back to pending
+                for iface_name in list(self._pd_applied):
+                    if not self._pd_interface_exists(iface_name):
+                        del self._pd_applied[iface_name]
+                        if iface_name in desired:
+                            self._pd_pending.add(iface_name)
+                            logger.info("PD reconciliation: %s disappeared, moved to pending",
+                                       iface_name,
+                                       extra={'interface_number': self.interface_number})
+
+                if newly_applied:
+                    logger.info("PD reconciliation: applied to %s", ', '.join(newly_applied),
+                               extra={'interface_number': self.interface_number})
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("PD reconciliation loop error: %s", e,
+                        extra={'interface_number': self.interface_number})
+
+    async def _pd_netlink_watch(self):
+        """Watch for RTM_NEWLINK/RTM_DELLINK events and apply/remove PD accordingly."""
+        NETLINK_ROUTE = 0
+        RTMGRP_LINK = 1
+        RTM_NEWLINK = 16
+        RTM_DELLINK = 17
+        IFLA_IFNAME = 3
+        NLMSG_HDRLEN = 16
+        IFINFOMSG_LEN = 16
+
+        sock = None
+        try:
+            sock = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM, NETLINK_ROUTE)
+            sock.bind((0, RTMGRP_LINK))
+            sock.setblocking(False)
+
+            loop = asyncio.get_event_loop()
+
+            while True:
+                # Wait for socket to be readable
+                future = loop.create_future()
+
+                def _on_readable():
+                    if not future.done():
+                        future.set_result(None)
+
+                loop.add_reader(sock.fileno(), _on_readable)
+                try:
+                    await future
+                finally:
+                    loop.remove_reader(sock.fileno())
+
+                try:
+                    data = sock.recv(65535)
+                except BlockingIOError:
+                    continue
+
+                # Parse netlink messages from the buffer
+                offset = 0
+                while offset < len(data):
+                    if offset + NLMSG_HDRLEN > len(data):
+                        break
+                    nlmsg_len, nlmsg_type, _, _, _ = struct.unpack_from(
+                        '=IHHII', data, offset
+                    )
+                    if nlmsg_len < NLMSG_HDRLEN or offset + nlmsg_len > len(data):
+                        break
+
+                    if nlmsg_type in (RTM_NEWLINK, RTM_DELLINK):
+                        # Parse ifinfomsg to skip it, then walk rtattrs for IFLA_IFNAME
+                        attr_offset = offset + NLMSG_HDRLEN + IFINFOMSG_LEN
+                        iface_name = None
+
+                        while attr_offset + 4 <= offset + nlmsg_len:
+                            rta_len, rta_type = struct.unpack_from('=HH', data, attr_offset)
+                            if rta_len < 4:
+                                break
+                            if rta_type == IFLA_IFNAME:
+                                name_start = attr_offset + 4
+                                name_end = attr_offset + rta_len
+                                raw = data[name_start:name_end]
+                                iface_name = raw.rstrip(b'\x00').decode('ascii', errors='replace')
+                                break
+                            # Align to 4-byte boundary
+                            attr_offset += (rta_len + 3) & ~3
+
+                        if iface_name:
+                            await self._pd_handle_netlink_event(
+                                nlmsg_type, iface_name
+                            )
+
+                    # Advance to next message (4-byte aligned)
+                    offset += (nlmsg_len + 3) & ~3
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("PD netlink watch error: %s", e,
+                        extra={'interface_number': self.interface_number})
+        finally:
+            if sock is not None:
+                sock.close()
+
+    async def _pd_handle_netlink_event(self, msg_type, iface_name):
+        """Handle a single RTM_NEWLINK or RTM_DELLINK event for PD."""
+        RTM_NEWLINK = 16
+        RTM_DELLINK = 17
+
+        if msg_type == RTM_NEWLINK and iface_name in self._pd_pending:
+            # Interface appeared — apply its delegated prefix
+            if not self._pd_carrier_prefix or not self._pd_config:
+                return
+            desired = self._pd_build_desired_state(
+                self._pd_carrier_prefix, self._pd_carrier_prefix_len
+            )
+            if iface_name in desired:
+                info = desired[iface_name]
+                ok = await self._pd_apply_to_interface(
+                    iface_name, info['addr'], info['prefix_len']
+                )
+                if ok:
+                    self._pd_applied[iface_name] = {
+                        'prefix': f"{info['addr']}/{info['prefix_len']}",
+                        'addr': info['addr'],
+                        'prefix_len': info['prefix_len'],
+                    }
+                    self._pd_pending.discard(iface_name)
+                    logger.info("PD netlink: applied to newly-appeared %s", iface_name,
+                               extra={'interface_number': self.interface_number})
+
+        elif msg_type == RTM_DELLINK and iface_name in self._pd_applied:
+            # Interface destroyed — move back to pending
+            del self._pd_applied[iface_name]
+            if not self._pd_carrier_prefix or not self._pd_config:
+                return
+            desired = self._pd_build_desired_state(
+                self._pd_carrier_prefix, self._pd_carrier_prefix_len
+            )
+            if iface_name in desired:
+                self._pd_pending.add(iface_name)
+                logger.info("PD netlink: %s destroyed, moved to pending", iface_name,
+                           extra={'interface_number': self.interface_number})
+
     async def _apply_bearer_ip_configuration(self):
         """Apply bearer IP configuration to the interface (VyOS responsibility)"""
         try:
@@ -8593,8 +9131,28 @@ class ModemStateMachine:
                 logger.info(f"Interface {interface_name} set UP for IP configuration",
                            extra={'interface_number': self.interface_number})
 
+            # ── Source address enforcement: capture old IPs before clearing ──
+            old_ipv4 = self._current_bearer_ipv4
+            old_ipv6 = self._current_bearer_ipv6
+            new_ipv4 = bearer_ips.get('ipv4')
+            new_ipv6 = bearer_ips.get('ipv6')
+            ipv4_changed = old_ipv4 and new_ipv4 and old_ipv4 != new_ipv4
+            ipv6_changed = old_ipv6 and new_ipv6 and old_ipv6 != new_ipv6
+
+            # Block IPv4 egress while we swap addresses + flush conntrack
+            if ipv4_changed:
+                logger.info("IPv4 address changing %s → %s — blocking egress during swap",
+                           old_ipv4, new_ipv4,
+                           extra={'interface_number': self.interface_number})
+                await self._block_egress_ipv4(interface_name)
+
             # Clear existing IP addresses to avoid conflicts (except link-local)
             await self._clear_interface_addresses(interface_name)
+
+            # Flush conntrack entries for the old IPv4 source so NAT doesn't
+            # re-use the stale mapping for in-flight or retransmitted packets
+            if ipv4_changed:
+                await self._flush_conntrack_ipv4(old_ipv4)
 
             # Apply IPv4 configuration
             if bearer_ips.get('ipv4'):
@@ -8722,23 +9280,31 @@ class ModemStateMachine:
                         logger.warning(f"IPv4 device route failed: {stderr.decode().strip()}",
                                       extra={'interface_number': self.interface_number})
 
+            # ── IPv4 source enforcement: unblock egress now that new IP + route are live ──
+            if ipv4_changed:
+                await self._unblock_egress_ipv4(interface_name)
+            # Track current IPv4 for next change detection
+            if new_ipv4:
+                self._current_bearer_ipv4 = new_ipv4
+
             # Apply IPv6 configuration
             if bearer_ips.get('ipv6'):
                 ipv6_addr = bearer_ips['ipv6']
-                ipv6_prefix = bearer_ips.get('ipv6_prefix', '64')  # Default /64
+                ipv6_prefix = bearer_ips.get('ipv6_prefix', '64')  # Carrier prefix length (used for PD / egress filter)
                 ipv6_gateway = bearer_ips.get('ipv6_gateway')
                 ipv6_dns = bearer_ips.get('ipv6_dns', [])
                 ipv6_mtu = bearer_ips.get('ipv6_mtu')
 
-                logger.info(f"Applying IPv6 configuration: {ipv6_addr}/{ipv6_prefix}",
+                logger.info(f"Applying IPv6 configuration: {ipv6_addr}/128 (carrier prefix /{ipv6_prefix})",
                            extra={'interface_number': self.interface_number,
                                   'gateway': ipv6_gateway,
                                   'dns_servers': ipv6_dns,
                                   'mtu': ipv6_mtu})
 
-                # Add IPv6 address (carrier-assigned)
+                # Add IPv6 address with /128 — point-to-point link to carrier;
+                # the full carrier prefix is reserved for PD to LAN interfaces.
                 result = await asyncio.create_subprocess_exec(
-                    'ip', '-6', 'addr', 'add', f"{ipv6_addr}/{ipv6_prefix}", 'dev', interface_name,
+                    'ip', '-6', 'addr', 'add', f"{ipv6_addr}/128", 'dev', interface_name,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
@@ -8807,6 +9373,30 @@ class ModemStateMachine:
                     else:
                         logger.warning(f"IPv6 device route failed: {stderr.decode().strip()}",
                                       extra={'interface_number': self.interface_number})
+
+            # ── IPv6 source enforcement: persistent egress prefix whitelist ──
+            if new_ipv6:
+                ipv6_prefix_len = bearer_ips.get('ipv6_prefix', '64')
+                await self._install_ipv6_egress_filter(interface_name, new_ipv6, ipv6_prefix_len)
+                # Kill locally-originated sockets still bound to old address
+                if ipv6_changed:
+                    await self._kill_stale_ipv6_sockets(old_ipv6)
+                # Track current IPv6 for next change detection
+                self._current_bearer_ipv6 = new_ipv6
+                self._current_bearer_ipv6_prefix = ipv6_prefix_len
+
+            # ── IPv6 Prefix Delegation: delegate carrier prefix to LAN interfaces ──
+            if bearer_ips.get('ipv6') and self._pd_config:
+                ipv6_addr = bearer_ips['ipv6']
+                carrier_plen = int(bearer_ips.get('ipv6_prefix', '64'))
+                try:
+                    carrier_net = ipaddress.IPv6Network(
+                        f"{ipv6_addr}/{carrier_plen}", strict=False
+                    )
+                    await self._pd_apply_all(carrier_net, carrier_plen)
+                except Exception as pd_err:
+                    logger.error("PD apply failed: %s", pd_err,
+                                extra={'interface_number': self.interface_number})
 
             # Register all carrier DNS servers with VyOS hostsd (same mechanism as DHCP interfaces)
             all_dns = bearer_ips.get('ipv4_dns', []) + bearer_ips.get('ipv6_dns', [])

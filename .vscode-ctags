@@ -1,0 +1,176 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/jfeeney/vyos-1x/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+$(BUILDDIR)/%.cmx	libvyosconfig/Makefile	/^$(BUILDDIR)\/%.cmx: %.ml$/;"	t
+$(BUILDDIR)/%.o	libvyosconfig/Makefile	/^$(BUILDDIR)\/%.o: %.c$/;"	t
+$(BUILDDIR)/libvyosconfig$(EXTDLL)	libvyosconfig/Makefile	/^$(BUILDDIR)\/libvyosconfig$(EXTDLL): $(CAML_INIT) $(LIBFILES)$/;"	t
+$(BUILDDIR)/stub/%.o	libvyosconfig/Makefile	/^$(BUILDDIR)\/stub\/%.o:$/;"	t
+$(GENERATED)	libvyosconfig/Makefile	/^$(GENERATED): $(GENERATOR)$/;"	t
+$(GENERATOR)	libvyosconfig/Makefile	/^$(GENERATOR): $(GENERATOR_FILES)$/;"	t
+%	debian/rules	/^%:$/;"	t
+%.xml	Makefile	/^%.xml: %.xml.in$/;"	t
+/usr/share/vyos/vyconf	debian/rules	/^\/usr\/share\/vyos\/vyconf: vyconf$/;"	t
+ACTIVATION_SCRIPTS_DIR	debian/rules	/^ACTIVATION_SCRIPTS_DIR := usr\/libexec\/vyos\/activate$/;"	m
+AR	src/shim/mkjson/makefile	/^AR = ar$/;"	m
+BASE_VERSION	debian/rules	/^BASE_VERSION := 999.0$/;"	m
+BUILDDIR	libvyosconfig/Makefile	/^BUILDDIR=_build$/;"	m
+BUILD_ARCH	Makefile	/^BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)$/;"	m
+BUILD_DIR	Makefile	/^BUILD_DIR := build$/;"	m
+CAML_CTYPES	libvyosconfig/Makefile	/^CAML_CTYPES:=$(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlfind query ctypes)$/;"	m
+CAML_INIT	libvyosconfig/Makefile	/^CAML_INIT=$(BUILDDIR)\/stub\/init.o$/;"	m
+CAML_STDLIB	libvyosconfig/Makefile	/^CAML_STDLIB:=$(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlfind ocamlc -config |/;"	m
+CC	libvyosconfig/Makefile	/^CC:= $(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlfind ocamlc -config | awk '\//;"	m
+CC	src/shim/Makefile	/^CC := gcc$/;"	m
+CC	src/shim/mkjson/makefile	/^CC = gcc$/;"	m
+CFLAGS	Makefile	/^CFLAGS :=$/;"	m
+CFLAGS	src/shim/Makefile	/^CFLAGS := -I.\/mkjson -L.\/mkjson\/lib -DDEBUG=${DEBUG}$/;"	m
+CFLAGS	src/shim/mkjson/makefile	/^CFLAGS = -Wall -Os -I.$/;"	m
+COMMIT_COUNT	debian/rules	/^COMMIT_COUNT := $(shell git rev-list HEAD --count)$/;"	m
+COMMIT_ID	debian/rules	/^COMMIT_ID := $(shell echo -n g && git rev-parse --short HEAD)$/;"	m
+COMMIT_MARKER	src/shim/vyshim.c	/^#define COMMIT_MARKER /;"	d	file:
+DATA_DIR	Makefile	/^DATA_DIR := data$/;"	m
+DEBUG	src/shim/Makefile	/^DEBUG = 0$/;"	m
+DEBUG_ON	src/shim/vyshim.c	/^#define DEBUG_ON /;"	d	file:
+DEB_TARGET_ARCH	debian/rules	/^DEB_TARGET_ARCH := $(shell dpkg-architecture -qDEB_TARGET_ARCH)$/;"	m
+DIR	debian/rules	/^DIR := debian\/tmp$/;"	m
+DIRTY_FLAG	debian/rules	/^DIRTY_FLAG := $(shell ! git diff --quiet || ! git diff --cached --quiet && echo -dirty || echo)$/;"	m
+DIR_AWS	debian/rules	/^DIR_AWS := $(DIR)\/vyos-1x-aws$/;"	m
+DIR_LIBVYOSCONFIG	debian/rules	/^DIR_LIBVYOSCONFIG := $(DIR)\/libvyosconfig$/;"	m
+ERROR_COMMIT	src/shim/vyshim.c	/^    ERROR_COMMIT = 1 << 1,$/;"	e	enum:__anon9994562d0103	file:
+ERROR_COMMIT_APPLY	src/shim/vyshim.c	/^    ERROR_COMMIT_APPLY = 1 << 4$/;"	e	enum:__anon9994562d0103	file:
+ERROR_DAEMON	src/shim/vyshim.c	/^    ERROR_DAEMON = 1 << 2,$/;"	e	enum:__anon9994562d0103	file:
+EXTDLL	libvyosconfig/Makefile	/^EXTDLL:=$(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlfind ocamlc -config | awk /;"	m
+EXTEXE	libvyosconfig/Makefile	/^EXTEXE=$/;"	m
+EXTEXE	libvyosconfig/Makefile	/^EXTEXE=.exe$/;"	m
+GENERATED	libvyosconfig/Makefile	/^GENERATED=$(BUILDDIR)\/generated\/vyosconfig.h \\$/;"	m
+GENERATOR	libvyosconfig/Makefile	/^GENERATOR=$(BUILDDIR)\/generate$(EXTEXE)$/;"	m
+GENERATOR_FILES	libvyosconfig/Makefile	/^GENERATOR_FILES=$(BUILDDIR)\/lib\/bindings.cmx \\$/;"	m
+GET_ACTIVE	src/shim/vyshim.c	/^#define GET_ACTIVE /;"	d	file:
+GET_SESSION	src/shim/vyshim.c	/^#define GET_SESSION /;"	d	file:
+J2LINT	Makefile	/^J2LINT := $(shell command -v j2lint 2> \/dev\/null)$/;"	m
+LIBFILES	libvyosconfig/Makefile	/^LIBFILES=$(BUILDDIR)\/lib\/bindings.cmx \\$/;"	m
+LIBNAME	libvyosconfig/Makefile	/^LIBNAME:=libvyosconfig.so.0$/;"	m
+LIBS	Makefile	/^LIBS := -lzmq$/;"	m
+LIBS	src/shim/Makefile	/^LIBS := -lmkjson -lzmq$/;"	m
+MIGRATION_SCRIPTS_DIR	debian/rules	/^MIGRATION_SCRIPTS_DIR := opt\/vyatta\/etc\/config-migrate\/migrate$/;"	m
+MKJSON_ARR	src/shim/mkjson/mkjson.h	/^	MKJSON_ARR = 0, \/\/ An array$/;"	e	enum:mkjson_container_type
+MKJSON_BOOL	src/shim/mkjson/mkjson.h	/^	MKJSON_BOOL        = (int)('b'), \/\/ int - A boolean value$/;"	e	enum:mkjson_value_type
+MKJSON_DOUBLE	src/shim/mkjson/mkjson.h	/^	MKJSON_DOUBLE      = (int)('d'), \/\/ double - A double$/;"	e	enum:mkjson_value_type
+MKJSON_H	src/shim/mkjson/mkjson.h	/^#define MKJSON_H$/;"	d
+MKJSON_IGN_BOOL	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_BOOL        = (-MKJSON_BOOL),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_DOUBLE	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_DOUBLE      = (-MKJSON_DOUBLE),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_INT	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_INT         = (-MKJSON_INT),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_JSON	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_JSON        = (-MKJSON_JSON),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_JSON_FREE	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_JSON_FREE   = (-MKJSON_JSON_FREE),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_LDOUBLE	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_LDOUBLE     = (-MKJSON_LDOUBLE),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_LLINT	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_LLINT       = (-MKJSON_LLINT),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_NULL	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_NULL        = (-MKJSON_NULL)$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_STRING	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_STRING      = (-MKJSON_STRING),$/;"	e	enum:mkjson_value_type
+MKJSON_IGN_STRING_FREE	src/shim/mkjson/mkjson.h	/^	MKJSON_IGN_STRING_FREE = (-MKJSON_STRING_FREE),$/;"	e	enum:mkjson_value_type
+MKJSON_INT	src/shim/mkjson/mkjson.h	/^	MKJSON_INT         = (int)('i'), \/\/ int - An integer$/;"	e	enum:mkjson_value_type
+MKJSON_JSON	src/shim/mkjson/mkjson.h	/^	MKJSON_JSON        = (int)('r'), \/\/ const char* - JSON data (like string, but no quotes)$/;"	e	enum:mkjson_value_type
+MKJSON_JSON_FREE	src/shim/mkjson/mkjson.h	/^	MKJSON_JSON_FREE   = (int)('j'), \/\/ char* - JSON data, but pointer is freed$/;"	e	enum:mkjson_value_type
+MKJSON_LDOUBLE	src/shim/mkjson/mkjson.h	/^	MKJSON_LDOUBLE     = (int)('D'), \/\/ long double - A long double$/;"	e	enum:mkjson_value_type
+MKJSON_LLINT	src/shim/mkjson/mkjson.h	/^	MKJSON_LLINT       = (int)('I'), \/\/ long long int - A long integer$/;"	e	enum:mkjson_value_type
+MKJSON_NULL	src/shim/mkjson/mkjson.h	/^	MKJSON_NULL        = (int)('n'),  \/\/ -- - JSON null value$/;"	e	enum:mkjson_value_type
+MKJSON_OBJ	src/shim/mkjson/mkjson.h	/^	MKJSON_OBJ = 1  \/\/ An object (hash or whatever you call it)$/;"	e	enum:mkjson_container_type
+MKJSON_SCI_DOUBLE	src/shim/mkjson/mkjson.h	/^	MKJSON_SCI_DOUBLE  = (int)('e'), \/\/ double - A double with scientific notation$/;"	e	enum:mkjson_value_type
+MKJSON_SCI_LDOUBLE	src/shim/mkjson/mkjson.h	/^	MKJSON_SCI_LDOUBLE = (int)('E'), \/\/ long double - A long double with scientific notation$/;"	e	enum:mkjson_value_type
+MKJSON_STRING	src/shim/mkjson/mkjson.h	/^	MKJSON_STRING      = (int)('s'), \/\/ const char* - String data$/;"	e	enum:mkjson_value_type
+MKJSON_STRING_FREE	src/shim/mkjson/mkjson.h	/^	MKJSON_STRING_FREE = (int)('f'), \/\/ char* - String data, but pointer is freed$/;"	e	enum:mkjson_value_type
+OCAMLDIR	libvyosconfig/Makefile	/^OCAMLDIR=$(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlopt -where)$/;"	m
+OCAML_DIR	debian/rules	/^OCAML_DIR := \/opt\/opam\/${OCAML_VERSION}$/;"	m
+OP_TMPL_DIR	Makefile	/^OP_TMPL_DIR := templates-op$/;"	m
+OSTYPE	libvyosconfig/Makefile	/^OSTYPE:=$(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlfind ocamlc -config | awk /;"	m
+PACKAGES	libvyosconfig/Makefile	/^PACKAGES=vyos1x-config,vyconf.vyconfd-config,vyconf.vycall-client,re,ctypes.stubs,ctypes.foreign$/;"	m
+PASS	src/shim/vyshim.c	/^    PASS =         1 << 3,$/;"	e	enum:__anon9994562d0103	file:
+PHONY	libvyosconfig/Makefile	/^PHONY: depends$/;"	t
+QUEUE_MARKER	src/shim/vyshim.c	/^#define QUEUE_MARKER /;"	d	file:
+SERVICES_DIR	debian/rules	/^SERVICES_DIR := usr\/libexec\/vyos\/services$/;"	m
+SHIM_DIR	Makefile	/^SHIM_DIR := src\/shim$/;"	m
+SOCKET_PATH	src/shim/vyshim.c	/^#define SOCKET_PATH /;"	d	file:
+SUCCESS	src/shim/vyshim.c	/^    SUCCESS =      1 << 0,$/;"	e	enum:__anon9994562d0103	file:
+SYSTEM	libvyosconfig/Makefile	/^SYSTEM:=$(shell eval $$(opam env --root=\/opt\/opam --set-root); ocamlfind ocamlc -config | awk /;"	m
+SYSTEM_SCRIPTS_DIR	debian/rules	/^SYSTEM_SCRIPTS_DIR := usr\/libexec\/vyos\/system$/;"	m
+TMPL_DIR	Makefile	/^TMPL_DIR := templates-cfg$/;"	m
+VPATH	libvyosconfig/Makefile	/^VPATH=$(BUILDDIR)$/;"	m
+VYCONF	debian/rules	/^VYCONF := usr\/libexec\/vyos\/vyconf$/;"	m
+VYCONF_BIN	debian/rules	/^VYCONF_BIN := $(VYCONF)\/bin$/;"	m
+VYCONF_CONF	debian/rules	/^VYCONF_CONF := $(VYCONF)\/config$/;"	m
+VYCONF_DATA	debian/rules	/^VYCONF_DATA := usr\/share\/vyos\/vyconf$/;"	m
+VYCONF_DEF	debian/rules	/^VYCONF_DEF := etc\/vyos$/;"	m
+VYCONF_REFTREE_DIR	debian/rules	/^VYCONF_REFTREE_DIR := $(VYOS_LIBEXEC_DIR)\/vyconf\/reftree$/;"	m
+VYCONF_SESSION	debian/rules	/^VYCONF_SESSION := $(VYCONF)\/session$/;"	m
+VYOS_BIN_DIR	debian/rules	/^VYOS_BIN_DIR := usr\/bin$/;"	m
+VYOS_CFG_TMPL_DIR	debian/rules	/^VYOS_CFG_TMPL_DIR := opt\/vyatta\/share\/vyatta-cfg\/templates$/;"	m
+VYOS_DATA_DIR	debian/rules	/^VYOS_DATA_DIR := usr\/share\/vyos$/;"	m
+VYOS_LIBEXEC_DIR	debian/rules	/^VYOS_LIBEXEC_DIR := usr\/libexec\/vyos$/;"	m
+VYOS_LIB_DIR	debian/rules	/^VYOS_LIB_DIR := usr\/lib$/;"	m
+VYOS_LOCALUI_DIR	debian/rules	/^VYOS_LOCALUI_DIR := srv\/localui$/;"	m
+VYOS_MIBS_DIR	debian/rules	/^VYOS_MIBS_DIR := usr\/share\/snmp\/mibs$/;"	m
+VYOS_OP_TMPL_DIR	debian/rules	/^VYOS_OP_TMPL_DIR := opt\/vyatta\/share\/vyatta-op\/templates$/;"	m
+VYOS_SBIN_DIR	debian/rules	/^VYOS_SBIN_DIR := usr\/sbin$/;"	m
+__anon9994562d0103	src/shim/vyshim.c	/^enum {$/;"	g	file:
+all	Makefile	/^all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint /;"	t
+all	libvyosconfig/Makefile	/^all: sharedlib$/;"	t
+all	src/shim/Makefile	/^all: vyshim$/;"	t
+all	src/shim/mkjson/makefile	/^all: clean force$/;"	t
+allsprintf	src/shim/mkjson/mkjson.c	/^static int allsprintf( char **strp, const char *fmt, ... )$/;"	f	typeref:typename:int	file:
+check_migration_scripts_executable	Makefile	/^check_migration_scripts_executable:$/;"	t
+clean	Makefile	/^clean:$/;"	t
+clean	libvyosconfig/Makefile	/^clean:$/;"	t
+clean	src/shim/Makefile	/^clean:$/;"	t
+clean	src/shim/mkjson/makefile	/^clean:$/;"	t
+config_xml_obj	Makefile	/^config_xml_obj = $(config_xml_src:.xml.in=.xml)$/;"	m
+config_xml_src	Makefile	/^config_xml_src = $(wildcard interface-definitions\/*.xml.in)$/;"	m
+copyright	Makefile	/^copyright:$/;"	t
+deb	Makefile	/^deb:$/;"	t
+debug_call	src/shim/vyshim.c	/^#define debug_call(/;"	d	file:
+debug_print	src/shim/vyshim.c	/^#define debug_print(/;"	d	file:
+depends	libvyosconfig/Makefile	/^depends:$/;"	t
+example	src/shim/mkjson/makefile	/^example: all$/;"	t
+force	src/shim/mkjson/makefile	/^force:$/;"	t
+generate-configd-include-json	Makefile	/^generate-configd-include-json:$/;"	t
+get_posix_clock_time	src/shim/vyshim.c	/^double get_posix_clock_time(void)$/;"	f	typeref:typename:double
+init	libvyosconfig/stub/init.c	/^init(void)$/;"	f	typeref:typename:void
+init_alarm	src/shim/vyshim.c	/^volatile int init_alarm = 0;$/;"	v	typeref:typename:volatile int
+initialization	src/shim/vyshim.c	/^int initialization(void* Requester, char* pid_val)$/;"	f	typeref:typename:int
+install	libvyosconfig/Makefile	/^install: sharedlib$/;"	t
+interface_definitions	Makefile	/^interface_definitions: libvyosconfig $(config_xml_obj)$/;"	t
+j2lint	Makefile	/^j2lint:$/;"	t
+leave_hint	src/shim/vyshim.c	/^void leave_hint(char *pid_val)$/;"	f	typeref:typename:void
+libmkjson	src/shim/Makefile	/^libmkjson:$/;"	t
+libvyosconfig	Makefile	/^libvyosconfig:$/;"	t
+main	src/shim/vyshim.c	/^int main(int argc, char* argv[])$/;"	f	typeref:typename:int
+mkjson	src/shim/mkjson/mkjson.c	/^char *mkjson( enum mkjson_container_type otype, int count, ... )$/;"	f	typeref:typename:char *
+mkjson_container_type	src/shim/mkjson/mkjson.h	/^enum mkjson_container_type$/;"	g
+mkjson_value_type	src/shim/mkjson/mkjson.h	/^enum mkjson_value_type$/;"	g
+op_mode_definitions	Makefile	/^op_mode_definitions: $(op_xml_obj)$/;"	t
+op_xml_obj	Makefile	/^op_xml_obj = $(op_xml_src:.xml.in=.xml)$/;"	m
+op_xml_src	Makefile	/^op_xml_src = $(wildcard op-mode-definitions\/*.xml.in)$/;"	m
+override_dh_auto_build	debian/rules	/^override_dh_auto_build:$/;"	t
+override_dh_auto_install	debian/rules	/^override_dh_auto_install: \/usr\/share\/vyos\/vyconf$/;"	t
+override_dh_gencontrol	debian/rules	/^override_dh_gencontrol:$/;"	t
+override_dh_installsystemd	debian/rules	/^override_dh_installsystemd:$/;"	t
+override_dh_strip_nondeterminism	debian/rules	/^override_dh_strip_nondeterminism:$/;"	t
+pass_through	src/shim/vyshim.c	/^int pass_through(char **argv, int ex_index)$/;"	f	typeref:typename:int
+pylint	Makefile	/^pylint: interface_definitions$/;"	t
+s_recv_string	src/shim/vyshim.c	/^static char * s_recv_string (void *socket, int bufsize) {$/;"	f	typeref:typename:char *	file:
+schema	Makefile	/^schema:$/;"	t
+sharedlib	libvyosconfig/Makefile	/^sharedlib: depends $(BUILDDIR)\/libvyosconfig$(EXTDLL)$/;"	t
+sonar	Makefile	/^sonar:$/;"	t
+stubs	libvyosconfig/Makefile	/^stubs: $(GENERATED)$/;"	t
+test	Makefile	/^test: generate-configd-include-json$/;"	t
+timeout	src/shim/vyshim.c	/^volatile int timeout = 0;$/;"	v	typeref:typename:volatile int
+timer_handler	src/shim/vyshim.c	/^void timer_handler(int signum)$/;"	f	typeref:typename:void
+vyconf	debian/rules	/^vyconf:$/;"	t
+vyshim	Makefile	/^vyshim:$/;"	t
+vyshim	src/shim/Makefile	/^vyshim: vyshim.c libmkjson$/;"	t
