@@ -420,11 +420,11 @@ def get_config(config=None):
                     if 'dpdk_options' not in iface_config:
                         iface_config['dpdk_options'] = {}
                     # Check in a persistent config first
-                    id_from_persisten_conf = eth_ifaces_persist.get(iface, {}).get(
+                    id_from_persistent_conf = eth_ifaces_persist.get(iface, {}).get(
                         'dev_id'
                     )
-                    if id_from_persisten_conf:
-                        iface_config['dpdk_options']['dev_id'] = id_from_persisten_conf
+                    if id_from_persistent_conf:
+                        iface_config['dpdk_options']['dev_id'] = id_from_persistent_conf
                     else:
                         try:
                             iface_to_search = iface
