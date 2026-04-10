@@ -61,7 +61,7 @@ def _csv_to_list(value, cast=str):
 # get_config  — read the VyOS tree and return raw dict
 # ---------------------------------------------------------------------------
 
-def get_config(config=None):
+def get_config(config=None, ifname=None):
     if config:
         conf = config
     else:
@@ -69,18 +69,12 @@ def get_config(config=None):
 
     base = ['interfaces', 'wwan']
 
-    # Determine interface name from argv (VyOS passes e.g. "wwan0")
-    # or from the config session.
-    if len(sys.argv) > 1:
-        ifname = sys.argv[1]
-    else:
-        # Fallback: list configured interfaces and take the first
-        ifname = None
-        for name in conf.list_nodes(base):
-            ifname = name
-            break
-        if not ifname:
-            return {'deleted': True, 'ifname': 'wwan0'}
+    # Interface name from: explicit param > argv > None (caller iterates)
+    if ifname is None:
+        if len(sys.argv) > 1:
+            ifname = sys.argv[1]
+        else:
+            return None  # No specific interface — caller should iterate
 
     path = base + [ifname]
     if not conf.exists(path):
@@ -426,23 +420,17 @@ async def _apply_via_dbus(interface_number, config):
         sys.path.insert(0, os.path.realpath(wwan_dir))
         from wwan_client import WWANClient, WWANError
 
-    # Ensure the WWAN D-Bus service is running
+    # Ensure the WWAN D-Bus service is running via systemd
     try:
         chk = subprocess.run(
-            ['pgrep', '-f', 'interfaces_wwan_main.py'],
-            capture_output=True, text=True
+            ['systemctl', 'is-active', '--quiet', 'vyos-wwan-manager'],
         )
         if chk.returncode != 0:
-            # Service not running — start it
-            script_dir = '/usr/lib/python3/dist-packages/vyos/utils/wwan'
-            service_path = os.path.join(script_dir, 'interfaces_wwan_main.py')
-            if os.path.exists(service_path):
-                subprocess.Popen(
-                    ['python3', service_path],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                await asyncio.sleep(3)
+            subprocess.run(
+                ['systemctl', 'start', 'vyos-wwan-manager'],
+                capture_output=True, text=True,
+            )
+            await asyncio.sleep(3)
     except Exception:
         pass  # Best-effort service start
 
@@ -467,9 +455,23 @@ async def _apply_via_dbus(interface_number, config):
 if __name__ == '__main__':
     try:
         c = get_config()
-        verify(c)
-        generate(c)
-        apply(c)
+        if c is not None:
+            # Single interface (called by VyOS config system with argv)
+            verify(c)
+            generate(c)
+            apply(c)
+        else:
+            # No argv — process all configured wwan interfaces
+            conf = Config()
+            interfaces = conf.list_nodes(['interfaces', 'wwan'])
+            if not interfaces:
+                print('No WWAN interfaces configured')
+                sys.exit(0)
+            for ifname in interfaces:
+                c = get_config(config=conf, ifname=ifname)
+                verify(c)
+                generate(c)
+                apply(c)
     except ConfigError as e:
         print(e)
         sys.exit(1)
