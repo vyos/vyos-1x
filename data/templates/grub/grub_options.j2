@@ -29,7 +29,9 @@ submenu "Boot options" {
         }
         menuentry "ttyS (serial)" {
             if [ "${grub_cpu}" == "arm64" ]; then
-                set serial_console="ttyAMA"
+#               PSL - for TI ARM64 ttySx is the console type
+#               set serial_console="ttyAMA"
+                set serial_console="ttyS"
             else
                 set serial_console="ttyS"
             fi
