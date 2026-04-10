@@ -29,20 +29,32 @@ from pathlib import Path
 
 from ftplib import FTP
 from ftplib import FTP_TLS
+from ftplib import _GLOBAL_DEFAULT_TIMEOUT
+from ftplib import error_reply
+from ftplib import parse150
 
-from paramiko import SSHClient, SSHException
+from paramiko import SSHClient
+from paramiko import SSHException
 from paramiko import MissingHostKeyPolicy
-
+from ftplib import FTP
+from ftplib import FTP_TLS
+from ftplib import _GLOBAL_DEFAULT_TIMEOUT
+from ftplib import error_reply
+from ftplib import parse150
 from requests import Session
 from requests.adapters import HTTPAdapter
+from urllib.parse import urlsplit
+from urllib.parse import urlunsplit
 from urllib3 import PoolManager
+from urllib3.connection import HTTPConnection
 
 from vyos.progressbar import Progressbar
 from vyos.utils.io import ask_yes_no
 from vyos.utils.io import is_interactive
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
-from vyos.utils.process import cmd, rc_cmd
+from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 from vyos.version import get_version
 from vyos.base import Warning
 from vyos.defaults import directories
@@ -72,16 +84,27 @@ class SourceAdapter(HTTPAdapter):
     """
     urllib3 transport adapter for setting source addresses per session.
     """
-    def __init__(self, source_pair, *args, **kwargs):
-        # A source pair is a tuple of a source host string and source port respectively.
-        # Supply '' and 0 respectively for default values.
+    def __init__(self, source_pair, vrf=None, *args, **kwargs):
         self._source_pair = source_pair
+        self._socket_options = list(HTTPConnection.default_socket_options)
+
+        # Linux VRF binding (requires privileges)
+        if vrf:
+            self._socket_options.append(
+                (socket.SOL_SOCKET, socket.SO_BINDTODEVICE, (vrf + "\0").encode())
+            )
+
         super(SourceAdapter, self).__init__(*args, **kwargs)
 
-    def init_poolmanager(self, connections, maxsize, block=False):
+    def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
+        pool_kwargs["source_address"] = self._source_pair
+        pool_kwargs["socket_options"] = self._socket_options
         self.poolmanager = PoolManager(
-            num_pools=connections, maxsize=maxsize,
-            block=block, source_address=self._source_pair)
+            num_pools=connections,
+            maxsize=maxsize,
+            block=block,
+            **pool_kwargs
+        )
 
 @contextmanager
 def umask(mask: int):
@@ -115,6 +138,99 @@ def check_storage(path, size):
     if size > shutil.disk_usage(directory).free:
         raise OSError(f'Not enough disk space available in "{directory}".')
 
+class VRFFTPMixin:
+    """Shared VRF support for FTP/FTPS sockets (control + data)."""
+    def __init__(self, *args, vrf=None, **kwargs):
+        self._vrf = vrf.encode() + b"\0" if vrf else None
+        super().__init__(*args, **kwargs)
+
+    def _bind_vrf(self, sock):
+        if self._vrf:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, self._vrf)
+        return sock
+
+    def _create_vrf_connection(self, address, timeout, source_address=None):
+        host, port = address
+        err = None
+        for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
+            af, socktype, proto, _, sa = res
+            sock = None
+            try:
+                sock = socket.socket(af, socktype, proto)
+                self._bind_vrf(sock)  # bind VRF BEFORE connect
+                if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+                    sock.settimeout(timeout)
+                if source_address:
+                    sock.bind(source_address)
+                sock.connect(sa)
+                return sock
+            except OSError as e:
+                err = e
+                if sock is not None:
+                    sock.close()
+        if err is not None:
+            raise err
+        raise OSError("getaddrinfo returns an empty list")
+
+    def connect(self, host="", port=0, timeout=-999, source_address=None):
+        if host:
+            self.host = host
+        if port:
+            self.port = port
+        if timeout != -999:
+            self.timeout = timeout
+
+        self.sock = self._create_vrf_connection(
+            (self.host, self.port), self.timeout, source_address
+        )
+        self.af = self.sock.family
+        self.file = self.sock.makefile('r', encoding=self.encoding)
+        self.welcome = self.getresp()
+        return self.welcome
+
+    def ntransfercmd(self, cmd, rest=None):
+        size = None
+        if self.passiveserver:
+            host, port = self.makepasv()
+            conn = self._create_vrf_connection(
+                (host, port), self.timeout, self.source_address
+            )
+            try:
+                if rest is not None:
+                    self.sendcmd("REST %s" % rest)
+                resp = self.sendcmd(cmd)
+                if resp[0] == '2':
+                    resp = self.getresp()
+                if resp[0] != '1':
+                    raise error_reply(resp)
+            except Exception:
+                conn.close()
+                raise
+        else:
+            with self.makeport() as sock:
+                if rest is not None:
+                    self.sendcmd("REST %s" % rest)
+                resp = self.sendcmd(cmd)
+                if resp[0] == '2':
+                    resp = self.getresp()
+                if resp[0] != '1':
+                    raise error_reply(resp)
+                conn, _ = sock.accept()
+                if self.timeout is not _GLOBAL_DEFAULT_TIMEOUT:
+                    conn.settimeout(self.timeout)
+                self._bind_vrf(conn)
+
+        if resp[:3] == '150':
+            size = parse150(resp)
+        return conn, size
+
+class VRF_FTP(VRFFTPMixin, FTP):
+    """FTP client with VRF binding support."""
+    pass
+
+class VRF_FTP_TLS(VRFFTPMixin, FTP_TLS):
+    """FTPS client with VRF binding support."""
+    pass
 
 class FtpC:
     def __init__(self,
@@ -123,7 +239,8 @@ class FtpC:
                  check_space=False,
                  source_host='',
                  source_port=0,
-                 timeout=10):
+                 timeout=10,
+                 vrf=None):
         self.secure = url.scheme == 'ftps'
         self.hostname = url.hostname
         self.path = url.path
@@ -134,14 +251,18 @@ class FtpC:
         self.progressbar = progressbar
         self.check_space = check_space
         self.timeout = timeout
+        self.vrf = vrf
 
     def _establish(self):
         if self.secure:
-            return FTP_TLS(source_address=self.source,
-                           context=ssl.create_default_context(),
-                           timeout=self.timeout)
+            return VRF_FTP_TLS(source_address=self.source,
+                              context=ssl.create_default_context(),
+                              timeout=self.timeout,
+                              vrf=self.vrf)
         else:
-            return FTP(source_address=self.source, timeout=self.timeout)
+            return VRF_FTP(source_address=self.source,
+                           timeout=self.timeout,
+                           vrf=self.vrf)
 
     def download(self, location: str):
         # Open the file upfront before establishing connection.
@@ -184,7 +305,8 @@ class SshC:
                  check_space=False,
                  source_host='',
                  source_port=0,
-                 timeout=10.0):
+                 timeout=10.0,
+                 vrf=None):
         self.hostname = url.hostname
         self.path = url.path
         self.username = url.username or os.getenv('REMOTE_USERNAME')
@@ -194,6 +316,7 @@ class SshC:
         self.progressbar = progressbar
         self.check_space = check_space
         self.timeout = timeout
+        self.vrf = vrf
 
     def _establish(self):
         ssh = SSHClient()
@@ -202,9 +325,30 @@ class SshC:
         if os.path.exists(self.known_hosts):
             ssh.load_host_keys(self.known_hosts)
         ssh.set_missing_host_key_policy(InteractivePolicy())
-        # `socket.create_connection()` automatically picks a NIC and an IPv4/IPv6 address family
-        #  for us on dual-stack systems.
-        sock = socket.create_connection((self.hostname, self.port), self.timeout, self.source)
+        # Create the socket manually so VRF/device binding is applied before
+        # connect(), while still trying IPv4/IPv6 candidates on dual-stack systems.
+        sock = None
+        last_error = None
+        for family, socktype, proto, _, sockaddr in socket.getaddrinfo(
+                self.hostname, self.port, type=socket.SOCK_STREAM):
+            try:
+                sock = socket.socket(family, socktype, proto)
+                sock.settimeout(self.timeout)
+                if self.source != ('', 0):
+                    sock.bind(self.source)
+                if self.vrf:
+                    vrf = (self.vrf + "\0").encode()
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, vrf)
+                sock.connect(sockaddr)
+                break
+            except OSError as err:
+                last_error = err
+                if sock is not None:
+                    sock.close()
+                sock = None
+        if sock is None:
+            raise last_error
+
         ssh.connect(self.hostname, self.port, self.username, self.password, sock=sock)
         return ssh
 
@@ -243,7 +387,8 @@ class HttpC:
                  check_space=False,
                  source_host='',
                  source_port=0,
-                 timeout=10.0):
+                 timeout=10.0,
+                 vrf=None):
         self.urlstring = urllib.parse.urlunsplit(url)
         self.progressbar = progressbar
         self.check_space = check_space
@@ -251,10 +396,12 @@ class HttpC:
         self.username = url.username or os.getenv('REMOTE_USERNAME')
         self.password = url.password or os.getenv('REMOTE_PASSWORD')
         self.timeout = timeout
+        self.vrf = vrf
 
     def _establish(self):
         session = Session()
-        session.mount(self.urlstring, SourceAdapter(self.source_pair))
+        adapter = SourceAdapter(self.source_pair, vrf=self.vrf)
+        session.mount(self.urlstring, adapter)
         session.headers.update({'User-Agent': 'VyOS/' + get_version()})
         if self.username:
             session.auth = self.username, self.password
@@ -315,30 +462,36 @@ class TftpC:
                  check_space=False,
                  source_host=None,
                  source_port=0,
-                 timeout=10):
+                 timeout=10,
+                 vrf=None):
         source_option = f'--interface {source_host} --local-port {source_port}' if source_host else ''
-        progress_flag = '--progress-bar' if progressbar else '-s'
+        progress_flag = '--progress-bar' if progressbar else '--silent'
         self.command = f'curl {source_option} {progress_flag} --connect-timeout {timeout}'
         self.urlstring = urllib.parse.urlunsplit(url)
+        self.vrf = vrf
 
     def download(self, location: str):
         with open(location, 'wb') as f:
-            f.write(cmd(f'{self.command} "{self.urlstring}"').encode())
+            f.write(cmd(f'{self.command} "{self.urlstring}"',
+                        vrf=self.vrf).encode())
 
     def upload(self, location: str):
+        print(f'{self.command} "{self.urlstring}"')
         with open(location, 'rb') as f:
-            cmd(f'{self.command} -T - "{self.urlstring}"', input=f.read())
+            cmd(f'{self.command} --upload-file - "{self.urlstring}"',
+                input=f.read(), vrf=self.vrf)
 
 class GitC:
     def __init__(self,
-        url,
-        progressbar=False,
-        check_space=False,
-        source_host=None,
-        source_port=0,
-        timeout=10,
-    ):
-        self.command = 'git'
+                 url,
+                 progressbar=False,
+                 check_space=False,
+                 source_host=None,
+                 source_port=0,
+                 timeout=10,
+                 vrf=None):
+        self.command = ['git']
+        self.vrf = vrf
         self.url = url
         self.urlstring = urllib.parse.urlunsplit(url)
         if self.urlstring.startswith("git+"):
@@ -384,9 +537,10 @@ class GitC:
             path_repository = Path(directory) / "repository"
             scheme = f"{scheme}://" if scheme else ""
             rc, out = rc_cmd(
-                [self.command, "clone", f"{scheme}{netloc}{url}", str(path_repository), "--depth=1"],
+                self.command + ["clone", f"{scheme}{netloc}{url}", str(path_repository), "--depth=1"],
                 env=env,
                 shell=False,
+                vrf=self.vrf,
             )
             if rc:
                 raise Exception(out)
@@ -396,7 +550,7 @@ class GitC:
             dst = path_repository / filename
             shutil.copy2(location, dst)
             rc, out = rc_cmd(
-                [self.command, "-C", str(path_repository), "add", filename],
+                self.command + ["-C", str(path_repository), "add", filename],
                 env=env,
                 shell=False,
             )
@@ -404,16 +558,17 @@ class GitC:
             # git commit -m
             commit_message = os.environ.get("COMMIT_COMMENT", "commit")
             rc, out = rc_cmd(
-                [self.command, "-C", str(path_repository), "commit", "-m", commit_message],
+                self.command + ["-C", str(path_repository), "commit", "-m", commit_message],
                 env=env,
                 shell=False,
             )
 
             # git push
             rc, out = rc_cmd(
-                [self.command, "-C", str(path_repository), "push"],
+                self.command + ["-C", str(path_repository), "push"],
                 env=env,
                 shell=False,
+                vrf=self.vrf,
             )
             if rc:
                 raise Exception(out)
@@ -456,12 +611,15 @@ def download(local_path, urlstring, progressbar=False, check_space=False,
         sys.exit(1)
 
 def upload(local_path, urlstring, progressbar=False,
-           source_host='', source_port=0, timeout=10.0):
+           source_host='', source_port=0, timeout=10.0, vrf=None):
     try:
         progressbar = progressbar and is_interactive()
-        urlc(urlstring, progressbar, False, source_host, source_port, timeout).upload(local_path)
+        urlc(urlstring, progressbar, False, source_host, source_port, timeout, vrf).upload(local_path)
     except Exception as err:
-        print_error(f'Unable to upload "{urlstring}": {err}')
+        url = urlsplit(urlstring)
+        _, _, netloc = url.netloc.rpartition('@')
+        redacted_location = urlunsplit(url._replace(netloc=netloc))
+        print_error(f'Unable to upload "{redacted_location}": {err}')
         sys.exit(1)
     except KeyboardInterrupt:
         print_error('\nUpload aborted by user.')
