@@ -60,7 +60,7 @@ if __name__ == '__main__':
         db_initialise()
 
     if options['provider'] == 'db-ip':
-        print('Dowloading latest DB-IP database...')
+        print('Downloading latest DB-IP database...')
         if not geoip_download_dbip():
             print('Failed to download, aborting.')
             sys.exit(1)
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         license_key = options['maxmind_license_key']
         lite = 'maxmind_lite' in options
 
-        print('Dowloading latest MaxMind database...')
+        print('Downloading latest MaxMind database...')
         if not geoip_download_maxmind(account_id, license_key, lite):
             print('Failed to download, aborting.')
             sys.exit(1)

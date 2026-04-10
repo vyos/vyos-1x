@@ -209,7 +209,7 @@ def verify(ocserv):
         raise ConfigError('SSL certificate missing on OpenConnect config!')
     verify_pki_certificate(ocserv, ocserv['ssl']['certificate'])
 
-    if 'ca_certificate' not in ocserv['ssl'] and 'certificiate' in ocserv['authentication']['mode']:
+    if 'ca_certificate' not in ocserv['ssl'] and 'certificate' in ocserv['authentication']['mode']:
         raise ConfigError('CA certificate must be provided in certificate authentication mode!')
 
     if 'ca_certificate' in ocserv['ssl']:

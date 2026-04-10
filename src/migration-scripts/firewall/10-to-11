@@ -36,9 +36,56 @@
     # set firewall [ipv4 | ipv6] input filter rule <5,10,15,...> action jump
     # set firewall [ipv4 | ipv6] input filter rule <5,10,15,...> jump-target <name>
 
+# T8281: Normalize firewall rule network prefixes for source and destination address
+#
+# Fixes invalid/non-canonical prefixes like:
+#   10.10.10.1/30   -> 10.10.10.0/30
+#   2001:db8::1/64  -> 2001:db8::/64
+#
+# Only "source address" and "destination address" are rewritten.
+
+from ipaddress import ip_network
 from vyos.configtree import ConfigTree
 
 base = ['firewall']
+
+
+def normalize_address(config: ConfigTree, path: list[str]):
+    if not config.exists(path):
+        return
+
+    def normalize(value: str) -> str | None:
+        if '/' not in value:
+            return None
+
+        is_except = value.startswith('!')
+        if is_except:
+            value = value.lstrip('!')
+
+        try:
+            new_value = str(ip_network(value, strict=False))
+        except ValueError:
+            return None
+
+        return f'!{new_value}' if is_except else new_value
+
+    value = config.return_value(path)
+    if value:
+        normalized = normalize(value)
+        if normalized and normalized != value:
+            config.set(path, value=normalized)
+
+
+def migrate_ruleset(config: ConfigTree, ruleset_base: list[str]):
+    if not config.exists(ruleset_base + ['rule']):
+        return
+
+    for rule_id in config.list_nodes(ruleset_base + ['rule']):
+        rule_base = ruleset_base + ['rule', rule_id]
+
+        for direction in ['source', 'destination']:
+            normalize_address(config, rule_base + [direction, 'address'])
+
 
 def migrate(config: ConfigTree) -> None:
     if not config.exists(base):
@@ -185,3 +232,25 @@ def migrate(config: ConfigTree) -> None:
                             inp_ipv6_rule = inp_ipv6_rule + 5
 
         config.delete(base + ['interface'])
+
+    ### Normalize/fix firewall rule network prefixes for source and destination address (T8281)
+    for family in ['ipv4', 'ipv6', 'bridge']:
+        # 1) Named rulesets:
+        #    set firewall ipv4|ipv6|bridge name <ruleset> rule <id> ...
+        ruleset_base = base + [family, 'name']
+        if config.exists(ruleset_base):
+            for ruleset in config.list_nodes(ruleset_base):
+                migrate_ruleset(config, ruleset_base + [ruleset])
+
+        # 2) Hook-based rulesets:
+        #    set firewall ipv4|ipv6|bridge input|output|forward filter|raw rule <id> ...
+        #    set firewall ipv4|ipv6 prerouting raw rule <id> ...
+        hook_rulesets = {
+            'input': ['filter', 'raw'],
+            'output': ['filter', 'raw'],
+            'forward': ['filter', 'raw'],
+            'prerouting': ['raw'],
+        }
+        for hook, rulesets in hook_rulesets.items():
+            for ruleset in rulesets:
+                migrate_ruleset(config, base + [family, hook, ruleset])

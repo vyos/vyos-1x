@@ -80,7 +80,7 @@ def sysctl_apply(sysctl_dict: dict[str, str], revert: bool = True) -> bool:
     return True
 
 def find_device_file(device):
-    """ Recurively search /dev for the given device file and return its full path.
+    """ Recursively search /dev for the given device file and return its full path.
         If no device file was found 'None' is returned """
     from fnmatch import fnmatch
 

@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# A utility to generate GraphQL schema defintions from typing information of
+# A utility to generate GraphQL schema definitions from typing information of
 # composite functions comprising several requests.
 
 import os

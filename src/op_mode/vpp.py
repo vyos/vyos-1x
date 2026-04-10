@@ -490,7 +490,7 @@ def show_bond_details(raw: bool):
     return VPPShow().bond_details(raw)
 
 # -----------------------------
-# Bridge op-mode entrie
+# Bridge op-mode entry
 # -----------------------------
 @vyos.opmode.verify_cli_exists(['interfaces', 'vpp', 'bridge'])
 def show_bridge(raw: bool, ifname: typing.Optional[str] = None):

@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from sys import exit
 
@@ -47,6 +46,7 @@ from vyos.utils.dict import dict_to_paths_values
 from vyos.utils.dict import dict_set
 from vyos.utils.dict import dict_delete
 from vyos.utils.process import is_systemd_service_running
+from vyos.vpp.config_verify import verify_vpp_remove_interface
 from vyos.vpp.control_vpp import VPPControl
 from vyos import ConfigError
 from vyos import airbag
@@ -138,7 +138,7 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
     if config:
@@ -176,12 +176,20 @@ def get_config(config=None):
 
     ethernet['flowtable_interfaces'] = get_flowtable_interfaces(conf)
 
-    ethernet['vpp'] = conf.get_config_dict(
+    vpp_config = conf.get_config_dict(
         ['vpp'],
         key_mangling=('-', '_'),
         get_first_key=True,
         no_tag_node_value_mangle=True,
     )
+    if vpp_config:
+        ethernet['vpp'] = vpp_config
+        ethernet['vpp']['interfaces_vpp'] = conf.get_config_dict(
+            ['interfaces', 'vpp'],
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            no_tag_node_value_mangle=True,
+        )
 
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
@@ -200,11 +208,11 @@ def verify_speed_duplex(ethernet: dict, ethtool: Ethtool):
     if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
             (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
         raise ConfigError(
-            'Speed/Duplex missmatch. Must be both auto or manually configured')
+            'Speed/Duplex mismatch. Must be both auto or manually configured')
 
     if ethernet['speed'] != 'auto' and ethernet['duplex'] != 'auto':
         # We need to verify if the requested speed and duplex setting is
-        # supported by the underlaying NIC.
+        # supported by the underlying NIC.
         speed = ethernet['speed']
         duplex = ethernet['duplex']
         if not ethtool.check_speed_duplex(speed, duplex):
@@ -287,7 +295,7 @@ def verify_offload(ethernet: dict, ethtool: Ethtool):
     """
     if dict_search('offload.rps', ethernet) != None:
         if not os.path.exists(f'/sys/class/net/{ethernet["ifname"]}/queues/rx-0/rps_cpus'):
-            raise ConfigError('Interface does not suport RPS!')
+            raise ConfigError('Interface does not support RPS!')
     driver = ethtool.get_driver_name()
     # T3342 - Xen driver requires special treatment
     if driver == 'vif':
@@ -308,7 +316,7 @@ def verify_mac_change(ethernet: dict, ethtool: Ethtool):
     if 'mac' not in ethernet:
         return None
     if not ethtool.check_mac_change():
-        raise ConfigError(f'Driver does not suport changing MAC address!')
+        raise ConfigError(f'Driver does not support changing MAC address!')
 
 def verify_allowedbond_changes(ethernet: dict):
     """
@@ -353,23 +361,11 @@ def verify_flowtable(ethernet: dict):
 
 def verify_vpp_remove_vif(ethernet: dict):
     """Ensure that VIF interfaces being removed are not used by VPP features"""
-    vpp_paths_pattern = re.compile(
-        # Known paths that already use VLAN interfaces
-        r'(nat\.cgnat\.interface\.inside)|'
-        r'(nat\.cgnat\.interface\.outside)|'
-        r'(nat\.nat44\.interface\.inside)|'
-        r'(nat\.nat44\.interface\.outside)|'
-        # Potential paths for VLAN interfaces
-        r'(nat\.nat44\.address_pool\.translation\.interface)|'
-        r'(nat\.nat44\.address_pool\.twice_nat\.interface)|'
-        r'(nat\.nat44\.exclude\.rule\.(\d)+\.external_interface)|'
-        r'(interfaces\.bonding\.bond(\d)+\.member\.interface)|'
-        r'(interfaces\.bridge\.br(\d)+\.member\.interface)|'
-        r'(interfaces\.xconnect\.xcon(\d)+\.member\.interface)|'
-        r'(acl\.ip\.interface)|'
-        r'(acl\.mac\.interface)'
-    )
     ifname = ethernet['ifname']
+    vpp_config = ethernet.get('vpp')
+
+    if not vpp_config:
+        return
 
     vlan_names = [
         f'{ifname}.{vif_id}'
@@ -377,29 +373,8 @@ def verify_vpp_remove_vif(ethernet: dict):
         for vif_id in ethernet.get(vif_group, [])
     ]
 
-    if not vlan_names:
-        return
-
-    vpp_flat = dict_to_paths_values(ethernet.get('vpp', {}))
-
-    candidate_keys = []
-    for key, value in vpp_flat.items():
-        # Normalize values to list for consistent processing
-        values = value if isinstance(value, list) else [value]
-        if any(vlan in values for vlan in vlan_names):
-            candidate_keys.append((key, values))
-
-    if not candidate_keys:
-        return
-
-    for key, values in candidate_keys:
-        if vpp_paths_pattern.fullmatch(key):
-            used_vlans = [v for v in vlan_names if v in values]
-            if used_vlans:
-                raise ConfigError(
-                    f'Cannot delete interface "{used_vlans[0]}", '
-                    f'it is still in use by "vpp {key.replace(".", " ")}"'
-                )
+    for vlan in vlan_names:
+        verify_vpp_remove_interface(vlan, vpp_config)
 
 def verify(ethernet):
     verify_flowtable(ethernet)

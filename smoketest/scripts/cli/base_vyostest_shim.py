@@ -18,6 +18,7 @@ import pprint
 import re
 import unittest
 
+from math import ceil
 from time import sleep
 from typing import Type
 
@@ -43,7 +44,7 @@ save_config = '/tmp/vyos-smoketest-save'
 class VyOSUnitTestSHIM:
     class TestCase(unittest.TestCase):
         # If enabled, print out each and every set/del command on stdout.
-        # This is usefull to grap all the commands required to trigger the
+        # This is useful to grab all the commands required to trigger the
         # certain failure condition.
         debug = False
         mgmt_daemon_pid = 0
@@ -414,6 +415,31 @@ class VyOSUnitTestSHIM:
                         matched = True
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
+
+        @staticmethod
+        def wait_for_result(runnable, check, pause=1, timeout=10):
+            """
+            Run `runnable` each `pause` seconds till `timeout` seconds is over.
+            Each time compare return value with `check` if it is not callable, if
+            it is callable check if `check(result)` is True.
+
+            @returns tuple (check_result, last_return_value). check_result is True
+            if (last_return_value == check) for non-callable check or if (check(last_return_value))
+            is true.
+            """
+            tries = ceil(timeout / pause)
+            result = None
+            for i in range(tries):
+                result = runnable()
+                if callable(check):
+                    if check(result):
+                        return True, result
+                elif result == check:
+                    return True, result
+
+                sleep(pause)
+
+            return False, result
 
 # standard construction; typing suggestion: https://stackoverflow.com/a/70292317
 def ignore_warning(warning: Type[Warning]):

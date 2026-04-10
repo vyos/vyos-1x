@@ -84,7 +84,7 @@ def _get_raw_scan_data(intf_name):
             ssid['ssid'] = line.lstrip().split(':')[-1].lstrip()
 
         elif line.lstrip().startswith('signal: '):
-            # Siganl can be "   signal: -67.00 dBm", thus strip all leading whitespaces
+            # Signal can be "   signal: -67.00 dBm", thus strip all leading whitespaces
             ssid['signal'] = line.lstrip().split(':')[-1].split()[0]
 
         elif line.lstrip().startswith('DS Parameter set: channel'):

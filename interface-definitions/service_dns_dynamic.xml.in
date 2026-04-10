@@ -52,10 +52,10 @@
                           #include <include/url-http-https.xml.i>
                           <leafNode name="skip">
                             <properties>
-                              <help>Pattern to skip from the HTTP(S) respose</help>
+                              <help>Pattern to skip from the HTTP(S) response</help>
                               <valueHelp>
                                 <format>txt</format>
-                                <description>Pattern to skip from the HTTP(S) respose to extract the external IP address</description>
+                                <description>Pattern to skip from the HTTP(S) response to extract the external IP address</description>
                               </valueHelp>
                             </properties>
                           </leafNode>

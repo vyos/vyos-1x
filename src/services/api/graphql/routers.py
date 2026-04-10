@@ -32,7 +32,7 @@ def graphql_init(app: 'FastAPI'):
 
     state = SessionState()
 
-    # import after initializaion of state
+    # import after initialization of state
     from .bindings import generate_schema
 
     schema = generate_schema()

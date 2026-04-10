@@ -283,3 +283,8 @@ fi
 if systemctl is-active --quiet vyos-domain-resolver; then
     systemctl restart vyos-domain-resolver
 fi
+
+# Restart vyos-netlinkd if running
+if systemctl is-active --quiet vyos-netlinkd; then
+    systemctl restart vyos-netlinkd
+fi

@@ -22,7 +22,7 @@ def migrate(config: ConfigTree) -> None:
         # Nothing to do
         return
 
-    # T4346: drop support to disbale IPv6 address family within the OS Kernel
+    # T4346: drop support to disable IPv6 address family within the OS Kernel
     if config.exists(base + ['disable']):
         config.delete(base + ['disable'])
         # IPv6 address family disable was the only CLI option set - we can cleanup

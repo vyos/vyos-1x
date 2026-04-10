@@ -33,7 +33,7 @@ airbag.enable()
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at
     least the interface name will be added or a deleted flag
     """
     if config:
@@ -46,7 +46,7 @@ def get_config(config=None):
     # We need to know all other veth related interfaces as veth requires a 1:1
     # mapping for the peer-names. The Linux kernel automatically creates both
     # interfaces, the local one and the peer-name, but VyOS also needs a peer
-    # interfaces configrued on the CLI so we can assign proper IP addresses etc.
+    # interfaces configured on the CLI so we can assign proper IP addresses etc.
     veth['other_interfaces'] = conf.get_config_dict(base, key_mangling=('-', '_'),
                                      get_first_key=True, no_tag_node_value_mangle=True)
 

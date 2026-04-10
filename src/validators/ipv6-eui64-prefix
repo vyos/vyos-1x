@@ -2,6 +2,8 @@
 
 # Validator used to check if given IPv6 prefix is of size /64 required by EUI64
 
+import ipaddress
+
 from sys import argv
 from sys import exit
 
@@ -10,7 +12,14 @@ if __name__ == '__main__':
         exit(1)
 
     prefix = argv[1]
-    if prefix.split('/')[1] == '64':
-        exit(0)
+
+    try:
+        network = ipaddress.ip_network(prefix)
+        if network.prefixlen == 64:
+            exit(0)
+    except ValueError:
+        print(
+            'EUI64 prefix must be a valid IPv6 prefix in CIDR notation (e.g., 2001:db8::/64)'
+        )
 
     exit(1)

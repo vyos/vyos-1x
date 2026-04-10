@@ -34,9 +34,9 @@ _drivers_without_bonding_support = _drivers_without_mac_change + []
 
 class Ethtool:
     """
-    Class is used to retrive and cache information about an ethernet adapter
+    Class is used to retrieve and cache information about an ethernet adapter
     """
-    # dictionary containing driver featurs, it will be populated on demand and
+    # dictionary containing driver features, it will be populated on demand and
     # the content will look like:
     # [{'esp-hw-offload': {'active': False, 'fixed': True, 'requested': False},
     #   'esp-tx-csum-hw-offload': {'active': False,
@@ -79,7 +79,7 @@ class Ethtool:
         if driver:
             self._driver_name = driver.group(1)
 
-        # Build a dictinary of supported link-speed and dupley settings.
+        # Build a dictionary of supported link-speed and dupley settings.
         # [ {
         #     "ifname": "eth0",
         #     "supported-ports": [ "TP" ],
@@ -187,7 +187,7 @@ class Ethtool:
 
     def check_speed_duplex(self, speed, duplex):
         """ Check if the passed speed and duplex combination is supported by
-        the underlaying network adapter. """
+        the underlying network adapter. """
         if isinstance(speed, int):
             speed = str(speed)
         if speed != 'auto' and not speed.isdigit():

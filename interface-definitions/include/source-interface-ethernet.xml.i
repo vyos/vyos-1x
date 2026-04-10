@@ -4,7 +4,7 @@
     <help>Physical interface the traffic will go through</help>
     <valueHelp>
       <format>interface</format>
-      <description>Physical interface used for traffic forwarding</description>
+      <description>Interface name</description>
     </valueHelp>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces --type ethernet</script>

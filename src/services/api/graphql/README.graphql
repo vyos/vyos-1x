@@ -64,7 +64,7 @@ save to /config/config.boot; to save to an alternative path, specify
 fileName.
 
 Similarly, using an analogous 'endpoint' (meaning the form of the request
-and resolver; the actual enpoint for all GraphQL requests is
+and resolver; the actual endpoint for all GraphQL requests is
 https://hostname/graphql), one can load an arbitrary config file from a
 path.
 

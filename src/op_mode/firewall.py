@@ -592,7 +592,7 @@ def show_firewall_group(name=None):
     header_tail = []
 
     for group_type, group_type_conf in firewall['group'].items():
-        # interate over dynamic-groups
+        # iterate over dynamic-groups
         if group_type == 'dynamic_group':
             if not args.detail:
                 header_tail = ['Timeout', 'Expires']

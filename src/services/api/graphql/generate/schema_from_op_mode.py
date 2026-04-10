@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# A utility to generate GraphQL schema defintions from standardized op-mode
+# A utility to generate GraphQL schema definitions from standardized op-mode
 # scripts.
 
 import os

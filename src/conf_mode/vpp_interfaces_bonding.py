@@ -19,16 +19,21 @@
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdep import set_dependents, call_dependents
+from vyos.configverify import verify_mtu_ipv6
 from vyos import ConfigError
 from vyos.utils.assertion import assert_mac
 from vyos.utils.process import is_systemd_service_active
 
+from vyos.ifconfig import Interface
 from vyos.ifconfig.vpp import VPPBondInterface
 from vyos.vpp.config_deps import deps_bond_dict
 from vyos.vpp.config_deps import deps_bridge_dict
 from vyos.vpp.config_deps import deps_xconnect_dict
+from vyos.vpp.config_verify import verify_member_conflicts
 from vyos.vpp.config_verify import verify_vpp_remove_bridge_interface
 from vyos.vpp.config_verify import verify_vpp_remove_xconnect_interface
+from vyos.vpp.config_verify import verify_vpp_remove_interface
+from vyos.vpp.config_verify import verify_vpp_interface_not_in_feature
 from vyos.vpp.utils import cli_ifaces_list
 
 
@@ -95,6 +100,13 @@ def get_config(config=None) -> dict:
         get_first_key=True,
         no_tag_node_value_mangle=True,
     )
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
 
     config['bond_members'] = deps_bond_dict(conf)
 
@@ -147,6 +159,7 @@ def verify(config):
     verify_vpp_remove_bridge_interface(config)
 
     if 'deleted' in config:
+        verify_vpp_remove_interface(ifname, config.get('vpp'), match_vlans=True)
         return None
 
     if not is_systemd_service_active('vpp.service'):
@@ -166,13 +179,21 @@ def verify(config):
                 f'Interface {iface} cannot be a member of multiple bonding interfaces: {", ".join(bond_members)}'
             )
 
-        # Interface cannot be a member of a bridge and a bond at the same time
-        bridge_members = config['bridge_members'].get(iface)
-        if bridge_members:
-            raise ConfigError(
-                f'Interface {iface} cannot be a member of a bond because '
-                f'it already belongs to bridge interface: {", ".join(bridge_members)}.'
-            )
+        verify_member_conflicts(iface, config, 'bond')
+        verify_vpp_interface_not_in_feature(iface, config.get('vpp'))
+
+        if mtu := config.get('mtu'):
+            mtu = int(mtu)
+            max_mtu = Interface(iface).get_max_mtu()
+            min_mtu = Interface(iface).get_min_mtu()
+            if mtu > max_mtu:
+                raise ConfigError(
+                    f'Configured MTU is greater than member interface "{iface}" maximum of {max_mtu}!'
+                )
+            if mtu < min_mtu:
+                raise ConfigError(
+                    f'Configured MTU is less than member interface "{iface}" minimum of {min_mtu}!'
+                )
 
     if 'mac' in config:
         mac = config['mac']
@@ -189,6 +210,9 @@ def verify(config):
             raise ConfigError(
                 f'Cannot remove interface {vif_iface}: it is still in use by the PPPoE server'
             )
+        verify_vpp_remove_interface(vif_iface, config.get('vpp'))
+
+    verify_mtu_ipv6(config)
 
 
 def generate(config):

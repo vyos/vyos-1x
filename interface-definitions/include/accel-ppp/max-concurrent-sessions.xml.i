@@ -9,7 +9,7 @@
     <constraint>
       <validator name="numeric" argument="--allow-range --range 0-65535"/>
     </constraint>
-    <constraintErrorMessage>Maximum concurent sessions must be in range 0-65535</constraintErrorMessage>
+    <constraintErrorMessage>Maximum concurrent sessions must be in range 0-65535</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->

@@ -14,14 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=empty-docstring,missing-module-docstring
-
 import csv
 import os
 import re
 import sys
 
-from ipaddress import IPv6Network, IPv6Address
+from ipaddress import IPv6Network
+from ipaddress import IPv6Address
 from json import dumps as json_write
 
 from vyos import ConfigError
@@ -35,19 +34,20 @@ from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import cmd
 from vyos.utils.process import run
+from vyos.utils.system import sysctl_read
 
 airbag.enable()
 
 INSTANCE_REGEX = re.compile(r'instance-(\d+)')
 JOOL_CONFIG_DIR = '/run/jool'
-
+base = ['nat64']
 
 def get_config(config: Config | None = None) -> ConfigDict:
     if config is None:
         config = Config()
 
-    base = ['nat64']
-    nat64 = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    nat64 = config.get_config_dict(base, key_mangling=('-', '_'),
+                                   get_first_key=True)
 
     config_diff = get_config_diff(config)
     # get_config_dict returns an instance of ConfigDict
@@ -57,12 +57,10 @@ def get_config(config: Config | None = None) -> ConfigDict:
 
 
 def verify(nat64) -> None:
-    # pylint: disable=too-many-branches
-
+    check_kmod(['jool'])
     config_diff = getattr(nat64, 'config_diff')
 
-    check_kmod(['jool'])
-    base_src = ['nat64', 'source', 'rule']
+    base_rule = base + ['source', 'rule']
 
     # Load in existing instances so we can destroy any unknown
     lines = cmd('jool instance display --csv').splitlines()
@@ -81,19 +79,25 @@ def verify(nat64) -> None:
 
         # If the user changes the mode, recreate the instance else Jool fails with:
         # Jool error: Sorry; you can't change an instance's framework for now.
-        if config_diff.is_node_changed(base_src + [f'instance-{num}', 'mode']):
+        if config_diff.is_node_changed(base_rule + [f'instance-{num}', 'mode']):
             rules[num]['recreate'] = True
 
         # If the user changes the pool6, recreate the instance else Jool fails with:
         # Jool error: Sorry; you can't change a NAT64 instance's pool6 for now.
         if dict_search('source.prefix', rules[num]) and config_diff.is_node_changed(
-            base_src + [num, 'source', 'prefix'],
+            base_rule + [num, 'source', 'prefix'],
         ):
             rules[num]['recreate'] = True
 
     if not nat64:
         # nothing left to do
         return
+
+    # https://nicmx.github.io/Jool/en/usr-flags-pool4.html#port-range
+    # Jool is incapable of ensuring pool4 does not intersect with other defined
+    # port ranges; this validation is the operator’s responsibility.
+    tmp = sysctl_read('net.ipv4.ip_local_port_range')
+    ephemeral_port_min, ephemeral_port_max = map(int, tmp.split())
 
     if dict_search('source.rule', nat64):
         # Ensure only 1 netfilter instance per namespace
@@ -126,26 +130,35 @@ def verify(nat64) -> None:
             pools = dict_search('translation.pool', instance)
             if pools:
                 for num, pool in pools.items():
+                    error_msg = f'Source NAT64 rule {rule} translation pool {num}'
                     if 'address' not in pool:
-                        raise ConfigError(
-                            f'Source NAT64 rule {rule} translation pool '
-                            f'{num} missing address/prefix'
-                        )
+                        raise ConfigError(f'{error_msg} missing address/prefix')
                     if 'port' not in pool:
-                        raise ConfigError(
-                            f'Source NAT64 rule {rule} translation pool '
-                            f'{num} missing port(-range)'
-                        )
+                        raise ConfigError(f'{error_msg} missing port(-range)')
+                    # Split the provided ports, it's either a single port or start-end
+                    tmp = pool['port'].split('-')
+                    if len(tmp) == 1: # single port
+                        pool_min = pool_max = int(tmp[0])
+                    elif len(tmp) == 2: # port range with start-stop
+                        pool_min, pool_max = map(int, tmp)
+                    else:
+                        raise ConfigError('Invalid port range, this should not happen!')
 
+                    # Inclusive overlap check between nat64 translation ports and
+                    # the Linux Kernel ephemeral port range
+                    # overlap if pool_min <= ephemeral_port_max and ephemeral_port_min <= pool_max
+                    if pool_min <= ephemeral_port_max and ephemeral_port_min <= pool_max:
+                        raise ConfigError(
+                            f'{error_msg} port range {pool_min}-{pool_max} overlaps with '
+                            f'local ephemeral range {ephemeral_port_min}-{ephemeral_port_max}'
+                        )
 
 def generate(nat64) -> None:
-    # pylint: disable=too-many-branches
     if not nat64:
         return
 
     os.makedirs(JOOL_CONFIG_DIR, exist_ok=True)
 
-    # pylint: disable=too-many-nested-blocks
     if dict_search('source.rule', nat64):
         for rule, instance in nat64['source']['rule'].items():
             if 'deleted' in instance:

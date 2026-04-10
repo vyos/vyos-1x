@@ -72,7 +72,7 @@ def get_config(config=None):
     snmp['vyos_user_pass'] = random(16)
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     snmp = conf.merge_defaults(snmp, recursive=True)
 
     if 'listen_address' in snmp:

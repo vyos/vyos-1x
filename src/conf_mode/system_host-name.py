@@ -119,7 +119,7 @@ def verify(hosts):
                 raise ConfigError(f'Invalid alias "{a}" in static-host-mapping "{host}"')
 
     for interface, interface_config in hosts['nameservers_dhcp_interfaces'].items():
-        # Warnin user if interface does not have DHCP or DHCPv6 configured
+        # Warning user if interface does not have DHCP or DHCPv6 configured
         if not set(interface_config).intersection(['dhcp', 'dhcpv6']):
             Warning(f'"{interface}" is not a DHCP interface but uses DHCP name-server option!')
 

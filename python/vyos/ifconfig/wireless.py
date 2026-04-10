@@ -42,9 +42,9 @@ class WiFiIf(Interface):
         self._cmd(cmd)
 
     def update(self, config):
-        """ General helper function which works on a dictionary retrived by
+        """ General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface. """
 
         # We can not call add_to_bridge() until wpa_supplicant is running, thus

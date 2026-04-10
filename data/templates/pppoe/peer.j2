@@ -59,7 +59,7 @@ mru {{ mru }}
 
 {{ "usepeerdns" if no_peer_dns is not vyos_defined }}
 
-{% if ipv6 is vyos_defined %}
+{% if ipv6 is vyos_defined or dhcpv6_options.pd is vyos_defined or (address is vyos_defined and 'dhcpv6' in address) %}
 +ipv6 {{ 'ipv6cp-use-ipaddr' if ipv6.address.autoconf is vyos_defined }}
 {% else %}
 noipv6

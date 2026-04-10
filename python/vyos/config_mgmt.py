@@ -172,11 +172,16 @@ class ConfigMgmt:
         # upload only on existence of effective values, notably, on boot.
         # one still needs session self.locations (above) for setting
         # post-commit hook in conf_mode script
-        path = ['system', 'config-management', 'commit-archive', 'location']
-        if config.exists_effective(path):
-            self.effective_locations = config.return_effective_values(path)
-        else:
-            self.effective_locations = []
+        base_path = ['system', 'config-management', 'commit-archive']
+        location_path = base_path + ['location']
+        self.effective_locations = None
+        if config.exists_effective(location_path):
+            self.effective_locations = config.return_effective_values(location_path)
+
+        vrf_path = base_path + ['vrf']
+        self.effective_vrf = None
+        if config.exists_effective(vrf_path):
+            self.effective_vrf = config.return_effective_value(vrf_path)
 
         # a call to compare without args is edit_level aware
         edit_level = os.getenv('VYATTA_EDIT_LEVEL', '')
@@ -499,16 +504,13 @@ Proceed ?"""
 
         if self.effective_locations:
             print('Archiving config...')
-        for location in self.effective_locations:
-            url = urlsplit(location)
-            _, _, netloc = url.netloc.rpartition('@')
-            redacted_location = urlunsplit(url._replace(netloc=netloc))
-            print(f'  {redacted_location}', end=' ', flush=True)
-            upload(
-                archive_config_file,
-                f'{location}/{remote_file}',
-                source_host=source_address,
-            )
+            for location in self.effective_locations:
+                url = urlsplit(location)
+                _, _, netloc = url.netloc.rpartition('@')
+                redacted_location = urlunsplit(url._replace(netloc=netloc))
+                print(f'  {redacted_location}', end=' ', flush=True)
+                upload(archive_config_file, f'{location}/{remote_file}',
+                       source_host=source_address, vrf=self.effective_vrf)
 
     # op-mode functions
     #
@@ -841,7 +843,7 @@ def run():
     rollback = subparsers.add_parser('rollback', help='Rollback to earlier config')
     rollback.add_argument('--rev', type=int, help='Revision number for rollback')
     rollback.add_argument(
-        '-y', dest='no_prompt', action='store_true', help='Excute without prompt'
+        '-y', dest='no_prompt', action='store_true', help='Execute without prompt'
     )
 
     rollback_soft = subparsers.add_parser(

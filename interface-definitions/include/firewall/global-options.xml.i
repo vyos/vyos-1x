@@ -62,7 +62,7 @@
                 </completionHelp>
                 <valueHelp>
                   <format>arp</format>
-                  <description>Adress Resolution Protocol (ARP)</description>
+                  <description>Address Resolution Protocol (ARP)</description>
                 </valueHelp>
                 <valueHelp>
                   <format>dhcp</format>
@@ -371,7 +371,7 @@
     </node>
     <leafNode name="twa-hazards-protection">
       <properties>
-        <help>RFC1337 TCP TIME-WAIT assasination hazards protection</help>
+        <help>RFC1337 TCP TIME-WAIT assassination hazards protection</help>
         <completionHelp>
           <list>enable disable</list>
         </completionHelp>

@@ -4,7 +4,7 @@
     <help>Number of NS messages to send while performing DAD</help>
     <valueHelp>
       <format>u32:0</format>
-      <description>Disable Duplicate Address Dectection (DAD)</description>
+      <description>Disable Duplicate Address Detection (DAD)</description>
     </valueHelp>
     <valueHelp>
       <format>u32:1-n</format>

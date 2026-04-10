@@ -108,13 +108,13 @@ if __name__ == '__main__':
         required=True,
     )
     parser.add_argument(
-        "-a", "--ca", type=str, help='OpenVPN CA cerificate', required=True
+        "-a", "--ca", type=str, help='OpenVPN CA certificate', required=True
     )
     parser.add_argument(
-        "-c", "--cert", type=str, help='OpenVPN client cerificate', required=True
+        "-c", "--cert", type=str, help='OpenVPN client certificate', required=True
     )
     parser.add_argument(
-        "-k", "--key", type=str, help='OpenVPN client cerificate key', action="store"
+        "-k", "--key", type=str, help='OpenVPN client certificate key', action="store"
     )
     args = parser.parse_args()
 

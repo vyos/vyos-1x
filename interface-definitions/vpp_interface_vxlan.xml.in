@@ -25,6 +25,9 @@
               #include <include/vni.xml.i>
               #include <include/interface/address-ipv4-ipv6.xml.i>
               #include <include/interface/mtu-68-16000.xml.i>
+              <leafNode name="mtu">
+                <defaultValue>1450</defaultValue>
+              </leafNode>
             </children>
           </tagNode>
         </children>

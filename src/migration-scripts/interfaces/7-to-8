@@ -43,7 +43,7 @@ def migrate(config: ConfigTree) -> None:
         # Nothing to do
         return
 
-    # list all individual wireguard interface isntance
+    # list all individual wireguard interface instance
     for i in config.list_nodes(base):
         iface = base + [i]
         for peer in config.list_nodes(iface + ['peer']):

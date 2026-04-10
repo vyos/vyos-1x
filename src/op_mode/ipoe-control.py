@@ -27,7 +27,7 @@ cmd_dict = {
     'actions'     : {
         'show_sessions'  : 'show sessions',
         'show_stat'      : 'show stat',
-        'terminate'      : 'teminate'
+        'terminate'      : 'terminate'
     }
 }
 

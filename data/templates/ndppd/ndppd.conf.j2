@@ -10,7 +10,7 @@ route-ttl {{ route_refresh }}
 proxy {{ iface }} {
     # Turn on or off the router flag for Neighbor Advertisements
     router {{ 'yes' if iface_config.enable_router_bit is vyos_defined else 'no' }}
-    # Control how long to wait for a Neighbor Advertisment message before invalidating the entry (milliseconds)
+    # Control how long to wait for a Neighbor Advertisement message before invalidating the entry (milliseconds)
     timeout {{ iface_config.timeout }}
     # Control how long a valid or invalid entry remains in the cache (milliseconds)
     ttl {{ iface_config.ttl }}

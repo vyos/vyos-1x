@@ -55,7 +55,7 @@ GCM_256_KEY_ERROR = 'gcm-aes-256 requires a 256bit long key!'
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
     if config:
@@ -154,11 +154,11 @@ def verify(macsec):
 
     if 'source_interface' in macsec:
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
-        # and 802.1q) - we need to check the underlaying MTU if our configured
+        # and 802.1q) - we need to check the underlying MTU if our configured
         # MTU is at least 40 bytes less then the MTU of our physical interface.
         lower_mtu = Interface(macsec['source_interface']).get_mtu()
         if lower_mtu < (int(macsec['mtu']) + 40):
-            raise ConfigError('MACsec overhead does not fit into underlaying device MTU,\n' \
+            raise ConfigError('MACsec overhead does not fit into underlying device MTU,\n' \
                               f'{lower_mtu} bytes is too small!')
 
     return None

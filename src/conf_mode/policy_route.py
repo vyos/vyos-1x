@@ -29,6 +29,7 @@ from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.utils.network import get_vrf_tableid
+from vyos.utils.network import interface_exists
 from vyos.defaults import rt_global_table
 from vyos.defaults import rt_global_vrf
 from vyos.geoip import  geoip_refresh, geoip_update
@@ -130,6 +131,11 @@ def verify_rule(policy, name, rule_conf, ipv6, rule_id):
 
         if 'vrf' in rule_conf['set'] and 'table' in rule_conf['set']:
             raise ConfigError(f'{name} rule {rule_id}: Cannot set both forwarding route table and VRF')
+
+        if 'vrf' in rule_conf['set']:
+            vrf = rule_conf['set']['vrf']
+            if vrf != 'default' and not interface_exists(vrf):
+                raise ConfigError(f'{name} rule {rule_id}: VRF "{vrf}" does not exist')
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:

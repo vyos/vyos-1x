@@ -19,9 +19,10 @@ import sys
 
 from vyos import ConfigError
 from vyos.config import Config
+from vyos.configverify import verify_vrf
 from vyos.config_mgmt import ConfigMgmt
-from vyos.config_mgmt import commit_post_hook_dir, commit_hooks
-
+from vyos.config_mgmt import commit_post_hook_dir
+from vyos.config_mgmt import commit_hooks
 
 def get_config(config=None):
     if config:
@@ -34,9 +35,7 @@ def get_config(config=None):
         return None
 
     mgmt = ConfigMgmt(config=conf)
-
     return mgmt
-
 
 def verify(mgmt):
     if mgmt is None:
@@ -47,15 +46,15 @@ def verify(mgmt):
     if confirm.get('action', '') == 'reload' and 'commit_revisions' not in d:
         raise ConfigError('commit-confirm reload requires non-zero commit-revisions')
 
-    return
+    if 'commit_archive' in d:
+        verify_vrf(d['commit_archive'])
 
+    return
 
 def generate(mgmt):
     if mgmt is None:
         return
-
     mgmt.initialize_revision()
-
 
 def apply(mgmt):
     if mgmt is None:

@@ -1153,6 +1153,25 @@
     <help>BGP parameters</help>
   </properties>
   <children>
+    <leafNode name="as-notation">
+      <properties>
+        <help>BGP AS-notation output format</help>
+        <completionHelp>
+          <list>asdot asdot+</list>
+        </completionHelp>
+        <valueHelp>
+          <format>asdot</format>
+          <description>Use asdot notation only for 4 byte AS numbers</description>
+        </valueHelp>
+        <valueHelp>
+          <format>asdot+</format>
+          <description>Use asdot notation for all AS numbers</description>
+        </valueHelp>
+        <constraint>
+          <regex>(asdot\+|asdot)</regex>
+        </constraint>
+      </properties>
+    </leafNode>
     <leafNode name="allow-martian-nexthop">
       <properties>
         <help>Allow Martian nexthops to be received in the NLRI from a peer</help>

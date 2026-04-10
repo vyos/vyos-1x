@@ -54,3 +54,25 @@ class VPPInterface:
             lcp_name = lcp_pair.get('vpp_name_kernel')
             if lcp_name:
                 self.vpp.iface_rxmode(lcp_name, rx_mode)
+
+    def set_mtu_vpp(self, mtu):
+        # Set MTU for the VPP interface
+        self.vpp.set_iface_mtu(self.vpp_ifname, mtu)
+
+        # Set MTU for the LCP pair interface
+        lcp_pair = self.vpp.lcp_pair_find(vpp_name_hw=self.vpp_ifname)
+        if lcp_pair:
+            lcp_name = lcp_pair.get('vpp_name_kernel')
+            if lcp_name:
+                self.vpp.set_iface_mtu(lcp_name, mtu)
+
+    def update(self, config):
+        # Set MTU
+        if 'mtu' in config:
+            mtu = int(config['mtu'])
+            self.set_mtu_vpp(mtu)
+
+        # Set rx-mode
+        rx_mode = config.get('vpp_settings', {}).get('interface_rx_mode')
+        if rx_mode:
+            self.set_rx_mode(rx_mode)

@@ -51,7 +51,7 @@ def get_config(config=None):
     if tmp: ntp.update({'restart_required': {}})
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     default_values = conf.get_config_defaults(**ntp.kwargs, recursive=True)
     # Only defined PTP default port, if PTP feature is in use
     if 'ptp' not in ntp:

@@ -53,7 +53,7 @@ VyOS has two distinct modes: operational mode and configuration mode. When a use
 the CLI is in the operational mode. In this mode, only the running (effective) config is accessible for reading.
 
 When a user enters the "configure" command, a configuration session is setup. Every config session
-has its *proposed* (or *session*) config built on top of the current running config. When changes are commited, if commit succeeds,
+has its *proposed* (or *session*) config built on top of the current running config. When changes are committed, if commit succeeds,
 the proposed config is merged into the running config.
 
 In configuration mode, "base" functions like `exists`, `return_value` return values from the session config,
@@ -259,7 +259,7 @@ class Config(object):
     def session_changed(self):
         """
         Returns:
-            True if the config session has uncommited changes, False otherwise.
+            True if the config session has uncommitted changes, False otherwise.
         """
         return self._config_source.session_changed()
 
@@ -544,7 +544,7 @@ class Config(object):
 
         Note:
             This function is safe to use in operational mode. In configuration mode,
-            it ignores uncommited changes.
+            it ignores uncommitted changes.
         """
         if self._running_config is None:
             return False

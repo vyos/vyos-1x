@@ -9,7 +9,7 @@
         <children>
           <node name="cpu">
             <properties>
-              <help>Show CPU informaion</help>
+              <help>Show CPU information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/cpu.py show</command>
             <children>

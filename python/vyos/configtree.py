@@ -282,8 +282,8 @@ class ConfigTree(object):
         """Set new entry in VyOS configuration.
         path: configuration path e.g. 'system dns forwarding listen-address'
         value: value to be added to node, e.g. '172.18.254.201'
-        replace: True: current occurance will be replaced
-                 False: new value will be appended to current occurances - use
+        replace: True: current occurrence will be replaced
+                 False: new value will be appended to current occurrences - use
                  this for adding values to a multi node
         """
 

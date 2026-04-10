@@ -1473,7 +1473,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.tearDownPKI()
 
     def test_remote_access_no_rekey(self):
-        # In some RA secnarios, disabling server-initiated rekey of IKE and CHILD SA is desired
+        # In some RA scenarios, disabling server-initiated rekey of IKE and CHILD SA is desired
         self.setupPKI()
 
         ike_group = 'IKE-RW'
@@ -1882,7 +1882,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         for config_option, cli_option in retransmission_options.items():
-            # Check configured value agains CLI default value
+            # Check configured value against CLI default value
             config_values_list = get_config_value(charon_file,config_option + ' =')
 
             if config_values_list:

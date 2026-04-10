@@ -104,7 +104,7 @@ class Xml:
         if self.exists(path):
             if self.is_valueless(path) or not self.is_leaf(path):
                 # It's a complete path for a valueless node
-                # or a path to an empy non-leaf node
+                # or a path to an empty non-leaf node
                 return (path, None)
             else:
                 raise ValueError(f'Path "{path}" needs a value or children')

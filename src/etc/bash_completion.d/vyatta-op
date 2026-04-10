@@ -243,7 +243,7 @@ _vyatta_op_set_completions ()
     _vyatta_op_noncompletions=( )
     completions=( )
 
-    # make runable commands have a non-comp
+    # make runnable commands have a non-comp
     ndef=${_vyatta_op_node_path}/node.def
     [ -f $ndef ] && \
       node_run=$( _vyatta_op_get_node_def_field $ndef run )
@@ -503,7 +503,7 @@ commands ()
 {
   if [ "$_OFR_CONFIGURE" != "" ]; then
       if $(cli-shell-api sessionChanged); then
-          echo "You have uncommited changes, please commit them before using the commands pipe"
+          echo "You have uncommitted changes, please commit them before using the commands pipe"
       else
           vyos-config-to-commands
       fi
@@ -516,7 +516,7 @@ json ()
 {
   if [ "$_OFR_CONFIGURE" != "" ]; then
       if $(cli-shell-api sessionChanged); then
-          echo "You have uncommited changes, please commit them before using the JSON pipe"
+          echo "You have uncommitted changes, please commit them before using the JSON pipe"
       else
           vyos-config-to-json
       fi

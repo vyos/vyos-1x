@@ -178,7 +178,7 @@ def get_interface_address(interface):
 
 def get_interface_namespace(interface: str):
     """
-       Returns wich netns the interface belongs to
+       Returns which netns the interface belongs to
     """
     # Bail out early if netns does not exist
     tmp = cmd(f'ip --json netns ls')
@@ -696,3 +696,28 @@ def is_valid_ipv6_address_or_range(addr: str) -> bool:
             return ip_network(addr).version == 6
     except:
         return False
+
+
+def get_interfaces_by_ip(ip_address: str) -> list:
+    """
+    Return a list of all interface names assigned the given IP address.
+    Args:
+        ip_address (str): The IP address to search for.
+    Returns:
+        list: List of interface names (str) that have the given IP address assigned.
+              Returns an empty list if no interface has the IP assigned.
+    """
+    import netifaces
+    from vyos.template import is_ipv6
+
+    addr_type = AF_INET
+    if is_ipv6(ip_address):
+        addr_type = AF_INET6
+
+    ifaces = []
+    for interface in netifaces.interfaces():
+        addresses = netifaces.ifaddresses(interface)
+        for addr_info in addresses.get(addr_type, []):
+            if addr_info.get('addr') == ip_address:
+                ifaces.append(interface)
+    return ifaces

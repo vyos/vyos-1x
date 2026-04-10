@@ -374,11 +374,11 @@
               </valueHelp>
               <valueHelp>
                 <format>_ipv4</format>
-                <description>Accept connections on or initate connections to IPv4 addresses only</description>
+                <description>Accept connections on or initiate connections to IPv4 addresses only</description>
               </valueHelp>
               <valueHelp>
                 <format>_ipv6</format>
-                <description>Accept connections on or initate connections to IPv6 addresses only</description>
+                <description>Accept connections on or initiate connections to IPv6 addresses only</description>
               </valueHelp>
               <valueHelp>
                 <format>dual-stack</format>
@@ -811,7 +811,7 @@
                           </valueHelp>
                           <valueHelp>
                             <format>enable</format>
-                            <description>Enable chalenge-response</description>
+                            <description>Enable challenge-response</description>
                           </valueHelp>
                           <constraint>
                             <regex>(disable|enable)</regex>

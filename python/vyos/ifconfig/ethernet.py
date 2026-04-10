@@ -244,7 +244,7 @@ class EthernetIf(Interface):
                 cmd += f' speed {speed} duplex {duplex} autoneg off'
             return self._cmd(cmd)
         except PermissionError:
-            # Some NICs do not tell that they don't suppport settings speed/duplex,
+            # Some NICs do not tell that they don't support settings speed/duplex,
             # but they do not actually support it either.
             # In that case it's probably better to ignore the error
             # than end up with a broken config.
@@ -450,7 +450,7 @@ class EthernetIf(Interface):
         cmd = f'ethtool --set-ring {ifname} {rx_tx} {size}'
         output, code = self._popen(cmd)
         # ethtool error codes:
-        #  80 - value already setted
+        #  80 - value already set
         #  81 - does not possible to set value
         if code and code != 80:
             print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
@@ -518,7 +518,7 @@ class EthernetIf(Interface):
         cmd = f'ethtool --set-channels {ifname} {rx_tx_comb} {queues}'
         output, code = self._popen(cmd)
         # ethtool error codes:
-        #  80 - value already setted
+        #  80 - value already set
         #  81 - does not possible to set value
         if code and code != 80:
             print(f'could not set "{rx_tx_comb}" channel for {ifname}')
@@ -550,9 +550,9 @@ class EthernetIf(Interface):
             self._cmd(f'/sbin/devlink dev eswitch set pci/{addr} mode legacy')
 
     def update(self, config):
-        """General helper function which works on a dictionary retrived by
+        """General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface."""
 
         # disable ethernet flow control (pause frames)
