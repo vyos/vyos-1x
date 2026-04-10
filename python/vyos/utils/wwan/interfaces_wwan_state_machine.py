@@ -1367,6 +1367,20 @@ class ModemStateMachine:
                     self.transition(ModemEvent.DISCONNECT)
                     self._safe_create_task(self.handle_disconnection_recovery())
 
+            elif current_fsm_state == ModemState.DISCONNECTING.value:
+                # Safety net: FSM already transitioned to DISCONNECTING (from
+                # the bearer D-Bus signal) but handle_disconnection_recovery
+                # may have returned early because MM was still at state 11.
+                # Now MM has caught up and says REGISTERED — kick recovery.
+                if not self.user_disconnected:
+                    logger.warning(
+                        "Modem REGISTERED while FSM DISCONNECTING — "
+                        "recovery may have stalled, re-triggering",
+                        extra={'interface_number': self.interface_number,
+                               'modem_state': mm_state,
+                               'fsm_state': current_fsm_state})
+                    self._safe_create_task(self.handle_disconnection_recovery())
+
         elif mm_state == 9:  # DISCONNECTING
             if current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Connection being terminated - stop network interface monitoring and trigger enhanced reconnection
@@ -1476,18 +1490,21 @@ class ModemStateMachine:
         # Track user-initiated disconnects and stop network interface monitoring
         if event == ModemEvent.DISCONNECT:
             # Check if this is from user or ModemManager
-            if current_state in [ModemState.CONNECTED.value]:
+            if current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Stop network interface monitoring when leaving connected state
                 try:
                     self._safe_create_task(self._stop_network_interface_monitoring())
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
-                # This is a user-initiated disconnect from connected state
-                self.user_disconnected = True
-                logger.info("User-initiated disconnect flagged",
+                # NOTE: Do NOT set user_disconnected here — network-initiated
+                # drops (bearer lost, carrier detach-reattach, etc.) also fire
+                # DISCONNECT events.  Only the explicit user/admin disconnect
+                # path should set this flag.  See _handle_admin_disconnect().
+                logger.info("DISCONNECT event processed",
                            extra={'interface_number': self.interface_number,
-                                  'current_state': current_state})
+                                  'current_state': current_state,
+                                  'user_disconnected': self.user_disconnected})
 
         elif event == ModemEvent.CONNECT:
             # Clear user disconnect flag when user requests connection
@@ -1570,6 +1587,7 @@ class ModemStateMachine:
             if not was_disabled:
                 logger.info("Interface administratively disabled",
                            extra={'interface_number': self.interface_number})
+                self.user_disconnected = True
                 self._safe_create_task(self._admin_disable())
             else:
                 logger.info("Interface remains disabled, configuration stored",
@@ -1578,6 +1596,7 @@ class ModemStateMachine:
 
         if was_disabled and not is_disabled:
             self._admin_disabled = False
+            self.user_disconnected = False
             logger.info("Interface re-enabled from admin-disabled state",
                        extra={'interface_number': self.interface_number})
             # Fall through to normal apply logic — will trigger
@@ -4661,6 +4680,18 @@ class ModemStateMachine:
                     # Per-SIM restricts — intersect with modem-supported
                     target_bands = [b for b in per_sim_band_constants if b in modem_bands_list]
                     target_band_names = [self._mm_constant_to_band_name(b) for b in target_bands]
+
+                    # Warn about NGRAN bands that MM doesn't expose (common on MM < 1.22)
+                    requested_ngran = [b for b in per_sim_band_constants if b >= 301]
+                    modem_ngran = [b for b in modem_bands_list if b >= 301]
+                    if requested_ngran and not modem_ngran:
+                        logger.warning("5G NR bands were requested but ModemManager does not report "
+                                      "any NGRAN bands in SupportedBands. This is a known limitation "
+                                      "of ModemManager < 1.22 with QMI modems. 5G band restrictions "
+                                      "will be ignored — the modem may still use 5G NR via NSA mode.",
+                                      extra={'interface_number': self.interface_number,
+                                             'requested_ngran': [self._mm_constant_to_band_name(b) for b in requested_ngran]})
+
                     logger.info("Applying per-SIM ∩ modem band filter",
                                extra={'interface_number': self.interface_number,
                                       'per_sim_bands': [self._mm_constant_to_band_name(b) for b in per_sim_band_constants],
@@ -4879,23 +4910,61 @@ class ModemStateMachine:
             'eutran-66': 96,  # 1700/2100 MHz
             'eutran-71': 101, # 600 MHz
 
-            # 5G NR/NGRAN bands
-            'ngran-1': 128,   # 2100 MHz
-            'ngran-2': 129,   # 1900 MHz
-            'ngran-3': 130,   # 1800 MHz
-            'ngran-5': 132,   # 850 MHz
-            'ngran-7': 134,   # 2600 MHz
-            'ngran-8': 135,   # 900 MHz
-            'ngran-12': 139,  # 700 MHz
-            'ngran-20': 147,  # 800 MHz
-            'ngran-25': 152,  # 1900 MHz
-            'ngran-28': 155,  # 700 MHz
-            'ngran-41': 168,  # 2500 MHz
-            'ngran-66': 193,  # 1700/2100 MHz
-            'ngran-71': 198,  # 600 MHz
-            'ngran-77': 204,  # 3700 MHz
-            'ngran-78': 205,  # 3500 MHz
-            'ngran-79': 206,  # 4700 MHz
+            # 5G NR/NGRAN bands (MM_MODEM_BAND_NGRAN_N = 300 + N)
+            'ngran-1': 301,   # 2100 MHz
+            'ngran-2': 302,   # 1900 MHz
+            'ngran-3': 303,   # 1800 MHz
+            'ngran-5': 305,   # 850 MHz
+            'ngran-7': 307,   # 2600 MHz
+            'ngran-8': 308,   # 900 MHz
+            'ngran-12': 312,  # 700 MHz
+            'ngran-13': 313,  # 700 MHz c
+            'ngran-14': 314,  # 700 MHz PS
+            'ngran-18': 318,  # 800 MHz
+            'ngran-20': 320,  # 800 MHz DD
+            'ngran-25': 325,  # 1900 MHz
+            'ngran-26': 326,  # 850 MHz
+            'ngran-28': 328,  # 700 MHz APT
+            'ngran-29': 329,  # 700 MHz SDL
+            'ngran-30': 330,  # 2300 MHz
+            'ngran-34': 334,  # 2010 MHz TDD
+            'ngran-38': 338,  # 2600 MHz TDD
+            'ngran-39': 339,  # 1900 MHz TDD
+            'ngran-40': 340,  # 2300 MHz TDD
+            'ngran-41': 341,  # 2500 MHz TDD
+            'ngran-48': 348,  # 3600 MHz CBRS
+            'ngran-50': 350,  # 1500 MHz SDL
+            'ngran-51': 351,  # 1500 MHz
+            'ngran-53': 353,  # 2400 MHz
+            'ngran-65': 365,  # 2100 MHz
+            'ngran-66': 366,  # 1700/2100 MHz AWS
+            'ngran-67': 367,  # 700 MHz EU SDL
+            'ngran-70': 370,  # 1700/2100 MHz
+            'ngran-71': 371,  # 600 MHz
+            'ngran-74': 374,  # 1400 MHz SDL
+            'ngran-75': 375,  # 1500 MHz SDL
+            'ngran-76': 376,  # 1500 MHz SDL
+            'ngran-77': 377,  # 3700 MHz TDD
+            'ngran-78': 378,  # 3500 MHz TDD
+            'ngran-79': 379,  # 4700 MHz TDD
+            'ngran-80': 380,  # 1800 MHz SUL
+            'ngran-81': 381,  # 900 MHz SUL
+            'ngran-82': 382,  # 800 MHz SUL
+            'ngran-83': 383,  # 700 MHz SUL
+            'ngran-84': 384,  # 2100 MHz SUL
+            'ngran-86': 386,  # 1700 MHz SUL
+            'ngran-89': 389,  # 800 MHz SUL
+            'ngran-90': 390,  # 2500 MHz TDD
+            'ngran-91': 391,  # 800/1400 MHz
+            'ngran-92': 392,  # 800/700 MHz
+            'ngran-93': 393,  # 900/1500 MHz
+            'ngran-94': 394,  # 880/1400 MHz
+            'ngran-95': 395,  # 2100 MHz SUL
+            # 5G NR FR2 mmWave bands
+            'ngran-257': 557, # 28 GHz mmWave
+            'ngran-258': 558, # 26 GHz mmWave
+            'ngran-260': 560, # 39 GHz mmWave
+            'ngran-261': 561, # 28 GHz mmWave
         }
 
     def _band_name_to_mm_constant(self, band_name):
@@ -6845,12 +6914,58 @@ class ModemStateMachine:
 
                 if mm_state == 11:  # Already CONNECTED
                     if not connectivity_triggered:
-                        logger.info(
-                            "Modem automatically reconnected",
-                            extra={'interface_number': self.interface_number})
-                        # ModemManager will trigger handle_modem_event
-                        # with state 11
-                        return
+                        # Verify the bearer is actually connected before
+                        # trusting MM state — MM may still report state 11
+                        # briefly after the bearer drops ("Regular
+                        # deactivation").  If we return early here the FSM
+                        # is stuck in DISCONNECTING with no recovery path.
+                        bearer_really_connected = False
+                        if saved_bearer_path:
+                            try:
+                                bp_introspect = await self.bus.introspect(
+                                    'org.freedesktop.ModemManager1',
+                                    saved_bearer_path)
+                                bp_proxy = self.bus.get_proxy_object(
+                                    'org.freedesktop.ModemManager1',
+                                    saved_bearer_path,
+                                    bp_introspect)
+                                bp_props = bp_proxy.get_interface(
+                                    'org.freedesktop.DBus.Properties')
+                                bp_connected_var = await bp_props.call_get(
+                                    'org.freedesktop.ModemManager1.Bearer',
+                                    'Connected')
+                                bearer_really_connected = bp_connected_var.value
+                            except Exception as bp_err:
+                                logger.debug(
+                                    f"Could not verify bearer connected "
+                                    f"state: {bp_err}",
+                                    extra={
+                                        'interface_number':
+                                            self.interface_number})
+
+                        if bearer_really_connected:
+                            logger.info(
+                                "Modem automatically reconnected "
+                                "(bearer verified connected)",
+                                extra={
+                                    'interface_number':
+                                        self.interface_number})
+                            # Restore bearer path so signal monitoring
+                            # and IP config continue to work.
+                            self.bearer_path = saved_bearer_path
+                            return
+
+                        # Bearer is disconnected but MM still reports
+                        # state 11 — fall through to stale-bearer
+                        # handling (same path as connectivity_triggered).
+                        logger.warning(
+                            "MM reports CONNECTED but bearer is "
+                            "disconnected — treating as stale bearer",
+                            extra={
+                                'interface_number':
+                                    self.interface_number,
+                                'saved_bearer_path':
+                                    saved_bearer_path})
 
                     # Stale bearer: MM says CONNECTED but pings prove
                     # the data path is dead.  Force-disconnect the bearer
@@ -6899,6 +7014,10 @@ class ModemStateMachine:
                         "teardown",
                         extra={
                             'interface_number': self.interface_number})
+                    # Move FSM to CONFIGURING so the connection flow
+                    # (handle_modem_event states 7→8→10→11) works.
+                    if self.machine.current_state == ModemState.DISCONNECTING.value:
+                        self.transition(ModemEvent.CONFIG_UPDATE)
                     if self.enhanced_reconnection:
                         success = await (
                             self._enhanced_reconnection_attempt())
@@ -6915,6 +7034,10 @@ class ModemStateMachine:
                         await self.apply_modem_configuration()
 
                 elif mm_state == 8:  # REGISTERED but not connected
+                    # Move FSM to CONFIGURING so the connection flow
+                    # (handle_modem_event states 7→8→10→11) works.
+                    if self.machine.current_state == ModemState.DISCONNECTING.value:
+                        self.transition(ModemEvent.CONFIG_UPDATE)
                     if escalate:
                         # Retry loop with SIM failover escalation
                         for attempt in range(1, self.max_recovery_before_sim_switch + 1):
@@ -7144,8 +7267,7 @@ class ModemStateMachine:
                                           'results': connectivity_results})
                     consecutive_failures = 0
 
-                    # Log successful test (debug level to avoid spam)
-                    logger.debug("Connectivity test passed",
+                    logger.info("Connectivity test passed",
                                extra={'interface_number': self.interface_number,
                                       'results': connectivity_results})
                 else:
@@ -7253,12 +7375,12 @@ class ModemStateMachine:
 
                     cmd.append(target)
 
-                    logger.debug(f"Testing {ip_family} connectivity",
-                               extra={'interface_number': self.interface_number,
-                                      'target': target,
-                                      'attempt': attempt + 1,
-                                      'interface': interface_name,
-                                      'command': ' '.join(cmd)})
+                    logger.info(f"Testing {ip_family} connectivity",
+                              extra={'interface_number': self.interface_number,
+                                     'target': target,
+                                     'attempt': attempt + 1,
+                                     'interface': interface_name,
+                                     'command': ' '.join(cmd)})
 
                     # Run ping with timeout
                     process = await asyncio.create_subprocess_exec(
@@ -7274,25 +7396,25 @@ class ModemStateMachine:
                         )
 
                         if process.returncode == 0:
-                            logger.debug(f"{ip_family} connectivity test successful",
+                            logger.info(f"{ip_family} connectivity test successful",
                                        extra={'interface_number': self.interface_number,
                                               'target': target,
                                               'attempt': attempt + 1})
                             return True  # Success on first working target
                         else:
-                            logger.debug(f"{ip_family} ping failed",
-                                       extra={'interface_number': self.interface_number,
-                                              'target': target,
-                                              'attempt': attempt + 1,
-                                              'returncode': process.returncode,
-                                              'stderr': stderr.decode()[:200]})
+                            logger.warning(f"{ip_family} ping failed",
+                                          extra={'interface_number': self.interface_number,
+                                                 'target': target,
+                                                 'attempt': attempt + 1,
+                                                 'returncode': process.returncode,
+                                                 'stderr': stderr.decode()[:200]})
 
                     except asyncio.TimeoutError:
-                        logger.debug(f"{ip_family} ping timed out",
-                                   extra={'interface_number': self.interface_number,
-                                          'target': target,
-                                          'attempt': attempt + 1,
-                                          'timeout': timeout})
+                        logger.warning(f"{ip_family} ping timed out",
+                                      extra={'interface_number': self.interface_number,
+                                             'target': target,
+                                             'attempt': attempt + 1,
+                                             'timeout': timeout})
                         try:
                             process.kill()
                             await process.wait()
@@ -8377,9 +8499,13 @@ class ModemStateMachine:
             # (e.g. "Regular deactivation" from carrier) and did not
             # reconnect within the debounce window.  Transition the FSM
             # and attempt to re-establish the connection.
-            if (self.machine.current_state == ModemState.CONNECTED.value
+            # Note: FSM may be in USAGE_MONITORING (not just CONNECTED)
+            # because the state machine transitions there after connect.
+            if (self.machine.current_state in (ModemState.CONNECTED.value,
+                                                ModemState.USAGE_MONITORING.value)
                     and not self.user_disconnected):
-                logger.warning("Bearer lost while FSM still CONNECTED — triggering reconnection recovery",
+                logger.warning("Bearer lost while FSM in %s — triggering reconnection recovery",
+                              self.machine.current_state,
                               extra={'interface_number': self.interface_number,
                                      'current_state': self.machine.current_state})
                 self.transition(ModemEvent.DISCONNECT)

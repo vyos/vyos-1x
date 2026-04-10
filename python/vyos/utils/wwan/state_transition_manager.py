@@ -98,6 +98,7 @@ class StateTransitionManager:
                 StateTransition("CONNECTED", "DISCONNECTING", "DISCONNECT", "User or system disconnect"),
                 StateTransition("USAGE_MONITORING", "DISCONNECTING", "DISCONNECT", "Disconnect from monitoring"),
                 StateTransition("DISCONNECTING", "DISCONNECTED", "DISCONNECTED", "Disconnection completed"),
+                StateTransition("DISCONNECTING", "CONFIGURING", "CONFIG_UPDATE", "Recovery: reconfigure after bearer loss"),
                 StateTransition("CONNECTED", "REGISTERED_IDLE", "ENTER_IDLE", "On-demand disconnect: drop bearer, keep registration"),
                 StateTransition("USAGE_MONITORING", "REGISTERED_IDLE", "ENTER_IDLE", "On-demand disconnect from monitoring"),
             ]
@@ -160,6 +161,7 @@ class StateTransitionManager:
                 StateTransition("CONNECTING", "FAILED", "CONNECTION_FAILED", "Connection attempt failed"),
                 StateTransition("CONNECTED", "FAILED", "CONNECTION_FAILED", "Active connection failed"),
                 StateTransition("CONFIGURING", "FAILED", "CONNECTION_FAILED", "Configuration failed"),
+                StateTransition("DISCONNECTING", "FAILED", "CONNECTION_FAILED", "Recovery from disconnecting failed"),
                 StateTransition("SCANNING", "FAILED", "CONNECTION_FAILED", "Modem scan failed"),
                 StateTransition("FAILED", "SCANNING", "START_SCAN", "Retry modem scanning"),
                 StateTransition("FAILED", "CONNECTING", "CONNECT", "Retry connection"),

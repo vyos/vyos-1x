@@ -1,198 +1,468 @@
 #!/usr/bin/env python3
 #
-# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright (C) 2024-2026 IGOS and contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
 #
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 or later as
-# published by the Free Software Foundation.
+# interfaces_wwan.py — VyOS conf_mode script for enhanced WWAN interface.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+# Reads the VyOS config tree (set interfaces wwan wwanN …) and translates it
+# into the nested dict expected by the WWAN FSM D-Bus service, then pushes the
+# config via D-Bus SetConfiguration.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# This script replaces the upstream VyOS interfaces_wwan.py and the flat-file
+# interfaces_wwan2.py config parser.
 
+import asyncio
 import os
-
-from sys import exit
-from time import sleep
+import re
+import subprocess
+import sys
 
 from vyos.config import Config
-from vyos.configdep import set_dependents
-from vyos.configdep import call_dependents
-from vyos.configdict import get_interface_dict
-from vyos.configdict import is_node_changed
-from vyos.configverify import verify_authentication
-from vyos.configverify import verify_interface_exists
-from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
-from vyos.ifconfig import WWANIf
-from vyos.utils.dict import dict_search
-from vyos.utils.network import is_wwan_connected
-from vyos.utils.process import cmd
-from vyos.utils.process import call
-from vyos.utils.process import DEVNULL
-from vyos.utils.process import is_systemd_service_active
-from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 service_name = 'ModemManager.service'
-cron_script = '/etc/cron.d/vyos-wwan'
+
+# ---------------------------------------------------------------------------
+# helpers
+# ---------------------------------------------------------------------------
+
+def _leaf(cfg, key, default=None):
+    """Return a leaf value from a VyOS config dict, or *default*."""
+    return cfg.get(key, default)
+
+
+def _leaf_int(cfg, key, default=0):
+    """Return a leaf value as int."""
+    v = cfg.get(key)
+    if v is None:
+        return default
+    return int(v)
+
+
+def _leaf_exists(cfg, key):
+    """True when a valueless node is present."""
+    return key in cfg
+
+
+def _csv_to_list(value, cast=str):
+    """Split a comma-separated string into a list, stripping whitespace."""
+    if not value:
+        return []
+    return [cast(x.strip()) for x in str(value).split(',') if x.strip()]
+
+
+# ---------------------------------------------------------------------------
+# get_config  — read the VyOS tree and return raw dict
+# ---------------------------------------------------------------------------
 
 def get_config(config=None):
-    """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
-    interface name will be added or a deleted flag
-    """
     if config:
         conf = config
     else:
         conf = Config()
+
     base = ['interfaces', 'wwan']
-    ifname, wwan = get_interface_dict(conf, base)
 
-    # We should only terminate the WWAN session if critical parameters change.
-    # All parameters that can be changed on-the-fly (like interface description)
-    # should not lead to a reconnect!
-    tmp = is_node_changed(conf, base + [ifname, 'address'])
-    if tmp: wwan.update({'shutdown_required': {}})
+    # Determine interface name from argv (VyOS passes e.g. "wwan0")
+    # or from the config session.
+    if len(sys.argv) > 1:
+        ifname = sys.argv[1]
+    else:
+        # Fallback: list configured interfaces and take the first
+        ifname = None
+        for name in conf.list_nodes(base):
+            ifname = name
+            break
+        if not ifname:
+            return {'deleted': True, 'ifname': 'wwan0'}
 
-    tmp = is_node_changed(conf, base + [ifname, 'apn'])
-    if tmp: wwan.update({'shutdown_required': {}})
+    path = base + [ifname]
+    if not conf.exists(path):
+        return {'deleted': True, 'ifname': ifname}
 
-    tmp = is_node_changed(conf, base + [ifname, 'disable'])
-    if tmp: wwan.update({'shutdown_required': {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'vrf'])
-    if tmp: wwan.update({'shutdown_required': {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'authentication'])
-    if tmp: wwan.update({'shutdown_required': {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'ipv6', 'address', 'autoconf'])
-    if tmp: wwan.update({'shutdown_required': {}})
-
-    # We need to know the amount of other WWAN interfaces as ModemManager needs
-    # to be started or stopped.
-    wwan['other_interfaces'] = conf.get_config_dict([], key_mangling=('-', '_'),
-                                                       get_first_key=True,
-                                                       no_tag_node_value_mangle=True)
-
-    # This if-clause is just to be sure - it will always evaluate to true
-    if ifname in wwan['other_interfaces']:
-        del wwan['other_interfaces'][ifname]
-    if len(wwan['other_interfaces']) == 0:
-        del wwan['other_interfaces']
-
-    # Protocols static arp dependency
-    if 'static_arp' in wwan:
-        set_dependents('static_arp', conf)
-
+    # key_mangling: VyOS stores hyphenated names; convert to underscored
+    wwan = conf.get_config_dict(
+        path,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        with_defaults=True,
+    )
+    wwan['ifname'] = ifname
     return wwan
+
+
+# ---------------------------------------------------------------------------
+# build_fsm_config  — translate VyOS dict → FSM nested dict
+# ---------------------------------------------------------------------------
+
+def build_fsm_config(wwan):
+    """Produce the config dict expected by the FSM D-Bus SetConfiguration."""
+
+    # ── SIM slots ────────────────────────────────────────────────────────
+    sim_cfg = wwan.get('sim', {})
+    slot_cfgs = sim_cfg.get('slot', {})
+
+    # Global data-usage fallback values
+    du = wwan.get('data_usage', {})
+    global_data_limit_size = _leaf_int(du, 'size', 0)
+    global_data_limit_action = _leaf(du, 'action', 'none')
+    global_data_limit_billing = _leaf_int(du, 'billing_date', 1)
+    global_data_limit_warning = _csv_to_list(du.get('warning', ''), int)
+
+    sim_slots = []
+    for slot_num in sorted(slot_cfgs.keys(), key=int):
+        s = slot_cfgs[slot_num]
+        dl = s.get('data_limit', {})
+        sim = {
+            'slot': int(slot_num),
+            'enabled': not _leaf_exists(s, 'disable'),
+            'apn': _leaf(s, 'apn', ''),
+            'username': _leaf(s, 'username', ''),
+            'password': _leaf(s, 'password', ''),
+            'auth_type': _leaf(s, 'auth_type', 'none'),
+            'pdp_type': _leaf(s, 'pdp_type', 'ipv4'),
+            'roaming': 'enabled' if _leaf_exists(s, 'roaming') else 'disabled',
+            'pin': _leaf(s, 'pin', ''),
+            'puk': _leaf(s, 'puk', ''),
+            'iccid': _leaf(s, 'iccid', ''),
+            'supported_bands': _csv_to_list(
+                _leaf(s, 'supported_bands', 'all')
+            ),
+            'preferred_carrier': _leaf(s, 'preferred_carrier', ''),
+            'enable_network_scan': _leaf_exists(s, 'enable_network_scan'),
+            'mtu': _leaf_int(s, 'mtu', 0),
+            # Per-SIM data limits, falling back to global
+            'data_limit_size': _leaf_int(dl, 'size', global_data_limit_size),
+            'data_limit_action': _leaf(dl, 'action', global_data_limit_action),
+            'data_limit_billing_date': _leaf_int(
+                dl, 'billing_date', global_data_limit_billing
+            ),
+            'data_limit_warning': (
+                _csv_to_list(dl.get('warning', ''), int)
+                if dl.get('warning')
+                else global_data_limit_warning
+            ),
+        }
+        sim_slots.append(sim)
+
+    # If no SIM slots explicitly configured, create a default slot 1
+    if not sim_slots:
+        sim_slots.append({
+            'slot': 1,
+            'enabled': True,
+            'apn': '',
+            'username': '',
+            'password': '',
+            'auth_type': 'none',
+            'pdp_type': 'ipv4',
+            'roaming': 'disabled',
+            'pin': '',
+            'puk': '',
+            'iccid': '',
+            'supported_bands': ['all'],
+            'preferred_carrier': '',
+            'enable_network_scan': False,
+            'mtu': 0,
+            'data_limit_size': global_data_limit_size,
+            'data_limit_action': global_data_limit_action,
+            'data_limit_billing_date': global_data_limit_billing,
+            'data_limit_warning': global_data_limit_warning,
+        })
+
+    # ── Connectivity monitoring ──────────────────────────────────────────
+    cm = wwan.get('connectivity_monitoring', {})
+    connectivity_monitoring = {
+        'enabled': not _leaf_exists(cm, 'disable'),
+        'interval': _leaf_int(cm, 'interval', 60),
+        'timeout': _leaf_int(cm, 'timeout', 10),
+        'retry_count': _leaf_int(cm, 'retry_count', 3),
+        'failure_threshold': _leaf_int(cm, 'failure_threshold', 2),
+        'test_ipv4': not _leaf_exists(cm, 'disable_test_ipv4'),
+        'test_ipv6': _leaf_exists(cm, 'test_ipv6'),
+        'require_both': _leaf_exists(cm, 'require_both'),
+        'ipv4_targets': _csv_to_list(
+            _leaf(cm, 'ipv4_targets', '8.8.8.8,1.1.1.1')
+        ),
+        'ipv6_targets': _csv_to_list(
+            _leaf(cm, 'ipv6_targets',
+                  '2001:4860:4860::8888,2606:4700:4700::1111')
+        ),
+    }
+
+    # ── Interface management ─────────────────────────────────────────────
+    im = wwan.get('interface_management', {})
+    interface_management = {
+        'enabled': not _leaf_exists(im, 'disable'),
+        'bearer_disconnect_delay': _leaf_int(im, 'bearer_disconnect_delay', 15),
+        'registration_recovery_delay': _leaf_int(
+            im, 'registration_recovery_delay', 20
+        ),
+        'registration_flap_count': _leaf_int(im, 'registration_flap_count', 5),
+        'registration_flap_window': _leaf_int(
+            im, 'registration_flap_window', 360
+        ),
+        'ip_change_delay': _leaf_int(im, 'ip_change_delay', 500),
+        'ensure_link_up_on_connect': not _leaf_exists(
+            im, 'disable_ensure_link_up_on_connect'
+        ),
+        'monitor_bearer_state': not _leaf_exists(
+            im, 'disable_monitor_bearer_state'
+        ),
+        'monitor_ip_changes': not _leaf_exists(
+            im, 'disable_monitor_ip_changes'
+        ),
+        'interface_up_timeout': _leaf_int(im, 'interface_up_timeout', 10),
+    }
+
+    # ── Enhanced reconnection ────────────────────────────────────────────
+    rc = wwan.get('reconnection', {})
+    ri = rc.get('retry_interval', {})
+    enhanced_reconnection = {
+        'enabled': not _leaf_exists(rc, 'disable_enhanced'),
+        'signal_threshold': _leaf_int(rc, 'signal_threshold', -85),
+        'retry_interval_good_signal': _leaf_int(ri, 'good_signal', 15),
+        'retry_interval_poor_signal': _leaf_int(ri, 'poor_signal', 45),
+        'max_wait_for_signal': _leaf_int(rc, 'max_wait_for_signal', 120),
+        'signal_check_interval': _leaf_int(rc, 'signal_check_interval', 10),
+        'signal_strength_buffer': _leaf_int(rc, 'signal_strength_buffer', 5),
+    }
+
+    # ── Failed-state retry ───────────────────────────────────────────────
+    fr = wwan.get('failed_retry', {})
+    failed_retry = {
+        'enabled': not _leaf_exists(fr, 'disable'),
+        'intervals': _csv_to_list(
+            _leaf(fr, 'intervals', '300,600,1200,1800'), int
+        ),
+        'max_interval': _leaf_int(fr, 'max_interval', 1800),
+        'escalation_threshold': _leaf_int(fr, 'escalation_threshold', 3),
+    }
+
+    # ── SIM failover ─────────────────────────────────────────────────────
+    sf = sim_cfg.get('sim_failover', {})
+    fb = sim_cfg.get('sim_failback', {})
+
+    # ── PD ───────────────────────────────────────────────────────────────
+    pd_cfg = wwan.get('pd', {})
+    pd_list = []
+    for pd_id in sorted(pd_cfg.keys(), key=int):
+        pd_entry = pd_cfg[pd_id]
+        iface_cfgs = pd_entry.get('interface', {})
+        interfaces = {}
+        for iface_name, iface_data in iface_cfgs.items():
+            interfaces[iface_name] = {
+                'address': _leaf_int(iface_data, 'address', 0),
+                'sla_id': _leaf_int(iface_data, 'sla_id', 0),
+                'sla_len': iface_data.get('sla_len'),  # None = auto
+            }
+        pd_list.append({
+            'id': int(pd_id),
+            'interfaces': interfaces,
+        })
+
+    # ── Timeouts ─────────────────────────────────────────────────────────
+    to = wwan.get('timeouts', {})
+
+    # ── Logging ──────────────────────────────────────────────────────────
+    lg = wwan.get('logging', {})
+
+    # ── Assemble the complete config dict ────────────────────────────────
+    config = {
+        # Basic interface settings
+        'interface_disabled': _leaf_exists(wwan, 'disable'),
+        'primary_sim_slot': _leaf_int(sim_cfg, 'primary_slot', 1),
+        'connection_mode': _leaf(wwan, 'connection_mode', 'always-on'),
+
+        # MTU
+        'mtu': _leaf_int(wwan, 'mtu', 1420),
+
+        # Enhanced reconnection
+        'enhanced_reconnection': enhanced_reconnection,
+
+        # APN discovery
+        'android_apn_discovery': (
+            'enabled' if _leaf_exists(
+                wwan.get('apn_discovery', {}), 'android'
+            ) else 'disabled'
+        ),
+
+        # SIM failover (global enable + policy)
+        'sim_failover': (
+            'disabled' if _leaf_exists(sf, 'disable') else 'enabled'
+        ),
+        'sim_failover_connect_retries': _leaf_int(
+            sf, 'connect_retries', 3
+        ),
+        'sim_failover_revert_timer': _leaf_int(sf, 'revert_timer', 300),
+        'sim_failover_signal_loss_timer': _leaf_int(
+            sf, 'signal_loss_timer', 60
+        ),
+        'sim_failover_signal_threshold': _leaf_int(
+            sf, 'signal_threshold', -90
+        ),
+
+        # SIM failback
+        'sim_failback_enabled': not _leaf_exists(fb, 'disable'),
+        'sim_failback_check_interval': _leaf_int(
+            fb, 'check_interval', 600
+        ),
+
+        # Data usage (global monitoring interval)
+        'data_usage_monitoring_interval': _leaf_int(
+            du, 'monitoring_interval', 30
+        ),
+
+        # Hardware reset
+        'hardware_reset_enabled': not _leaf_exists(
+            wwan.get('hardware_reset', {}), 'disable'
+        ),
+        'max_hardware_resets': _leaf_int(
+            wwan.get('hardware_reset', {}), 'max_attempts', 3
+        ),
+        'hardware_reset_cooldown': _leaf_int(
+            wwan.get('hardware_reset', {}), 'cooldown', 300
+        ),
+
+        # Connection and timeout settings
+        'connection_timeout': _leaf_int(to, 'connection', 120),
+        'registration_timeout': _leaf_int(to, 'registration', 180),
+        'network_scan_timeout': _leaf_int(
+            wwan.get('network_scan', {}), 'timeout', 60
+        ),
+        'network_mode': _leaf(wwan, 'network_mode', 'auto'),
+
+        # Monitoring intervals
+        'normal_monitoring_interval': _leaf_int(
+            to, 'normal_monitoring_interval', 30
+        ),
+        'system_health_check_interval': _leaf_int(
+            lg, 'health_check_interval', 300
+        ),
+
+        # Logging
+        'verbose_logging': _leaf_exists(lg, 'verbose'),
+        'log_level': _leaf(lg, 'level', 'info'),
+        'snmp_monitoring': _leaf_exists(lg, 'snmp_monitoring'),
+        'detailed_status': _leaf_exists(lg, 'detailed_status'),
+
+        # Collections
+        'sim_slots': sim_slots,
+        'connectivity_monitoring': connectivity_monitoring,
+        'interface_management': interface_management,
+        'failed_retry': failed_retry,
+
+        # IPv6 Prefix Delegation
+        'pd': pd_list,
+        'pd_reconciliation_interval': _leaf_int(
+            wwan, 'pd_reconciliation_interval', 10
+        ),
+    }
+
+    return config
+
+
+# ---------------------------------------------------------------------------
+# verify
+# ---------------------------------------------------------------------------
 
 def verify(wwan):
     if 'deleted' in wwan:
         return None
 
-    ifname = wwan['ifname']
-    if not 'apn' in wwan:
-        raise ConfigError(f'No APN configured for "{ifname}"!')
-
-    verify_interface_exists(wwan, ifname)
-    verify_authentication(wwan)
     verify_vrf(wwan)
     verify_mtu_ipv6(wwan)
     verify_mirror_redirect(wwan)
 
     return None
 
+
+# ---------------------------------------------------------------------------
+# generate  — nothing to render
+# ---------------------------------------------------------------------------
+
 def generate(wwan):
-    if 'deleted' in wwan:
-        # We are the last WWAN interface - there are no other ones remaining
-        # thus the cronjob needs to go away, too
-        if 'other_interfaces' not in wwan:
-            if os.path.exists(cron_script):
-                os.unlink(cron_script)
-        return None
-
-    # Install cron triggered helper script to re-dial WWAN interfaces on
-    # disconnect - e.g. happens during RF signal loss. The script watches every
-    # WWAN interface - so there is only one instance.
-    if not os.path.exists(cron_script):
-        write_file(cron_script, '*/5 * * * * root /usr/libexec/vyos/vyos-check-wwan.py\n')
-
     return None
+
+
+# ---------------------------------------------------------------------------
+# apply  — push config to FSM via D-Bus
+# ---------------------------------------------------------------------------
 
 def apply(wwan):
-    # ModemManager is required to dial WWAN connections - one instance is
-    # required to serve all modems. Activate ModemManager on first invocation
-    # of any WWAN interface.
-    if not is_systemd_service_active(service_name):
-        cmd(f'systemctl start {service_name}')
+    ifname = wwan.get('ifname', 'wwan0')
+    # Extract numeric interface index from wwanN
+    match = re.search(r'(\d+)$', ifname)
+    interface_number = int(match.group(1)) if match else 0
 
-        counter = 100
-        # Wait until a modem is detected and then we can continue
-        while counter > 0:
-            counter -= 1
-            tmp = cmd('mmcli -L')
-            if tmp != 'No modems were found':
-                break
-            sleep(0.250)
+    if 'deleted' in wwan or _leaf_exists(wwan, 'disable'):
+        # Interface is being removed or disabled — tell the FSM
+        config = {'interface_disabled': True}
+    else:
+        config = build_fsm_config(wwan)
 
-    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        # deprecated: we only need the modem number. wwan0 -> 0, wwan1 -> 1
-        # modem = wwan['ifname'].lstrip('wwan')
-        # get the modem index of the first modem, assuming only one modem detected
-        tmp = cmd('mmcli -L')
-        modem = tmp.split("/Modem/")[1].split()[0]
-        base_cmd = f'mmcli --modem {modem}'
-        # Number of bearers is limited - always disconnect first
-        cmd(f'{base_cmd} --simple-disconnect')
-
-    w = WWANIf(wwan['ifname'])
-    if 'deleted' in wwan or 'disable' in wwan:
-        w.remove()
-
-        # We are the last WWAN interface - there are no other WWAN interfaces
-        # remaining, thus we can stop ModemManager and free resources.
-        if 'other_interfaces' not in wwan:
-            cmd(f'systemctl stop {service_name}')
-            # Clean CRON helper script which is used for to re-connect when
-            # RF signal is lost
-            if os.path.exists(cron_script):
-                os.unlink(cron_script)
-
-        return None
-
-    if 'shutdown_required' in wwan or (not is_wwan_connected(wwan['ifname'])):
-        ip_type = 'ipv4'
-        slaac = dict_search('ipv6.address.autoconf', wwan) != None
-        if 'address' in wwan:
-            if 'dhcp' in wwan['address'] and ('dhcpv6' in wwan['address'] or slaac):
-                ip_type = 'ipv4v6'
-            elif 'dhcpv6' in wwan['address'] or slaac:
-                ip_type = 'ipv6'
-            elif 'dhcp' in wwan['address']:
-                ip_type = 'ipv4'
-
-        options = f'ip-type={ip_type},apn=' + wwan['apn']
-        if 'authentication' in wwan:
-            options += ',user={username},password={password}'.format(**wwan['authentication'])
-
-        command = f'{base_cmd} --simple-connect="{options}"'
-        call(command, stdout=DEVNULL)
-
-    w.update(wwan)
-
-    if 'static_arp' in wwan:
-        call_dependents()
-
+    # Send config via D-Bus
+    asyncio.run(_apply_via_dbus(interface_number, config))
     return None
+
+
+async def _apply_via_dbus(interface_number, config):
+    """Push configuration to the FSM D-Bus service."""
+    # Import here to avoid hard dependency at module level
+    sys.path.insert(0, '/usr/lib/python3/dist-packages/vyos/utils/wwan')
+    try:
+        from wwan_client import WWANClient, WWANError
+    except ImportError:
+        # Fallback: try relative import for dev environments
+        wwan_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '..', '..', 'python', 'vyos', 'utils', 'wwan'
+        )
+        sys.path.insert(0, os.path.realpath(wwan_dir))
+        from wwan_client import WWANClient, WWANError
+
+    # Ensure the WWAN D-Bus service is running
+    try:
+        chk = subprocess.run(
+            ['pgrep', '-f', 'interfaces_wwan_main.py'],
+            capture_output=True, text=True
+        )
+        if chk.returncode != 0:
+            # Service not running — start it
+            script_dir = '/usr/lib/python3/dist-packages/vyos/utils/wwan'
+            service_path = os.path.join(script_dir, 'interfaces_wwan_main.py')
+            if os.path.exists(service_path):
+                subprocess.Popen(
+                    ['python3', service_path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                await asyncio.sleep(3)
+    except Exception:
+        pass  # Best-effort service start
+
+    try:
+        async with WWANClient() as client:
+            await client.add_interface(interface_number)
+            await asyncio.sleep(0.5)
+            result = await client.set_configuration(interface_number, config)
+            print(f'WWAN interface {interface_number}: {result}')
+    except WWANError as exc:
+        raise ConfigError(f'WWAN D-Bus configuration failed: {exc}') from exc
+    except Exception as exc:
+        raise ConfigError(
+            f'Failed to communicate with WWAN service: {exc}'
+        ) from exc
+
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
     try:
@@ -202,4 +472,4 @@ if __name__ == '__main__':
         apply(c)
     except ConfigError as e:
         print(e)
-        exit(1)
+        sys.exit(1)

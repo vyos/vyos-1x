@@ -675,22 +675,59 @@ technologies (e.g. Band 1 exists in UMTS, LTE, and 5G NR).
 | | `eutran-41` | 71 | 2500 MHz |
 | | `eutran-66` | 96 | 1700/2100 MHz |
 | | `eutran-71` | 101 | 600 MHz |
-| **5G NR (NGRAN)** | `ngran-1` | 128 | 2100 MHz |
-| | `ngran-2` | 129 | 1900 MHz |
-| | `ngran-3` | 130 | 1800 MHz |
-| | `ngran-5` | 132 | 850 MHz |
-| | `ngran-7` | 134 | 2600 MHz |
-| | `ngran-8` | 135 | 900 MHz |
-| | `ngran-12` | 139 | 700 MHz |
-| | `ngran-20` | 147 | 800 MHz |
-| | `ngran-25` | 152 | 1900 MHz |
-| | `ngran-28` | 155 | 700 MHz |
-| | `ngran-41` | 168 | 2500 MHz |
-| | `ngran-66` | 193 | 1700/2100 MHz |
-| | `ngran-71` | 198 | 600 MHz |
-| | `ngran-77` | 204 | 3700 MHz |
-| | `ngran-78` | 205 | 3500 MHz |
-| | `ngran-79` | 206 | 4700 MHz |
+| **5G NR (NGRAN)** | `ngran-1` | 301 | 2100 MHz |
+| | `ngran-2` | 302 | 1900 MHz |
+| | `ngran-3` | 303 | 1800 MHz |
+| | `ngran-5` | 305 | 850 MHz |
+| | `ngran-7` | 307 | 2600 MHz |
+| | `ngran-8` | 308 | 900 MHz |
+| | `ngran-12` | 312 | 700 MHz |
+| | `ngran-13` | 313 | 700 MHz c |
+| | `ngran-14` | 314 | 700 MHz PS |
+| | `ngran-18` | 318 | 800 MHz |
+| | `ngran-20` | 320 | 800 MHz DD |
+| | `ngran-25` | 325 | 1900 MHz |
+| | `ngran-26` | 326 | 850 MHz |
+| | `ngran-28` | 328 | 700 MHz APT |
+| | `ngran-29` | 329 | 700 MHz SDL |
+| | `ngran-30` | 330 | 2300 MHz |
+| | `ngran-34` | 334 | 2010 MHz TDD |
+| | `ngran-38` | 338 | 2600 MHz TDD |
+| | `ngran-39` | 339 | 1900 MHz TDD |
+| | `ngran-40` | 340 | 2300 MHz TDD |
+| | `ngran-41` | 341 | 2500 MHz TDD |
+| | `ngran-48` | 348 | 3600 MHz CBRS |
+| | `ngran-50` | 350 | 1500 MHz SDL |
+| | `ngran-51` | 351 | 1500 MHz |
+| | `ngran-53` | 353 | 2400 MHz |
+| | `ngran-65` | 365 | 2100 MHz |
+| | `ngran-66` | 366 | 1700/2100 MHz AWS |
+| | `ngran-67` | 367 | 700 MHz EU SDL |
+| | `ngran-70` | 370 | 1700/2100 MHz |
+| | `ngran-71` | 371 | 600 MHz |
+| | `ngran-74` | 374 | 1400 MHz SDL |
+| | `ngran-75` | 375 | 1500 MHz SDL |
+| | `ngran-76` | 376 | 1500 MHz SDL |
+| | `ngran-77` | 377 | 3700 MHz TDD |
+| | `ngran-78` | 378 | 3500 MHz TDD |
+| | `ngran-79` | 379 | 4700 MHz TDD |
+| | `ngran-80` | 380 | 1800 MHz SUL |
+| | `ngran-81` | 381 | 900 MHz SUL |
+| | `ngran-82` | 382 | 800 MHz SUL |
+| | `ngran-83` | 383 | 700 MHz SUL |
+| | `ngran-84` | 384 | 2100 MHz SUL |
+| | `ngran-86` | 386 | 1700 MHz SUL |
+| | `ngran-89` | 389 | 800 MHz SUL |
+| | `ngran-90` | 390 | 2500 MHz TDD |
+| | `ngran-91` | 391 | 800/1400 MHz |
+| | `ngran-92` | 392 | 800/700 MHz |
+| | `ngran-93` | 393 | 900/1500 MHz |
+| | `ngran-94` | 394 | 880/1400 MHz |
+| | `ngran-95` | 395 | 2100 MHz SUL |
+| **5G NR FR2 (mmWave)** | `ngran-257` | 557 | 28 GHz mmWave |
+| | `ngran-258` | 558 | 26 GHz mmWave |
+| | `ngran-260` | 560 | 39 GHz mmWave |
+| | `ngran-261` | 561 | 28 GHz mmWave |
 
 ### Timeouts
 
