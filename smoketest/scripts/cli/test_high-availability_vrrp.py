@@ -137,6 +137,9 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(global_param_base + ['garp', 'master-refresh-repeat', f'{garp_master_refresh_repeat}'])
         self.cli_set(global_param_base + ['version', vrrp_version])
 
+        # SNMP
+        self.cli_set(base_path + ['vrrp', 'snmp', 'trap'])
+
         # commit changes
         self.cli_commit()
 
@@ -149,6 +152,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'vrrp_garp_master_refresh {garp_master_refresh}', config)
         self.assertIn(f'vrrp_garp_master_refresh_repeat {garp_master_refresh_repeat}', config)
         self.assertIn(f'vrrp_version {vrrp_version}', config)
+        self.assertIn('enable_traps', config)
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
@@ -173,6 +177,14 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'garp_master_delay {group_garp_master_delay}', config)
             self.assertIn(f'garp_master_refresh {group_garp_master_refresh}', config)
             self.assertIn(f'garp_master_repeat {group_garp_master_repeat}', config)
+
+        # Remove SNMP traps
+        self.cli_delete(base_path + ['vrrp', 'snmp', 'trap'])
+
+        # commit changes
+        self.cli_commit()
+        config = getConfig(f'global_defs')
+        self.assertNotIn('enable_traps', config)
 
     def test_03_sync_group(self):
         sync_group = 'VyOS'

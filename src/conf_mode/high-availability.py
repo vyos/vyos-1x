@@ -25,7 +25,7 @@ from ipaddress import IPv6Interface
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import node_changed
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.template import is_ipv4
@@ -59,7 +59,7 @@ def get_config(config=None):
     if conf.exists(conntrack_path):
         ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
-    if leaf_node_changed(conf, base + ['vrrp', 'snmp']):
+    if node_changed(conf, base + ['vrrp', 'snmp']):
         ha.update({'restart_required': {}})
 
     return ha
