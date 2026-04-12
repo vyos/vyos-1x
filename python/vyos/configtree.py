@@ -18,6 +18,12 @@ import json
 import logging
 
 from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
+from typing import TYPE_CHECKING
+
+# https://peps.python.org/pep-0484/#forward-references
+# for type 'ConfigDict'
+if TYPE_CHECKING:
+    from vyos.referencetree import ReferenceTree
 
 BUILD_PATH = '/tmp/libvyosconfig/_build/libvyosconfig.so'
 INSTALL_PATH = '/usr/lib/libvyosconfig.so.0'
@@ -621,6 +627,49 @@ def mask_exclusive(left, right, libpath=LIBPATH):
     if not res:
         msg = __get_error().decode()
         raise ConfigTreeError(msg)
+
+    tree = ConfigTree(address=res)
+
+    return tree
+
+
+def subtree_from_partial(
+    config_tree: ConfigTree,
+    path: list[str],
+    reference_tree: 'ReferenceTree',
+    start: ConfigTree = None,
+    libpath=LIBPATH,
+):
+    if start:
+        if not isinstance(start, ConfigTree):
+            raise TypeError("Argument 'start' must be an instance of ConfigTree")
+    else:
+        start = ConfigTree('')
+
+    check_path(path)
+    path_str = ' '.join(map(str, path)).encode()
+
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __subtree_from_partial = __lib.subtree_from_partial
+        __subtree_from_partial.argtypes = [c_void_p, c_void_p, c_void_p, c_char_p]
+        __subtree_from_partial.restype = c_void_p
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+
+        res = __subtree_from_partial(
+            reference_tree.get_tree(),
+            config_tree.get_tree(),
+            start.get_tree(),
+            path_str,
+        )
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if not res:
+        msg = __get_error().decode()
+        # msg is space separated list of path
+        raise ConfigTreeError(msg.split())
 
     tree = ConfigTree(address=res)
 
