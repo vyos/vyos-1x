@@ -584,13 +584,38 @@ def mask_inclusive(left, right, libpath=LIBPATH):
     try:
         __lib = cdll.LoadLibrary(libpath)
         __mask_tree = __lib.mask_tree
-        __mask_tree.argtypes = [c_void_p, c_void_p]
+        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
         __mask_tree.restype = c_void_p
         __get_error = __lib.get_error
         __get_error.argtypes = []
         __get_error.restype = c_char_p
 
-        res = __mask_tree(left.get_tree(), right.get_tree())
+        res = __mask_tree(left.get_tree(), right.get_tree(), False)
+    except Exception as e:
+        raise ConfigTreeError(e)
+    if not res:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+    tree = ConfigTree(address=res)
+
+    return tree
+
+
+def mask_exclusive(left, right, libpath=LIBPATH):
+    if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+        raise TypeError('Arguments must be instances of ConfigTree')
+
+    try:
+        __lib = cdll.LoadLibrary(libpath)
+        __mask_tree = __lib.mask_tree
+        __mask_tree.argtypes = [c_void_p, c_void_p, c_bool]
+        __mask_tree.restype = c_void_p
+        __get_error = __lib.get_error
+        __get_error.argtypes = []
+        __get_error.restype = c_char_p
+
+        res = __mask_tree(left.get_tree(), right.get_tree(), True)
     except Exception as e:
         raise ConfigTreeError(e)
     if not res:
