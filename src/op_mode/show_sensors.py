@@ -17,8 +17,16 @@
 
 import re
 import sys
+
+from vyos.utils.file import read_file
 from vyos.utils.process import popen
 from vyos.utils.process import DEVNULL
+
+cpu_info = read_file('/proc/cpuinfo')
+# Linux always adds "hypervisor" to CPU flags
+if 'hypervisor' in cpu_info:
+    print('VyOS running under hypervisor, no sensors available!')
+    sys.exit(1)
 
 output,retcode = popen("sensors --no-adapter",  stderr=DEVNULL)
 if retcode == 0:
