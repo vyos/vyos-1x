@@ -476,6 +476,18 @@ let mask_tree c_ptr_l c_ptr_r exclusive =
         | CD.Incommensurable -> error_message := "Incommensurable"; Ctypes.null
         | CD.Empty_comparison -> error_message := "Empty comparison"; Ctypes.null
 
+let subtree_from_partial r_ptr c_ptr i_ptr path =
+    let rt = Root.get r_ptr in
+    let ct = Root.get c_ptr in
+    let input = Root.get i_ptr in
+    let path = split_on_whitespace path in
+    try
+        let ct_ret = (CD.subtree_from_partial[@alert "-exn"]) rt ct input path in
+        Ctypes.Root.create ct_ret
+    with
+        CD.Malformed_path s ->
+            error_message := s; Ctypes.null
+
 let validate_tree_filter c_ptr rt_cache_path validator_dir =
     (* alert exn Internal.read_internal:
         [Internal.Read_error] caught
@@ -540,6 +552,7 @@ struct
   let () = I.internal "tree_merge" (bool @-> (ptr void) @-> (ptr void) @-> returning (ptr void)) tree_merge
   let () = I.internal "reference_tree_to_json" (string @-> string @-> string @-> returning int) reference_tree_to_json
   let () = I.internal "mask_tree" ((ptr void) @-> (ptr void) @-> bool @-> returning (ptr void)) mask_tree
+  let () = I.internal "subtree_from_partial" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> returning (ptr void)) subtree_from_partial
   let () = I.internal "validate_tree_filter" ((ptr void) @-> string @-> string @-> returning (ptr void)) validate_tree_filter
   let () = I.internal "config_dict" ((ptr void) @-> (ptr void) @-> (ptr void) @-> string @-> bool @-> bool @-> returning string) config_dict
 end
