@@ -346,7 +346,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
             if 'remote' in tunnel_config:
                 self.cli_set(self._base_path + [tunnel, 'remote', tunnel_config['remote']])
 
-        # GRE key must be supplied when two or more tunnels are formed to the same desitnation
+        # GRE key must be supplied when two or more tunnels are formed to the same destination
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         for tunnel, tunnel_config in tunnels.items():

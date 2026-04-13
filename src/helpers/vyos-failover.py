@@ -515,7 +515,7 @@ if __name__ == '__main__':
 
     # keys: NextHopNamedTuple with dhcp_interface != None
     # values: NextHopNamedTuple with next_hop != None
-    # Translates nexthop with dhcp_interface to ususal nexthop
+    # Translates nexthop with dhcp_interface to usual nexthop
     nexthop_by_dhcp_nexthop = {}
 
     had_sleeps = True

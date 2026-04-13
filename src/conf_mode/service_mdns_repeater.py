@@ -60,7 +60,7 @@ def verify(mdns):
     if not mdns or 'disable' in mdns:
         return None
 
-    # We need at least two interfaces to repeat mDNS advertisments
+    # We need at least two interfaces to repeat mDNS advertisements
     if 'interface' not in mdns or len(mdns['interface']) < 2:
         raise ConfigError('mDNS repeater requires at least 2 configured interfaces!')
 

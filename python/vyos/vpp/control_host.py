@@ -420,7 +420,7 @@ def get_eth_mac(iface_name: str) -> str:
 
 
 def xdp_remove(iface_name: str) -> None:
-    """Remove XDP BPF program from an interfce
+    """Remove XDP BPF program from an interface
 
     Args:
         iface_name (str): name of an interface

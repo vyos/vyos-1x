@@ -106,7 +106,7 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
             self.assertIn(directory, config)
 
         # Check for running processes - one process is spawned per listen
-        # IP address, wheter it's IPv4 or IPv6
+        # IP address, whether it's IPv4 or IPv6
         count = 0
         for p in process_iter():
             if PROCESS_NAME in p.name():

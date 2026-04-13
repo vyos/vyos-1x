@@ -124,7 +124,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>table-per-metric</format>
-                        <description>One table per gorups of metric by the metric name</description>
+                        <description>One table per groups of metric by the metric name</description>
                       </valueHelp>
                       <constraint>
                         <regex>(single-table|table-per-metric)</regex>

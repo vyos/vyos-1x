@@ -299,8 +299,8 @@ def apply(pbr):
 
         if 'rule' in pbr_route:
             for rule, rule_config in pbr_route['rule'].items():
-                # VRFs get configred as route table alias names for iproute2 and only 
-                # one 'set' can get past validation. Either can be fed to lookup. 
+                # VRFs get configured as route table alias names for iproute2 and only
+                # one 'set' can get past validation. Either can be fed to lookup.
                 vrf = rule_config['set'].get('vrf', '')
                 if vrf == 'default':
                     table_or_vrf = 'main'

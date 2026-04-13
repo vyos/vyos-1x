@@ -3,6 +3,7 @@
 # Synchronizer settings
 Sync {
     Mode FTFW {
+        PurgeTimeout {{ purge_timeout }}
         DisableExternalCache {{ 'on' if disable_external_cache is vyos_defined else 'off' }}
         StartupResync {{ 'on' if startup_resync is vyos_defined else 'off' }}
     }

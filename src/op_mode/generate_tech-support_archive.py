@@ -68,7 +68,7 @@ def __save_show_report_files(reports_dir: Path):
 
 def __generate_archived_files(location_path: str) -> None:
     """
-    Generate arhives of main directories
+    Generate archives of main directories
     :param location_path: path to temporary directory
     :type location_path: str
     """
@@ -128,10 +128,10 @@ def __generate_archived_files(location_path: str) -> None:
 
 def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
     """
-    Generate main arhive file
-    :param archive_file: name of arhive file
+    Generate main archive file
+    :param archive_file: name of archive file
     :type archive_file: str
-    :param tmp_dir_path: path to arhive memeber
+    :param tmp_dir_path: path to archive member
     :type tmp_dir_path: str
     """
 

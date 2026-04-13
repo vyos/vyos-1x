@@ -52,7 +52,7 @@ def success(data):
 # Pydantic models for validation
 # Pydantic will cast when possible, so use StrictStr validators added as
 # needed for additional constraints
-# json_schema_extra adds anotations to OpenAPI to add examples
+# json_schema_extra adds annotations to OpenAPI to add examples
 
 
 class ApiModel(BaseModel):

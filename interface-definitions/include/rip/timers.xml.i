@@ -9,7 +9,7 @@
         <help>Garbage collection timer</help>
         <valueHelp>
           <format>u32:5-2147483647</format>
-          <description>Garbage colletion time</description>
+          <description>Garbage collection time</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 5-2147483647"/>

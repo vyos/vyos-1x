@@ -51,7 +51,7 @@ class ConfigSource:
     def session_changed(self):
         """
         Returns:
-            True if the config session has uncommited changes, False otherwise.
+            True if the config session has uncommitted changes, False otherwise.
         """
         raise NotImplementedError(f"function not available for {type(self)}")
 
@@ -198,7 +198,7 @@ class ConfigSourceSession(ConfigSource):
     def session_changed(self):
         """
         Returns:
-            True if the config session has uncommited changes, False otherwise.
+            True if the config session has uncommitted changes, False otherwise.
         """
         try:
             self._run(self._make_command('sessionChanged', ''))
@@ -245,7 +245,7 @@ class ConfigSourceSession(ConfigSource):
         # FIXUP: by default, showConfig will give you a diff
         # if there are uncommitted changes.
         # The config parser obviously cannot work with diffs,
-        # so we need to supress diff production using appropriate
+        # so we need to suppress diff production using appropriate
         # options for getting either running (active)
         # or proposed (working) config.
         if effective:
@@ -364,7 +364,7 @@ class ConfigSourceVyconfSession(ConfigSource):
     def session_changed(self):
         """
         Returns:
-            True if the config session has uncommited changes, False otherwise.
+            True if the config session has uncommitted changes, False otherwise.
         """
         try:
             return self._vyconf_session.session_changed()

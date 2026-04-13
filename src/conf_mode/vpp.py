@@ -31,7 +31,7 @@ from vyos.base import Warning
 from vyos.config import Config, config_dict_merge
 from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
-from vyos.configdict import node_changed
+from vyos.configdict import node_changed, is_member
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_virtual_interface_exists
 from vyos.ifconfig import Section
@@ -39,6 +39,7 @@ from vyos.logger import getLogger
 from vyos.template import render
 from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.cpu import get_available_cpus
+from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import list_loaded_modules
@@ -48,10 +49,8 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.vpp import VPPControl
 from vyos.vpp import control_host
 from vyos.vpp import VppNotRunningError
-from vyos.vpp.config_deps import deps_bond_dict
-from vyos.vpp.config_deps import deps_bridge_dict
-from vyos.vpp.config_deps import deps_xconnect_dict
 from vyos.vpp.config_verify import (
+    verify_vpp_remove_interface,
     verify_vpp_minimum_cpus,
     verify_vpp_minimum_memory,
     verify_vpp_cpu_cores,
@@ -66,6 +65,7 @@ from vyos.vpp.config_resource_checks import memory
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
+from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 from vyos.vpp.configdb import JSONStorage
 
 airbag.enable()
@@ -88,7 +88,7 @@ dependency_interface_type_map = {
     'vpp_interfaces_xconnect': 'xconnect',
 }
 
-# dict of drivers that needs to be overrided
+# dict of drivers that needs to be overridden
 override_drivers: dict[str, str] = {
     'hv_netvsc': 'uio_hv_generic',
 }
@@ -139,7 +139,7 @@ def _load_module(module_name: str):
         module_name (str): Name of the module to load.
     """
     if module_name in list_loaded_modules():
-        vpp_log.info(f"Module '{module_name}' is alrady loaded")
+        vpp_log.info(f"Module '{module_name}' is already loaded")
         return
     try:
         check_kmod(module_name)
@@ -216,33 +216,6 @@ def _get_max_xdp_rx_queues(config: dict):
     return 1
 
 
-def _check_removed_interfaces(config: dict, feature_name: str, interfaces_config: dict):
-    """
-    Check if removed interfaces are used in any feature configuration
-
-    Args:
-        config: The main configuration dictionary
-        feature_name: Human-readable feature name for error messages
-        interfaces_config: The interfaces dictionary from the feature config
-    Example:
-        _check_removed_interfaces(config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {}))
-    """
-    if (
-        'removed_ifaces' not in config
-        or not config['removed_ifaces']
-        or not interfaces_config
-    ):
-        return
-
-    for removed_iface in config['removed_ifaces']:
-        iface_name = removed_iface.get('iface_name')
-        if iface_name and iface_name in interfaces_config:
-            raise ConfigError(
-                f'Cannot remove interface {iface_name} - it is currently configured for {feature_name}. '
-                f'Remove it from {feature_name} configuration first.'
-            )
-
-
 def _is_device_allowed(config: dict, iface: str):
     """
     Determines if a network interface device is allowed to be used
@@ -251,7 +224,7 @@ def _is_device_allowed(config: dict, iface: str):
     if 'allow_unsupported_nics' in config['settings']:
         return True
 
-    persist_config = config['persist_config'][iface]
+    persist_config = dict_search(f'persist_config.{iface}', config, default={})
 
     pci_id = persist_config.get('pci_id')
     # PCI ID is sufficient by itself, if presented
@@ -293,10 +266,6 @@ def get_config(config=None):
         no_tag_node_value_mangle=True,
     )
 
-    xconn_members = deps_xconnect_dict(conf)
-    bridge_members = deps_bridge_dict(conf)
-    bond_members = deps_bond_dict(conf)
-
     removed_ifaces = []
     tmp = node_changed(conf, base_settings + ['interface'])
     if tmp:
@@ -335,9 +304,6 @@ def get_config(config=None):
             set_dependents('pppoe_server', conf)
         return {
             'removed_ifaces': removed_ifaces,
-            'xconn_members': xconn_members,
-            'bridge_members': bridge_members,
-            'bond_members': bond_members,
             'persist_config': eth_ifaces_persist,
             'interfaces_vpp': interfaces_config,
             'pppoe_ifaces': pppoe_ifaces,
@@ -394,6 +360,9 @@ def get_config(config=None):
     # Return to config dictionary
     config['persist_config'] = eth_ifaces_persist
 
+    # list of all Ethernet interfaces with vifs
+    ifaces_with_vifs = cli_ethernet_with_vifs_ifaces(conf, include_nested_vifs=True)
+
     if 'settings' in config:
         if 'interface' in config['settings']:
             interface_rx_mode = config['settings'].get('interface_rx_mode')
@@ -426,16 +395,36 @@ def get_config(config=None):
                 #         }
                 #     )
 
+                # Collect memberships as sets for uniqueness
+                bond_member = is_member(conf, iface, 'bonding')
+                bridge_member = is_member(conf, iface, 'bridge')
+
+                # Look for VLAN interfaces of this parent
+                vlans = [
+                    vlan_iface
+                    for vlan_iface in ifaces_with_vifs
+                    if vlan_iface.startswith(f'{iface}.')
+                ]
+                for vlan_iface in vlans:
+                    bond_member.update(is_member(conf, vlan_iface, 'bonding'))
+                    bridge_member.update(is_member(conf, vlan_iface, 'bridge'))
+
+                # Store as lists
+                if bond_member:
+                    iface_config['bond_member'] = list(bond_member)
+                if bridge_member:
+                    iface_config['bridge_member'] = list(bridge_member)
+
                 # Get PCI address or device ID
                 if iface_config['driver'] == 'dpdk':
                     if 'dpdk_options' not in iface_config:
                         iface_config['dpdk_options'] = {}
                     # Check in a persistent config first
-                    id_from_persisten_conf = eth_ifaces_persist.get(iface, {}).get(
+                    id_from_persistent_conf = eth_ifaces_persist.get(iface, {}).get(
                         'dev_id'
                     )
-                    if id_from_persisten_conf:
-                        iface_config['dpdk_options']['dev_id'] = id_from_persisten_conf
+                    if id_from_persistent_conf:
+                        iface_config['dpdk_options']['dev_id'] = id_from_persistent_conf
                     else:
                         try:
                             iface_to_search = iface
@@ -478,9 +467,6 @@ def get_config(config=None):
 
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
-        config['xconn_members'] = xconn_members
-        config['bridge_members'] = bridge_members
-        config['bond_members'] = bond_members
 
     config['interfaces_vpp'] = interfaces_config
 
@@ -532,11 +518,6 @@ def get_config(config=None):
 
 
 def verify(config):
-    # Check remove VPP interface that used in IPFIX
-    _check_removed_interfaces(
-        config, 'IPFIX monitoring', config.get('ipfix', {}).get('interface', {})
-    )
-
     if config.get('interfaces_vpp') and 'remove' in config:
         raise ConfigError(
             'VPP cannot be removed while VPP interfaces exist. Remove all "interfaces vpp" first!'
@@ -554,6 +535,12 @@ def verify(config):
     # bail out early - looks like removal from running config
     if not config or 'remove' in config:
         return None
+
+    # Check removed interfaces (and their VLANs) against all VPP features
+    for removed_iface in config.get('removed_ifaces', []):
+        verify_vpp_remove_interface(
+            removed_iface['iface_name'], config, match_vlans=True
+        )
 
     if 'settings' not in config:
         raise ConfigError('"settings interface" is required but not set!')
@@ -602,20 +589,24 @@ def verify(config):
 
     # ensure DPDK/XDP settings are properly configured
     for iface, iface_config in config['settings']['interface'].items():
-        # check if selected driver is supported, but only for new interfaces
-        # or if driver was changed
-        original_driver = config['persist_config'][iface]['original_driver']
-        if (
-            iface
-            not in config.get('effective', {}).get('settings', {}).get('interface', {})
-            or 'driver_changed' in iface_config
-        ):
-            if not _is_device_allowed(config, iface):
-                raise ConfigError(
-                    f'NIC used by "{iface}" is not validated for VPP on VyOS. '
-                    'Using it is unsafe and unsupported and will void support for the entire system. '
-                    'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
-                )
+        if not _is_device_allowed(config, iface):
+            raise ConfigError(
+                f'NIC used by "{iface}" is not validated for VPP on VyOS. '
+                'Using it is unsafe and unsupported and will void support for the entire system. '
+                'To proceed at your own risk, enable: "set vpp settings allow-unsupported-nics".'
+            )
+
+        err_message = f'Cannot add {iface} to VPP - '
+        if 'bond_member' in iface_config:
+            raise ConfigError(
+                err_message
+                + f'interface (or its VLAN) is a member of bond(s): {", ".join(iface_config["bond_member"])}'
+            )
+        if 'bridge_member' in iface_config:
+            raise ConfigError(
+                err_message
+                + f'interface (or its VLAN) is a member of bridge(s): {", ".join(iface_config["bridge_member"])}'
+            )
 
         if iface_config['driver'] == 'xdp' and 'xdp_options' in iface_config:
             if iface_config['xdp_options']['num_rx_queues'] != 'all':
@@ -656,21 +647,6 @@ def verify(config):
                     f'RX mode {rx_mode} is not supported for interface {iface}'
                 )
 
-    # Check if deleted interfaces are not xconnect/bridge/bond members
-    for iface_config in config.get('removed_ifaces', []):
-        if iface_config['iface_name'] in config.get('xconn_members', {}):
-            raise ConfigError(
-                f'Interface {iface_config["iface_name"]} is an xconnect member and cannot be removed'
-            )
-        if iface_config['iface_name'] in config.get('bridge_members', {}):
-            raise ConfigError(
-                f'Interface {iface_config["iface_name"]} is a bridge member and cannot be removed'
-            )
-        if iface_config['iface_name'] in config.get('bond_members', {}):
-            raise ConfigError(
-                f'Interface {iface_config["iface_name"]} is a bond member and cannot be removed'
-            )
-
     verify_routes_count(config['settings'])
 
     for pppoe_iface in config.get('changed_pppoe_ifaces', []):
@@ -678,6 +654,7 @@ def verify(config):
             verify_virtual_interface_exists(config, pppoe_iface)
         else:
             verify_interface_exists(config, pppoe_iface)
+
 
 def generate(config):
     if not config or 'remove' in config:
@@ -888,7 +865,7 @@ def apply(config):
                     )
                     vpp_control.iface_rxmode(lcp_name, rx_mode)
 
-            # Syncronize routes via LCP
+            # Synchronize routes via LCP
             vpp_control.lcp_resync()
 
         except (VPPIOError, VPPValueError, VppNotRunningError) as e:

@@ -498,7 +498,7 @@ class Interface(Control):
 
     def get_mac(self):
         """
-        Get current interface MAC (Media Access Contrl) address used.
+        Get current interface MAC (Media Access Control) address used.
 
         Example:
         >>> from vyos.ifconfig import Interface
@@ -554,7 +554,7 @@ class Interface(Control):
 
     def set_mac(self, mac):
         """
-        Set interface MAC (Media Access Contrl) address to given value.
+        Set interface MAC (Media Access Control) address to given value.
 
         Example:
         >>> from vyos.ifconfig import Interface
@@ -572,7 +572,7 @@ class Interface(Control):
 
         self.set_interface('mac', mac)
 
-        # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
+        # Turn an interface to the 'up' state if it was changed to 'down' by this function
         if prev_state == 'up':
             self.set_admin_state('up')
 
@@ -1539,7 +1539,7 @@ class Interface(Control):
             render(systemd_override_file, 'dhcp-client/override.conf.j2', self.config)
             render(dhclient_config_file, 'dhcp-client/ipv4.j2', self.config)
 
-            # Reload systemd unit definitons as some options are dynamically generated
+            # Reload systemd unit definitions as some options are dynamically generated
             self._cmd('systemctl daemon-reload')
 
             # When the DHCP client is restarted a brief outage will occur, as
@@ -1554,7 +1554,7 @@ class Interface(Control):
             if is_systemd_service_active(systemd_service):
                 self._cmd(f'systemctl stop {systemd_service}')
 
-            # Smoketests occationally fail if the lease is not removed from the Kernel fast enough:
+            # Smoketests occasionally fail if the lease is not removed from the Kernel fast enough:
             # AssertionError: 2 unexpectedly found in {17: [{'addr': '52:54:00:00:00:00',
             # 'broadcast': 'ff:ff:ff:ff:ff:ff'}], 2: [{'addr': '192.0.2.103', 'netmask': '255.255.255.0',
             #
@@ -1598,7 +1598,7 @@ class Interface(Control):
             render(config_file, 'dhcp-client/ipv6.j2', config)
             render(script_file, 'dhcp-client/dhcp6c-script.j2', config, permission=0o755)
 
-            # Reload systemd unit definitons as some options are dynamically generated
+            # Reload systemd unit definitions as some options are dynamically generated
             self._cmd('systemctl daemon-reload')
 
             # We must ignore any return codes. This is required to enable
@@ -1621,7 +1621,7 @@ class Interface(Control):
         # Please refer to the document for details
         #   - https://man7.org/linux/man-pages/man8/tc.8.html
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
-        # Depening if we are the source or the target interface of the port
+        # Depending if we are the source or the target interface of the port
         # mirror we need to setup some variables.
 
         # Don't allow for netns yet
@@ -1755,9 +1755,9 @@ class Interface(Control):
                 os.unlink(wpa_supplicant_conf)
 
     def update(self, config):
-        """ General helper function which works on a dictionary retrived by
+        """ General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface. """
 
         if self.debug:

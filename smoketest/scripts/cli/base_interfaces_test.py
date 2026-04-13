@@ -581,7 +581,7 @@ class BasicInterfaceTest:
                         self.assertTrue(is_intf_addr_assigned(intf, addr['addr']))
 
         def test_ipv6_link_local_address(self):
-            # Common function for IPv6 link-local address assignemnts
+            # Common function for IPv6 link-local address assignments
             if not self._test_ipv6:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 

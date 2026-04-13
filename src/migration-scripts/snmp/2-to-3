@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# T4857: Implement FRR SNMP recomendations
+# T4857: Implement FRR SNMP recommendations
 #  cli changes from:
 #  set service snmp oid-enable route-table
 #  To

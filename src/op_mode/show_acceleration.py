@@ -71,7 +71,7 @@ def get_qat_proc_path(qat_dev):
                         q_bsf = q_list[1]
         return "/sys/kernel/debug/qat_"+q_type+"_"+q_bsf+"/"
 
-# Check if QAT service confgured
+# Check if QAT service configured
 def check_qat_if_conf():
     if not Config().exists_effective('system acceleration qat'):
         print("\t system acceleration qat is not configured")
@@ -92,7 +92,7 @@ args = parser.parse_args()
 
 if args.hw:
     detect_qat_dev()
-    # Show availible Intel QAT devices
+    # Show available Intel QAT devices
     call('lspci -nn | egrep -e \'8086:37c[8-9]|8086:19e2|8086:0435|8086:6f54\'')
 elif args.flow and args.dev:
     check_qat_if_conf()

@@ -81,7 +81,7 @@ def get_config(config=None):
         ssh.update({'restart_required': {}})
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     ssh = conf.merge_defaults(ssh, recursive=True)
 
     # Ignore default XML values if config doesn't exists
@@ -133,12 +133,12 @@ def generate(ssh):
 
         return None
 
-    # This usually happens only once on a fresh system, SSH keys need to be
-    # freshly generted, one per every system!
     # PERLE check if tpm allowed before generating RSA server host key text files
     # PERLE for some reason vyos is not generating ECDSA server host key text files
     # PERLE else if tpm is allowed, remove old rsa/ecdsa files, then create tpm backed rsa  ecdsa keys
     if not tpm_allowed():
+        # This usually happens only once on a fresh system, SSH keys need to be
+        # freshly generated, one per every system!
         if not os.path.isfile(key_rsa):
             syslog(LOG_INFO, 'SSH RSA host key not found, generating new key!')
             call(f'ssh-keygen -q -N "" -t rsa -f {key_rsa}')

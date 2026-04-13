@@ -33,6 +33,7 @@ from vyos.configdep import set_dependents
 from vyos.configdep import call_dependents
 from vyos.utils.dict import dict_search
 from vyos.utils.network import interface_exists
+from vyos.vpp.utils import cli_ifaces_list
 from vyos import ConfigError
 
 from vyos import airbag
@@ -40,7 +41,7 @@ airbag.enable()
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
     if config:
@@ -128,6 +129,8 @@ def get_config(config=None):
     if 'static_arp' in bridge:
         set_dependents('static_arp', conf)
 
+    bridge['vpp_ifaces'] = cli_ifaces_list(conf)
+
     return bridge
 
 def verify(bridge):
@@ -153,7 +156,7 @@ def verify(bridge):
 
     if dict_search('member.interface', bridge):
         for interface, interface_config in bridge['member']['interface'].items():
-            error_msg = f'Can not add interface "{interface}" to bridge, '
+            error_msg = f'Cannot add interface "{interface}" to bridge, '
 
             if interface == 'lo':
                 raise ConfigError('Loopback interface "lo" can not be added to a bridge')
@@ -189,6 +192,12 @@ def verify(bridge):
 
             if interface.startswith('vtun') and not interface_config['valid_ovpn']:
                 raise ConfigError(error_msg + 'OpenVPN device-type must be set to "tap"')
+
+            iface_base = interface.split('.')[0]  # get the parent interface name
+            if iface_base in bridge['vpp_ifaces']:
+                raise ConfigError(
+                    error_msg + 'it is already configured as VPP interface'
+                )
 
     if 'enable_vlan' in bridge:
         if dict_search('vif.1', bridge):

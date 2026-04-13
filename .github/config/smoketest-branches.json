@@ -26,6 +26,7 @@
       "test_tpm_tests": true,
       "test_vpp": true,
       "test_vpp_runner": ["self-hosted", "vpp"],
+      "smoketests_runner": ["self-hosted", "smoketests"],
       "mirror_enabled": false
     },
     "sagitta": {
@@ -34,6 +35,7 @@
       "vyos_build_repo": "VyOS-Networks/vyos-build",
       "use_pat": true,
       "build_runner": ["self-hosted", "azure"],
+      "smoketests_runner": ["self-hosted", "smoketests"],
       "build_version_format": "1.4-integration-%Y%m%d%H%M",
       "install_build_deps": true,
       "test_cli_command": "test-no-interfaces",

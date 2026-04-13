@@ -186,7 +186,7 @@ def graph_from_dependency_dict(d: dict) -> dict:
     for k in list(d):
         g[k] = set()
         # add the dependencies for every sub-case; should there be cases
-        # that are mutally exclusive in the future, the graphs will be
+        # that are mutually exclusive in the future, the graphs will be
         # distinguished
         for el in list(d[k]):
             g[k] |= set(d[k][el])

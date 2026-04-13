@@ -28,7 +28,7 @@ from vyos.utils.process import popen
 
 parser = argparse.ArgumentParser(description='Retrieve SNMP interfaces information')
 parser.add_argument('--ifindex', action='store', nargs='?', const='all', help='Show interface index')
-parser.add_argument('--ifalias', action='store', nargs='?', const='all', help='Show interface aliase')
+parser.add_argument('--ifalias', action='store', nargs='?', const='all', help='Show interface alias')
 parser.add_argument('--ifdescr', action='store', nargs='?', const='all', help='Show interface description')
 
 def show_ifindex(intf):

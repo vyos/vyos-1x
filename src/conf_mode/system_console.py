@@ -67,7 +67,7 @@ def verify(console):
             # If the device name still starts with usbXXX no matching tty was found
             # and it can not be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
-                raise ConfigError(f'Device {device} does not support beeing used as tty')
+                raise ConfigError(f'Device {device} does not support being used as tty')
         if not is_tty(device):
             Warning(f'Device "{device}" used for console is not a TTY!')
 
@@ -99,7 +99,7 @@ def generate(console):
                 console['device'][device_updated] = console['device'][device]
                 del console['device'][device]
             else:
-                raise ConfigError(f'Device {device} does not support beeing used as tty')
+                raise ConfigError(f'Device {device} does not support being used as tty')
 
     for device, device_config in console['device'].items():
         # Do not render getty configuration if specified device is not a TTY.
@@ -114,7 +114,7 @@ def generate(console):
 
     # GRUB
     # For existing serial line change speed (if necessary)
-    # Only applys to ttyS0
+    # Only applies to ttyS0
     if 'ttyS0' not in console['device']:
         return None
 

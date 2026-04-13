@@ -80,7 +80,7 @@ service_file = '/run/systemd/system/openvpn@{ifname}.service.d/20-override.conf'
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
     if config:
@@ -747,7 +747,7 @@ def generate(openvpn):
     # create client config directory on demand
     makedir(ccd_dir, user, group)
 
-    # Fix file permissons for keys
+    # Fix file permissions for keys
     generate_pki_files(openvpn)
 
     # Generate User/Password authentication file

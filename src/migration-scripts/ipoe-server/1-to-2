@@ -21,7 +21,7 @@
 # - changed cli of all named pools
 # - moved gateway-address from pool to global configuration with / netmask
 #   gateway can exist without pool if radius is used
-#   and Framed-ip-address is transmited
+#   and Framed-ip-address is transmitted
 # - There are several gateway-addresses in ipoe
 # - default-pool by migration.
 #       1. The first pool that contains next-poll.

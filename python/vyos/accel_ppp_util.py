@@ -130,7 +130,7 @@ def verify_accel_ppp_authentication(config, local_users=True):
     Common helper function which must be used by all Accel-PPP services based
     on get_config_dict()
     """
-    # vertify auth settings
+    # verify auth settings
     if local_users and dict_search("authentication.mode", config) == "local":
         if (
             dict_search("authentication.local_users", config) is None
@@ -173,7 +173,7 @@ def verify_accel_ppp_authentication(config, local_users=True):
             user_config = config["authentication"]["interface"][interface]
             if "mac" not in user_config:
                 raise ConfigError(
-                    f'Users MAC addreses are not configured for interface "{interface}"')
+                    f'Users MAC addresses are not configured for interface "{interface}"')
 
     if dict_search('authentication.radius.dynamic_author.server', config):
         if not dict_search('authentication.radius.dynamic_author.key', config):

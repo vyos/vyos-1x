@@ -20,10 +20,10 @@ from vyos.template import is_ip
 
 def migrate_interface_route(config, base, path, route_route6):
     """ Generic migration function which can be called on every instance of
-    interface-route, beeing it ipv4, ipv6 or nested under the "static table" nodes.
+    interface-route, being it ipv4, ipv6 or nested under the "static table" nodes.
 
     What we do?
-      - Drop 'interface-route' or 'interface-route6' and migrate the route unter the
+      - Drop 'interface-route' or 'interface-route6' and migrate the route under the
         'route' or 'route6' tag node.
     """
     if config.exists(base + path):
@@ -49,7 +49,7 @@ def migrate_interface_route(config, base, path, route_route6):
 
 def migrate_route(config, base, path, route_route6):
     """ Generic migration function which can be called on every instance of
-    route, beeing it ipv4, ipv6 or even nested under the static table nodes.
+    route, being it ipv4, ipv6 or even nested under the static table nodes.
 
     What we do?
       - for consistency reasons rename next-hop-interface to interface
@@ -61,7 +61,7 @@ def migrate_route(config, base, path, route_route6):
             if config.exists(next_hop):
                 for gateway in config.list_nodes(next_hop):
                     # IPv4 routes calls it next-hop-interface, rename this to
-                    # interface instead so it's consitent with IPv6
+                    # interface instead so it's consistent with IPv6
                     interface_path = next_hop + [gateway, 'next-hop-interface']
                     if config.exists(interface_path):
                         config.rename(interface_path, 'interface')
@@ -76,7 +76,7 @@ def migrate_route(config, base, path, route_route6):
             if config.exists(next_hop):
                 for interface in config.list_nodes(next_hop):
                     # IPv4 routes calls it next-hop-interface, rename this to
-                    # interface instead so it's consitent with IPv6
+                    # interface instead so it's consistent with IPv6
                     interface_path = next_hop + [interface, 'next-hop-interface']
                     if config.exists(interface_path):
                         config.rename(interface_path, 'interface')

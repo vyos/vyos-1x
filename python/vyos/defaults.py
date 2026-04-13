@@ -52,7 +52,7 @@ systemd_services = {
 }
 
 internal_ports = {
-    'certbot_haproxy' : 65080, # Certbot running behing haproxy
+    'certbot_haproxy' : 65080, # Certbot running behind haproxy
 }
 
 config_files = {

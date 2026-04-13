@@ -30,6 +30,7 @@ from vyos.vpp.utils import vpp_iface_name_transform
 from vyos.vpp.nat.nat44 import Nat44
 from vyos.vpp.control_vpp import VPPControl
 from vyos.vpp.config_verify import verify_nat_interfaces
+from vyos.vpp.config_verify import verify_vpp_interface_not_a_member
 
 
 protocol_map = {
@@ -124,6 +125,14 @@ def get_config(config=None) -> dict:
     if effective_config:
         config.update({'effective': effective_config})
 
+    # VPP interface membership data for member-conflict checks
+    config['interfaces_vpp'] = conf.get_config_dict(
+        ['interfaces', 'vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     return config
 
 
@@ -171,6 +180,7 @@ def verify(config):
                 raise ConfigError(
                     f'{interface} must be a VPP interface for {direction} NAT interface'
                 )
+            verify_vpp_interface_not_a_member(interface, config)
 
     if not config.get('address_pool', {}).get('translation') and not config.get(
         'static', {}

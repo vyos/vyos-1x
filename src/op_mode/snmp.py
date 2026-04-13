@@ -22,7 +22,7 @@ from vyos.utils.process import call
 
 config_file_daemon = r'/etc/snmp/snmpd.conf'
 
-parser = argparse.ArgumentParser(description='Retrieve infomration from running SNMP daemon')
+parser = argparse.ArgumentParser(description='Retrieve information from running SNMP daemon')
 parser.add_argument('--allowed', action="store_true", help='Show available SNMP communities')
 parser.add_argument('--community', action="store", help='Show status of given SNMP community', type=str)
 parser.add_argument('--host', action="store", help='SNMP host to connect to', type=str, default='localhost')

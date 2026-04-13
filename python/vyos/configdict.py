@@ -430,7 +430,7 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
     """
     Common utility function to retrieve and mangle the interfaces configuration
     from the CLI input nodes. All interfaces have a common base where value
-    retrival is identical. This function must be used whenever possible when
+    retrieval is identical. This function must be used whenever possible when
     working on the interfaces node!
 
     Return a dictionary with the necessary interface config keys.
@@ -489,14 +489,14 @@ def get_interface_dict(config, base, ifname='', recursive_defaults=True, with_pk
     bond = is_member(config, ifname, 'bonding')
     if bond: dict.update({'is_bond_member' : bond})
 
-    # Check if any DHCP options changed which require a client restat
+    # Check if any DHCP options changed which require a client restart
     dhcp = is_node_changed(config, base + [ifname, 'dhcp-options'])
     if dhcp: dict.update({'dhcp_options_changed' : {}})
     dhcpv6 = is_node_changed(config, base + [ifname, 'dhcpv6-options'])
     if dhcpv6: dict.update({'dhcpv6_options_changed' : {}})
 
     # Some interfaces come with a source_interface which must also not be part
-    # of any other bond or bridge interface as it is exclusivly assigned as the
+    # of any other bond or bridge interface as it is exclusively assigned as the
     # Kernels "lower" interface to this new "virtual/upper" interface.
     if 'source_interface' in dict:
         # Check if source interface is member of another bridge
@@ -666,7 +666,7 @@ def get_accel_dict(config, base, chap_secrets, with_pki=False):
     """
     Common utility function to retrieve and mangle the Accel-PPP configuration
     from different CLI input nodes. All Accel-PPP services have a common base
-    where value retrival is identical. This function must be used whenever
+    where value retrieval is identical. This function must be used whenever
     possible when working with Accel-PPP services!
 
     Return a dictionary with the necessary interface config keys.

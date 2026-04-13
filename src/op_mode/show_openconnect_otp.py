@@ -97,7 +97,7 @@ def display_otp_ocserv(username, params, info):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=False, description='Show OTP authentication information for selected user')
     parser.add_argument('--user', action="store", type=str, default='', help='Username')
-    parser.add_argument('--info', action="store", type=str, default='full', help='Wich information to display')
+    parser.add_argument('--info', action="store", type=str, default='full', help='Which information to display')
 
     args = parser.parse_args()
     if check_uname_otp(args.user):

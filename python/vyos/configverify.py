@@ -33,7 +33,7 @@ dynamic_interface_pattern = r'(ppp|pppoe|sstpc|l2tp|ipoe)[0-9]+'
 def verify_mtu(config):
     """
     Common helper function used by interface implementations to perform
-    recurring validation if the specified MTU can be used by the underlaying
+    recurring validation if the specified MTU can be used by the underlying
     hardware.
     """
     from vyos.ifconfig import Interface
@@ -180,8 +180,13 @@ def verify_mirror_redirect(config):
 
     It makes no sense to mirror traffic back at yourself!
     """
-    if {'mirror', 'redirect'} <= set(config):
+    if 'mirror' in config and 'redirect' in config:
         raise ConfigError('Mirror and redirect can not be enabled at the same time!')
+
+    if 'mirror' in config and 'qos' in config:
+        # XXX: support combination of limiting and mirror - this is an artificial
+        # limitation from the past
+        raise ConfigError('Can not use QoS together with mirror!')
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
@@ -198,11 +203,6 @@ def verify_mirror_redirect(config):
         if not interface_exists(redirect_ifname):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
-
-    if 'qos' in config and ('mirror' in config or 'redirect' in config):
-        # XXX: support combination of limiting and redirect/mirror - this is an
-        # artificial limitation
-        raise ConfigError('Can not use QoS together with mirror/redirect!')
 
 def verify_authentication(config):
     """
@@ -456,7 +456,7 @@ def verify_common_route_maps(config):
     # XXX: This function is called in combination with a previous call to:
     # tmp = conf.get_config_dict(['policy']) - see protocols_ospf.py as example.
     # We should NOT call this with the key_mangling option as this would rename
-    # route-map hypens '-' to underscores '_' and one could no longer distinguish
+    # route-map hyphens '-' to underscores '_' and one could no longer distinguish
     # what should have been the "proper" route-map name, as foo-bar and foo_bar
     # are two entire different route-map instances!
     for route_map in ['route-map', 'route_map']:

@@ -1,10 +1,47 @@
-# redefine ip command to use FRR when it is available
+# redefine ip command to use FRR when it is available and preserve static addresses
 
 # default route distance
 IF_METRIC=${IF_METRIC:-210}
 
 # Check if interface is inside a VRF
 VRF_OPTION=$(/usr/sbin/ip --json --detail link show ${interface} | jq -r '.[0] | select(.linkinfo.info_slave_kind == "vrf") | "vrf \(.master)"')
+
+# Flush only DHCP (dynamic) addresses from interface, preserving static addresses
+#
+#  When dhclient renews/rebinds a lease, it calls:
+#      ip -4 addr flush dev <interface>
+#  This removes ALL IPv4 addresses, including static addresses configured
+#  via VyOS (e.g., "set interfaces ethernet eth0 address 192.168.1.1/24").
+#
+#  The ip() wrapper below intercepts the "ip -4 addr flush" command and replaces
+#  it with a selective flush that only removes addresses marked as "dynamic" by
+#  the kernel. DHCP-assigned addresses have the "dynamic" flag set automatically.
+_flush_dhcp_addrs() {
+    local dev="${1:-$interface}"
+
+    logmsg info "Selectively flushing only dynamic (DHCP) addresses from ${dev}"
+
+    local addrs
+    addrs=$(/usr/sbin/ip -4 -j addr show dev "${dev}" 2>&1 | jq -r '
+      .[] | .addr_info[]? | select(.family == "inet" and .dynamic == true)
+      | "\(.local)/\(.prefixlen)"
+    ' 2>&1)
+    if [ $? -ne 0 ]; then
+        logmsg warn "Failed to list dynamic IPv4 addresses on ${dev}; skipping selective flush. ip/jq error output: $addrs"
+        return 0
+    fi
+
+    while IFS= read -r addr; do
+        if [ -n "$addr" ]; then
+            logmsg info "Removing dynamic address ${addr} from ${dev}"
+            if ! /usr/sbin/ip -4 addr del "${addr}" dev "${dev}" 2>&1; then
+                logmsg warn "Failed to remove dynamic address ${addr} from ${dev}"
+            fi
+        fi
+    done <<< "$addrs"
+
+    return 0
+}
 
 # get status of FRR
 function frr_alive () {
@@ -90,7 +127,21 @@ function vtysh_conf () {
 
 # replace ip command with this wrapper
 function ip () {
-    # pass comand to system `ip` if this is not related to routes change
+    # Intercept: ip -4 addr flush dev <interface>
+    # to preserve static addresses (only remove dynamic/DHCP addresses)
+    if [ "$1" = "-4" ] && [ "$2" = "addr" ] && [ "$3" = "flush" ]; then
+        logmsg info "Intercepting 'ip -4 addr flush' to preserve static addresses"
+        shift 3
+        local dev=""
+        while [ $# -gt 0 ]; do
+            [ "$1" = "dev" ] && dev="$2" && break
+            shift
+        done
+        _flush_dhcp_addrs "${dev:-$interface}"
+        return $?
+    fi
+
+    # pass command to system `ip` if this is not related to routes change
     if [ "$2" != "route" ] ; then
         logmsg info "Passing command to /usr/sbin/ip: \"$@\""
         /usr/sbin/ip $@

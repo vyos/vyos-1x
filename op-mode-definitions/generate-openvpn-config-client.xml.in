@@ -30,7 +30,7 @@
                     <children>
                       <tagNode name="certificate">
                         <properties>
-                          <help>Cerificate used by client</help>
+                          <help>Certificate used by client</help>
                           <completionHelp>
                             <path>pki certificate</path>
                           </completionHelp>

@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+import sys
+import syslog
+import signal
+import select
+
+from pyroute2 import IPRoute # pylint: disable = no-name-in-module
+from pyroute2 import NetlinkError # pylint: disable = no-name-in-module
+from time import sleep
+from typing import Optional
+
+from vyos.configquery import op_mode_config_dict
+from vyos.ifconfig import Section
+from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.commit import commit_in_progress
+from vyos.utils.dict import dict_search
+from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_active
+
+running = True
+
+# compile regex once during startup for fast match
+IFACE_RE = re.compile(r"^(?:eth|br|bond|wlan)")
+
+def match_iface(ifname: str) -> bool:
+    """ Helper function returning true if interface name is a match for further
+    processing (e.g. restart of DHCP(v6) client)
+    """
+    return IFACE_RE.match(ifname) is not None
+
+def sigterm_handler(signo, frame):
+    global running
+    running = False
+    sig = signal.Signals(signo)
+    syslog.syslog(syslog.LOG_INFO, f'Received signal {sig.name} - shutting down...')
+
+def _handle_dhcp_events(config_dict: dict, operstate: Optional[str], ifname: str) -> None:
+    systemdV4_service = f'dhclient@{ifname}.service'
+    systemdV6_service = f'dhcp6c@{ifname}.service'
+
+    # Only handle explicit UP/DOWN state transitions; ignore other kernel states.
+    if operstate not in ['UP', 'DOWN']:
+        return None
+
+    if operstate == 'DOWN':
+        # Interface moved state to down
+        if is_systemd_service_active(systemdV4_service):
+            syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV4_service}...')
+            cmd(f'systemctl stop {systemdV4_service}')
+        if is_systemd_service_active(systemdV6_service):
+            syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV6_service}...')
+            cmd(f'systemctl stop {systemdV6_service}')
+
+    elif operstate == 'UP':
+        v6_restart = False
+        interface_path = Section.get_config_path(ifname, delimiter='.')
+        if tmp := dict_search(f'{interface_path}.address', config_dict):
+            # Always (re-)start the DHCP(v6) client service. If the DHCP(v6) client
+            # is already running - which could happen if the interface is re-
+            # configured in operational down state, it will have an exponential backoff
+            # time increasing while not receiving a DHCP(v6) reply.
+            #
+            # To make the interface instantly available, and as for a DHCP(v6) lease
+            # we will re-start the service and thus cancel the backoff time.
+            if 'dhcp' in tmp:
+                syslog.syslog(syslog.LOG_DEBUG, f'Restarting {systemdV4_service}...')
+                cmd(f'systemctl restart {systemdV4_service}')
+            if 'dhcpv6' in tmp:
+                v6_restart = True
+
+        if dict_search(f'{interface_path}.dhcpv6_options.pd', config_dict):
+            v6_restart = True
+
+        if v6_restart:
+            syslog.syslog(syslog.LOG_DEBUG, f'Restarting {systemdV6_service}...')
+            cmd(f'systemctl restart {systemdV6_service}')
+
+    return None
+
+def main():
+    syslog.openlog(ident="vyos-netlinkd",
+                   logoption=syslog.LOG_PID,
+                   facility=syslog.LOG_DAEMON)
+    syslog.syslog(syslog.LOG_INFO, "VyOS Netlink listener daemon started.")
+
+    ipr = IPRoute()
+    ipr.bind()
+    fd = ipr.fileno()
+
+    global running
+    while running:
+        if not boot_configuration_complete():
+            syslog.syslog(syslog.LOG_INFO, 'System bootup not yet finished...')
+            sleep(5)
+            continue
+
+        try:
+            # Wait for up to 1 second for a netlink message
+            rlist, _, _ = select.select([fd], [], [], 1.0)
+            if not rlist:
+                # timeout - retry
+                continue
+
+            # Receive and process any messages
+            for message in ipr.get():
+                # Wait for commit to complete
+                while commit_in_progress():
+                    sleep(0.250)
+
+                config_dict = op_mode_config_dict(['interfaces'],
+                                            key_mangling=('-', '_'),
+                                            get_first_key=True)
+
+                # Parse NETLINK message
+                match message['event']:
+                    # Message received during interface creation or modification
+                    # e.g. link up/down.
+                    case 'RTM_NEWLINK':
+                        attrs = dict(message.get('attrs', []))
+                        ifname = attrs.get('IFLA_IFNAME', None)
+                        mac = attrs.get('IFLA_ADDRESS', '<unknown>')
+                        operstate = attrs.get('IFLA_OPERSTATE', None)
+                        syslog.syslog(syslog.LOG_DEBUG,
+                                      f'RTM_NEWLINK -> {ifname}, state={operstate}, mac={mac}')
+
+                        # Bail out early - no interface name in the message
+                        if not ifname:
+                            continue
+                        # Bail out early - not interested in interface type
+                        if not match_iface(ifname):
+                            continue
+
+                        _handle_dhcp_events(config_dict, operstate, ifname)
+
+                    # Deletion of a network link which has been previously added to the kernel
+                    case 'RTM_DELLINK':
+                        pass
+
+        except NetlinkError as e:
+            syslog.syslog(syslog.LOG_ERR, f'Netlink error: {e}')
+        except Exception as e:
+            syslog.syslog(syslog.LOG_ERR, f'Unhandled exception: {e}')
+        except KeyboardInterrupt:
+            break
+
+    ipr.close()
+    syslog.syslog(syslog.LOG_INFO, 'Netlink listener daemon stopped.')
+    sys.exit(0)
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    signal.signal(signal.SIGINT, sigterm_handler)
+    main()

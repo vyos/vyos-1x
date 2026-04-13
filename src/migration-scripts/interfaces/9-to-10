@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# - rename CLI node 'dhcpv6-options delgate' to 'dhcpv6-options prefix-delegation
+# - rename CLI node 'dhcpv6-options delegate' to 'dhcpv6-options prefix-delegation
 #   interface'
 # - rename CLI node 'interface-id' for prefix-delegation to 'address' as it
 #   represents the local interface IPv6 address assigned by DHCPv6-PD
@@ -41,5 +41,5 @@ def migrate(config: ConfigTree) -> None:
                 for interface in config.list_nodes(new_path + ['interface']):
                     config.rename(new_path + ['interface', interface, 'interface-id'], 'address')
 
-                # delete old noe
+                # delete old node
                 config.delete(base_path)

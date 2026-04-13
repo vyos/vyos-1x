@@ -190,7 +190,7 @@ def get_config(config=None):
         ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024'
         ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'
 
-    # Collect the interface dicts for any refernced VTI interfaces in
+    # Collect the interface dicts for any referenced VTI interfaces in
     # case we need to bring the interface up
     ipsec['vti_interface_dicts'] = {}
 

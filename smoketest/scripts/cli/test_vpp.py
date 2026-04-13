@@ -543,6 +543,19 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertRegex(out, r'\s*eth1\s+\d+\s+\d+')
         self.assertRegex(out, r'\s*vxlan_tunnel23\s+\d+\s+\d+')
 
+        # Cannot add members of bridge interface to cross-connect
+        # expect raise ConfigError
+        self.cli_set(
+            interfaces_path + ['xconnect', 'vppxcon1', 'member', 'interface', interface]
+        )
+        self.cli_set(
+            interfaces_path
+            + ['xconnect', 'vppxcon1', 'member', 'interface', interface_vxlan]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(interfaces_path + ['xconnect'])
+
         # Add Loopback BVI to the bridge
         self.cli_set(interfaces_path + ['loopback', f'vpplo{vni}'])
         self.cli_set(
@@ -652,6 +665,16 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         ]
         for required_string in required_str_list:
             self.assertIn(required_string, out)
+
+        # Cannot add members of cross-connect interface to bond/bridge
+        # expect raise ConfigError
+        self.cli_set(
+            interfaces_path
+            + ['bonding', 'vppbond1', 'member', 'interface', interface_vxlan]
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(interfaces_path + ['bonding'])
 
         # delete xconnect interface
         self.cli_delete(xconn_path + [interface_xconnect])
@@ -850,6 +873,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         lines = out.split('\n')
         self.assertTrue(len(lines) == 3)
 
+        # Cannot remove inside/outside interface from vpp while it is used in the feature
+        # expect raise ConfigError
+        self.cli_delete(base_bond + [iface_bond, 'vif', vif_1])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
     def test_14_vpp_nat44(self):
         base_nat = base_path + ['nat', 'nat44']
         exclude_local_addr = '100.64.0.52'
@@ -994,6 +1024,13 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         for expected_entry in expected_entries:
             self.assertIn(expected_entry, out)
+
+        # Cannot remove interface from vpp while it is used in the feature
+        # expect raise ConfigError
+        self.cli_delete(base_path + ['settings', 'interface', iface_2])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
 
         # cannot delete system sFlow configuration if VPP sFlow is configured
         # expect raise ConfigError
@@ -1373,6 +1410,45 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         # Second commit changes
         self.cli_set(base_path + ['settings', 'interface', interface])
         self.cli_set(base_path + ['settings', 'poll-sleep-usec', '30'])
+        self.cli_commit()
+
+        # Ensure that VPP process is active
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_22_no_vpp_kernel_bridge_cross_membership(self):
+        vlan = '123'
+        member = f'{interface}.{vlan}'
+        bridge_iface = 'br1'
+
+        self.cli_commit()
+
+        # Ensure that VPP process is active
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # Attempt to add a VPP interface VLAN as a bridge member
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_set(
+            ['interfaces', 'bridge', bridge_iface, 'member', 'interface', member]
+        )
+
+        # Adding a VPP interface (or its VLAN) as a bridge member is not allowed
+        # expect raise ConfigError
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path)
+        self.cli_commit()
+
+        # Ensure interface is a member of bridge
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{bridge_iface}/lower_{member}'))
+
+        # Adding a bridge member as a VPP interface is not allowed
+        # expect raise ConfigError
+        self.cli_set(base_path + ['settings', 'interface', interface])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['interfaces', 'bridge'])
         self.cli_commit()
 
         # Ensure that VPP process is active

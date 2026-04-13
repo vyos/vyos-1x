@@ -179,7 +179,7 @@ def prune_vyos_versions(root_dir: str = '') -> None:
 
 
 def update_cfg_ver(root_dir:str = '') -> int:
-    """Get minumum version of image-tools across all installed images
+    """Get minimum version of image-tools across all installed images
 
     Args:
         root_dir (str): an optional path to the root directory

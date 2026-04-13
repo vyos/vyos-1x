@@ -112,7 +112,7 @@ def migrate(config: ConfigTree) -> None:
                     config.set(base + [tunnel_name, 'multicast'], value=nbma,
                                replace=False)
 
-        ## Delete non-cahching
+        ## Delete non-caching
         if config.exists(base + [tunnel_name, 'non-caching']):
             config.delete(base + [tunnel_name, 'non-caching'])
         ## Delete shortcut-destination
