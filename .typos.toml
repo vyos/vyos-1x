@@ -1,0 +1,6 @@
+# .typos.toml
+[files]
+extend-exclude = [
+  "smoketest/**",
+  "mibs/**"
+]
