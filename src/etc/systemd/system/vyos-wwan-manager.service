@@ -34,8 +34,10 @@ SupplementaryGroups=messagebus
 # Environment
 Environment=PYTHONPATH=/usr/lib/python3/dist-packages
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
 
 # Logging
+SyslogIdentifier=vyos-wwan-manager
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=vyos-wwan-manager
