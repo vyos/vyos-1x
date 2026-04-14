@@ -1,0 +1,15 @@
+[Unit]
+Description=VyOS NDP route synchronization daemon
+After=vyos-router.service ndppd.service
+ConditionPathExists=/run/ndppd/route-sync.conf
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/vyos-ndp-route-sync.py --config /run/ndppd/route-sync.conf
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

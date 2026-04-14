@@ -111,6 +111,12 @@
                     </properties>
                     <defaultValue>static</defaultValue>
                   </leafNode>
+                  <leafNode name="route-sync">
+                    <properties>
+                      <help>Synchronize active neighbor /128 routes for this prefix</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   #include <include/generic-interface.xml.i>
                 </children>
               </tagNode>

@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -25,6 +26,8 @@ from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'ndppd'
 NDPPD_CONF = '/run/ndppd/ndppd.conf'
+ROUTE_SYNC_CONF = '/run/ndppd/route-sync.conf'
+ROUTE_SYNC_PROTO = '/etc/iproute2/rt_protos.d/ndp_proxy_sync.conf'
 base_path = ['service', 'ndp-proxy']
 
 def getConfigSection(string=None, end=' {', endsection='^}'):
@@ -124,6 +127,53 @@ class TestServiceNDPProxy(VyOSUnitTestSHIM.TestCase):
 
         config = cmd(f'cat {NDPPD_CONF}')
         self.assertNotIn(f'proxy {interface} {{', config)
+
+    def test_route_sync_requires_interface_mode(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '::/0']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_commit()
+
+        self.cli_set(prefix_path + ['route-sync'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_route_sync_renders_config(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '::/0']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(prefix_path + ['mode', 'interface'])
+        self.cli_set(prefix_path + ['interface', interface])
+        self.cli_set(prefix_path + ['route-sync'])
+        self.cli_commit()
+
+        config = cmd(f'cat {ROUTE_SYNC_CONF}')
+        self.assertIn('"proto": "ndp-proxy-sync"', config)
+        self.assertIn('"hold_time": 120', config)
+        self.assertIn('"prefix": "::/0"', config)
+        self.assertIn(f'"interface": "{interface}"', config)
+        self.assertTrue(os.path.isfile(ROUTE_SYNC_PROTO))
+        proto = cmd(f'cat {ROUTE_SYNC_PROTO}')
+        self.assertIn('190  ndp-proxy-sync', proto)
+        service_state = cmd('systemctl is-active vyos-ndp-route-sync.service || true').strip()
+        self.assertIn(service_state, ['active', 'activating'])
+
+    def test_route_sync_removed_cleans_runtime_config(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '::/0']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(prefix_path + ['mode', 'interface'])
+        self.cli_set(prefix_path + ['interface', interface])
+        self.cli_set(prefix_path + ['route-sync'])
+        self.cli_commit()
+
+        self.assertTrue(os.path.isfile(ROUTE_SYNC_CONF))
+
+        self.cli_delete(prefix_path + ['route-sync'])
+        self.cli_commit()
+
+        self.assertFalse(os.path.isfile(ROUTE_SYNC_CONF))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
