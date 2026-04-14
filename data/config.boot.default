@@ -26,11 +26,6 @@ system {
     config-management {
         commit-revisions "100"
     }
-    console {
-        device ttyS0 {
-            speed "115200"
-        }
-    }
     host-name "vyos"
     login {
         operator-group default {

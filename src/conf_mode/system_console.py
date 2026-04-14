@@ -30,6 +30,8 @@ airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
 
+default_tty_console = ('tty', '0', '')
+
 def get_config(config=None):
     if config:
         conf = config
@@ -57,7 +59,8 @@ def verify(console):
     if not console or 'device' not in console:
         return None
 
-    for device in console['device']:
+    kernel_consoles: list = []
+    for device, device_config in console['device'].items():
         if device.startswith('usb'):
             # It is much easiert to work with the native ttyUSBn name when using
             # getty, but that name may change across reboots - depending on the
@@ -68,8 +71,13 @@ def verify(console):
             # and it can not be used as a serial interface
             if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
                 raise ConfigError(f'Device {device} does not support being used as tty')
-        if not is_tty(device):
+        if not is_tty(device, warning=True):
             Warning(f'Device "{device}" used for console is not a TTY!')
+        if 'kernel' in device_config:
+            kernel_consoles.append(device)
+
+    if len(kernel_consoles) > 1:
+        raise ConfigError('Only one device can be used as Kernel output console!')
 
     return None
 
@@ -82,6 +90,7 @@ def generate(console):
                 os.unlink(os.path.join(root, basename))
 
     if not console or 'device' not in console:
+        grub_util.update_serial_console(*default_tty_console)
         return None
 
     # replace keys in the config for ttyUSB items to use them in `apply()` later
@@ -101,6 +110,7 @@ def generate(console):
             else:
                 raise ConfigError(f'Device {device} does not support being used as tty')
 
+    use_serial_console = False
     for device, device_config in console['device'].items():
         # Do not render getty configuration if specified device is not a TTY.
         if not is_tty(device):
@@ -112,14 +122,15 @@ def generate(console):
         render(config_file, 'getty/serial-getty.service.j2', device_config)
         os.symlink(config_file, getty_wants_symlink)
 
-    # GRUB
-    # For existing serial line change speed (if necessary)
-    # Only applies to ttyS0
-    if 'ttyS0' not in console['device']:
-        return None
+        if 'kernel' in device_config:
+            # get console type ("ttyS" or "ttyAMA") from device (e.g. "ttyS0")
+            console_type = device.rstrip('0123456789')
+            console_num = device[len(console_type):]
+            grub_util.update_serial_console(console_type, console_num, device_config['speed'])
+            use_serial_console = True
 
-    speed = console['device']['ttyS0']['speed']
-    grub_util.update_console_speed(speed)
+        if not use_serial_console:
+            grub_util.update_serial_console(*default_tty_console)
 
     return None
 
@@ -127,9 +138,9 @@ def apply(console):
     # Reset screen blanking
     call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
 
-    # Service control moved to vyos.utils.serial to unify checks and prompts. 
-    # If users are connected, we want to show an informational message on completing 
-    # the process, but not halt configuration processing with an interactive prompt. 
+    # Service control moved to vyos.utils.serial to unify checks and prompts.
+    # If users are connected, we want to show an informational message on completing
+    # the process, but not halt configuration processing with an interactive prompt.
     restart_login_consoles(prompt_user=False, quiet=False)
 
     if not console:

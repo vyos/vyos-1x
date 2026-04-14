@@ -1,0 +1,38 @@
+# Copyright (C) VyOS Inc.
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Serial
+
+from vyos.configtree import ConfigTree
+from vyos.system import disk
+from vyos.system.grub import CFG_VYOS_VARS
+from vyos.system.grub import vars_read
+
+serial_console = 'ttyS0'
+base = ['system', 'console']
+
+def migrate(config: ConfigTree) -> None:
+    if not base:
+        return
+
+    root_dir = disk.find_persistence()
+    vars_file: str = f'{root_dir}/{CFG_VYOS_VARS}'
+    vars_current: dict[str, str] = vars_read(vars_file)
+    # Check if VyOS installation uses serial boot console
+    if vars_current['console_type'] == 'ttyS':
+        # In the past we only supported ttyS0 as boot console, that's why we
+        # can hardcode it ...
+        if config.exists(base + ['device', serial_console]):
+            config.set(base + ['device', serial_console, 'kernel'])

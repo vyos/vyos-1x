@@ -194,10 +194,10 @@ migrate_bootfile ()
 }
 
 # configure system-specific settings
-system_config ()
+system_activate ()
 {
     if [ -x $vyos_libexec_dir/run-config-activation.py ]; then
-        log_progress_msg system
+        log_progress_msg activate
         sg ${GROUP} -c "$vyos_libexec_dir/run-config-activation.py $BOOTFILE"
     fi
 }
@@ -613,7 +613,7 @@ start ()
 
     update_interface_config || overall_status=1
 
-    disabled system_config || system_config || overall_status=1
+    disabled system_activate || system_activate || overall_status=1
 
     for s in ${subinit[@]} ; do
         if ! disabled $s; then
