@@ -661,7 +661,7 @@ def kea_get_server_leases(config, inet, vrf_name, pools=[], state=[], origin=Non
         if lease['valid-lft'] > 0 and lease['expire_time'] > now:
             # subtraction gives us a timedelta object which can't be formatted
             # with strftime so we use str(), split gets rid of the microseconds
-            data_lease['remaining'] = str(lease['expire_time'] - now).split('.')[0]
+            data_lease['remaining'] = (lease['expire_time'].replace(microsecond=0) - now.replace(microsecond=0))
 
         # Do not add old leases
         if (
