@@ -61,7 +61,7 @@ def _csv_to_list(value, cast=str):
 # get_config  — read the VyOS tree and return raw dict
 # ---------------------------------------------------------------------------
 
-def get_config(config=None, ifname=None):
+def get_config(config=None):
     if config:
         conf = config
     else:
@@ -69,12 +69,10 @@ def get_config(config=None, ifname=None):
 
     base = ['interfaces', 'wwan']
 
-    # Interface name from: explicit param > argv > None (caller iterates)
+    # Interface name from argv (provided by configd)
+    ifname = sys.argv[1] if len(sys.argv) > 1 else None
     if ifname is None:
-        if len(sys.argv) > 1:
-            ifname = sys.argv[1]
-        else:
-            return None  # No specific interface — caller should iterate
+        raise ConfigError('No WWAN interface name specified')
 
     path = base + [ifname]
     if not conf.exists(path):
@@ -455,23 +453,9 @@ async def _apply_via_dbus(interface_number, config):
 if __name__ == '__main__':
     try:
         c = get_config()
-        if c is not None:
-            # Single interface (called by VyOS config system with argv)
-            verify(c)
-            generate(c)
-            apply(c)
-        else:
-            # No argv — process all configured wwan interfaces
-            conf = Config()
-            interfaces = conf.list_nodes(['interfaces', 'wwan'])
-            if not interfaces:
-                print('No WWAN interfaces configured')
-                sys.exit(0)
-            for ifname in interfaces:
-                c = get_config(config=conf, ifname=ifname)
-                verify(c)
-                generate(c)
-                apply(c)
+        verify(c)
+        generate(c)
+        apply(c)
     except ConfigError as e:
         print(e)
         sys.exit(1)
