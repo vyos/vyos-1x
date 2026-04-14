@@ -37,3 +37,41 @@ class TestVyOSUtils(TestCase):
         self.assertEqual(list_strip(lst, rsb, right=True), ['a', 'b', 'c'])
         self.assertEqual(list_strip(lst, non), [])
         self.assertEqual(list_strip(sub, lst), [])
+
+    def test_range_str_to_list(self):
+        from vyos.utils.convert import range_str_to_list
+
+        # basic cases
+        self.assertEqual(range_str_to_list('1-3'), [1, 2, 3])
+        self.assertEqual(range_str_to_list('1-3,5,7-8'), [1, 2, 3, 5, 7, 8])
+        self.assertEqual(range_str_to_list('3'), [3])
+        # empty string
+        self.assertEqual(range_str_to_list(''), [])
+        # unordered input
+        self.assertEqual(range_str_to_list('5,1-3,4'), [1, 2, 3, 4, 5])
+        self.assertEqual(range_str_to_list('7-9,1-3'), [1, 2, 3, 7, 8, 9])
+        # overlapping ranges
+        self.assertEqual(range_str_to_list('1-5,3-7'), [1, 2, 3, 4, 5, 6, 7])
+        self.assertEqual(range_str_to_list('1-3,2-4,3-5'), [1, 2, 3, 4, 5])
+        # duplicated values
+        self.assertEqual(range_str_to_list('1,1,2,2,3'), [1, 2, 3])
+        self.assertEqual(range_str_to_list('5,1-3,2,3'), [1, 2, 3, 5])
+        # adjacent ranges
+        self.assertEqual(range_str_to_list('1-3,4-6'), [1, 2, 3, 4, 5, 6])
+
+    def test_list_to_range_str(self):
+        from vyos.utils.convert import list_to_range_str
+
+        # basic cases
+        self.assertEqual(list_to_range_str([1, 2, 3]), '1-3')
+        self.assertEqual(list_to_range_str([1, 2, 3, 5, 7, 8]), '1-3,5,7-8')
+        self.assertEqual(list_to_range_str([1, 3]), '1,3')
+        self.assertEqual(list_to_range_str([3]), '3')
+        # empty list
+        self.assertEqual(list_to_range_str([]), '')
+        # unordered input
+        self.assertEqual(list_to_range_str([5, 1, 2, 3, 4]), '1-5')
+        self.assertEqual(list_to_range_str([7, 8, 9, 1, 2, 3]), '1-3,7-9')
+        # duplicated values
+        self.assertEqual(list_to_range_str([1, 1, 2, 2, 3, 3]), '1-3')
+        self.assertEqual(list_to_range_str([5, 1, 2, 2, 3, 5]), '1-3,5')
