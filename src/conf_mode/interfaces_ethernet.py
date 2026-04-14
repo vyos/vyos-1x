@@ -175,6 +175,8 @@ def get_config(config=None):
     if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
 
     ethernet['flowtable_interfaces'] = get_flowtable_interfaces(conf)
+    vif_changed = is_node_changed(conf, base + [ifname, 'vif'])
+    vif_s_changed = is_node_changed(conf, base + [ifname, 'vif-s'])
 
     vpp_config = conf.get_config_dict(
         ['vpp'],
@@ -190,6 +192,13 @@ def get_config(config=None):
             get_first_key=True,
             no_tag_node_value_mangle=True,
         )
+        if (
+            'acl' in vpp_config
+            and (vif_changed or vif_s_changed)
+            and dict_search(f'settings.interface.{ifname}', vpp_config) is not None
+        ):
+            ethernet['vpp_acl_dependent'] = True
+            set_dependents('vpp_acl', conf)
 
     # Protocols static arp dependency
     if 'static_arp' in ethernet:
@@ -441,7 +450,7 @@ def apply(ethernet):
         e.remove()
     else:
         e.update(ethernet)
-    if 'static_arp' in ethernet:
+    if 'static_arp' in ethernet or 'vpp_acl_dependent' in ethernet:
         call_dependents()
 
     vpp_iface_config = dict_search(f'vpp.settings.interface.{ifname}', ethernet)
