@@ -1401,7 +1401,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         rule = '10'
 
         self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
-        self.cli_set(base_acl + ['tag-name', acl_name, 'rule', rule, 'action', 'permit'])
+        self.cli_set(
+            base_acl + ['tag-name', acl_name, 'rule', rule, 'action', 'permit']
+        )
         self.cli_set(
             base_acl
             + ['interface', subif, 'input', 'acl-tag', acl_tag, 'tag-name', acl_name]
