@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="send">
+    <properties>
+      <help>Send a message or command</help>
+    </properties>
     <children>
       <node name="sms">
         <properties>

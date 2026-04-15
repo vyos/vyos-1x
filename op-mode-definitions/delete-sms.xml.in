@@ -3,8 +3,14 @@
   <node name="delete">
     <children>
       <node name="interfaces">
+        <properties>
+          <help>Delete interface-related data</help>
+        </properties>
         <children>
           <node name="wwan">
+            <properties>
+              <help>Delete Wireless Modem (WWAN) data</help>
+            </properties>
             <children>
               <tagNode name="node.tag">
                 <properties>
