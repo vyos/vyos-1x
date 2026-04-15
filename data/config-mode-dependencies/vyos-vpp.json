@@ -15,9 +15,6 @@
         "vpp_sflow": ["vpp_sflow"],
         "pppoe_server": ["service_pppoe-server"]
     },
-    "interfaces_ethernet": {
-        "vpp_acl": ["vpp_acl"]
-    },
     "vpp_interfaces_bonding": {
         "vpp_interfaces_xconnect": ["vpp_interfaces_xconnect"],
         "vpp_interfaces_bridge": ["vpp_interfaces_bridge"],

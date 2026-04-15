@@ -1392,7 +1392,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show flowprobe feature')
         self.assertIn(required_str, out)
 
-    def test_20_3_vpp_acl_subinterface(self):
+    def test_23_vpp_acl_subinterface(self):
         base_acl = base_path + ['acl', 'ip']
         vlan = '200'
         subif = f'{interface}.{vlan}'
