@@ -108,6 +108,12 @@ MODEM_INTERFACE = "org.freedesktop.ModemManager1.Modem"
 OBJECT_MANAGER_INTERFACE = "org.freedesktop.DBus.ObjectManager"
 BEARER_INTERFACE = "org.freedesktop.ModemManager1.Bearer"
 SIMPLE_INTERFACE = "org.freedesktop.ModemManager1.Modem.Simple"
+MESSAGING_INTERFACE = "org.freedesktop.ModemManager1.Modem.Messaging"
+SMS_INTERFACE = "org.freedesktop.ModemManager1.Sms"
+
+# ── SMS flat-file storage ───────────────────────────────────────────────────
+SMS_STORAGE_DIR = "/var/lib/wwan/sms"
+SMS_MAX_MESSAGES = 100
 
 # ── Central defaults ────────────────────────────────────────────────────────
 # Single source of truth for configuration defaults.  Every code path that
@@ -2151,6 +2157,8 @@ class ModemStateMachine:
                     if self.ensure_link_up_on_connect:
                         self._safe_create_task(self._ensure_interface_up())
                     self._safe_create_task(self._start_network_interface_monitoring())
+                    # Set up SMS incoming-message listener
+                    self._safe_create_task(self._setup_sms_listener())
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
@@ -6086,7 +6094,7 @@ class ModemStateMachine:
             buffer_dbm = getattr(self, 'signal_strength_buffer', 5)
             effective_threshold = min_signal_dbm - buffer_dbm
 
-            signal_percent, signal_dbm = await self._get_detailed_signal_quality()
+            signal_percent, signal_dbm, _ = await self._get_detailed_signal_quality()
 
             if signal_percent is None or signal_dbm is None:
                 logger.warning("Cannot read signal strength - assuming adequate for reconnection",
@@ -6138,10 +6146,15 @@ class ModemStateMachine:
             return False
 
     async def _get_detailed_signal_quality(self):
-        """Get detailed signal quality metrics using actual dBm readings"""
+        """Get detailed signal quality metrics using actual dBm readings.
+
+        Returns (signal_percent, signal_dbm, signal_detail) where
+        signal_detail is a dict with keys: rssi, rsrp, rsrq, snr,
+        technology (or None if unavailable).
+        """
         try:
             if not self.proxy:
-                return None, None
+                return None, None, None
 
             props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
 
@@ -6159,7 +6172,15 @@ class ModemStateMachine:
 
             # Get actual dBm readings from Signal interface
             signal_dbm = None
+            signal_detail = None
             try:
+                def _extract_val(signals, key):
+                    """Safely extract a numeric value from a signal dict."""
+                    if key in signals:
+                        v = signals[key]
+                        return v.value if hasattr(v, 'value') else v
+                    return None
+
                 # Get LTE signal metrics from Signal interface
                 lte_signal_variant = await props.call_get("org.freedesktop.ModemManager1.Modem.Signal", "Lte")
                 if lte_signal_variant and lte_signal_variant.value:
@@ -6167,14 +6188,22 @@ class ModemStateMachine:
 
                     # Try RSSI first (most common)
                     if 'rssi' in lte_signals:
-                        signal_dbm = lte_signals['rssi'].value
+                        signal_dbm = _extract_val(lte_signals, 'rssi')
                         logger.debug(f"Got RSSI signal: {signal_dbm} dBm",
                                    extra={'interface_number': self.interface_number})
                     # Fall back to RSRP for LTE
                     elif 'rsrp' in lte_signals:
-                        signal_dbm = lte_signals['rsrp'].value
+                        signal_dbm = _extract_val(lte_signals, 'rsrp')
                         logger.debug(f"Got RSRP signal: {signal_dbm} dBm",
                                    extra={'interface_number': self.interface_number})
+
+                    signal_detail = {
+                        'technology': 'LTE',
+                        'rssi': _extract_val(lte_signals, 'rssi') or '',
+                        'rsrp': _extract_val(lte_signals, 'rsrp') or '',
+                        'rsrq': _extract_val(lte_signals, 'rsrq') or '',
+                        'snr': _extract_val(lte_signals, 'snr') or '',
+                    }
 
                 # Try other technologies if LTE not available
                 if signal_dbm is None:
@@ -6185,13 +6214,21 @@ class ModemStateMachine:
                             nr5g_signals = nr5g_signal_variant.value
                             # 5G typically uses RSRP as primary metric
                             if 'rsrp' in nr5g_signals:
-                                signal_dbm = nr5g_signals['rsrp'].value
+                                signal_dbm = _extract_val(nr5g_signals, 'rsrp')
                                 logger.debug(f"Got 5G NR RSRP signal: {signal_dbm} dBm",
                                            extra={'interface_number': self.interface_number})
                             elif 'rssi' in nr5g_signals:
-                                signal_dbm = nr5g_signals['rssi'].value
+                                signal_dbm = _extract_val(nr5g_signals, 'rssi')
                                 logger.debug(f"Got 5G NR RSSI signal: {signal_dbm} dBm",
                                            extra={'interface_number': self.interface_number})
+
+                            signal_detail = {
+                                'technology': '5G NR',
+                                'rssi': _extract_val(nr5g_signals, 'rssi') or '',
+                                'rsrp': _extract_val(nr5g_signals, 'rsrp') or '',
+                                'rsrq': _extract_val(nr5g_signals, 'rsrq') or '',
+                                'snr': _extract_val(nr5g_signals, 'snr') or '',
+                            }
                     except Exception:
                         pass
 
@@ -6202,13 +6239,21 @@ class ModemStateMachine:
                             if umts_signal_variant and umts_signal_variant.value:
                                 umts_signals = umts_signal_variant.value
                                 if 'rssi' in umts_signals:
-                                    signal_dbm = umts_signals['rssi'].value
+                                    signal_dbm = _extract_val(umts_signals, 'rssi')
                                     logger.debug(f"Got UMTS (3G) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
                                 elif 'rscp' in umts_signals:
-                                    signal_dbm = umts_signals['rscp'].value
+                                    signal_dbm = _extract_val(umts_signals, 'rscp')
                                     logger.debug(f"Got UMTS (3G) RSCP signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
+
+                                signal_detail = {
+                                    'technology': 'UMTS',
+                                    'rssi': _extract_val(umts_signals, 'rssi') or '',
+                                    'rsrp': '',
+                                    'rsrq': '',
+                                    'snr': '',
+                                }
                         except Exception:
                             pass
 
@@ -6219,9 +6264,17 @@ class ModemStateMachine:
                             if gsm_signal_variant and gsm_signal_variant.value:
                                 gsm_signals = gsm_signal_variant.value
                                 if 'rssi' in gsm_signals:
-                                    signal_dbm = gsm_signals['rssi'].value
+                                    signal_dbm = _extract_val(gsm_signals, 'rssi')
                                     logger.debug(f"Got GSM (2G) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
+
+                                    signal_detail = {
+                                        'technology': 'GSM',
+                                        'rssi': _extract_val(gsm_signals, 'rssi') or '',
+                                        'rsrp': '',
+                                        'rsrq': '',
+                                        'snr': '',
+                                    }
                         except Exception:
                             pass
 
@@ -6232,9 +6285,17 @@ class ModemStateMachine:
                             if cdma_signal_variant and cdma_signal_variant.value:
                                 cdma_signals = cdma_signal_variant.value
                                 if 'rssi' in cdma_signals:
-                                    signal_dbm = cdma_signals['rssi'].value
+                                    signal_dbm = _extract_val(cdma_signals, 'rssi')
                                     logger.debug(f"Got CDMA (2G) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
+
+                                    signal_detail = {
+                                        'technology': 'CDMA',
+                                        'rssi': _extract_val(cdma_signals, 'rssi') or '',
+                                        'rsrp': '',
+                                        'rsrq': '',
+                                        'snr': '',
+                                    }
                         except Exception:
                             pass
 
@@ -6245,9 +6306,17 @@ class ModemStateMachine:
                             if evdo_signal_variant and evdo_signal_variant.value:
                                 evdo_signals = evdo_signal_variant.value
                                 if 'rssi' in evdo_signals:
-                                    signal_dbm = evdo_signals['rssi'].value
+                                    signal_dbm = _extract_val(evdo_signals, 'rssi')
                                     logger.debug(f"Got EVDO (3G CDMA) RSSI signal: {signal_dbm} dBm",
                                                extra={'interface_number': self.interface_number})
+
+                                    signal_detail = {
+                                        'technology': 'EVDO',
+                                        'rssi': _extract_val(evdo_signals, 'rssi') or '',
+                                        'rsrp': '',
+                                        'rsrq': '',
+                                        'snr': '',
+                                    }
                         except Exception:
                             pass
 
@@ -6270,12 +6339,12 @@ class ModemStateMachine:
                 else:
                     signal_dbm = -100
 
-            return signal_percent, signal_dbm
+            return signal_percent, signal_dbm, signal_detail
 
         except Exception as e:
             logger.error(f"Failed to get detailed signal quality: {e}",
                         extra={'interface_number': self.interface_number})
-            return None, None
+            return None, None, None
 
     async def _wait_for_adequate_signal(self, max_wait=None):
         """Wait for signal to improve before attempting reconnection"""
@@ -6450,64 +6519,228 @@ class ModemStateMachine:
         status['connected_apn_auth'] = apn.get('auth_type', '')
         status['connected_apn_username'] = apn.get('username', '')
 
-        # ── 4. Modem hardware information ────────────────────────────────
+        # ── 4 & 5. Modem hardware + registration (batched GetAll) ────────
+        # A single GetAll on MODEM_INTERFACE replaces ~12 individual
+        # call_get round-trips; one more GetAll for Modem3gpp replaces 3.
         try:
             if self.proxy:
                 props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-                mfr_v = await props.call_get(MODEM_INTERFACE, "Manufacturer")
-                status['modem_manufacturer'] = mfr_v.value if mfr_v else ''
-                model_v = await props.call_get(MODEM_INTERFACE, "Model")
-                status['modem_model'] = model_v.value if model_v else ''
-                equip_v = await props.call_get(MODEM_INTERFACE, "EquipmentIdentifier")
-                status['modem_imei'] = equip_v.value if equip_v else ''
-                rev_v = await props.call_get(MODEM_INTERFACE, "Revision")
-                status['modem_firmware'] = rev_v.value if rev_v else ''
-                device_v = await props.call_get(MODEM_INTERFACE, "Device")
-                status['modem_device'] = device_v.value if device_v else ''
-        except Exception:
-            for k in ('modem_manufacturer', 'modem_model', 'modem_imei',
-                      'modem_firmware', 'modem_device'):
-                status.setdefault(k, '')
 
-        # ── 5. Registration / access technology ──────────────────────────
-        try:
-            if self.proxy:
-                props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
-                # Modem numeric state
-                state_v = await props.call_get(MODEM_INTERFACE, "State")
-                status['modem_state'] = state_v.value if state_v else -1
-                # Access technologies bitmask
-                at_v = await props.call_get(MODEM_INTERFACE, "AccessTechnologies")
-                status['access_technologies'] = at_v.value if at_v else 0
-                status['access_technology_name'] = self._access_tech_to_string(
-                    status['access_technologies'])
-                # 3GPP operator name and registration state
+                # --- Batch: all properties from MODEM_INTERFACE -----------
+                modem_all_raw = await props.call_get_all(MODEM_INTERFACE)
+                # Unwrap Variants: each value is Variant(signature, value)
+                modem_props = {}
+                for k, v in modem_all_raw.items():
+                    modem_props[k] = v.value if hasattr(v, 'value') else v
+
+                # Section 4 — hardware
+                status['modem_manufacturer'] = modem_props.get('Manufacturer', '')
+                status['modem_model'] = modem_props.get('Model', '')
+                status['modem_imei'] = modem_props.get('EquipmentIdentifier', '')
+                status['modem_firmware'] = modem_props.get('Revision', '')
+                status['modem_device'] = modem_props.get('Device', '')
+
+                own_nums = modem_props.get('OwnNumbers', [])
+                if own_nums and hasattr(own_nums, '__iter__'):
+                    own_nums = list(own_nums)
+                else:
+                    own_nums = []
+                status['modem_phone_number'] = own_nums[0] if own_nums else ''
+                status['modem_phone_numbers'] = own_nums
+
+                status['modem_hardware_revision'] = modem_props.get('HardwareRevision', '')
+
+                pwr_val = modem_props.get('PowerState', 0)
+                status['modem_power_state'] = pwr_val
+                status['modem_power_state_name'] = {
+                    0: 'unknown', 1: 'off', 2: 'low', 3: 'on'
+                }.get(pwr_val, 'unknown')
+
+                # Section 5 — registration / access technology
+                status['modem_state'] = modem_props.get('State', -1)
+                at_val = modem_props.get('AccessTechnologies', 0)
+                status['access_technologies'] = at_val
+                status['access_technology_name'] = self._access_tech_to_string(at_val)
+
+                sfr_val = modem_props.get('StateFailedReason', 0)
+                status['modem_state_failed_reason'] = sfr_val
+                status['modem_state_failed_reason_name'] = {
+                    0: 'none', 1: 'unknown', 2: 'sim-missing',
+                    3: 'sim-error',
+                }.get(sfr_val, f'unknown({sfr_val})')
+
+                band_list = modem_props.get('CurrentBands', [])
+                if band_list and hasattr(band_list, '__iter__'):
+                    status['current_bands'] = [self._band_to_string(b) for b in band_list]
+                else:
+                    status['current_bands'] = []
+
+                # Signal quality percentage (from modem GetAll)
+                sq = modem_props.get('SignalQuality', None)
+                if sq:
+                    sq_val = sq[0] if isinstance(sq, (list, tuple)) and sq else sq
+                    status['_signal_percent_from_getall'] = sq_val
+
+                # --- Batch: all properties from Modem3gpp -----------------
                 try:
                     gpp_iface = "org.freedesktop.ModemManager1.Modem.Modem3gpp"
-                    op_v = await props.call_get(gpp_iface, "OperatorName")
-                    status['operator_name'] = op_v.value if op_v else ''
-                    reg_v = await props.call_get(gpp_iface, "RegistrationState")
-                    status['registration_state'] = reg_v.value if reg_v else 0
-                    op_code_v = await props.call_get(gpp_iface, "OperatorCode")
-                    status['operator_code'] = op_code_v.value if op_code_v else ''
+                    gpp_all_raw = await props.call_get_all(gpp_iface)
+                    gpp_props = {}
+                    for k, v in gpp_all_raw.items():
+                        gpp_props[k] = v.value if hasattr(v, 'value') else v
+
+                    status['operator_name'] = gpp_props.get('OperatorName', '')
+                    status['registration_state'] = gpp_props.get('RegistrationState', 0)
+                    status['operator_code'] = gpp_props.get('OperatorCode', '')
                 except Exception:
                     status.setdefault('operator_name', '')
                     status.setdefault('registration_state', 0)
                     status.setdefault('operator_code', '')
         except Exception:
+            for k in ('modem_manufacturer', 'modem_model', 'modem_imei',
+                      'modem_firmware', 'modem_device',
+                      'modem_hardware_revision', 'modem_power_state_name'):
+                status.setdefault(k, '')
+            status.setdefault('modem_phone_number', '')
+            status.setdefault('modem_phone_numbers', [])
+            status.setdefault('modem_power_state', 0)
             for k in ('modem_state', 'access_technologies',
                       'access_technology_name', 'operator_name',
-                      'registration_state', 'operator_code'):
+                      'registration_state', 'operator_code',
+                      'modem_state_failed_reason_name'):
                 status.setdefault(k, '')
+            status.setdefault('modem_state_failed_reason', 0)
+            status.setdefault('current_bands', [])
 
-        # ── 6. Signal quality ────────────────────────────────────────────
+        # ── 6. Signal quality (batched GetAll on Signal interface) ─────────
         try:
-            signal_pct, signal_dbm = await self._get_detailed_signal_quality()
-            status['signal_percent'] = signal_pct or 0
+            # Use signal percent already captured from modem GetAll if available
+            signal_percent = status.pop('_signal_percent_from_getall', None)
+            if signal_percent is None:
+                signal_percent = 0
+
+            signal_dbm = None
+            signal_detail = None
+
+            if self.proxy:
+                sig_props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+                sig_iface = "org.freedesktop.ModemManager1.Modem.Signal"
+                try:
+                    sig_all_raw = await sig_props.call_get_all(sig_iface)
+                    sig_all = {}
+                    for k, v in sig_all_raw.items():
+                        sig_all[k] = v.value if hasattr(v, 'value') else v
+
+                    def _unwrap_sig_dict(d):
+                        """Unwrap a signal tech dict (may have Variant values)."""
+                        out = {}
+                        if d and isinstance(d, dict):
+                            for sk, sv in d.items():
+                                out[sk] = sv.value if hasattr(sv, 'value') else sv
+                        return out
+
+                    # Try LTE first
+                    lte = _unwrap_sig_dict(sig_all.get('Lte'))
+                    if lte:
+                        signal_dbm = lte.get('rssi') or lte.get('rsrp')
+                        signal_detail = {
+                            'technology': 'LTE',
+                            'rssi': lte.get('rssi', ''),
+                            'rsrp': lte.get('rsrp', ''),
+                            'rsrq': lte.get('rsrq', ''),
+                            'snr': lte.get('snr', ''),
+                        }
+
+                    # 5G NR
+                    if signal_dbm is None:
+                        nr5g = _unwrap_sig_dict(sig_all.get('Nr5g'))
+                        if nr5g:
+                            signal_dbm = nr5g.get('rsrp') or nr5g.get('rssi')
+                            signal_detail = {
+                                'technology': '5G NR',
+                                'rssi': nr5g.get('rssi', ''),
+                                'rsrp': nr5g.get('rsrp', ''),
+                                'rsrq': nr5g.get('rsrq', ''),
+                                'snr': nr5g.get('snr', ''),
+                            }
+
+                    # UMTS (3G)
+                    if signal_dbm is None:
+                        umts = _unwrap_sig_dict(sig_all.get('Umts'))
+                        if umts:
+                            signal_dbm = umts.get('rssi') or umts.get('rscp')
+                            signal_detail = {
+                                'technology': 'UMTS',
+                                'rssi': umts.get('rssi', ''),
+                                'rsrp': '', 'rsrq': '', 'snr': '',
+                            }
+
+                    # GSM (2G)
+                    if signal_dbm is None:
+                        gsm = _unwrap_sig_dict(sig_all.get('Gsm'))
+                        if gsm and gsm.get('rssi'):
+                            signal_dbm = gsm['rssi']
+                            signal_detail = {
+                                'technology': 'GSM',
+                                'rssi': gsm['rssi'],
+                                'rsrp': '', 'rsrq': '', 'snr': '',
+                            }
+
+                    # CDMA
+                    if signal_dbm is None:
+                        cdma = _unwrap_sig_dict(sig_all.get('Cdma'))
+                        if cdma and cdma.get('rssi'):
+                            signal_dbm = cdma['rssi']
+                            signal_detail = {
+                                'technology': 'CDMA',
+                                'rssi': cdma['rssi'],
+                                'rsrp': '', 'rsrq': '', 'snr': '',
+                            }
+
+                    # EVDO
+                    if signal_dbm is None:
+                        evdo = _unwrap_sig_dict(sig_all.get('Evdo'))
+                        if evdo and evdo.get('rssi'):
+                            signal_dbm = evdo['rssi']
+                            signal_detail = {
+                                'technology': 'EVDO',
+                                'rssi': evdo['rssi'],
+                                'rsrp': '', 'rsrq': '', 'snr': '',
+                            }
+                except Exception:
+                    pass  # Signal interface may not be set up yet
+
+            # Fall back to percentage-based estimation
+            if signal_dbm is None:
+                if signal_percent > 80:
+                    signal_dbm = -60
+                elif signal_percent > 60:
+                    signal_dbm = -70
+                elif signal_percent > 40:
+                    signal_dbm = -80
+                elif signal_percent > 20:
+                    signal_dbm = -90
+                else:
+                    signal_dbm = -100
+
+            status['signal_percent'] = signal_percent or 0
             status['signal_dbm'] = signal_dbm or 0
+            if signal_detail:
+                status['signal_rssi'] = signal_detail.get('rssi', '')
+                status['signal_rsrp'] = signal_detail.get('rsrp', '')
+                status['signal_rsrq'] = signal_detail.get('rsrq', '')
+                status['signal_snr'] = signal_detail.get('snr', '')
+                status['signal_technology'] = signal_detail.get('technology', '')
+            else:
+                for k in ('signal_rssi', 'signal_rsrp', 'signal_rsrq',
+                          'signal_snr', 'signal_technology'):
+                    status[k] = ''
         except Exception:
             status['signal_percent'] = 0
             status['signal_dbm'] = 0
+            for k in ('signal_rssi', 'signal_rsrp', 'signal_rsrq',
+                      'signal_snr', 'signal_technology'):
+                status[k] = ''
 
         # ── 7. IP configuration (live from interface) ────────────────────
         try:
@@ -6715,6 +6948,36 @@ class ModemStateMachine:
         if self.last_scan_results:
             status['available_networks'] = self.last_scan_results
 
+        # ── 14. SMS status ───────────────────────────────────────────────
+        sms_supported = False
+        sms_message_count = 0
+        sms_unread_count = 0
+        if self.modem_path:
+            try:
+                introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
+                proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, introspect)
+                # Check if Messaging interface exists on this modem
+                try:
+                    proxy.get_interface(MESSAGING_INTERFACE)
+                    sms_supported = True
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        # Count messages in flat-file store
+        try:
+            messages = self._sms_load()
+            sms_message_count = len(messages)
+            sms_unread_count = sum(
+                1 for m in messages
+                if m.get('direction') == 'incoming' and not m.get('read', False)
+            )
+        except Exception:
+            pass
+        status['sms_supported'] = sms_supported
+        status['sms_message_count'] = sms_message_count
+        status['sms_unread_count'] = sms_unread_count
+
         return status
 
     @staticmethod
@@ -6747,6 +7010,61 @@ class ModemStateMachine:
             if bitmask & flag:
                 techs.append(name)
         return ', '.join(techs) if techs else 'unknown'
+
+    @staticmethod
+    def _band_to_string(band_id) -> str:
+        """Convert MM MMModemBand enum to human-readable string."""
+        # ModemManager MMModemBand values (subset of most common)
+        band_map = {
+            0: 'unknown',
+            1: 'EGSM-900', 2: 'DCS-1800', 3: 'PCS-1900', 4: 'G850',
+            5: 'UTRAN-1', 6: 'UTRAN-3', 7: 'UTRAN-4', 8: 'UTRAN-6',
+            9: 'UTRAN-5', 10: 'UTRAN-8', 11: 'UTRAN-9', 12: 'UTRAN-2',
+            13: 'UTRAN-7', 14: 'G450', 15: 'G480', 16: 'G750',
+            17: 'G380', 18: 'G410', 19: 'G710', 20: 'G810',
+            31: 'EUTRAN-1', 32: 'EUTRAN-2', 33: 'EUTRAN-3', 34: 'EUTRAN-4',
+            35: 'EUTRAN-5', 36: 'EUTRAN-6', 37: 'EUTRAN-7', 38: 'EUTRAN-8',
+            39: 'EUTRAN-9', 40: 'EUTRAN-10', 41: 'EUTRAN-11', 42: 'EUTRAN-12',
+            43: 'EUTRAN-13', 44: 'EUTRAN-14', 45: 'EUTRAN-17', 46: 'EUTRAN-18',
+            47: 'EUTRAN-19', 48: 'EUTRAN-20', 49: 'EUTRAN-21', 50: 'EUTRAN-22',
+            51: 'EUTRAN-23', 52: 'EUTRAN-24', 53: 'EUTRAN-25', 54: 'EUTRAN-26',
+            55: 'EUTRAN-27', 56: 'EUTRAN-28', 57: 'EUTRAN-29', 58: 'EUTRAN-30',
+            59: 'EUTRAN-31', 60: 'EUTRAN-32', 61: 'EUTRAN-33', 62: 'EUTRAN-34',
+            63: 'EUTRAN-35', 64: 'EUTRAN-36', 65: 'EUTRAN-37', 66: 'EUTRAN-38',
+            67: 'EUTRAN-39', 68: 'EUTRAN-40', 69: 'EUTRAN-41', 70: 'EUTRAN-42',
+            71: 'EUTRAN-43', 72: 'EUTRAN-44', 73: 'EUTRAN-45', 74: 'EUTRAN-46',
+            75: 'EUTRAN-47', 76: 'EUTRAN-48',
+            77: 'EUTRAN-65', 78: 'EUTRAN-66', 79: 'EUTRAN-67', 80: 'EUTRAN-68',
+            81: 'EUTRAN-69', 82: 'EUTRAN-70', 83: 'EUTRAN-71',
+            # CDMA
+            128: 'CDMA-BC0', 129: 'CDMA-BC1', 130: 'CDMA-BC2',
+            131: 'CDMA-BC3', 132: 'CDMA-BC4', 133: 'CDMA-BC5',
+            134: 'CDMA-BC6', 135: 'CDMA-BC7', 136: 'CDMA-BC8',
+            137: 'CDMA-BC9', 138: 'CDMA-BC10', 139: 'CDMA-BC11',
+            140: 'CDMA-BC12', 141: 'CDMA-BC13', 142: 'CDMA-BC14',
+            143: 'CDMA-BC15', 144: 'CDMA-BC16', 145: 'CDMA-BC17',
+            146: 'CDMA-BC18', 147: 'CDMA-BC19',
+            # 5G NR
+            171: 'NGRAN-1', 172: 'NGRAN-2', 173: 'NGRAN-3', 174: 'NGRAN-5',
+            175: 'NGRAN-7', 176: 'NGRAN-8', 177: 'NGRAN-12', 178: 'NGRAN-13',
+            179: 'NGRAN-14', 180: 'NGRAN-18', 181: 'NGRAN-20',
+            182: 'NGRAN-25', 183: 'NGRAN-26', 184: 'NGRAN-28',
+            185: 'NGRAN-29', 186: 'NGRAN-30', 187: 'NGRAN-34',
+            188: 'NGRAN-38', 189: 'NGRAN-39', 190: 'NGRAN-40',
+            191: 'NGRAN-41', 192: 'NGRAN-48', 193: 'NGRAN-50',
+            194: 'NGRAN-51', 195: 'NGRAN-53', 196: 'NGRAN-65',
+            197: 'NGRAN-66', 198: 'NGRAN-70', 199: 'NGRAN-71',
+            200: 'NGRAN-74', 201: 'NGRAN-75', 202: 'NGRAN-76',
+            203: 'NGRAN-77', 204: 'NGRAN-78', 205: 'NGRAN-79',
+            206: 'NGRAN-80', 207: 'NGRAN-81', 208: 'NGRAN-82',
+            209: 'NGRAN-83', 210: 'NGRAN-84', 211: 'NGRAN-86',
+            212: 'NGRAN-89', 213: 'NGRAN-90', 214: 'NGRAN-91',
+            215: 'NGRAN-92', 216: 'NGRAN-93', 217: 'NGRAN-94',
+            218: 'NGRAN-95',
+            # Special
+            256: 'ANY',
+        }
+        return band_map.get(band_id, f'band-{band_id}')
 
     async def update_bus_connection(self, new_bus):
         """Update D-Bus connection after ModemManager restart"""
@@ -9577,3 +9895,241 @@ class ModemStateMachine:
             hc.apply()
         except Exception:
             pass  # hostsd may not be running; non-fatal
+
+    # ── SMS support ─────────────────────────────────────────────────────────
+    # Messages are stored in per-SIM JSON flat files under SMS_STORAGE_DIR,
+    # keyed by ICCID.  Each file holds up to SMS_MAX_MESSAGES entries.
+    # ModemManager Messaging D-Bus API is used for send/receive.
+
+    def _sms_storage_path(self) -> str:
+        """Return the flat-file path for the current SIM's SMS store."""
+        sim = self.last_known_sim_info or {}
+        iccid = sim.get('sim_identifier', '') or 'unknown'
+        return os.path.join(SMS_STORAGE_DIR, f"sms_{iccid}.json")
+
+    def _sms_load(self) -> list:
+        """Load SMS messages from the current SIM's flat file."""
+        path = self._sms_storage_path()
+        if not os.path.exists(path):
+            return []
+        try:
+            with open(path, 'r') as f:
+                messages = json.load(f)
+            if not isinstance(messages, list):
+                return []
+            return messages
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"SMS store corrupt or unreadable, starting fresh: {e}",
+                          extra={'interface_number': self.interface_number})
+            return []
+
+    def _sms_save(self, messages: list):
+        """Save SMS messages to the current SIM's flat file (atomic write)."""
+        path = self._sms_storage_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        import tempfile
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix='.tmp')
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump(messages[-SMS_MAX_MESSAGES:], f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
+
+    def _sms_append(self, msg: dict):
+        """Append a message to the store, enforcing the cap."""
+        messages = self._sms_load()
+        messages.append(msg)
+        # Trim oldest if over cap
+        if len(messages) > SMS_MAX_MESSAGES:
+            messages = messages[-SMS_MAX_MESSAGES:]
+        self._sms_save(messages)
+
+    async def sms_send(self, recipient: str, text: str) -> dict:
+        """Send an SMS via ModemManager and record it in the flat-file store.
+
+        Returns a dict with 'status' and 'message_id' keys.
+        """
+        if not self.modem_path:
+            raise RuntimeError("No modem available — cannot send SMS")
+
+        try:
+            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
+            proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, introspect)
+            messaging = proxy.get_interface(MESSAGING_INTERFACE)
+
+            # Create SMS on ModemManager — properties dict with string Variants
+            sms_properties = {
+                'number': Variant('s', recipient),
+                'text': Variant('s', text),
+            }
+            sms_path = await messaging.call_create(sms_properties)
+
+            logger.info(f"SMS created at {sms_path}, sending...",
+                       extra={'interface_number': self.interface_number})
+
+            # Send the SMS
+            sms_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, sms_path)
+            sms_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, sms_path, sms_introspect)
+            sms_iface = sms_proxy.get_interface(SMS_INTERFACE)
+            await sms_iface.call_send()
+
+            # Record in flat file
+            msg_id = len(self._sms_load()) + 1
+            record = {
+                'id': msg_id,
+                'direction': 'outgoing',
+                'number': recipient,
+                'text': text,
+                'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                'status': 'sent',
+            }
+            self._sms_append(record)
+
+            # Delete from ModemManager after successful send
+            try:
+                await messaging.call_delete(sms_path)
+            except Exception:
+                pass  # Non-fatal — message already sent
+
+            logger.info(f"SMS sent to {recipient}, id={msg_id}",
+                       extra={'interface_number': self.interface_number})
+            return {'status': 'sent', 'message_id': msg_id}
+
+        except Exception as e:
+            logger.error(f"SMS send failed: {e}",
+                        extra={'interface_number': self.interface_number})
+            raise
+
+    async def sms_list(self) -> list:
+        """List all stored SMS messages for the current SIM."""
+        return self._sms_load()
+
+    async def sms_read(self, message_id: int) -> dict:
+        """Read a specific SMS by ID."""
+        messages = self._sms_load()
+        for msg in messages:
+            if msg.get('id') == message_id:
+                # Mark as read if incoming and unread
+                if msg.get('direction') == 'incoming' and not msg.get('read', False):
+                    msg['read'] = True
+                    self._sms_save(messages)
+                return msg
+        raise ValueError(f"SMS message {message_id} not found")
+
+    async def sms_delete(self, message_id: int) -> dict:
+        """Delete a specific SMS by ID."""
+        messages = self._sms_load()
+        new_messages = [m for m in messages if m.get('id') != message_id]
+        if len(new_messages) == len(messages):
+            raise ValueError(f"SMS message {message_id} not found")
+        self._sms_save(new_messages)
+        logger.info(f"SMS message {message_id} deleted",
+                   extra={'interface_number': self.interface_number})
+        return {'status': 'deleted', 'message_id': message_id}
+
+    async def sms_delete_all(self) -> dict:
+        """Delete all SMS messages for the current SIM."""
+        self._sms_save([])
+        logger.info("All SMS messages deleted",
+                   extra={'interface_number': self.interface_number})
+        return {'status': 'deleted', 'count': 0}
+
+    async def _handle_incoming_sms(self, sms_path: str):
+        """Handle an incoming SMS notification from ModemManager."""
+        try:
+            sms_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, sms_path)
+            sms_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, sms_path, sms_introspect)
+            sms_props = sms_proxy.get_interface('org.freedesktop.DBus.Properties')
+
+            # Read SMS properties
+            number_v = await sms_props.call_get(SMS_INTERFACE, 'Number')
+            text_v = await sms_props.call_get(SMS_INTERFACE, 'Text')
+            timestamp_v = await sms_props.call_get(SMS_INTERFACE, 'Timestamp')
+            state_v = await sms_props.call_get(SMS_INTERFACE, 'State')
+
+            number = number_v.value if hasattr(number_v, 'value') else str(number_v)
+            text = text_v.value if hasattr(text_v, 'value') else str(text_v)
+            timestamp = timestamp_v.value if hasattr(timestamp_v, 'value') else str(timestamp_v)
+            state = state_v.value if hasattr(state_v, 'value') else int(state_v)
+
+            # MM_SMS_STATE_RECEIVED = 3
+            if state != 3:
+                return  # Not a received message, ignore
+
+            msg_id = len(self._sms_load()) + 1
+            record = {
+                'id': msg_id,
+                'direction': 'incoming',
+                'number': number,
+                'text': text,
+                'timestamp': timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                'status': 'received',
+                'read': False,
+            }
+            self._sms_append(record)
+
+            logger.info(f"Incoming SMS from {number}, id={msg_id}",
+                       extra={'interface_number': self.interface_number})
+
+            # Delete from ModemManager to free SIM storage
+            try:
+                messaging_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
+                messaging_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, messaging_introspect)
+                messaging = messaging_proxy.get_interface(MESSAGING_INTERFACE)
+                await messaging.call_delete(sms_path)
+            except Exception:
+                pass  # Non-fatal
+
+        except Exception as e:
+            logger.error(f"Failed to process incoming SMS: {e}",
+                       extra={'interface_number': self.interface_number})
+
+    async def _setup_sms_listener(self):
+        """Subscribe to ModemManager Messaging.Added signal for incoming SMS."""
+        if not self.modem_path:
+            return
+        try:
+            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
+            proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, introspect)
+            messaging = proxy.get_interface(MESSAGING_INTERFACE)
+
+            def on_sms_added(path, received):
+                """Callback for new SMS — received=True means incoming."""
+                if received:
+                    asyncio.ensure_future(self._handle_incoming_sms(path))
+
+            messaging.on_added(on_sms_added)
+            logger.info("SMS listener registered",
+                       extra={'interface_number': self.interface_number})
+
+            # Also drain any SMS already waiting on the SIM
+            await self._drain_existing_sms()
+
+        except Exception as e:
+            logger.warning(f"Could not set up SMS listener: {e}",
+                          extra={'interface_number': self.interface_number})
+
+    async def _drain_existing_sms(self):
+        """Import any SMS already stored on the SIM into our flat-file store."""
+        if not self.modem_path:
+            return
+        try:
+            introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
+            proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, introspect)
+            props = proxy.get_interface('org.freedesktop.DBus.Properties')
+            messages_v = await props.call_get(MESSAGING_INTERFACE, 'Messages')
+            sms_paths = messages_v.value if hasattr(messages_v, 'value') else []
+
+            for sms_path in sms_paths:
+                await self._handle_incoming_sms(sms_path)
+
+        except Exception as e:
+            logger.debug(f"Could not drain existing SMS: {e}",
+                        extra={'interface_number': self.interface_number})

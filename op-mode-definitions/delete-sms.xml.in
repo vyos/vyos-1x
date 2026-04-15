@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="delete">
+    <children>
+      <node name="interfaces">
+        <children>
+          <node name="wwan">
+            <children>
+              <tagNode name="node.tag">
+                <properties>
+                  <help>WWAN interface name</help>
+                  <completionHelp>
+                    <path>interfaces wwan</path>
+                    <script>cd /sys/class/net; ls -d wwan* 2>/dev/null</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="sms">
+                    <properties>
+                      <help>Delete all SMS messages</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/wwan_sms.py delete_all_sms --interface="$4"</command>
+                    <children>
+                      <tagNode name="message">
+                        <properties>
+                          <help>Delete a specific SMS message by ID</help>
+                          <completionHelp>
+                            <list>&lt;1-999&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/wwan_sms.py delete_sms --interface="$4" --message-id="$6"</command>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

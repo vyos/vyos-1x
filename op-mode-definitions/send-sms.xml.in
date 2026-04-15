@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="send">
+    <children>
+      <node name="sms">
+        <properties>
+          <help>Send SMS message via WWAN modem</help>
+        </properties>
+        <children>
+          <node name="interface">
+            <properties>
+              <help>WWAN interface to send SMS from</help>
+            </properties>
+            <children>
+              <tagNode name="node.tag">
+                <properties>
+                  <help>WWAN interface name</help>
+                  <completionHelp>
+                    <path>interfaces wwan</path>
+                    <script>cd /sys/class/net; ls -d wwan* 2>/dev/null</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="number">
+                    <properties>
+                      <help>Destination phone number</help>
+                    </properties>
+                    <children>
+                      <tagNode name="node.tag">
+                        <properties>
+                          <help>Phone number (e.g. +15551234567)</help>
+                        </properties>
+                        <children>
+                          <node name="message">
+                            <properties>
+                              <help>SMS message text</help>
+                            </properties>
+                            <children>
+                              <tagNode name="node.tag">
+                                <properties>
+                                  <help>Message text to send</help>
+                                </properties>
+                                <command>${vyos_op_scripts_dir}/wwan_sms.py send_sms --interface="$4" --number="$6" --message="$8"</command>
+                              </tagNode>
+                            </children>
+                          </node>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

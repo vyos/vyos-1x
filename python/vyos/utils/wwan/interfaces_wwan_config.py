@@ -1797,3 +1797,96 @@ class InterfaceConfig(ServiceInterface):
                         extra={'interface_number': self.interface_number,
                                'error': str(e)})
             raise DBusError("com.igos.IgosModemManager.StatusError", str(e))
+
+    # ── SMS methods ──────────────────────────────────────────────────────
+
+    @method()
+    async def send_sms(self, recipient: 's', message: 's') -> 'a{sv}':  # type: ignore[name-defined]  # noqa: F821, F722
+        """Send an SMS message via the modem.
+
+        Parameters: recipient phone number, message text.
+        Returns dict with 'status' and 'message_id'.
+        """
+        try:
+            logger.info("SMS send requested",
+                       extra={'interface_number': self.interface_number})
+            result = await self.fsm.sms_send(recipient, message)
+            return {k: Variant('s', str(v)) for k, v in result.items()}
+        except Exception as e:
+            logger.error(f"SMS send failed: {e}",
+                        extra={'interface_number': self.interface_number})
+            raise DBusError("com.igos.IgosModemManager.SmsError", str(e))
+
+    @method()
+    async def list_sms(self) -> 'aa{sv}':  # type: ignore[name-defined]  # noqa: F821, F722
+        """List all stored SMS messages for the current SIM.
+
+        Returns array of dicts, each with id, direction, number, text,
+        timestamp, status, and read fields.
+        """
+        try:
+            messages = await self.fsm.sms_list()
+            result = []
+            for msg in messages:
+                entry = {}
+                for k, v in msg.items():
+                    if isinstance(v, bool):
+                        entry[k] = Variant('b', v)
+                    elif isinstance(v, int):
+                        entry[k] = Variant('x', v)
+                    else:
+                        entry[k] = Variant('s', str(v))
+                result.append(entry)
+            return result
+        except Exception as e:
+            logger.error(f"SMS list failed: {e}",
+                        extra={'interface_number': self.interface_number})
+            raise DBusError("com.igos.IgosModemManager.SmsError", str(e))
+
+    @method()
+    async def read_sms(self, message_id: 'x') -> 'a{sv}':  # type: ignore[name-defined]  # noqa: F821, F722
+        """Read a specific SMS message by ID.
+
+        Returns dict with all message fields.  Marks incoming messages as read.
+        """
+        try:
+            msg = await self.fsm.sms_read(int(message_id))
+            result = {}
+            for k, v in msg.items():
+                if isinstance(v, bool):
+                    result[k] = Variant('b', v)
+                elif isinstance(v, int):
+                    result[k] = Variant('x', v)
+                else:
+                    result[k] = Variant('s', str(v))
+            return result
+        except ValueError as e:
+            raise DBusError("com.igos.IgosModemManager.SmsNotFound", str(e))
+        except Exception as e:
+            logger.error(f"SMS read failed: {e}",
+                        extra={'interface_number': self.interface_number})
+            raise DBusError("com.igos.IgosModemManager.SmsError", str(e))
+
+    @method()
+    async def delete_sms(self, message_id: 'x') -> 'a{sv}':  # type: ignore[name-defined]  # noqa: F821, F722
+        """Delete a specific SMS message by ID."""
+        try:
+            result = await self.fsm.sms_delete(int(message_id))
+            return {k: Variant('s', str(v)) for k, v in result.items()}
+        except ValueError as e:
+            raise DBusError("com.igos.IgosModemManager.SmsNotFound", str(e))
+        except Exception as e:
+            logger.error(f"SMS delete failed: {e}",
+                        extra={'interface_number': self.interface_number})
+            raise DBusError("com.igos.IgosModemManager.SmsError", str(e))
+
+    @method()
+    async def delete_all_sms(self) -> 'a{sv}':  # type: ignore[name-defined]  # noqa: F821, F722
+        """Delete all stored SMS messages for the current SIM."""
+        try:
+            result = await self.fsm.sms_delete_all()
+            return {k: Variant('s', str(v)) for k, v in result.items()}
+        except Exception as e:
+            logger.error(f"SMS delete-all failed: {e}",
+                        extra={'interface_number': self.interface_number})
+            raise DBusError("com.igos.IgosModemManager.SmsError", str(e))

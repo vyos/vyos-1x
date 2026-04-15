@@ -26,72 +26,53 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=wirelessmodem</command>
                 <children>
-                  <leafNode name="capabilities">
+                  <leafNode name="detail">
                     <properties>
-                      <help>Show WWAN module capabilities</help>
+                      <help>Show all WWAN modem information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --capabilities</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_detail --interface="$4"</command>
                   </leafNode>
-                  <leafNode name="firmware">
+                  <leafNode name="hardware">
                     <properties>
-                      <help>Show WWAN module firmware</help>
+                      <help>Show WWAN modem hardware information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --firmware</command>
-                  </leafNode>
-                  <leafNode name="imei">
-                    <properties>
-                      <help>Show WWAN module IMEI/ESN/MEID</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imei</command>
-                  </leafNode>
-                  <leafNode name="imsi">
-                    <properties>
-                      <help>Show WWAN module IMSI</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imsi</command>
-                  </leafNode>
-                  <leafNode name="model">
-                    <properties>
-                      <help>Show WWAN module manufacturer</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --model</command>
-                  </leafNode>
-                  <leafNode name="msisdn">
-                    <properties>
-                      <help>Show WWAN module MSISDN</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --msisdn</command>
-                  </leafNode>
-                  <leafNode name="revision">
-                    <properties>
-                      <help>Show WWAN module revision</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --revision</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_hardware --interface="$4"</command>
                   </leafNode>
                   <leafNode name="signal">
                     <properties>
-                      <help>Show WWAN module RF signal info</help>
+                      <help>Show WWAN RF signal information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --signal</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_signal --interface="$4"</command>
                   </leafNode>
                   <leafNode name="sim">
                     <properties>
-                      <help>Show WWAN module connected SIM card information</help>
+                      <help>Show WWAN SIM card information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --sim</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_sim --interface="$4"</command>
                   </leafNode>
-                  <leafNode name="detail">
+                  <leafNode name="status">
                     <properties>
-                      <help>Show WWAN module detailed information summary</help>
+                      <help>Show WWAN operational status</help>
                     </properties>
-                    <command>bash -c "if cli-shell-api existsActive interfaces wwan $4; then mmcli --modem ${4#wwan}; else echo \"Interface \"$4\" unconfigured!\"; fi"</command>
+                    <command>${vyos_op_scripts_dir}/show_wwan.py show_status --interface="$4"</command>
                   </leafNode>
-                  <leafNode name="log">
+                  <node name="sms">
                     <properties>
-                      <help>Show interface log for specified interface</help>
+                      <help>Show SMS messages</help>
                     </properties>
-                    <command>bash -c 'echo Unimplemented'</command>
-                  </leafNode>
+                    <command>${vyos_op_scripts_dir}/wwan_sms.py show_sms --interface="$4"</command>
+                    <children>
+                      <tagNode name="message">
+                        <properties>
+                          <help>Show a specific SMS message by ID</help>
+                          <completionHelp>
+                            <list>&lt;1-999&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/wwan_sms.py read_sms --interface="$4" --message-id="$6"</command>
+                      </tagNode>
+                    </children>
+                  </node>
                   #include <include/show-interface-type-event-log.xml.i>
                 </children>
               </virtualTagNode>

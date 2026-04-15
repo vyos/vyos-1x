@@ -500,8 +500,15 @@ class WWANClient:
         -------
         dict
             Keys include (among many others): ``fsm_state``,
-            ``modem_model``, ``modem_imei``, ``signal_percent``,
-            ``signal_dbm``, ``access_technology_name``,
+            ``modem_model``, ``modem_imei``, ``modem_phone_number``,
+            ``modem_phone_numbers``, ``modem_hardware_revision``,
+            ``modem_power_state``, ``modem_power_state_name``,
+            ``signal_percent``,
+            ``signal_dbm``, ``signal_rssi``, ``signal_rsrp``,
+            ``signal_rsrq``, ``signal_snr``, ``signal_technology``,
+            ``access_technology_name``, ``current_bands``,
+            ``modem_state_failed_reason``,
+            ``modem_state_failed_reason_name``,
             ``operator_name``, ``operator_code``,
             ``registration_state``, ``connection_mode``,
             ``active_sim_slot``, ``configured_sim_slot``,
@@ -564,6 +571,116 @@ class WWANClient:
             return _variant_to_python(raw)
         except DBusError as exc:
             raise WWANError(f"GetStatus failed: {exc}") from exc
+
+    # ── SMS methods ──────────────────────────────────────────────────────
+
+    async def send_sms(
+        self, interface_number: int, recipient: str, message: str
+    ) -> Dict[str, Any]:
+        """Send an SMS message via the modem.
+
+        Parameters
+        ----------
+        interface_number : int
+            Interface index.
+        recipient : str
+            Destination phone number.
+        message : str
+            SMS text body (up to 160 chars for single SMS, longer texts
+            are concatenated automatically by ModemManager).
+
+        Returns
+        -------
+        dict
+            ``{'status': 'sent', 'message_id': N}``
+        """
+        iface = await self._get_iface(interface_number)
+        try:
+            raw = await iface.call_send_sms(recipient, message)
+            return _variant_to_python(raw)
+        except DBusError as exc:
+            raise WWANError(f"SendSms failed: {exc}") from exc
+
+    async def list_sms(self, interface_number: int) -> list:
+        """List all stored SMS messages for the current SIM.
+
+        Returns
+        -------
+        list[dict]
+            Each dict has keys: ``id``, ``direction``, ``number``,
+            ``text``, ``timestamp``, ``status``, ``read``.
+        """
+        iface = await self._get_iface(interface_number)
+        try:
+            raw = await iface.call_list_sms()
+            return _variant_to_python(raw)
+        except DBusError as exc:
+            raise WWANError(f"ListSms failed: {exc}") from exc
+
+    async def read_sms(
+        self, interface_number: int, message_id: int
+    ) -> Dict[str, Any]:
+        """Read a specific SMS message by ID.
+
+        Marks incoming messages as read on first access.
+
+        Parameters
+        ----------
+        interface_number : int
+            Interface index.
+        message_id : int
+            Message ID from :meth:`list_sms`.
+
+        Returns
+        -------
+        dict
+            Full message record.
+        """
+        iface = await self._get_iface(interface_number)
+        try:
+            raw = await iface.call_read_sms(message_id)
+            return _variant_to_python(raw)
+        except DBusError as exc:
+            raise WWANError(f"ReadSms failed: {exc}") from exc
+
+    async def delete_sms(
+        self, interface_number: int, message_id: int
+    ) -> Dict[str, Any]:
+        """Delete a specific SMS message by ID.
+
+        Parameters
+        ----------
+        interface_number : int
+            Interface index.
+        message_id : int
+            Message ID to delete.
+
+        Returns
+        -------
+        dict
+            ``{'status': 'deleted', 'message_id': N}``
+        """
+        iface = await self._get_iface(interface_number)
+        try:
+            raw = await iface.call_delete_sms(message_id)
+            return _variant_to_python(raw)
+        except DBusError as exc:
+            raise WWANError(f"DeleteSms failed: {exc}") from exc
+
+    async def delete_all_sms(self, interface_number: int) -> Dict[str, Any]:
+        """Delete all stored SMS messages for the current SIM.
+
+        Returns
+        -------
+        dict
+            ``{'status': 'deleted', 'count': 0}``
+        """
+        iface = await self._get_iface(interface_number)
+        try:
+            raw = await iface.call_delete_all_sms()
+            return _variant_to_python(raw)
+        except DBusError as exc:
+            raise WWANError(f"DeleteAllSms failed: {exc}") from exc
 
     # ── convenience helpers ──────────────────────────────────────────────
 
@@ -695,6 +812,39 @@ class WWANClientSync:
     def get_status(self, interface_number: int) -> Dict[str, Any]:
         """Full status dict.  See :meth:`WWANClient.get_status`."""
         return self._run(self._call("get_status", interface_number))
+
+    # ── SMS ──────────────────────────────────────────────────────────────
+
+    def send_sms(
+        self, interface_number: int, recipient: str, message: str
+    ) -> Dict[str, Any]:
+        """Send SMS.  See :meth:`WWANClient.send_sms`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.send_sms(interface_number, recipient, message)
+        return self._run(_inner())
+
+    def list_sms(self, interface_number: int) -> list:
+        """List SMS.  See :meth:`WWANClient.list_sms`."""
+        return self._run(self._call("list_sms", interface_number))
+
+    def read_sms(self, interface_number: int, message_id: int) -> Dict[str, Any]:
+        """Read SMS.  See :meth:`WWANClient.read_sms`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.read_sms(interface_number, message_id)
+        return self._run(_inner())
+
+    def delete_sms(self, interface_number: int, message_id: int) -> Dict[str, Any]:
+        """Delete SMS.  See :meth:`WWANClient.delete_sms`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.delete_sms(interface_number, message_id)
+        return self._run(_inner())
+
+    def delete_all_sms(self, interface_number: int) -> Dict[str, Any]:
+        """Delete all SMS.  See :meth:`WWANClient.delete_all_sms`."""
+        return self._run(self._call("delete_all_sms", interface_number))
 
     def wait_for_bearer(
         self,
