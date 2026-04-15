@@ -30,8 +30,6 @@ airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
 
-default_tty_console = ('tty', '0', '')
-
 def get_config(config=None):
     if config:
         conf = config
@@ -89,6 +87,8 @@ def generate(console):
             if 'serial-getty' in basename:
                 os.unlink(os.path.join(root, basename))
 
+    # Define a default console on a tty framebuffer
+    default_tty_console = ('tty', '0', '')
     if not console or 'device' not in console:
         grub_util.update_serial_console(*default_tty_console)
         return None
@@ -110,7 +110,6 @@ def generate(console):
             else:
                 raise ConfigError(f'Device {device} does not support being used as tty')
 
-    use_serial_console = False
     for device, device_config in console['device'].items():
         # Do not render getty configuration if specified device is not a TTY.
         if not is_tty(device):
@@ -126,12 +125,9 @@ def generate(console):
             # get console type ("ttyS" or "ttyAMA") from device (e.g. "ttyS0")
             console_type = device.rstrip('0123456789')
             console_num = device[len(console_type):]
-            grub_util.update_serial_console(console_type, console_num, device_config['speed'])
-            use_serial_console = True
+            default_tty_console = (console_type, console_num, device_config['speed'])
 
-        if not use_serial_console:
-            grub_util.update_serial_console(*default_tty_console)
-
+    grub_util.update_serial_console(*default_tty_console)
     return None
 
 def apply(console):
