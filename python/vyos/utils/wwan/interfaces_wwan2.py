@@ -4,7 +4,6 @@ import os
 import sys
 import asyncio
 import subprocess
-import logging
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error

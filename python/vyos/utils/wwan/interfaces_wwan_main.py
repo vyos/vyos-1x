@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_main.py
 import asyncio
-import logging
 import subprocess
 import sys
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
