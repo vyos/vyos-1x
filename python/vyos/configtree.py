@@ -73,11 +73,21 @@ class ConfigTreeError(Exception):
 
 class ConfigTree(object):
     def __init__(
-        self, config_string=None, address=None, internal=None, libpath=LIBPATH
+        self,
+        config_string=None,
+        address=None,
+        internal=None,
+        internal_string=None,
+        libpath=LIBPATH,
     ):
-        if config_string is None and address is None and internal is None:
+        if (
+            config_string is None
+            and address is None
+            and internal is None
+            and internal_string is None
+        ):
             raise TypeError(
-                "ConfigTree() requires one of 'config_string', 'address', or 'internal'"
+                "ConfigTree() requires one of 'config_string', 'address', 'internal', or 'internal_string'"
             )
 
         self.__config = None
@@ -106,6 +116,14 @@ class ConfigTree(object):
 
         self.__write_internal = self.__lib.write_internal
         self.__write_internal.argtypes = [c_void_p, c_char_p]
+
+        self.__read_internal_string = self.__lib.read_internal_string
+        self.__read_internal_string.argtypes = [c_char_p]
+        self.__read_internal_string.restype = c_void_p
+
+        self.__write_internal_string = self.__lib.write_internal_string
+        self.__write_internal_string.argtypes = [c_void_p]
+        self.__write_internal_string.restype = c_char_p
 
         self.__to_json = self.__lib.to_json
         self.__to_json.argtypes = [c_void_p]
@@ -212,7 +230,19 @@ class ConfigTree(object):
             config = self.__read_internal(internal.encode())
             if config is None:
                 msg = self.__get_error().decode()
-                raise ValueError('Failed to read internal rep: {0}'.format(msg))
+                raise ValueError(
+                    f'Failed to read internal representation from file {internal}: {msg}'
+                )
+            else:
+                self.__config = config
+                self.__version = ''
+        elif internal_string is not None:
+            config = self.__read_internal_string(internal_string.encode())
+            if config is None:
+                msg = self.__get_error().decode()
+                raise ValueError(
+                    f'Failed to read internal representation from string: {msg}'
+                )
             else:
                 self.__config = config
                 self.__version = ''
@@ -222,7 +252,7 @@ class ConfigTree(object):
             config = self.__from_string(config_section.encode())
             if config is None:
                 msg = self.__get_error().decode()
-                raise ValueError('Failed to parse config: {0}'.format(msg))
+                raise ValueError(f'Failed to parse config: {msg}')
             else:
                 self.__config = config
                 self.__version = version_section
@@ -255,6 +285,10 @@ class ConfigTree(object):
 
     def write_cache(self, file_name):
         self.__write_internal(self.get_tree(), file_name.encode())
+
+    def write_internal_string(self) -> str:
+        res = self.__write_internal_string(self.get_tree())
+        return res.decode()
 
     def to_string(self, ordered_values=False, no_version=False):
         config_string = self.__to_string(self.__config, ordered_values).decode()
@@ -668,8 +702,7 @@ def subtree_from_partial(
         raise ConfigTreeError(e)
     if not res:
         msg = __get_error().decode()
-        # msg is space separated list of path
-        raise ConfigTreeError(msg.split())
+        raise ConfigTreeError(msg)
 
     tree = ConfigTree(address=res)
 
