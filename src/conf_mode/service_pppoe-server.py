@@ -219,8 +219,8 @@ def apply(pppoe):
     if 'vpp_ifaces' in pppoe:
         vpp = VPPControl()
         mapping = vpp.get_pppoe_interface_mapping()
-        for dp_iface, cp_iface in mapping.items():
-            vpp.delete_pppoe_mapping(dp_iface, cp_iface)
+        for dp_index, cp_index in mapping.items():
+            vpp.delete_pppoe_mapping(dp_index, cp_index)
 
     if 'remove' in pppoe:
         call(f'systemctl stop {systemd_service}')
