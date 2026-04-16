@@ -2,102 +2,17 @@
 # filepath: /home/jfeeney/vyos-1x/python/vyos/utils/wwan/interfaces_wwan_main.py
 import asyncio
 import logging
-import logging.handlers
 import subprocess
 import sys
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_service_manager import ConfigServiceManager
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter
+from vyos.utils.wwan.wwan_logging import setup_logging
 
 
-class ManagerFormatter(_BaseFormatter):
-    """Main-manager-specific RFC 5424 formatter."""
-
-    def _get_message_id(self, record):
-        msg = record.getMessage().lower()
-        if 'modemmanager' in msg and ('crash' in msg or 'stop' in msg):
-            return 'MM_CRASH'
-        elif 'restart' in msg and 'modemmanager' in msg:
-            return 'MM_RESTART'
-        elif 'starting wwan' in msg:
-            return 'SERVICE_START'
-        elif 'stopped' in msg or 'shutting down' in msg:
-            return 'SERVICE_STOP'
-        elif 'stable again' in msg:
-            return 'MM_STABLE'
-        elif 'd-bus' in msg and 'available' in msg:
-            return 'DBUS_READY'
-        elif 'd-bus' in msg and 'responsive' in msg:
-            return 'DBUS_READY'
-        elif 'interface' in msg and 'add' in msg:
-            return 'IFACE_ADD'
-        elif 'interface' in msg and 'remove' in msg:
-            return 'IFACE_REMOVE'
-        elif 'connect' in msg:
-            return 'CONN_EVENT'
-        elif 'configuration' in msg:
-            return 'CONFIG_EVENT'
-        elif 'waiting for' in msg and 'initialize' in msg:
-            return 'MM_WAIT'
-        elif 'error' in msg:
-            return 'ERROR_EVENT'
-        else:
-            return 'GENERAL'
-
-    def _build_structured_data(self, record):
-        sd_elements = []
-        wwan_data = []
-        if hasattr(record, 'interface_number'):
-            wwan_data.append(f'interface="{record.interface_number}"')
-        if hasattr(record, 'restart_attempt'):
-            wwan_data.append(f'attempt="{record.restart_attempt}"')
-            wwan_data.append(f'max_attempts="{record.max_attempts}"')
-        if hasattr(record, 'modem_state'):
-            wwan_data.append(f'state="{record.modem_state}"')
-        if hasattr(record, 'signal_strength'):
-            wwan_data.append(f'signal="{record.signal_strength}"')
-        if hasattr(record, 'software'):
-            wwan_data.append(f'software="{record.software}"')
-        if hasattr(record, 'version'):
-            wwan_data.append(f'version="{record.version}"')
-        if wwan_data:
-            sd_elements.append(f'[wwan@32473 {" ".join(wwan_data)}]')
-        origin_data = ['software="vyos-wwan"', 'version="1.0"']
-        sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-        return ''.join(sd_elements) if sd_elements else '-'
-
-
-# Set up RFC 5424 logging for SNMP integration — use root logger for manager
-def setup_rfc5424_logging():
-    formatter = ManagerFormatter("wwan-manager")
-    try:
-        syslog_handler = logging.handlers.SysLogHandler(
-            address='/dev/log',
-            facility=logging.handlers.SysLogHandler.LOG_LOCAL0,
-        )
-        syslog_handler.setFormatter(formatter)
-        use_syslog = True
-    except (OSError, IOError):
-        use_syslog = False
-
-    console_formatter = logging.Formatter(
-        '%(asctime)s %(name)s[%(process)d]: %(levelname)s: %(message)s'
-    )
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    if use_syslog:
-        root_logger.addHandler(syslog_handler)
-    root_logger.addHandler(console_handler)
-    return root_logger
-
-
-# Set up RFC 5424 logging for SNMP integration
-logger = setup_rfc5424_logging()
+# Set up logging — use root logger for manager so all module logs are captured
+logger = setup_logging("", "wwan-manager")
 
 class ModemManagerMonitor:
     def __init__(self, service_manager):

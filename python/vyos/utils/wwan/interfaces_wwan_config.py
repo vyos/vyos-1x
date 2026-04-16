@@ -5,57 +5,8 @@ import re
 from dbus_next.service import ServiceInterface, method  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
+from vyos.utils.wwan.wwan_logging import setup_logging
 
-
-class ConfigFormatter(_BaseFormatter):
-    """Config-specific RFC 5424 formatter."""
-
-    def _get_message_id(self, record):
-        msg = record.getMessage().lower()
-        if 'setting configuration' in msg:
-            return 'CONFIG_SET'
-        elif 'configuration applied' in msg:
-            return 'CONFIG_APPLIED'
-        elif 'invalid parameter' in msg:
-            return 'CONFIG_INVALID'
-        elif 'sim configuration' in msg:
-            return 'SIM_CONFIG'
-        elif 'connecting interface' in msg:
-            return 'IFACE_CONNECT'
-        elif 'disconnecting interface' in msg:
-            return 'IFACE_DISCONNECT'
-        elif 'validation' in msg:
-            return 'CONFIG_VALIDATE'
-        elif 'error' in msg:
-            return 'CONFIG_ERROR'
-        elif 'unlock' in msg:
-            return 'SIM_UNLOCK'
-        elif 'carrier' in msg:
-            return 'CARRIER_CONFIG'
-        else:
-            return 'CONFIG_EVENT'
-
-    def _build_structured_data(self, record):
-        sd_elements = []
-        config_data = []
-        if hasattr(record, 'interface_number'):
-            config_data.append(f'interface="{record.interface_number}"')
-        if hasattr(record, 'config_keys'):
-            config_data.append(f'keys="{",".join(record.config_keys)}"')
-        if hasattr(record, 'validation_field'):
-            config_data.append(f'field="{record.validation_field}"')
-        if hasattr(record, 'sim_slot'):
-            config_data.append(f'sim_slot="{record.sim_slot}"')
-        if hasattr(record, 'band_count'):
-            config_data.append(f'band_count="{record.band_count}"')
-        if hasattr(record, 'carrier_resolved'):
-            config_data.append(f'carrier_resolved="{record.carrier_resolved}"')
-        if config_data:
-            sd_elements.append(f'[config@32473 {" ".join(config_data)}]')
-        origin_data = ['software="vyos-wwan-config"', 'version="1.0"']
-        sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-        return ''.join(sd_elements) if sd_elements else '-'
 
 # Carrier name to operator code mapping for user-friendly configuration
 CARRIER_MAPPINGS = {
@@ -169,7 +120,7 @@ def resolve_carrier_code(carrier_input):
     # No match found - return as-is for direct operator registration attempt
     return carrier_clean, f"Unknown: {carrier_clean}", False
 
-logger = setup_logging(__name__, "wwan-config", formatter_class=ConfigFormatter)
+logger = setup_logging(__name__, "wwan-config")
 
 class InterfaceConfig(ServiceInterface):
     # Centralized default configuration values

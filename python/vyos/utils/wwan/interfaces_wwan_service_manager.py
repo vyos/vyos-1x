@@ -3,48 +3,10 @@ from dbus_next.service import ServiceInterface, method  # pylint: disable=import
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from vyos.utils.wwan.interfaces_wwan_state_machine import ModemStateMachine
 from vyos.utils.wwan.interfaces_wwan_config import InterfaceConfig
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
+from vyos.utils.wwan.wwan_logging import setup_logging
 
 
-class ServiceFormatter(_BaseFormatter):
-    """Service-manager-specific RFC 5424 formatter."""
-
-    def _get_message_id(self, record):
-        msg = record.getMessage().lower()
-        if 'adding interface' in msg:
-            return 'IFACE_ADD'
-        elif 'removing interface' in msg:
-            return 'IFACE_REMOVE'
-        elif 'exported' in msg:
-            return 'DBUS_EXPORT'
-        elif 'removed' in msg:
-            return 'DBUS_UNEXPORT'
-        elif 'state machine' in msg:
-            return 'FSM_EVENT'
-        elif 'bus connection' in msg:
-            return 'BUS_RECONNECT'
-        elif 'error' in msg:
-            return 'ERROR_EVENT'
-        else:
-            return 'SERVICE_EVENT'
-
-    def _build_structured_data(self, record):
-        sd_elements = []
-        service_data = []
-        if hasattr(record, 'interface_number'):
-            service_data.append(f'interface="{record.interface_number}"')
-        if hasattr(record, 'object_path'):
-            service_data.append(f'path="{record.object_path}"')
-        if hasattr(record, 'fsm_count'):
-            service_data.append(f'fsm_count="{record.fsm_count}"')
-        if service_data:
-            sd_elements.append(f'[service@32473 {" ".join(service_data)}]')
-        origin_data = ['software="vyos-wwan-service"', 'version="1.0"']
-        sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-        return ''.join(sd_elements) if sd_elements else '-'
-
-
-logger = setup_logging(__name__, "wwan-service", formatter_class=ServiceFormatter)
+logger = setup_logging(__name__, "wwan-service")
 
 class ControlInterface(ServiceInterface):
     """

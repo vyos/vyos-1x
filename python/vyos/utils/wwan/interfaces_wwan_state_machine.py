@@ -32,74 +32,10 @@ from vyos.utils.wwan.apn_discovery import APNDiscovery
 from vyos.utils.wwan.connection_manager import ConnectionManager
 from vyos.utils.wwan.state_transition_manager import StateTransitionManager
 
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter, setup_logging
+from vyos.utils.wwan.wwan_logging import setup_logging
 
 
-class FSMFormatter(_BaseFormatter):
-    """FSM-specific RFC 5424 formatter with state-machine message IDs."""
-
-    def _get_message_id(self, record):
-        msg = record.getMessage().lower()
-        if 'state changed' in msg or '\u2192' in msg:
-            return 'STATE_CHANGE'
-        elif 'modem found' in msg:
-            return 'MODEM_FOUND'
-        elif 'config applied' in msg:
-            return 'CONFIG_APPLIED'
-        elif 'connecting' in msg:
-            return 'CONNECT_EVENT'
-        elif 'disconnecting' in msg or 'disconnected' in msg:
-            return 'DISCONNECT_EVENT'
-        elif 'usage' in msg and ('rx=' in msg or 'tx=' in msg):
-            return 'USAGE_STATS'
-        elif 'usage limit' in msg:
-            return 'USAGE_LIMIT'
-        elif 'scan' in msg:
-            return 'MODEM_SCAN'
-        elif 'fsm error' in msg:
-            return 'FSM_ERROR'
-        elif 'timeout' in msg:
-            return 'TIMEOUT'
-        elif 'sim switch' in msg:
-            return 'SIM_SWITCH'
-        else:
-            return 'FSM_EVENT'
-
-    def _build_structured_data(self, record):
-        sd_elements = []
-        fsm_data = []
-        if hasattr(record, 'interface_number'):
-            fsm_data.append(f'interface="{record.interface_number}"')
-        if hasattr(record, 'current_state'):
-            fsm_data.append(f'state="{record.current_state}"')
-        if hasattr(record, 'event'):
-            fsm_data.append(f'event="{record.event}"')
-        if hasattr(record, 'modem_path'):
-            fsm_data.append(f'modem_path="{record.modem_path}"')
-        if hasattr(record, 'physdev_uid'):
-            fsm_data.append(f'physdev_uid="{record.physdev_uid}"')
-        if hasattr(record, 'rx_bytes'):
-            fsm_data.append(f'rx_bytes="{record.rx_bytes}"')
-        if hasattr(record, 'tx_bytes'):
-            fsm_data.append(f'tx_bytes="{record.tx_bytes}"')
-        if hasattr(record, 'signal_strength'):
-            fsm_data.append(f'signal="{record.signal_strength}"')
-        if hasattr(record, 'current_sim'):
-            fsm_data.append(f'current_sim="{record.current_sim}"')
-        if hasattr(record, 'config_sim'):
-            fsm_data.append(f'config_sim="{record.config_sim}"')
-        if hasattr(record, 'sim_switch_reason'):
-            fsm_data.append(f'sim_switch_reason="{record.sim_switch_reason}"')
-        if hasattr(record, 'target_sim'):
-            fsm_data.append(f'target_sim="{record.target_sim}"')
-        if fsm_data:
-            sd_elements.append(f'[fsm@32473 {" ".join(fsm_data)}]')
-        origin_data = ['software="vyos-wwan-fsm"', 'version="1.0"']
-        sd_elements.append(f'[origin@32473 {" ".join(origin_data)}]')
-        return ''.join(sd_elements) if sd_elements else '-'
-
-
-logger = setup_logging(__name__, "wwan-fsm", formatter_class=FSMFormatter)
+logger = setup_logging(__name__, "wwan-fsm")
 
 # Constants
 MODEM_MANAGER_SERVICE = "org.freedesktop.ModemManager1"

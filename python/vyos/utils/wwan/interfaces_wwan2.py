@@ -5,65 +5,15 @@ import sys
 import asyncio
 import subprocess
 import logging
-import logging.handlers
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.constants import BusType  # pylint: disable=import-error
 from dbus_next.errors import DBusError  # pylint: disable=import-error
 from dbus_next import Variant  # pylint: disable=import-error
-from vyos.utils.wwan.rfc5424_logging import RFC5424Formatter as _BaseFormatter
-
-
-class ClientFormatter(_BaseFormatter):
-    """Client (interfaces_wwan2) specific RFC 5424 formatter."""
-
-    def _get_message_id(self, record):
-        msg = record.getMessage().lower()
-        if 'service' in msg and ('start' in msg or 'running' in msg):
-            return 'SERVICE_STATUS'
-        elif 'configuration' in msg and ('load' in msg or 'applied' in msg):
-            return 'CONFIG_EVENT'
-        elif 'd-bus' in msg or 'dbus' in msg:
-            return 'DBUS_EVENT'
-        elif 'interface' in msg and 'add' in msg:
-            return 'IFACE_ADD'
-        elif 'connect' in msg:
-            return 'CONN_EVENT'
-        elif 'error' in msg:
-            return 'ERROR_EVENT'
-        elif 'complete' in msg or 'success' in msg:
-            return 'SUCCESS_EVENT'
-        else:
-            return 'CONFIG_GENERAL'
-
-
-def setup_logging_client():
-    """Set up RFC 5424 logging for SNMP integration"""
-    console_formatter = logging.Formatter('%(asctime)s wwan-config[%(process)d]: %(levelname)s: %(message)s')
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-
-    try:
-        syslog_handler = logging.handlers.SysLogHandler(address='/dev/log')
-        syslog_formatter = ClientFormatter("wwan-config")
-        syslog_handler.setFormatter(syslog_formatter)
-        use_syslog = True
-    except (OSError, IOError):
-        use_syslog = False
-
-    # Configure logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-
-    if use_syslog:
-        logger.addHandler(syslog_handler)
-    logger.addHandler(console_handler)
-    logger.propagate = False
-
-    return logger
+from vyos.utils.wwan.wwan_logging import setup_logging
 
 
 # Set up logging
-logger = setup_logging_client()
+logger = setup_logging(__name__, "wwan-config")
 
 # ─── parse_config() ────────────────────────────────────────────────────────
 def parse_config(config_path):
