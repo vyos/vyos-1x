@@ -95,6 +95,21 @@ let write_internal c_ptr file =
     with Internal.Write_error msg ->
         error_message := msg
 
+let read_internal_string s =
+    (* alert exn Internal.read_string:
+        [Internal.Read_error] caught
+     *)
+    try
+        error_message := "";
+        let ct = (I.read_string[@alert "-exn"]) s in
+        Ctypes.Root.create ct
+    with Internal.Read_error msg ->
+        error_message := msg; Ctypes.null
+
+let write_internal_string c_ptr =
+    let ct = Root.get c_ptr in
+    I.write_string ct
+
 let render_json_reference_tree c_ptr =
     RT.render_json (Root.get c_ptr)
 
@@ -525,6 +540,8 @@ struct
   let () = I.internal "to_commands" ((ptr void) @-> string @-> returning string) render_commands
   let () = I.internal "read_internal" (string @-> returning (ptr void)) read_internal
   let () = I.internal "write_internal" ((ptr void) @-> string @-> returning void) write_internal
+  let () = I.internal "read_internal_string" (string @-> returning (ptr void)) read_internal_string
+  let () = I.internal "write_internal_string" ((ptr void) @-> returning string) write_internal_string
   let () = I.internal "to_json_reference_tree" ((ptr void) @-> returning string) render_json_reference_tree
   let () = I.internal "read_internal_reference_tree" (string @-> returning (ptr void)) read_internal_reference_tree
   let () = I.internal "write_internal_reference_tree" ((ptr void) @-> string @-> returning void) write_internal_reference_tree
