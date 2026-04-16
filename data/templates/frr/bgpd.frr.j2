@@ -157,6 +157,8 @@
  address-family ipv6 flowspec
 {%         elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
+{%         elif afi == 'link_state' %}
+ address-family link-state
 {%         endif %}
 {%         if afi_config.addpath_tx_all is vyos_defined %}
   neighbor {{ neighbor }} addpath-tx-all-paths

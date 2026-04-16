@@ -1749,5 +1749,21 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'bmp monitor ipv6 unicast loc-rib', frrconfig)
         self.assertIn(f'bmp connect {target_address} port {target_port} min-retry {min_retry} max-retry {max_retry}', frrconfig)
 
+    def test_bgp_100_link_state(self):
+        router_id = '127.0.0.1'
+        peer = '192.0.3.3'
+        peer_asn = '100'
+
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['neighbor', peer, 'remote-as', peer_asn])
+
+        self.cli_set(base_path + ['neighbor', peer, 'address-family', 'link-state'])
+
+        self.cli_commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f' address-family link-state', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
