@@ -13,9 +13,7 @@
 # interfaces_wwan2.py config parser.
 
 import asyncio
-import os
 import re
-import subprocess
 import sys
 
 from vyos.config import Config
@@ -109,7 +107,7 @@ def build_fsm_config(wwan):
             'username': _leaf(s, 'username', ''),
             'password': _leaf(s, 'password', ''),
             'auth_type': _leaf(s, 'auth_type', 'none'),
-            'pdp_type': _leaf(s, 'pdp_type', 'ipv4'),
+            'pdp_type': _leaf(s, 'pdp_type', 'ipv4v6'),
             'roaming': 'enabled' if _leaf_exists(s, 'roaming') else 'disabled',
             'pin': _leaf(s, 'pin', ''),
             'puk': _leaf(s, 'puk', ''),
@@ -143,7 +141,7 @@ def build_fsm_config(wwan):
             'username': '',
             'password': '',
             'auth_type': 'none',
-            'pdp_type': 'ipv4',
+            'pdp_type': 'ipv4v6',
             'roaming': 'disabled',
             'pin': '',
             'puk': '',
@@ -270,9 +268,9 @@ def build_fsm_config(wwan):
 
         # APN discovery
         'android_apn_discovery': (
-            'enabled' if _leaf_exists(
-                wwan.get('apn_discovery', {}), 'android'
-            ) else 'disabled'
+            'disabled' if _leaf_exists(
+                wwan.get('apn_discovery', {}), 'disable'
+            ) else 'enabled'
         ),
 
         # SIM failover (global enable + policy)
@@ -328,11 +326,11 @@ def build_fsm_config(wwan):
             lg, 'health_check_interval', 300
         ),
 
-        # Logging
-        'verbose_logging': _leaf_exists(lg, 'verbose'),
+        # Logging (all default enabled — disable nodes to turn off)
+        'verbose_logging': not _leaf_exists(lg, 'disable_verbose'),
         'log_level': _leaf(lg, 'level', 'info'),
-        'snmp_monitoring': _leaf_exists(lg, 'snmp_monitoring'),
-        'detailed_status': _leaf_exists(lg, 'detailed_status'),
+        'snmp_monitoring': not _leaf_exists(lg, 'disable_snmp_monitoring'),
+        'detailed_status': not _leaf_exists(lg, 'disable_detailed_status'),
 
         # Collections
         'sim_slots': sim_slots,
@@ -409,31 +407,7 @@ def apply(wwan):
 async def _apply_via_dbus(interface_number, config):
     """Push configuration to the FSM D-Bus service."""
     # Import here to avoid hard dependency at module level
-    sys.path.insert(0, '/usr/lib/python3/dist-packages/vyos/utils/wwan')
-    try:
-        from wwan_client import WWANClient, WWANError
-    except ImportError:
-        # Fallback: try relative import for dev environments
-        wwan_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            '..', '..', 'python', 'vyos', 'utils', 'wwan'
-        )
-        sys.path.insert(0, os.path.realpath(wwan_dir))
-        from wwan_client import WWANClient, WWANError
-
-    # Ensure the WWAN D-Bus service is running via systemd
-    try:
-        chk = subprocess.run(
-            ['systemctl', 'is-active', '--quiet', 'vyos-wwan-manager'],
-        )
-        if chk.returncode != 0:
-            subprocess.run(
-                ['systemctl', 'start', 'vyos-wwan-manager'],
-                capture_output=True, text=True,
-            )
-            await asyncio.sleep(3)
-    except Exception:
-        pass  # Best-effort service start
+    from vyos.utils.wwan.wwan_client import WWANClient, WWANError
 
     try:
         async with WWANClient() as client:

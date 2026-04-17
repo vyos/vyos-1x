@@ -1,13 +1,13 @@
 #!/bin/bash
 # VyOS WWAN Manager D-Bus Configuration Installer
 # This script installs the necessary D-Bus policy and systemd service files
-# to allow the VyOS WWAN interface manager to run properly.
+# to allow the iGOS WWAN interface manager to run properly.
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DBUS_CONFIG_SRC="${SCRIPT_DIR}/../src/etc/dbus-1/system.d/com.igos.IgosModemManager.conf"
-SYSTEMD_SERVICE_SRC="${SCRIPT_DIR}/../src/etc/systemd/system/vyos-wwan-manager.service"
+SYSTEMD_SERVICE_SRC="${SCRIPT_DIR}/../src/etc/systemd/system/igos-wwan-manager.service"
 
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
@@ -29,8 +29,8 @@ chown root:root /etc/dbus-1/system.d/com.igos.IgosModemManager.conf
 # Install systemd service file
 echo "Installing systemd service file..."
 cp "${SYSTEMD_SERVICE_SRC}" /etc/systemd/system/
-chmod 644 /etc/systemd/system/vyos-wwan-manager.service
-chown root:root /etc/systemd/system/vyos-wwan-manager.service
+chmod 644 /etc/systemd/system/igos-wwan-manager.service
+chown root:root /etc/systemd/system/igos-wwan-manager.service
 
 # Reload D-Bus configuration
 echo "Reloading D-Bus configuration..."
@@ -57,14 +57,14 @@ echo "1. Test the WWAN manager manually:"
 echo "   sudo python3 /usr/lib/python3/dist-packages/vyos/utils/wwan/interfaces_wwan_main.py --interface 0"
 echo ""
 echo "2. Or enable and start the systemd service:"
-echo "   sudo systemctl enable vyos-wwan-manager.service"
-echo "   sudo systemctl start vyos-wwan-manager.service"
+echo "   sudo systemctl enable igos-wwan-manager.service"
+echo "   sudo systemctl start igos-wwan-manager.service"
 echo ""
 echo "3. Check service status:"
-echo "   sudo systemctl status vyos-wwan-manager.service"
+echo "   sudo systemctl status igos-wwan-manager.service"
 echo ""
 echo "4. View logs:"
-echo "   sudo journalctl -u vyos-wwan-manager.service -f"
+echo "   sudo journalctl -u igos-wwan-manager.service -f"
 echo ""
 
 # Optional: Test D-Bus policy by attempting a quick connection test

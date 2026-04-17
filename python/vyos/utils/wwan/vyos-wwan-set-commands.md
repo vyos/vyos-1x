@@ -88,7 +88,7 @@ interfaces
         │           └── signal-threshold <dBm>            #   default: -90
         │
         ├── apn-discovery
-        │     └── android                                 #   valueless — enable Android APN DB
+        │     └── disable                                #   valueless — disable Android APN DB (enabled by default)
         │
         ├── reconnection
         │     ├── disable-enhanced                        #   valueless — fall back to basic fixed-interval reconnection (enhanced by default)
@@ -152,9 +152,9 @@ interfaces
         │
         └── logging
               ├── level <debug|info|warning|error>        #   default: info
-              ├── verbose                                 #   valueless
-              ├── snmp-monitoring                         #   valueless
-              ├── detailed-status                         #   valueless
+              ├── disable-verbose                        #   valueless (default: on)
+              ├── disable-snmp-monitoring                 #   valueless (default: on)
+              ├── disable-detailed-status                 #   valueless (default: on)
               └── health-check-interval <seconds>         #   default: 300
 ```
 
@@ -178,9 +178,9 @@ automatically using a 4-priority APN discovery chain:
 | **IPv6 PD** | not configured | No prefix delegation; configure `pd` to have the FSM subdivide the carrier prefix and delegate to LAN interfaces |
 | **PD reconciliation** | `10 s` | Safety-net timer re-checks pending LAN interfaces; netlink watch provides instant detection |
 | **Active SIM slot** | `1` | Slot 1 is used |
-| **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (if enabled), 4) automatic (let the network assign) |
+| **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (enabled by default), 4) automatic (let the network assign) |
 | **Authentication** | per-SIM only, default `none` | No PPP auth; auth-type/username/password configured per SIM slot |
-| **PDP type** | per-SIM only, default `ipv4` | IPv4-only bearer per slot unless overridden |
+| **PDP type** | per-SIM only, default `ipv4v6` | Dual-stack bearer per slot unless overridden |
 | **Roaming** | per-SIM only, default `disabled` | Modem will not register on visited networks unless enabled per slot |
 | **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
 | **MTU** | `1420` (fallback) | Carrier-negotiated bearer MTU is used when available; 1420 is used only if the carrier does not provide one; also acts as a ceiling; per-SIM `mtu` overrides when active |
@@ -188,7 +188,7 @@ automatically using a 4-priority APN discovery chain:
 | **SIM PIN** | per-SIM only | If a PIN is configured, the FSM always sends it automatically when the SIM is locked |
 | **SIM failover** | per-SIM, `enabled` | Automatic switch to backup SIM on failure; use `disable` to turn off |
 | **SIM failback** | `enabled` | After sim-failover fires, automatic return to primary SIM; use `disable` to turn off |
-| **APN discovery (Android)** | `disabled` | Only configured / automatic APNs are tried |
+| **APN discovery (Android)** | `enabled` | Android APN database lookup, configured APNs, and automatic (network-assigned) APNs are all tried |
 | **Connection mode** | `always-on` | Modem connects immediately at boot and stays connected |
 | **Enhanced reconnection** | `enabled` | Signal-quality-aware reconnection; use `disable-enhanced` to fall back to basic fixed-interval |
 | **Reconnection retry** | good-signal `15 s`, poor-signal `45 s` | Active by default (enhanced reconnection is on) |
@@ -413,10 +413,11 @@ set interfaces wwan wwan0 sim sim-failover signal-threshold -90
 
 ### APN Discovery
 
-> **If unconfigured:** Android APN database lookup is disabled.  Only configured APN, in-memory last-connected APN, and automatic (network-assigned) APN are tried.
+> **If unconfigured:** Android APN database lookup is enabled by default.  The full priority chain is used: configured APN, in-memory last-connected APN, Android APN DB, and automatic (network-assigned) APN.
 
 ```
-set interfaces wwan wwan0 apn-discovery android
+# APN discovery is on by default — to disable:
+# set interfaces wwan wwan0 apn-discovery disable
 ```
 
 ### Connection Mode
@@ -745,10 +746,11 @@ set interfaces wwan wwan0 timeouts normal-monitoring-interval 30
 
 ```
 set interfaces wwan wwan0 logging level 'info'
-set interfaces wwan wwan0 logging verbose
-set interfaces wwan wwan0 logging snmp-monitoring
-set interfaces wwan wwan0 logging detailed-status
 set interfaces wwan wwan0 logging health-check-interval 300
+# To disable (all on by default):
+# set interfaces wwan wwan0 logging disable-verbose
+# set interfaces wwan wwan0 logging disable-snmp-monitoring
+# set interfaces wwan wwan0 logging disable-detailed-status
 ```
 
 ---
@@ -805,7 +807,7 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `sim slot N data-limit billing-date` | `sim_slot_N_data_limit_billing_date` | `1` |
 | `sim slot N data-limit warning` | `sim_slot_N_data_limit_warning` | `(empty)` |
 | `sim slot N disable` | *(D-Bus only)* | both enabled (no `disable` set) |
-| `apn-discovery android` | `android_apn_discovery` | `disabled` |
+| `apn-discovery disable` | `android_apn_discovery` | `enabled` |
 | `connection-mode` | `connection_mode` | `always-on` |
 | `reconnection disable-enhanced` | `enhanced_reconnection` | `enabled` |
 | `reconnection signal-threshold` | `reconnection_signal_threshold` | `-85` |
@@ -853,9 +855,9 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `timeouts registration` | `registration_timeout` | `180` |
 | `timeouts normal-monitoring-interval` | `normal_monitoring_interval` | `30` |
 | `logging level` | `log_level` | `info` |
-| `logging verbose` | `verbose_logging` | `true` |
-| `logging snmp-monitoring` | `snmp_monitoring` | `true` |
-| `logging detailed-status` | `detailed_status` | `true` |
+| `logging disable-verbose` | `verbose_logging` | `true` |
+| `logging disable-snmp-monitoring` | `snmp_monitoring` | `true` |
+| `logging disable-detailed-status` | `detailed_status` | `true` |
 | `logging health-check-interval` | `system_health_check_interval` | `300` |
 
 ---
@@ -881,7 +883,8 @@ set interfaces wwan wwan0 sim slot 2 data-limit action 'sim-failover'
 # sim-failover and sim-failback are enabled by default — no 'enable' command needed
 # To disable: set interfaces wwan wwan0 sim sim-failover disable
 
-set interfaces wwan wwan0 apn-discovery android
+# apn-discovery is enabled by default — to disable:
+# set interfaces wwan wwan0 apn-discovery disable
 # reconnection enhanced is on by default — to disable:
 # set interfaces wwan wwan0 reconnection disable-enhanced
 set interfaces wwan wwan0 reconnection signal-threshold -85

@@ -1864,13 +1864,13 @@ class ModemStateMachine:
 
             # Get SIM config for connection parameters
             active_slot = self.config.get('primary_sim_slot', 1) if self.config else 1
-            sim_config = {'pdp_type': 'ipv4', 'roaming': 'disabled'}  # defaults
+            sim_config = {'pdp_type': 'ipv4v6', 'roaming': 'disabled'}  # defaults
 
             if self.config and 'sim_slots' in self.config:
                 for slot in self.config['sim_slots']:
                     if slot['slot'] == active_slot:
                         sim_config = {
-                            'pdp_type': slot.get('pdp_type', 'ipv4'),
+                            'pdp_type': slot.get('pdp_type', 'ipv4v6'),
                             'roaming': slot.get('roaming', 'disabled')
                         }
                         break
@@ -2014,7 +2014,7 @@ class ModemStateMachine:
                                       extra={'interface_number': self.interface_number})
 
             # PRIORITY 3: Try APNs from discovery service
-            if not connection_successful and self.config and self.config.get('android_apn_discovery') == 'enabled':
+            if not connection_successful and (not self.config or self.config.get('android_apn_discovery', 'enabled') == 'enabled'):
                 logger.info("Attempting connection using APN discovery service",
                            extra={'interface_number': self.interface_number})
                 try:
@@ -5267,10 +5267,15 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number})
 
             # Build minimal connection parameters - let network assign APN
-            connect_params = {}
+            # Pass an empty APN string rather than omitting the key entirely;
+            # ModemManager's 3GPP connect logic requires the 'apn' property
+            # to be present even when letting the network assign one.
+            connect_params = {
+                'apn': Variant('s', ''),
+            }
 
             # Only specify IP type and roaming
-            pdp_type = sim_config.get('pdp_type', 'ipv4')
+            pdp_type = sim_config.get('pdp_type', 'ipv4v6')
             connect_params['ip-type'] = Variant('u', self._convert_pdp_type(pdp_type))
 
             roaming = sim_config.get('roaming', 'disabled')
@@ -5485,7 +5490,7 @@ class ModemStateMachine:
                         'username': apn_data.get('username', ''),
                         'password': apn_data.get('password', ''),
                         'auth_type': apn_data.get('auth_type', 'none'),
-                        'pdp_type': apn_data.get('pdp_type', 'ipv4')
+                        'pdp_type': apn_data.get('pdp_type', 'ipv4v6')
                     }
 
                     # Attempt connection with this APN
@@ -6805,7 +6810,7 @@ class ModemStateMachine:
                 # Config
                 status[f"{prefix}_enabled"] = slot.get('enabled', True)
                 status[f"{prefix}_roaming"] = slot.get('roaming', 'disabled')
-                status[f"{prefix}_pdp_type"] = slot.get('pdp_type', 'ipv4')
+                status[f"{prefix}_pdp_type"] = slot.get('pdp_type', 'ipv4v6')
                 apn_val = slot.get('apn', '')
                 status[f"{prefix}_apn"] = apn_val.get('name', '') if isinstance(apn_val, dict) else str(apn_val)
                 status[f"{prefix}_preferred_carrier"] = slot.get('preferred_carrier', '')
@@ -6854,7 +6859,7 @@ class ModemStateMachine:
         # ── 12. Key configuration summary ────────────────────────────────
         if self.config:
             status['connection_mode'] = self.config.get('connection_mode', 'always-on')
-            status['android_apn_discovery'] = self.config.get('android_apn_discovery', 'disabled')
+            status['android_apn_discovery'] = self.config.get('android_apn_discovery', 'enabled')
             status['enhanced_reconnection'] = (
                 'enabled' if self.config.get('enhanced_reconnection', {}).get('enabled') else 'disabled'
             )
@@ -6878,7 +6883,7 @@ class ModemStateMachine:
             status['registration_flap_failover_triggered'] = self._registration_flap_failover_triggered
 
             status['network_mode'] = self.config.get('network_mode', 'auto')
-            status['verbose_logging'] = self.config.get('verbose_logging', False)
+            status['verbose_logging'] = self.config.get('verbose_logging', True)
 
         # ── 13. Network scan results (if available) ──────────────────────
         if self.last_scan_results:

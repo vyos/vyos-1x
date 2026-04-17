@@ -259,6 +259,9 @@ systemctl enable vyos-config-cloud-init.service
 # Enable Podman API
 systemctl enable podman.service
 
+# Enable WWAN interface manager D-Bus service
+systemctl enable igos-wwan-manager.service
+
 # Generate API GraphQL schema
 /usr/libexec/vyos/services/api/graphql/generate/generate_schema.py
 

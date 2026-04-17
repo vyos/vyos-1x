@@ -215,7 +215,7 @@
                       </completionHelp>
                       <valueHelp>
                         <format>ipv4</format>
-                        <description>IPv4 only (default)</description>
+                        <description>IPv4 only</description>
                       </valueHelp>
                       <valueHelp>
                         <format>ipv6</format>
@@ -230,7 +230,7 @@
                       </constraint>
                       <constraintErrorMessage>PDP type must be ipv4, ipv6, or ipv4v6</constraintErrorMessage>
                     </properties>
-                    <defaultValue>ipv4</defaultValue>
+                    <defaultValue>ipv4v6</defaultValue>
                   </leafNode>
                   <leafNode name="roaming">
                     <properties>
@@ -488,9 +488,9 @@
               <help>APN auto-discovery settings</help>
             </properties>
             <children>
-              <leafNode name="android">
+<leafNode name="disable">
                 <properties>
-                  <help>Enable Android APN database lookup</help>
+                  <help>Disable Android APN database lookup (enabled by default)</help>
                   <valueless/>
                 </properties>
               </leafNode>
@@ -1197,21 +1197,21 @@
                 </properties>
                 <defaultValue>info</defaultValue>
               </leafNode>
-              <leafNode name="verbose">
+              <leafNode name="disable-verbose">
                 <properties>
-                  <help>Enable verbose logging</help>
+                  <help>Disable verbose logging (enabled by default)</help>
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="snmp-monitoring">
+              <leafNode name="disable-snmp-monitoring">
                 <properties>
-                  <help>Enable SNMP monitoring output</help>
+                  <help>Disable SNMP monitoring output (enabled by default)</help>
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="detailed-status">
+              <leafNode name="disable-detailed-status">
                 <properties>
-                  <help>Enable detailed status in logs</help>
+                  <help>Disable detailed status in logs (enabled by default)</help>
                   <valueless/>
                 </properties>
               </leafNode>

@@ -1,6 +1,6 @@
 [Unit]
-Description=VyOS WWAN Interface Manager
-Documentation=man:vyos-wwan-manager(8)
+Description=iGOS WWAN Interface Manager
+Documentation=man:igos-wwan-manager(8)
 After=dbus.service ModemManager.service vyos-router.service
 Wants=dbus.service ModemManager.service
 # Note: Optional service - does not block VyOS boot if it fails
@@ -16,11 +16,10 @@ User=root
 Group=vyattacfg
 
 # Security settings
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/run /var/log /tmp
-ProtectKernelTunables=true
+# Note: This service must configure network interfaces (ip addr/route/link),
+# write sysctl (/proc/sys/net/) and sysfs (/sys/class/net/) values, and
+# read the VyOS config tree.  Heavy sandboxing is not feasible.
+ProtectHome=read-only
 ProtectKernelModules=true
 ProtectControlGroups=true
 RestrictRealtime=true
@@ -37,11 +36,10 @@ Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=PYTHONUNBUFFERED=1
 
 # Logging
-SyslogIdentifier=vyos-wwan-manager
+SyslogIdentifier=igos-wwan-manager
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=vyos-wwan-manager
+SyslogIdentifier=igos-wwan-manager
 
 [Install]
 WantedBy=multi-user.target
-# Note: Service must be manually enabled and will not auto-start on installation
