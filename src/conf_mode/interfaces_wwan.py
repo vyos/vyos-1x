@@ -19,9 +19,12 @@ import subprocess
 import sys
 
 from vyos.config import Config
+from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
+from vyos.ifconfig import WWANIf
+from vyos.utils.network import interface_exists
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -69,23 +72,11 @@ def get_config(config=None):
 
     base = ['interfaces', 'wwan']
 
-    # Interface name from argv (provided by configd)
-    ifname = sys.argv[1] if len(sys.argv) > 1 else None
-    if ifname is None:
-        raise ConfigError('No WWAN interface name specified')
-
-    path = base + [ifname]
-    if not conf.exists(path):
-        return {'deleted': True, 'ifname': ifname}
-
-    # key_mangling: VyOS stores hyphenated names; convert to underscored
-    wwan = conf.get_config_dict(
-        path,
-        key_mangling=('-', '_'),
-        get_first_key=True,
-        with_defaults=True,
-    )
-    wwan['ifname'] = ifname
+    # get_interface_dict() handles VYOS_TAGNODE_VALUE, deleted detection,
+    # key_mangling, defaults, and populates change-tracking keys needed by
+    # Interface.update(): address_old, eui64_old, mac_old, is_bridge_member,
+    # is_bond_member, is_mirror_intf, qos, etc.
+    ifname, wwan = get_interface_dict(conf, base)
     return wwan
 
 
@@ -395,11 +386,23 @@ def apply(wwan):
     if 'deleted' in wwan or _leaf_exists(wwan, 'disable'):
         # Interface is being removed or disabled — tell the FSM
         config = {'interface_disabled': True}
-    else:
-        config = build_fsm_config(wwan)
+        asyncio.run(_apply_via_dbus(interface_number, config))
+
+        if interface_exists(ifname):
+            w = WWANIf(ifname)
+            w.remove()
+        return None
+
+    config = build_fsm_config(wwan)
 
     # Send config via D-Bus
     asyncio.run(_apply_via_dbus(interface_number, config))
+
+    # Apply VyOS infrastructure settings to the kernel interface:
+    # VRF, mirror/redirect, ip/ipv6 options, MTU, description, etc.
+    if interface_exists(ifname):
+        w = WWANIf(ifname)
+        w.update(wwan)
     return None
 
 

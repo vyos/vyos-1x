@@ -9800,9 +9800,62 @@ class ModemStateMachine:
                               'ipv4': bearer_ips.get('ipv4'),
                               'ipv6': bearer_ips.get('ipv6')})
 
+            # Re-apply VyOS infrastructure settings (VRF, sysctl, mirror/redirect,
+            # description, etc.) in case the kernel interface was destroyed and
+            # recreated during USB re-enumeration or modem reset.
+            await self._reapply_vyos_infrastructure(interface_name)
+
         except Exception as e:
             logger.error(f"Failed to apply bearer IP configuration: {e}",
                         extra={'interface_number': self.interface_number})
+
+    async def _reapply_vyos_infrastructure(self, interface_name):
+        """Re-apply VyOS infrastructure settings after bearer IP configuration.
+
+        When a modem resets or USB re-enumerates, the kernel interface is
+        destroyed and recreated, losing all VyOS-managed settings (VRF binding,
+        mirror/redirect tc rules, sysctl knobs, description, etc.).  These are
+        normally applied by interfaces_wwan.py → WWANIf.update() at commit time
+        but there is no callback from the FSM back to configd.
+
+        This method re-reads the active VyOS config tree and calls
+        WWANIf.update() to restore those settings.  It runs in a thread pool
+        because the VyOS Config API is synchronous.
+        """
+        try:
+            await asyncio.get_event_loop().run_in_executor(
+                None, self._reapply_vyos_infrastructure_sync, interface_name
+            )
+        except Exception as e:
+            logger.warning(f"VyOS infrastructure reapply failed: {e}",
+                          extra={'interface_number': self.interface_number})
+
+    def _reapply_vyos_infrastructure_sync(self, interface_name):
+        """Synchronous helper — runs in executor thread."""
+        from vyos.config import Config
+        from vyos.ifconfig import WWANIf
+
+        conf = Config()
+        path = ['interfaces', 'wwan', interface_name]
+        if not conf.exists(path):
+            logger.debug("No VyOS config for %s — skipping infrastructure reapply",
+                        interface_name,
+                        extra={'interface_number': self.interface_number})
+            return
+
+        wwan = conf.get_config_dict(
+            path,
+            key_mangling=('-', '_'),
+            get_first_key=True,
+            with_defaults=True,
+        )
+        wwan['ifname'] = interface_name
+
+        w = WWANIf(interface_name)
+        w.update(wwan)
+        logger.info("VyOS infrastructure settings reapplied to %s",
+                    interface_name,
+                    extra={'interface_number': self.interface_number})
 
     async def _clear_interface_addresses(self, interface_name):
         """Clear existing global IP addresses from interface (keep link-local)"""
