@@ -36,10 +36,14 @@ from vyos.ifconfig import WiFiIf
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import is_module_loaded
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import interface_exists
+from vyos.base import Warning
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -232,7 +236,9 @@ def verify(wifi):
         phy = wifi['physical_device']
         if phy in wifi['station_interfaces']:
             if len(wifi['station_interfaces'][phy]) > 0:
-                raise ConfigError('Only one station per wireless physical interface possible!')
+                raise ConfigError(
+                    'Only one station per wireless physical interface possible!'
+                )
 
     verify_address(wifi)
     verify_vrf(wifi)
@@ -319,6 +325,59 @@ def apply(wifi):
     # Finally create the new interface
     w = WiFiIf(**wifi)
     w.update(wifi)
+
+    # Set up the mt7915e module according to new wifi configuration.
+    # For this card, the decision is made for the 5GHz/6GHz-capable phy:
+    # 5GHz uses VHT (802.11ac) op_modes and 6GHz uses HE (802.11ax)
+    # op_modes. The card does not support WiFi-7 (802.11be).
+    # There is a race condition in the order the two phys on that card
+    # are configured. Sometimes, the 5/6GHz phy is configured first and
+    # the 2.4GHz phy is configured last, which would overwrite the module
+    # parameter definition. Only the Wi-Fi configuration for the 5/6GHz phy
+    # must write the file!
+    # op_modes as configured in interfaces_wireless.xml.in
+    five_ghz_op_modes_vht = ['0', '1', '2', '3']
+    six_ghz_op_modes_he = ['131', '132', '133', '134', '135']
+    # Make sure to act only when VHT or HE modes are used
+    module_options = None
+    if 'capabilities' in wifi:
+        if 'he' in wifi['capabilities']:
+            if 'channel_set_width' in wifi['capabilities']['he']:
+                if wifi['capabilities']['he']['channel_set_width'] in six_ghz_op_modes_he:
+                    # 6GHz band required (802.11ax, WiFi-6e)
+                    module_options = 'options mt7915e enable_6ghz=1'
+        if 'vht' in wifi['capabilities']:
+            if 'channel_set_width' in wifi['capabilities']['vht']:
+                if wifi['capabilities']['vht']['channel_set_width'] in five_ghz_op_modes_vht:
+                    # 5GHz band required...
+                    module_options = 'options mt7915e enable_6ghz=0'
+        if module_options:
+            # Only if the mt7915e module is loaded (card present)...
+            if is_module_loaded('mt7915e'):
+                tmp = None
+                try:
+                    tmp = read_file(f'/etc/modprobe.d/mt7915e.conf')
+                except FileNotFoundError:
+                    # Module config does not exist yet.
+                    # Fail silently as it is written later in any case.
+                    pass
+                finally:
+                    # Write the module config in any case, so that there always is a
+                    # valid module config which is mandatory to load the mt7916 firmware.
+                    write_file(
+                        f'/etc/modprobe.d/mt7915e.conf',
+                        module_options,
+                        user='root',
+                        group='root',
+                        mode=0o644
+                    )
+                    # Issue a warning if module options have changed.
+                    # A warning is necessary even if this is the first time
+                    # this module is configured. The firmware must be reloaded.
+                    if tmp != module_options:
+                        Warning(
+                            'Change to firmware 5GHz/6GHz configuration detected. The system must be rebooted to correctly reload the mt7916 firmware. The card will not work otherwise!'
+                        )
 
     # Enable/Disable interface - interface is always placed in
     # administrative down state in WiFiIf class
