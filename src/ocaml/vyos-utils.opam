@@ -1,0 +1,21 @@
+opam-version: "2.0"
+name: "vyos-utils"
+version: "0.0.3"
+synopsis: "VyOS utils"
+description: """
+A collection of validators and completion helpers.
+"""
+maintainer: "Daniil Baturin <daniil@baturin.org>"
+authors: "VyOS maintainers and contributors <maintainers@vyos.net>"
+license: "MIT"
+homepage: "https://github.com/vyos/vyos-utils"
+bug-reports: "https://phabricator.vyos.net"
+dev-repo: "git+https://github.com/vyos/vyos-utils/"
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name]
+]
+depends: [
+  "ocamlfind" {build}
+  "dune" {build & >= "2.0"}
+]

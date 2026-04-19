@@ -29,6 +29,7 @@ usr/bin/vyos-config-to-commands
 usr/bin/vyos-config-to-json
 usr/bin/vyos-commands-to-config
 usr/bin/vyos-hostsd-client
+usr/bin/vyos-op-run
 usr/lib
 usr/libexec/vyos/activate
 usr/libexec/vyos/completion
