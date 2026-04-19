@@ -24,7 +24,6 @@ from vyos.frrender import FRRender
 from vyos.frrender import get_frrender_dict
 from vyos.ifconfig import Section
 from vyos.utils.dict import dict_search
-from vyos.utils.dict import dict_search_args
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.system import sysctl_write
 from vyos import ConfigError
@@ -47,99 +46,66 @@ def verify(config_dict):
 
     if 'srv6' in sr:
         srv6_enable = False
-        if 'interface' in sr:
-            for interface, interface_config in sr['interface'].items():
-                if 'srv6' in interface_config:
-                    srv6_enable = True
-                    break
+        for _, interface_config in dict_search('interface', sr, {}).items():
+            if 'srv6' in interface_config:
+                srv6_enable = True
+                break
         if not srv6_enable:
             raise ConfigError('SRv6 should be enabled on at least one interface!')
 
-    if dict_search('traffic_engineering', sr):
-        # Check for traffic engineering database import having more than one
-        # protocol configured concurrently
-        if tmp := dict_search('traffic_engineering.database_import_protocol', sr):
-            if {'isis', 'ospf'} <= set(tmp.keys()):
-                raise ConfigError('Segment routing traffic engineering database import cannot ' \
-                                  'have IS-IS and OSPF configured at the same time!')
+    # Check for database import having more than one protocol
+    if tmp := dict_search('traffic_engineering.database_import_protocol', sr):
+        if {'isis', 'ospf'} <= set(tmp.keys()):
+            raise ConfigError('SR-TE database import: IS-IS and OSPF are mutually exclusive!')
 
-        # Check for traffic engineering per segment list per index and validate
-        # that an index is configured
-        for segment_list in dict_search('traffic_engineering.segment_list', sr, []):
-            segment_list_base_path = 'traffic_engineering.segment_list'
-            if dict_search(f'{segment_list_base_path}.{segment_list}.index', sr) is None:
-                raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                  f'{segment_list} has no index configured. Please configure ' \
-                                   'an index!')
-            
-            # Check for traffic engineering per segment list per index nai adjacency 
-            # and prefix configured concurrently
-            for index in dict_search(f'{segment_list_base_path}.{segment_list}.index', sr, []):
-                if dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai', sr):
-                    if 'adjacency' in (dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai', sr)) \
-                    and 'prefix' in (dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai', sr)):
-                        raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                            f'{segment_list} on index {index} cannot have prefix and ' \
-                                            'adjacency segment values configured at the same time!')
+    for segment_list in dict_search('traffic_engineering.segment_list', sr, []):
+        sl_data = dict_search(f'traffic_engineering.segment_list.{segment_list}', sr)
+        indices = sl_data.get('index') if sl_data else None
 
-                    # Check for traffic engineering per segment list per index nai adjacency
-                    # ipv4 and ipv6 configured concurrently
-                    if dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency', sr):
-                        if 'ipv4' in (dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency', sr)) \
-                        and 'ipv6' in (dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency', sr)):
-                            raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                              f'{segment_list} on index {index} on nai adjacency cannot ' \
-                                               'have ipv4 and ipv6 address families configured at the same time!')
+        if indices is None:
+            raise ConfigError(f'SR-TE segment list "{segment_list}": '\
+                               'at least one index is required!')
 
-                    # Check for traffic engineering per segment list per index nai prefix
-                    # ipv4 and ipv6 configured concurrently
-                    if dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix', sr):
-                        if 'ipv4' in (dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix', sr)) \
-                        and 'ipv6' in (dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix', sr)):
-                            raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                              f'{segment_list} on index {index} on nai prefix cannot ' \
-                                               'have ipv4 and ipv6 address families configured at the same time!')
+        for index, index_data in indices.items():
+            nai = index_data.get('nai')
+            if not nai:
+                continue
 
-                    # Check for traffic engineering per segment list per index nai adjacency
-                    # missing a source_identifier or destination-identifier
-                    if dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency', sr):
-                        for address_family in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency', sr, []):
-                            if 'source_identifier' in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency.{address_family}', sr) \
-                            and 'destination_identifier' not in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency.{address_family}', sr):
-                                raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                                  f'{segment_list} on index {index} on nai adjacency address family ' \
-                                                  f'{address_family} has a missing destination-identifier. Please add a destination-identifier!')
-                            elif 'destination_identifier' in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency.{address_family}', sr) \
-                            and 'source_identifier' not in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.adjacency.{address_family}', sr):
-                                raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                                  f'{segment_list} on index {index} on nai adjacency address family ' \
-                                                  f'{address_family} has a missing source-identifier. Please add a source-identifier!')
+            error_msg = f'SR-TE segment list "{segment_list}", index "{index}"'
+            if 'adjacency' in nai and 'prefix' in nai:
+                raise ConfigError(f'{error_msg}: "prefix" and "adjacency" are mutually exclusive!')
 
-                    # Check for traffic engineering per segment list per index nai prefix
-                    # missing a prefix-identifier
-                    if dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix', sr):
-                        for address_family in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix', sr, []):
-                            if 'prefix_identifier' not in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix.{address_family}', sr):
-                                raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                                  f'{segment_list} on index {index} on nai prefix address family ' \
-                                                  f'{address_family} has a missing prefix-identifier. Please add a prefix-identifier!')
+            for nai_type in ('adjacency', 'prefix'):
+                nai_data = nai.get(nai_type)
+                if not nai_data:
+                    continue
 
-                            # Check for traffic engineering per segment list per index nai prefix
-                            # missing an algorithm value
-                            for prefix in dict_search(f'{segment_list_base_path}.{segment_list}.index.{index}.nai.prefix.{address_family}.prefix_identifier', sr, []):
-                                if 'algorithm' not in dict_search_args(sr, 'traffic_engineering', 'segment_list', segment_list, 'index', index, 'nai', 'prefix', address_family, 'prefix_identifier', prefix):
-                                    raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                                      f'{segment_list} on index {index} on nai prefix {prefix} address family ' \
-                                                      f'{address_family} has a missing algorithm value. Please add an algorithm value!')
+                if 'ipv4' in nai_data and 'ipv6' in nai_data:
+                    raise ConfigError(f'{error_msg}, nai {nai_type}: "ipv4" and "ipv6" are '
+                                      'mutually exclusive!')
 
-                                # Check for traffic engineering per segment list per index nai prefix
-                                # having two algorithms configured
-                                if tmp := dict_search_args(sr, 'traffic_engineering', 'segment_list', segment_list, 'index', index, 'nai', 'prefix', address_family, 'prefix_identifier', prefix, 'algorithm'):
-                                    if {'spf', 'strict_spf'} <= set(tmp.keys()):
-                                        raise ConfigError(f'Segment routing traffic engineering segment list ' \
-                                                          f'{segment_list} on index {index} on nai prefix {prefix} address family ' \
-                                                          f'{address_family} has spf and strict-spf algorithms configured. Please ' \
-                                                           'remove one of them!')
+                for af, af_config in nai_data.items():
+                    af_ctx = f'{error_msg}, nai {nai_type} {af}'
+                    if nai_type == 'adjacency':
+                        has_src = 'source_identifier' in af_config
+                        has_dst = 'destination_identifier' in af_config
+                        if has_src != has_dst:
+                            missing = 'destination-identifier' if has_src else 'source-identifier'
+                            raise ConfigError(f'{af_ctx}: "{missing}" is required!')
+                    else:
+                        if 'prefix_identifier' not in af_config:
+                            raise ConfigError(f'{af_ctx}: "prefix-identifier" is required!')
+
+                        for pfx, pfx_data in af_config['prefix_identifier'].items():
+                            pfx_ctx = f'{af_ctx}, prefix "{pfx}"'
+                            if 'algorithm' not in pfx_data:
+                                raise ConfigError(f'{pfx_ctx}: "algorithm" is required!')
+
+                            if alg := pfx_data.get('algorithm'):
+                                if {'spf', 'strict_spf'} <= set(alg.keys()):
+                                    raise ConfigError(f'{pfx_ctx}: "spf" and "strict-spf" '
+                                                       'are mutually exclusive!')
+
     return None
 
 def generate(config_dict):
