@@ -26,7 +26,6 @@ from vyos.utils.system import sysctl_read
 
 base_path = ['protocols', 'segment-routing']
 
-
 class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -37,6 +36,16 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        # create a VLAN interface for testing
+        cls.cli_set(cls, ['interfaces', 'ethernet', 'eth0', 'vif', '4000',
+                          'address', '192.168.40.1/24'])
+        cls.cli_commit(cls)
+        cls._interfaces = Section.interfaces('ethernet', vlan=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'ethernet', 'eth0', 'vif', '4000'])
+        super(TestProtocolsSegmentRouting, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -48,7 +57,6 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         super().tearDown()
 
     def test_srv6(self):
-        interfaces = Section.interfaces('ethernet', vlan=False)
         locators = {
             'foo1': {'prefix': '2001:a::/64'},
             'foo2': {'prefix': '2001:b::/64', 'usid': {}},
@@ -112,17 +120,17 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         # verify() - SRv6 should be enabled on at least one interface!
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        for interface in interfaces:
+        for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'srv6'])
 
         self.cli_commit()
 
-        for interface in interfaces:
+        for interface in self._interfaces:
             self.assertEqual(
-                sysctl_read(f'net.ipv6.conf.{interface}.seg6_enabled'), '1'
+                sysctl_read(['net', 'ipv6', 'conf', interface, 'seg6_enabled']), '1'
             )
             self.assertEqual(
-                sysctl_read(f'net.ipv6.conf.{interface}.seg6_require_hmac'), '0'
+                sysctl_read(['net', 'ipv6', 'conf', interface, 'seg6_require_hmac']), '0'
             )  # default
 
         frrconfig = self.getFRRconfig('segment-routing', stop_section='^exit')
@@ -163,7 +171,7 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         source6 = '2001:db8::1'
 
         # SRv6 must be enabled on at least one interface
-        for interface in Section.interfaces('ethernet', vlan=False):
+        for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'srv6'])
 
         self.cli_set(base_path + ['srv6', 'encapsulation', 'source-address', source6])
@@ -176,43 +184,41 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'   source-address {source6}', frrconfig)
 
     def test_srv6_sysctl(self):
-        interfaces = Section.interfaces('ethernet', vlan=False)
 
         # HMAC accept
-        for interface in interfaces:
+        for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'srv6'])
             self.cli_set(base_path + ['interface', interface, 'srv6', 'hmac', 'ignore'])
         self.cli_commit()
 
-        for interface in interfaces:
+        for interface in self._interfaces:
             self.assertEqual(
-                sysctl_read(f'net.ipv6.conf.{interface}.seg6_enabled'), '1'
+                sysctl_read(['net', 'ipv6', 'conf', interface, 'seg6_enabled']), '1'
             )
             self.assertEqual(
-                sysctl_read(f'net.ipv6.conf.{interface}.seg6_require_hmac'), '-1'
+                sysctl_read(['net', 'ipv6', 'conf', interface, 'seg6_require_hmac']), '-1'
             )  # ignore
 
         # HMAC drop
-        for interface in interfaces:
+        for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'srv6'])
             self.cli_set(base_path + ['interface', interface, 'srv6', 'hmac', 'drop'])
         self.cli_commit()
 
-        for interface in interfaces:
+        for interface in self._interfaces:
             self.assertEqual(
-                sysctl_read(f'net.ipv6.conf.{interface}.seg6_enabled'), '1'
+                sysctl_read(['net', 'ipv6', 'conf', interface, 'seg6_enabled']), '1'
             )
             self.assertEqual(
-                sysctl_read(f'net.ipv6.conf.{interface}.seg6_require_hmac'), '1'
+                sysctl_read(['net', 'ipv6', 'conf', interface, 'seg6_require_hmac']), '1'
             )  # drop
 
         # Disable SRv6 on first interface
-        first_if = interfaces[-1]
+        first_if = self._interfaces[-1]
         self.cli_delete(base_path + ['interface', first_if])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read(f'net.ipv6.conf.{first_if}.seg6_enabled'), '0')
-
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', first_if, 'seg6_enabled']), '0')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

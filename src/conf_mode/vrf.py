@@ -243,8 +243,8 @@ def apply(vrf):
     bind_all = '0'
     if 'bind_to_all' in vrf:
         bind_all = '1'
-    sysctl_write('net.ipv4.tcp_l3mdev_accept', bind_all)
-    sysctl_write('net.ipv4.udp_l3mdev_accept', bind_all)
+    sysctl_write(['net', 'ipv4', 'tcp_l3mdev_accept'], bind_all)
+    sysctl_write(['net', 'ipv4', 'udp_l3mdev_accept'], bind_all)
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if interface_exists(tmp):

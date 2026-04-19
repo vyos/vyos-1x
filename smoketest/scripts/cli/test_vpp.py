@@ -1052,25 +1052,25 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Check if max-map-count has default auto calculated value
         # but not less than '65530'
-        self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
+        self.assertEqual(sysctl_read(['vm', 'max_map_count']), '65530')
         # The same is with: kernel.shmmax = '8589934592'
-        self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
+        self.assertEqual(sysctl_read(['kernel', 'shmmax']), '8589934592')
 
         # Change max-map-count, shmmax and check
         self.cli_set(hr_path + ['max-map-count', max_map_count])
         self.cli_set(hr_path + ['shmmax', shmmax])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('vm.max_map_count'), max_map_count)
-        self.assertEqual(sysctl_read('kernel.shmmax'), shmmax)
+        self.assertEqual(sysctl_read(['vm', 'max_map_count']), max_map_count)
+        self.assertEqual(sysctl_read(['kernel', 'shmmax']), shmmax)
 
         # We expect max-map-count and shmmax will return auto calculated values
         self.cli_delete(hr_path + ['max-map-count'])
         self.cli_delete(hr_path + ['shmmax'])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
-        self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
+        self.assertEqual(sysctl_read(['vm', 'max_map_count']), '65530')
+        self.assertEqual(sysctl_read(['kernel', 'shmmax']), '8589934592')
 
     def test_17_1_vpp_pppoe_mapping(self):
         config_file = '/run/accel-pppd/pppoe.conf'
