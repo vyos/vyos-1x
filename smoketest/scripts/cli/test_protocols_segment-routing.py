@@ -220,58 +220,61 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', first_if, 'seg6_enabled']), '0')
 
-    def test_segment_routing_srte_database(self):
-        # Add database-import-protocol for isis and check the config
-        base_path = ['protocols', 'segment-routing', 'traffic-engineering']
+    def test_srte_database(self):
         for protocol in ['isis', 'ospf']:
-            self.cli_set(base_path + ['database-import-protocol', protocol])
+            self.cli_set(base_path + ['traffic-engineering', 'database-import-protocol', protocol])
+        # IS-IS and OSPF are mutually exclusive
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Add database-import-protocol for isis and check the config
+        for protocol in ['isis', 'ospf']:
+            self.cli_delete(base_path)
+            self.cli_set(base_path + ['traffic-engineering', 'database-import-protocol', protocol])
             self.cli_commit()
 
             frrconfig = self.getFRRconfig(f'segment-routing', stop_section='^exit')
-            self.assertIn(f'segment-routing', frrconfig)
-            self.assertIn(f' traffic-eng', frrconfig)
-            self.assertIn(f'  mpls-te on', frrconfig)
+            self.assertIn('segment-routing', frrconfig)
+            self.assertIn(' traffic-eng', frrconfig)
+            self.assertIn('  mpls-te on', frrconfig)
             self.assertIn(f'  mpls-te import {protocol}', frrconfig)
 
-            self.cli_delete(base_path)
-            self.cli_commit()
-
-    def test_segment_routing_mpls_label(self):
+    def test_srte_mpls_label(self):
         # Add segment-list with an mpls value
-        base_path = ['protocols', 'segment-routing', 'traffic-engineering']
         mpls_label = '500'
         segment_list = 'smoketest-mpls-only-segment-list'
         index_value = '0'
 
-        self.cli_set(base_path + ['segment-list', segment_list, 'index', index_value, 'mpls', 'label', mpls_label])
+        self.cli_set(base_path + ['traffic-engineering', 'segment-list', segment_list,
+                                  'index', index_value, 'mpls', 'label', mpls_label])
         self.cli_commit()
 
         frrconfig = self.getFRRconfig(f'segment-routing', stop_section='^exit')
-        self.assertIn(f'segment-routing', frrconfig)
-        self.assertIn(f' traffic-eng', frrconfig)
-        self.assertIn(f'  mpls-te on', frrconfig)
+        self.assertIn('segment-routing', frrconfig)
+        self.assertIn(' traffic-eng', frrconfig)
+        self.assertIn('  mpls-te on', frrconfig)
         self.assertIn(f'  segment-list {segment_list}', frrconfig)
         self.assertIn(f'   index {index_value} mpls label {mpls_label}', frrconfig)
 
-        self.cli_delete(base_path)
-        self.cli_commit()
-
-    def test_segment_routing_mpls_label_and_adjacency(self):
+    def test_srte_mpls_label_and_adjacency(self):
         # Add segment-list with an mpls value and adjacency
-        base_path = ['protocols', 'segment-routing', 'traffic-engineering']
         mpls_label = '1000'
         segment_list = 'smoketest-mpls-with-adjacency-segment-list'
         index_value = '0'
 
-        addresses = {'ipv4' : {'source_identifier' : '192.168.255.1', 'destination_identifier' : '192.168.255.2'}, 
+        addresses = {'ipv4' : {'source_identifier' : '192.168.255.1', 'destination_identifier' : '192.168.255.2'},
                      'ipv6' : {'source_identifier' : '2003::1', 'destination_identifier' : '2003::2'}}
 
+        test_path = base_path + ['traffic-engineering', 'segment-list', segment_list, 'index', index_value]
         for address_family in ['ipv4', 'ipv6']:
             source_identifier = addresses[address_family]['source_identifier']
             destination_identifier = addresses[address_family]['destination_identifier']
-            self.cli_set(base_path + ['segment-list', segment_list, 'index', index_value, 'mpls', 'label', mpls_label])
-            self.cli_set(base_path + ['segment-list', segment_list, 'index', index_value, 'nai', 'adjacency', address_family, 'source-identifier', source_identifier])
-            self.cli_set(base_path + ['segment-list', segment_list, 'index', index_value, 'nai', 'adjacency', address_family, 'destination-identifier', destination_identifier])
+            # Make testcase re-entrant for next for loop
+            self.cli_delete(test_path)
+
+            self.cli_set(test_path + ['mpls', 'label', mpls_label])
+            self.cli_set(test_path + ['nai', 'adjacency', address_family, 'source-identifier', source_identifier])
+            self.cli_set(test_path + ['nai', 'adjacency', address_family, 'destination-identifier', destination_identifier])
             self.cli_commit()
 
             frrconfig = self.getFRRconfig(f'segment-routing', stop_section='^exit')
@@ -282,24 +285,24 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'   index {index_value} mpls label {mpls_label}', frrconfig)
             self.assertIn(f'   index {index_value} nai adjacency {source_identifier} {destination_identifier}', frrconfig)
 
-            self.cli_delete(base_path)
-            self.cli_commit()
-
-    def test_segment_routing_mpls_label_and_prefix(self):
+    def test_srte_mpls_label_and_prefix(self):
         # Add segment-list with an mpls value and prefix
-        base_path = ['protocols', 'segment-routing', 'traffic-engineering']
         mpls_label = '1500'
         segment_list = 'smoketest-mpls-with-prefix-segment-list'
         index_value = '0'
 
-        prefixes = {'ipv4' : {'prefix' : '192.168.255.0/24'}, 
+        prefixes = {'ipv4' : {'prefix' : '192.168.255.0/24'},
                     'ipv6' : {'prefix' : '2003::/120'}}
 
+        test_path = base_path + ['traffic-engineering', 'segment-list', segment_list, 'index', index_value]
         for address_family in ['ipv4', 'ipv6']:
             for algorithm_type in ['spf', 'strict-spf']:
                 prefix = prefixes[address_family]['prefix']
-                self.cli_set(base_path + ['segment-list', segment_list, 'index', index_value, 'mpls', 'label', mpls_label])
-                self.cli_set(base_path + ['segment-list', segment_list, 'index', index_value, 'nai', 'prefix', address_family, 'prefix-identifier', prefix, 'algorithm', algorithm_type])
+                # Make testcase re-entrant for next for loop
+                self.cli_delete(test_path)
+
+                self.cli_set(test_path + ['mpls', 'label', mpls_label])
+                self.cli_set(test_path + ['nai', 'prefix', address_family, 'prefix-identifier', prefix, 'algorithm', algorithm_type])
                 self.cli_commit()
 
                 frrconfig = self.getFRRconfig(f'segment-routing', stop_section='^exit')
@@ -313,9 +316,6 @@ class TestProtocolsSegmentRouting(VyOSUnitTestSHIM.TestCase):
                 elif algorithm_type == 'strict-spf':
                     self.assertIn(f'   index {index_value} mpls label {mpls_label}', frrconfig)
                     self.assertIn(f'   index {index_value} nai prefix {prefix} algorithm 1', frrconfig)
-
-                self.cli_delete(base_path)
-                self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())
