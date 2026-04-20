@@ -1392,46 +1392,6 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         _, out = rc_cmd('sudo vppctl show flowprobe feature')
         self.assertIn(required_str, out)
 
-    def test_23_vpp_acl_subinterface(self):
-        base_acl = base_path + ['acl', 'ip']
-        vlan = '200'
-        subif = f'{interface}.{vlan}'
-        acl_name = 'STATEFUL'
-        acl_tag = '10'
-        rule = '10'
-
-        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
-        self.cli_set(
-            base_acl + ['tag-name', acl_name, 'rule', rule, 'action', 'permit']
-        )
-        self.cli_set(
-            base_acl
-            + ['interface', subif, 'input', 'acl-tag', acl_tag, 'tag-name', acl_name]
-        )
-        self.cli_commit()
-
-        vpp = VPPControl()
-        subif_index = vpp.get_sw_if_index(subif)
-        self.assertIsNotNone(subif_index)
-
-        acl_index = None
-        for acl in vpp.api.acl_dump(acl_index=0xFFFFFFFF):
-            if acl.tag == acl_name:
-                acl_index = acl.acl_index
-                break
-        self.assertIsNotNone(acl_index)
-
-        acl_interfaces = [
-            entry
-            for entry in vpp.api.acl_interface_list_dump()
-            if entry.sw_if_index == subif_index and entry.count != 0
-        ]
-        self.assertEqual(len(acl_interfaces), 1)
-        self.assertEqual(acl_interfaces[0].n_input, 1)
-        self.assertEqual(
-            list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
-        )
-
     def test_21_double_enabling_vpp(self):
         # Verify double enabling of VPP
 
@@ -1493,6 +1453,46 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_23_vpp_acl_subinterface(self):
+        base_acl = base_path + ['acl', 'ip']
+        vlan = '200'
+        subif = f'{interface}.{vlan}'
+        acl_name = 'STATEFUL'
+        acl_tag = '10'
+        rule = '10'
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_set(
+            base_acl + ['tag-name', acl_name, 'rule', rule, 'action', 'permit']
+        )
+        self.cli_set(
+            base_acl
+            + ['interface', subif, 'input', 'acl-tag', acl_tag, 'tag-name', acl_name]
+        )
+        self.cli_commit()
+
+        vpp = VPPControl()
+        subif_index = vpp.get_sw_if_index(subif)
+        self.assertIsNotNone(subif_index)
+
+        acl_index = None
+        for acl in vpp.api.acl_dump(acl_index=0xFFFFFFFF):
+            if acl.tag == acl_name:
+                acl_index = acl.acl_index
+                break
+        self.assertIsNotNone(acl_index)
+
+        acl_interfaces = [
+            entry
+            for entry in vpp.api.acl_interface_list_dump()
+            if entry.sw_if_index == subif_index and entry.count != 0
+        ]
+        self.assertEqual(len(acl_interfaces), 1)
+        self.assertEqual(acl_interfaces[0].n_input, 1)
+        self.assertEqual(
+            list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
+        )
 
 
 if __name__ == '__main__':
