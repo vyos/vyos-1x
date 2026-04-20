@@ -62,15 +62,22 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/wwan_sms.py show_sms --interface="$4"</command>
                     <children>
-                      <tagNode name="message">
+                      <node name="message">
                         <properties>
-                          <help>Show a specific SMS message by ID</help>
-                          <completionHelp>
-                            <list>&lt;1-999&gt;</list>
-                          </completionHelp>
+                          <help>Show a specific SMS message</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/wwan_sms.py read_sms --interface="$4" --message-id="$6"</command>
-                      </tagNode>
+                        <children>
+                          <tagNode name="node.tag">
+                            <properties>
+                              <help>Show a specific SMS message by ID</help>
+                              <completionHelp>
+                                <list>&lt;1-999&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/wwan_sms.py read_sms --interface="$4" --message-id="$7"</command>
+                          </tagNode>
+                        </children>
+                      </node>
                     </children>
                   </node>
                   #include <include/show-interface-type-event-log.xml.i>

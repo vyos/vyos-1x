@@ -27,15 +27,22 @@
                     </properties>
                     <command>${vyos_op_scripts_dir}/wwan_sms.py delete_all_sms --interface="$4"</command>
                     <children>
-                      <tagNode name="message">
+                      <node name="message">
                         <properties>
-                          <help>Delete a specific SMS message by ID</help>
-                          <completionHelp>
-                            <list>&lt;1-999&gt;</list>
-                          </completionHelp>
+                          <help>Delete a specific SMS message</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/wwan_sms.py delete_sms --interface="$4" --message-id="$6"</command>
-                      </tagNode>
+                        <children>
+                          <tagNode name="node.tag">
+                            <properties>
+                              <help>Delete a specific SMS message by ID</help>
+                              <completionHelp>
+                                <list>&lt;1-999&gt;</list>
+                              </completionHelp>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/wwan_sms.py delete_sms --interface="$4" --message-id="$7"</command>
+                          </tagNode>
+                        </children>
+                      </node>
                     </children>
                   </node>
                 </children>
