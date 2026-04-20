@@ -32,6 +32,12 @@
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
            </leafNode>
+           <leafNode name="fips">
+             <properties>
+               <help>Enable FIPS-140-3 (Federal Information Processing Standard) cryptographic modules</help>
+               <valueless/>
+             </properties>
+           </leafNode>
            <node name="resource-limits">
              <properties>
                <help>Resource limits</help>
