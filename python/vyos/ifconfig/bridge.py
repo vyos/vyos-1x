@@ -386,6 +386,11 @@ class BridgeIf(Interface):
                 value = '1' if (tmp != None) else '0'
                 lower.set_root_guard(value)
 
+                # set learning
+                disable_learning = dict_search('disable_learning', interface_config)
+                value = '1' if disable_learning is None else '0'
+                lower.set_learning(value)
+
                 if 'enable_vlan' in config:
                     add_vlan = []
                     native_vlan_id = None
