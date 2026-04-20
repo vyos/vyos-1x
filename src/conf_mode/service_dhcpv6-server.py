@@ -77,7 +77,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    # if running in vrf, set base diffrently
+    # if running in vrf, set base differently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
         base = ['vrf', 'name', vrf_name, 'service', 'dhcpv6-server']
@@ -241,22 +241,22 @@ def verify(dhcpv6):
 
             subnets.append(subnet)
 
-        # DHCPv6 requires at least one configured address range or one static mapping
-        # (FIXME: is not actually checked right now?)
+            # DHCPv6 requires at least one configured address range or one static mapping
+            # (FIXME: is not actually checked right now?)
 
-        # There must be one subnet connected to a listen interface if network is not disabled.
-        if 'disable' not in network_config:
-            if is_subnet_connected(subnet):
-                listen_ok = True
+            # There must be one subnet connected to a listen interface if network is not disabled.
+            if 'disable' not in network_config:
+                if is_subnet_connected(subnet):
+                    listen_ok = True
 
-            # DHCPv6 subnet must not overlap. ISC DHCP also complains about overlapping
-            # subnets: "Warning: subnet 2001:db8::/32 overlaps subnet 2001:db8:1::/32"
-            net = ip_network(subnet)
-            for n in subnets:
-                net2 = ip_network(n)
-                if (net != net2):
-                    if net.overlaps(net2):
-                        raise ConfigError('DHCPv6 conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
+                # DHCPv6 subnet must not overlap. ISC DHCP also complains about overlapping
+                # subnets: "Warning: subnet 2001:db8::/32 overlaps subnet 2001:db8:1::/32"
+                net = ip_network(subnet)
+                for n in subnets:
+                    net2 = ip_network(n)
+                    if (net != net2):
+                        if net.overlaps(net2):
+                            raise ConfigError('DHCPv6 conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
 
     if not listen_ok:
         raise ConfigError('None of the DHCPv6 subnets are connected to a subnet6 on '\
@@ -292,7 +292,7 @@ def generate(dhcpv6):
     return None
 
 def apply(dhcpv6):
-    # if running in vrf, set base diffrently
+    # if running in vrf, set base differently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
         service_name = f'isc-kea-dhcp6-server@{vrf_name}.service'

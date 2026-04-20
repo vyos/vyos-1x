@@ -1,0 +1,75 @@
+firewall {
+    group {
+        network-group TEST_GROUP, {
+            network 192.168.0.0/24
+        }
+        network-group TEST_GROUP+ {
+            network 192.168.1.0/24
+        }
+    }
+    name TEST1 {
+        default-action drop
+        rule 10 {
+            action accept
+            source {
+                group {
+                    network-group TEST_GROUP,
+                }
+            }
+        }
+        rule 20 {
+            action drop
+            source {
+                group {
+                    network-group !TEST_GROUP,
+                }
+            }
+        }
+    }
+    name TEST2 {
+        default-action drop
+        rule 10 {
+            action accept
+            source {
+                group {
+                    network-group TEST_GROUP+
+                }
+            }
+        }
+        rule 20 {
+            action drop
+            source {
+                group {
+                    network-group !TEST_GROUP+
+                }
+            }
+        }
+    }
+}
+interfaces {
+    ethernet eth0 {
+    }
+    loopback lo {
+    }
+}
+system {
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$QxPS.uk6mfo$9QBSo8u1FkH16gMyAVhus6fU3LOzvLR9Z9.82m3tiHFAxTtIkhaZSWssSgzt4v4dGAL8rhVQxTg0oAG9/q11h/
+                plaintext-password ""
+            }
+        }
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@23:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.8

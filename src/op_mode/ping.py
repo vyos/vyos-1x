@@ -97,7 +97,7 @@ options = {
     'no-loopback': {
         'ping': '{command} -L',
         'type': 'noarg',
-        'help': 'Supress loopback of multicast pings'
+        'help': 'Suppress loopback of multicast pings'
     },
     'pattern': {
         'ping': '{command} -p {value}',

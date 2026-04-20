@@ -120,6 +120,7 @@ debian/vyos-1x
 debian/vyos-1x-vmware
 debian/vyos-1x-smoketest
 debian/vyos-1x-aws
+debian/vyos-user-utils
 debian/*.postinst.debhelper
 debian/*.prerm.debhelper
 debian/*.postrm.debhelper

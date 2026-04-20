@@ -47,6 +47,7 @@ kea4_options = {
     'captive_portal': 'v4-captive-portal',
     'capwap_controller': 'capwap-ac-v4',
     'interface_mtu': 'interface-mtu',
+    'bootfile_name': 'boot-file-name',
 }
 
 kea6_options = {
@@ -79,7 +80,7 @@ def _format_hex_string(in_str):
 def _find_list_of_dict_index(lst, key='ip', value=''):
     """
     Find the index entry of list of dict matching the dict value
-    Exampe:
+    Example:
         % lst = [{'ip': '192.0.2.1'}, {'ip': '192.0.2.2'}]
         % _find_list_of_dict_index(lst, key='ip', value='192.0.2.2')
         % 1
@@ -658,7 +659,7 @@ def kea_get_server_leases(config, inet, vrf_name, pools=[], state=[], origin=Non
 
         now = datetime.now(timezone.utc)
         if lease['valid-lft'] > 0 and lease['expire_time'] > now:
-            # substraction gives us a timedelta object which can't be formatted
+            # subtraction gives us a timedelta object which can't be formatted
             # with strftime so we use str(), split gets rid of the microseconds
             data_lease['remaining'] = str(lease['expire_time'] - now).split('.')[0]
 

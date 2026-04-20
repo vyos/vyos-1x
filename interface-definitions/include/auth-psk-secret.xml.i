@@ -9,7 +9,7 @@
     <constraint>
       <validator name="psk-secret"/>
     </constraint>
-    <constraintErrorMessage>Pre-Shared-Keys must be at leas 16 bytes long, which implies at least 32 characterss</constraintErrorMessage>
+    <constraintErrorMessage>Pre-Shared-Keys must be at least 16 bytes long, which implies at least 32 characters</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->

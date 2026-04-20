@@ -191,7 +191,7 @@ def _get_formatted_statistics_output(data: list) -> str:
     Prepare formatted statistics output from the given data.
 
     Args:
-        data (list): A list of dictionaries containing vrrp grop information
+        data (list): A list of dictionaries containing vrrp group information
             and statistics.
 
     Returns:
@@ -228,7 +228,7 @@ def _get_formatted_detail_output(data: list) -> str:
     Prepare formatted detail information output from the given data.
 
     Args:
-        data (list): A list of dictionaries containing vrrp grop information
+        data (list): A list of dictionaries containing vrrp group information
             and statistics.
 
     Returns:

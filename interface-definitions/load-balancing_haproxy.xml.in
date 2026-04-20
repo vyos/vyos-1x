@@ -295,7 +295,7 @@
           </tagNode>
           <node name="global-parameters">
             <properties>
-              <help>Global perfomance parameters and limits</help>
+              <help>Global performance parameters and limits</help>
             </properties>
             <children>
               #include <include/haproxy/logging.xml.i>

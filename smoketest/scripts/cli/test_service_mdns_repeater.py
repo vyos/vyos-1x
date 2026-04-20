@@ -102,7 +102,7 @@ class TestServiceMDNSrepeater(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['interface', 'dum10'])
         self.cli_set(base_path + ['interface', 'dum40'])
 
-        # exception is raised if partcipating interfaces do not have IPv4 address
+        # exception is raised if participating interfaces do not have IPv4 address
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['interface', 'dum40'])
@@ -119,12 +119,12 @@ class TestServiceMDNSrepeater(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(conf['reflector']['enable-reflector'], 'yes')
 
     def test_service_ipv6(self):
-        # partcipating interfaces should have IPv6 addresses
+        # participating interfaces should have IPv6 addresses
         self.cli_set(base_path + ['ip-version', 'ipv6'])
         self.cli_set(base_path + ['interface', 'dum10'])
         self.cli_set(base_path + ['interface', 'dum30'])
 
-        # exception is raised if partcipating interfaces do not have IPv4 address
+        # exception is raised if participating interfaces do not have IPv4 address
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['interface', 'dum10'])

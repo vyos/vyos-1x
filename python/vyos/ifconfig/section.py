@@ -186,7 +186,7 @@ class Section:
         return list(cls._prefixes.keys())
 
     @classmethod
-    def get_config_path(cls, name):
+    def get_config_path(cls, name, delimiter=' '):
         """
         get config path to interface with .vif or .vif-s.vif-c
         example: eth0.1.2 -> 'ethernet eth0 vif-s 1 vif-c 2'
@@ -195,11 +195,11 @@ class Section:
         sect = cls.section(name)
         if sect:
             splinterface = name.split('.')
-            intfpath = f'{sect} {splinterface[0]}'
+            intfpath = f'{sect}{delimiter}{splinterface[0]}'
             if len(splinterface) == 2:
-                intfpath += f' vif {splinterface[1]}'
+                intfpath += f'{delimiter}vif{delimiter}{splinterface[1]}'
             elif len(splinterface) == 3:
-                intfpath += f' vif-s {splinterface[1]} vif-c {splinterface[2]}'
+                intfpath += f'{delimiter}vif-s{delimiter}{splinterface[1]}{delimiter}vif-c{delimiter}{splinterface[2]}'
             return intfpath
         else:
             return False

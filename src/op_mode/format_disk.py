@@ -123,10 +123,10 @@ if __name__ == '__main__':
           f'\ndata on {target_disk}.\n')
 
     if not ask_yes_no('Do you wish to proceed?'):
-        print(f'Disk drive {target_disk} will not be re-formated')
+        print(f'Disk drive {target_disk} will not be re-formatted')
         exit(0)
 
-    print(f'Re-formating disk drive {target_disk}...')
+    print(f'Re-formatting disk drive {target_disk}...')
 
     print('Making backup copy of partitions...')
     backup_partitions(target_disk)

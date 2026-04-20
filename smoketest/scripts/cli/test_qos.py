@@ -244,7 +244,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(flows, tmp['options']['flows'])
             self.assertEqual(queue_limit, tmp['options']['limit'])
 
-            # due to internal rounding we need to substract 1 from interval and target after converting to milliseconds
+            # due to internal rounding we need to subtract 1 from interval and target after converting to milliseconds
             # configuration of:
             # tc qdisc add dev eth0 root fq_codel quantum 1500 flows 512 interval 100ms limit 2048 target 5ms noecn
             # results in: tc -j qdisc show dev eth0

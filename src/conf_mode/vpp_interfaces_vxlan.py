@@ -18,9 +18,14 @@
 
 from vyos import ConfigError
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdep import set_dependents, call_dependents
+from vyos.configverify import verify_mtu_ipv6
+from vyos.ifconfig import Interface
+from vyos.template import is_ipv6
+from vyos.utils.network import get_interfaces_by_ip
 from vyos.utils.process import is_systemd_service_active
 
 from vyos.ifconfig.vpp import VPPVXLANInterface
@@ -116,6 +121,29 @@ def verify(config):
     verify_vpp_tunnel_source_address(config)
     if config.get('source_address') == config.get('remote'):
         raise ConfigError('Remote address must not be the same as source address')
+
+    # VXLAN adds at least an overhead of 50 bytes - we need to check the
+    # underlying device if our VXLAN package is not going to be fragmented!
+    source_address = config['source_address']
+    vxlan_overhead = 50
+    if is_ipv6(source_address):
+        # IPv6 adds an extra 20 bytes overhead because the IPv6 header is 20
+        # bytes larger than the IPv4 header - assuming no extra options are
+        # in use.
+        vxlan_overhead += 20
+
+    ifaces_with_ip = get_interfaces_by_ip(source_address)
+    vpp_ifaces = config['vpp_ether_vif_ifaces']
+    matching_iface = next((iface for iface in ifaces_with_ip if iface in vpp_ifaces))
+
+    lower_mtu = Interface(matching_iface).get_mtu()
+    if lower_mtu < (int(config['mtu']) + vxlan_overhead):
+        Warning(
+            f'Underlying device MTU is too small ({lower_mtu} bytes) '
+            f'for VXLAN overhead ({vxlan_overhead} bytes!)'
+        )
+
+    verify_mtu_ipv6(config)
 
 
 def generate(config):

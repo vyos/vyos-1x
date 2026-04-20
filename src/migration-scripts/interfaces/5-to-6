@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# Migrate IPv6 router advertisments from a nested interface configuration to
+# Migrate IPv6 router advertisements from a nested interface configuration to
 # a denested "service router-advert"
 
 from vyos.configtree import ConfigTree

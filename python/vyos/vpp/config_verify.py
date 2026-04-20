@@ -21,10 +21,126 @@ import psutil
 from vyos import ConfigError
 from vyos.base import Warning
 from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
+from vyos.utils.dict import dict_search
 
 from vyos.vpp.config_resource_checks import memory as mem_checks
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.utils import human_memory_to_bytes, bytes_to_human_memory
+
+# VPP feature paths that reference interfaces
+_VPP_FEATURE_INTERFACE_REFS = [
+    ('nat.cgnat.interface.inside', None, 'VPP CGNAT inside'),
+    ('nat.cgnat.interface.outside', None, 'VPP CGNAT outside'),
+    ('nat.nat44.interface.inside', None, 'VPP NAT44 inside'),
+    ('nat.nat44.interface.outside', None, 'VPP NAT44 outside'),
+    (
+        'nat.nat44.address_pool.translation.interface',
+        None,
+        'VPP NAT44 translation pool',
+    ),
+    ('nat.nat44.address_pool.twice_nat.interface', None, 'VPP NAT44 twice-NAT pool'),
+    ('nat.nat44.exclude.rule', 'external_interface', 'VPP NAT44 exclude rule external'),
+    ('acl.ip.interface', None, 'VPP IP ACL'),
+    ('acl.mac.interface', None, 'VPP MAC ACL'),
+    ('ipfix.interface', None, 'IPFIX monitoring'),
+    ('sflow.interface', None, 'VPP sFlow'),
+]
+# VPP member configuration paths that reference interfaces
+_VPP_MEMBER_INTERFACE_REFS = [
+    ('interfaces_vpp.bonding', 'member.interface', 'VPP bonding member'),
+    ('interfaces_vpp.bridge', 'member.interface', 'VPP bridge member'),
+    ('interfaces_vpp.xconnect', 'member.interface', 'VPP xconnect member'),
+]
+
+_VPP_INTERFACE_REFS = _VPP_FEATURE_INTERFACE_REFS + _VPP_MEMBER_INTERFACE_REFS
+
+
+def vpp_interface_in_use(
+    iface: str, config: dict, match_vlans: bool = False, refs: list = None
+):
+    """Check if an interface is referenced in VPP config.
+
+    Args:
+        iface: interface name to check (e.g. 'eth0' or 'eth0.100')
+        config: config dict
+        match_vlans: if True, also match VLAN subinterfaces (e.g. 'eth0.100')
+        refs: list of (path, inner_path, feature_name) tuples to scan.
+              Defaults to _VPP_INTERFACE_REFS (all refs).
+              Use _VPP_FEATURE_INTERFACE_REFS or _VPP_MEMBER_INTERFACE_REFS to narrow scope.
+
+    Returns:
+        feature_name (str) if found, None otherwise
+    """
+    if refs is None:
+        refs = _VPP_INTERFACE_REFS
+
+    def _matches(candidate):
+        """
+        Return True if 'candidate' matches 'iface' (optionally match subinterfaces).
+        'candidate' can be a string or a list/iterable of strings.
+        """
+        values = [candidate] if isinstance(candidate, str) else list(candidate)
+        for name in values:
+            if name == iface:
+                return True
+            if match_vlans and name.startswith(f'{iface}.'):
+                return True
+        return False
+
+    for path, inner_path, usage in refs:
+        data = dict_search(path, config)
+        if not data:
+            continue
+
+        if inner_path is not None:
+            for item_key, item_conf in data.items():
+                value = dict_search(inner_path, item_conf)
+                if value is not None and _matches(value):
+                    return usage
+        else:
+            if _matches(data):
+                return usage
+
+    return None
+
+
+def verify_vpp_remove_interface(iface: str, config: dict, match_vlans: bool = False):
+    """
+    Check that an interface is not referenced by any VPP feature.
+    Raises ConfigError if the interface is still referenced.
+    """
+    feature = vpp_interface_in_use(iface, config, match_vlans)
+    if feature:
+        raise ConfigError(
+            f'Cannot remove interface "{iface}", '
+            f'{"it or its VLAN " if match_vlans else "it "}is still configured as {feature} interface'
+        )
+
+
+def verify_vpp_interface_not_in_feature(iface: str, config: dict):
+    """Raise ConfigError if interface is used by a VPP feature (NAT, ACL, etc.).
+
+    Called from VPP interfaces scripts (bonding/bridge/xconnect) before adding a member.
+    """
+    feature = vpp_interface_in_use(iface, config, refs=_VPP_FEATURE_INTERFACE_REFS)
+    if feature:
+        raise ConfigError(
+            f'Interface {iface} is already used as {feature} interface '
+            f'and cannot be added as a member'
+        )
+
+
+def verify_vpp_interface_not_a_member(iface: str, config: dict):
+    """Raise ConfigError if interface is a member of bonding/bridge/xconnect.
+
+    Called from feature scripts (NAT, ACL, sFlow, etc.) before adding an interface.
+    """
+    member = vpp_interface_in_use(iface, config, refs=_VPP_MEMBER_INTERFACE_REFS)
+    if member:
+        raise ConfigError(
+            f'Interface {iface} is already used as {member} interface '
+            f'and cannot be added to a VPP feature'
+        )
 
 
 def verify_vpp_remove_xconnect_interface(config: dict):
@@ -60,6 +176,35 @@ def verify_vpp_tunnel_source_address(config: dict):
     raise ConfigError(
         f'Source address "{address}" is not assigned on any Ethernet or VIF interface!'
     )
+
+
+def verify_member_conflicts(iface, config, current_type):
+    """
+    Check that a member interface is not already used by another interface type.
+
+    Args:
+        iface (str): interface name to check
+        config (dict): configuration dictionary
+        current_type (str): the membership type being assigned
+            to the interface ('bridge', 'bond', or 'xconn')
+
+    Raises:
+        ConfigError: If the interface is already a member of a conflicting interface type.
+    """
+    iface_type_map = {
+        'bridge': 'bridge',
+        'bond': 'bonding',
+        'xconn': 'xconnect',
+    }
+    for iface_type, label in iface_type_map.items():
+        if iface_type == current_type:
+            continue
+        members = config.get(f'{iface_type}_members', {}).get(iface)
+        if members:
+            raise ConfigError(
+                f'Interface {iface} cannot be a member of {iface_type_map[current_type]} '
+                f'because it already belongs to {label} interface(s): {", ".join(members)}.'
+            )
 
 
 def create_cpu_error_message(cpus_required: int, cpus_available: int = None) -> str:

@@ -1171,3 +1171,12 @@ def get_default_config_file(filename):
         raise RuntimeError(f'Configuration file "{filename}" not found in '\
                            'internal vyos.defaults.config_files dict!')
     return config_files[filename]
+
+
+@register_filter('parse_url')
+def parse_url(url):
+    """Parse the given URL and return a urllib.parse.ParseResult object"""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    return parsed

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-# T4870: change underlaying container filesystem from vfs to overlay
+# T4870: change underlying container filesystem from vfs to overlay
 
 import os
 import shutil
@@ -35,7 +35,7 @@ def migrate(config: ConfigTree) -> None:
             image_name = config.return_value(base + [container, 'image'])
             call(f'sudo podman image save --quiet --output /root/{container}.tar --format oci-archive {image_name}')
 
-    # No need to adjust the strage driver online (this is only used for testing and
+    # No need to adjust the storage driver online (this is only used for testing and
     # debugging on a live system) - it is already overlay2 when the migration script
     # is run during system update. But the specified driver in the image is actually
     # overwritten by the still present VFS filesystem on disk. Thus podman still

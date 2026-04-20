@@ -364,7 +364,7 @@ def apply(qos):
     for interface, interface_config in qos['interface'].items():
         if not verify_interface_exists(qos, interface, state_required=True, warning_only=True):
             # When shaper is bound to a dialup (e.g. PPPoE) interface it is
-            # possible that it is yet not availbale when to QoS code runs.
+            # possible that it is yet not available when to QoS code runs.
             # Skip the configuration and inform the user via warning_only=True
             continue
 

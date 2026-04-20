@@ -23,7 +23,7 @@
                   <constraint>
                     <regex>.{1,63}</regex>
                   </constraint>
-                  <constraintErrorMessage>invalid alias hostname, needs to be between 1 and 63 charactes</constraintErrorMessage>
+                  <constraintErrorMessage>invalid alias hostname, needs to be between 1 and 63 characters</constraintErrorMessage>
                   <multi />
                 </properties>
               </leafNode>

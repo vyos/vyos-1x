@@ -54,7 +54,7 @@ CMD_INTERFACES_LIST: list[str] = [
     "ethtool --phy-statistics "
 ]
 
-# get intefaces info
+# get interfaces info
 interfaces_list = os.popen('ls /sys/class/net/').read().split()
 
 # modify CMD_INTERFACES_LIST for all interfaces

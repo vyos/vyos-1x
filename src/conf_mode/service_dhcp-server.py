@@ -168,7 +168,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    # if running in vrf, set base diffrently
+    # if running in vrf, set base differently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
         base = ['vrf', 'name', vrf_name, 'service', 'dhcp-server']
@@ -617,7 +617,7 @@ def generate(dhcp):
 
 
 def apply(dhcp):
-    # if running in vrf, set base diffrently
+    # if running in vrf, set base differently
     if argv and len(argv) > 1:
         vrf_name = argv[1]
         services = [f'isc-kea-dhcp4-server@{vrf_name}', f'isc-kea-dhcp-ddns-server@{vrf_name}']

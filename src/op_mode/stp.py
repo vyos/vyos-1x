@@ -72,7 +72,7 @@ def _get_stp_data(ifname, brInfo, brStatus):
     tmpInfo['bridge_id'] = cmd(f"cat /sys/class/net/{brInfo.get('ifname')}/bridge/bridge_id").split('.')
     tmpInfo['root_id'] = cmd(f"cat /sys/class/net/{brInfo.get('ifname')}/bridge/root_id").split('.')
 
-    # The "/sys/class/net" structure stores the IDs without seperators like ':' or '.'
+    # The "/sys/class/net" structure stores the IDs without separators like ':' or '.'
     # This adds a ':' after every 2 characters to make it resemble a MAC Address
     tmpInfo['bridge_id'][1] = ':'.join(tmpInfo['bridge_id'][1][i:i+2] for i in range(0, len(tmpInfo['bridge_id'][1]), 2))
     tmpInfo['root_id'][1] = ':'.join(tmpInfo['root_id'][1][i:i+2] for i in range(0, len(tmpInfo['root_id'][1]), 2))

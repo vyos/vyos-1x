@@ -69,11 +69,11 @@ def get_config(config=None):
 
     # store path to API config file for later use in templates
     https['api_config_state'] = api_config_state
-    # get fully qualified system hsotname
+    # get fully qualified system hostname
     https['hostname'] = socket.getfqdn()
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     default_values = conf.get_config_defaults(**https.kwargs, recursive=True)
     if 'api' not in https or 'graphql' not in https['api']:
         del default_values['api']
@@ -107,10 +107,10 @@ def verify(https):
         Warning('No certificate specified, using build-in self-signed certificates. '\
                 'Do not use them in a production environment!')
 
-    # check if /etc/nginx/flask.conf existed
+    # check if /etc/nginx/flask.conf exists
     https['flask_conf_exist'] = os.path.exists('/etc/nginx/flask.conf')
 
-    # Check if server port is already in use by a different appliaction
+    # Check if server port is already in use by a different application
     listen_address = ['0.0.0.0']
     port = int(https['port'])
     if 'listen_address' in https:

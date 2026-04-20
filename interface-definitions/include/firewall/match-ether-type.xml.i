@@ -15,7 +15,7 @@
     </valueHelp>
     <valueHelp>
       <format>arp</format>
-      <description>Adress Resolution Protocol</description>
+      <description>Address Resolution Protocol</description>
     </valueHelp>
     <valueHelp>
       <format>_ipv4</format>

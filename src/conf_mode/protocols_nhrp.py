@@ -92,7 +92,7 @@ def verify(config_dict):
                             nbma_list.append(nbma_ip)
                         else:
                             raise ConfigError(
-                                f'Nbma address {nbma_ip} cannot be maped to several tunnel-ip')
+                                f'Nbma address {nbma_ip} cannot be mapped to several tunnel-ip')
     return None
 
 

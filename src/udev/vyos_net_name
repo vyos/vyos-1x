@@ -43,7 +43,7 @@ def is_available(intfs: dict, intf_name: str) -> bool:
 
 
 def find_available(intfs: dict, prefix: str) -> str:
-    """Find lowest indexed iterface name that is not assigned"""
+    """Find lowest indexed interface name that is not assigned"""
     index_list = [
         int(x.replace(prefix, '')) for x in list(intfs.values()) if prefix in x
     ]
@@ -72,7 +72,7 @@ def mod_ifname(ifname: str) -> str:
 def get_biosdevname(ifname: str) -> str:
     """Use legacy vyatta-biosdevname to query for name
 
-    This is carried over for compatability only, and will likely be dropped
+    This is carried over for compatibility only, and will likely be dropped
     going forward.
     XXX: This throws an error, and likely has for a long time, unnoticed
     since vyatta_net_name redirected stderr to /dev/null.

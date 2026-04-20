@@ -57,7 +57,7 @@ def assert_mac(m, test_all_zero=True):
     split = m.split(':')
     size = len(split)
 
-    # a mac address consits out of 6 octets
+    # a mac address consists out of 6 octets
     if size != 6:
         raise ValueError(f'wrong number of MAC octets ({size}): {m}')
 

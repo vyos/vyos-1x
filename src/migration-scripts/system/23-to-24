@@ -43,7 +43,7 @@ def migrate(config: ConfigTree) -> None:
         return
 
     # We need a temporary copy of the config tree as the original one needs to be
-    # deleted first due to a change iun thge tagNode structure.
+    # deleted first due to a change in the tagNode structure.
     config.copy(base, tmp_base)
     config.delete(base)
 

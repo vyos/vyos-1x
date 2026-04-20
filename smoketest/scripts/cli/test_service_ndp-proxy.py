@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
@@ -65,6 +66,64 @@ class TestServiceNDPProxy(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'router yes', config)
             self.assertIn(f'timeout 500', config) # default value
             self.assertIn(f'ttl 30000', config) # default value
+
+    def test_prefix_mode_interface_requires_interface(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '2001:db8::/64']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_commit()
+
+        self.cli_set(prefix_path + ['mode', 'interface'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_prefix_mode_interface_with_interface(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '2001:db8::/64']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(prefix_path + ['mode', 'interface'])
+        self.cli_set(prefix_path + ['interface', interface])
+        self.cli_commit()
+
+        config = getConfigSection(f'proxy {interface}')
+        self.assertIn('rule 2001:db8::/64 {', config)
+        self.assertIn(f'iface {interface}', config)
+
+    def test_prefix_mode_auto_rejects_interface(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '2001:db8::/64']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_commit()
+
+        self.cli_set(prefix_path + ['mode', 'auto'])
+        self.cli_set(prefix_path + ['interface', interface])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_disabled_prefix_skips_validation(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '2001:db8::/64']
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(prefix_path + ['mode', 'interface'])
+        self.cli_set(prefix_path + ['disable'])
+
+        self.cli_commit()
+
+        config = getConfigSection(f'proxy {interface}')
+        self.assertNotIn('rule 2001:db8::/64 {', config)
+
+    def test_disabled_interface_skips_validation(self):
+        interface = Section.interfaces('ethernet')[0]
+        prefix_path = base_path + ['interface', interface, 'prefix', '2001:db8::/64']
+        self.cli_set(base_path + ['interface', interface, 'disable'])
+        self.cli_set(prefix_path + ['mode', 'interface'])
+
+        self.cli_commit()
+
+        config = cmd(f'cat {NDPPD_CONF}')
+        self.assertNotIn(f'proxy {interface} {{', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=VyOSUnitTestSHIM.TestCase.debug_on())

@@ -33,13 +33,13 @@ class Control(Section):
     ifname = None
 
     def __init__(self, **kargs):
-        # some commands (such as operation comands - show interfaces, etc.)
+        # some commands (such as operation commands - show interfaces, etc.)
         # need to query the interface statistics. If the interface
         # code is used and the debugging is enabled, the screen output
         # will include both the command but also the debugging for that command
-        # to prevent this, debugging can be explicitely disabled
+        # to prevent this, debugging can be explicitly disabled
 
-        # if debug is not explicitely disabled the the config, enable it
+        # if debug is not explicitly disabled the the config, enable it
         self.debug = ''
         if kargs.get('debug', True) and debug.enabled('ifconfig'):
             self.debug = 'ifconfig'

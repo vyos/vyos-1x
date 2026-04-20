@@ -118,7 +118,7 @@ def auth_required(data: ApiModel):
 
 
 # override Request and APIRoute classes in order to convert form request to json;
-# do all explicit validation here, for backwards compatability of error messages;
+# do all explicit validation here, for backwards compatibility of error messages;
 # the explicit validation may be dropped, if desired, in favor of native
 # validation by FastAPI/Pydantic, as is used for application/json requests
 class MultipartRequest(Request):
@@ -513,7 +513,7 @@ def _execute_configure_op(
         status = 500
 
         # Don't give the details away to the outer world
-        error_msg = 'An internal error occured. Check the logs for details.'
+        error_msg = 'An internal error occurred. Check the logs for details.'
     finally:
         if 'IN_COMMIT_CONFIRM' in env:
             del env['IN_COMMIT_CONFIRM']
@@ -643,7 +643,7 @@ async def retrieve_op(data: RetrieveModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -731,7 +731,7 @@ async def config_file_op(data: ConfigFileModel, background_tasks: BackgroundTask
             return error(400, str(e))
         except Exception:
             LOG.critical(traceback.format_exc())
-            return error(500, 'An internal error occured. Check the logs for details.')
+            return error(500, 'An internal error occurred. Check the logs for details.')
         finally:
             if 'IN_COMMIT_CONFIRM' in env:
                 del env['IN_COMMIT_CONFIRM']
@@ -759,7 +759,7 @@ def image_op(data: ImageModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -792,7 +792,7 @@ def container_image_op(data: ContainerImageModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -815,7 +815,7 @@ def generate_op(data: GenerateModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -837,7 +837,7 @@ def show_op(data: ShowModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -859,7 +859,7 @@ def reboot_op(data: RebootModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -880,7 +880,7 @@ def renew_op(data: RenewModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -901,7 +901,7 @@ def reset_op(data: ResetModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 
@@ -941,7 +941,7 @@ def import_pki(data: ImportPkiModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
     finally:
         lock.release()
 
@@ -965,7 +965,7 @@ def poweroff_op(data: PoweroffModel):
         return error(400, str(e))
     except Exception:
         LOG.critical(traceback.format_exc())
-        return error(500, 'An internal error occured. Check the logs for details.')
+        return error(500, 'An internal error occurred. Check the logs for details.')
 
     return success(res)
 

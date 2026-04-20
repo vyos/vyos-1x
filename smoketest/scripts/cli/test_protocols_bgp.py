@@ -1638,6 +1638,57 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
 
 
+    def test_bgp_31_as_notation(self):
+        # Test BGP AS-notation output format for both global and VRF BGP instances.
+        # Verify all three notation types render correctly on the router bgp line.
+        router_id = '127.0.0.4'
+        vrf = 'red'
+
+        for vrf in ['', 'red']:
+            vrf_base = ['vrf', 'name', vrf] if vrf else []
+            vrf_frr_bit = f' vrf {vrf}' if vrf else ''
+            bgp_path = vrf_base + base_path
+
+            if vrf_base:
+                self.cli_set(vrf_base + ['table', '2000'])
+
+            self.cli_set(bgp_path + ['system-as', ASN])
+            self.cli_set(bgp_path + ['parameters', 'router-id', router_id])
+
+            for notation in ['asdot', 'asdot+']:
+                self.cli_set(bgp_path + ['parameters', 'as-notation', notation])
+                self.cli_commit()
+
+                # our config options are called 'asdot' and 'asdot+' as in
+                # RFC 5396
+                # but FRR calls them 'dot' and 'dot+' in the router bgp line
+                # e.g. router bgp 12345 as-notation dot
+                # or
+                # router bgp 12345 vrf red as-notation dot
+                router_str = f'router bgp {ASN}{vrf_frr_bit} as-notation {notation.replace("as", "")}'
+                # getFRRConfig interprets the arguments as regex, so escape '+' if present
+                frrconfig = self.getFRRconfig(
+                    router_str.replace('+', r'\+'), stop_section='^exit'
+                )
+                self.assertIn(router_str, frrconfig)
+
+            # Verify removing as-notation works
+            self.cli_delete(bgp_path + ['parameters', 'as-notation'])
+            self.cli_commit()
+
+            router_str = f'router bgp {ASN}{vrf_frr_bit}'
+
+            frrconfig = self.getFRRconfig(router_str, stop_section='^exit')
+            self.assertIn(router_str, frrconfig)
+            self.assertNotIn('as-notation', frrconfig.splitlines()[0])
+
+            # Cleanup
+            self.cli_delete(bgp_path)
+            if vrf_base:
+                self.cli_delete(vrf_base)
+
+            self.cli_commit()
+
     def test_bgp_99_bmp(self):
         target_name = 'instance-bmp'
         target_address = '127.0.0.1'

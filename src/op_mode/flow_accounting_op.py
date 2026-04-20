@@ -86,7 +86,7 @@ def _get_ifaces_dict():
         if regex_filter.search(iface_line):
             ifaces_dict[int(regex_filter.search(iface_line).group('iface_index'))] = regex_filter.search(iface_line).group('iface_name')
 
-    # return dictioanry
+    # return dictionary
     return ifaces_dict
 
 

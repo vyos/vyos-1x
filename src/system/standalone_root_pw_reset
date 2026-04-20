@@ -64,7 +64,7 @@ change_password() {
 dead() {
     echo $*
     echo
-    echo "This tool can only recover missing admininistrator password."
+    echo "This tool can only recover missing administrator password."
     echo "It is not a full system restore"
     echo
     echo -n "Hit return to reboot system: "

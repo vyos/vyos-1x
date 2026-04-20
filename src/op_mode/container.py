@@ -74,7 +74,7 @@ def _get_raw_data(command: str) -> list:
 
 def add_image(name: str):
     """ Pull image from container registry. If registry authentication
-    is defined within VyOS CLI, credentials are used to login befroe pull """
+    is defined within VyOS CLI, credentials are used to login before pull """
     from vyos.configquery import ConfigTreeQuery
 
     conf = ConfigTreeQuery()

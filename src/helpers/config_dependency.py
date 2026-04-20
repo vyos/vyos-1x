@@ -59,7 +59,7 @@ def graph_from_dependency_dict(d: dict) -> dict:
     for k in list(d):
         g[k] = set()
         # add the dependencies for every sub-case; should there be cases
-        # that are mutally exclusive in the future, the graphs will be
+        # that are mutually exclusive in the future, the graphs will be
         # distinguished
         for el in list(d[k]):
             g[k] |= set(d[k][el])
@@ -94,7 +94,7 @@ def path_exists(s):
     return s
 
 def main():
-    parser = ArgumentParser(description='generate and save dict from xml defintions')
+    parser = ArgumentParser(description='generate and save dict from xml definitions')
     parser.add_argument('--dependency-dir', type=path_exists,
                         default=dependency_dir,
                         help='location of vyos-1x dependency directory')

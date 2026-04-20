@@ -32,7 +32,7 @@
     </leafNode>
     <leafNode name="master-refresh">
       <properties>
-        <help>Minimum time interval for refreshing gratuitous ARPs while beeing master</help>
+        <help>Minimum time interval for refreshing gratuitous ARPs while being master</help>
         <valueHelp>
           <format>u32:0</format>
           <description>No refresh</description>
@@ -49,7 +49,7 @@
     </leafNode>
     <leafNode name="master-refresh-repeat">
       <properties>
-        <help>Number of gratuitous ARP messages to send at a time while beeing master</help>
+        <help>Number of gratuitous ARP messages to send at a time while being master</help>
         <valueHelp>
           <format>u32:1-255</format>
           <description>Number of gratuitous ARP messages</description>

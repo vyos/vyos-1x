@@ -14,7 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 # T6747:
-#   - Migrate static BFD configuration to match FRR possibillities
+#   - Migrate static BFD configuration to match FRR possibilities
 #   - Consolidate static multicast routing configuration under a new node
 
 from vyos.configtree import ConfigTree
@@ -23,7 +23,7 @@ static_base = ['protocols', 'static']
 
 def migrate(config: ConfigTree) -> None:
     # Check for static route/route6 configuration
-    # Migrate static BFD configuration to match FRR possibillities
+    # Migrate static BFD configuration to match FRR possibilities
     for route_route6 in ['route', 'route6']:
         route_route6_base = static_base + [route_route6]
         if not config.exists(route_route6_base):

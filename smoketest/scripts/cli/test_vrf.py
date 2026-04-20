@@ -64,7 +64,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # always forward to base class
         super().setUp()
 
-        # VRF strict_most ist always enabled
+        # VRF strict_most is always enabled
         tmp = read_file('/proc/sys/net/vrf/strict_mode')
         self.assertEqual(tmp, '1')
 
@@ -740,7 +740,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         dns_2 = inc_ip(subnet, 3)
         domain_name = 'vyos.net'
 
-        # declare fiels
+        # declare files
         process_name = 'kea-dhcp4'
         kea4_conf = f'/var/run/kea/kea-{vrf}-dhcp4.conf'
 
@@ -938,7 +938,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         interface = 'dum8888'
         interface_addr = inc_ip(subnet, 1) + '/64'
 
-        # declare fiels
+        # declare files
         process_name = 'kea-dhcp6'
         kea6_conf = f'/var/run/kea/kea-{vrf}-dhcp6.conf'
 

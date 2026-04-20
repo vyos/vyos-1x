@@ -48,7 +48,7 @@ def verify(config_dict):
     if 'vrf_context' in config_dict:
         vrf = config_dict['vrf_context']
 
-    # eqivalent of the C foo ? 'a' : 'b' statement
+    # equivalent of the C foo ? 'a' : 'b' statement
     ospfv3 = vrf and dict_search(f'vrf.name.{vrf}.protocols.ospfv3',
                                  config_dict) or config_dict['ospfv3']
     ospfv3['policy'] = config_dict['policy']

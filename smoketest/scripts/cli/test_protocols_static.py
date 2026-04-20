@@ -648,16 +648,31 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_set(interface_path + ['vrf', vrf])
         self.cli_commit()
 
-        # Wait for dhclient to receive IP address and default gateway
-        sleep(5)
-
         router = get_dhcp_router(interface)
-        frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
-        self.assertIn(rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}', frrconfig)
+        route_str = (
+            rf'ip route 0.0.0.0/0 {router} {interface} tag 210 {default_distance}'
+        )
 
+        def check_default_route():
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', stop_section='^exit-vrf')
+            if route_str in frrconfig:
+                return True
+            return frrconfig
+
+        result, config = self.wait_for_result(
+            check_default_route, True, pause=1, timeout=10
+        )
+
+        # First clean interfaces from VRF so that VRF can be deleted
         self.cli_delete(interface_path + ['address'])
         self.cli_delete(interface_path + ['vrf'])
         self.cli_commit()
+
+        # now we can assert
+        self.assertTrue(
+            result,
+            f"Expected '{route_str}' in FRR config, vrf section of FRR config:\n {config}",
+        )
 
         # Wait for dhclient to stop
         while process_named_running('dhclient', cmdline=interface, timeout=10):

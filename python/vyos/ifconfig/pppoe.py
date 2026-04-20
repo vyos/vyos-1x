@@ -102,9 +102,9 @@ class PPPoEIf(Interface):
         self.set_interface('accept_ra_defrtr', enable)
 
     def update(self, config):
-        """ General helper function which works on a dictionary retrived by
+        """ General helper function which works on a dictionary retrieved by
         get_config_dict(). It's main intention is to consolidate the scattered
-        interface setup code and provide a single point of entry when workin
+        interface setup code and provide a single point of entry when working
         on any interface. """
 
         # Cache the configuration - it will be reused inside e.g. DHCP handler
@@ -142,5 +142,5 @@ class PPPoEIf(Interface):
                 self._cmd(f'vtysh -c "conf t" {vrf} -c "ipv6 route ::/0 {self.ifname} tag 210 {distance}"')
 
         # kick RS when IPv6 is up.
-        if 'autoconf' in dict_search('ipv6.address', config):
+        if dict_search('ipv6.address.autoconf', config) is not None:
             self._cmd(f'rdisc6 --single --retry 3 {self.ifname}')

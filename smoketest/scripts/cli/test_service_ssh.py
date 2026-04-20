@@ -173,7 +173,7 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        # Check configured port agains CLI default value
+        # Check configured port against CLI default value
         port = get_config_value('Port')
         cli_default = default_value(base_path + ['port'])
         self.assertEqual(port, cli_default)

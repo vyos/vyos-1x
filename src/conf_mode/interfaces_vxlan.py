@@ -42,7 +42,7 @@ airbag.enable()
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least
     the interface name will be added or a deleted flag
     """
     if config:
@@ -101,7 +101,7 @@ def verify(vxlan):
 
     if 'group' in vxlan:
         if 'source_interface' not in vxlan:
-            raise ConfigError('Multicast VXLAN requires an underlaying interface')
+            raise ConfigError('Multicast VXLAN requires an underlying interface')
         if 'remote' in vxlan:
             raise ConfigError('Both group and remote cannot be specified')
         verify_source_interface(vxlan)
@@ -125,7 +125,7 @@ def verify(vxlan):
                 if dict_search('parameters.vni_filter', tunnel_config) != None:
                     other_vni_filter = True
                     break
-            # eqivalent of the C foo ? 'a' : 'b' statement
+            # equivalent of the C foo ? 'a' : 'b' statement
             vni_filter = True and (dict_search('parameters.vni_filter', vxlan) != None) or False
             # If either one is enabled, so must be the other. Both can be off and both can be on
             if (vni_filter and not other_vni_filter) or (not vni_filter and other_vni_filter):
@@ -144,7 +144,7 @@ def verify(vxlan):
 
     if 'source_interface' in vxlan:
         # VXLAN adds at least an overhead of 50 byte - we need to check the
-        # underlaying device if our VXLAN package is not going to be fragmented!
+        # underlying device if our VXLAN package is not going to be fragmented!
         vxlan_overhead = 50
         if 'source_address' in vxlan and is_ipv6(vxlan['source_address']):
             # IPv6 adds an extra 20 bytes overhead because the IPv6 header is 20
@@ -159,8 +159,10 @@ def verify(vxlan):
 
         lower_mtu = Interface(vxlan['source_interface']).get_mtu()
         if lower_mtu < (int(vxlan['mtu']) + vxlan_overhead):
-            raise ConfigError(f'Underlaying device MTU is to small ({lower_mtu} '\
-                              f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)')
+            Warning(
+                f'Underlying device MTU is too small ({lower_mtu} '
+                f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)'
+            )
 
     # Check for mixed IPv4 and IPv6 addresses
     protocol = None

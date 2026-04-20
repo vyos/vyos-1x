@@ -422,8 +422,11 @@ class VPPControl:
             mtu (int): MTU
         """
         iface_index = self.get_sw_if_index(iface_name_vpp)
-        api_call_args: dict[str, str | int] = {'sw_if_index': iface_index, 'mtu': mtu}
-        return self.__vpp_api_client.api.hw_interface_set_mtu(**api_call_args)
+        api_call_args: dict[str, int | list[int]] = {
+            'sw_if_index': iface_index,
+            'mtu': [mtu, 0, 0, 0],
+        }
+        return self.__vpp_api_client.api.sw_interface_set_mtu(**api_call_args)
 
     @_Decorators.api_call
     def get_sw_if_dev_type(self, ifname: str) -> int | None:

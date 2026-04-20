@@ -263,7 +263,7 @@ class ConfigDiff(object):
                                   to provide full dict; for example, Diff.MERGE
                                   will expand dict['merge'] into dict under
                                   value
-            no_detaults=False: if expand_nodes & Diff.MERGE, do not merge default
+            no_defaults=False: if expand_nodes & Diff.MERGE, do not merge default
                                values to ret['merge']
             recursive: if true, use config_tree diff algorithm provided by
                        diff_tree class
@@ -343,7 +343,7 @@ class ConfigDiff(object):
                                   to provide full dict; for example, Diff.MERGE
                                   will expand dict['merge'] into dict under
                                   value
-            no_detaults=False: if expand_nodes & Diff.MERGE, do not merge default
+            no_defaults=False: if expand_nodes & Diff.MERGE, do not merge default
                                values to ret['merge']
             recursive: if true, use config_tree diff algorithm provided by
                        diff_tree class

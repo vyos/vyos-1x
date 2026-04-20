@@ -54,19 +54,17 @@ from vyos.system import raid
 from vyos.system import SYSTEM_CFG_VER
 from vyos.system import grub_util
 from vyos.template import render
-from vyos.utils.auth import (
-    DEFAULT_PASSWORD,
-    EPasswdStrength,
-    evaluate_strength
-)
+from vyos.utils.auth import DEFAULT_PASSWORD
+from vyos.utils.auth import EPasswdStrength
+from vyos.utils.auth import evaluate_strength
+from vyos.utils.auth import get_local_users
+from vyos.utils.auth import get_user_home_dir
 from vyos.utils.dict import dict_search
 from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import cmd, run, rc_cmd
-from vyos.utils.auth import get_local_users
-from vyos.utils.auth import get_user_home_dir
 from vyos.version import get_version_data
 from vyos.config_mgmt import unsaved_commits
 
@@ -536,7 +534,7 @@ def get_cli_kernel_options(config_file: str) -> list:
     k_memory_opts = kernel_options.get('memory', {})
 
     # XXX: This code path and if statements must be kept in sync with the Kernel
-    # option handling in system_options.py:generate(). This occurance is used
+    # option handling in system_options.py:generate(). This occurrence is used
     # for having the appropriate options passed to GRUB after an image upgrade!
     if 'disable-mitigations' in kernel_options:
         cmdline_options.append('mitigations=off')
@@ -992,7 +990,7 @@ def install_image() -> None:
             Path(f'{DIR_DST_ROOT}/boot/efi').mkdir(parents=True)
             disk.partition_mount(install_target.partition['efi'], f'{DIR_DST_ROOT}/boot/efi')
 
-        # a config dir. It is the deepest one, so the comand will
+        # a config dir. It is the deepest one, so the command will
         # create all the rest in a single step
         print('Creating a configuration file')
         target_config_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw{DIR_CONFIG}/'
@@ -1131,7 +1129,7 @@ def install_image() -> None:
 
     except Exception as err:
         print(f'Unable to install VyOS: {err}')
-        # unmount filesystems and clenup
+        # unmount filesystems and cleanup
         try:
             if install_target is not None:
                 if is_raid_install(install_target):
@@ -1277,7 +1275,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
 
         cmdline_options = []
 
-        # a config dir. It is the deepest one, so the comand will
+        # a config dir. It is the deepest one, so the command will
         # create all the rest in a single step
         target_config_dir: str = f'{root_dir}/boot/{image_name}/rw{DIR_CONFIG}/'
         # copy config
@@ -1293,7 +1291,7 @@ def add_image(image_path: str, vrf: str = None, username: str = '',
                 write_file('/opt/vyatta/etc/config/first_boot', dumps(tmp))
                 sync()
 
-                # Copy encrypteed volumes
+                # Copy encrypted volumes
                 current_name = image.get_running_image()
                 current_config_path = f'{root_dir}/luks/{current_name}'
                 target_config_path = f'{root_dir}/luks/{image_name}'

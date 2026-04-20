@@ -34,6 +34,7 @@ from vyos.configverify import verify_vrf
 from vyos.defaults import SSH_DSA_DEPRECATION_WARNING
 from vyos.template import render
 from vyos.template import is_ipv4
+from vyos.utils.auth import DEFAULT_PASSWORD
 from vyos.utils.auth import EPasswdStrength
 from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_current_user
@@ -67,7 +68,7 @@ login_motd_dsa_warning = r'/run/motd.d/92-vyos-user-dsa-deprecation-warning'
 
 # LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
 MAX_RADIUS_TIMEOUT: int = 50
-# MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
+# MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recommended timeout)
 MAX_RADIUS_COUNT: int = 8
 # Maximum number of supported TACACS servers
 MAX_TACACS_COUNT: int = 8
@@ -169,20 +170,21 @@ def verify(login):
                 if s_user.pw_name == user and s_user.pw_uid < MIN_USER_UID:
                     raise ConfigError(f'User "{user}" can not be created, conflict with local system account!')
 
+            plaintext_password = dict_search('authentication.plaintext_password', user_config)
+            if plaintext_password == DEFAULT_PASSWORD:
+                Warning(f'Default password used for user "{user}" - consider changing it')
+
             # T6353: Check password for complexity using cracklib.
             # A user password should be sufficiently complex
-            plaintext_password = dict_search(
-                path='authentication.plaintext_password',
-                dict_object=user_config
-            ) or None
-
             failed_check_status = [EPasswdStrength.WEAK, EPasswdStrength.ERROR]
-            if plaintext_password is not None:
+            if plaintext_password and len(plaintext_password) > 0:
                 result = evaluate_strength(plaintext_password)
                 if result['strength'] in failed_check_status:
-                    Warning(result['error'])
+                    tmp = result['error']
+                    Warning(f'User "{user}" - {tmp}')
 
-            for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
+            for pubkey, pubkey_options in dict_search('authentication.public_keys', user_config,
+                                                      default={}).items():
                 if 'type' not in pubkey_options:
                     raise ConfigError(f'Missing type for public-key "{pubkey}"!')
                 if 'key' not in pubkey_options:

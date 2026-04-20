@@ -33,7 +33,7 @@
   <children>
     <leafNode name="strict">
       <properties>
-        <help>Neighbor must send this exact capability, otherwise a role missmatch notification will be sent</help>
+        <help>Neighbor must send this exact capability, otherwise a role mismatch notification will be sent</help>
         <valueless/>
       </properties>
     </leafNode>

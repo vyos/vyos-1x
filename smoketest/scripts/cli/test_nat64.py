@@ -20,6 +20,9 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
+from vyos.utils.system import sysctl_read
+
 base_path = ['nat64']
 src_path = base_path + ['source']
 
@@ -48,15 +51,25 @@ class TestNAT64(VyOSUnitTestSHIM.TestCase):
         pool = '192.0.2.10'
         pool_port = '1-65535'
 
-        self.cli_set(src_path + ['rule', rule, 'source', 'prefix', prefix_v6])
-        self.cli_set(
-            src_path
-            + ['rule', rule, 'translation', 'pool', translation_rule, 'address', pool]
-        )
-        self.cli_set(
-            src_path
-            + ['rule', rule, 'translation', 'pool', translation_rule, 'port', pool_port]
-        )
+        rule_path = src_path + ['rule', rule]
+        self.cli_set(rule_path + ['source', 'prefix', prefix_v6])
+        self.cli_set(rule_path + ['translation', 'pool', translation_rule,
+                                  'address', pool])
+        self.cli_set(rule_path + ['translation', 'pool', translation_rule,
+                                  'port', pool_port])
+
+        # pool_port overlaps with the Linux Kernel ephemeral port range
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # https://nicmx.github.io/Jool/en/usr-flags-pool4.html#port-range
+        # Jool is incapable of ensuring pool4 does not intersect with other defined
+        # port ranges; this validation is the operator’s responsibility.
+        tmp = sysctl_read('net.ipv4.ip_local_port_range')
+        _, ephemeral_port_max = map(int, tmp.split())
+        pool_port = f'{ephemeral_port_max +1}-{ephemeral_port_max +1000}'
+        self.cli_set(rule_path + ['translation', 'pool', translation_rule,
+                                  'port', pool_port])
         self.cli_commit()
 
         # Load the JSON file

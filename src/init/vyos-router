@@ -230,6 +230,8 @@ init_bootfile () {
         else
             $vyos_libexec_dir/add-system-version.py > $BOOTFILE
         fi
+    fi
+    if [ -f $BOOTFILE ] ; then
         chgrp ${GROUP} $BOOTFILE
         chmod 660 $BOOTFILE
     fi
@@ -556,7 +558,7 @@ start ()
     chmod 775 /var/run/vyatta /var/log/vyatta
 
     log_daemon_msg "Waiting for NICs to settle down"
-    # On boot time udev migth take a long time to reorder nic's, this will ensure that
+    # On boot time udev might take a long time to reorder nic's, this will ensure that
     # all udev activity is completed and all nics presented at boot-time will have their
     # final name before continuing with vyos-router initialization.
     SECONDS=0
@@ -751,13 +753,18 @@ start ()
     fi
 
     # Start netplug daemon
-    systemctl start netplug.service
+    systemctl start vyos-netlinkd.service
 }
 
 stop()
 {
     local -i status=0
     log_daemon_msg "Stopping VyOS router"
+
+    # As vyos-netlinkd consumes a configuration, we need to stop it prior
+    # unmounting /config
+    systemctl stop vyos-netlinkd.service
+
     for ((i=${#sub_inits[@]} - 1; i >= 0; i--)) ; do
     s=${subinit[$i]}
     log_progress_msg $s
@@ -769,7 +776,6 @@ stop()
     umount ${vyatta_configdir}
     log_action_end_msg $?
 
-    systemctl stop netplug.service
     systemctl stop vyconfd.service
     systemctl stop frr.service
 

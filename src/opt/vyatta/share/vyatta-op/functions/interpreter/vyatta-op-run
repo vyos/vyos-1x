@@ -20,7 +20,7 @@
 
 _vyatta_op_init ()
 {
-    # empty and default line compeletion
+    # empty and default line completion
     complete -E -F _vyatta_op_expand
     complete -D -F _vyatta_op_default_expand
 
@@ -100,7 +100,7 @@ _vyatta_op_conv_node_path ()
 
 _vyatta_op_conv_run_cmd ()
 {
-  # Substitue bash positional variables 
+  # Substitute bash positional variables 
   # for the same value in the expanded array
   local restore_shopts=$( shopt -p extglob nullglob | tr \\n \; )
   shopt -s extglob

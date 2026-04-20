@@ -111,7 +111,7 @@ class VTIUpDownDB:
         """
         Removes a matching entry from the DB.
 
-        If no matching entry can be fonud, the operation returns successfully.
+        If no matching entry can be found, the operation returns successfully.
         """
         ifspec = f"{interface}:{connection}:{protocol}" if (connection is not None and protocol is not None) else interface
         if ifspec in self._ifspecs:

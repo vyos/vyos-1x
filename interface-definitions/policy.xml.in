@@ -1567,7 +1567,7 @@
                   </leafNode>
                   <leafNode name="origin">
                     <properties>
-                      <help>Border Gateway Protocl (BGP) origin code</help>
+                      <help>Border Gateway Protocol (BGP) origin code</help>
                       <completionHelp>
                         <list>igp egp incomplete</list>
                       </completionHelp>

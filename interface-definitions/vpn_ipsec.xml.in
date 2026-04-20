@@ -1223,7 +1223,7 @@
                   </leafNode>
                   <leafNode name="default-esp-group">
                     <properties>
-                      <help>Defult ESP group name</help>
+                      <help>Default ESP group name</help>
                       <completionHelp>
                         <path>vpn ipsec esp-group</path>
                       </completionHelp>
@@ -1246,11 +1246,11 @@
                       </completionHelp>
                       <valueHelp>
                         <format>yes</format>
-                        <description>Enable remote host re-autentication during an IKE re-key. Currently broken due to a strong swan bug</description>
+                        <description>Enable remote host re-authentication during an IKE re-key. Currently broken due to a strong swan bug</description>
                       </valueHelp>
                       <valueHelp>
                         <format>no</format>
-                        <description>Disable remote host re-authenticaton during an IKE re-key.</description>
+                        <description>Disable remote host re-authentication during an IKE re-key.</description>
                       </valueHelp>
                       <valueHelp>
                         <format>inherit</format>

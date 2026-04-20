@@ -78,7 +78,7 @@ def find_other_stations(conf, base, ifname):
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
     interface name will be added or a deleted flag
     """
     if config:
@@ -219,7 +219,7 @@ def verify(wifi):
         elif 'wpa' in wifi['security']:
             wpa = wifi['security']['wpa']
             if not any(i in ['passphrase', 'radius'] for i in wpa):
-                raise ConfigError('Misssing WPA key or RADIUS server')
+                raise ConfigError('Missing WPA key or RADIUS server')
 
             if 'username' in wpa:
                 if 'passphrase' not in wpa:

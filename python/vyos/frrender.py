@@ -14,7 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Helper class attached to vyos-configd to interfact between our CLI configuration
+Helper class attached to vyos-configd to interact between our CLI configuration
 and FRR. Class will render one full FRR configuration and apply this via
 frr-reload.py, if the configuration has no errors.
 
@@ -102,7 +102,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
     def dict_helper_ospf_defaults(ospf, path):
         # We have gathered the dict representation of the CLI, but there are default
-        # options which we need to update into the dictionary retrived.
+        # options which we need to update into the dictionary retrieved.
         default_values = conf.get_config_defaults(path, key_mangling=('-', '_'),
                                                   get_first_key=True, recursive=True)
 
@@ -140,7 +140,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
     def dict_helper_ospfv3_defaults(ospfv3, path):
         # We have gathered the dict representation of the CLI, but there are default
-        # options which we need to update into the dictionary retrived.
+        # options which we need to update into the dictionary retrieved.
         default_values = conf.get_config_defaults(path, key_mangling=('-', '_'),
                                                   get_first_key=True, recursive=True)
 
@@ -168,7 +168,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
 
     def dict_helper_pim_defaults(pim, path):
         # We have gathered the dict representation of the CLI, but there are default
-        # options which we need to update into the dictionary retrived.
+        # options which we need to update into the dictionary retrieved.
         default_values = conf.get_config_defaults(path, key_mangling=('-', '_'),
                                                   get_first_key=True, recursive=True)
 
@@ -510,7 +510,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
             bgp_vrf_path = ['vrf', 'name', vrf_name, 'protocols', 'bgp']
             if 'bgp' in vrf_config.get('protocols', []):
                 # We have gathered the dict representation of the CLI, but there are default
-                # options which we need to update into the dictionary retrived.
+                # options which we need to update into the dictionary retrieved.
                 default_values = conf.get_config_defaults(bgp_vrf_path, key_mangling=('-', '_'),
                                                         get_first_key=True, recursive=True)
 
@@ -826,7 +826,7 @@ class FRRender:
 
                 output += inline_helper(vrf_config['protocols'])
 
-        # remove any accidently added empty newline to not confuse FRR
+        # remove any accidentally added empty newline to not confuse FRR
         output = os.linesep.join([s for s in output.splitlines() if s])
 
         if '!!' in output:
