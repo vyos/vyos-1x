@@ -193,7 +193,7 @@ override_dh_auto_install:
 
 	# OCaml binaries from former vyos-utils package
 	cp $(VYOS_OCAML_TOOLS)/numeric $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
-	cp $(VYOS_OCAML_TOOLS)/validate-value $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
+	cp $(VYOS_OCAML_TOOLS)/validate-value $(DIR)/$(VYOS_LIBEXEC_DIR)
 	cp $(VYOS_OCAML_TOOLS)/file-path $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 	cp $(VYOS_OCAML_TOOLS)/url $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 	cp $(VYOS_OCAML_TOOLS)/list_interfaces $(DIR)/$(VYOS_LIBEXEC_DIR)/completion
