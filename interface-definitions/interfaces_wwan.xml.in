@@ -1197,6 +1197,31 @@
                 </properties>
                 <defaultValue>info</defaultValue>
               </leafNode>
+              <leafNode name="sink">
+                <properties>
+                  <help>Log output destination</help>
+                  <completionHelp>
+                    <list>both journal syslog</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>both</format>
+                    <description>Write logs to both journal and syslog (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>journal</format>
+                    <description>Write logs only to systemd journal</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>syslog</format>
+                    <description>Write logs only to /dev/log syslog</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(both|journal|syslog)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Log sink must be both, journal, or syslog</constraintErrorMessage>
+                </properties>
+                <defaultValue>both</defaultValue>
+              </leafNode>
               <leafNode name="disable-verbose">
                 <properties>
                   <help>Disable verbose logging (enabled by default)</help>

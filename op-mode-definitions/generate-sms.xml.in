@@ -1,18 +1,15 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="send">
-    <properties>
-      <help>Send a message or command</help>
-    </properties>
+  <node name="generate">
     <children>
-      <node name="sms">
+      <node name="interfaces">
         <properties>
-          <help>Send SMS message via WWAN modem</help>
+          <help>Generate interface-related output</help>
         </properties>
         <children>
-          <node name="interface">
+          <node name="wwan">
             <properties>
-              <help>WWAN interface to send SMS from</help>
+              <help>Generate SMS from Wireless Modem (WWAN)</help>
             </properties>
             <children>
               <tagNode name="node.tag">
@@ -24,31 +21,38 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  <node name="number">
+                  <node name="sms">
                     <properties>
-                      <help>Destination phone number</help>
+                      <help>Generate (send) SMS message</help>
                     </properties>
                     <children>
-                      <tagNode name="node.tag">
+                      <node name="number">
                         <properties>
-                          <help>Phone number (e.g. +15551234567)</help>
+                          <help>Destination phone number</help>
                         </properties>
                         <children>
-                          <node name="message">
+                          <tagNode name="node.tag">
                             <properties>
-                              <help>SMS message text</help>
+                              <help>Phone number (e.g. +15551234567)</help>
                             </properties>
                             <children>
-                              <tagNode name="node.tag">
+                              <node name="message">
                                 <properties>
-                                  <help>Message text to send</help>
+                                  <help>SMS message text</help>
                                 </properties>
-                                <command>${vyos_op_scripts_dir}/wwan_sms.py send_sms --interface="$4" --number="$6" --message="$8"</command>
-                              </tagNode>
+                                <children>
+                                  <tagNode name="node.tag">
+                                    <properties>
+                                      <help>Message text to send</help>
+                                    </properties>
+                                    <command>${vyos_op_scripts_dir}/wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"</command>
+                                  </tagNode>
+                                </children>
+                              </node>
                             </children>
-                          </node>
+                          </tagNode>
                         </children>
-                      </tagNode>
+                      </node>
                     </children>
                   </node>
                 </children>

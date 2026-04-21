@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="delete">
+  <node name="clear">
     <children>
       <node name="interfaces">
         <properties>
-          <help>Delete interface-related data</help>
+          <help>Clear interface-related data</help>
         </properties>
         <children>
           <node name="wwan">
             <properties>
-              <help>Delete Wireless Modem (WWAN) data</help>
+              <help>Clear Wireless Modem (WWAN) SMS data</help>
             </properties>
             <children>
               <tagNode name="node.tag">
@@ -23,18 +23,18 @@
                 <children>
                   <node name="sms">
                     <properties>
-                      <help>Delete all SMS messages</help>
+                      <help>Clear all SMS messages</help>
                     </properties>
                     <command>${vyos_op_scripts_dir}/wwan_sms.py delete_all_sms --interface="$4"</command>
                     <children>
                       <node name="message">
                         <properties>
-                          <help>Delete a specific SMS message</help>
+                          <help>Clear a specific SMS message</help>
                         </properties>
                         <children>
                           <tagNode name="node.tag">
                             <properties>
-                              <help>Delete a specific SMS message by ID</help>
+                              <help>Clear a specific SMS message by ID</help>
                               <completionHelp>
                                 <list>&lt;1-999&gt;</list>
                               </completionHelp>

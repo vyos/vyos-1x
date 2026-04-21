@@ -168,6 +168,7 @@ class InterfaceConfig(ServiceInterface):
         # Logging and monitoring settings
         "verbose_logging": True,
         "log_level": "info",
+        "log_sink": "both",
         "snmp_monitoring": True,
         "detailed_status": True,
 
@@ -1302,6 +1303,12 @@ class InterfaceConfig(ServiceInterface):
                           extra={'interface_number': self.interface_number,
                                  'validation_field': 'log_level'})
             raise ValueError("log_level must be 'debug', 'info', 'warning', 'error', or 'critical'")
+
+        if 'log_sink' in config and config['log_sink'] not in ['both', 'journal', 'syslog']:
+            logger.warning("Invalid log_sink",
+                          extra={'interface_number': self.interface_number,
+                                 'validation_field': 'log_sink'})
+            raise ValueError("log_sink must be 'both', 'journal', or 'syslog'")
 
         if 'snmp_monitoring' in config and not isinstance(config['snmp_monitoring'], bool):
             logger.warning("Invalid snmp_monitoring",

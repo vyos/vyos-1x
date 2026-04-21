@@ -38,17 +38,18 @@ connect
 disconnect
   └── interface <wwanN>                                    # tear down WWAN bearer
 
-send
-  └── sms
-        └── interface <wwanN>
-              └── number <phone>
-                    └── message <text>                     # send SMS
-
-delete
+generate
   └── interfaces
         └── wwan <wwanN>
-              └── sms                                      # delete all SMS messages
-                    └── message <id>                       # delete specific SMS message
+              └── sms
+                    └── number <phone>
+                          └── message <text>              # send SMS
+
+clear
+  └── interfaces
+        └── wwan <wwanN>
+              └── sms                                      # clear all SMS messages
+                    └── message <id>                       # clear specific SMS message
 ```
 
 ---
@@ -119,6 +120,8 @@ vyos@vyos:~$ show interfaces wwan wwan0 status
 | | Operator | Network operator name |
 | | Operator code | MCC/MNC code |
 | | APN | Connected APN name |
+| | Log level | Effective WWAN log level |
+| | Log sink | Effective WWAN log destination (`both`, `journal`, `syslog`) |
 | | Failure reason | Set when state is `FAILED` |
 | **IP Configuration** | IPv4 address | Bearer IPv4 address |
 | | IPv4 gateway | IPv4 default gateway |
@@ -274,6 +277,8 @@ vyos@vyos:~$ show interfaces wwan wwan0 detail
 | | Reconnection | Enhanced reconnection status |
 | | Monitoring | Connectivity monitoring status |
 | | Interface mgmt | Interface management status |
+| | Log level | Effective WWAN log level |
+| | Log sink | Effective WWAN log destination (`both`, `journal`, `syslog`) |
 | | Verbose logging | Verbose logging status |
 
 **JSON mode:** `show interfaces wwan wwan0 detail --raw` (returns the full FSM status dict)
@@ -415,15 +420,15 @@ vyos@vyos:~$ disconnect interface wwan0
 
 ## SMS Commands
 
-### `send sms interface <wwanN> number <phone> message <text>`
+### `generate interfaces wwan <wwanN> sms number <phone> message <text>`
 
 Send an SMS message via the WWAN modem.
 
 ```
-vyos@vyos:~$ send sms interface wwan0 number '+15551234567' message 'Router rebooted successfully'
+vyos@vyos:~$ generate interfaces wwan wwan0 sms number '+15551234567' message 'Router rebooted successfully'
 ```
 
-**Script:** `wwan_sms.py send_sms --interface="$4" --number="$6" --message="$8"`
+**Script:** `wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"`
 
 **Output:**
 - Human: `SMS sent to +15551234567 (message id: 42)`
@@ -436,12 +441,12 @@ vyos@vyos:~$ send sms interface wwan0 number '+15551234567' message 'Router rebo
 
 ---
 
-### `delete interfaces wwan <wwanN> sms`
+### `clear interfaces wwan <wwanN> sms`
 
 Delete all SMS messages on the active SIM.
 
 ```
-vyos@vyos:~$ delete interfaces wwan wwan0 sms
+vyos@vyos:~$ clear interfaces wwan wwan0 sms
 ```
 
 **Script:** `wwan_sms.py delete_all_sms --interface="$4"`
@@ -452,15 +457,15 @@ vyos@vyos:~$ delete interfaces wwan wwan0 sms
 
 ---
 
-### `delete interfaces wwan <wwanN> sms message <id>`
+### `clear interfaces wwan <wwanN> sms message <id>`
 
 Delete a specific SMS message by ID.
 
 ```
-vyos@vyos:~$ delete interfaces wwan wwan0 sms message 3
+vyos@vyos:~$ clear interfaces wwan wwan0 sms message 3
 ```
 
-**Script:** `wwan_sms.py delete_sms --interface="$4" --message-id="$6"`
+**Script:** `wwan_sms.py delete_sms --interface="$4" --message-id="$7"`
 
 **Output:**
 - Human: `SMS message 3 deleted`
@@ -513,8 +518,8 @@ scripts use the `WWANClientSync` client library from
 | File | Purpose |
 |---|---|
 | `op-mode-definitions/show-interfaces-wwan.xml.in` | XML: `show interfaces wwan` command tree |
-| `op-mode-definitions/send-sms.xml.in` | XML: `send sms` command |
-| `op-mode-definitions/delete-sms.xml.in` | XML: `delete interfaces wwan … sms` commands |
+| `op-mode-definitions/generate-sms.xml.in` | XML: `generate interfaces wwan ... sms` command |
+| `op-mode-definitions/clear-sms.xml.in` | XML: `clear interfaces wwan … sms` commands |
 | `op-mode-definitions/connect.xml.in` | XML: `connect interface` (shared with PPPoE/SSTPC) |
 | `op-mode-definitions/disconnect.xml.in` | XML: `disconnect interface` (shared with PPPoE/SSTPC) |
 | `src/op_mode/show_wwan.py` | Python: status, hardware, sim, signal, detail handlers |
@@ -544,6 +549,6 @@ scripts use the `WWANClientSync` client library from
 | `show interfaces wwan wwan0 event-log link` | Link-state events only |
 | `connect interface wwan0` | Bring up WWAN bearer |
 | `disconnect interface wwan0` | Tear down WWAN bearer |
-| `send sms interface wwan0 number '+15551234567' message 'hello'` | Send an SMS |
-| `delete interfaces wwan wwan0 sms` | Delete all SMS messages |
-| `delete interfaces wwan wwan0 sms message 3` | Delete SMS message #3 |
+| `generate interfaces wwan wwan0 sms number '+15551234567' message 'hello'` | Send an SMS |
+| `clear interfaces wwan wwan0 sms` | Clear all SMS messages |
+| `clear interfaces wwan wwan0 sms message 3` | Clear SMS message #3 |

@@ -8,6 +8,7 @@ import datetime
 import ipaddress
 import socket
 import struct
+import logging
 from enum import Enum
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
 from dbus_next.message import Message  # pylint: disable=import-error
@@ -32,7 +33,7 @@ from vyos.utils.wwan.apn_discovery import APNDiscovery
 from vyos.utils.wwan.connection_manager import ConnectionManager
 from vyos.utils.wwan.state_transition_manager import StateTransitionManager
 
-from vyos.utils.wwan.wwan_logging import setup_logging
+from vyos.utils.wwan.wwan_logging import setup_logging, reconfigure_logging
 
 
 logger = setup_logging(__name__, "wwan-fsm")
@@ -1674,6 +1675,19 @@ class ModemStateMachine:
 
     def _apply_parsed_configuration(self):
         """Apply parsed configuration to instance variables for backward compatibility"""
+        # Logging sink + level are applied process-wide so all WWAN modules
+        # follow the same output destination policy.
+        raw_log_level = str(self.parsed_config.raw_config.get('log_level', 'info')).upper()
+        log_level = getattr(logging, raw_log_level, logging.INFO)
+        self.log_level = raw_log_level.lower()
+        self.log_sink = self.parsed_config.raw_config.get('log_sink', 'both')
+        applied_sink = reconfigure_logging(sink=self.log_sink, level=log_level)
+
+        logger.info("Applied logging output configuration",
+                   extra={'interface_number': self.interface_number,
+                          'log_level': self.log_level,
+                          'log_sink': applied_sink})
+
         # Enhanced reconnection configuration
         self.enhanced_reconnection = self.parsed_config.enhanced_reconnection.enabled
         self.reconnection_signal_threshold = self.parsed_config.enhanced_reconnection.signal_threshold
@@ -6884,6 +6898,8 @@ class ModemStateMachine:
 
             status['network_mode'] = self.config.get('network_mode', 'auto')
             status['verbose_logging'] = self.config.get('verbose_logging', True)
+            status['log_level'] = self.config.get('log_level', getattr(self, 'log_level', 'info'))
+            status['log_sink'] = self.config.get('log_sink', getattr(self, 'log_sink', 'both'))
 
         # ── 13. Network scan results (if available) ──────────────────────
         if self.last_scan_results:

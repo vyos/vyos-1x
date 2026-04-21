@@ -16,6 +16,20 @@ import logging
 import logging.handlers
 
 
+VALID_LOG_SINKS = {'both', 'journal', 'syslog'}
+_DEFAULT_LOG_SINK = 'both'
+_LOGGER_REGISTRY = {}
+
+
+def _normalize_sink(sink: str | None) -> str:
+    if sink is None:
+        return _DEFAULT_LOG_SINK
+    sink_val = str(sink).strip().lower()
+    if sink_val not in VALID_LOG_SINKS:
+        return _DEFAULT_LOG_SINK
+    return sink_val
+
+
 class WwanSyslogFormatter(logging.Formatter):
     """RFC 3164 syslog formatter for local /dev/log.
 
@@ -47,36 +61,59 @@ class WwanSyslogFormatter(logging.Formatter):
 
 def setup_logging(logger_name: str,
                   app_name: str,
-                  level: int = logging.INFO):
+                  level: int = logging.INFO,
+                  sink: str | None = None):
     """Convenience helper used by every WWAN module.
 
     Returns a configured ``logging.Logger`` with a syslog handler
     (if ``/dev/log`` is available) and a console handler.
     """
+    sink_mode = _normalize_sink(sink)
     formatter = WwanSyslogFormatter(app_name)
-
-    try:
-        facility_num = WwanSyslogFormatter.FACILITY_MAP.get(app_name, 16)
-        syslog_handler = logging.handlers.SysLogHandler(
-            address='/dev/log',
-            facility=facility_num,
-        )
-        syslog_handler.setFormatter(formatter)
-        use_syslog = True
-    except (OSError, IOError):
-        use_syslog = False
-
-    console_formatter = logging.Formatter(
-        f'%(asctime)s {app_name}[%(process)d]: %(levelname)s: %(message)s'
-    )
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-
     lgr = logging.getLogger(logger_name)
     lgr.setLevel(level)
-    if use_syslog:
-        lgr.addHandler(syslog_handler)
-    lgr.addHandler(console_handler)
+
+    # Remove existing WWAN-managed handlers to prevent duplicates.
+    for handler in list(lgr.handlers):
+        if getattr(handler, '_wwan_managed', False):
+            lgr.removeHandler(handler)
+
+    if sink_mode in ('both', 'syslog'):
+        try:
+            facility_num = WwanSyslogFormatter.FACILITY_MAP.get(app_name, 16)
+            syslog_handler = logging.handlers.SysLogHandler(
+                address='/dev/log',
+                facility=facility_num,
+            )
+            syslog_handler.setFormatter(formatter)
+            syslog_handler._wwan_managed = True
+            lgr.addHandler(syslog_handler)
+        except (OSError, IOError):
+            # Graceful fallback: continue with remaining sinks.
+            pass
+
+    if sink_mode in ('both', 'journal'):
+        console_formatter = logging.Formatter(
+            f'%(asctime)s {app_name}[%(process)d]: %(levelname)s: %(message)s'
+        )
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(console_formatter)
+        console_handler._wwan_managed = True
+        lgr.addHandler(console_handler)
+
     lgr.propagate = False
+    _LOGGER_REGISTRY[logger_name] = app_name
 
     return lgr
+
+
+def reconfigure_logging(sink: str | None = None,
+                        level: int | None = None):
+    """Reconfigure all previously created WWAN loggers at runtime."""
+    sink_mode = _normalize_sink(sink)
+    for logger_name, app_name in _LOGGER_REGISTRY.items():
+        lgr = logging.getLogger(logger_name)
+        effective_level = lgr.level if level is None else level
+        setup_logging(logger_name, app_name, effective_level, sink_mode)
+
+    return sink_mode

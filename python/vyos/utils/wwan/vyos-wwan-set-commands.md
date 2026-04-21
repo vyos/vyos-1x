@@ -152,6 +152,7 @@ interfaces
         │
         └── logging
               ├── level <debug|info|warning|error>        #   default: info
+              ├── sink <both|journal|syslog>              #   default: both
               ├── disable-verbose                        #   valueless (default: on)
               ├── disable-snmp-monitoring                 #   valueless (default: on)
               ├── disable-detailed-status                 #   valueless (default: on)
@@ -213,7 +214,7 @@ automatically using a 4-priority APN discovery chain:
 | **Connection timeout** | `120 s` | Max wait for MM `Simple.Connect()` to succeed |
 | **Registration timeout** | `180 s` | Max wait for network registration |
 | **Normal monitoring interval** | `30 s` | Polling cycle in CONNECTED state |
-| **Logging** | level `info`, verbose `on`, SNMP `on`, detailed-status `on` | Full operational logging enabled by default |
+| **Logging** | level `info`, sink `both`, verbose `on`, SNMP `on`, detailed-status `on` | Logs go to both journal and syslog by default |
 | **Health-check interval** | `300 s` | Periodic self-diagnostic cycle |
 
 ### Minimum Viable Configuration
@@ -742,10 +743,11 @@ set interfaces wwan wwan0 timeouts normal-monitoring-interval 30
 
 ### Logging and Monitoring
 
-> **If unconfigured:** Level `info`, verbose on, SNMP on, detailed-status on, health-check every 300 s.
+> **If unconfigured:** Level `info`, sink `both` (journal + syslog), verbose on, SNMP on, detailed-status on, health-check every 300 s.
 
 ```
 set interfaces wwan wwan0 logging level 'info'
+set interfaces wwan wwan0 logging sink 'both'
 set interfaces wwan wwan0 logging health-check-interval 300
 # To disable (all on by default):
 # set interfaces wwan wwan0 logging disable-verbose
@@ -855,6 +857,7 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `timeouts registration` | `registration_timeout` | `180` |
 | `timeouts normal-monitoring-interval` | `normal_monitoring_interval` | `30` |
 | `logging level` | `log_level` | `info` |
+| `logging sink` | `log_sink` | `both` |
 | `logging disable-verbose` | `verbose_logging` | `true` |
 | `logging disable-snmp-monitoring` | `snmp_monitoring` | `true` |
 | `logging disable-detailed-status` | `detailed_status` | `true` |

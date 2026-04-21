@@ -111,6 +111,8 @@ def _raw_status(status: dict) -> dict:
         'session_rx_bytes': status.get('session_rx_bytes', 0),
         'session_tx_bytes': status.get('session_tx_bytes', 0),
         'session_duration': status.get('session_duration_seconds', 0),
+        'log_level': status.get('log_level', ''),
+        'log_sink': status.get('log_sink', ''),
         'failure_reason': status.get('failure_reason', ''),
         'sms_supported': status.get('sms_supported', False),
         'sms_message_count': status.get('sms_message_count', 0),
@@ -209,6 +211,8 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_kv('APN:', d['apn']))
     if d['failure_reason']:
         lines.append(_kv('Failure reason:', d['failure_reason']))
+    lines.append(_kv('Log level:', d['log_level']))
+    lines.append(_kv('Log sink:', d['log_sink']))
 
     lines.append(_section('IP Configuration'))
     lines.append(_kv('IPv4 address:', d['ipv4_address']))
@@ -356,6 +360,8 @@ def _format_detail(status: dict, interface: str) -> str:
     lines.append(_kv('Reconnection:', status.get('enhanced_reconnection', '')))
     lines.append(_kv('Monitoring:', status.get('connectivity_monitoring', '')))
     lines.append(_kv('Interface mgmt:', status.get('interface_management', '')))
+    lines.append(_kv('Log level:', status.get('log_level', '')))
+    lines.append(_kv('Log sink:', status.get('log_sink', '')))
     lines.append(_kv('Verbose logging:', status.get('verbose_logging', '')))
 
     parts.append('\n'.join(line for line in lines if line))

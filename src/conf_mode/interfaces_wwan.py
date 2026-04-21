@@ -329,6 +329,7 @@ def build_fsm_config(wwan):
         # Logging (all default enabled — disable nodes to turn off)
         'verbose_logging': not _leaf_exists(lg, 'disable_verbose'),
         'log_level': _leaf(lg, 'level', 'info'),
+        'log_sink': _leaf(lg, 'sink', 'both'),
         'snmp_monitoring': not _leaf_exists(lg, 'disable_snmp_monitoring'),
         'detailed_status': not _leaf_exists(lg, 'disable_detailed_status'),
 
