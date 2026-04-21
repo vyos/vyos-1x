@@ -213,6 +213,12 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="disable-learning">
+                    <properties>
+                      <help>Disable MAC address learning</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>

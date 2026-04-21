@@ -199,7 +199,12 @@ system_activate ()
     if [ -x $vyos_libexec_dir/run-config-activation.py ]; then
         log_progress_msg activate
         sg ${GROUP} -c "$vyos_libexec_dir/run-config-activation.py $BOOTFILE"
+        STATUS=$?
+        if [[ "$STATUS" != "0" ]]; then
+            return 1
+        fi
     fi
+    return 0
 }
 
 # load the initial config
