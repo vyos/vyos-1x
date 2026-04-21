@@ -19,6 +19,7 @@
 # avoiding conflicts with ModemManager.
 
 import sys
+import ast
 
 import vyos.opmode
 
@@ -54,6 +55,35 @@ def _get_full_status(interface: str) -> dict:
         )
 
 
+def _normalize_list_field(value) -> list[str]:
+    """Return a clean list for fields that may arrive as stringified lists."""
+    if value is None or value == '':
+        return []
+
+    if isinstance(value, (list, tuple, set)):
+        return [str(v) for v in value if v not in ('', None)]
+
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return []
+
+        # Common case from D-Bus marshalling layers: "['a', 'b']"
+        if (text.startswith('[') and text.endswith(']')) or (
+            text.startswith('(') and text.endswith(')')
+        ):
+            try:
+                parsed = ast.literal_eval(text)
+                if isinstance(parsed, (list, tuple, set)):
+                    return [str(v) for v in parsed if v not in ('', None)]
+            except (ValueError, SyntaxError):
+                pass
+
+        return [text]
+
+    return [str(value)]
+
+
 # ── Raw data helpers (return dicts for JSON mode) ───────────────────────
 
 def _raw_status(status: dict) -> dict:
@@ -77,7 +107,7 @@ def _raw_status(status: dict) -> dict:
         'mtu': status.get('mtu_effective', status.get('mtu', '')),
         'signal_percent': status.get('signal_percent', 0),
         'signal_dbm': status.get('signal_dbm', 0),
-        'current_bands': status.get('current_bands', []),
+        'current_bands': _normalize_list_field(status.get('current_bands', [])),
         'session_rx_bytes': status.get('session_rx_bytes', 0),
         'session_tx_bytes': status.get('session_tx_bytes', 0),
         'session_duration': status.get('session_duration_seconds', 0),
@@ -96,7 +126,7 @@ def _raw_hardware(status: dict) -> dict:
         'firmware_revision': status.get('modem_firmware', ''),
         'hardware_revision': status.get('modem_hardware_revision', ''),
         'phone_number': status.get('modem_phone_number', ''),
-        'phone_numbers': status.get('modem_phone_numbers', []),
+        'phone_numbers': _normalize_list_field(status.get('modem_phone_numbers', [])),
         'device': status.get('modem_device', ''),
         'power_state': status.get('modem_power_state_name', ''),
     }
@@ -150,7 +180,7 @@ def _raw_signal(status: dict) -> dict:
         'rsrp': status.get('signal_rsrp', ''),
         'rsrq': status.get('signal_rsrq', ''),
         'snr': status.get('signal_snr', ''),
-        'current_bands': status.get('current_bands', []),
+        'current_bands': _normalize_list_field(status.get('current_bands', [])),
     }
 
 

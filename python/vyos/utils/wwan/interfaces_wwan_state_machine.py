@@ -10053,31 +10053,46 @@ class ModemStateMachine:
             timestamp = timestamp_v.value if hasattr(timestamp_v, 'value') else str(timestamp_v)
             state = state_v.value if hasattr(state_v, 'value') else int(state_v)
 
-            # MM_SMS_STATE_RECEIVED = 3
-            if state != 3:
-                return  # Not a received message, ignore
+            # ModemManager SMS states of interest:
+            #   2 = receiving (message object exists but may still be assembling)
+            #   3 = received  (fully received)
+            # Some modems can remain in "receiving" long enough that users
+            # see it via mmcli, but our previous logic dropped it completely.
+            if state not in (2, 3):
+                return  # Not an incoming message state we expose
 
-            msg_id = len(self._sms_load()) + 1
+            # Avoid duplicates when the same ModemManager SMS object is observed
+            # both during startup drain and live Added signal processing.
+            existing = self._sms_load()
+            for msg in existing:
+                if msg.get('source_path') == sms_path:
+                    return
+
+            msg_id = len(existing) + 1
             record = {
                 'id': msg_id,
                 'direction': 'incoming',
                 'number': number,
                 'text': text,
                 'timestamp': timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                'status': 'received',
+                'status': 'received' if state == 3 else 'receiving',
                 'read': False,
+                'source_path': sms_path,
             }
             self._sms_append(record)
 
             logger.info(f"Incoming SMS from {number}, id={msg_id}",
                        extra={'interface_number': self.interface_number})
 
-            # Delete from ModemManager to free SIM storage
+            # Delete from ModemManager to free SIM storage once fully received.
+            # Keep "receiving" objects untouched so ModemManager can finish
+            # assembly/transition to RECEIVED.
             try:
-                messaging_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
-                messaging_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, messaging_introspect)
-                messaging = messaging_proxy.get_interface(MESSAGING_INTERFACE)
-                await messaging.call_delete(sms_path)
+                if state == 3:
+                    messaging_introspect = await self.bus.introspect(MODEM_MANAGER_SERVICE, self.modem_path)
+                    messaging_proxy = self.bus.get_proxy_object(MODEM_MANAGER_SERVICE, self.modem_path, messaging_introspect)
+                    messaging = messaging_proxy.get_interface(MESSAGING_INTERFACE)
+                    await messaging.call_delete(sms_path)
             except Exception:
                 pass  # Non-fatal
 
