@@ -78,6 +78,15 @@
                           </tagNode>
                         </children>
                       </node>
+                      <tagNode name="node.tag">
+                        <properties>
+                          <help>Show a specific SMS message by ID</help>
+                          <completionHelp>
+                            <list>&lt;1-999&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/wwan_sms.py read_sms --interface="$4" --message-id="$6"</command>
+                      </tagNode>
                     </children>
                   </node>
                   #include <include/show-interface-type-event-log.xml.i>

@@ -23,6 +23,7 @@ show
                     ├── sim                                 # SIM/slot/PIN information
                     ├── status                              # connection state and IP config
                     ├── sms                                 # list all SMS messages
+                    │     ├── <id>                          # read specific SMS message (preferred)
                     │     └── message <id>                  # read specific SMS message
                     └── event-log                           # network event log (journalctl)
                           ├── route                         # route events only
@@ -304,15 +305,29 @@ vyos@vyos:~$ show interfaces wwan wwan0 sms
 
 ---
 
+### `show interfaces wwan <wwanN> sms <id>`
+
+Read a specific SMS message by ID. Incoming messages are marked as read.
+
+```
+vyos@vyos:~$ show interfaces wwan wwan0 sms 3
+```
+
+**Script:** `wwan_sms.py read_sms --interface="$4" --message-id="$6"`
+
+**JSON mode:** `show interfaces wwan wwan0 sms 3 --raw`
+
+---
+
 ### `show interfaces wwan <wwanN> sms message <id>`
 
-Read a specific SMS message by ID.  Incoming messages are marked as read.
+Legacy alternate syntax for reading a specific SMS message by ID.
 
 ```
 vyos@vyos:~$ show interfaces wwan wwan0 sms message 3
 ```
 
-**Script:** `wwan_sms.py read_sms --interface="$4" --message-id="$6"`
+**Script:** `wwan_sms.py read_sms --interface="$4" --message-id="$7"`
 
 **Output fields:**
 
