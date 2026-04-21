@@ -10,7 +10,9 @@
 {%     set boot_opts_rendered = boot_opts_default %}
 {% endif %}
 menuentry "{{ version_name }}" --id {{ version_uuid }} {
+    probe -u (hd0,gpt3) --set=disk_uuid
     set boot_opts="{{ boot_opts_rendered }}"
+    set boot_opts="${boot_opts} root=UUID=${disk_uuid}"
     if [ "${console_type}" == "ttyS" -o "${console_type}" == "ttyAMA" ]; then
         set console_opts="console=${console_type}${console_num},${console_speed}"
     else
