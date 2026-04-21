@@ -82,7 +82,7 @@ ocaml: libvyosconfig
 	$(MAKE) -C src/ocaml
 
 .PHONY: all
-all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json
+all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json ocaml
 
 .PHONY: copyright
 copyright:
