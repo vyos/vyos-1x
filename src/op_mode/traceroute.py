@@ -223,7 +223,8 @@ if __name__ == '__main__':
             args.append(option['dflt'])
 
     try:
-        ip = socket.gethostbyname(host)
+        info = socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        ip = info[0][4][0]
     except UnicodeError:
         sys.exit(f'tracroute: Unknown host: {host}')
     except socket.gaierror:
