@@ -226,6 +226,11 @@ class Interface(Control):
             'location': '/sys/class/net/{ifname}/brport/root_block',
             'errormsg': '{ifname} is not a bridge port member'
         },
+        'learning': {
+            'validate':  assert_boolean,
+            'location': '/sys/class/net/{ifname}/brport/learning',
+            'errormsg': '{ifname} is not a bridge port member'
+        },
         'proxy_arp': {
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp',
@@ -1158,6 +1163,18 @@ class Interface(Control):
         >>> Interface('eth1').set_port_isolation('on')
         """
         self.set_interface('bridge_port_isolation', on_or_off)
+
+    def set_learning(self, state):
+        """
+        Set MAC address learning state on a bridge port. When disabled,
+        the bridge will not learn source MAC addresses from incoming frames on
+        this port, causing all unknown unicast traffic to be flooded.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_learning(0)
+        """
+        self.set_interface('learning', state)
 
     def set_proxy_arp(self, enable):
         """
