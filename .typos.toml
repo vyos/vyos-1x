@@ -4,3 +4,9 @@ extend-exclude = [
   "smoketest/**",
   "mibs/**"
 ]
+
+# VyOS-specific networking terms and abbreviations
+[default.extend-words]
+dum = "dum"      # dummy interface
+oif = "oif"      # outgoing interface
+iif = "iif"      # incoming interface
