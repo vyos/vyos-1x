@@ -238,7 +238,7 @@ if __name__ == '__main__':
         ip = info[0][4][0]
     except UnicodeError:
         sys.exit(f'traceroute: Unknown host: {host}')
-    except socket.gaierror:
+    except OSError:
         ip = host
 
     try:
