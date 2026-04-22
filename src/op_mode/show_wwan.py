@@ -20,6 +20,8 @@
 
 import sys
 import ast
+import shutil
+import textwrap
 
 import vyos.opmode
 
@@ -194,6 +196,28 @@ def _kv(label: str, value, width: int = 24) -> str:
     return f'  {label:<{width}} {value}'
 
 
+def _kv_wrapped(label: str, value: str, width: int = 24) -> list[str]:
+    """Render a key/value pair with wrapped continuation lines.
+
+    This avoids very long lines being visually mangled in narrow terminals.
+    """
+    if value == '' or value is None:
+        return []
+
+    text = str(value)
+    cols = shutil.get_terminal_size((120, 20)).columns
+    available = max(20, cols - (2 + width + 1))
+    chunks = textwrap.wrap(text, width=available, break_long_words=False, break_on_hyphens=False)
+
+    if not chunks:
+        return []
+
+    lines = [f'  {label:<{width}} {chunks[0]}']
+    for chunk in chunks[1:]:
+        lines.append(f'  {"":<{width}} {chunk}')
+    return lines
+
+
 def _section(title: str) -> str:
     return f'\n  --- {title} ---'
 
@@ -228,7 +252,7 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_kv('Strength:', f"{d['signal_dbm']} dBm"))
     bands = d['current_bands']
     if bands:
-        lines.append(_kv('Active bands:', ', '.join(bands)))
+        lines.extend(_kv_wrapped('Active bands:', ', '.join(bands)))
 
     lines.append(_section('SMS'))
     lines.append(_kv('SMS supported:', 'yes' if d['sms_supported'] else 'no'))

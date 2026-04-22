@@ -1449,6 +1449,22 @@ class ModemStateMachine:
                                   'current_state': current_state,
                                   'user_disconnected': self.user_disconnected})
 
+        elif event == ModemEvent.ENTER_IDLE:
+            # On-demand disconnect path: drop bearer but keep registration.
+            # Treat this as intentional/normal (not a failure path) and stop
+            # connected-state monitoring without forcing Linux link down.
+            if current_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
+                try:
+                    self._safe_create_task(self._stop_network_interface_monitoring())
+                except RuntimeError:
+                    # No event loop running (e.g., during tests) - ignore
+                    pass
+                logger.info("ENTER_IDLE event processed",
+                           extra={'interface_number': self.interface_number,
+                                  'current_state': current_state,
+                                  'user_disconnected': self.user_disconnected,
+                                  'connection_mode': self.connection_mode})
+
         elif event == ModemEvent.CONNECT:
             # Clear user disconnect flag when user requests connection
             if self.user_disconnected:
@@ -6968,60 +6984,69 @@ class ModemStateMachine:
                 techs.append(name)
         return ', '.join(techs) if techs else 'unknown'
 
-    @staticmethod
-    def _band_to_string(band_id) -> str:
-        """Convert MM MMModemBand enum to human-readable string."""
-        # ModemManager MMModemBand values (subset of most common)
-        band_map = {
-            0: 'unknown',
-            1: 'EGSM-900', 2: 'DCS-1800', 3: 'PCS-1900', 4: 'G850',
-            5: 'UTRAN-1', 6: 'UTRAN-3', 7: 'UTRAN-4', 8: 'UTRAN-6',
-            9: 'UTRAN-5', 10: 'UTRAN-8', 11: 'UTRAN-9', 12: 'UTRAN-2',
-            13: 'UTRAN-7', 14: 'G450', 15: 'G480', 16: 'G750',
-            17: 'G380', 18: 'G410', 19: 'G710', 20: 'G810',
-            31: 'EUTRAN-1', 32: 'EUTRAN-2', 33: 'EUTRAN-3', 34: 'EUTRAN-4',
-            35: 'EUTRAN-5', 36: 'EUTRAN-6', 37: 'EUTRAN-7', 38: 'EUTRAN-8',
-            39: 'EUTRAN-9', 40: 'EUTRAN-10', 41: 'EUTRAN-11', 42: 'EUTRAN-12',
-            43: 'EUTRAN-13', 44: 'EUTRAN-14', 45: 'EUTRAN-17', 46: 'EUTRAN-18',
-            47: 'EUTRAN-19', 48: 'EUTRAN-20', 49: 'EUTRAN-21', 50: 'EUTRAN-22',
-            51: 'EUTRAN-23', 52: 'EUTRAN-24', 53: 'EUTRAN-25', 54: 'EUTRAN-26',
-            55: 'EUTRAN-27', 56: 'EUTRAN-28', 57: 'EUTRAN-29', 58: 'EUTRAN-30',
-            59: 'EUTRAN-31', 60: 'EUTRAN-32', 61: 'EUTRAN-33', 62: 'EUTRAN-34',
-            63: 'EUTRAN-35', 64: 'EUTRAN-36', 65: 'EUTRAN-37', 66: 'EUTRAN-38',
-            67: 'EUTRAN-39', 68: 'EUTRAN-40', 69: 'EUTRAN-41', 70: 'EUTRAN-42',
-            71: 'EUTRAN-43', 72: 'EUTRAN-44', 73: 'EUTRAN-45', 74: 'EUTRAN-46',
-            75: 'EUTRAN-47', 76: 'EUTRAN-48',
-            77: 'EUTRAN-65', 78: 'EUTRAN-66', 79: 'EUTRAN-67', 80: 'EUTRAN-68',
-            81: 'EUTRAN-69', 82: 'EUTRAN-70', 83: 'EUTRAN-71',
-            # CDMA
-            128: 'CDMA-BC0', 129: 'CDMA-BC1', 130: 'CDMA-BC2',
-            131: 'CDMA-BC3', 132: 'CDMA-BC4', 133: 'CDMA-BC5',
-            134: 'CDMA-BC6', 135: 'CDMA-BC7', 136: 'CDMA-BC8',
-            137: 'CDMA-BC9', 138: 'CDMA-BC10', 139: 'CDMA-BC11',
-            140: 'CDMA-BC12', 141: 'CDMA-BC13', 142: 'CDMA-BC14',
-            143: 'CDMA-BC15', 144: 'CDMA-BC16', 145: 'CDMA-BC17',
-            146: 'CDMA-BC18', 147: 'CDMA-BC19',
-            # 5G NR
-            171: 'NGRAN-1', 172: 'NGRAN-2', 173: 'NGRAN-3', 174: 'NGRAN-5',
-            175: 'NGRAN-7', 176: 'NGRAN-8', 177: 'NGRAN-12', 178: 'NGRAN-13',
-            179: 'NGRAN-14', 180: 'NGRAN-18', 181: 'NGRAN-20',
-            182: 'NGRAN-25', 183: 'NGRAN-26', 184: 'NGRAN-28',
-            185: 'NGRAN-29', 186: 'NGRAN-30', 187: 'NGRAN-34',
-            188: 'NGRAN-38', 189: 'NGRAN-39', 190: 'NGRAN-40',
-            191: 'NGRAN-41', 192: 'NGRAN-48', 193: 'NGRAN-50',
-            194: 'NGRAN-51', 195: 'NGRAN-53', 196: 'NGRAN-65',
-            197: 'NGRAN-66', 198: 'NGRAN-70', 199: 'NGRAN-71',
-            200: 'NGRAN-74', 201: 'NGRAN-75', 202: 'NGRAN-76',
-            203: 'NGRAN-77', 204: 'NGRAN-78', 205: 'NGRAN-79',
-            206: 'NGRAN-80', 207: 'NGRAN-81', 208: 'NGRAN-82',
-            209: 'NGRAN-83', 210: 'NGRAN-84', 211: 'NGRAN-86',
-            212: 'NGRAN-89', 213: 'NGRAN-90', 214: 'NGRAN-91',
-            215: 'NGRAN-92', 216: 'NGRAN-93', 217: 'NGRAN-94',
-            218: 'NGRAN-95',
-            # Special
+    def _band_to_string(self, band_id) -> str:
+        """Convert MM MMModemBand enum to human-readable string.
+
+        ModemManager band enums changed over time; this renderer accepts both
+        legacy and modern values and prefers canonical names.
+        """
+        if hasattr(band_id, 'value'):
+            band_id = band_id.value
+
+        try:
+            band_id = int(band_id)
+        except (TypeError, ValueError):
+            return f'band-{band_id}'
+
+        # Preserve historical GSM labels used in existing output.
+        legacy_gsm = {
+            1: 'EGSM-900',
+            2: 'DCS-1800',
+            3: 'PCS-1900',
+            4: 'G850',
+            14: 'G450',
+            15: 'G480',
+            16: 'G750',
+            17: 'G380',
+            18: 'G410',
+            19: 'G710',
+            20: 'G810',
             256: 'ANY',
         }
-        return band_map.get(band_id, f'band-{band_id}')
+        if band_id in legacy_gsm:
+            return legacy_gsm[band_id]
+
+        # First try explicit configured mappings (includes canonical names
+        # such as eutran-66 -> 96 and ngran-78 -> 378).
+        name = self._mm_constant_to_band_name(band_id)
+        if not name.startswith('unknown-'):
+            if name.startswith('umts-'):
+                return f"UTRAN-{name.split('-', 1)[1]}"
+            return name.upper()
+
+        # Fallback decoding for constants not explicitly listed in config map.
+        # New MM-style UTRAN constants: 200 + band
+        if 201 <= band_id <= 299:
+            return f'UTRAN-{band_id - 200}'
+
+        # New MM-style NGRAN constants: 300 + band
+        if 300 <= band_id <= 1000:
+            return f'NGRAN-{band_id - 300}'
+
+        # New MM-style EUTRAN constants: 30 + band
+        if 31 <= band_id <= 199:
+            return f'EUTRAN-{band_id - 30}'
+
+        # Legacy UTRAN constants used by older MM versions.
+        legacy_utran = {
+            5: 'UTRAN-1', 6: 'UTRAN-3', 7: 'UTRAN-4', 8: 'UTRAN-6',
+            9: 'UTRAN-5', 10: 'UTRAN-8', 11: 'UTRAN-9', 12: 'UTRAN-2',
+            13: 'UTRAN-7',
+        }
+        if band_id in legacy_utran:
+            return legacy_utran[band_id]
+
+        return f'band-{band_id}'
 
     async def update_bus_connection(self, new_bus):
         """Update D-Bus connection after ModemManager restart"""
@@ -8748,10 +8773,10 @@ class ModemStateMachine:
         """Handle bearer disconnect with configurable delay and automatic reconnection.
 
         After the debounce timer expires without the bearer reconnecting,
-        sets the interface DOWN and triggers the FSM recovery path so the
-        connection is re-established automatically.  This covers the
-        'Regular deactivation' scenario where the carrier drops the bearer
-        but the modem stays registered on the network.
+        recovery path depends on context:
+        - Intentional on-demand idle (FSM REGISTERED_IDLE) is treated as
+          normal and does not cycle Linux link state.
+        - Unexpected bearer loss triggers Linux link-down and recovery.
         """
         try:
             # Start disconnect timer
@@ -8760,6 +8785,21 @@ class ModemStateMachine:
             )
 
             await self._bearer_disconnect_timer
+
+            current_state = self.machine.current_state
+
+            # User/admin requested on-demand bearer teardown is not an error.
+            # Keep Linux interface state unchanged in idle path.
+            if (current_state == ModemState.REGISTERED_IDLE.value and
+                    self.connection_mode in ('connect-on-demand', 'dial-on-demand')):
+                logger.info("Bearer disconnect debounce expired in on-demand idle; preserving Linux link state",
+                           extra={'interface_number': self.interface_number,
+                                  'current_state': current_state,
+                                  'connection_mode': self.connection_mode,
+                                  'user_disconnected': self.user_disconnected,
+                                  'delay': self.bearer_disconnect_delay})
+                self._bearer_disconnect_timer = None
+                return
 
             # Timer expired without cancellation - notify Linux of link down
             logger.warning("Bearer disconnect timer expired - setting interface DOWN",

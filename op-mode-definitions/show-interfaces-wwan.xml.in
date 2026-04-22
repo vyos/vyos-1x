@@ -67,7 +67,7 @@
                           <help>Show a specific SMS message</help>
                         </properties>
                         <children>
-                          <tagNode name="node.tag">
+                          <virtualTagNode>
                             <properties>
                               <help>Show a specific SMS message by ID</help>
                               <completionHelp>
@@ -75,10 +75,10 @@
                               </completionHelp>
                             </properties>
                             <command>${vyos_op_scripts_dir}/wwan_sms.py read_sms --interface="$4" --message-id="$7"</command>
-                          </tagNode>
+                          </virtualTagNode>
                         </children>
                       </node>
-                      <tagNode name="node.tag">
+                      <virtualTagNode>
                         <properties>
                           <help>Show a specific SMS message by ID</help>
                           <completionHelp>
@@ -86,7 +86,7 @@
                           </completionHelp>
                         </properties>
                         <command>${vyos_op_scripts_dir}/wwan_sms.py read_sms --interface="$4" --message-id="$6"</command>
-                      </tagNode>
+                      </virtualTagNode>
                     </children>
                   </node>
                   #include <include/show-interface-type-event-log.xml.i>

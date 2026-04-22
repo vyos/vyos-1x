@@ -430,6 +430,10 @@ vyos@vyos:~$ generate interfaces wwan wwan0 sms number '+15551234567' message 'R
 
 **Script:** `wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"`
 
+> **Phone number format:** Use E.164 format (`+<countrycode><subscriber>`,
+> for example `+14168310352`) for best interoperability. Non-E.164 formats
+> may work on some modem/carrier combinations but are not guaranteed.
+
 **Output:**
 - Human: `SMS sent to +15551234567 (message id: 42)`
 - JSON (`--raw`): `{"message_id": 42}`

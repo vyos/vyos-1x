@@ -12,7 +12,7 @@
               <help>Generate SMS from Wireless Modem (WWAN)</help>
             </properties>
             <children>
-              <tagNode name="node.tag">
+              <virtualTagNode>
                 <properties>
                   <help>WWAN interface name</help>
                   <completionHelp>
@@ -50,7 +50,7 @@
                                 </children>
                               </node>
                             </children>
-                          </tagNode>
+                            </virtualTagNode>
                         </children>
                       </node>
                     </children>

@@ -12,7 +12,7 @@
               <help>Clear Wireless Modem (WWAN) SMS data</help>
             </properties>
             <children>
-              <tagNode name="node.tag">
+              <virtualTagNode>
                 <properties>
                   <help>WWAN interface name</help>
                   <completionHelp>
@@ -32,7 +32,7 @@
                           <help>Clear a specific SMS message</help>
                         </properties>
                         <children>
-                          <tagNode name="node.tag">
+                          <virtualTagNode>
                             <properties>
                               <help>Clear a specific SMS message by ID</help>
                               <completionHelp>
@@ -40,13 +40,13 @@
                               </completionHelp>
                             </properties>
                             <command>${vyos_op_scripts_dir}/wwan_sms.py delete_sms --interface="$4" --message-id="$7"</command>
-                          </tagNode>
+                          </virtualTagNode>
                         </children>
                       </node>
                     </children>
                   </node>
                 </children>
-              </tagNode>
+                </virtualTagNode>
             </children>
           </node>
         </children>
