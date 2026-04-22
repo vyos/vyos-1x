@@ -160,6 +160,7 @@
 {%         elif afi == 'link_state' %}
  address-family link-state
 {%         endif %}
+  neighbor {{ neighbor }} activate
 {%         if afi_config.addpath_tx_all is vyos_defined %}
   neighbor {{ neighbor }} addpath-tx-all-paths
 {%         endif %}
@@ -252,8 +253,13 @@
 {%         if afi_config.disable_send_community.standard is vyos_defined %}
   no neighbor {{ neighbor }} send-community standard
 {%         endif %}
-  neighbor {{ neighbor }} activate
+{#         Workaround: FRR's link-state SAFI parser rejects    #}
+{#         'exit-address-family' when 'next-hop-self' is set   #}
+{#         in the same block. It is optional when followed by  #}
+{#         '!', so omit it. Remove once fixed upstream.        #}
+{%         if not (afi == 'link_state' and afi_config.nexthop_self is vyos_defined) %}
  exit-address-family
+{%         endif %}
  !
 {# j2lint: disable=jinja-statements-delimeter #}
 {%     endfor %}
