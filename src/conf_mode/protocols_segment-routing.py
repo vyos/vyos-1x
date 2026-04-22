@@ -67,11 +67,15 @@ def verify(config_dict):
                                'at least one index is required!')
 
         for index, index_data in indices.items():
+            error_msg = f'SR-TE segment list "{segment_list}", index "{index}"'
             nai = index_data.get('nai')
+            mpls = index_data.get('mpls')
+            if not nai and not mpls:
+                raise ConfigError(f'{error_msg}: "mpls" or "nai" is required!')
+            
             if not nai:
                 continue
 
-            error_msg = f'SR-TE segment list "{segment_list}", index "{index}"'
             if 'adjacency' in nai and 'prefix' in nai:
                 raise ConfigError(f'{error_msg}: "prefix" and "adjacency" are mutually exclusive!')
 
