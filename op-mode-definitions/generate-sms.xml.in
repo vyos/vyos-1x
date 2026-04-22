@@ -50,13 +50,13 @@
                                 </children>
                               </node>
                             </children>
-                            </virtualTagNode>
+                          </tagNode>
                         </children>
                       </node>
                     </children>
                   </node>
                 </children>
-              </tagNode>
+              </virtualTagNode>
             </children>
           </node>
         </children>
