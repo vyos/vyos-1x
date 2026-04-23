@@ -458,6 +458,11 @@ registers the modem **and** establishes the bearer automatically at startup
 2. Call D-Bus `connect_bearer()` → bearer is re-established.
 3. Poll D-Bus `get_bearer_status()` → returns `"connected"` or `"disconnected"`.
 
+During normal connection procedure, `dial-on-demand` will continue to bring
+the bearer up automatically.  Auto-reconnect suppression only applies after an
+explicit bearer disconnect command (`disconnect_bearer()` / on-demand
+`disconnect()`) has been issued.
+
 All three bearer methods (`connect_bearer`, `disconnect_bearer`,
 `get_bearer_status`) are always available regardless of connection mode.
 `connect_bearer()` and `disconnect_bearer()` always return `"accepted"`;

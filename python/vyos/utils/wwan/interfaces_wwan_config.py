@@ -281,6 +281,7 @@ class InterfaceConfig(ServiceInterface):
         super().__init__("com.igos.IgosModemManager.Interface")
         self.interface_number = interface_number
         self.fsm = fsm
+        self._restored_runtime_state = {}
 
         # Configuration persistence (only for service crashes, not across reboots)
         self.config_state_dir = "/run/wwan"  # /run is tmpfs, cleared on boot
@@ -310,6 +311,18 @@ class InterfaceConfig(ServiceInterface):
                     # Convert complex objects to string representation
                     json_safe_config[key] = str(value)
 
+            # Preserve runtime state section across config rewrites
+            runtime_state = {}
+            if os.path.exists(self.config_state_file):
+                try:
+                    with open(self.config_state_file, 'r') as f:
+                        existing = json.load(f)
+                    runtime_state = existing.get('__runtime_state__', {})
+                except Exception:
+                    runtime_state = {}
+
+            json_safe_config['__runtime_state__'] = runtime_state
+
             # Atomic write: write to temp file then rename so a crash
             # mid-write never leaves a truncated/corrupt config file.
             fd, tmp_path = tempfile.mkstemp(
@@ -338,6 +351,51 @@ class InterfaceConfig(ServiceInterface):
                         extra={'interface_number': self.interface_number})
             import traceback
             logger.error(f"Save traceback: {traceback.format_exc()}")
+
+    def _save_runtime_state(self):
+        """Persist runtime state (e.g. user disconnect hold) for crash recovery."""
+        try:
+            import os
+            import json
+            import tempfile
+
+            os.makedirs(self.config_state_dir, exist_ok=True)
+
+            state_doc = {}
+            if os.path.exists(self.config_state_file):
+                try:
+                    with open(self.config_state_file, 'r') as f:
+                        state_doc = json.load(f)
+                except Exception:
+                    state_doc = {}
+
+            runtime_state = {
+                'user_disconnected': bool(getattr(self.fsm, 'user_disconnected', False)),
+                'connection_mode': str(getattr(self.fsm, 'connection_mode', 'always-on')),
+            }
+            state_doc['__runtime_state__'] = runtime_state
+
+            fd, tmp_path = tempfile.mkstemp(dir=self.config_state_dir, suffix='.tmp')
+            try:
+                with os.fdopen(fd, 'w') as f:
+                    json.dump(state_doc, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, self.config_state_file)
+            except BaseException:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+
+            logger.info("Runtime state saved",
+                       extra={'interface_number': self.interface_number,
+                              'user_disconnected': runtime_state['user_disconnected'],
+                              'connection_mode': runtime_state['connection_mode']})
+        except Exception as e:
+            logger.error(f"Failed to save runtime state: {e}",
+                        extra={'interface_number': self.interface_number})
 
     def _remove_configuration(self):
         """Remove configuration from persistent storage (called during interface removal)"""
@@ -386,6 +444,9 @@ class InterfaceConfig(ServiceInterface):
             logger.info("Restored configuration from persistent storage",
                        extra={'interface_number': self.interface_number,
                               'config_file': self.config_state_file})
+
+            # Restore runtime state section separately (not part of SetConfiguration)
+            self._restored_runtime_state = saved_config.pop('__runtime_state__', {}) or {}
 
             # Apply the restored configuration
             from dbus_next import Variant  # pylint: disable=import-error
@@ -447,6 +508,22 @@ class InterfaceConfig(ServiceInterface):
 
             # Apply the configuration
             await self.set_configuration(dbus_config)
+
+            # Re-apply persisted runtime hold state (dial-on-demand manual disconnect)
+            if isinstance(self._restored_runtime_state, dict):
+                hold = bool(self._restored_runtime_state.get('user_disconnected', False))
+                mode = str(getattr(self.fsm, 'connection_mode', 'always-on'))
+                if hold and mode == 'dial-on-demand':
+                    self.fsm.user_disconnected = True
+                    logger.info("Restored dial-on-demand manual-disconnect hold from crash state",
+                               extra={'interface_number': self.interface_number,
+                                      'user_disconnected': True,
+                                      'connection_mode': mode})
+                else:
+                    logger.debug("No runtime hold restoration needed",
+                                extra={'interface_number': self.interface_number,
+                                       'restored_hold': hold,
+                                       'connection_mode': mode})
 
             logger.info("Restored configuration applied successfully",
                        extra={'interface_number': self.interface_number})
@@ -1668,6 +1745,7 @@ class InterfaceConfig(ServiceInterface):
 
             # Always clear user-disconnect hold so auto-recovery can resume
             self.fsm.user_disconnected = False
+            self._save_runtime_state()
 
             if current_state == ModemState.REGISTERED_IDLE.value:
                 self.fsm.transition(ModemEvent.CONNECT)
@@ -1709,6 +1787,7 @@ class InterfaceConfig(ServiceInterface):
                 self.fsm.user_disconnected = True
                 logger.info("Dial-on-demand: bearer held down until connect_bearer()",
                            extra={'interface_number': self.interface_number})
+                self._save_runtime_state()
 
             bearer_up = {ModemState.CONNECTED.value}
             if current_state in bearer_up:
