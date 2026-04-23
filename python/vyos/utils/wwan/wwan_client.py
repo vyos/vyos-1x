@@ -59,8 +59,9 @@ INTERFACE_IFACE      "com.igos.IgosModemManager.Interface"
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from dbus_next import Variant  # pylint: disable=import-error
 from dbus_next.aio import MessageBus  # pylint: disable=import-error
@@ -74,6 +75,8 @@ logger = logging.getLogger(__name__)
 BUS_NAME = "com.igos.IgosModemManager"
 CONTROL_PATH = "/com/igos/IgosModemManager/Control"
 CONTROL_IFACE = "com.igos.IgosModemManager.Control"
+ALERT_PATH = "/com/igos/IgosModemManager/AlertBus"
+ALERT_IFACE = "com.igos.IgosModemManager.AlertBus"
 INTERFACE_IFACE = "com.igos.IgosModemManager.Interface"
 
 # ─── Exceptions ─────────────────────────────────────────────────────────────
@@ -173,8 +176,11 @@ class WWANClient:
         self._bus_type = bus_type
         self._bus: Optional[MessageBus] = None
         self._ctrl_iface = None
+        self._alert_iface = None
         # Cache of introspected per-interface proxies: {int: iface_proxy}
         self._iface_cache: Dict[int, Any] = {}
+        self._alert_subscriptions: Dict[int, Dict[str, Any]] = {}
+        self._next_alert_subscription_id = 1
 
     # ── lifecycle ────────────────────────────────────────────────────────
 
@@ -185,6 +191,14 @@ class WWANClient:
             intro = await self._bus.introspect(BUS_NAME, CONTROL_PATH)
             obj = self._bus.get_proxy_object(BUS_NAME, CONTROL_PATH, intro)
             self._ctrl_iface = obj.get_interface(CONTROL_IFACE)
+
+            # Alert bus is optional for backward compatibility with older daemons.
+            try:
+                alert_intro = await self._bus.introspect(BUS_NAME, ALERT_PATH)
+                alert_obj = self._bus.get_proxy_object(BUS_NAME, ALERT_PATH, alert_intro)
+                self._alert_iface = alert_obj.get_interface(ALERT_IFACE)
+            except Exception:
+                self._alert_iface = None
         except Exception as exc:
             raise WWANConnectionError(
                 f"Failed to connect to {BUS_NAME}: {exc}"
@@ -193,6 +207,7 @@ class WWANClient:
 
     async def close(self) -> None:
         """Disconnect from the D-Bus bus."""
+        self.clear_alert_subscriptions()
         self._iface_cache.clear()
         if self._bus:
             self._bus.disconnect()
@@ -572,6 +587,394 @@ class WWANClient:
         except DBusError as exc:
             raise WWANError(f"GetStatus failed: {exc}") from exc
 
+    async def get_recent_alerts(
+        self,
+        limit: int = 50,
+        interface_number: int = -1,
+    ) -> list:
+        """Fetch recent normalized alerts from the generalized AlertBus.
+
+        Parameters
+        ----------
+        limit : int
+            Maximum number of alerts to return.
+        interface_number : int
+            Interface filter; ``-1`` means all interfaces.
+        """
+        if not self._alert_iface:
+            return []
+        try:
+            raw = await self._alert_iface.call_get_recent_alerts(limit, interface_number)
+            return _variant_to_python(raw)
+        except DBusError as exc:
+            raise WWANError(f"GetRecentAlerts failed: {exc}") from exc
+
+    async def clear_alerts(self, interface_number: int = -1) -> str:
+        """Clear alert history globally (-1) or for one interface."""
+        if not self._alert_iface:
+            return "AlertBus unavailable"
+        try:
+            return await self._alert_iface.call_clear_alerts(interface_number)
+        except DBusError as exc:
+            raise WWANError(f"ClearAlerts failed: {exc}") from exc
+
+    async def ack_alert(self, alert_id: str) -> bool:
+        """Acknowledge an alert by id.
+
+        Returns ``True`` when the alert id exists, else ``False``.
+        """
+        if not self._alert_iface:
+            return False
+        try:
+            return bool(await self._alert_iface.call_ack_alert(str(alert_id)))
+        except DBusError as exc:
+            raise WWANError(f"AckAlert failed: {exc}") from exc
+
+    @staticmethod
+    def _alert_matches(
+        alert: Dict[str, Any],
+        *,
+        alert_type: Optional[str] = None,
+        category: Optional[str] = None,
+        code: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        severity: Optional[str] = None,
+        contains: Optional[str] = None,
+        min_sequence: int = 0,
+    ) -> bool:
+        """Return True if an alert matches the provided filter criteria."""
+        try:
+            seq = int(alert.get('sequence', 0))
+        except (TypeError, ValueError):
+            seq = 0
+        if seq <= min_sequence:
+            return False
+
+        if alert_type and str(alert.get('type', '')) != alert_type:
+            return False
+
+        if category and str(alert.get('category', '')).lower() != category.lower():
+            return False
+
+        if code and str(alert.get('code', '')) != code:
+            return False
+
+        if source and str(alert.get('source', '')) != source:
+            return False
+
+        if state and str(alert.get('state', '')).lower() != state.lower():
+            return False
+
+        if severity and str(alert.get('severity', '')).lower() != severity.lower():
+            return False
+
+        if contains:
+            msg = str(alert.get('message', ''))
+            if contains.lower() not in msg.lower():
+                return False
+
+        return True
+
+    async def get_alerts_filtered(
+        self,
+        *,
+        limit: int = 200,
+        interface_number: int = -1,
+        alert_type: Optional[str] = None,
+        category: Optional[str] = None,
+        code: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        severity: Optional[str] = None,
+        contains: Optional[str] = None,
+        min_sequence: int = 0,
+    ) -> list:
+        """Fetch recent alerts and return only entries matching filters.
+
+        Parameters
+        ----------
+        limit : int
+            Number of recent alerts fetched from AlertBus before local filtering.
+        interface_number : int
+            Interface filter (`-1` means all interfaces).
+        alert_type : str, optional
+            Exact alert type filter.
+        category : str, optional
+            Alert category filter (e.g. connectivity/sim/usage).
+        code : str, optional
+            Exact stable machine code filter.
+        source : str, optional
+            Exact source filter.
+        state : str, optional
+            Alert state filter (`open`, `cleared`, `acked`).
+        severity : str, optional
+            Severity filter (`info`, `warning`, `error`, ...).
+        contains : str, optional
+            Case-insensitive substring match against alert message text.
+        min_sequence : int
+            Only return alerts with `sequence > min_sequence`.
+        """
+        alerts = await self.get_recent_alerts(limit=limit, interface_number=interface_number)
+        return [
+            a for a in alerts
+            if isinstance(a, dict) and self._alert_matches(
+                a,
+                alert_type=alert_type,
+                category=category,
+                code=code,
+                source=source,
+                state=state,
+                severity=severity,
+                contains=contains,
+                min_sequence=min_sequence,
+            )
+        ]
+
+    def subscribe_alerts(
+        self,
+        callback: Callable[[Dict[str, Any]], Any],
+        *,
+        interface_number: int = -1,
+        alert_type: Optional[str] = None,
+        category: Optional[str] = None,
+        code: Optional[str] = None,
+        severity: Optional[str] = None,
+        contains: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        use_json_signal: bool = False,
+    ) -> int:
+        """Subscribe to AlertBus signal events with optional filtering.
+
+        Returns a subscription id that can be passed to
+        :meth:`unsubscribe_alerts`.
+        """
+        if not self._alert_iface:
+            raise WWANConnectionError("AlertBus unavailable")
+
+        subscription_id = self._next_alert_subscription_id
+        self._next_alert_subscription_id += 1
+
+        signal_name = 'alert_raised' if use_json_signal else 'alert'
+        on_method = getattr(self._alert_iface, f'on_{signal_name}', None)
+        if not on_method:
+            raise WWANConnectionError(f"Signal registration method on_{signal_name} is unavailable")
+
+        def _dispatch(alert_payload):
+            try:
+                if use_json_signal:
+                    if isinstance(alert_payload, (str, bytes)):
+                        alert = json.loads(alert_payload)
+                    else:
+                        alert = json.loads(str(alert_payload))
+                else:
+                    alert = _variant_to_python(alert_payload)
+
+                if not isinstance(alert, dict):
+                    return
+
+                if interface_number >= 0 and int(alert.get('interface_number', -1)) != interface_number:
+                    return
+
+                if not self._alert_matches(
+                    alert,
+                    alert_type=alert_type,
+                    category=category,
+                    code=code,
+                    source=source,
+                    state=state,
+                    severity=severity,
+                    contains=contains,
+                ):
+                    return
+
+                result = callback(alert)
+                if asyncio.iscoroutine(result):
+                    asyncio.create_task(result)
+            except Exception as exc:
+                logger.debug("Alert subscription callback error: %s", exc)
+
+        on_method(_dispatch)
+        self._alert_subscriptions[subscription_id] = {
+            'signal_name': signal_name,
+            'callback': _dispatch,
+        }
+        return subscription_id
+
+    def unsubscribe_alerts(self, subscription_id: int) -> bool:
+        """Unsubscribe a previously registered alert callback."""
+        sub = self._alert_subscriptions.pop(subscription_id, None)
+        if not sub or not self._alert_iface:
+            return False
+
+        off_method = getattr(self._alert_iface, f"off_{sub['signal_name']}", None)
+        if off_method:
+            try:
+                off_method(sub['callback'])
+            except Exception as exc:
+                logger.debug("Alert unsubscribe failed for %s: %s", subscription_id, exc)
+        return True
+
+    def clear_alert_subscriptions(self) -> None:
+        """Unsubscribe all active alert callbacks for this client."""
+        for subscription_id in list(self._alert_subscriptions.keys()):
+            self.unsubscribe_alerts(subscription_id)
+
+    async def monitor_alerts(
+        self,
+        *,
+        timeout: float = 30.0,
+        interface_number: int = -1,
+        alert_type: Optional[str] = None,
+        category: Optional[str] = None,
+        code: Optional[str] = None,
+        severity: Optional[str] = None,
+        contains: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        include_existing: bool = False,
+        existing_limit: int = 50,
+        use_json_signal: bool = False,
+    ) -> list:
+        """Collect matching alerts emitted during a monitoring window.
+
+        This helper uses signal subscriptions under the hood and returns all
+        matching alerts observed before timeout.
+        """
+        collected = []
+        if include_existing:
+            collected.extend(await self.get_alerts_filtered(
+                limit=existing_limit,
+                interface_number=interface_number,
+                alert_type=alert_type,
+                category=category,
+                code=code,
+                source=source,
+                state=state,
+                severity=severity,
+                contains=contains,
+            ))
+
+        subscription_id = self.subscribe_alerts(
+            lambda alert: collected.append(alert),
+            interface_number=interface_number,
+            alert_type=alert_type,
+            category=category,
+            code=code,
+            severity=severity,
+            contains=contains,
+            source=source,
+            state=state,
+            use_json_signal=use_json_signal,
+        )
+        try:
+            await asyncio.sleep(max(0.0, float(timeout)))
+            return collected
+        finally:
+            self.unsubscribe_alerts(subscription_id)
+
+    async def wait_for_alert(
+        self,
+        *,
+        alert_type: Optional[str] = None,
+        severity: Optional[str] = None,
+        interface_number: int = -1,
+        contains: Optional[str] = None,
+        timeout: float = 60.0,
+        poll_interval: float = 1.0,
+        include_existing: bool = False,
+        limit: int = 200,
+    ) -> Optional[Dict[str, Any]]:
+        """Wait until an alert matching criteria appears.
+
+        Returns the first matching alert, or ``None`` if timeout expires.
+        By default only *new* alerts are considered.
+        """
+        min_sequence = 0
+        if not include_existing:
+            baseline = await self.get_recent_alerts(limit=limit, interface_number=interface_number)
+            for entry in baseline:
+                if isinstance(entry, dict):
+                    try:
+                        min_sequence = max(min_sequence, int(entry.get('sequence', 0)))
+                    except (TypeError, ValueError):
+                        continue
+
+        deadline = asyncio.get_event_loop().time() + timeout
+        while asyncio.get_event_loop().time() < deadline:
+            matches = await self.get_alerts_filtered(
+                limit=limit,
+                interface_number=interface_number,
+                alert_type=alert_type,
+                severity=severity,
+                contains=contains,
+                min_sequence=min_sequence,
+            )
+            if matches:
+                return matches[0]
+            await asyncio.sleep(poll_interval)
+
+        return None
+
+    async def get_failover_alerts(
+        self,
+        *,
+        limit: int = 200,
+        interface_number: int = -1,
+        min_sequence: int = 0,
+    ) -> list:
+        """Convenience helper: return SIM failover/switch related alerts."""
+        alerts = await self.get_recent_alerts(limit=limit, interface_number=interface_number)
+        result = []
+        for alert in alerts:
+            if not isinstance(alert, dict):
+                continue
+            try:
+                if int(alert.get('sequence', 0)) <= min_sequence:
+                    continue
+            except (TypeError, ValueError):
+                continue
+
+            alert_kind = str(alert.get('type', ''))
+            msg = str(alert.get('message', '')).lower()
+            if alert_kind in ('sim_failover', 'sim_switch') or 'failover' in msg:
+                result.append(alert)
+        return result
+
+    async def wait_for_failover_alert(
+        self,
+        *,
+        interface_number: int = -1,
+        timeout: float = 120.0,
+        poll_interval: float = 1.0,
+        include_existing: bool = False,
+        limit: int = 200,
+    ) -> Optional[Dict[str, Any]]:
+        """Convenience helper: wait for a SIM failover-related alert."""
+        min_sequence = 0
+        if not include_existing:
+            baseline = await self.get_recent_alerts(limit=limit, interface_number=interface_number)
+            for entry in baseline:
+                if isinstance(entry, dict):
+                    try:
+                        min_sequence = max(min_sequence, int(entry.get('sequence', 0)))
+                    except (TypeError, ValueError):
+                        continue
+
+        deadline = asyncio.get_event_loop().time() + timeout
+        while asyncio.get_event_loop().time() < deadline:
+            matches = await self.get_failover_alerts(
+                limit=limit,
+                interface_number=interface_number,
+                min_sequence=min_sequence,
+            )
+            if matches:
+                return matches[0]
+            await asyncio.sleep(poll_interval)
+
+        return None
+
     # ── SMS methods ──────────────────────────────────────────────────────
 
     async def send_sms(
@@ -812,6 +1215,158 @@ class WWANClientSync:
     def get_status(self, interface_number: int) -> Dict[str, Any]:
         """Full status dict.  See :meth:`WWANClient.get_status`."""
         return self._run(self._call("get_status", interface_number))
+
+    def get_recent_alerts(self, limit: int = 50, interface_number: int = -1) -> list:
+        """Fetch recent alerts.  See :meth:`WWANClient.get_recent_alerts`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.get_recent_alerts(limit=limit, interface_number=interface_number)
+        return self._run(_inner())
+
+    def clear_alerts(self, interface_number: int = -1) -> str:
+        """Clear alert history.  See :meth:`WWANClient.clear_alerts`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.clear_alerts(interface_number=interface_number)
+        return self._run(_inner())
+
+    def ack_alert(self, alert_id: str) -> bool:
+        """Acknowledge alert by id. See :meth:`WWANClient.ack_alert`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.ack_alert(alert_id=alert_id)
+        return self._run(_inner())
+
+    def get_alerts_filtered(
+        self,
+        *,
+        limit: int = 200,
+        interface_number: int = -1,
+        alert_type: Optional[str] = None,
+        category: Optional[str] = None,
+        code: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        severity: Optional[str] = None,
+        contains: Optional[str] = None,
+        min_sequence: int = 0,
+    ) -> list:
+        """Filtered alerts helper.  See :meth:`WWANClient.get_alerts_filtered`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.get_alerts_filtered(
+                    limit=limit,
+                    interface_number=interface_number,
+                    alert_type=alert_type,
+                    category=category,
+                    code=code,
+                    source=source,
+                    state=state,
+                    severity=severity,
+                    contains=contains,
+                    min_sequence=min_sequence,
+                )
+        return self._run(_inner())
+
+    def monitor_alerts(
+        self,
+        *,
+        timeout: float = 30.0,
+        interface_number: int = -1,
+        alert_type: Optional[str] = None,
+        category: Optional[str] = None,
+        code: Optional[str] = None,
+        severity: Optional[str] = None,
+        contains: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        include_existing: bool = False,
+        existing_limit: int = 50,
+        use_json_signal: bool = False,
+    ) -> list:
+        """Block and collect matching alerts for *timeout* seconds."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.monitor_alerts(
+                    timeout=timeout,
+                    interface_number=interface_number,
+                    alert_type=alert_type,
+                    category=category,
+                    code=code,
+                    severity=severity,
+                    contains=contains,
+                    source=source,
+                    state=state,
+                    include_existing=include_existing,
+                    existing_limit=existing_limit,
+                    use_json_signal=use_json_signal,
+                )
+        return self._run(_inner())
+
+    def wait_for_alert(
+        self,
+        *,
+        alert_type: Optional[str] = None,
+        severity: Optional[str] = None,
+        interface_number: int = -1,
+        contains: Optional[str] = None,
+        timeout: float = 60.0,
+        poll_interval: float = 1.0,
+        include_existing: bool = False,
+        limit: int = 200,
+    ) -> Optional[Dict[str, Any]]:
+        """Blocking alert wait helper.  See :meth:`WWANClient.wait_for_alert`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.wait_for_alert(
+                    alert_type=alert_type,
+                    severity=severity,
+                    interface_number=interface_number,
+                    contains=contains,
+                    timeout=timeout,
+                    poll_interval=poll_interval,
+                    include_existing=include_existing,
+                    limit=limit,
+                )
+        return self._run(_inner())
+
+    def get_failover_alerts(
+        self,
+        *,
+        limit: int = 200,
+        interface_number: int = -1,
+        min_sequence: int = 0,
+    ) -> list:
+        """Failover-alert helper.  See :meth:`WWANClient.get_failover_alerts`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.get_failover_alerts(
+                    limit=limit,
+                    interface_number=interface_number,
+                    min_sequence=min_sequence,
+                )
+        return self._run(_inner())
+
+    def wait_for_failover_alert(
+        self,
+        *,
+        interface_number: int = -1,
+        timeout: float = 120.0,
+        poll_interval: float = 1.0,
+        include_existing: bool = False,
+        limit: int = 200,
+    ) -> Optional[Dict[str, Any]]:
+        """Blocking failover-alert wait helper. See :meth:`WWANClient.wait_for_failover_alert`."""
+        async def _inner():
+            async with WWANClient(bus_type=self._bus_type) as client:
+                return await client.wait_for_failover_alert(
+                    interface_number=interface_number,
+                    timeout=timeout,
+                    poll_interval=poll_interval,
+                    include_existing=include_existing,
+                    limit=limit,
+                )
+        return self._run(_inner())
 
     # ── SMS ──────────────────────────────────────────────────────────────
 

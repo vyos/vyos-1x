@@ -136,10 +136,10 @@ def show_sms(raw: bool, interface: str):
     return '\n'.join(lines)
 
 
-def read_sms(raw: bool, interface: str, message_id: int):
-    """Read a specific SMS message.
+def show_sms_message(raw: bool, interface: str, message_id: int):
+    """Show a specific SMS message.
 
-    CLI: show interfaces wwan <wwan0> sms message <id>
+    CLI: show interfaces wwan <wwan0> sms <id> or sms message <id>
     """
     _check_interface(interface)
     if_num = _get_interface_number(interface)

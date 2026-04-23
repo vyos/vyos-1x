@@ -1,6 +1,6 @@
-# VyOS WWAN Enhanced Interface — Operational Command Reference
+# IGOS WWAN Enhanced Interface — Operational Command Reference
 
-This document defines the VyOS operational-mode commands implemented for the
+This document defines the IGOS operational-mode commands implemented for the
 enhanced WWAN interface management service.  All data is sourced from the
 WWAN FSM D-Bus service (no raw QMI/mmcli calls from op-mode scripts, avoiding
 conflicts with ModemManager).
@@ -22,6 +22,12 @@ show
                     ├── signal                              # RF signal metrics
                     ├── sim                                 # SIM/slot/PIN information
                     ├── status                              # connection state and IP config
+                    ├── wait-failover-alert                 # wait for next failover alert
+                    │     └── timeout <1-600>               # override wait timeout (seconds)
+                    ├── monitor-alerts                      # collect live alerts for a timeout window
+                    │     ├── timeout <1-600>               # monitor duration in seconds
+                    │     ├── severity {info|warning|critical}
+                    │     └── category {connectivity|sim|usage|gps|time|modem}
                     ├── sms                                 # list all SMS messages
                     │     ├── <id>                          # read specific SMS message (preferred)
                     │     └── message <id>                  # read specific SMS message
@@ -58,10 +64,10 @@ clear
 
 ### `show interfaces wwan`
 
-Summary of all WWAN interfaces (standard VyOS interface listing).
+Summary of all WWAN interfaces (standard IGOS interface listing).
 
 ```
-vyos@vyos:~$ show interfaces wwan
+igos@igos:~$ show interfaces wwan
 ```
 
 **Script:** `interfaces.py show_summary --intf-type=wwan`
@@ -76,12 +82,12 @@ addresses, description) for every `wwan*` interface.
 Detailed standard interface information for all WWAN interfaces.
 
 ```
-vyos@vyos:~$ show interfaces wwan detail
+igos@igos:~$ show interfaces wwan detail
 ```
 
 **Script:** `interfaces.py show --intf-type=wwan`
 
-Standard VyOS detailed interface output (counters, MTU, MAC, etc.) for every
+Standard IGOS detailed interface output (counters, MTU, MAC, etc.) for every
 `wwan*` interface.
 
 ---
@@ -91,7 +97,7 @@ Standard VyOS detailed interface output (counters, MTU, MAC, etc.) for every
 Standard interface summary for a specific WWAN interface.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0
+igos@igos:~$ show interfaces wwan wwan0
 ```
 
 **Script:** `interfaces.py show --intf-name="$4" --intf-type=wirelessmodem`
@@ -101,10 +107,10 @@ vyos@vyos:~$ show interfaces wwan wwan0
 ### `show interfaces wwan <wwanN> status`
 
 Current connection state, IP configuration, signal overview, SMS count, and
-session data usage.
+live bearer session data usage.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 status
+igos@igos:~$ show interfaces wwan wwan0 status
 ```
 
 **Script:** `show_wwan.py show_status --interface="$4"`
@@ -136,9 +142,9 @@ vyos@vyos:~$ show interfaces wwan wwan0 status
 | **SMS** | SMS supported | Whether modem supports SMS |
 | | Messages | Total SMS message count |
 | | Unread | Unread incoming SMS count |
-| **Data Usage (session)** | RX bytes | Bytes received this session |
-| | TX bytes | Bytes transmitted this session |
-| | Duration | Session duration (hours/minutes/seconds) |
+| **Data Usage (session)** | RX bytes | Bytes received on the current bearer session |
+| | TX bytes | Bytes transmitted on the current bearer session |
+| | Duration | Current bearer session duration (hours/minutes/seconds) |
 
 **JSON mode:** `show interfaces wwan wwan0 status --raw`
 
@@ -149,7 +155,7 @@ vyos@vyos:~$ show interfaces wwan wwan0 status
 Modem hardware identification.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 hardware
+igos@igos:~$ show interfaces wwan wwan0 hardware
 ```
 
 **Script:** `show_wwan.py show_hardware --interface="$4"`
@@ -177,7 +183,7 @@ vyos@vyos:~$ show interfaces wwan wwan0 hardware
 RF signal metrics and active radio bands.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 signal
+igos@igos:~$ show interfaces wwan wwan0 signal
 ```
 
 **Script:** `show_wwan.py show_signal --interface="$4"`
@@ -214,7 +220,7 @@ vyos@vyos:~$ show interfaces wwan wwan0 signal
 SIM card, slot, failover, and PIN/PUK status.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 sim
+igos@igos:~$ show interfaces wwan wwan0 sim
 ```
 
 **Script:** `show_wwan.py show_sim --interface="$4"`
@@ -253,10 +259,11 @@ vyos@vyos:~$ show interfaces wwan wwan0 sim
 ### `show interfaces wwan <wwanN> detail`
 
 Comprehensive display combining all sections: status, hardware, SIM, signal,
-plus cumulative data usage, failover history, and configuration summary.
+plus billing-cycle cumulative usage, runtime bearer/recovery counters,
+failover history, and configuration summary.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 detail
+igos@igos:~$ show interfaces wwan wwan0 detail
 ```
 
 **Script:** `show_wwan.py show_detail --interface="$4"`
@@ -267,12 +274,24 @@ vyos@vyos:~$ show interfaces wwan wwan0 detail
 |---|---|---|
 | **Cumulative Data Usage** | Cumulative bytes | Total bytes across all sessions in current billing cycle |
 | | Including session | Cumulative + current session bytes |
+| | Billing day | Day of month on which the billing-cycle counters reset |
+| | Tracked slot | Active slot associated with the persisted usage record |
+| | Tracked ICCID | Physical SIM ICCID used for billing usage tracking when available; falls back to slot-based tracking if unavailable |
 | | Data limit | Configured data limit in bytes (if set) |
 | | Usage | Percentage of data limit consumed |
 | | Limit action | Action when limit reached (`none`, `disable`, `sim-failover`, `sim-failover-sticky`) |
 | **Failover History** | Failover count | Number of SIM failover events |
 | | Last failover | Timestamp of last failover |
 | | Recovery attempts | Number of connectivity recovery attempts |
+| **Runtime Counters** | Bearer drops | Number of bearer-down events since boot |
+| | Registration losses | Number of bearer losses that surfaced as registration-only state since boot |
+| | Reconnect attempts | Automatic reconnection attempts since boot |
+| | Reconnect successes | Successful bearer recoveries since boot |
+| | SIM switches | Runtime SIM slot changes since boot |
+| | Total downtime | Accumulated bearer downtime since boot |
+| | Current downtime | Current bearer downtime if the interface is presently disconnected |
+| | Last disconnect | Timestamp of the last bearer-down event |
+| | Last reason | Reason recorded for the last bearer-down event |
 | **Configuration** | Network mode | Configured RAT selection mode |
 | | Reconnection | Enhanced reconnection status |
 | | Monitoring | Connectivity monitoring status |
@@ -285,12 +304,67 @@ vyos@vyos:~$ show interfaces wwan wwan0 detail
 
 ---
 
+### `show interfaces wwan <wwanN> wait-failover-alert`
+
+Wait for the next failover-related alert for the specified interface.
+
+```
+igos@igos:~$ show interfaces wwan wwan0 wait-failover-alert
+```
+
+Optional timeout override:
+
+```
+igos@igos:~$ show interfaces wwan wwan0 wait-failover-alert timeout 300
+```
+
+**Script:** `show_wwan.py show_wait_failover --interface="$4"`
+
+**Behavior:**
+- Uses `WWANClientSync.wait_for_failover_alert()` (AlertBus-backed helper)
+- Waits for a new failover/switch alert (default timeout: 120 seconds)
+- Timeout can be tuned via `timeout <1-600>`
+- Prints a structured alert block when received
+- Prints timeout notice if no failover alert arrives in time
+
+**JSON mode:** `show interfaces wwan wwan0 wait-failover-alert --raw`
+
+---
+
+### `show interfaces wwan <wwanN> monitor-alerts`
+
+Collect matching live alerts from AlertBus over a fixed monitoring window.
+
+```
+igos@igos:~$ show interfaces wwan wwan0 monitor-alerts
+```
+
+Optional filters:
+
+```
+igos@igos:~$ show interfaces wwan wwan0 monitor-alerts timeout 120
+igos@igos:~$ show interfaces wwan wwan0 monitor-alerts severity critical
+igos@igos:~$ show interfaces wwan wwan0 monitor-alerts category connectivity
+```
+
+**Script:** `show_wwan.py show_monitor_alerts --interface="$4"`
+
+**Behavior:**
+- Uses `WWANClientSync.monitor_alerts()` (AlertBus signal subscription)
+- Collects matching alerts during timeout window (default: 30s)
+- Optional server-side filter on `severity` and `category`
+- Returns count + per-alert summary (sequence, timestamp, code/type/category/message)
+
+**JSON mode:** `show interfaces wwan wwan0 monitor-alerts --raw`
+
+---
+
 ### `show interfaces wwan <wwanN> sms`
 
 List all SMS messages for the active SIM.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 sms
+igos@igos:~$ show interfaces wwan wwan0 sms
 ```
 
 **Script:** `wwan_sms.py show_sms --interface="$4"`
@@ -315,10 +389,10 @@ vyos@vyos:~$ show interfaces wwan wwan0 sms
 Read a specific SMS message by ID. Incoming messages are marked as read.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 sms 3
+igos@igos:~$ show interfaces wwan wwan0 sms 3
 ```
 
-**Script:** `wwan_sms.py read_sms --interface="$4" --message-id="$6"`
+**Script:** `wwan_sms.py show_sms_message --interface="$4" --message-id="$6"`
 
 **JSON mode:** `show interfaces wwan wwan0 sms 3 --raw`
 
@@ -329,10 +403,10 @@ vyos@vyos:~$ show interfaces wwan wwan0 sms 3
 Legacy alternate syntax for reading a specific SMS message by ID.
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 sms message 3
+igos@igos:~$ show interfaces wwan wwan0 sms message 3
 ```
 
-**Script:** `wwan_sms.py read_sms --interface="$4" --message-id="$7"`
+**Script:** `wwan_sms.py show_sms_message --interface="$4" --message-id="$7"`
 
 **Output fields:**
 
@@ -356,7 +430,7 @@ Show network event log entries for the specified WWAN interface (link, address,
 route, neighbor, and PBR rule events from journalctl).
 
 ```
-vyos@vyos:~$ show interfaces wwan wwan0 event-log
+igos@igos:~$ show interfaces wwan wwan0 event-log
 ```
 
 **Sub-commands:**
@@ -381,7 +455,7 @@ vyos@vyos:~$ show interfaces wwan wwan0 event-log
 Bring up (or re-establish) the WWAN bearer connection.
 
 ```
-vyos@vyos:~$ connect interface wwan0
+igos@igos:~$ connect interface wwan0
 ```
 
 **Script:** `connect_disconnect.py --connect --interface "$3"`
@@ -402,7 +476,7 @@ vyos@vyos:~$ connect interface wwan0
 Tear down the WWAN bearer connection.
 
 ```
-vyos@vyos:~$ disconnect interface wwan0
+igos@igos:~$ disconnect interface wwan0
 ```
 
 **Script:** `connect_disconnect.py --disconnect --interface "$3"`
@@ -425,7 +499,7 @@ vyos@vyos:~$ disconnect interface wwan0
 Send an SMS message via the WWAN modem.
 
 ```
-vyos@vyos:~$ generate interfaces wwan wwan0 sms number '+15551234567' message 'Router rebooted successfully'
+igos@igos:~$ generate interfaces wwan wwan0 sms number '+15551234567' message 'Router rebooted successfully'
 ```
 
 **Script:** `wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"`
@@ -450,7 +524,7 @@ vyos@vyos:~$ generate interfaces wwan wwan0 sms number '+15551234567' message 'R
 Delete all SMS messages on the active SIM.
 
 ```
-vyos@vyos:~$ clear interfaces wwan wwan0 sms
+igos@igos:~$ clear interfaces wwan wwan0 sms
 ```
 
 **Script:** `wwan_sms.py delete_all_sms --interface="$4"`
@@ -466,7 +540,7 @@ vyos@vyos:~$ clear interfaces wwan wwan0 sms
 Delete a specific SMS message by ID.
 
 ```
-vyos@vyos:~$ clear interfaces wwan wwan0 sms message 3
+igos@igos:~$ clear interfaces wwan wwan0 sms message 3
 ```
 
 **Script:** `wwan_sms.py delete_sms --interface="$4" --message-id="$7"`
@@ -491,6 +565,7 @@ scripts use the `WWANClientSync` client library from
 |---|---|---|
 | `/com/igos/IgosModemManager/Control` | `com.igos.IgosModemManager.Control` | Service management (add/remove interfaces) |
 | `/com/igos/IgosModemManager/Interface<N>` | `com.igos.IgosModemManager.Interface` | Per-interface operations |
+| `/com/igos/IgosModemManager/AlertBus` | `com.igos.IgosModemManager.AlertBus` | Structured WWAN alert stream + recent-alert history |
 
 ### Per-Interface D-Bus Methods
 
@@ -515,6 +590,87 @@ scripts use the `WWANClientSync` client library from
 | `AddInterface(interface_number)` | integer | — | Create and export new interface handler |
 | `RemoveInterface(interface_number)` | — | — | Shutdown and unexport interface |
 
+### AlertBus D-Bus Methods and Signal
+
+| Name | Parameters | Returns | Description |
+|---|---|---|---|
+| `Alert` (signal) | `payload` (`a{sv}`) | — | Emitted for normalized WWAN alerts (bearer down/up, failover, data-limit, FSM failure) |
+| `AlertRaised` (signal) | `alert_json` (`s`) | — | Compatibility signal carrying the same alert envelope as compact JSON |
+| `GetRecentAlerts(limit, interface_number)` | integer, integer (`-1` = all) | Array of alert dicts | Retrieve recent alerts from in-memory ring buffer |
+| `AckAlert(alert_id)` | string | boolean | Mark an alert as acknowledged (`state=acked`) |
+| `ClearAlerts(interface_number)` | integer (`-1` = all) | Status string | Clear alert history globally or per-interface |
+
+### WWAN client subscription helpers
+
+The WWAN Python client library includes callback and monitor helpers:
+
+- `WWANClient.subscribe_alerts(callback, ...) -> subscription_id`
+- `WWANClient.unsubscribe_alerts(subscription_id) -> bool`
+- `WWANClient.monitor_alerts(timeout=..., ...) -> list[alert]`
+- `WWANClientSync.monitor_alerts(...) -> list[alert]`
+
+These helpers are the base for protocol adapters (SNMP/REST/MQTT) without
+coupling protocol-specific code into the WWAN FSM.
+
+### Protocol adapter skeletons (SNMP/REST/MQTT)
+
+The module `python/vyos/utils/wwan/alert_adapters.py` provides decoupled
+subscriber skeletons:
+
+- `AlertSubscriptionRunner` — shared subscriber dispatcher
+- `RestAlertAdapter` — in-memory recent/active alert store for REST endpoints
+- `MqttAlertAdapter` — topic mapping to `igos/alerts/<category>/<source>`
+- `SnmpAlertAdapter` — stable `code -> OID` trap mapping via callback
+
+Adapters are transport-agnostic by design:
+- MQTT uses injected `publish_func(topic, payload, qos, retain)`
+- SNMP uses injected `send_trap_func(oid, varbinds)`
+
+This keeps WWAN core stable while protocol-specific implementations evolve in
+separate daemons/services.
+
+### Alert envelope schema (stable contract)
+
+All AlertBus payloads use a normalized envelope with stable machine fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string (UUID) | Unique alert id |
+| `timestamp` | string (UTC ISO8601) | Alert creation time |
+| `sequence` | integer | Monotonic sequence number |
+| `severity` | string | `info` \| `warning` \| `critical` |
+| `category` | string | `connectivity` \| `sim` \| `usage` \| `gps` \| `time` \| `modem` |
+| `source` | string | Source component (e.g. `wwan-fsm`) |
+| `code` | string | Stable machine code (e.g. `WWAN_BEARER_DOWN`) |
+| `message` | string | Human-readable message |
+| `labels` | dict | Structured tags (interface, fsm_state, etc.) |
+| `state` | string | `open` \| `cleared` \| `acked` |
+| `dedupe_key` | string | Stable dedupe/suppression key |
+| `interface_number` | integer | Interface index (`-1` = global/service) |
+
+### AlertBus → Journald bridge (for standard IGOS `service event-handler`)
+
+AlertBus events are also written to journald with:
+
+- `SYSLOG_IDENTIFIER=igos-wwan-alertbus`
+- `MESSAGE=<alert message>`
+- `WWAN_ALERT=1`
+- `WWAN_ALERT_TYPE`, `WWAN_ALERT_SEVERITY`, `WWAN_ALERT_INTERFACE`
+- `WWAN_ALERT_SEQUENCE`, `WWAN_ALERT_TIMESTAMP`, `WWAN_ALERT_SOURCE`, `WWAN_ALERT_FSM_STATE`
+- `SYSLOG_IDENTIFIER=igos-wwan-alertbus-json` (parallel JSON line)
+- `MESSAGE=<compact JSON alert envelope>`
+- `WWAN_ALERT_JSON=1`
+
+This allows native `service event-handler` rules to trigger scripts from WWAN
+alerts without replacing the structured D-Bus AlertBus API.
+
+#### Event-handler + HTTPS webhook note
+
+The IGOS `service event-handler` passes only the journal `MESSAGE` text into the
+script environment variable `message`. If your script needs structured JSON for
+an HTTPS POST body, use `syslog-identifier igos-wwan-alertbus-json` and parse
+`$message` as JSON.
+
 ---
 
 ## Implementation Files
@@ -530,6 +686,7 @@ scripts use the `WWANClientSync` client library from
 | `src/op_mode/wwan_sms.py` | Python: send, list, read, delete SMS handlers |
 | `src/op_mode/connect_disconnect.py` | Python: connect/disconnect handler (shared) |
 | `python/vyos/utils/wwan/wwan_client.py` | Python: `WWANClientSync` D-Bus client library |
+| `python/vyos/utils/wwan/alert_adapters.py` | Python: AlertBus subscriber adapters (REST/MQTT/SNMP skeletons) |
 | `python/vyos/utils/wwan/interfaces_wwan_config.py` | Python: D-Bus service — per-interface methods |
 | `python/vyos/utils/wwan/interfaces_wwan_service_manager.py` | Python: D-Bus service — control plane |
 
@@ -547,6 +704,8 @@ scripts use the `WWANClientSync` client library from
 | `show interfaces wwan wwan0 signal` | RSSI, RSRP, RSRQ, SNR, active bands |
 | `show interfaces wwan wwan0 sim` | SIM slots, IMSI, ICCID, failover, PIN/PUK status |
 | `show interfaces wwan wwan0 detail` | All of the above + data usage + failover history |
+| `show interfaces wwan wwan0 wait-failover-alert` | Wait for next failover-related alert |
+| `show interfaces wwan wwan0 monitor-alerts` | Collect live alerts during monitor window |
 | `show interfaces wwan wwan0 sms` | List all SMS messages |
 | `show interfaces wwan wwan0 sms message 3` | Read SMS message #3 |
 | `show interfaces wwan wwan0 event-log` | Network event log for wwan0 |

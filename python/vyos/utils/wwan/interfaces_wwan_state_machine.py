@@ -132,9 +132,10 @@ class ModemEvent(str, Enum):
 class ModemStateMachine:
     modem_state_machines = {}
 
-    def __init__(self, interface_number: int, bus: MessageBus):
+    def __init__(self, interface_number: int, bus: MessageBus, alert_emitter=None):
         self.interface_number = interface_number
         self.bus = bus
+        self.alert_emitter = alert_emitter
         self.proxy = None
         self.config = None
         self._previous_config = None        # Track previous config for selective disconnection
@@ -172,6 +173,18 @@ class ModemStateMachine:
         self.last_known_sim_info = None     # Store SIM info from last successful connection
         self.sim_changed = False            # Flag to indicate SIM card change detected
         self.connected_apn = None           # Last successful APN config dict (for reconnection & status)
+
+        # Since-boot operational counters for bearer / recovery visibility.
+        self.bearer_disconnect_count = 0    # Number of bearer-down events since boot
+        self.registration_loss_count = 0    # Number of bearer losses surfacing as REGISTERED
+        self.reconnect_attempt_count = 0    # Automatic bearer re-establishment attempts since boot
+        self.reconnect_success_count = 0    # Successful reconnects after downtime since boot
+        self.sim_switch_count = 0           # Runtime SIM slot changes since boot
+        self.total_bearer_downtime_seconds = 0  # Accumulated bearer downtime since boot
+        self._bearer_down_since = None      # Timestamp when current downtime window started
+        self.last_disconnect_time = 0       # Timestamp of last bearer drop / disconnect
+        self.last_disconnect_reason = ''    # Human-readable reason for last bearer loss
+        self._disconnect_reason_override = None  # Temporary reason set before DISCONNECT
 
         # Per-slot SIM identity cache — stores physical SIM details (IMSI, ICCID,
         # operator) for each slot as we observe them.  ModemManager only exposes
@@ -333,6 +346,29 @@ class ModemStateMachine:
                         extra={'interface_number': self.interface_number,
                                'task_name': task.get_name(),
                                'exception': str(exc)})
+
+    def _emit_alert(self, alert_type: str, severity: str, message: str, **extra_fields):
+        """Emit a normalized alert envelope through the manager-owned alert bus."""
+        if not self.alert_emitter:
+            return
+
+        payload = {
+            'source': 'wwan-fsm',
+            'type': alert_type,
+            'severity': severity,
+            'message': message,
+            'interface_number': self.interface_number,
+            'fsm_state': self.machine.current_state if hasattr(self, 'machine') else 'unknown',
+        }
+        if extra_fields:
+            payload.update(extra_fields)
+
+        try:
+            self.alert_emitter(payload)
+        except Exception as e:
+            logger.debug(f"Alert emit failed (non-fatal): {e}",
+                        extra={'interface_number': self.interface_number,
+                               'alert_type': alert_type})
 
     def _is_reset_allowed(self) -> bool:
         """Check if hardware reset is allowed (not in cooldown period)"""
@@ -623,6 +659,11 @@ class ModemStateMachine:
 
                 # Store original state for logging
                 original_state = self.machine.current_state
+
+                if original_state in [ModemState.CONNECTED.value,
+                                      ModemState.USAGE_MONITORING.value,
+                                      ModemState.DISCONNECTING.value]:
+                    self._record_bearer_down('modem_removed')
 
                 # Clean up current modem references
                 self.proxy = None
@@ -1162,6 +1203,11 @@ class ModemStateMachine:
             self.current_active_sim = new_sim
 
             if old_sim != new_sim:
+                self._record_sim_switch(
+                    old_sim,
+                    new_sim,
+                    self.sim_switch_reason or 'runtime_slot_change',
+                )
                 logger.info("Active SIM changed",
                            extra={'interface_number': self.interface_number,
                                   'from_sim': old_sim,
@@ -1299,6 +1345,7 @@ class ModemStateMachine:
                 # DISCONNECTING (state 9).  This can happen with "Regular deactivation"
                 # where the carrier drops the bearer but the modem stays registered.
                 if not self.user_disconnected:
+                    self._disconnect_reason_override = 'registration_loss'
                     logger.warning("Modem dropped to REGISTERED while FSM CONNECTED — bearer lost, triggering reconnection",
                                   extra={'interface_number': self.interface_number,
                                          'modem_state': mm_state,
@@ -1327,6 +1374,7 @@ class ModemStateMachine:
         elif mm_state == 9:  # DISCONNECTING
             if current_fsm_state in [ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
                 # Connection being terminated - stop network interface monitoring and trigger enhanced reconnection
+                self._disconnect_reason_override = 'modemmanager_disconnecting'
                 logger.warning("ModemManager disconnecting - starting enhanced reconnection",
                               extra={'interface_number': self.interface_number})
                 try:
@@ -1368,20 +1416,8 @@ class ModemStateMachine:
 
                     # Reset failover counters — connection is stable
                     self._reset_failover_counters()
-
-                    # Only start usage monitoring if data limits are configured (per-SIM)
-                    sim_data_cfg = self._get_active_sim_data_config()
-                    if sim_data_cfg['data_limit_size']:
-                        logger.info("Data usage limits configured, will start monitoring",
-                                   extra={'interface_number': self.interface_number,
-                                          'limit_gb': sim_data_cfg['data_limit_size'] / (1024*1024*1024),
-                                          'sim_slot': self.current_active_sim})
-                        # Don't transition — just start the monitoring task
-                        if not self.usage_monitor_task or self.usage_monitor_task.done():
-                            self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
-                    else:
-                        logger.info("No data usage limits configured, staying in CONNECTED state",
-                                   extra={'interface_number': self.interface_number})
+                    self._record_bearer_up('modem_state_connected')
+                    self._ensure_usage_monitoring_started('handle_modem_event')
 
                     # Start connectivity monitoring (ping tests) if configured
                     self._safe_create_task(self.start_connectivity_monitoring())
@@ -1444,6 +1480,14 @@ class ModemStateMachine:
                 # drops (bearer lost, carrier detach-reattach, etc.) also fire
                 # DISCONNECT events.  Only the explicit user/admin disconnect
                 # path should set this flag.  See _handle_admin_disconnect().
+                disconnect_reason = self._disconnect_reason_override or (
+                    'user_disconnect' if self.user_disconnected else 'bearer_disconnect'
+                )
+                self._record_bearer_down(
+                    disconnect_reason,
+                    registration_lost=(disconnect_reason == 'registration_loss'),
+                )
+                self._disconnect_reason_override = None
                 logger.info("DISCONNECT event processed",
                            extra={'interface_number': self.interface_number,
                                   'current_state': current_state,
@@ -1459,6 +1503,7 @@ class ModemStateMachine:
                 except RuntimeError:
                     # No event loop running (e.g., during tests) - ignore
                     pass
+                self._record_bearer_down('enter_idle')
                 logger.info("ENTER_IDLE event processed",
                            extra={'interface_number': self.interface_number,
                                   'current_state': current_state,
@@ -1495,6 +1540,16 @@ class ModemStateMachine:
                                    'configured_apn_rejected': self.configured_apn_rejected,
                                    'trigger_event': event.value,
                                    'from_state': old_state})
+                self._emit_alert(
+                    alert_type='fsm_failed',
+                    severity='error',
+                    message='FSM entered FAILED state',
+                    from_state=old_state,
+                    trigger_event=event.value,
+                    failure_reason=self.last_failure_reason or 'unspecified',
+                    failed_apn=self.last_failed_apn or '',
+                    configured_apn_rejected=bool(self.configured_apn_rejected),
+                )
                 # Start periodic retry from FAILED state — but not if the
                 # retry loop itself caused the re-entry (it manages its own
                 # continuation).
@@ -2131,19 +2186,8 @@ class ModemStateMachine:
 
                 # Reset failover counters — connection is stable
                 self._reset_failover_counters()
-
-                # Only start data usage monitoring if limits are configured (per-SIM)
-                sim_data_cfg = self._get_active_sim_data_config()
-                if sim_data_cfg['data_limit_size']:
-                    logger.info("Data usage limits configured, starting data monitoring",
-                               extra={'interface_number': self.interface_number,
-                                      'limit_gb': sim_data_cfg['data_limit_size'] / (1024*1024*1024),
-                                      'sim_slot': self.current_active_sim})
-                    if not self.usage_monitor_task or self.usage_monitor_task.done():
-                        self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
-                else:
-                    logger.info("No data usage limits - connection monitoring is now event-driven",
-                               extra={'interface_number': self.interface_number})
+                self._record_bearer_up('apply_modem_configuration')
+                self._ensure_usage_monitoring_started('apply_modem_configuration')
 
                 # Start connectivity monitoring (ping tests) if configured
                 self._safe_create_task(self.start_connectivity_monitoring())
@@ -3167,6 +3211,151 @@ class ModemStateMachine:
                           'failover_count': self.failover_count,
                           'failover_time': self.last_failover_time,
                           'primary_sim': self.primary_sim_slot})
+        self._emit_alert(
+            alert_type='sim_failover',
+            severity='warning',
+            message='SIM failover recorded',
+            failover_count=self.failover_count,
+            primary_sim_slot=self.primary_sim_slot or 0,
+            active_sim_slot=self.current_active_sim or 0,
+            last_failover_time=self.last_failover_time,
+        )
+
+    def _record_bearer_down(self, reason: str, *, registration_lost: bool = False):
+        """Record a bearer-down event and start downtime accounting."""
+        now = time.time()
+        self.bearer_disconnect_count += 1
+        if registration_lost:
+            self.registration_loss_count += 1
+        self.last_disconnect_time = now
+        self.last_disconnect_reason = reason
+
+        if self._bearer_down_since is None:
+            self._bearer_down_since = now
+
+        logger.info("Recorded bearer disconnect",
+                   extra={'interface_number': self.interface_number,
+                          'reason': reason,
+                          'bearer_disconnect_count': self.bearer_disconnect_count,
+                          'registration_loss_count': self.registration_loss_count})
+        self._emit_alert(
+            alert_type='bearer_down',
+            severity='warning',
+            message=f'Bearer disconnected ({reason})',
+            reason=reason,
+            registration_lost=registration_lost,
+            bearer_disconnect_count=self.bearer_disconnect_count,
+            registration_loss_count=self.registration_loss_count,
+            disconnect_time=now,
+        )
+
+    def _record_reconnect_attempt(self, reason: str):
+        """Record an automatic reconnect attempt after a bearer loss."""
+        self.reconnect_attempt_count += 1
+        logger.info("Recorded reconnect attempt",
+                   extra={'interface_number': self.interface_number,
+                          'reason': reason,
+                          'reconnect_attempt_count': self.reconnect_attempt_count})
+        self._emit_alert(
+            alert_type='reconnect_attempt',
+            severity='info',
+            message=f'Automatic reconnect attempt ({reason})',
+            reason=reason,
+            reconnect_attempt_count=self.reconnect_attempt_count,
+        )
+
+    def _record_bearer_up(self, reason: str = 'reconnected'):
+        """Record bearer recovery and close downtime accounting if active."""
+        if self._bearer_down_since is None:
+            return
+
+        now = time.time()
+        downtime = max(0, int(now - self._bearer_down_since))
+        self.total_bearer_downtime_seconds += downtime
+        self.reconnect_success_count += 1
+        self._bearer_down_since = None
+
+        logger.info("Recorded bearer recovery",
+                   extra={'interface_number': self.interface_number,
+                          'reason': reason,
+                          'downtime_seconds': downtime,
+                          'total_bearer_downtime_seconds': self.total_bearer_downtime_seconds,
+                          'reconnect_success_count': self.reconnect_success_count})
+        self._emit_alert(
+            alert_type='bearer_up',
+            severity='info',
+            message=f'Bearer recovered ({reason})',
+            reason=reason,
+            downtime_seconds=downtime,
+            total_bearer_downtime_seconds=self.total_bearer_downtime_seconds,
+            reconnect_success_count=self.reconnect_success_count,
+        )
+
+    def _record_sim_switch(self, from_sim: int, to_sim: int, reason: str):
+        """Record a runtime SIM slot change."""
+        if from_sim in (None, 0) or to_sim in (None, 0) or from_sim == to_sim:
+            return
+
+        self.sim_switch_count += 1
+        logger.info("Recorded SIM switch",
+                   extra={'interface_number': self.interface_number,
+                          'from_sim': from_sim,
+                          'to_sim': to_sim,
+                          'reason': reason,
+                          'sim_switch_count': self.sim_switch_count})
+        self._emit_alert(
+            alert_type='sim_switch',
+            severity='warning' if 'failover' in str(reason) else 'info',
+            message=f'SIM switched from slot {from_sim} to slot {to_sim} ({reason})',
+            from_sim=from_sim,
+            to_sim=to_sim,
+            reason=reason,
+            sim_switch_count=self.sim_switch_count,
+        )
+
+    def _get_usage_identity(self) -> dict:
+        """Return the persistence identity for billing-cycle usage accounting."""
+        slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+
+        iccid = ''
+        if self.last_known_sim_info:
+            iccid = self.last_known_sim_info.get('sim_identifier', '')
+
+        if not iccid:
+            iccid = self.sim_slot_info_cache.get(slot, {}).get('iccid', '')
+
+        if iccid:
+            return {
+                'key': f'iccid:{iccid}',
+                'type': 'iccid',
+                'slot': slot,
+                'iccid': iccid,
+                'legacy_slot_key': str(slot),
+            }
+
+        return {
+            'key': f'slot:{slot}',
+            'type': 'slot',
+            'slot': slot,
+            'iccid': '',
+            'legacy_slot_key': str(slot),
+        }
+
+    def _ensure_usage_monitoring_started(self, source: str):
+        """Start usage monitoring whenever a bearer is connected."""
+        if self.usage_monitor_task and not self.usage_monitor_task.done():
+            return
+
+        identity = self._get_usage_identity()
+        data_cfg = self._get_active_sim_data_config()
+        logger.info("Starting usage monitoring",
+                   extra={'interface_number': self.interface_number,
+                          'source': source,
+                          'usage_identity_type': identity['type'],
+                          'usage_tracking_slot': identity['slot'],
+                          'usage_tracking_iccid': identity['iccid'] or 'slot-fallback',
+                          'data_limit_bytes': data_cfg.get('data_limit_size', 0)})
+        self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
 
     def _reset_failover_counters(self):
         """Reset failover counters after a stable connection is established"""
@@ -5669,16 +5858,11 @@ class ModemStateMachine:
                    extra={'interface_number': self.interface_number,
                           'bearer_path': self.bearer_path,
                           'active_sim': self.current_active_sim,
+                          'usage_identity': self._get_usage_identity()['key'],
                           'data_limit_gb': data_limit / (1024*1024*1024) if data_limit else 0,
                           'action': data_action,
                           'warning_thresholds': data_warning_thresholds,
                           'billing_date': billing_date})
-
-        if not data_limit:
-            logger.info("No data usage limit configured for active SIM",
-                       extra={'interface_number': self.interface_number,
-                              'active_sim': self.current_active_sim})
-            return
 
         # Load persisted cumulative usage for this SIM
         cumulative_bytes = self._load_persisted_usage()
@@ -5717,21 +5901,33 @@ class ModemStateMachine:
                             usage_pct = (total_bytes / data_limit) * 100 if data_limit > 0 else 0
 
                             # Check per-SIM data-limit warning thresholds
-                            for threshold in data_warning_thresholds:
-                                if usage_pct >= threshold and threshold not in warnings_logged:
-                                    warnings_logged.add(threshold)
-                                    logger.warning(
-                                        f"Data usage warning: {usage_pct:.1f}% of limit reached "
-                                        f"(warning threshold: {threshold}%)",
-                                        extra={'interface_number': self.interface_number,
-                                               'active_sim': self.current_active_sim,
-                                               'usage_pct': round(usage_pct, 1),
-                                               'warning_threshold': threshold,
-                                               'total_mb': total_bytes / (1024*1024),
-                                               'limit_gb': data_limit / (1024*1024*1024)})
+                            if data_limit > 0:
+                                for threshold in data_warning_thresholds:
+                                    if usage_pct >= threshold and threshold not in warnings_logged:
+                                        warnings_logged.add(threshold)
+                                        logger.warning(
+                                            f"Data usage warning: {usage_pct:.1f}% of limit reached "
+                                            f"(warning threshold: {threshold}%)",
+                                            extra={'interface_number': self.interface_number,
+                                                   'active_sim': self.current_active_sim,
+                                                   'usage_pct': round(usage_pct, 1),
+                                                   'warning_threshold': threshold,
+                                                   'total_mb': total_bytes / (1024*1024),
+                                                   'limit_gb': data_limit / (1024*1024*1024)})
+                                        self._emit_alert(
+                                            alert_type='data_usage_warning',
+                                            severity='warning',
+                                            message=f'Data usage crossed {threshold}% threshold',
+                                            warning_threshold=float(threshold),
+                                            usage_percent=round(usage_pct, 1),
+                                            active_sim_slot=self.current_active_sim or 0,
+                                            total_bytes=int(total_bytes),
+                                            data_limit_bytes=int(data_limit),
+                                            action=data_action,
+                                        )
 
                             # Check if limit exceeded
-                            if total_bytes >= data_limit:
+                            if data_limit > 0 and total_bytes >= data_limit:
                                 if not limit_logged:
                                     limit_logged = True
                                     logger.warning(
@@ -5741,6 +5937,16 @@ class ModemStateMachine:
                                                'usage_gb': total_bytes / (1024*1024*1024),
                                                'limit_gb': data_limit / (1024*1024*1024),
                                                'action': data_action})
+                                    self._emit_alert(
+                                        alert_type='data_usage_limit_reached',
+                                        severity='error',
+                                        message='Data usage limit reached',
+                                        active_sim_slot=self.current_active_sim or 0,
+                                        total_bytes=int(total_bytes),
+                                        data_limit_bytes=int(data_limit),
+                                        usage_percent=round(usage_pct, 1),
+                                        action=data_action,
+                                    )
 
                                 if data_action in ('sim-failover', 'sim-failover-sticky'):
                                     # Switch to alternative SIM
@@ -5844,7 +6050,9 @@ class ModemStateMachine:
             {"1": {"bytes": 123456789, "billing_date": 1, "last_updated": "..."}, "2": ...}
         Handles billing-cycle resets automatically.
         """
-        slot_key = str(self.current_active_sim or self.config.get('primary_sim_slot', 1))
+        identity = self._get_usage_identity()
+        slot_key = identity['legacy_slot_key']
+        identity_key = identity['key']
         data_cfg = self._get_active_sim_data_config()
         billing_date = data_cfg['data_limit_billing_date']
 
@@ -5855,7 +6063,32 @@ class ModemStateMachine:
         except (FileNotFoundError, json.JSONDecodeError, PermissionError):
             return 0
 
-        slot_data = usage_data.get(slot_key, {})
+        slot_data = usage_data.get(identity_key, {})
+        legacy_key = None
+        if not slot_data:
+            for candidate in (slot_key, f'slot:{slot_key}'):
+                if candidate in usage_data:
+                    slot_data = usage_data.get(candidate, {})
+                    legacy_key = candidate
+                    break
+
+        if slot_data and legacy_key and legacy_key != identity_key:
+            usage_data[identity_key] = {
+                **slot_data,
+                'slot': identity['slot'],
+                'iccid': identity['iccid'],
+                'identity_type': identity['type'],
+            }
+            del usage_data[legacy_key]
+            try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                tmp_path = path + '.tmp'
+                with open(tmp_path, 'w') as f:
+                    json.dump(usage_data, f, indent=2)
+                os.replace(tmp_path, path)
+            except Exception:
+                pass
+
         stored_bytes = slot_data.get('bytes', 0)
         last_updated = slot_data.get('last_updated', '')
 
@@ -5868,7 +6101,7 @@ class ModemStateMachine:
                 if self._billing_cycle_crossed(last_dt, now, billing_date):
                     logger.info("Billing cycle crossed - resetting cumulative usage",
                                extra={'interface_number': self.interface_number,
-                                      'sim_slot': slot_key,
+                                   'usage_identity': identity_key,
                                       'previous_bytes': stored_bytes,
                                       'billing_date': billing_date})
                     # Clear sticky failover hold when billing cycle resets
@@ -5877,19 +6110,20 @@ class ModemStateMachine:
                         logger.info("Billing cycle reset lifted sim-failover-sticky hold — "
                                    "failback may resume",
                                    extra={'interface_number': self.interface_number,
-                                          'sim_slot': slot_key})
+                                    'usage_identity': identity_key})
                     self._persist_usage(0)
                     return 0
         except Exception:
             pass  # If date parsing fails, use stored value
 
-        logger.debug(f"Loaded persisted usage for SIM {slot_key}: {stored_bytes / (1024*1024):.1f} MB",
+        logger.debug(f"Loaded persisted usage for {identity_key}: {stored_bytes / (1024*1024):.1f} MB",
                     extra={'interface_number': self.interface_number})
         return stored_bytes
 
     def _persist_usage(self, total_bytes: int):
         """Persist cumulative usage for the current active SIM to disk."""
-        slot_key = str(self.current_active_sim or self.config.get('primary_sim_slot', 1))
+        identity = self._get_usage_identity()
+        slot_key = identity['key']
         data_cfg = self._get_active_sim_data_config()
         path = self._usage_file_path()
 
@@ -5904,6 +6138,9 @@ class ModemStateMachine:
         usage_data[slot_key] = {
             'bytes': total_bytes,
             'billing_date': data_cfg['data_limit_billing_date'],
+            'slot': identity['slot'],
+            'iccid': identity['iccid'],
+            'identity_type': identity['type'],
             'last_updated': datetime.datetime.now().isoformat(),
         }
 
@@ -6350,6 +6587,7 @@ class ModemStateMachine:
     async def _enhanced_reconnection_attempt(self):
         """Enhanced reconnection with signal validation and faster timing"""
         try:
+            self._record_reconnect_attempt('enhanced_reconnection')
             # Final signal check before reconnection
             signal_adequate = await self._check_signal_adequacy_for_reconnection()
             if signal_adequate:
@@ -6800,6 +7038,7 @@ class ModemStateMachine:
         # ── 9. Per-SIM cumulative data usage ─────────────────────────────
         try:
             cumulative = self._load_persisted_usage()
+            usage_identity = self._get_usage_identity()
             status['cumulative_bytes'] = cumulative
             status['cumulative_plus_session'] = cumulative + status.get('session_total_bytes', 0)
             data_cfg = self._get_active_sim_data_config()
@@ -6807,16 +7046,23 @@ class ModemStateMachine:
             status['data_limit_action'] = data_cfg.get('data_limit_action', 'none')
             status['data_limit_warning'] = data_cfg.get('data_limit_warning', [])
             status['data_limit_billing_date'] = data_cfg.get('data_limit_billing_date', 1)
+            status['usage_tracking_key'] = usage_identity['key']
+            status['usage_tracking_type'] = usage_identity['type']
+            status['usage_tracking_slot'] = usage_identity['slot']
+            status['usage_tracking_iccid'] = usage_identity['iccid']
             limit = status['data_limit_bytes']
             total = status['cumulative_plus_session']
             status['data_usage_percent'] = round((total / limit) * 100, 1) if limit > 0 else 0.0
         except Exception:
             for k in ('cumulative_bytes', 'cumulative_plus_session',
                       'data_limit_bytes', 'data_limit_action',
-                      'data_limit_billing_date',
+                      'data_limit_billing_date', 'usage_tracking_slot',
                       'data_usage_percent'):
                 status.setdefault(k, 0)
             status.setdefault('data_limit_warning', [])
+            status.setdefault('usage_tracking_key', '')
+            status.setdefault('usage_tracking_type', 'slot')
+            status.setdefault('usage_tracking_iccid', '')
 
         # ── 10. Failover / recovery stats ────────────────────────────────
         status['failover_count'] = self.failover_count
@@ -6825,6 +7071,22 @@ class ModemStateMachine:
             if self.last_failover_time else ''
         )
         status['connectivity_recovery_attempts'] = self.connectivity_recovery_attempts
+        status['disconnection_recovery_attempts'] = self.disconnection_recovery_attempts
+        status['bearer_disconnect_count'] = self.bearer_disconnect_count
+        status['registration_loss_count'] = self.registration_loss_count
+        status['reconnect_attempt_count'] = self.reconnect_attempt_count
+        status['reconnect_success_count'] = self.reconnect_success_count
+        status['sim_switch_count'] = self.sim_switch_count
+        status['total_bearer_downtime_seconds'] = self.total_bearer_downtime_seconds
+        status['current_bearer_downtime_seconds'] = (
+            max(0, int(time.time() - self._bearer_down_since))
+            if self._bearer_down_since else 0
+        )
+        status['last_disconnect_time'] = (
+            datetime.datetime.fromtimestamp(self.last_disconnect_time).isoformat()
+            if self.last_disconnect_time else ''
+        )
+        status['last_disconnect_reason'] = self.last_disconnect_reason
         status['hardware_reset_in_progress'] = self.reset_operation_in_progress
         status['last_hardware_reset_time'] = (
             datetime.datetime.fromtimestamp(self.last_reset_time).isoformat()
@@ -7329,8 +7591,10 @@ class ModemStateMachine:
                                 extra={
                                     'interface_number':
                                         self.interface_number})
+                            self._record_reconnect_attempt('standard_recovery_fallback')
                             await self.apply_modem_configuration()
                     else:
+                        self._record_reconnect_attempt('standard_recovery')
                         await self.apply_modem_configuration()
 
                 elif mm_state == 8:  # REGISTERED but not connected
@@ -7357,8 +7621,10 @@ class ModemStateMachine:
                                         "Enhanced reconnection failed, falling back to standard",
                                         extra={'interface_number': self.interface_number,
                                                'attempt': attempt})
+                                    self._record_reconnect_attempt('standard_recovery_fallback')
                                     await self.apply_modem_configuration()
                             else:
+                                self._record_reconnect_attempt('standard_recovery')
                                 await self.apply_modem_configuration()
 
                             # Allow time for connection to establish
@@ -7447,8 +7713,10 @@ class ModemStateMachine:
                                     "Enhanced reconnection failed, "
                                     "falling back to standard",
                                     extra={'interface_number': self.interface_number})
+                                self._record_reconnect_attempt('standard_recovery_fallback')
                                 await self.apply_modem_configuration()
                         else:
+                            self._record_reconnect_attempt('standard_recovery')
                             await self.apply_modem_configuration()
 
                 elif mm_state in [6, 7]:  # ENABLED or SEARCHING
@@ -7816,6 +8084,7 @@ class ModemStateMachine:
 
                     # FSM: CONNECTED → SIM_SWITCHING; _execute_sim_switch handles
                     # bearer disconnect, task teardown, and the full switch sequence.
+                    self._disconnect_reason_override = 'connectivity_failure'
                     self.transition(ModemEvent.SWITCH_SIM)
                     await self._execute_sim_switch()
                     return
@@ -7826,6 +8095,7 @@ class ModemStateMachine:
             # Pass escalate=False so that only a single attempt is made;
             # _trigger_connectivity_recovery handles retry counting and
             # SIM escalation itself.
+            self._disconnect_reason_override = 'connectivity_failure'
             self.transition(ModemEvent.DISCONNECT)
             await self.handle_disconnection_recovery(
                 escalate=False, connectivity_triggered=True)

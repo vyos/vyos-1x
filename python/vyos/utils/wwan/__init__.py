@@ -1,4 +1,4 @@
-# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright IGOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-VyOS WWAN utilities package
+IGOS WWAN utilities package
 
 This package contains utility modules for WWAN interface management,
-including APN discovery, connection management, and state transitions.
+including APN discovery, connection management, state transitions,
+and AlertBus adapter helpers (REST/MQTT/SNMP fan-out skeletons).
 """

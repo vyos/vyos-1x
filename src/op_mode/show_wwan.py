@@ -369,6 +369,9 @@ def _format_detail(status: dict, interface: str) -> str:
     limit = status.get('data_limit_bytes', 0)
     lines.append(_kv('Cumulative bytes:', f'{cum:,}'))
     lines.append(_kv('Including session:', f'{cum_plus:,}'))
+    lines.append(_kv('Billing day:', status.get('data_limit_billing_date', 1)))
+    lines.append(_kv('Tracked slot:', status.get('usage_tracking_slot', '')))
+    lines.append(_kv('Tracked ICCID:', status.get('usage_tracking_iccid') or 'slot-based fallback'))
     if limit:
         lines.append(_kv('Data limit:', f'{limit:,}'))
         lines.append(_kv('Usage:', f"{status.get('data_usage_percent', 0)}%"))
@@ -378,6 +381,19 @@ def _format_detail(status: dict, interface: str) -> str:
     lines.append(_kv('Failover count:', status.get('failover_count', 0)))
     lines.append(_kv('Last failover:', status.get('last_failover_time', '')))
     lines.append(_kv('Recovery attempts:', status.get('connectivity_recovery_attempts', 0)))
+
+    lines.append(_section('Runtime Counters'))
+    lines.append(_kv('Bearer drops:', status.get('bearer_disconnect_count', 0)))
+    lines.append(_kv('Registration losses:', status.get('registration_loss_count', 0)))
+    lines.append(_kv('Reconnect attempts:', status.get('reconnect_attempt_count', 0)))
+    lines.append(_kv('Reconnect successes:', status.get('reconnect_success_count', 0)))
+    lines.append(_kv('SIM switches:', status.get('sim_switch_count', 0)))
+    lines.append(_kv('Total downtime:', f"{status.get('total_bearer_downtime_seconds', 0)}s"))
+    current_down = status.get('current_bearer_downtime_seconds', 0)
+    if current_down:
+        lines.append(_kv('Current downtime:', f'{current_down}s'))
+    lines.append(_kv('Last disconnect:', status.get('last_disconnect_time', '')))
+    lines.append(_kv('Last reason:', status.get('last_disconnect_reason', '')))
 
     lines.append(_section('Configuration'))
     lines.append(_kv('Network mode:', status.get('network_mode', '')))
@@ -390,6 +406,27 @@ def _format_detail(status: dict, interface: str) -> str:
 
     parts.append('\n'.join(line for line in lines if line))
     return '\n'.join(parts)
+
+
+def _format_alert(alert: dict, interface: str) -> str:
+    lines = [f'WWAN alert for {interface}:']
+    lines.append(_kv('Sequence:', alert.get('sequence', '')))
+    lines.append(_kv('Timestamp:', alert.get('timestamp', '')))
+    lines.append(_kv('Type:', alert.get('type', '')))
+    lines.append(_kv('Severity:', alert.get('severity', '')))
+    lines.append(_kv('Source:', alert.get('source', '')))
+    lines.append(_kv('FSM state:', alert.get('fsm_state', '')))
+    lines.extend(_kv_wrapped('Message:', str(alert.get('message', ''))))
+
+    details = alert.get('details')
+    if details:
+        if isinstance(details, dict):
+            details_text = ', '.join(f'{k}={v}' for k, v in details.items())
+        else:
+            details_text = str(details)
+        lines.extend(_kv_wrapped('Details:', details_text))
+
+    return '\n'.join(line for line in lines if line)
 
 
 # ── Public op-mode entry points ─────────────────────────────────────────
@@ -427,6 +464,134 @@ def show_detail(raw: bool, interface: str):
     if raw:
         return status
     return _format_detail(status, interface)
+
+
+def show_wait_failover(raw: bool,
+                       interface: str,
+                       timeout: int = 120,
+                       poll_interval: int = 1,
+                       include_existing: bool = False):
+    """Wait for next failover alert for an interface and print it.
+
+    This consumes WWANClientSync.wait_for_failover_alert() directly so
+    operators can do a quick interactive wait in op-mode.
+    """
+    try:
+        timeout = int(timeout)
+    except (TypeError, ValueError):
+        raise ValueError('Timeout must be an integer (1-600 seconds)')
+
+    try:
+        poll_interval = int(poll_interval)
+    except (TypeError, ValueError):
+        raise ValueError('Poll interval must be an integer (>= 1 second)')
+
+    if timeout < 1 or timeout > 600:
+        raise ValueError('Timeout must be between 1 and 600 seconds')
+    if poll_interval < 1:
+        raise ValueError('Poll interval must be >= 1 second')
+
+    config = ConfigTreeQuery()
+    if not config.exists(['interfaces', 'wwan', interface]):
+        raise vyos.opmode.UnconfiguredSubsystem(
+            f'Interface "{interface}" is not configured'
+        )
+
+    if_num = _get_interface_number(interface)
+    try:
+        client = _get_client()
+        alert = client.wait_for_failover_alert(
+            interface_number=if_num,
+            timeout=float(timeout),
+            poll_interval=float(poll_interval),
+            include_existing=include_existing,
+        )
+    except Exception as e:
+        raise vyos.opmode.DataUnavailable(
+            f'Cannot wait for WWAN failover alert on {interface}: {e}'
+        )
+
+    if not alert:
+        return (
+            f'No failover alert observed for {interface} '
+            f'within {timeout}s'
+        )
+
+    if raw:
+        return alert
+    return _format_alert(alert, interface)
+
+
+def show_monitor_alerts(raw: bool,
+                        interface: str,
+                        timeout: int = 30,
+                        severity: str = '',
+                        category: str = ''):
+    """Collect and display WWAN alerts for a fixed monitoring window."""
+    try:
+        timeout = int(timeout)
+    except (TypeError, ValueError):
+        raise ValueError('Timeout must be an integer (1-600 seconds)')
+
+    if timeout < 1 or timeout > 600:
+        raise ValueError('Timeout must be between 1 and 600 seconds')
+
+    severity = str(severity or '').strip().lower()
+    category = str(category or '').strip().lower()
+
+    if severity and severity not in ('info', 'warning', 'critical'):
+        raise ValueError('Severity must be one of: info, warning, critical')
+
+    if category and category not in ('connectivity', 'sim', 'usage', 'gps', 'time', 'modem'):
+        raise ValueError('Category must be one of: connectivity, sim, usage, gps, time, modem')
+
+    config = ConfigTreeQuery()
+    if not config.exists(['interfaces', 'wwan', interface]):
+        raise vyos.opmode.UnconfiguredSubsystem(
+            f'Interface "{interface}" is not configured'
+        )
+
+    if_num = _get_interface_number(interface)
+    try:
+        client = _get_client()
+        alerts = client.monitor_alerts(
+            timeout=float(timeout),
+            interface_number=if_num,
+            severity=severity or None,
+            category=category or None,
+            include_existing=False,
+        )
+    except Exception as e:
+        raise vyos.opmode.DataUnavailable(
+            f'Cannot monitor WWAN alerts on {interface}: {e}'
+        )
+
+    if raw:
+        return alerts
+
+    lines = [
+        f'WWAN alert monitor for {interface}: {len(alerts)} alert(s) captured in {timeout}s'
+    ]
+    if severity:
+        lines.append(_kv('Severity filter:', severity))
+    if category:
+        lines.append(_kv('Category filter:', category))
+
+    if not alerts:
+        lines.append('  (no alerts observed)')
+        return '\n'.join(lines)
+
+    for idx, alert in enumerate(alerts, start=1):
+        lines.append(_section(f'Alert {idx}'))
+        lines.append(_kv('Sequence:', alert.get('sequence', '')))
+        lines.append(_kv('Timestamp:', alert.get('timestamp', '')))
+        lines.append(_kv('Code:', alert.get('code', '')))
+        lines.append(_kv('Type:', alert.get('type', '')))
+        lines.append(_kv('Category:', alert.get('category', '')))
+        lines.append(_kv('Severity:', alert.get('severity', '')))
+        lines.extend(_kv_wrapped('Message:', str(alert.get('message', ''))))
+
+    return '\n'.join(line for line in lines if line)
 
 
 if __name__ == '__main__':
