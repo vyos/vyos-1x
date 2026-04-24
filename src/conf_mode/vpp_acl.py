@@ -25,6 +25,7 @@ from vyos.configdict import node_changed
 from vyos.config import Config
 from vyos.utils.network import get_protocol_by_name
 
+from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
 from vyos.vpp.utils import cli_ifaces_list
 from vyos.vpp.acl import Acl
 from vyos.vpp.config_verify import verify_vpp_interface_not_a_member
@@ -184,7 +185,11 @@ def get_config(config=None) -> dict:
         {
             'changed_ip_ifaces': changed_ip_ifaces,
             'changed_mac_ifaces': changed_mac_ifaces,
-            'vpp_ifaces': cli_ifaces_list(conf),
+            'vpp_ifaces': list(
+                dict.fromkeys(
+                    cli_ifaces_list(conf) + cli_ethernet_with_vifs_ifaces(conf)
+                )
+            ),
         }
     )
 
