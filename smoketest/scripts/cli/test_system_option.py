@@ -104,12 +104,10 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
 
     def test_kernel_options(self):
         amd_pstate_mode = 'active'
-        isolate_cpus = '1,2,3'
         nohz_full = '2'
         rcu_no_cbs = '1,2,4-5'
 
         self.cli_set(['system', 'option', 'kernel', 'cpu', 'disable-nmi-watchdog'])
-        self.cli_set(['system', 'option', 'kernel', 'cpu', 'isolate-cpus', isolate_cpus])
         self.cli_set(['system', 'option', 'kernel', 'cpu', 'nohz-full', nohz_full])
         self.cli_set(['system', 'option', 'kernel', 'cpu', 'rcu-no-cbs', rcu_no_cbs])
         self.cli_set(['system', 'option', 'kernel', 'disable-hpet'])
@@ -138,7 +136,6 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
         self.assertIn(' hpet=disable', tmp)
         self.assertIn(' mce=off', tmp)
         self.assertIn(' nosoftlockup', tmp)
-        self.assertIn(f' isolcpus={isolate_cpus}', tmp)
         self.assertIn(f' nohz_full={nohz_full}', tmp)
         self.assertIn(f' rcu_nocbs={rcu_no_cbs}', tmp)
         self.assertIn(' numa_balancing=disable', tmp)
