@@ -40,40 +40,40 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
     def test_system_ip_forwarding(self):
         # Test if IPv4 forwarding can be disabled globally, default is '1'
         # which means forwarding enabled
-        self.assertEqual(sysctl_read('net.ipv4.conf.all.forwarding'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'conf', 'all', 'forwarding']), '1')
 
         self.cli_set(base_path + ['disable-forwarding'])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('net.ipv4.conf.all.forwarding'), '0')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'conf', 'all', 'forwarding']), '0')
         frrconfig = self.getFRRconfig()
         self.assertIn('no ip forwarding', frrconfig)
 
         self.cli_delete(base_path + ['disable-forwarding'])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('net.ipv4.conf.all.forwarding'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'conf', 'all', 'forwarding']), '1')
         frrconfig = self.getFRRconfig()
         self.assertNotIn('no ip forwarding', frrconfig)
 
     def test_system_ip_multipath(self):
         # Test IPv4 multipathing options, options default to off -> '0'
-        self.assertEqual(sysctl_read('net.ipv4.fib_multipath_use_neigh'), '0')
-        self.assertEqual(sysctl_read('net.ipv4.fib_multipath_hash_policy'), '0')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'fib_multipath_use_neigh']), '0')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'fib_multipath_hash_policy']), '0')
 
         self.cli_set(base_path + ['multipath', 'ignore-unreachable-nexthops'])
         self.cli_set(base_path + ['multipath', 'layer4-hashing'])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('net.ipv4.fib_multipath_use_neigh'), '1')
-        self.assertEqual(sysctl_read('net.ipv4.fib_multipath_hash_policy'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'fib_multipath_use_neigh']), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'fib_multipath_hash_policy']), '1')
 
     def test_system_ip_arp_table_size(self):
         cli_default = int(default_value(base_path + ['arp', 'table-size']))
         def _verify_gc_thres(table_size):
-            self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh3'), str(table_size))
-            self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh2'), str(table_size // 2))
-            self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh1'), str(table_size // 8))
+            self.assertEqual(sysctl_read(['net', 'ipv4', 'neigh', 'default', 'gc_thresh3']), str(table_size))
+            self.assertEqual(sysctl_read(['net', 'ipv4', 'neigh', 'default', 'gc_thresh2']), str(table_size // 2))
+            self.assertEqual(sysctl_read(['net', 'ipv4', 'neigh', 'default', 'gc_thresh1']), str(table_size // 8))
 
         _verify_gc_thres(cli_default)
 

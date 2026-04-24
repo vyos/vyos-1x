@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
+from unittest.mock import patch
 
 class TestVyOSUtils(TestCase):
     def test_key_mangling(self):
@@ -24,7 +25,17 @@ class TestVyOSUtils(TestCase):
 
     def test_sysctl_read(self):
         from vyos.utils.system import sysctl_read
-        self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'conf', 'lo', 'forwarding']), '1')
+
+    def test_sysctl_key_normalization(self):
+        from vyos.utils.system import sysctl_read
+        with patch('vyos.utils.system.run') as mock_run:
+            mock_run.return_value.stdout = b'1\n'
+            sysctl_read(['net', 'ipv4', 'conf', 'eth0.10', 'forwarding'])
+            mock_run.assert_called_with(
+                ['sysctl', '-nb', 'net.ipv4.conf.eth0/10.forwarding'],
+                capture_output=True,
+            )
 
     def test_list_strip(self):
         from vyos.utils.list import list_strip

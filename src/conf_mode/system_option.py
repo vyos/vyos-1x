@@ -571,7 +571,7 @@ def apply(options):
         }
 
         for parameter, value in parameters.items():
-            sysctl_write(parameter, value)
+            sysctl_write(parameter.split('.'), value)
 
 
 if __name__ == '__main__':

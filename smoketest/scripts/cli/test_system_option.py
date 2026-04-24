@@ -84,9 +84,9 @@ class TestSystemOption(VyOSUnitTestSHIM.TestCase):
 
         self.assertTrue(is_systemd_service_active(tuned_service))
 
-        self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh1'), gc_thresh1)
-        self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh2'), gc_thresh2)
-        self.assertEqual(sysctl_read('net.ipv4.neigh.default.gc_thresh3'), gc_thresh3)
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'neigh', 'default', 'gc_thresh1']), gc_thresh1)
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'neigh', 'default', 'gc_thresh2']), gc_thresh2)
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'neigh', 'default', 'gc_thresh3']), gc_thresh3)
 
     def test_ssh_client_options(self):
         loopback = 'lo'
