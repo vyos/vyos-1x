@@ -371,7 +371,6 @@ def _format_detail(status: dict, interface: str) -> str:
     lines.append(_kv('Including session:', f'{cum_plus:,}'))
     lines.append(_kv('Billing day:', status.get('data_limit_billing_date', 1)))
     lines.append(_kv('Tracked slot:', status.get('usage_tracking_slot', '')))
-    lines.append(_kv('Tracked ICCID:', status.get('usage_tracking_iccid') or 'slot-based fallback'))
     if limit:
         lines.append(_kv('Data limit:', f'{limit:,}'))
         lines.append(_kv('Usage:', f"{status.get('data_usage_percent', 0)}%"))

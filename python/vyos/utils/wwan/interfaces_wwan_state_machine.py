@@ -3313,47 +3313,26 @@ class ModemStateMachine:
             sim_switch_count=self.sim_switch_count,
         )
 
-    def _get_usage_identity(self) -> dict:
-        """Return the persistence identity for billing-cycle usage accounting."""
-        slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
+    def _current_usage_slot(self) -> int:
+        """Return the SIM slot number used as the usage-tracking key.
 
-        iccid = ''
-        if self.last_known_sim_info:
-            iccid = self.last_known_sim_info.get('sim_identifier', '')
-
-        if not iccid:
-            iccid = self.sim_slot_info_cache.get(slot, {}).get('iccid', '')
-
-        if iccid:
-            return {
-                'key': f'iccid:{iccid}',
-                'type': 'iccid',
-                'slot': slot,
-                'iccid': iccid,
-                'legacy_slot_key': str(slot),
-            }
-
-        return {
-            'key': f'slot:{slot}',
-            'type': 'slot',
-            'slot': slot,
-            'iccid': '',
-            'legacy_slot_key': str(slot),
-        }
+        Usage is tracked per SIM slot (not per physical ICCID) because the
+        carrier data plan / billing limit is configured against a slot
+        (``sim_slot_N_*``).  Tracking by physical ICCID would reset the
+        counter when a replacement SIM is issued on the same plan.
+        """
+        return self.current_active_sim or self.config.get('primary_sim_slot', 1)
 
     def _ensure_usage_monitoring_started(self, source: str):
         """Start usage monitoring whenever a bearer is connected."""
         if self.usage_monitor_task and not self.usage_monitor_task.done():
             return
 
-        identity = self._get_usage_identity()
         data_cfg = self._get_active_sim_data_config()
         logger.info("Starting usage monitoring",
                    extra={'interface_number': self.interface_number,
                           'source': source,
-                          'usage_identity_type': identity['type'],
-                          'usage_tracking_slot': identity['slot'],
-                          'usage_tracking_iccid': identity['iccid'] or 'slot-fallback',
+                          'usage_tracking_slot': self._current_usage_slot(),
                           'data_limit_bytes': data_cfg.get('data_limit_size', 0)})
         self.usage_monitor_task = self._safe_create_task(self.monitor_data_usage())
 
@@ -5858,7 +5837,6 @@ class ModemStateMachine:
                    extra={'interface_number': self.interface_number,
                           'bearer_path': self.bearer_path,
                           'active_sim': self.current_active_sim,
-                          'usage_identity': self._get_usage_identity()['key'],
                           'data_limit_gb': data_limit / (1024*1024*1024) if data_limit else 0,
                           'action': data_action,
                           'warning_thresholds': data_warning_thresholds,
@@ -6050,9 +6028,8 @@ class ModemStateMachine:
             {"1": {"bytes": 123456789, "billing_date": 1, "last_updated": "..."}, "2": ...}
         Handles billing-cycle resets automatically.
         """
-        identity = self._get_usage_identity()
-        slot_key = identity['legacy_slot_key']
-        identity_key = identity['key']
+        slot = self._current_usage_slot()
+        slot_key = str(slot)
         data_cfg = self._get_active_sim_data_config()
         billing_date = data_cfg['data_limit_billing_date']
 
@@ -6063,32 +6040,7 @@ class ModemStateMachine:
         except (FileNotFoundError, json.JSONDecodeError, PermissionError):
             return 0
 
-        slot_data = usage_data.get(identity_key, {})
-        legacy_key = None
-        if not slot_data:
-            for candidate in (slot_key, f'slot:{slot_key}'):
-                if candidate in usage_data:
-                    slot_data = usage_data.get(candidate, {})
-                    legacy_key = candidate
-                    break
-
-        if slot_data and legacy_key and legacy_key != identity_key:
-            usage_data[identity_key] = {
-                **slot_data,
-                'slot': identity['slot'],
-                'iccid': identity['iccid'],
-                'identity_type': identity['type'],
-            }
-            del usage_data[legacy_key]
-            try:
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                tmp_path = path + '.tmp'
-                with open(tmp_path, 'w') as f:
-                    json.dump(usage_data, f, indent=2)
-                os.replace(tmp_path, path)
-            except Exception:
-                pass
-
+        slot_data = usage_data.get(slot_key, {})
         stored_bytes = slot_data.get('bytes', 0)
         last_updated = slot_data.get('last_updated', '')
 
@@ -6101,7 +6053,7 @@ class ModemStateMachine:
                 if self._billing_cycle_crossed(last_dt, now, billing_date):
                     logger.info("Billing cycle crossed - resetting cumulative usage",
                                extra={'interface_number': self.interface_number,
-                                   'usage_identity': identity_key,
+                                      'sim_slot': slot_key,
                                       'previous_bytes': stored_bytes,
                                       'billing_date': billing_date})
                     # Clear sticky failover hold when billing cycle resets
@@ -6110,20 +6062,20 @@ class ModemStateMachine:
                         logger.info("Billing cycle reset lifted sim-failover-sticky hold — "
                                    "failback may resume",
                                    extra={'interface_number': self.interface_number,
-                                    'usage_identity': identity_key})
+                                          'sim_slot': slot_key})
                     self._persist_usage(0)
                     return 0
         except Exception:
             pass  # If date parsing fails, use stored value
 
-        logger.debug(f"Loaded persisted usage for {identity_key}: {stored_bytes / (1024*1024):.1f} MB",
+        logger.debug(f"Loaded persisted usage for slot {slot_key}: {stored_bytes / (1024*1024):.1f} MB",
                     extra={'interface_number': self.interface_number})
         return stored_bytes
 
     def _persist_usage(self, total_bytes: int):
         """Persist cumulative usage for the current active SIM to disk."""
-        identity = self._get_usage_identity()
-        slot_key = identity['key']
+        slot = self._current_usage_slot()
+        slot_key = str(slot)
         data_cfg = self._get_active_sim_data_config()
         path = self._usage_file_path()
 
@@ -6134,13 +6086,11 @@ class ModemStateMachine:
         except (FileNotFoundError, json.JSONDecodeError, PermissionError):
             usage_data = {}
 
-        # Update this SIM's entry
+        # Update this SIM slot's entry
         usage_data[slot_key] = {
             'bytes': total_bytes,
             'billing_date': data_cfg['data_limit_billing_date'],
-            'slot': identity['slot'],
-            'iccid': identity['iccid'],
-            'identity_type': identity['type'],
+            'slot': slot,
             'last_updated': datetime.datetime.now().isoformat(),
         }
 
@@ -7038,7 +6988,6 @@ class ModemStateMachine:
         # ── 9. Per-SIM cumulative data usage ─────────────────────────────
         try:
             cumulative = self._load_persisted_usage()
-            usage_identity = self._get_usage_identity()
             status['cumulative_bytes'] = cumulative
             status['cumulative_plus_session'] = cumulative + status.get('session_total_bytes', 0)
             data_cfg = self._get_active_sim_data_config()
@@ -7046,10 +6995,7 @@ class ModemStateMachine:
             status['data_limit_action'] = data_cfg.get('data_limit_action', 'none')
             status['data_limit_warning'] = data_cfg.get('data_limit_warning', [])
             status['data_limit_billing_date'] = data_cfg.get('data_limit_billing_date', 1)
-            status['usage_tracking_key'] = usage_identity['key']
-            status['usage_tracking_type'] = usage_identity['type']
-            status['usage_tracking_slot'] = usage_identity['slot']
-            status['usage_tracking_iccid'] = usage_identity['iccid']
+            status['usage_tracking_slot'] = self._current_usage_slot()
             limit = status['data_limit_bytes']
             total = status['cumulative_plus_session']
             status['data_usage_percent'] = round((total / limit) * 100, 1) if limit > 0 else 0.0
@@ -7060,9 +7006,6 @@ class ModemStateMachine:
                       'data_usage_percent'):
                 status.setdefault(k, 0)
             status.setdefault('data_limit_warning', [])
-            status.setdefault('usage_tracking_key', '')
-            status.setdefault('usage_tracking_type', 'slot')
-            status.setdefault('usage_tracking_iccid', '')
 
         # ── 10. Failover / recovery stats ────────────────────────────────
         status['failover_count'] = self.failover_count
