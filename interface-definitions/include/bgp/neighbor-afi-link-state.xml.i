@@ -1,10 +1,8 @@
 <!-- include start from bgp/neighbor-afi-link-state.xml.i -->
-<node name="link-state">
+<leafNode name="link-state">
   <properties>
-    <help>Link State BGP settings</help>
+    <help>Link State BGP address family</help>
+    <valueless/>
   </properties>
-  <children>
-    #include <include/bgp/afi-nexthop-self.xml.i>
-  </children>
-</node>
+</leafNode>
 <!-- include end -->
