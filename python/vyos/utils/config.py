@@ -44,6 +44,35 @@ def read_saved_value(path: list):
         return ' '.join(res)
     return res
 
+def write_saved_value(path: list, value=None, config_path: str=config_file):
+    """Write or replace a node in a saved configuration.
+
+    - If value is None, the node is treated as valueless.
+    - Tag nodes in the path are detected via XML reference tree and marked on
+      the ConfigTree prior to setting the node.
+    """
+    if not isinstance(path, list) or not path:
+        raise ValueError('path must be a non-empty list')
+
+    from vyos.configtree import ConfigTree
+    from vyos.utils.file import read_file
+    from vyos.utils.file import write_file
+
+    config_string = read_file(config_path)
+    ct = ConfigTree(config_string)
+
+    # ConfigTree.set_tag() requires the node to exist.
+    # Create missing nodes along the path so tag marking works even when
+    # writing a completely new subtree into config.boot.
+    for target in flag(path):
+        if not ct.exists(target):
+            ct.create_node(target)
+
+    set_tags(ct, path)
+
+    ct.set(path, value=value, replace=True)
+    write_file(config_path, ct.to_string())
+
 def flag(l: list) -> list:
     res = [l[0:i] for i,_ in enumerate(l, start=1)]
     return res
