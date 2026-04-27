@@ -47,6 +47,9 @@ vrrp_script healthcheck_sg_{{ name }} {
     script "/usr/bin/ping -c1 {{ sync_group_config.health_check.ping }}"
 {%             endif %}
     interval {{ sync_group_config.health_check.interval }}
+{%             if sync_group_config.health_check.timeout is vyos_defined %}
+    timeout {{ sync_group_config.health_check.timeout }}
+{%             endif %}
     fall {{ sync_group_config.health_check.failure_count }}
     rise 1
 }
@@ -64,6 +67,9 @@ vrrp_script healthcheck_{{ name }} {
     script "/usr/bin/ping -c1 {{ group_config.health_check.ping }}"
 {%             endif %}
     interval {{ group_config.health_check.interval }}
+{%             if group_config.health_check.timeout is vyos_defined %}
+    timeout {{ group_config.health_check.timeout }}
+{%             endif %}
     fall {{ group_config.health_check.failure_count }}
     rise 1
 }

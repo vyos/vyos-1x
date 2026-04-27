@@ -279,6 +279,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
     def test_check_health_script(self):
         sync_group = 'VyOS'
+        timeout = '100'
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
@@ -328,6 +329,16 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
         config = getConfig(f'vrrp_sync_group {sync_group}')
         self.assertIn(f'track_script', config)
+
+        self.cli_set(
+            base_path
+            + ['vrrp', 'sync-group', sync_group, 'health-check', 'timeout', timeout]
+        )
+        # commit changes
+        self.cli_commit()
+
+        config = getConfig(f'vrrp_script healthcheck_sg_{sync_group}')
+        self.assertIn(f'timeout {timeout}', config)
 
 
 if __name__ == '__main__':
