@@ -66,6 +66,9 @@ autosectionlabel_prefix_document = True
 # source_suffix = ['.rst', '.md']
 source_suffix = ['.rst', '.md']
 
+myst_enable_extensions = ["colon_fence", "deflist", "fieldlist", "substitution"]
+myst_fence_as_directive = ["cfgcmd", "opcmd", "cmdincludemd"]
+
 # The master toctree document.
 master_doc = 'index'
 
@@ -85,7 +88,14 @@ gettext_uuid = False
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x']
+exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x', '**/md-*.md']
+
+import pathlib
+_build = pathlib.Path(__file__).parent / '_build'
+if (_build / '_swap_state.json').exists() and (_build / '_swap_exclude.txt').exists():
+    exclude_patterns.extend(
+        s for s in (line.strip() for line in (_build / '_swap_exclude.txt').read_text().splitlines()) if s
+    )
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
