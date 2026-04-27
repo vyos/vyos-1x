@@ -1038,6 +1038,30 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="source-peer">
+                    <properties>
+                      <help>Source peer to match (BGP)</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Peer IPv4 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Peer IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name of peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>BGP peer-group name</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4 --ipv6 --interfaces --peer-groups --all-vrfs</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
                   <leafNode name="protocol">
                     <properties>
                       <help>Match protocol via which the route was learnt</help>
