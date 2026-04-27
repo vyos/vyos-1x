@@ -26,33 +26,19 @@
                       <help>Generate (send) SMS message</help>
                     </properties>
                     <children>
-                      <node name="number">
+                      <tagNode name="number">
                         <properties>
-                          <help>Destination phone number</help>
+                          <help>Destination phone number (e.g. +15551234567)</help>
                         </properties>
                         <children>
-                          <tagNode name="node.tag">
+                          <tagNode name="message">
                             <properties>
-                              <help>Phone number (e.g. +15551234567)</help>
+                              <help>Message text to send</help>
                             </properties>
-                            <children>
-                              <node name="message">
-                                <properties>
-                                  <help>SMS message text</help>
-                                </properties>
-                                <children>
-                                  <tagNode name="node.tag">
-                                    <properties>
-                                      <help>Message text to send</help>
-                                    </properties>
-                                    <command>${vyos_op_scripts_dir}/wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"</command>
-                                  </tagNode>
-                                </children>
-                              </node>
-                            </children>
+                            <command>${vyos_op_scripts_dir}/wwan_sms.py send_sms --interface="$4" --number="$7" --message="$9"</command>
                           </tagNode>
                         </children>
-                      </node>
+                      </tagNode>
                     </children>
                   </node>
                 </children>

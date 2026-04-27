@@ -23,8 +23,6 @@ from time import sleep
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
-from vyos.utils.network import is_wwan_connected
-from vyos.utils.process import DEVNULL
 
 def check_ppp_interface(interface):
     if not os.path.isfile(f'/etc/ppp/peers/{interface}'):
@@ -40,6 +38,15 @@ def check_ppp_running(interface):
 
     return False
 
+def _wwan_ifnum(interface):
+    """Extract numeric index from 'wwanN'."""
+    return int(interface.replace('wwan', ''))
+
+def _wwan_client():
+    """Return a synchronous WWAN FSM D-Bus client."""
+    from vyos.utils.wwan.wwan_client import WWANClientSync
+    return WWANClientSync()
+
 def connect(interface):
     """ Connect dialer interface """
 
@@ -54,10 +61,18 @@ def connect(interface):
             print(f'Interface {interface}: connecting...')
             call(f'systemctl restart ppp@{interface}.service')
     elif interface.startswith('wwan'):
-        if is_wwan_connected(interface):
-            print(f'Interface {interface}: already connected!')
-        else:
-            call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces_wwan.py')
+        # Route through the FSM so it clears the user-disconnect inhibit
+        # and drives the modem through its own state machine.
+        try:
+            client = _wwan_client()
+            if client.get_bearer_status(_wwan_ifnum(interface)) == 'connected':
+                print(f'Interface {interface}: already connected!')
+            else:
+                print(f'Interface {interface}: connecting...')
+                client.connect(_wwan_ifnum(interface))
+        except Exception as exc:
+            print(f'Interface {interface}: connect failed: {exc}')
+            exit(1)
     else:
         print(f'Unknown interface {interface}, cannot connect. Aborting!')
 
@@ -85,11 +100,18 @@ def disconnect(interface):
             print(f'Interface {interface}: disconnecting...')
             call(f'systemctl stop ppp@{interface}.service')
     elif interface.startswith('wwan'):
-        if not is_wwan_connected(interface):
-            print(f'Interface {interface}: connection is already down')
-        else:
-            modem = interface.lstrip('wwan')
-            call(f'mmcli --modem {modem} --simple-disconnect', stdout=DEVNULL)
+        # Route through the FSM — it sets the user-disconnect inhibit so
+        # the bearer does not automatically reconnect.
+        try:
+            client = _wwan_client()
+            if client.get_bearer_status(_wwan_ifnum(interface)) != 'connected':
+                print(f'Interface {interface}: connection is already down')
+            else:
+                print(f'Interface {interface}: disconnecting...')
+                client.disconnect(_wwan_ifnum(interface))
+        except Exception as exc:
+            print(f'Interface {interface}: disconnect failed: {exc}')
+            exit(1)
     else:
         print(f'Unknown interface {interface}, cannot disconnect. Aborting!')
 

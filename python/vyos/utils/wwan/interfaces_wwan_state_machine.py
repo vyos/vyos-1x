@@ -1432,13 +1432,30 @@ class ModemStateMachine:
 
 
         elif mm_state in [-1, 0]:  # FAILED or UNKNOWN
-            if current_fsm_state in [ModemState.CONFIGURING.value, ModemState.CONNECTING.value,
-                                    ModemState.CONNECTED.value, ModemState.USAGE_MONITORING.value]:
-                # Failure during active operation
-                logger.error("Modem entered failed/unknown state",
-                            extra={'interface_number': self.interface_number,
-                                   'mm_state': mm_state})
-                self.transition(ModemEvent.CONNECTION_FAILED)
+            # Don't trigger anything if this is service-initiated or we're in
+            # a reset/SIM-switch grace period — those flows already drive
+            # state transitions explicitly.
+            if (self.service_initiated_disable
+                    or self._is_in_reset_grace_period()
+                    or self._sim_switch_in_progress
+                    or self._sim_failover_in_progress):
+                logger.debug(
+                    "Modem FAILED/UNKNOWN state ignored "
+                    "(service-initiated or grace period active)",
+                    extra={'interface_number': self.interface_number,
+                           'mm_state': mm_state})
+                return
+
+            # Inspect StateFailedReason — if the modem failed because the
+            # SIM disappeared (e.g. user pulled SIM1 while running), the
+            # generic CONNECTION_FAILED path will not trigger SIM failover.
+            # Route through the dedicated sim-missing failover handler so
+            # slot-2 can take over automatically.
+            logger.error("Modem entered failed/unknown state",
+                        extra={'interface_number': self.interface_number,
+                               'mm_state': mm_state,
+                               'fsm_state': current_fsm_state})
+            self._safe_create_task(self._handle_failed_state_event(mm_state))
 
         else:
             # States 1 (INITIALIZING), 4 (DISABLING), 5 (ENABLING) - informational only
@@ -3816,6 +3833,80 @@ class ModemStateMachine:
         except Exception as e:
             logger.error(f"SIM switch cleanup failed entirely: {e}",
                         extra={'interface_number': self.interface_number})
+
+    async def _handle_failed_state_event(self, mm_state):
+        """Handle ModemManager FAILED/UNKNOWN state transition.
+
+        When the modem reports state -1 (FAILED) the generic
+        ``CONNECTION_FAILED`` path is insufficient because it does not look
+        at *why* the modem failed.  The most common cause in field
+        deployments is that the active SIM was physically removed (e.g.
+        SIM1 pulled while running) — the modem then sits in
+        ``state=failed reason=sim-missing`` and never connects on SIM2
+        unless we explicitly trigger SIM failover.
+
+        Strategy:
+          * Read ``StateFailedReason`` from the Modem D-Bus interface.
+          * For ``sim-missing`` (2) or ``sim-error`` (3): route through
+            ``_handle_sim_missing_failover`` so the FSM switches to the
+            alternate slot.
+          * Otherwise: fall back to the original CONNECTION_FAILED
+            transition (only meaningful when the FSM was actively
+            configuring/connecting/connected).
+        """
+        try:
+            failed_reason = 0
+            if self.proxy:
+                try:
+                    props = self.proxy.get_interface(
+                        "org.freedesktop.DBus.Properties")
+                    sfr_v = await props.call_get(
+                        MODEM_INTERFACE, "StateFailedReason")
+                    failed_reason = sfr_v.value if hasattr(sfr_v, 'value') else sfr_v
+                except Exception as e:
+                    logger.debug(
+                        f"Could not read StateFailedReason: {e}",
+                        extra={'interface_number': self.interface_number})
+
+            reason_name = {
+                0: 'none', 1: 'unknown', 2: 'sim-missing', 3: 'sim-error',
+            }.get(failed_reason, f'unknown({failed_reason})')
+
+            logger.warning(
+                "Modem FAILED state — investigating reason",
+                extra={'interface_number': self.interface_number,
+                       'mm_state': mm_state,
+                       'failed_reason': failed_reason,
+                       'failed_reason_name': reason_name})
+
+            # sim-missing (2) or sim-error (3) → route through SIM failover.
+            # The active SIM tray is empty (or unreadable) but the modem
+            # still reports it as the active slot, so failover must be
+            # triggered explicitly to swap to the alternate slot.
+            if failed_reason in (2, 3):
+                logger.warning(
+                    "Modem FAILED with SIM-related reason — "
+                    "triggering SIM failover",
+                    extra={'interface_number': self.interface_number,
+                           'failed_reason_name': reason_name})
+                self._cancel_failed_retry()  # SIM event supersedes retry
+                self.transition(ModemEvent.SIM_MISSING)
+                await self._handle_sim_missing_failover()
+                return
+
+            # Non-SIM failure during an active operation — preserve the
+            # original behaviour so the existing failed-retry loop kicks in.
+            current_fsm_state = self.machine.current_state
+            if current_fsm_state in [ModemState.CONFIGURING.value,
+                                     ModemState.CONNECTING.value,
+                                     ModemState.CONNECTED.value,
+                                     ModemState.USAGE_MONITORING.value]:
+                self.transition(ModemEvent.CONNECTION_FAILED)
+
+        except Exception as e:
+            logger.error(
+                f"Failed-state event handler error: {e}",
+                extra={'interface_number': self.interface_number})
 
     async def _handle_locked_state_detection(self):
         """Distinguish between PIN-locked SIM and physically missing SIM.
