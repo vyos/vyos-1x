@@ -1,0 +1,7 @@
+# Incremental MyST swap list
+# One page stem per line (relative to docs/, no extension)
+# Pages listed here will render from MD instead of RST at build time.
+#
+# Example:
+#   quick-start
+#   configuration/firewall/zone

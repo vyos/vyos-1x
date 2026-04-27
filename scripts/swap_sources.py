@@ -295,8 +295,6 @@ def main(argv=None):
         parser.error(f"docs directory not found: {docs_dir}")
 
     if args.swap:
-        import atexit
-        atexit.register(do_restore, docs_dir)
         do_swap(docs_dir)
     elif args.restore:
         do_restore(docs_dir)
