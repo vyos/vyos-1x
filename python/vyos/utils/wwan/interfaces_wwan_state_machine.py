@@ -1141,6 +1141,32 @@ class ModemStateMachine:
                     extra={'interface_number': self.interface_number,
                            'mm_state': state})
                 self._last_modem_state = state
+
+                # The handle_modem_event() FAILED branch suppresses
+                # itself when *we* triggered the disable/reset.  For a
+                # synthesized cold-attach event that's by definition not
+                # the case, so clear those guards before dispatching;
+                # otherwise the event is silently swallowed and
+                # SIM-failover never runs.  (See also the matching
+                # cleanup in the _configure_modem_initial except branch.)
+                if (self.service_initiated_disable
+                        or self.reset_operation_in_progress
+                        or self._is_in_reset_grace_period()):
+                    logger.info(
+                        "Clearing stale service-disable/reset guards "
+                        "before synthesizing FAILED state event",
+                        extra={'interface_number': self.interface_number,
+                               'service_initiated_disable':
+                                   self.service_initiated_disable,
+                               'reset_operation_in_progress':
+                                   self.reset_operation_in_progress,
+                               'reset_grace_period_remaining':
+                                   max(0, self.reset_grace_period_end
+                                       - time.time())})
+                    self.service_initiated_disable = False
+                    self.reset_operation_in_progress = False
+                    self.reset_grace_period_end = 0
+
                 self.handle_modem_event(state, None)
         except Exception as e:
             logger.debug(
@@ -2345,9 +2371,31 @@ class ModemStateMachine:
             # Record the exception as the failure reason
             self.last_failure_reason = f"Modem configuration error: {e}"
             self.last_failure_time = time.time()
+
+            # Clear "service is mid-disable / mid-reset" flags that
+            # _ensure_modem_disabled_for_config set on the way in.  If we
+            # leave these set, the handle_modem_event() FAILED/UNKNOWN
+            # branch will silently suppress the recovery dispatch (it
+            # treats our own disable/reset as the cause of FAILED).  That
+            # was the precise reason cold-attach SIM failover never fired
+            # when the modem was already `state=failed reason=sim-missing`
+            # — config raised, flags stayed True, dispatch hit the guard
+            # and returned without ever issuing SetPrimarySimSlot.
+            self.service_initiated_disable = False
+            self.reset_operation_in_progress = False
+            self.reset_grace_period_end = 0
+
             # Don't override SIM_MISSING transition with CONNECTION_FAILED
             if self.machine.current_state != ModemState.WAITING_FOR_SIM.value:
                 self.transition(ModemEvent.CONNECTION_FAILED)
+
+            # Re-read modem State so the SIM-missing recovery path runs.
+            # If the modem is still sitting in FAILED with sim-missing
+            # (the very condition that caused this except branch),
+            # _dispatch_initial_modem_state -> handle_modem_event(-1) ->
+            # _handle_failed_state_event -> _handle_sim_missing_failover
+            # will now succeed because the suppression flags are clear.
+            self._safe_create_task(self._dispatch_initial_modem_state())
         finally:
             self.initial_configuration_in_progress = False
 
