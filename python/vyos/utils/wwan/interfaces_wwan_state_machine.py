@@ -152,9 +152,9 @@ class ModemStateMachine:
         # SIM failover cooldown tracking to prevent ping-pong
         self.last_failover_time = 0          # Timestamp of last SIM failover
         self.failover_count = 0              # Number of failovers since last stable connection
-        self.failover_cooldown_seconds = 300 # 5 minute cooldown between failovers
+        self.failover_cooldown_seconds = 600 # 10 minute cooldown between failovers (carrier-friendly)
         self.max_failovers_before_backoff = 3 # Max failovers before extended backoff
-        self.failover_backoff_seconds = 900  # 15 minute extended backoff after max failovers
+        self.failover_backoff_seconds = 3600 # 1 hour extended backoff after max failovers (carrier-friendly)
 
         # Connectivity recovery tracking for SIM escalation
         self.connectivity_recovery_attempts = 0  # Consecutive recovery attempts on same SIM
@@ -221,8 +221,8 @@ class ModemStateMachine:
         self._failed_retry_task = None       # Background asyncio task
         self._failed_retry_attempt = 0       # Current attempt number for backoff calc
         self._failed_retry_enabled = True    # Overridden by config in _apply_parsed_configuration
-        self._failed_retry_intervals = [300, 600, 1200, 1800]  # 5, 10, 20, 30 min
-        self._failed_retry_max_interval = 1800  # Cap at 30 min
+        self._failed_retry_intervals = [600, 1800, 3600, 7200]  # 10, 30, 60, 120 min (carrier-friendly)
+        self._failed_retry_max_interval = 7200  # Cap at 2 hr (carrier-friendly)
         self._failed_retry_escalation_threshold = 3  # Disable/enable cycle after N failures (0=never)
 
         # Modem removal flag — lets CancelledError handlers log the right reason
@@ -1097,6 +1097,55 @@ class ModemStateMachine:
         # Start periodic SIM check if we transition to WAITING_FOR_SIM
         if self.machine.current_state == ModemState.WAITING_FOR_SIM.value:
             self._safe_create_task(self._periodic_sim_check())
+
+        # Synthesize a state event for the modem's CURRENT state.  The
+        # PropertiesChanged signal only fires on *transitions*, so if the
+        # modem is already sitting in FAILED (e.g. SIM was pulled before
+        # the FSM started, or vyos-wwan-state-machine was restarted while
+        # the modem was already in `state=failed reason=sim-missing`), our
+        # SIM-failover handler never fires.  Re-read State and dispatch it
+        # so the existing handle_modem_event() recovery path runs at boot.
+        self._safe_create_task(self._dispatch_initial_modem_state())
+
+    async def _dispatch_initial_modem_state(self):
+        """Re-read modem State at startup and feed it to handle_modem_event.
+
+        Covers the case where the modem is already in FAILED/UNKNOWN when
+        we attach — no D-Bus StateChanged signal will fire for that
+        pre-existing condition, so we must observe and act on it
+        ourselves.  Waits briefly for any in-flight initial configuration
+        so SIM-failover logic has a populated config to consult.
+        """
+        try:
+            if self._initial_config_task is not None:
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(self._initial_config_task), timeout=30.0)
+                except (asyncio.TimeoutError, Exception):
+                    pass  # proceed regardless of config-task outcome
+
+            if not self.proxy:
+                return
+            props = self.proxy.get_interface("org.freedesktop.DBus.Properties")
+            state_v = await props.call_get(MODEM_INTERFACE, "State")
+            state = state_v.value if hasattr(state_v, 'value') else state_v
+
+            # Only synthesize for actionable initial states; routine
+            # states (ENABLED/SEARCHING/REGISTERED/...) will be driven
+            # naturally by the FSM as configuration progresses.
+            if state in (-1, 0):
+                logger.warning(
+                    "Modem already in FAILED/UNKNOWN at attach — "
+                    "synthesizing state event so recovery (e.g. SIM "
+                    "failover) runs without waiting for a transition",
+                    extra={'interface_number': self.interface_number,
+                           'mm_state': state})
+                self._last_modem_state = state
+                self.handle_modem_event(state, None)
+        except Exception as e:
+            logger.debug(
+                f"Initial state dispatch failed: {e}",
+                extra={'interface_number': self.interface_number})
 
     def _dispatch_properties_changed(self, interface_name, changed_properties, invalidated_properties):
         """Unified PropertiesChanged dispatcher.

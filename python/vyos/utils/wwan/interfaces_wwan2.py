@@ -178,26 +178,26 @@ def build_config(raw_cfg):
     enhanced_reconnection = {
         'enabled': raw_cfg.get('enhanced_reconnection', 'enabled') == 'enabled',
         'signal_threshold': raw_cfg.get('reconnection_signal_threshold', -85),
-        'retry_interval_good_signal': raw_cfg.get('retry_interval_good_signal', 15),
-        'retry_interval_poor_signal': raw_cfg.get('retry_interval_poor_signal', 45),
+        'retry_interval_good_signal': raw_cfg.get('retry_interval_good_signal', 30),
+        'retry_interval_poor_signal': raw_cfg.get('retry_interval_poor_signal', 120),
         'max_wait_for_signal': raw_cfg.get('max_wait_for_signal', 120),
         'signal_check_interval': raw_cfg.get('signal_check_interval', 10),
         'signal_strength_buffer': raw_cfg.get('signal_strength_buffer', 5)
     }
 
     # Build failed-state retry configuration
-    failed_retry_intervals_raw = raw_cfg.get('failed_retry_intervals', '300,600,1200,1800')
+    failed_retry_intervals_raw = raw_cfg.get('failed_retry_intervals', '600,1800,3600,7200')
     if isinstance(failed_retry_intervals_raw, str):
         failed_retry_intervals = [int(x.strip()) for x in failed_retry_intervals_raw.split(',') if x.strip()]
     elif isinstance(failed_retry_intervals_raw, list):
         failed_retry_intervals = [int(x) for x in failed_retry_intervals_raw]
     else:
-        failed_retry_intervals = [300, 600, 1200, 1800]
+        failed_retry_intervals = [600, 1800, 3600, 7200]
 
     failed_retry = {
         'enabled': raw_cfg.get('failed_retry_enabled', True),
         'intervals': failed_retry_intervals,
-        'max_interval': int(raw_cfg.get('failed_retry_max_interval', 1800)),
+        'max_interval': int(raw_cfg.get('failed_retry_max_interval', 7200)),
         'escalation_threshold': int(raw_cfg.get('failed_retry_escalation_threshold', 3)),
     }
 

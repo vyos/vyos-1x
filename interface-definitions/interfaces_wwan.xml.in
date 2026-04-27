@@ -615,7 +615,7 @@
                       </constraint>
                       <constraintErrorMessage>Retry interval must be 5-600 seconds</constraintErrorMessage>
                     </properties>
-                    <defaultValue>15</defaultValue>
+                    <defaultValue>30</defaultValue>
                   </leafNode>
                   <leafNode name="poor-signal">
                     <properties>
@@ -629,7 +629,7 @@
                       </constraint>
                       <constraintErrorMessage>Retry interval must be 10-3600 seconds</constraintErrorMessage>
                     </properties>
-                    <defaultValue>45</defaultValue>
+                    <defaultValue>120</defaultValue>
                   </leafNode>
                 </children>
               </node>
@@ -1051,14 +1051,14 @@
                   <help>Stepped backoff intervals from FAILED state</help>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Comma-separated seconds (default: 300,600,1200,1800)</description>
+                    <description>Comma-separated seconds (default: 600,1800,3600,7200)</description>
                   </valueHelp>
                   <constraint>
                     <regex>^[0-9]+(,[0-9]+)*$</regex>
                   </constraint>
-                  <constraintErrorMessage>Intervals must be comma-separated integers (e.g. 300,600,1200,1800)</constraintErrorMessage>
+                  <constraintErrorMessage>Intervals must be comma-separated integers (e.g. 600,1800,3600,7200)</constraintErrorMessage>
                 </properties>
-                <defaultValue>300,600,1200,1800</defaultValue>
+                <defaultValue>600,1800,3600,7200</defaultValue>
               </leafNode>
               <leafNode name="max-interval">
                 <properties>
@@ -1072,7 +1072,7 @@
                   </constraint>
                   <constraintErrorMessage>Max interval must be 60-86400 seconds</constraintErrorMessage>
                 </properties>
-                <defaultValue>1800</defaultValue>
+                <defaultValue>7200</defaultValue>
               </leafNode>
               <leafNode name="escalation-threshold">
                 <properties>

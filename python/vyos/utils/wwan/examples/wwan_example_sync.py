@@ -129,8 +129,8 @@ def example_full_config():
         "enhanced_reconnection": {
             "enabled": True,
             "signal_threshold": -85,
-            "retry_interval_good_signal": 15,
-            "retry_interval_poor_signal": 45,
+            "retry_interval_good_signal": 30,
+            "retry_interval_poor_signal": 120,
         },
 
         # Connectivity monitoring

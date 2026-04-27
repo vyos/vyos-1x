@@ -18,8 +18,8 @@ class EnhancedReconnectionConfig:
     enabled: bool = True
     signal_threshold: int = -85
     max_retries: int = 3
-    retry_interval_good_signal: int = 15
-    retry_interval_poor_signal: int = 45
+    retry_interval_good_signal: int = 30
+    retry_interval_poor_signal: int = 120
     max_wait_for_signal: int = 120
     signal_check_interval: int = 10
     normal_monitoring_interval: int = 30
@@ -45,13 +45,13 @@ class InterfaceManagementConfig:
 class FailedRetryConfig:
     '''Failed-state periodic retry configuration'''
     enabled: bool = True
-    intervals: list = None  # Backoff intervals in seconds, e.g. [300, 600, 1200, 1800]
-    max_interval: int = 1800  # Cap once intervals list is exhausted
+    intervals: list = None  # Backoff intervals in seconds, e.g. [600, 1800, 3600, 7200]
+    max_interval: int = 7200  # Cap once intervals list is exhausted (2 hr, carrier-friendly)
     escalation_threshold: int = 3  # After N consecutive failures, escalate to disable/enable cycle (0 = never)
 
     def __post_init__(self):
         if self.intervals is None:
-            self.intervals = [300, 600, 1200, 1800]
+            self.intervals = [600, 1800, 3600, 7200]
 
 
 @dataclass
@@ -160,8 +160,8 @@ class ConfigurationLoader:
             enabled=enhanced_enabled,
             signal_threshold=int(config.get('reconnection_signal_threshold', -85)),
             max_retries=int(config.get('enhanced_reconnection_max_retries', 3)),
-            retry_interval_good_signal=int(config.get('retry_interval_good_signal', 15)),
-            retry_interval_poor_signal=int(config.get('retry_interval_poor_signal', 45)),
+            retry_interval_good_signal=int(config.get('retry_interval_good_signal', 30)),
+            retry_interval_poor_signal=int(config.get('retry_interval_poor_signal', 120)),
             max_wait_for_signal=int(config.get('max_wait_for_signal', 120)),
             signal_check_interval=int(config.get('signal_check_interval', 10)),
             normal_monitoring_interval=int(config.get('normal_monitoring_interval', 30)),
@@ -209,14 +209,14 @@ class ConfigurationLoader:
         if isinstance(enabled, str):
             enabled = enabled.lower() in ('true', 'enabled', '1')
 
-        intervals = failed_retry.get('intervals', [300, 600, 1200, 1800])
+        intervals = failed_retry.get('intervals', [600, 1800, 3600, 7200])
         if isinstance(intervals, str):
             intervals = [int(x.strip()) for x in intervals.split(',') if x.strip()]
 
         return FailedRetryConfig(
             enabled=bool(enabled),
             intervals=[int(x) for x in intervals],
-            max_interval=int(failed_retry.get('max_interval', 1800)),
+            max_interval=int(failed_retry.get('max_interval', 7200)),
             escalation_threshold=int(failed_retry.get('escalation_threshold', 3))
         )
 

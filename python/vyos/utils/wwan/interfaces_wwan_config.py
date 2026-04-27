@@ -176,8 +176,8 @@ class InterfaceConfig(ServiceInterface):
         "enhanced_reconnection": {
             "enabled": True,
             "signal_threshold": -85,
-            "retry_interval_good_signal": 15,
-            "retry_interval_poor_signal": 45,
+            "retry_interval_good_signal": 30,
+            "retry_interval_poor_signal": 120,
             "max_wait_for_signal": 120,
             "signal_check_interval": 10,
             "signal_strength_buffer": 5
@@ -214,8 +214,8 @@ class InterfaceConfig(ServiceInterface):
         # Failed-state periodic retry settings
         "failed_retry": {
             "enabled": True,                          # Enable automatic retry from FAILED state
-            "intervals": [300, 600, 1200, 1800],      # Backoff intervals in seconds (5, 10, 20, 30 min)
-            "max_interval": 1800,                      # Cap interval once list is exhausted (seconds)
+            "intervals": [600, 1800, 3600, 7200],      # Backoff intervals in seconds (10, 30, 60, 120 min) — carrier-friendly
+            "max_interval": 7200,                      # Cap interval once list is exhausted (2 hr, carrier-friendly)
             "escalation_threshold": 3,                 # Consecutive failures before disable/enable cycle (0 = disabled)
         },
 
