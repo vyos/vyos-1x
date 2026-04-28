@@ -96,12 +96,16 @@ def build_fsm_config(wwan):
     global_data_limit_billing = _leaf_int(du, 'billing_date', 1)
     global_data_limit_warning = _csv_to_list(du.get('warning', ''), int)
 
+    # Both SIM slots are present and enabled by default. The CLI only
+    # overrides per-slot settings; presence (or absence) of `slot N` in
+    # the config tree does NOT determine enablement — only the explicit
+    # `slot N disable` leaf disables a slot.
     sim_slots = []
-    for slot_num in sorted(slot_cfgs.keys(), key=int):
-        s = slot_cfgs[slot_num]
+    for slot_num in (1, 2):
+        s = slot_cfgs.get(str(slot_num), {})
         dl = s.get('data_limit', {})
-        sim = {
-            'slot': int(slot_num),
+        sim_slots.append({
+            'slot': slot_num,
             'enabled': not _leaf_exists(s, 'disable'),
             'apn': _leaf(s, 'apn', ''),
             'username': _leaf(s, 'username', ''),
@@ -129,31 +133,6 @@ def build_fsm_config(wwan):
                 if dl.get('warning')
                 else global_data_limit_warning
             ),
-        }
-        sim_slots.append(sim)
-
-    # If no SIM slots explicitly configured, create a default slot 1
-    if not sim_slots:
-        sim_slots.append({
-            'slot': 1,
-            'enabled': True,
-            'apn': '',
-            'username': '',
-            'password': '',
-            'auth_type': 'none',
-            'pdp_type': 'ipv4v6',
-            'roaming': 'disabled',
-            'pin': '',
-            'puk': '',
-            'iccid': '',
-            'supported_bands': ['all'],
-            'preferred_carrier': '',
-            'enable_network_scan': False,
-            'mtu': 0,
-            'data_limit_size': global_data_limit_size,
-            'data_limit_action': global_data_limit_action,
-            'data_limit_billing_date': global_data_limit_billing,
-            'data_limit_warning': global_data_limit_warning,
         })
 
     # ── Connectivity monitoring ──────────────────────────────────────────
