@@ -216,6 +216,9 @@ def kea_parse_subnet(subnet, config):
             if 'disable' in host_config:
                 continue
 
+            if 'mac' not in host_config and 'duid' not in host_config:
+                continue
+
             reservation = {
                 'hostname': host,
             }
@@ -352,6 +355,9 @@ def kea6_parse_subnet(subnet, config):
         reservations = []
         for host, host_config in config['static_mapping'].items():
             if 'disable' in host_config:
+                continue
+
+            if 'mac' not in host_config and 'duid' not in host_config:
                 continue
 
             reservation = {'hostname': host}
