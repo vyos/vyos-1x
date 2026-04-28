@@ -572,6 +572,78 @@
             </properties>
             <defaultValue>10</defaultValue>
           </leafNode>
+          <!-- ── IP Passthrough (DOCSIS-modem-style single-host) ── -->
+          <node name="ip-passthrough">
+            <properties>
+              <help>Hand the carrier IP directly to a downstream device via DHCP/RA</help>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>LAN interface that delivers the carrier IP to the downstream device</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                  </completionHelp>
+                  <constraint>
+                    <regex>(eth|bond|br|en)[0-9a-z._]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Passthrough interface must be a wired LAN interface</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="mac">
+                <properties>
+                  <help>Pin the carrier IP to a specific downstream MAC (default: first MAC seen)</help>
+                  <valueHelp>
+                    <format>macaddr</format>
+                    <description>MAC address of downstream device (xx:xx:xx:xx:xx:xx)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="lease-time">
+                <properties>
+                  <help>DHCP lease time in seconds (short leases speed up IP-change recovery)</help>
+                  <valueHelp>
+                    <format>u32:30-600</format>
+                    <description>Lease duration in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 30-600"/>
+                  </constraint>
+                  <constraintErrorMessage>Lease time must be 30-600 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>60</defaultValue>
+              </leafNode>
+              <leafNode name="management-address">
+                <properties>
+                  <help>Auto-provisioned IPv4 management address on the passthrough interface (Policy B: only applied if 'interfaces ethernet &lt;if&gt; address' is unset)</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address with prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                </properties>
+                <defaultValue>192.168.200.1/24</defaultValue>
+              </leafNode>
+              <leafNode name="management-address-ipv6">
+                <properties>
+                  <help>Auto-provisioned IPv6 management address on the passthrough interface (Policy B: only applied if 'interfaces ethernet &lt;if&gt; address' is unset)</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address with prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <defaultValue>fd00:6c61:6e30::1/64</defaultValue>
+              </leafNode>
+            </children>
+          </node>
           <!-- ── Reconnection ────────────────────────────────────── -->
           <node name="reconnection">
             <properties>

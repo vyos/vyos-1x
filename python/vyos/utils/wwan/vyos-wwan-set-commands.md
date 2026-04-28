@@ -48,6 +48,13 @@ interfaces
         │
         ├── pd-reconciliation-interval <seconds>          # safety-net timer for late-appearing LAN interfaces (default: 10)
         │
+        ├── ip-passthrough                                # DOCSIS-modem-style: hand carrier IP to one downstream device
+        │     ├── interface <name>                        # designated LAN port (required)
+        │     ├── mac <xx:xx:xx:xx:xx:xx>                 # optional — pin to a specific downstream MAC (default: first-MAC-wins)
+        │     ├── lease-time <30-600>                     # DHCP lease seconds (default: 60)
+        │     ├── management-address <ipv4/prefix>        # FSM-provisioned mgmt v4 (default: 192.168.200.1/24; Policy B: skipped if 'interfaces ethernet <if> address' is set)
+        │     └── management-address-ipv6 <ipv6/prefix>   # FSM-provisioned mgmt v6 (default: fd00:6c61:6e30::1/64; same Policy B)
+        │
         ├── mirror                                        # packet mirroring
         │     ├── ingress <interface>
         │     └── egress <interface>
@@ -354,6 +361,116 @@ set interfaces wwan wwan0 pd 0 interface br0 sla-len '0'
 
 # Reconciliation interval — safety-net for late-appearing interfaces (default 10 s)
 set interfaces wwan wwan0 pd-reconciliation-interval 10
+```
+
+### IP Passthrough (DOCSIS-Modem-Style)
+
+> **If unconfigured:** No passthrough.  The carrier IP lives on `wwanN` and
+> the router NATs/forwards normally.
+>
+> **What it does:** When a downstream device must own the public carrier IP
+> directly (single-host CPE, IoT gateway behind a customer firewall,
+> telematics, point-of-sale terminals that demand a "real" public address),
+> the FSM hands the carrier-assigned IPv4 and IPv6 to one wired client via
+> a tiny isolated DHCP/RA service on a designated LAN interface.  The
+> downstream NIC sees the carrier address as if it were directly attached.
+>
+> **Why this is not a true L2 bridge:**  3GPP PDN bearers are L3-only — no
+> Ethernet frames cross the modem.  Every cellular vendor (Cradlepoint,
+> Digi, Sierra, Peplink) implements "IP Passthrough" as a DHCP handoff,
+> not a bridge.  The FSM does the same: bearer L3 → dnsmasq → downstream
+> NIC.
+>
+> **Architecture (FSM-owned, single CLI knob):**
+>
+> 1. The FSM brings a per-passthrough `dnsmasq` instance up on the
+>    designated interface (`--bind-interfaces`, scoped PID file in
+>    `/run/wwan/passthru-<if>.pid`).
+> 2. **DHCPv4** offers exactly one lease — the carrier IPv4 — to the first
+>    MAC seen (or to a pinned MAC).  Lease time defaults to 60 s so an IP
+>    change propagates within one renewal window.  The carrier-supplied
+>    DNS servers from the bearer's `Ip4Config` are advertised via DHCP
+>    option 6 (with `8.8.8.8/1.1.1.1` as a last-resort fallback if the
+>    bearer didn't provide any).
+> 3. **DHCPv6 IA_NA + RA (M=1, O=1)** offers the carrier IPv6 (`/128`) to
+>    the same client.  RA advertises the FSM as the default gateway with
+>    DNS via option 23, again sourced from the bearer's `Ip6Config`.
+> 4. **Inbound forwarding via policy routing** — the carrier IP stays
+>    bound to `wwanN` so the router itself still has a working source
+>    for outbound traffic (ModemManager probes, NTP, DNS, etc.).  Inbound
+>    packets to the carrier IP are diverted to the LAN interface via:
+>
+>    ```
+>    ip rule add iif wwanN to <carrier_ip> lookup passthruN
+>    ip route add <carrier_ip> dev <lan_if> table passthruN
+>    ```
+>
+>    The rule fires *before* the local table is consulted, so packets
+>    arriving on `wwanN` for the carrier IP are forwarded to the
+>    downstream device (whose MAC is resolved via normal ARP/NDP since
+>    it received the IP via DHCP).  Locally-originated traffic doesn't
+>    match `iif wwanN` and continues to use the local table.
+> 5. **Management address** — because the carrier IP is leased away, the
+>    LAN interface still needs an address for SSH/HTTPS to the router.
+>    The FSM auto-provisions `192.168.200.1/24` (v4) and
+>    `fd00:6c61:6e30::1/64` (v6) by default.  These are configurable.
+> 6. **Persistent source-address whitelist** — mirrors the PD ip6tables
+>    egress filter.  A per-FSM chain on FORWARD drops any traffic
+>    arriving on the LAN interface whose source is not the current
+>    carrier IP (link-local is always permitted on v6 so NDP keeps
+>    working).  This is *persistent*, not just during a swap — if a
+>    downstream device clings to a stale address after the carrier
+>    rolls the IP, packets are dropped continuously, not just during
+>    the 5 s grace window.  The whitelist is rewritten in place on
+>    every IP change.
+> 7. **Policy B coexistence:** if the user has set
+>    `interfaces ethernet <if> address ...` explicitly, the FSM defers
+>    entirely — no auto-mgmt address is added.  Silent → FSM provides
+>    defaults.  This avoids fighting VyOS's own ethernet config.
+>
+> **Carrier IP changes (the hard part):**  When the carrier reassigns an
+> address (renew, handover, reconnect), stale connections must die
+> immediately or the downstream device will black-hole until its lease
+> expires.  The FSM applies this sequence:
+>
+> 1. `iptables` rule blocks egress with `saddr == old_carrier_ip` (v4 + v6).
+> 2. `conntrack -D -s old_carrier_ip` flushes existing flows.
+> 3. Old policy-routing entry (`ip rule` + table route) is removed.
+> 4. dnsmasq config rewritten + `SIGHUP`.
+> 5. New policy-routing entry installed for the new carrier IP.
+> 6. **DHCPFORCERENEW** (RFC 3203) for v4 — sent via the `dhcp_release2`
+>    helper from `dnsmasq-utils`.  If the helper is missing, the FSM
+>    logs a one-time warning and the downstream device renews at T1
+>    (`lease/2`, ≤30 s with the default 60 s lease).  DHCPv6 Reconfigure
+>    (RFC 8415 §18.2.11) is handled implicitly by dnsmasq's SIGHUP.
+> 7. After downstream renewal is observed (or a 5 s grace window
+>    elapses), the `iptables` block is removed.
+>
+> **Bearer down:**  dnsmasq is stopped, mgmt address (if FSM-owned) is
+> removed, iptables rules are torn down.  No stale lease remains advertised.
+>
+> **Restrictions:**
+>  - The designated interface must not be in a bridge or bond.
+>  - PD (`set interfaces wwan wwan0 pd ...`) is mutually exclusive with
+>    passthrough — both consume the bearer's IPv6.
+>  - The interface should be wired (not Wi-Fi) — DHCPFORCERENEW behaviour
+>    on wireless drivers is unreliable.
+
+```
+# Single CLI knob — designate the LAN port
+set interfaces wwan wwan0 ip-passthrough interface 'eth1'
+
+# Optional: pin to a specific MAC (otherwise first-MAC-wins on lease)
+set interfaces wwan wwan0 ip-passthrough mac 'aa:bb:cc:dd:ee:ff'
+
+# Optional: tune lease (default 60 s, range 30–600)
+set interfaces wwan wwan0 ip-passthrough lease-time '60'
+
+# Optional: override the auto-provisioned management addresses
+#   (only takes effect if 'interfaces ethernet <if> address' is unset —
+#    Policy B: explicit user config always wins)
+set interfaces wwan wwan0 ip-passthrough management-address '192.168.200.1/24'
+set interfaces wwan wwan0 ip-passthrough management-address-ipv6 'fd00:6c61:6e30::1/64'
 ```
 
 ### Packet Mirroring

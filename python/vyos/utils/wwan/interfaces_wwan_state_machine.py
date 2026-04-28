@@ -32,6 +32,7 @@ from vyos.utils.wwan.wwan_configuration import ConfigurationLoader
 from vyos.utils.wwan.apn_discovery import APNDiscovery
 from vyos.utils.wwan.connection_manager import ConnectionManager
 from vyos.utils.wwan.state_transition_manager import StateTransitionManager
+from vyos.utils.wwan.interfaces_wwan_passthrough import PassthroughManager
 
 from vyos.utils.wwan.wwan_logging import setup_logging, reconfigure_logging
 
@@ -1887,6 +1888,9 @@ class ModemStateMachine:
         self._current_bearer_ipv6 = None      # Last applied IPv6 address (bare, no prefix)
         self._current_bearer_ipv6_prefix = None  # e.g. '64' — length of the carrier prefix
         self._ipv6_egress_filter_active = False  # True when ip6tables whitelist chain is installed
+
+        # IP Passthrough manager (DOCSIS-modem-style single-host handoff)
+        self._passthrough = PassthroughManager(self.interface_number)
 
         # Connection mode: always-on | connect-on-demand | dial-on-demand
         self.connection_mode = self.parsed_config.raw_config.get('connection_mode', 'always-on')
@@ -9208,6 +9212,15 @@ class ModemStateMachine:
                                  'delay': self.bearer_disconnect_delay})
             await self._set_interface_down()
 
+            # Tear down IP passthrough so no stale lease is advertised to the
+            # downstream device while the bearer is gone.
+            try:
+                if self._passthrough.cfg.is_active():
+                    await self._passthrough.teardown()
+            except Exception as pt_err:
+                logger.warning("IP passthrough teardown failed: %s", pt_err,
+                              extra={'interface_number': self.interface_number})
+
             # Clear timer
             self._bearer_disconnect_timer = None
 
@@ -10261,6 +10274,23 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'ipv4': bearer_ips.get('ipv4'),
                               'ipv6': bearer_ips.get('ipv6')})
+
+            # ── IP Passthrough: hand carrier IP to a downstream device ──
+            try:
+                pt_cfg = (self.config or {}).get('ip_passthrough')
+                self._passthrough.update_config(pt_cfg)
+                if self._passthrough.cfg.is_active():
+                    v6_plen = int(bearer_ips.get('ipv6_prefix', '128') or 128)
+                    await self._passthrough.apply(
+                        carrier_v4=bearer_ips.get('ipv4'),
+                        carrier_v6=bearer_ips.get('ipv6'),
+                        carrier_v6_prefix=v6_plen,
+                        ipv4_dns=bearer_ips.get('ipv4_dns', []),
+                        ipv6_dns=bearer_ips.get('ipv6_dns', []),
+                    )
+            except Exception as pt_err:
+                logger.error("IP passthrough apply failed: %s", pt_err,
+                            extra={'interface_number': self.interface_number})
 
             # Re-apply VyOS infrastructure settings (VRF, sysctl, mirror/redirect,
             # description, etc.) in case the kernel interface was destroyed and

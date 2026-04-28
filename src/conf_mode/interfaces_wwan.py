@@ -75,6 +75,21 @@ def get_config(config=None):
     # Interface.update(): address_old, eui64_old, mac_old, is_bridge_member,
     # is_bond_member, is_mirror_intf, qos, etc.
     ifname, wwan = get_interface_dict(conf, base)
+
+    # ── IP Passthrough — Policy B coexistence check ──────────────────────
+    # If the user designated a passthrough interface AND has set an explicit
+    # 'interfaces ethernet <if> address ...', the FSM must NOT auto-provision
+    # a management address (user wins).  Stamp the result into the dict so
+    # build_fsm_config() can emit the correct policy decision.
+    ipt = wwan.get('ip_passthrough', {}) or {}
+    pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
+    if pt_iface:
+        eth_path = ['interfaces', 'ethernet', pt_iface, 'address']
+        user_addrs = []
+        if conf.exists(eth_path):
+            user_addrs = conf.return_values(eth_path) or []
+        wwan.setdefault('ip_passthrough', {})['_user_eth_addresses'] = user_addrs
+
     return wwan
 
 
@@ -232,6 +247,34 @@ def build_fsm_config(wwan):
     # ── Logging ──────────────────────────────────────────────────────────
     lg = wwan.get('logging', {})
 
+    # ── IP Passthrough (DOCSIS-modem-style) ──────────────────────────────
+    ipt = wwan.get('ip_passthrough', {}) or {}
+    pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
+    if pt_iface:
+        # Policy B: only emit a default mgmt address when the user has NOT
+        # set 'interfaces ethernet <if> address ...' on the passthrough port.
+        user_eth_addrs = ipt.get('_user_eth_addresses') or []
+        user_owns_eth = bool(user_eth_addrs)
+        ip_passthrough = {
+            'enabled': True,
+            'interface': pt_iface,
+            'mac': _leaf(ipt, 'mac', '') or '',
+            'lease_time': _leaf_int(ipt, 'lease_time', 60),
+            # Policy B: blank out FSM defaults if the user owns the ethernet
+            'management_address': (
+                '' if user_owns_eth
+                else _leaf(ipt, 'management_address', '192.168.200.1/24')
+            ),
+            'management_address_ipv6': (
+                '' if user_owns_eth
+                else _leaf(ipt, 'management_address_ipv6',
+                           'fd00:6c61:6e30::1/64')
+            ),
+            'mgmt_owned_by_user': user_owns_eth,
+        }
+    else:
+        ip_passthrough = {'enabled': False}
+
     # ── Assemble the complete config dict ────────────────────────────────
     config = {
         # Basic interface settings
@@ -323,6 +366,9 @@ def build_fsm_config(wwan):
         'pd_reconciliation_interval': _leaf_int(
             wwan, 'pd_reconciliation_interval', 10
         ),
+
+        # IP Passthrough (mutually exclusive with PD — see verify())
+        'ip_passthrough': ip_passthrough,
     }
 
     return config
@@ -339,6 +385,33 @@ def verify(wwan):
     verify_vrf(wwan)
     verify_mtu_ipv6(wwan)
     verify_mirror_redirect(wwan)
+
+    # ── IP Passthrough verification ──────────────────────────────────────
+    ipt = wwan.get('ip_passthrough', {}) or {}
+    pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
+    if pt_iface:
+        # Mutually exclusive with PD — both consume the bearer's IPv6.
+        pd_cfg = wwan.get('pd', {}) or {}
+        if pd_cfg:
+            raise ConfigError(
+                "ip-passthrough is mutually exclusive with pd — both consume "
+                "the bearer's IPv6 prefix.  Remove one or the other."
+            )
+        # 'mac', 'lease-time', and address validators handled by XML.
+        # Other sub-leaves require 'interface' to be set.
+        for required_with_iface in ('mac', 'lease_time',
+                                    'management_address',
+                                    'management_address_ipv6'):
+            pass  # presence-only sub-leaves; no extra checks needed
+    else:
+        # If any sub-leaf is set without 'interface', that's an error.
+        sub_leaves = ('mac', 'lease_time',
+                      'management_address', 'management_address_ipv6')
+        if isinstance(ipt, dict) and any(k in ipt for k in sub_leaves):
+            raise ConfigError(
+                "ip-passthrough sub-options require 'ip-passthrough interface "
+                "<eth>' to be set first."
+            )
 
     return None
 
