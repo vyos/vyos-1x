@@ -71,6 +71,8 @@ def write_saved_value(path: list, value=None, config_path: str=config_file):
     set_tags(ct, path)
 
     ct.set(path, value=value, replace=True)
+    set_leaf(ct, path)
+
     write_file(config_path, ct.to_string())
 
 def flag(l: list) -> list:
@@ -91,6 +93,11 @@ def set_tags(ct: 'ConfigTree', path: list) -> None:
     for condition, target in zip(if_tag, fl):
         if condition:
             ct.set_tag(target)
+
+def set_leaf(ct: 'ConfigTree', path: list) -> None:
+    from vyos.xml_ref import is_leaf
+    if is_leaf(path):
+        ct.set_leaf(path, True)
 
 def parse_commands(cmds: str) -> dict:
     from re import split as re_split
