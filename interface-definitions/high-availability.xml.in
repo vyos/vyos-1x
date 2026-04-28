@@ -170,6 +170,18 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Health check script timeout in seconds</help>
+                      <valueHelp>
+                        <format>u32</format>
+                        <description>Timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <leafNode name="hello-source-address">
@@ -390,6 +402,18 @@
                       <help>Health check script file</help>
                       <constraint>
                         <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Health check script timeout in seconds</help>
+                      <valueHelp>
+                        <format>u32</format>
+                        <description>Timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
                       </constraint>
                     </properties>
                   </leafNode>

@@ -188,6 +188,15 @@ def _validate_health_check(group, group_config):
         # to avoid generating useless config statements in keepalived.conf
         del group_config["health_check"]
 
+    if 'timeout' in group_config.get('health_check', {}):
+        interval = int(group_config['health_check']['interval'])
+        timeout = int(group_config['health_check']['timeout'])
+        if timeout < interval:
+            Warning(
+                f'Health check timeout ({timeout}s) is less than interval ({interval}s) '
+                f'for VRRP group "{group}", script may be killed before completion'
+            )
+
 
 def generate(ha):
     if not ha or 'disable' in ha:
