@@ -127,9 +127,9 @@ def apply(console):
     # Reset screen blanking
     call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
 
-    # Service control moved to vyos.utils.serial to unify checks and prompts. 
-    # If users are connected, we want to show an informational message on completing 
-    # the process, but not halt configuration processing with an interactive prompt. 
+    # Service control moved to vyos.utils.serial to unify checks and prompts.
+    # If users are connected, we want to show an informational message on completing
+    # the process, but not halt configuration processing with an interactive prompt.
     restart_login_consoles(prompt_user=False, quiet=False)
 
     if not console:

@@ -16,6 +16,7 @@
 
 import os
 import sys
+from vyos.utils.serial import is_ttyS
 
 def get_login_shell_pid():
     pid = os.getpid()
@@ -41,6 +42,9 @@ def get_login_shell_pid():
 
 def main():
     ttyname = sys.argv[1]
+    if not is_ttyS(ttyname):
+        exit(1)
+
     user = ''
     shell_pid = -1
 
