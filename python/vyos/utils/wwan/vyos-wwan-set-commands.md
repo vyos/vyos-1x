@@ -53,7 +53,8 @@ interfaces
         │     ├── mac <xx:xx:xx:xx:xx:xx>                 # optional — pin to a specific downstream MAC (default: first-MAC-wins)
         │     ├── lease-time <30-600>                     # DHCP lease seconds (default: 60)
         │     ├── management-address <ipv4/prefix>        # FSM-provisioned mgmt v4 (default: 192.168.200.1/24; Policy B: skipped if 'interfaces ethernet <if> address' is set)
-        │     └── management-address-ipv6 <ipv6/prefix>   # FSM-provisioned mgmt v6 (default: fd00:6c61:6e30::1/64; same Policy B)
+        │     ├── management-address-ipv6 <ipv6/prefix>   # FSM-provisioned mgmt v6 (default: fd00:6c61:6e30::1/64; same Policy B)
+        │     └── dns-server <ipv4|ipv6> (multi)          # override DNS advertised to downstream (precedence: user > carrier > 8.8.8.8/1.1.1.1)
         │
         ├── mirror                                        # packet mirroring
         │     ├── ingress <interface>
@@ -471,6 +472,15 @@ set interfaces wwan wwan0 ip-passthrough lease-time '60'
 #    Policy B: explicit user config always wins)
 set interfaces wwan wwan0 ip-passthrough management-address '192.168.200.1/24'
 set interfaces wwan wwan0 ip-passthrough management-address-ipv6 'fd00:6c61:6e30::1/64'
+
+# Optional: override DNS advertised to the downstream device (multi-value).
+#   Precedence: user override > carrier-supplied DNS > 8.8.8.8/1.1.1.1 fallback.
+#   Mix v4 and v6 freely — they are split automatically into DHCPv4 option 6
+#   and DHCPv6 option 23 / RA RDNSS. Use this for NextDNS, OpenDNS, internal
+#   resolvers, or carrier-mandated DNS for compliance.
+set interfaces wwan wwan0 ip-passthrough dns-server '1.1.1.1'
+set interfaces wwan wwan0 ip-passthrough dns-server '9.9.9.9'
+set interfaces wwan wwan0 ip-passthrough dns-server '2606:4700:4700::1111'
 ```
 
 ### Packet Mirroring

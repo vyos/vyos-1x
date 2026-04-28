@@ -642,6 +642,23 @@
                 </properties>
                 <defaultValue>fd00:6c61:6e30::1/64</defaultValue>
               </leafNode>
+              <leafNode name="dns-server">
+                <properties>
+                  <help>Override DNS servers advertised to the downstream device (overrides carrier-supplied DNS; if unset, carrier DNS is used, falling back to public anycast)</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 DNS server address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 DNS server address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <!-- ── Reconnection ────────────────────────────────────── -->

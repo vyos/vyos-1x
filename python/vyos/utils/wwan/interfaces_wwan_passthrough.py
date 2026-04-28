@@ -36,7 +36,7 @@ import logging
 import os
 import shutil
 import signal
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -72,10 +72,17 @@ class PassthroughConfig:
     management_address: str = ''    # '' if user owns ethernet
     management_address_ipv6: str = ''
     mgmt_owned_by_user: bool = False
+    # User-supplied DNS overrides.  When non-empty, these are advertised to
+    # the downstream device instead of the carrier-supplied DNS list.
+    # Mixed v4/v6 addresses are split internally.
+    dns_servers: list = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, raw: Optional[dict]) -> 'PassthroughConfig':
         raw = raw or {}
+        dns_raw = raw.get('dns_servers') or []
+        if isinstance(dns_raw, str):
+            dns_raw = [d.strip() for d in dns_raw.split(',') if d.strip()]
         return cls(
             enabled=bool(raw.get('enabled', False)),
             interface=str(raw.get('interface', '') or ''),
@@ -84,10 +91,22 @@ class PassthroughConfig:
             management_address=str(raw.get('management_address', '') or ''),
             management_address_ipv6=str(raw.get('management_address_ipv6', '') or ''),
             mgmt_owned_by_user=bool(raw.get('mgmt_owned_by_user', False)),
+            dns_servers=[str(d) for d in dns_raw if d],
         )
 
     def is_active(self) -> bool:
         return self.enabled and bool(self.interface)
+
+    def split_dns(self) -> tuple[list, list]:
+        """Split user-supplied DNS into (v4, v6) lists."""
+        v4, v6 = [], []
+        for d in self.dns_servers:
+            try:
+                ip = ipaddress.ip_address(d)
+            except ValueError:
+                continue
+            (v4 if ip.version == 4 else v6).append(str(ip))
+        return v4, v6
 
 
 # ---------------------------------------------------------------------------
@@ -342,9 +361,16 @@ class PassthroughManager:
             # carrier IP with a host route, not a /30.
             lines.append(f"dhcp-option=tag:{tag},1,255.255.255.255")  # netmask
             lines.append(f"dhcp-option=tag:{tag},3,0.0.0.0")          # router (we are link-local proxy)
-            # DNS option 6 — prefer carrier-supplied resolvers; fall back to
-            # public anycast only if the bearer didn't provide any.
-            v4_dns = [d for d in (ipv4_dns or []) if d] or ['8.8.8.8', '1.1.1.1']
+            # DNS option 6 — three-tier precedence:
+            #   1. user override (CLI dns-server) — wins always
+            #   2. carrier-supplied resolvers from the bearer
+            #   3. public anycast last-resort fallback
+            user_v4, _user_v6 = self.cfg.split_dns()
+            v4_dns = (
+                user_v4
+                or [d for d in (ipv4_dns or []) if d]
+                or ['8.8.8.8', '1.1.1.1']
+            )
             lines.append(f"dhcp-option=tag:{tag},6,{','.join(v4_dns)}")
             lines.append(f"dhcp-option=tag:{tag},51,{lease}")          # lease time
             lines.append(f"dhcp-option=tag:{tag},58,{lease // 2}")     # T1
@@ -359,8 +385,9 @@ class PassthroughManager:
             lines.append("enable-ra")
             # M=1 O=1 — managed + other-stateful
             lines.append(f"ra-param={self.cfg.interface},mtu:1500,0,60")
-            # DNS option 23 (DHCPv6) + RDNSS in RA — use bearer DNS if present
-            v6_dns = [d for d in (ipv6_dns or []) if d]
+            # DNS option 23 (DHCPv6) + RDNSS in RA — user override beats carrier
+            _user_v4, user_v6 = self.cfg.split_dns()
+            v6_dns = user_v6 or [d for d in (ipv6_dns or []) if d]
             if v6_dns:
                 lines.append(
                     "dhcp-option=option6:dns-server,"

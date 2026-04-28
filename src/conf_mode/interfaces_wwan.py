@@ -271,6 +271,14 @@ def build_fsm_config(wwan):
                            'fd00:6c61:6e30::1/64')
             ),
             'mgmt_owned_by_user': user_owns_eth,
+            # Optional user-supplied DNS override (multi-value). When set,
+            # these resolvers are advertised to the downstream device in
+            # place of carrier-supplied DNS. Mirrors Cradlepoint/Peplink.
+            'dns_servers': (
+                ipt.get('dns_server')
+                if isinstance(ipt.get('dns_server'), list)
+                else ([ipt.get('dns_server')] if ipt.get('dns_server') else [])
+            ),
         }
     else:
         ip_passthrough = {'enabled': False}

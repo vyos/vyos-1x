@@ -171,6 +171,11 @@ Depends:
   modemmanager,
   usb-modeswitch,
   libqmi-utils,
+# dnsmasq-utils provides dhcp_release2 for DHCPFORCERENEW (RFC 3203),
+# used by ip-passthrough to instantly migrate the downstream lease when
+# the carrier rotates the WAN IP. Optional at runtime (graceful fallback
+# to natural lease expiry) but recommended for sub-second IP takeover.
+  dnsmasq-utils,
 # End "interfaces wwan"
 # For "interfaces openvpn"
   openvpn,
