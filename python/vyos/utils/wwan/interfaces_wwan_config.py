@@ -232,7 +232,7 @@ class InterfaceConfig(ServiceInterface):
                 "preferred_carrier": "",
                 "enable_network_scan": False,  # Control scanning behavior for carrier selection
                 "supported_bands": ["all"],
-                "pdp_type": "ipv4",
+                "pdp_type": "ipv4v6",
                 # Enhanced APN configuration - supports both formats
                 "apn": {
                     "name": "",              # APN name (e.g., "internet.t-mobile.com")
@@ -252,12 +252,12 @@ class InterfaceConfig(ServiceInterface):
             },
             {
                 "slot": 2,
-                "enabled": False,
+                "enabled": True,
                 "roaming": "disabled",
                 "preferred_carrier": "",
                 "enable_network_scan": False,  # Control scanning behavior for carrier selection
                 "supported_bands": ["all"],
-                "pdp_type": "ipv4",
+                "pdp_type": "ipv4v6",
                 "apn": {
                     "name": "",
                     "username": "",

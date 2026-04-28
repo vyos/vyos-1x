@@ -14,6 +14,15 @@ from vyos.utils.wwan.wwan_logging import setup_logging
 # Set up logging
 logger = setup_logging(__name__, "wwan-config")
 
+
+def _bool(val):
+    """Coerce raw-config string/bool values to bool. Default True for unknowns."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.strip().lower() in ('true', 'enabled', '1', 'yes', 'on')
+    return bool(val)
+
 # ─── parse_config() ────────────────────────────────────────────────────────
 def parse_config(config_path):
     """Parse configuration file into dictionary"""
@@ -100,11 +109,12 @@ def build_config(raw_cfg):
     # SIM Slot 1
     sim1 = {
         'slot': 1,
+        'enabled': _bool(raw_cfg.get('sim_slot_1_enabled', True)),
         'apn': str(raw_cfg.get('sim_slot_1_apn', '')),
         'username': str(raw_cfg.get('sim_slot_1_username', '')),
         'password': str(raw_cfg.get('sim_slot_1_password', '')),
         'auth_type': raw_cfg.get('sim_slot_1_auth_type', 'none'),
-        'pdp_type': raw_cfg.get('sim_slot_1_pdp_type', 'ipv4'),
+        'pdp_type': raw_cfg.get('sim_slot_1_pdp_type', 'ipv4v6'),
         'roaming': raw_cfg.get('sim_slot_1_roaming', 'disabled'),
         'pin': str(raw_cfg.get('sim_slot_1_pin', '')),
         'puk': str(raw_cfg.get('sim_slot_1_puk', '')),
@@ -121,30 +131,30 @@ def build_config(raw_cfg):
     }
     sim_slots.append(sim1)
 
-    # SIM Slot 2 (if configured)
-    if any(key.startswith('sim_slot_2_') for key in raw_cfg.keys()):
-        sim2 = {
-            'slot': 2,
-            'apn': str(raw_cfg.get('sim_slot_2_apn', '')),
-            'username': str(raw_cfg.get('sim_slot_2_username', '')),
-            'password': str(raw_cfg.get('sim_slot_2_password', '')),
-            'auth_type': raw_cfg.get('sim_slot_2_auth_type', 'none'),
-            'pdp_type': raw_cfg.get('sim_slot_2_pdp_type', 'ipv4'),
-            'roaming': raw_cfg.get('sim_slot_2_roaming', 'disabled'),
-            'pin': str(raw_cfg.get('sim_slot_2_pin', '')),
-            'puk': str(raw_cfg.get('sim_slot_2_puk', '')),
-            'iccid': str(raw_cfg.get('sim_slot_2_iccid', '')),
-            'supported_bands': [b.strip() for b in str(raw_cfg.get('sim_slot_2_supported_bands', 'all')).split(',')],
-            'preferred_carrier': str(raw_cfg.get('sim_slot_2_preferred_carrier', '')),
-            'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', False),
-            'mtu': int(raw_cfg.get('sim_slot_2_mtu', 0)),
-            # Per-SIM data usage limits (fallback to global config)
-            'data_limit_size': raw_cfg.get('sim_slot_2_data_limit_size', raw_cfg.get('data_limit_size', 0)),
-            'data_limit_action': raw_cfg.get('sim_slot_2_data_limit_action', raw_cfg.get('data_limit_action', 'none')),
-            'data_limit_warning': [int(x) for x in str(raw_cfg.get('sim_slot_2_data_limit_warning', raw_cfg.get('data_limit_warning', ''))).split(',') if x.strip()] if raw_cfg.get('sim_slot_2_data_limit_warning', raw_cfg.get('data_limit_warning', '')) else [],
-            'data_limit_billing_date': raw_cfg.get('sim_slot_2_data_limit_billing_date', raw_cfg.get('data_limit_billing_date', 1)),
-        }
-        sim_slots.append(sim2)
+    # SIM Slot 2 — always present, enabled by default to match XML defaults
+    sim2 = {
+        'slot': 2,
+        'enabled': _bool(raw_cfg.get('sim_slot_2_enabled', True)),
+        'apn': str(raw_cfg.get('sim_slot_2_apn', '')),
+        'username': str(raw_cfg.get('sim_slot_2_username', '')),
+        'password': str(raw_cfg.get('sim_slot_2_password', '')),
+        'auth_type': raw_cfg.get('sim_slot_2_auth_type', 'none'),
+        'pdp_type': raw_cfg.get('sim_slot_2_pdp_type', 'ipv4v6'),
+        'roaming': raw_cfg.get('sim_slot_2_roaming', 'disabled'),
+        'pin': str(raw_cfg.get('sim_slot_2_pin', '')),
+        'puk': str(raw_cfg.get('sim_slot_2_puk', '')),
+        'iccid': str(raw_cfg.get('sim_slot_2_iccid', '')),
+        'supported_bands': [b.strip() for b in str(raw_cfg.get('sim_slot_2_supported_bands', 'all')).split(',')],
+        'preferred_carrier': str(raw_cfg.get('sim_slot_2_preferred_carrier', '')),
+        'enable_network_scan': raw_cfg.get('sim_slot_2_enable_network_scan', False),
+        'mtu': int(raw_cfg.get('sim_slot_2_mtu', 0)),
+        # Per-SIM data usage limits (fallback to global config)
+        'data_limit_size': raw_cfg.get('sim_slot_2_data_limit_size', raw_cfg.get('data_limit_size', 0)),
+        'data_limit_action': raw_cfg.get('sim_slot_2_data_limit_action', raw_cfg.get('data_limit_action', 'none')),
+        'data_limit_warning': [int(x) for x in str(raw_cfg.get('sim_slot_2_data_limit_warning', raw_cfg.get('data_limit_warning', ''))).split(',') if x.strip()] if raw_cfg.get('sim_slot_2_data_limit_warning', raw_cfg.get('data_limit_warning', '')) else [],
+        'data_limit_billing_date': raw_cfg.get('sim_slot_2_data_limit_billing_date', raw_cfg.get('data_limit_billing_date', 1)),
+    }
+    sim_slots.append(sim2)
 
     # Build connectivity monitoring configuration
     connectivity_monitoring = {

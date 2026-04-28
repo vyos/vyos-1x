@@ -57,24 +57,24 @@ interfaces
         │     │
         │     ├── slot <1|2>                              #   per-SIM tag node
         │     │     ├── disable                           #   valueless — turn off this slot (both slots enabled by default)
-        │     │     ├── iccid <19-20 digits>               #   ICCID lock — only accept this SIM (tamper prevention)
-        │     │     ├── apn <name>
-        │     │     ├── username <text>
-        │     │     ├── password <text>
-        │     │     ├── auth-type <none|pap|chap|both>
-        │     │     ├── pdp-type <ipv4|ipv6|ipv4v6>
-        │     │     ├── roaming                           #   valueless
+        │     │     ├── iccid <19-20 digits>              #   ICCID lock — only accept this SIM (tamper prevention)
+        │     │     ├── apn <name>                        #   default: '' (use APN discovery)
+        │     │     ├── username <text>                   #   default: ''
+        │     │     ├── password <text>                   #   default: ''
+        │     │     ├── auth-type <none|pap|chap|both>    #   default: none
+        │     │     ├── pdp-type <ipv4|ipv6|ipv4v6>       #   default: ipv4v6
+        │     │     ├── roaming                           #   valueless — default: roaming disabled
         │     │     ├── pin <4-8 digits>                  #   if set, SIM is auto-unlocked
-        │     │     ├── puk <8 digits>                     #   PUK for auto-recovery (resets PIN)
-        │     │     ├── supported-bands <all|band,band,...>
-        │     │     ├── preferred-carrier <MCCMNC|name>  #   e.g. '302610' or 'Bell'
+        │     │     ├── puk <8 digits>                    #   PUK for auto-recovery (resets PIN)
+        │     │     ├── supported-bands <all|band,band,...> #   default: all
+        │     │     ├── preferred-carrier <MCCMNC|name>   #   e.g. '302610' or 'Bell'; default: '' (auto)
         │     │     ├── enable-network-scan               #   valueless — diagnostic scan; results in status
         │     │     ├── mtu <bytes>                       #   per-SIM MTU override (0 = use interface mtu)
         │     │     └── data-limit
-        │     │           ├── size <bytes>                #   0 = unlimited
-        │     │           ├── action <none|disable|sim-failover|sim-failover-sticky>
-        │     │           ├── billing-date <1-28>
-        │     │           └── warning <pct,pct,...>          #   e.g. '75,90,95'; empty = no warnings
+        │     │           ├── size <bytes>                #   0 = unlimited (default)
+        │     │           ├── action <none|disable|sim-failover|sim-failover-sticky>  #   default: none
+        │     │           ├── billing-date <1-28>         #   default: 1
+        │     │           └── warning <pct,pct,...>       #   e.g. '75,90,95'; empty = no warnings
         │     │
         │     ├── sim-failback
         │     |     ├── disable                           #   valueless — turn off failback
