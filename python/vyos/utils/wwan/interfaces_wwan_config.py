@@ -8,117 +8,35 @@ from dbus_next import Variant  # pylint: disable=import-error
 from vyos.utils.wwan.wwan_logging import setup_logging
 
 
-# Carrier name to operator code mapping for user-friendly configuration
-CARRIER_MAPPINGS = {
-    # US Carriers
-    'verizon': '311480',
-    'verizon wireless': '311480',
-    'vzw': '311480',
-
-    't-mobile': '310260',
-    't-mobile us': '310260',
-    'tmobile': '310260',
-    'tmo': '310260',
-
-    'at&t': '310410',
-    'att': '310410',
-    'at&t mobility': '310410',
-
-    'sprint': '310120',
-    'sprint pcs': '310120',
-
-    'us cellular': '311580',
-    'uscellular': '311580',
-
-    'cricket': '310150',
-    'cricket wireless': '310150',
-
-    'boost mobile': '311870',
-    'boost': '311870',
-
-    'metro pcs': '310260',  # T-Mobile network
-    'metro': '310260',
-
-    'straight talk': '311480',  # Typically Verizon
-
-    # Common MVNO carriers
-    'mint mobile': '310260',    # T-Mobile network
-    'mint': '310260',
-
-    'google fi': '310260',      # Multi-carrier but often T-Mobile
-    'fi': '310260',
-
-    'visible': '311480',        # Verizon network
-
-    'red pocket': '310260',     # Multi-carrier MVNO
-    'red pocket mobile': '310260',
-
-    'total wireless': '311480', # Verizon network
-    'total': '311480',
-
-    'tracfone': '311480',       # Multi-carrier but often Verizon
-    'net10': '311480',          # TracFone subsidiary
-
-    # International carriers (examples)
-    'vodafone uk': '23415',
-    'vodafone': '23415',
-    'ee': '23430',
-    'o2 uk': '23410',
-    'three uk': '23420',
-
-    'orange fr': '20801',
-    'sfr': '20810',
-    'bouygues': '20820',
-    'free mobile': '20815',
-
-    'telekom de': '26201',
-    'vodafone de': '26202',
-    'o2 de': '26207',
-    'e-plus': '26203',
-
-    # Canada
-    'rogers': '302720',
-    'bell': '302610',
-    'telus': '302220',
-    'freedom': '302490',
-
-    # Add more as needed for your deployment regions
-}
-
 def resolve_carrier_code(carrier_input):
-    """
-    Resolve user-friendly carrier name to operator code
+    """Classify a user-supplied preferred-carrier value.
+
+    No name-to-code mapping is performed — that responsibility belongs to
+    the modem / ModemManager network-scan results, not to a hardcoded
+    static table.  This function only distinguishes a numeric MCCMNC
+    operator code from a free-form carrier name and forwards the value
+    unchanged.
 
     Args:
-        carrier_input: User input (can be name like "T-Mobile" or code like "310260")
+        carrier_input: User input — either a numeric MCCMNC code
+            (e.g. ``"310260"``) or a free-form carrier name passed to
+            ModemManager for network selection.
 
     Returns:
-        tuple: (resolved_code, display_name, is_code)
+        tuple: ``(value, display_name, is_code)`` where ``is_code`` is
+        ``True`` when the input is a 5+ digit numeric MCCMNC code.
     """
     if not carrier_input:
         return '', '', False
 
     carrier_clean = carrier_input.strip()
 
-    # Check if it's already a numeric code
+    # Numeric MCCMNC code (typically 5 or 6 digits: 3-digit MCC + 2/3-digit MNC)
     if carrier_clean.isdigit() and len(carrier_clean) >= 5:
         return carrier_clean, f"Operator Code {carrier_clean}", True
 
-    # Try to resolve from mapping
-    carrier_lower = carrier_clean.lower()
-
-    # Exact match first
-    if carrier_lower in CARRIER_MAPPINGS:
-        operator_code = CARRIER_MAPPINGS[carrier_lower]
-        return operator_code, f"{carrier_clean} ({operator_code})", False
-
-    # Partial match (for flexibility)
-    for name, code in CARRIER_MAPPINGS.items():
-        if carrier_lower in name or name in carrier_lower:
-            return code, f"{name.title()} ({code})", False
-
-    # No match found - return as-is for direct operator registration attempt
-    return carrier_clean, f"Unknown: {carrier_clean}", False
+    # Free-form name — forward to ModemManager unchanged
+    return carrier_clean, carrier_clean, False
 
 logger = setup_logging(__name__, "wwan-config")
 
@@ -228,7 +146,7 @@ class InterfaceConfig(ServiceInterface):
             {
                 "slot": 1,
                 "enabled": True,
-                "roaming": "disabled",
+                "roaming": "enabled",
                 "preferred_carrier": "",
                 "enable_network_scan": False,  # Control scanning behavior for carrier selection
                 "supported_bands": ["all"],
@@ -253,7 +171,7 @@ class InterfaceConfig(ServiceInterface):
             {
                 "slot": 2,
                 "enabled": True,
-                "roaming": "disabled",
+                "roaming": "enabled",
                 "preferred_carrier": "",
                 "enable_network_scan": False,  # Control scanning behavior for carrier selection
                 "supported_bands": ["all"],

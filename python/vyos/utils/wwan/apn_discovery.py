@@ -35,33 +35,64 @@ class APNDiscovery:
         self.interface_number = interface_number
         self.logger = logging.getLogger(f"{__name__}.Interface{interface_number}")
 
-        # Fallback APN database for common carriers
-        self.fallback_db = {
-            "310260": [{"name": "fast.t-mobile.com", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-            "311480": [{"name": "vzwinternet", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-            "310410": [{"name": "broadband", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-            "302720": [{"name": "pda.bell.ca", "username": "", "password": "", "auth_type": "none", "priority": 1}],
-            "302610": [
-                {"name": "", "username": "", "password": "", "auth_type": "none", "priority": 1},
-                {"name": "nxtgenphone", "username": "", "password": "", "auth_type": "none", "priority": 2},
-                {"name": "pda.bell.ca", "username": "", "password": "", "auth_type": "none", "priority": 3},
-                {"name": "bell.com", "username": "", "password": "", "auth_type": "none", "priority": 4}
-            ],
-            "302880": [{"name": "internet.com", "username": "", "password": "", "auth_type": "none", "priority": 1}],
+    @staticmethod
+    def _blank_apn_candidate(sim_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Build the carrier-agnostic blank-APN candidate.
+
+        Many modern carriers (3GPP-compliant) auto-assign an APN when the
+        attach request carries an empty APN field.  This is universal,
+        carrier-neutral behavior — not a hardcoded guess — and serves as
+        the last-resort candidate when no other discovery path produced
+        results.
+        """
+        return {
+            'name': '',
+            'username': '',
+            'password': '',
+            'auth_type': 'none',
+            'priority': 99,
+            'carrier': sim_info.get('operator_name') or '',
+            'mcc_mnc': sim_info.get('mcc_mnc') or '',
+            'match_type': 'blank_apn',
+            'source': 'carrier_assigned',
         }
 
     async def discover_apn_candidates(self, sim_info: Dict[str, Any], sim_config: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Discover APN candidates using Android library or fallback"""
-        try:
-            if APN_LOOKUP_AVAILABLE:
-                return await self._discover_with_android_library(sim_info, sim_config)
-            else:
-                return await self._discover_with_fallback(sim_info, sim_config)
+        """Discover APN candidates.
 
-        except Exception as e:
-            self.logger.error(f"APN discovery failed: {e}",
-                            extra={'interface_number': self.interface_number})
-            return []
+        Strategy (no hardcoded carrier-to-APN table):
+          1. Query the Android APN library if available.
+          2. Always append a blank-APN last-resort candidate, allowing the
+             carrier to auto-assign the APN per 3GPP attach semantics.
+
+        The user-configured APN (``set interfaces wwan wwanN sim slot N
+        apn ...``) is handled by the caller and takes precedence over
+        anything returned here.
+        """
+        candidates: List[Dict[str, Any]] = []
+
+        if APN_LOOKUP_AVAILABLE:
+            try:
+                candidates = await self._discover_with_android_library(
+                    sim_info, sim_config
+                )
+            except Exception as e:
+                self.logger.error(f"APN discovery failed: {e}",
+                                extra={'interface_number': self.interface_number})
+                candidates = []
+        else:
+            self.logger.info(
+                "Android APN library unavailable — using blank-APN "
+                "carrier auto-assignment as the only candidate",
+                extra={'interface_number': self.interface_number,
+                       'mcc_mnc': sim_info.get('mcc_mnc')})
+
+        # Always append a blank-APN last-resort candidate (carrier-assigned).
+        # Skip if a blank entry was already discovered to avoid duplicates.
+        if not any(not c.get('name') for c in candidates):
+            candidates.append(self._blank_apn_candidate(sim_info))
+
+        return candidates
 
     async def _discover_with_android_library(self, sim_info: Dict[str, Any], sim_config: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Use the Android apnscripts library for APN discovery"""
@@ -103,8 +134,7 @@ class APNDiscovery:
         except Exception as e:
             self.logger.error(f"Android APN lookup failed: {e}",
                             extra={'interface_number': self.interface_number})
-            # Fallback to built-in database
-            return await self._discover_with_fallback(sim_info, sim_config)
+            return []
 
     def _convert_android_apns(self, android_apns: List[Any], sim_info: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Convert Android APN format to our standardized format.
@@ -115,26 +145,16 @@ class APNDiscovery:
         return convert_android_apns(android_apns, sim_info)
 
     async def _discover_with_fallback(self, sim_info: Dict[str, Any], sim_config: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Fallback discovery when Android library is not available"""
-        self.logger.info("Using fallback APN discovery",
-                       extra={'interface_number': self.interface_number,
-                              'mcc_mnc': sim_info['mcc_mnc'],
-                              'operator_name': sim_info['operator_name']})
+        """Removed: hardcoded fallback APN database is no longer supported.
 
-        candidates = []
-
-        mcc_mnc = sim_info['mcc_mnc']
-        if mcc_mnc in self.fallback_db:
-            for apn in self.fallback_db[mcc_mnc]:
-                candidates.append({
-                    **apn,
-                    'carrier': sim_info['operator_name'],
-                    'mcc_mnc': mcc_mnc,
-                    'match_type': 'fallback_database',
-                    'source': 'builtin'
-                })
-
-        return candidates
+        Production deployments must rely on the Android APN library
+        (``apnscripts``) or an explicit user-configured APN.
+        """
+        self.logger.warning(
+            "_discover_with_fallback() called — hardcoded fallback DB "
+            "removed; returning no candidates",
+            extra={'interface_number': self.interface_number})
+        return []
 
     def prioritize_apn_candidates(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Sort APN candidates by priority (lower number = higher priority)"""
@@ -195,30 +215,10 @@ class APNDiscovery:
             return f"APN summary error: {e}"
 
     def update_fallback_database(self, mcc_mnc: str, apn_config: Dict[str, Any]):
-        """Update fallback database with successful APN for future use"""
-        try:
-            if mcc_mnc not in self.fallback_db:
-                self.fallback_db[mcc_mnc] = []
+        """Removed: hardcoded fallback APN database is no longer maintained.
 
-            # Add to fallback database if not already present
-            apn_name = apn_config.get('name')
-            existing_names = [apn.get('name') for apn in self.fallback_db[mcc_mnc]]
-
-            if apn_name and apn_name not in existing_names:
-                fallback_entry = {
-                    'name': apn_name,
-                    'username': apn_config.get('username', ''),
-                    'password': apn_config.get('password', ''),
-                    'auth_type': apn_config.get('auth_type', 'none'),
-                    'priority': 1
-                }
-
-                self.fallback_db[mcc_mnc].insert(0, fallback_entry)  # Add as highest priority
-
-                self.logger.info(f"Updated fallback database with successful APN: {apn_name}",
-                               extra={'interface_number': self.interface_number,
-                                      'mcc_mnc': mcc_mnc})
-
-        except Exception as e:
-            self.logger.warning(f"Failed to update fallback database: {e}",
-                              extra={'interface_number': self.interface_number})
+        Successful APNs are tracked elsewhere (per-SIM config); no in-memory
+        carrier-to-APN table is updated.  Kept as a no-op stub for backward
+        compatibility with any external caller.
+        """
+        return

@@ -104,7 +104,7 @@ async def example_full_config():
                     "auth_type": "chap",
                 },
                 "pdp_type": "ipv4v6",
-                "roaming": "disabled",
+                "roaming": "enabled",
                 "pin": "1234",
                 "supported_bands": ["all"],
                 "data_limit_size": 5_000_000_000,

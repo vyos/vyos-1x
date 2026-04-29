@@ -71,7 +71,7 @@ interfaces
         │     │     ├── password <text>                   #   default: ''
         │     │     ├── auth-type <none|pap|chap|both>    #   default: none
         │     │     ├── pdp-type <ipv4|ipv6|ipv4v6>       #   default: ipv4v6
-        │     │     ├── roaming                           #   valueless — default: roaming disabled
+        │     │     ├── disable-roaming                   #   valueless — default: roaming enabled (set to turn off)
         │     │     ├── pin <4-8 digits>                  #   if set, SIM is auto-unlocked
         │     │     ├── puk <8 digits>                    #   PUK for auto-recovery (resets PIN)
         │     │     ├── supported-bands <all|band,band,...> #   default: all
@@ -190,7 +190,7 @@ automatically using a 4-priority APN discovery chain:
 | **APN** | per-SIM only, `(empty)` — triggers auto-discovery | Priority chain: 1) per-SIM configured APN, 1.5) in-memory last-connected APN, 3) Android APN DB (enabled by default), 4) automatic (let the network assign) |
 | **Authentication** | per-SIM only, default `none` | No PPP auth; auth-type/username/password configured per SIM slot |
 | **PDP type** | per-SIM only, default `ipv4v6` | Dual-stack bearer per slot unless overridden |
-| **Roaming** | per-SIM only, default `disabled` | Modem will not register on visited networks unless enabled per slot |
+| **Roaming** | per-SIM only, default `enabled` | Roaming is permitted by default so aggregator/MVNO SIMs (e.g. roaming-style Rogers-on-Bell) work out of the box. Use `disable-roaming` per slot to forbid visited networks. |
 | **Network mode** | `auto` | Modem selects best available RAT (5G→LTE→3G→2G) |
 | **MTU** | `1420` (fallback) | Carrier-negotiated bearer MTU is used when available; 1420 is used only if the carrier does not provide one; also acts as a ceiling; per-SIM `mtu` overrides when active |
 | **Per-SIM MTU** | `0` (use interface mtu) | Optional per-SIM override; when the SIM is active, this value is used instead |
@@ -505,7 +505,7 @@ set interfaces wwan wwan0 sim slot 1 username ''
 set interfaces wwan wwan0 sim slot 1 password ''
 set interfaces wwan wwan0 sim slot 1 auth-type 'chap'
 set interfaces wwan wwan0 sim slot 1 pdp-type 'ipv4v6'
-set interfaces wwan wwan0 sim slot 1 roaming
+set interfaces wwan wwan0 sim slot 1 disable-roaming
 set interfaces wwan wwan0 sim slot 1 pin '1234'
 set interfaces wwan wwan0 sim slot 1 puk '12345678'
 set interfaces wwan wwan0 sim slot 1 iccid '89302610123456789012'
@@ -928,7 +928,7 @@ set interfaces wwan wwan0 logging health-check-interval 300
 | `sim slot N password` | `sim_slot_N_password` | `(empty)` |
 | `sim slot N auth-type` | `sim_slot_N_auth_type` | `none` |
 | `sim slot N pdp-type` | `sim_slot_N_pdp_type` | `ipv4` |
-| `sim slot N roaming` | `sim_slot_N_roaming` | `disabled` |
+| `sim slot N disable-roaming` | `sim_slot_N_roaming` | `enabled` |
 | `sim slot N pin` | `sim_slot_N_pin` | `(empty)` |
 | `sim slot N puk` | `sim_slot_N_puk` | `(empty)` |
 | `sim slot N iccid` | `sim_slot_N_iccid` | `(empty)` |

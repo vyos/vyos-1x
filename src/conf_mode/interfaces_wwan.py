@@ -143,7 +143,10 @@ def build_fsm_config(wwan):
             'password': _leaf(s, 'password', ''),
             'auth_type': _leaf(s, 'auth_type', 'none'),
             'pdp_type': _leaf(s, 'pdp_type', 'ipv4v6'),
-            'roaming': 'enabled' if _leaf_exists(s, 'roaming') else 'disabled',
+            # Roaming is enabled by default; CLI 'disable-roaming' leaf turns it off.
+            # Many aggregator/MVNO SIMs (e.g. roaming-style Rogers-on-Bell) only
+            # connect when roaming is permitted, so 'enabled' is the safe default.
+            'roaming': 'disabled' if _leaf_exists(s, 'disable_roaming') else 'enabled',
             'pin': _leaf(s, 'pin', ''),
             'puk': _leaf(s, 'puk', ''),
             'iccid': _leaf(s, 'iccid', ''),

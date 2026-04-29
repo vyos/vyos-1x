@@ -169,6 +169,12 @@ class ModemStateMachine:
         self.failback_suppressed_by_data_limit = False  # Sticky failover: suppress failback until billing reset
         self._sticky_failover_timestamp = None            # When sticky hold was activated
         self.failback_suppressed_by_connection_failure = False  # Suppress failback when primary SIM's APN cascade failed
+        # Anti-flap protection — SIM 1 must be CONTINUOUSLY present for
+        # sim_failover_revert_timer seconds before failback fires.  A user
+        # repeatedly cycling the SIM resets this timestamp on every removal,
+        # so flapping cards never trigger failback.
+        self._primary_first_seen_present_ts = None  # When SIM 1 first reappeared in this on-failover session
+        self._last_failback_time = 0.0              # Cooldown anchor — prevents rapid failover/failback ping-pong
 
         # SIM change tracking for worldwide operation
         self.last_known_sim_info = None     # Store SIM info from last successful connection
@@ -2045,14 +2051,14 @@ class ModemStateMachine:
 
             # Get SIM config for connection parameters
             active_slot = self.config.get('primary_sim_slot', 1) if self.config else 1
-            sim_config = {'pdp_type': 'ipv4v6', 'roaming': 'disabled'}  # defaults
+            sim_config = {'pdp_type': 'ipv4v6', 'roaming': 'enabled'}  # defaults
 
             if self.config and 'sim_slots' in self.config:
                 for slot in self.config['sim_slots']:
                     if slot['slot'] == active_slot:
                         sim_config = {
                             'pdp_type': slot.get('pdp_type', 'ipv4v6'),
-                            'roaming': slot.get('roaming', 'disabled')
+                            'roaming': slot.get('roaming', 'enabled')
                         }
                         break
 
@@ -2071,7 +2077,7 @@ class ModemStateMachine:
             except Exception:
                 current_reg_state = 0  # Unknown — proceed normally
 
-            if current_reg_state == 5 and sim_config.get('roaming', 'disabled') == 'disabled':
+            if current_reg_state == 5 and sim_config.get('roaming', 'enabled') == 'disabled':
                 logger.warning(
                     "Modem registered on roaming network but roaming is disabled "
                     "for this SIM — skipping APN connection attempts",
@@ -2870,6 +2876,32 @@ class ModemStateMachine:
                           extra={'interface_number': self.interface_number,
                                  'error': str(e)})
 
+    @staticmethod
+    def _carrier_name_matches(user_input, operator_long, operator_short):
+        """Return True if user_input matches either reported operator name.
+
+        Matching is case-insensitive and bidirectional, so both
+        "Bell" vs "Bell Canada" and "Bell Canada" vs "Bell" match.
+        No carrier names or telecom-specific vocabulary are hardcoded —
+        matching is pure string containment against whatever
+        ModemManager reports as operator-long / operator-short.
+        """
+        if not user_input or (not operator_long and not operator_short):
+            return False
+
+        user = user_input.strip().lower()
+        if not user:
+            return False
+        names = [n.strip().lower() for n in (operator_long, operator_short)
+                 if n and n.strip()]
+        if not names:
+            return False
+
+        for name in names:
+            if user == name or user in name or name in user:
+                return True
+        return False
+
     async def _process_scan_results(self, operators, preferred_carrier, gpp_iface, props):
         """Process network scan results and register to preferred operator.
 
@@ -2931,11 +2963,21 @@ class ModemStateMachine:
                                   'operator_code': operator_code,
                                   'status': status})
 
-                # Match preferred carrier by name or MCCMNC code
-                # Status 1 = Available, 2 = Current (already registered)
-                if preferred_carrier and (
-                    preferred_carrier.lower() in operator_name.lower() or
-                    preferred_carrier == operator_code) and status in [1, 2]:
+                # Match preferred carrier by MCCMNC code or name.
+                # Status 1 = Available, 2 = Current (already registered).
+                #
+                # Name matching is bidirectional and checks both the long
+                # and short operator-name fields so that user input like
+                # "bell canada" still matches a modem reporting just "Bell"
+                # (and vice-versa: "bell" matches "Bell Mobility Canada").
+                # Token-overlap matching catches cases where neither side
+                # is a clean substring (e.g. "Bell Canada" vs "BellMTS").
+                if preferred_carrier and status in [1, 2] and (
+                    preferred_carrier == operator_code
+                    or self._carrier_name_matches(
+                        preferred_carrier, operator_name, operator_short
+                    )
+                ):
                     target_code = operator_code
                     target_name = operator_name
                     logger.info("Matched preferred carrier in scan",
@@ -3470,18 +3512,74 @@ class ModemStateMachine:
         """Start the periodic failback check if conditions are met.
 
         Conditions:
-          1. Currently running on the failover (non-primary) SIM
+          1. Currently running on a non-primary SIM (derived from observed
+             current_active_sim vs configured primary_sim_slot — NOT just
+             the is_on_failover_sim bookkeeping flag, because modem-
+             firmware-initiated failover after physical SIM removal causes
+             a USB re-enumeration that bypasses _record_failover()).
           2. sim_failback_enabled is True in config
           3. No failback task already running
         """
-        if not self.is_on_failover_sim:
-            return
         if not self.config:
             return
         if not self.config.get('sim_failback_enabled', True):
             logger.debug("SIM failback disabled in config",
                         extra={'interface_number': self.interface_number})
             return
+
+        # Derive failover state from observed reality.  Physical slot
+        # numbers are the only stable identifier across modem re-
+        # enumeration — D-Bus modem indices and SIM object paths all
+        # change on every SetPrimarySimSlot or SIM eject/insert event.
+        primary = self.primary_sim_slot
+        current = self.current_active_sim
+        if primary is None or current is None:
+            logger.debug("Cannot evaluate failback start — primary or current SIM unknown",
+                        extra={'interface_number': self.interface_number,
+                               'primary_sim': primary,
+                               'current_sim': current})
+            return
+        if current == primary:
+            # Already on primary — nothing to fail back to.  Sync
+            # bookkeeping with observed reality: clear any stale
+            # is_on_failover_sim flag and cancel any leftover monitor
+            # task so we never run failback against ourselves.  This
+            # handles paths where we land on primary by routes other
+            # than _execute_failback() (e.g. SIM 2 ejected, SIM 1
+            # reinserted, modem re-enumerates onto SIM 1 directly).
+            if self.is_on_failover_sim:
+                logger.info("Back on primary SIM — clearing failover state",
+                           extra={'interface_number': self.interface_number,
+                                  'primary_sim': primary,
+                                  'current_sim': current})
+                self.is_on_failover_sim = False
+            # Clear failback suppression flags — they only meaningful
+            # while running on a non-primary SIM.
+            self.failback_suppressed_by_data_limit = False
+            self._sticky_failover_timestamp = None
+            self.failback_suppressed_by_connection_failure = False
+            self._primary_first_seen_present_ts = None
+            # Cancel any leftover monitor task from a previous failover
+            # session so it doesn't run against the new (primary)
+            # context.
+            if self.failback_task and not self.failback_task.done():
+                self.failback_task.cancel()
+                self.failback_task = None
+            return
+
+        # We're on a non-primary SIM.  Make the flag reflect reality so
+        # status reporting and downstream consumers are consistent,
+        # regardless of how we got here (FSM-driven failover, modem-
+        # firmware self-failover after SIM removal, or boot-time
+        # mismatch).
+        if not self.is_on_failover_sim:
+            logger.info("Detected operation on non-primary SIM without recorded "
+                        "failover (likely modem-initiated after SIM removal or "
+                        "boot mismatch) — marking failover state for failback",
+                        extra={'interface_number': self.interface_number,
+                               'primary_sim': primary,
+                               'current_sim': current})
+            self.is_on_failover_sim = True
 
         # Suppress failback when sticky failover is active (data-limit triggered)
         # Note: we still start the monitor loop so it can detect when the
@@ -3516,6 +3614,24 @@ class ModemStateMachine:
         if self.config:
             check_interval = max(60, self.config.get('sim_failback_check_interval', 600))
 
+        # Stability gate — primary SIM must be CONTINUOUSLY available for
+        # this many seconds before failback fires.  Reuses the existing
+        # sim_failover_revert_timer config knob (default 300s).  Anti-flap:
+        # if SIM 1 disappears at any point, the timestamp resets and the
+        # gate restarts from zero.
+        revert_timer = 300
+        if self.config:
+            revert_timer = max(0, int(self.config.get('sim_failover_revert_timer', 300)))
+
+        # Cooldown between successive failbacks — prevents rapid
+        # failover↔failback ping-pong if the user keeps cycling the SIM
+        # after a successful failback.  Reuses the carrier-friendly
+        # failover_cooldown_seconds (default 600s).
+        failback_cooldown = 600
+        if self.config:
+            failback_cooldown = max(0, int(self.config.get(
+                'failover_cooldown_seconds', 600)))
+
         primary = self.primary_sim_slot
         if primary is None:
             logger.warning("Primary SIM slot unknown, cannot run failback monitor",
@@ -3525,11 +3641,27 @@ class ModemStateMachine:
         logger.info("Failback monitor loop started",
                    extra={'interface_number': self.interface_number,
                           'primary_sim': primary,
-                          'interval_seconds': check_interval})
+                          'check_interval_seconds': check_interval,
+                          'revert_timer_seconds': revert_timer,
+                          'failback_cooldown_seconds': failback_cooldown})
+
+        # First probe happens after a short settle so the SIM 2 connection
+        # has a chance to stabilize and ModemManager has populated SimSlots
+        # for the (possibly just re-enumerated) modem.  Subsequent
+        # iterations use the full check_interval.
+        FIRST_CHECK_SETTLE_SECONDS = 30
+        # Reset stability tracking on monitor start — every fresh
+        # on-failover session begins with no observed primary presence.
+        self._primary_first_seen_present_ts = None
+        first_iteration = True
 
         while True:
             try:
-                await asyncio.sleep(check_interval)
+                if first_iteration:
+                    await asyncio.sleep(FIRST_CHECK_SETTLE_SECONDS)
+                    first_iteration = False
+                else:
+                    await asyncio.sleep(check_interval)
 
                 # Guard: stop if we're no longer on a failover SIM (e.g. user manually switched)
                 if not self.is_on_failover_sim:
@@ -3585,18 +3717,63 @@ class ModemStateMachine:
                 # Query the primary SIM slot status via ModemManager
                 primary_available = await self._check_primary_sim_available(primary)
 
-                if primary_available:
-                    logger.info("Primary SIM appears available — initiating failback",
-                               extra={'interface_number': self.interface_number,
-                                      'primary_sim': primary,
-                                      'current_sim': self.current_active_sim})
-                    await self._execute_failback(primary)
-                    break  # Failback initiated, exit loop
-                else:
+                now_ts = time.time()
+
+                if not primary_available:
+                    # Primary not present — reset the stability gate.  This
+                    # is the anti-flap mechanism: every removal forces the
+                    # continuous-presence counter back to zero.
+                    if self._primary_first_seen_present_ts is not None:
+                        logger.info("Primary SIM disappeared — resetting failback stability gate",
+                                   extra={'interface_number': self.interface_number,
+                                          'primary_sim': primary})
+                        self._primary_first_seen_present_ts = None
                     logger.debug("Primary SIM not yet available, will check again",
                                 extra={'interface_number': self.interface_number,
                                        'primary_sim': primary,
                                        'next_check_in': check_interval})
+                    continue
+
+                # Primary appears present.  Start (or continue) the
+                # continuous-presence timer.
+                if self._primary_first_seen_present_ts is None:
+                    self._primary_first_seen_present_ts = now_ts
+                    logger.info("Primary SIM detected — starting failback stability gate",
+                               extra={'interface_number': self.interface_number,
+                                      'primary_sim': primary,
+                                      'required_seconds': revert_timer})
+                    continue
+
+                continuous_present = now_ts - self._primary_first_seen_present_ts
+                if continuous_present < revert_timer:
+                    logger.debug("Primary SIM present but stability gate not yet satisfied",
+                                extra={'interface_number': self.interface_number,
+                                       'primary_sim': primary,
+                                       'continuous_present_seconds': int(continuous_present),
+                                       'required_seconds': revert_timer})
+                    continue
+
+                # Cooldown gate — refuse to failback if we just failed back
+                # recently.  Protects against rapid failover↔failback
+                # ping-pong when a user repeatedly cycles SIM 1.
+                since_last_failback = now_ts - self._last_failback_time
+                if (self._last_failback_time > 0
+                        and since_last_failback < failback_cooldown):
+                    logger.info("Failback cooldown active — deferring failback",
+                               extra={'interface_number': self.interface_number,
+                                      'primary_sim': primary,
+                                      'seconds_since_last_failback': int(since_last_failback),
+                                      'cooldown_seconds': failback_cooldown})
+                    continue
+
+                logger.info("Primary SIM stably available — initiating failback",
+                           extra={'interface_number': self.interface_number,
+                                  'primary_sim': primary,
+                                  'current_sim': self.current_active_sim,
+                                  'continuous_present_seconds': int(continuous_present)})
+                self._last_failback_time = now_ts
+                await self._execute_failback(primary)
+                break  # Failback initiated, exit loop
 
             except asyncio.CancelledError:
                 logger.info("Failback monitor cancelled",
@@ -5668,7 +5845,7 @@ class ModemStateMachine:
             pdp_type = sim_config.get('pdp_type', 'ipv4v6')
             connect_params['ip-type'] = Variant('u', self._convert_pdp_type(pdp_type))
 
-            roaming = sim_config.get('roaming', 'disabled')
+            roaming = sim_config.get('roaming', 'enabled')
             connect_params['allow-roaming'] = Variant('b', roaming == 'enabled')
 
             # Let ModemManager/network handle APN assignment
@@ -7236,7 +7413,7 @@ class ModemStateMachine:
                 prefix = f"sim_slot_{slot_num}"
                 # Config
                 status[f"{prefix}_enabled"] = slot.get('enabled', True)
-                status[f"{prefix}_roaming"] = slot.get('roaming', 'disabled')
+                status[f"{prefix}_roaming"] = slot.get('roaming', 'enabled')
                 status[f"{prefix}_pdp_type"] = slot.get('pdp_type', 'ipv4v6')
                 apn_val = slot.get('apn', '')
                 status[f"{prefix}_apn"] = apn_val.get('name', '') if isinstance(apn_val, dict) else str(apn_val)

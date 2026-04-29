@@ -232,9 +232,9 @@
                     </properties>
                     <defaultValue>ipv4v6</defaultValue>
                   </leafNode>
-                  <leafNode name="roaming">
+                  <leafNode name="disable-roaming">
                     <properties>
-                      <help>Allow roaming on visited networks</help>
+                      <help>Disable roaming on visited networks (roaming is enabled by default)</help>
                       <valueless/>
                     </properties>
                   </leafNode>
