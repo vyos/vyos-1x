@@ -18,6 +18,7 @@ as inbound or outbound in the case of interface groups.
 An **address group** contains a single IP address or IP address range.
 
 ```{cfgcmd} set firewall group address-group \<name\> address [address | address range]
+
 ```
 ```{cfgcmd} set firewall group ipv6-address-group \<name\> address \<address\>
 

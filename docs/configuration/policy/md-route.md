@@ -11,6 +11,7 @@ ability to specify the criteria to match. Data packets go through the rules
 from 1 - 999999, at the first match the action of the rule will be executed.
 
 ```{cfgcmd} set policy route \<name\> description \<text\>
+
 ```
 ```{cfgcmd} set policy route6 \<name\> description \<text\>
 

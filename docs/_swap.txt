@@ -112,3 +112,13 @@ configuration/protocols/index
 installation/virtual/eve-ng
 configexamples/site-2-site-cisco
 contributing/upstream-packages
+
+# Newly added 2026-04-29 (post cfgcmd/opcmd single-line body fix, BackstopJS <5%)
+configuration/policy/as-path-list
+configuration/policy/community-list
+configuration/policy/extcommunity-list
+configuration/policy/large-community-list
+configuration/policy/local-route
+configuration/policy/prefix-list
+configuration/service/salt-minion
+configuration/system/updates
