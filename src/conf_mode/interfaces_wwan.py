@@ -76,6 +76,22 @@ def get_config(config=None):
     # is_bond_member, is_mirror_intf, qos, etc.
     ifname, wwan = get_interface_dict(conf, base)
 
+    # ── Live-tree intent flags ───────────────────────────────────────
+    # get_interface_dict() merges XML <defaultValue> tags into the parsed
+    # dict regardless of whether the user actually configured the parent
+    # node.  For optional features (e.g. ip-passthrough), defaulted sub-leaves
+    # would otherwise look indistinguishable from user-configured values.
+    # We therefore stash explicit "the user touched this" flags here, sourced
+    # from the live config tree, so verify() can reason about user intent
+    # without being fooled by phantom defaults.
+    iface_base = base + [ifname]
+    wwan['_user_set'] = {
+        'ip_passthrough': conf.exists(iface_base + ['ip-passthrough']),
+        'ip_passthrough_interface': conf.exists(
+            iface_base + ['ip-passthrough', 'interface']
+        ),
+    }
+
     # ── IP Passthrough — Policy B coexistence check ──────────────────────
     # If the user designated a passthrough interface AND has set an explicit
     # 'interfaces ethernet <if> address ...', the FSM must NOT auto-provision
@@ -83,7 +99,7 @@ def get_config(config=None):
     # build_fsm_config() can emit the correct policy decision.
     ipt = wwan.get('ip_passthrough', {}) or {}
     pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
-    if pt_iface:
+    if pt_iface and wwan['_user_set']['ip_passthrough_interface']:
         eth_path = ['interfaces', 'ethernet', pt_iface, 'address']
         user_addrs = []
         if conf.exists(eth_path):
@@ -201,8 +217,8 @@ def build_fsm_config(wwan):
     enhanced_reconnection = {
         'enabled': not _leaf_exists(rc, 'disable_enhanced'),
         'signal_threshold': _leaf_int(rc, 'signal_threshold', -85),
-        'retry_interval_good_signal': _leaf_int(ri, 'good_signal', 15),
-        'retry_interval_poor_signal': _leaf_int(ri, 'poor_signal', 45),
+        'retry_interval_good_signal': _leaf_int(ri, 'good_signal', 30),
+        'retry_interval_poor_signal': _leaf_int(ri, 'poor_signal', 120),
         'max_wait_for_signal': _leaf_int(rc, 'max_wait_for_signal', 120),
         'signal_check_interval': _leaf_int(rc, 'signal_check_interval', 10),
         'signal_strength_buffer': _leaf_int(rc, 'signal_strength_buffer', 5),
@@ -213,9 +229,9 @@ def build_fsm_config(wwan):
     failed_retry = {
         'enabled': not _leaf_exists(fr, 'disable'),
         'intervals': _csv_to_list(
-            _leaf(fr, 'intervals', '300,600,1200,1800'), int
+            _leaf(fr, 'intervals', '600,1800,3600,7200'), int
         ),
-        'max_interval': _leaf_int(fr, 'max_interval', 1800),
+        'max_interval': _leaf_int(fr, 'max_interval', 7200),
         'escalation_threshold': _leaf_int(fr, 'escalation_threshold', 3),
     }
 
@@ -395,30 +411,22 @@ def verify(wwan):
     verify_mirror_redirect(wwan)
 
     # ── IP Passthrough verification ──────────────────────────────────────
-    ipt = wwan.get('ip_passthrough', {}) or {}
-    pt_iface = ipt.get('interface') if isinstance(ipt, dict) else None
-    if pt_iface:
-        # Mutually exclusive with PD — both consume the bearer's IPv6.
-        pd_cfg = wwan.get('pd', {}) or {}
-        if pd_cfg:
+    # Reason about user intent via live-tree flags stashed by get_config(),
+    # not the defaults-merged dict (XML <defaultValue> tags would otherwise
+    # make unconfigured sub-leaves indistinguishable from user-set ones).
+    user_set = wwan.get('_user_set', {})
+    if user_set.get('ip_passthrough'):
+        if not user_set.get('ip_passthrough_interface'):
             raise ConfigError(
-                "ip-passthrough is mutually exclusive with pd — both consume "
-                "the bearer's IPv6 prefix.  Remove one or the other."
+                "ip-passthrough sub-options require 'ip-passthrough "
+                "interface <eth>' to be set first."
             )
-        # 'mac', 'lease-time', and address validators handled by XML.
-        # Other sub-leaves require 'interface' to be set.
-        for required_with_iface in ('mac', 'lease_time',
-                                    'management_address',
-                                    'management_address_ipv6'):
-            pass  # presence-only sub-leaves; no extra checks needed
-    else:
-        # If any sub-leaf is set without 'interface', that's an error.
-        sub_leaves = ('mac', 'lease_time',
-                      'management_address', 'management_address_ipv6')
-        if isinstance(ipt, dict) and any(k in ipt for k in sub_leaves):
+        # Mutually exclusive with PD — both consume the bearer's IPv6.
+        if wwan.get('pd'):
             raise ConfigError(
-                "ip-passthrough sub-options require 'ip-passthrough interface "
-                "<eth>' to be set first."
+                "ip-passthrough is mutually exclusive with pd — both "
+                "consume the bearer's IPv6 prefix.  Remove one or the "
+                "other."
             )
 
     return None
