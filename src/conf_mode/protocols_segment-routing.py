@@ -72,43 +72,41 @@ def verify(config_dict):
             mpls = index_data.get('mpls')
             if not nai and not mpls:
                 raise ConfigError(f'{error_msg}: "mpls" or "nai" is required!')
-            
-            if not nai:
-                continue
 
-            if 'adjacency' in nai and 'prefix' in nai:
-                raise ConfigError(f'{error_msg}: "prefix" and "adjacency" are mutually exclusive!')
+            if nai:
+                if 'adjacency' in nai and 'prefix' in nai:
+                    raise ConfigError(f'{error_msg}: "prefix" and "adjacency" are mutually exclusive!')
 
-            for nai_type in ('adjacency', 'prefix'):
-                nai_data = nai.get(nai_type)
-                if not nai_data:
-                    continue
+                for nai_type in ('adjacency', 'prefix'):
+                    nai_data = nai.get(nai_type)
+                    if not nai_data:
+                        continue
 
-                if 'ipv4' in nai_data and 'ipv6' in nai_data:
-                    raise ConfigError(f'{error_msg}, nai {nai_type}: "ipv4" and "ipv6" are '
-                                      'mutually exclusive!')
+                    if 'ipv4' in nai_data and 'ipv6' in nai_data:
+                        raise ConfigError(f'{error_msg}, nai {nai_type}: "ipv4" and "ipv6" are '
+                                           'mutually exclusive!')
 
-                for af, af_config in nai_data.items():
-                    af_ctx = f'{error_msg}, nai {nai_type} {af}'
-                    if nai_type == 'adjacency':
-                        has_src = 'source_identifier' in af_config
-                        has_dst = 'destination_identifier' in af_config
-                        if has_src != has_dst:
-                            missing = 'destination-identifier' if has_src else 'source-identifier'
-                            raise ConfigError(f'{af_ctx}: "{missing}" is required!')
-                    else:
-                        if 'prefix_identifier' not in af_config:
-                            raise ConfigError(f'{af_ctx}: "prefix-identifier" is required!')
+                    for af, af_config in nai_data.items():
+                        af_ctx = f'{error_msg}, nai {nai_type} {af}'
+                        if nai_type == 'adjacency':
+                            has_src = 'source_identifier' in af_config
+                            has_dst = 'destination_identifier' in af_config
+                            if has_src != has_dst:
+                                missing = 'destination-identifier' if has_src else 'source-identifier'
+                                raise ConfigError(f'{af_ctx}: "{missing}" is required!')
+                        else:
+                            if 'prefix_identifier' not in af_config:
+                                raise ConfigError(f'{af_ctx}: "prefix-identifier" is required!')
 
-                        for pfx, pfx_data in af_config['prefix_identifier'].items():
-                            pfx_ctx = f'{af_ctx}, prefix "{pfx}"'
-                            if 'algorithm' not in pfx_data:
-                                raise ConfigError(f'{pfx_ctx}: "algorithm" is required!')
+                            for pfx, pfx_data in af_config['prefix_identifier'].items():
+                                pfx_ctx = f'{af_ctx}, prefix "{pfx}"'
+                                if 'algorithm' not in pfx_data:
+                                    raise ConfigError(f'{pfx_ctx}: "algorithm" is required!')
 
-                            if alg := pfx_data.get('algorithm'):
-                                if {'spf', 'strict_spf'} <= set(alg.keys()):
-                                    raise ConfigError(f'{pfx_ctx}: "spf" and "strict-spf" '
-                                                       'are mutually exclusive!')
+                                if alg := pfx_data.get('algorithm'):
+                                    if {'spf', 'strict_spf'} <= set(alg.keys()):
+                                        raise ConfigError(f'{pfx_ctx}: "spf" and "strict-spf" '
+                                                           'are mutually exclusive!')
 
     return None
 
