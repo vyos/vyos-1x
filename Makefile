@@ -77,8 +77,12 @@ op_mode_definitions: $(op_xml_obj)
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
+.PHONY: ocaml
+ocaml: libvyosconfig
+	$(MAKE) -C src/ocaml
+
 .PHONY: all
-all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json
+all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json ocaml
 
 .PHONY: copyright
 copyright:
@@ -93,6 +97,7 @@ clean:
 	rm -rf $(TMPL_DIR)
 	rm -rf $(OP_TMPL_DIR)
 	$(MAKE) -C $(SHIM_DIR) clean
+	$(MAKE) -C src/ocaml clean
 
 .PHONY: test
 test: generate-configd-include-json
@@ -129,6 +134,10 @@ deb:
 .PHONY: generate-configd-include-json
 generate-configd-include-json:
 	@scripts/generate-configd-include-json.py
+
+.PHONY: generate-activation-scripts-json
+generate-activation-scripts-json:
+	@scripts/generate-activation-scripts-json.py
 
 .PHONY: schema
 schema:

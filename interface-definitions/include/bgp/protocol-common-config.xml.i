@@ -1056,6 +1056,7 @@
         #include <include/bgp/neighbor-afi-ipv4-multicast.xml.i>
         #include <include/bgp/neighbor-afi-ipv6-multicast.xml.i>
         #include <include/bgp/neighbor-afi-l2vpn-evpn.xml.i>
+        #include <include/bgp/neighbor-afi-link-state.xml.i>
       </children>
     </node>
     <leafNode name="advertisement-interval">
@@ -1708,6 +1709,7 @@
         #include <include/bgp/neighbor-afi-ipv6-labeled-unicast.xml.i>
         #include <include/bgp/neighbor-afi-ipv6-vpn.xml.i>
         #include <include/bgp/neighbor-afi-l2vpn-evpn.xml.i>
+        #include <include/bgp/neighbor-afi-link-state.xml.i>
       </children>
     </node>
     #include <include/generic-description.xml.i>

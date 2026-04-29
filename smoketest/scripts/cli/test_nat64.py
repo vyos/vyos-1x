@@ -65,7 +65,7 @@ class TestNAT64(VyOSUnitTestSHIM.TestCase):
         # https://nicmx.github.io/Jool/en/usr-flags-pool4.html#port-range
         # Jool is incapable of ensuring pool4 does not intersect with other defined
         # port ranges; this validation is the operator’s responsibility.
-        tmp = sysctl_read('net.ipv4.ip_local_port_range')
+        tmp = sysctl_read(['net', 'ipv4', 'ip_local_port_range'])
         _, ephemeral_port_max = map(int, tmp.split())
         pool_port = f'{ephemeral_port_max +1}-{ephemeral_port_max +1000}'
         self.cli_set(rule_path + ['translation', 'pool', translation_rule,

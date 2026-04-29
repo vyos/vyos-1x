@@ -85,21 +85,21 @@ def apply(config_dict):
     labels = '0'
     if 'interface' in mpls:
         labels = '1048575'
-    sysctl_write('net.mpls.platform_labels', labels)
+    sysctl_write(['net', 'mpls', 'platform_labels'], labels)
 
     # Check for changes in global MPLS options
     if 'parameters' in mpls:
             # Choose whether to copy IP TTL to MPLS header TTL
         if 'no_propagate_ttl' in mpls['parameters']:
-            sysctl_write('net.mpls.ip_ttl_propagate', 0)
+            sysctl_write(['net', 'mpls', 'ip_ttl_propagate'], 0)
             # Choose whether to limit maximum MPLS header TTL
         if 'maximum_ttl' in mpls['parameters']:
             ttl = mpls['parameters']['maximum_ttl']
-            sysctl_write('net.mpls.default_ttl', ttl)
+            sysctl_write(['net', 'mpls', 'default_ttl'], ttl)
     else:
         # Set default global MPLS options if not defined.
-        sysctl_write('net.mpls.ip_ttl_propagate', 1)
-        sysctl_write('net.mpls.default_ttl', 255)
+        sysctl_write(['net', 'mpls', 'ip_ttl_propagate'], 1)
+        sysctl_write(['net', 'mpls', 'default_ttl'], 255)
 
     # Enable and disable MPLS processing on interfaces per configuration
     if 'interface' in mpls:
@@ -112,20 +112,17 @@ def apply(config_dict):
             interface_state = read_file(f'/proc/sys/net/mpls/conf/{system_interface}/input')
             if '1' in interface_state:
                 if system_interface not in mpls['interface']:
-                    system_interface = system_interface.replace('.', '/')
-                    sysctl_write(f'net.mpls.conf.{system_interface}.input', 0)
+                    sysctl_write(['net', 'mpls', 'conf', system_interface, 'input'], 0)
             elif '0' in interface_state:
                 if system_interface in mpls['interface']:
-                    system_interface = system_interface.replace('.', '/')
-                    sysctl_write(f'net.mpls.conf.{system_interface}.input', 1)
+                    sysctl_write(['net', 'mpls', 'conf', system_interface, 'input'], 1)
     else:
         system_interfaces = []
         # If MPLS interfaces are not configured, set MPLS processing disabled
         for interface in glob('/proc/sys/net/mpls/conf/*'):
             system_interfaces.append(os.path.basename(interface))
         for system_interface in system_interfaces:
-            system_interface = system_interface.replace('.', '/')
-            sysctl_write(f'net.mpls.conf.{system_interface}.input', 0)
+            sysctl_write(['net', 'mpls', 'conf', system_interface, 'input'], 0)
 
     return None
 

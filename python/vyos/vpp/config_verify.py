@@ -20,8 +20,10 @@ import psutil
 
 from vyos import ConfigError
 from vyos.base import Warning
+from vyos.utils.convert import range_str_to_list
 from vyos.utils.cpu import get_core_count as total_core_count, get_cpus
 from vyos.utils.dict import dict_search
+from vyos.utils.file import read_file
 
 from vyos.vpp.config_resource_checks import memory as mem_checks
 from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
@@ -53,6 +55,9 @@ _VPP_MEMBER_INTERFACE_REFS = [
 ]
 
 _VPP_INTERFACE_REFS = _VPP_FEATURE_INTERFACE_REFS + _VPP_MEMBER_INTERFACE_REFS
+
+# Line width used by ConfigError for message formatting
+LINE_WIDTH = 72
 
 
 def vpp_interface_in_use(
@@ -217,12 +222,12 @@ def create_cpu_error_message(cpus_required: int, cpus_available: int = None) -> 
 
     available_str = (
         (
-            '---'.ljust(72)
-            + 'Reserved:'.ljust(72)
-            + f'For system: {reserved_cpus}'.ljust(72)
-            + f'VPP main thread: 1'.ljust(72)
-            + '---'.ljust(72)
-            + 'Available:'.ljust(72)
+            '---'.ljust(LINE_WIDTH)
+            + 'Reserved:'.ljust(LINE_WIDTH)
+            + f'For system: {reserved_cpus}'.ljust(LINE_WIDTH)
+            + f'VPP main thread: 1'.ljust(LINE_WIDTH)
+            + '---'.ljust(LINE_WIDTH)
+            + 'Available:'.ljust(LINE_WIDTH)
             + f'Physical cores: {max(cpus_available, 0)}'
         )
         if cpus_available is not None
@@ -230,13 +235,13 @@ def create_cpu_error_message(cpus_required: int, cpus_available: int = None) -> 
     )
 
     message = (
-        '---'.ljust(72)
-        + 'Total in the system:'.ljust(72)
-        + f'Physical cores: {total_core_count()}'.ljust(72)
-        + f'Logical cores: {logical_cores}'.ljust(72)
-        + '---'.ljust(72)
-        + 'Required:'.ljust(72)
-        + f'Physical cores: {cpus_required}'.ljust(72)
+        '---'.ljust(LINE_WIDTH)
+        + 'Total in the system:'.ljust(LINE_WIDTH)
+        + f'Physical cores: {total_core_count()}'.ljust(LINE_WIDTH)
+        + f'Logical cores: {logical_cores}'.ljust(LINE_WIDTH)
+        + '---'.ljust(LINE_WIDTH)
+        + 'Required:'.ljust(LINE_WIDTH)
+        + f'Physical cores: {cpus_required}'.ljust(LINE_WIDTH)
         + available_str
     )
 
@@ -251,7 +256,7 @@ def verify_vpp_minimum_cpus():
     min_cpus = default_resource_map.get('min_cpus')
     if total_core_count() < min_cpus:
         raise ConfigError(
-            'This system does not meet minimal requirements for VPP. '.ljust(72)
+            'This system does not meet minimal requirements for VPP. '.ljust(LINE_WIDTH)
             + create_cpu_error_message(min_cpus)
         )
 
@@ -329,10 +334,10 @@ def verify_vpp_memory(config: dict):
 
     if errors:
         raise ConfigError(
-            'Not enough free memory to start VPP! '.ljust(72)
-            + '. '.join([line.ljust(72) for line in errors.values()])
+            'Not enough free memory to start VPP! '.ljust(LINE_WIDTH)
+            + '. '.join([line.ljust(LINE_WIDTH) for line in errors.values()])
             + (
-                'To add HugePages memory please use command '.ljust(72)
+                'To add HugePages memory please use command '.ljust(LINE_WIDTH)
                 + '"set system option kernel memory hugepage-size ..." and reboot!'
                 if any(k in errors for k in ('2M', '1G'))
                 else ''
@@ -342,8 +347,19 @@ def verify_vpp_memory(config: dict):
 
 def verify_vpp_cpu_cores(cpu_cores: int):
     """
-    Verify that the system has enough available CPU cores
-    to run a given amount of worker processes (1 worker/core)
+    Verify that the system has enough available and isolated CPU cores.
+
+    Checks performed:
+      1. The host has enough physical cores (minus reserved) for the requested
+         cpu_cores count.
+      2. The kernel actually has at least cpu_cores isolated CPUs
+         (read from /sys/devices/system/cpu/isolated).
+
+    Args:
+        cpu_cores: Total number of VPP CPU cores (1 main + N-1 workers).
+
+    Raises:
+        ConfigError: When any of the checks fail.
     """
     total_cores = total_core_count()
     reserved_cpus = default_resource_map.get('reserved_cpu_cores')
@@ -351,8 +367,25 @@ def verify_vpp_cpu_cores(cpu_cores: int):
 
     if cpu_cores > available_cores:
         raise ConfigError(
-            f'Not enough free physical CPU cores for {cpu_cores} "cpu-cores" '.ljust(72)
+            f'Not enough free physical CPU cores for {cpu_cores} "cpu-cores" '.ljust(
+                LINE_WIDTH
+            )
             + create_cpu_error_message(cpu_cores, available_cores)
+        )
+
+    # Read the set of CPUs the running kernel has actually isolated
+    isolated = read_file('/sys/devices/system/cpu/isolated')
+    isolated_cpus = range_str_to_list(isolated)
+
+    if cpu_cores > len(isolated_cpus):
+        raise ConfigError(
+            'Not enough isolated CPU cores available: '.ljust(LINE_WIDTH)
+            + f'{cpu_cores} requested, but only {len(isolated_cpus)} isolated'
+            f'{f" (CPU#{isolated})" if len(isolated_cpus) > 0 else ""}. '.ljust(
+                LINE_WIDTH
+            )
+            + 'To isolate CPUs please use command '.ljust(LINE_WIDTH)
+            + '"set system option kernel cpu isolate-cpus ..." save and reboot!'
         )
 
 

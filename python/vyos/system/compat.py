@@ -14,12 +14,18 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from pathlib import Path
-from re import compile, MULTILINE, DOTALL
+from re import compile
+from re import MULTILINE
+from re import DOTALL
 from functools import wraps
 from copy import deepcopy
 from typing import Union
 
-from vyos.system import disk, grub, image, SYSTEM_CFG_VER
+from vyos.flavor import get_image_serial_console
+from vyos.system import disk
+from vyos.system import grub
+from vyos.system import image
+from vyos.system import SYSTEM_CFG_VER
 from vyos.template import render
 
 TMPL_GRUB_COMPAT: str = 'grub/grub_compat.j2'
@@ -128,11 +134,15 @@ def parse_entry(entry: tuple) -> dict:
         entry_dict['bootmode'] = 'pw_reset'
     else:
         entry_dict['bootmode'] = 'normal'
+    (_, _, default_speed) = get_image_serial_console()
     # find console type and number
     regex_filter = compile(REGEX_CONSOLE)
     entry_dict.update(regex_filter.match(entry[1]).groupdict())
+    # Set new or default console speed - this line must always be present to
+    # keep backward compatibility. It is needed to boot into old images and
+    # use the serial console speed
     speed = entry_dict.get('console_speed', None)
-    entry_dict['console_speed'] = speed if speed is not None else '115200'
+    entry_dict['console_speed'] = speed if speed is not None else default_speed
     entry_dict['boot_opts'] = sanitize_boot_opts(entry[1])
 
     return entry_dict

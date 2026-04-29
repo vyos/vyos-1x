@@ -6,13 +6,13 @@
         <properties>
           <help>Show command history</help>
         </properties>
-        <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history</command>
+        <command>bash -c 'HISTTIMEFORMAT="%FT%T%z "; HISTFILE="'"$HOME"'/.bash_history"; \set -o history; history'</command>
         <children>
           <leafNode name="brief">
             <properties>
               <help>Show recent command history</help>
             </properties>
-            <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history 20</command>
+            <command>bash -c 'HISTTIMEFORMAT="%FT%T%z "; HISTFILE="'"$HOME"'/.bash_history"; \set -o history; history 20'</command>
           </leafNode>
           <virtualTagNode>
             <properties>
@@ -21,7 +21,7 @@
                 <list>&lt;NUMBER&gt;</list>
               </completionHelp>
             </properties>
-            <command>HISTTIMEFORMAT='%FT%T%z ' HISTFILE="$HOME/.bash_history" \set -o history; history $3</command>
+            <command>bash -c 'HISTTIMEFORMAT="%FT%T%z "; HISTFILE="'"$HOME"'/.bash_history"; \set -o history; history '$3</command>
           </virtualTagNode>
         </children>
       </node>

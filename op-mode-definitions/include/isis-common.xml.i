@@ -106,7 +106,7 @@
       <properties>
         <help>Show specific IS-IS neighbor adjacency </help>
         <completionHelp>
-          <list>system-id</list>
+          <script>vtysh -c "show isis hostname" | awk 'NR>2 &amp;&amp; $1 != "*" {print $NF}' | sort -u</script>
         </completionHelp>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>

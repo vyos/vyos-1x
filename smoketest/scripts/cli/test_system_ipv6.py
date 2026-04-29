@@ -41,23 +41,23 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
     def test_system_ipv6_forwarding(self):
         # Test if IPv6 forwarding can be disabled globally, default is '1'
         # which means forwearding enabled
-        self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', 'all', 'forwarding']), '1')
 
         self.cli_set(base_path + ['disable-forwarding'])
         self.cli_commit()
-        self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '0')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', 'all', 'forwarding']), '0')
         frrconfig = self.getFRRconfig()
         self.assertIn('no ipv6 forwarding', frrconfig)
 
         self.cli_delete(base_path + ['disable-forwarding'])
         self.cli_commit()
-        self.assertEqual(sysctl_read('net.ipv6.conf.all.forwarding'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', 'all', 'forwarding']), '1')
         frrconfig = self.getFRRconfig()
         self.assertNotIn('no ipv6 forwarding', frrconfig)
 
     def test_system_ipv6_strict_dad(self):
         # This defaults to 1
-        self.assertEqual(sysctl_read('net.ipv6.conf.all.accept_dad'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', 'all', 'accept_dad']), '1')
 
         # Do not assign any IPv6 address on interfaces, this requires a reboot
         # which can not be tested, but we can read the config file :)
@@ -65,11 +65,11 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify configuration file
-        self.assertEqual(sysctl_read('net.ipv6.conf.all.accept_dad'), '2')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'conf', 'all', 'accept_dad']), '2')
 
     def test_system_ipv6_multipath(self):
         # This defaults to 0
-        self.assertEqual(sysctl_read('net.ipv6.fib_multipath_hash_policy'), '0')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'fib_multipath_hash_policy']), '0')
 
         # Do not assign any IPv6 address on interfaces, this requires a reboot
         # which can not be tested, but we can read the config file :)
@@ -77,7 +77,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify configuration file
-        self.assertEqual(sysctl_read('net.ipv6.fib_multipath_hash_policy'), '1')
+        self.assertEqual(sysctl_read(['net', 'ipv6', 'fib_multipath_hash_policy']), '1')
 
     def test_system_ipv6_neighbor_table_size(self):
         # Maximum number of entries to keep in the ARP cache, the
@@ -85,9 +85,9 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         cli_default = int(default_value(base_path + ['neighbor', 'table-size']))
 
         def _verify_gc_thres(table_size):
-            self.assertEqual(sysctl_read('net.ipv6.neigh.default.gc_thresh3'), str(table_size))
-            self.assertEqual(sysctl_read('net.ipv6.neigh.default.gc_thresh2'), str(table_size // 2))
-            self.assertEqual(sysctl_read('net.ipv6.neigh.default.gc_thresh1'), str(table_size // 8))
+            self.assertEqual(sysctl_read(['net', 'ipv6', 'neigh', 'default', 'gc_thresh3']), str(table_size))
+            self.assertEqual(sysctl_read(['net', 'ipv6', 'neigh', 'default', 'gc_thresh2']), str(table_size // 2))
+            self.assertEqual(sysctl_read(['net', 'ipv6', 'neigh', 'default', 'gc_thresh1']), str(table_size // 8))
 
         _verify_gc_thres(cli_default)
 

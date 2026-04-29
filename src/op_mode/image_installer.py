@@ -17,9 +17,14 @@
 # You should have received a copy of the GNU General Public License along with
 # VyOS. If not, see <https://www.gnu.org/licenses/>.
 
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
+from argparse import Namespace
 from pathlib import Path
-from shutil import copy, chown, rmtree, copytree, disk_usage
+from shutil import copy
+from shutil import chown
+from shutil import rmtree
+from shutil import copytree
+from shutil import disk_usage
 from glob import glob
 from sys import exit
 from os import environ
@@ -38,8 +43,11 @@ from psutil import disk_partitions
 
 from vyos.base import Warning
 from vyos.configtree import ConfigTree
+from vyos.config_mgmt import unsaved_commits
 from vyos.defaults import base_dir
 from vyos.defaults import directories
+from vyos.defaults import activation_hint
+from vyos.flavor import get_image_serial_console
 from vyos.remote import download
 from vyos.system import disk
 from vyos.system import grub
@@ -55,13 +63,16 @@ from vyos.utils.auth import evaluate_strength
 from vyos.utils.auth import get_local_users
 from vyos.utils.auth import get_user_home_dir
 from vyos.utils.dict import dict_search
-from vyos.utils.io import ask_input, ask_yes_no, select_entry
+from vyos.utils.io import ask_input
+from vyos.utils.io import ask_yes_no
+from vyos.utils.io import select_entry
 from vyos.utils.file import chmod_2775
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
-from vyos.utils.process import cmd, run, rc_cmd
+from vyos.utils.process import cmd
+from vyos.utils.process import run
+from vyos.utils.process import rc_cmd
 from vyos.version import get_version_data
-from vyos.config_mgmt import unsaved_commits
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -123,6 +134,7 @@ CONST_RESERVED_SPACE: int = (2 + 1 + 256) * 1024**2
 
 # define directories and paths
 DIR_CONFIG: str = directories['config']
+DIR_DATA: str = directories['data']
 DIR_INSTALLATION: str = '/mnt/installation'
 DIR_ROOTFS_SRC: str = f'{DIR_INSTALLATION}/root_src'
 DIR_ROOTFS_DST: str = f'{DIR_INSTALLATION}/root_dst'
@@ -135,15 +147,16 @@ ISO_DOWNLOAD_PATH: str = ''
 external_download_script: str = f'{base_dir}/simple-download.py'
 external_latest_image_url_script: str = f'{base_dir}/latest-image-url.py'
 
+(flavor_sercon_type, flavor_sercon_num, flavor_sercon_speed) = get_image_serial_console()
+
 # default boot variables
 DEFAULT_BOOT_VARS: dict[str, str] = {
     'timeout': '5',
     'console_type': 'tty',
-    'console_num': '0',
-    'console_speed': '115200',
+    'console_num': flavor_sercon_num,
+    'console_speed': flavor_sercon_speed,
     'bootmode': 'normal'
 }
-
 
 def bytes_to_gb(size: int) -> float:
     """Convert Bytes to GBytes, rounded to 1 decimal number
@@ -606,6 +619,49 @@ def configure_authentication(config_file: str, password: str) -> None:
     with open(config_file, 'w') as f:
         f.write(config.to_string())
 
+def configure_serial_console(config_file: str, console_type: str) -> None:
+    """Apply serial console settings to config.boot from kernel cmdline.
+
+    This overlaps with 05-serial_console.py activation logic, but that script
+    only runs during live boot. During installation, the user may pick a
+    different source config, so serial console settings must be written to
+    the final target config explicitly.
+
+    Behavior:
+    - Reads the kernel serial console device/speed from the current boot cmdline.
+    - If the detected device is a valid tty, writes:
+        system console device <TTY> speed <rate>
+    - If "console_type == 'S'", also writes:
+        system console device <TTY> kernel
+
+    Args:
+        config_file (str): path of target config file
+        console_type (str): 'K' (KVM/tty) or 'S' (serial)
+    """
+    from vyos.utils.serial import is_tty
+    from vyos.utils.kernel import get_kernel_serial_console
+
+    # Parse current kernel cmdline and continue only for valid serial console
+    # data. Prevent writing incomplete/invalid console settings to config.boot.
+    k_console_type, k_console_num, k_console_speed = get_kernel_serial_console()
+    device = f'{k_console_type}{k_console_num}'
+    if not is_tty(device) or not k_console_speed:
+        return
+
+    base = ['system', 'console', 'device']
+    config_string = read_file(config_file)
+    config = ConfigTree(config_string)
+    config.set(base + [device, 'speed'], value=k_console_speed)
+    config.set_tag(base)
+
+    # Only mark this device as kernel boot console when console_type 'S' for
+    # serial was defined by user.
+    if console_type == 'S':
+        config.set(base + [device, 'kernel'])
+
+    with open(config_file, 'w') as f:
+        f.write(config.to_string())
+
 def validate_signature(file_path: str, sign_type: str) -> None:
     """Validate a file by signature and delete a signature file
 
@@ -759,11 +815,10 @@ def console_hint() -> str:
         path = '/dev/tty'
 
     name = Path(path).name
-    if name in ['ttyS0', 'ttyAMA0']:
+    if name.startswith(('ttyS', 'ttyAMA')):
         return 'S'
     else:
         return 'K'
-
 
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
     """Clean up after installation
@@ -913,10 +968,10 @@ def install_image() -> None:
         print(MSG_WARN_PASSWORD_CONFIRM)
 
     # ask for default console
+    console_dict: dict[str, str] = {'K': 'tty', 'S': flavor_sercon_type}
     console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
                                   default=console_hint(),
-                                  valid_responses=['K', 'S'])
-    console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS'}
+                                  valid_responses=console_dict.keys())
 
     config_boot_list = [f'{DIR_CONFIG}/config.boot',
                         '/opt/vyatta/etc/config.boot.default']
@@ -962,6 +1017,8 @@ def install_image() -> None:
         copy(default_config, f'{target_config_dir}/config.boot')
         configure_authentication(f'{target_config_dir}/config.boot',
                                  user_password)
+        configure_serial_console(f'{target_config_dir}/config.boot',
+                                 console_type)
         Path(f'{target_config_dir}/.vyatta_config').touch()
 
         # create a persistence.conf
@@ -985,6 +1042,14 @@ def install_image() -> None:
         if is_raid_install(install_target):
             write_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw'
             raid.update_default(write_dir)
+
+        # set activation hint
+        target_data_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw{DIR_DATA}/'
+        data_path = Path(target_data_dir)
+        data_path.mkdir(parents=True)
+        data_path.chmod(0o755)
+        init_hint = data_path.joinpath(Path(activation_hint).name)
+        init_hint.touch()
 
         setup_grub(DIR_DST_ROOT)
         # add information about version
