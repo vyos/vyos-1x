@@ -96,7 +96,7 @@
                 <properties>
                   <help>Monitor last lines of DHCPv6 client log</help>
                 </properties>
-                <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@*.service"</command>
+                <command>journalctl --no-hostname --follow --boot --unit "dhcpcd6@*.service"</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -105,7 +105,7 @@
                         <script>${vyos_completion_dir}/list_interfaces</script>
                       </completionHelp>
                     </properties>
-                    <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@$6.service"</command>
+                    <command>journalctl --no-hostname --follow --boot --unit "dhcpcd6@$6.service"</command>
                   </tagNode>
                 </children>
               </node>

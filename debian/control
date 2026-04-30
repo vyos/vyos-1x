@@ -120,7 +120,7 @@ Depends:
   ssl-cert,
   tuned,
   beep,
-  wide-dhcpv6-client,
+  dhcpcd-base,
 # Generic colorizer
   grc,
 ## End of System services and utilities

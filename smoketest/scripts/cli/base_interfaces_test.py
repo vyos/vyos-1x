@@ -13,7 +13,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import time
 import jmespath
+import psutil
 
 from json import loads
 from netifaces import ifaddresses # pylint: disable = no-name-in-module
@@ -32,6 +34,7 @@ from vyos.utils.file import read_file
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
+from vyos.utils.process import process_running
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_vrf
 from vyos.utils.network import get_vrf_tableid
@@ -44,10 +47,38 @@ from vyos.xml_ref import default_value
 
 dhclient_base_dir = directories['isc_dhclient_dir']
 dhclient_process_name = 'dhclient'
-dhcp6c_base_dir = directories['dhcp6_client_dir']
-dhcp6c_process_name = 'dhcp6c'
+dhcpcd6_base_dir = directories['dhcpcd6_client_dir']
+dhcpcd6_process_name = 'dhcpcd'
 
 MSG_TESTCASE_UNSUPPORTED = 'unsupported on interface family'
+
+
+def dhcpcd6_read_pid(ifname, timeout=10):
+    """Poll dhcpcd's PID file and return the PID once the process is alive.
+
+    process_named_running breaks for dhcpcd because setproctitle overwrites
+    /proc/PID/cmdline; psutil.name() reads /proc/PID/status instead.
+    Returns None on timeout.
+    """
+    pid_file = f'{dhcpcd6_base_dir}/{ifname}-6.pid'
+    deadline = time.time() + timeout
+    while True:
+        try:
+            pid = int(read_file(pid_file).strip())
+            proc = psutil.Process(pid)
+            if proc.name() == 'dhcpcd':
+                return pid
+        except (
+            ValueError,
+            FileNotFoundError,
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.AccessDenied,
+        ):
+            pass
+        if time.time() >= deadline:
+            return None
+        time.sleep(0.100)
 
 server_ca_root_cert_data = """
 MIIBcTCCARagAwIBAgIUDcAf1oIQV+6WRaW7NPcSnECQ/lUwCgYIKoZIzj0EAwIw
@@ -208,15 +239,26 @@ class BasicInterfaceTest:
                 for map_entry in ct_map:
                      self.assertNotEqual(intf, map_entry['interface'])
 
-            # No daemon started during tests should remain running
-            for daemon in ['dhcp6c', 'dhclient']:
-                # if _interface list is populated do a more fine grained search
-                # by also checking the cmd arguments passed to the daemon
-                if self._interfaces:
-                    for tmp in self._interfaces:
-                        self.assertFalse(process_named_running(daemon, tmp))
-                else:
-                    self.assertFalse(process_named_running(daemon))
+            # No daemon started during tests should remain running.
+            if self._interfaces:
+                for tmp in self._interfaces:
+                    self.assertFalse(process_named_running(dhclient_process_name, tmp))
+            else:
+                self.assertFalse(process_named_running(dhclient_process_name))
+            # dhcpcd: setproctitle breaks process_named_running; use PID file
+            # per interface or psutil.name() (reads /proc/PID/status) globally.
+            if self._interfaces:
+                for interface in self._interfaces:
+                    self.assertFalse(
+                        process_running(f'{dhcpcd6_base_dir}/{interface}-6.pid')
+                    )
+            else:
+                self.assertFalse(
+                    any(
+                        p.name() == dhcpcd6_process_name
+                        for p in psutil.process_iter(['name'])
+                    )
+                )
 
             # always forward to base class
             super().tearDown()
@@ -364,8 +406,7 @@ class BasicInterfaceTest:
                 tmp = get_interface_vrf(interface)
                 self.assertEqual(tmp, vrf_name)
 
-                # Check if dhclient process runs
-                tmp = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
+                tmp = dhcpcd6_read_pid(interface, timeout=10)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
@@ -383,8 +424,8 @@ class BasicInterfaceTest:
                 tmp = get_interface_vrf(interface)
                 self.assertEqual(tmp, 'default')
 
-                # Check if dhclient process runs
-                tmp = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
+                # Check if dhcpcd process runs
+                tmp = dhcpcd6_read_pid(interface, timeout=10)
                 self.assertTrue(tmp)
                 # .. inside the appropriate VRF instance
                 vrf_pids = cmd(f'ip vrf pids {vrf_name}')
@@ -1162,7 +1203,6 @@ class BasicInterfaceTest:
                 for option in self._options.get(interface, []):
                     self.cli_set(path + option.split())
 
-                # Enable DHCPv6 client
                 self.cli_set(path + ['address', 'dhcpv6'])
                 self.cli_set(path + ['dhcpv6-options', 'no-release'])
                 self.cli_set(path + ['dhcpv6-options', 'rapid-commit'])
@@ -1170,46 +1210,47 @@ class BasicInterfaceTest:
                 self.cli_set(path + ['dhcpv6-options', 'duid', duid])
                 duid_base += 1
 
+            before_commit = time.time()
             self.cli_commit()
 
             duid_base = 10
             for interface in self._interfaces:
                 duid = f'00:01:00:01:27:71:db:f0:00:50:00:00:00:{duid_base}'
-                dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
-                self.assertIn(f'interface {interface} ' + '{', dhcpc6_config)
-                self.assertIn(f'  request domain-name-servers;', dhcpc6_config)
-                self.assertIn(f'  request domain-name;', dhcpc6_config)
-                self.assertIn(f'  information-only;', dhcpc6_config)
-                self.assertIn(f'  send ia-na 0;', dhcpc6_config)
-                self.assertIn(f'  send rapid-commit;', dhcpc6_config)
-                self.assertIn(f'  send client-id {duid};', dhcpc6_config)
-                self.assertIn('};', dhcpc6_config)
+                dhcpcd6_config = read_file(
+                    f'{dhcpcd6_base_dir}/dhcpcd6.{interface}.conf'
+                )
+                self.assertIn('option dhcp6_rapid_commit', dhcpcd6_config)
+                # no-release omits the 'release' directive rather than adding a negating one
+                self.assertNotIn('release', dhcpcd6_config.splitlines())
+                # parameters-only suppresses IA_NA
+                self.assertNotIn('ia_na', dhcpcd6_config)
+                self.assertIn(f'duid {duid}', dhcpcd6_config)
                 duid_base += 1
 
-                # T7058: verify daemon has no problems understanding the custom DUID option
+                # Verify service unit logged no fatal config parse errors since
+                # this commit (seek past stale entries from earlier test runs)
                 j = journal.Reader()
                 j.this_boot()
-                j.add_match(_SYSTEMD_UNIT=f'dhcp6c@{interface}.service')
+                j.seek_realtime(before_commit)
+                j.add_match(_SYSTEMD_UNIT=f'dhcpcd6@{interface}.service')
                 for entry in j:
-                    self.assertNotIn('yyerror0', entry.get('MESSAGE', ''))
-                    self.assertNotIn('syntax error', entry.get('MESSAGE', ''))
+                    msg = entry.get('MESSAGE', '').lower()
+                    self.assertNotIn('syntax error', msg)
+                    self.assertNotIn('unknown option', msg)
+                    self.assertNotIn('fatal', msg)
 
-                # Better ask the process about it's commandline in the future
-                pid = process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10)
-                self.assertTrue(pid)
+                self.assertTrue(dhcpcd6_read_pid(interface, timeout=10))
 
-                # DHCPv6 option "no-release" requires "-n" daemon startup option
-                dhcp6c_options = read_file(f'/proc/{pid}/cmdline')
-                self.assertIn('-n', dhcp6c_options)
+                # parameters-only emits 'inform6' in dhcpcd.conf, not on the cmdline
+                self.assertIn('inform6', dhcpcd6_config)
 
         def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6_pd:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
             prefix_len = '56'
-            sla_len = str(64 - int(prefix_len))
 
-            # Create delegatee interfaces first to avoid any confusion by dhcpc6
+            # Create delegatee interfaces first to avoid any confusion by dhcpcd
             # this is mainly an "issue" with virtual-ethernet interfaces
             delegatees = ['dum2340', 'dum2341', 'dum2342', 'dum2343', 'dum2344']
             for delegatee in delegatees:
@@ -1236,25 +1277,20 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
+                dhcpcd6_config = read_file(
+                    f'{dhcpcd6_base_dir}/dhcpcd6.{interface}.conf'
+                )
+                self.assertIn(f'ia_pd 0/::/{prefix_len}', dhcpcd6_config)
 
-                # verify DHCPv6 prefix delegation
-                self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
-
-                address = '1'
-                sla_id = '0'
+                # auto sla-id starts at 0 and increments; address starts at 1
+                sla_id = 0
+                address = 1
                 for delegatee in delegatees:
-                    self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
-                    self.assertIn(f'ifid {address};', dhcpc6_config)
-                    self.assertIn(f'sla-id {sla_id};', dhcpc6_config)
+                    self.assertIn(f'{delegatee}/{sla_id}/64/{address}', dhcpcd6_config)
+                    sla_id += 1
+                    address += 1
 
-                    # increment sla-id
-                    sla_id = str(int(sla_id) + 1)
-                    # increment interface address
-                    address = str(int(address) + 1)
-
-                # Check for running process
-                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10))
+                self.assertTrue(dhcpcd6_read_pid(interface, timeout=10))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
@@ -1267,9 +1303,8 @@ class BasicInterfaceTest:
                 self.skipTest(MSG_TESTCASE_UNSUPPORTED)
 
             prefix_len = '56'
-            sla_len = str(64 - int(prefix_len))
 
-            # Create delegatee interfaces first to avoid any confusion by dhcpc6
+            # Create delegatee interfaces first to avoid any confusion by dhcpcd
             # this is mainly an "issue" with virtual-ethernet interfaces
             delegatees = ['dum3340', 'dum3341', 'dum3342', 'dum3343', 'dum3344']
             for delegatee in delegatees:
@@ -1299,27 +1334,20 @@ class BasicInterfaceTest:
 
             self.cli_commit()
 
-            # Verify dhcpc6 client configuration
             for interface in self._interfaces:
+                dhcpcd6_config = read_file(
+                    f'{dhcpcd6_base_dir}/dhcpcd6.{interface}.conf'
+                )
+                self.assertIn(f'ia_pd 0/::/{prefix_len}', dhcpcd6_config)
+
                 address = '1'
                 sla_id = '1'
-                dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
-
-                # verify DHCPv6 prefix delegation
-                self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
-
                 for delegatee in delegatees:
-                    self.assertIn(f'prefix-interface {delegatee}' + r' {', dhcpc6_config)
-                    self.assertIn(f'ifid {address};', dhcpc6_config)
-                    self.assertIn(f'sla-id {sla_id};', dhcpc6_config)
-
-                    # increment sla-id
-                    sla_id = str(int(sla_id) + 1)
-                    # increment interface address
+                    self.assertIn(f'{delegatee}/{sla_id}/64/{address}', dhcpcd6_config)
                     address = str(int(address) + 1)
+                    sla_id = str(int(sla_id) + 1)
 
-                # Check for running process
-                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface, timeout=10))
+                self.assertTrue(dhcpcd6_read_pid(interface, timeout=10))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here

@@ -1588,23 +1588,42 @@ class Interface(Control):
         if enable not in [True, False]:
             raise ValueError()
 
-        config_base = directories['dhcp6_client_dir']
-        config_file = f'{config_base}/dhcp6c.{self.ifname}.conf'
-        script_file = f'/etc/wide-dhcpv6/dhcp6c.{self.ifname}.script' # can not live under /run b/c of noexec mount option
-        systemd_override_file = f'/run/systemd/system/dhcp6c@{self.ifname}.service.d/10-override.conf'
-        systemd_service = f'dhcp6c@{self.ifname}.service'
+        config_base = directories['dhcpcd6_client_dir']
+        config_file = f'{config_base}/dhcpcd6.{self.ifname}.conf'
+        hook_file = f'/etc/dhcpcd6/dhcpcd6.{self.ifname}.hook'
+        systemd_override_file = (
+            f'/run/systemd/system/dhcpcd6@{self.ifname}.service.d/10-override.conf'
+        )
+        systemd_service = f'dhcpcd6@{self.ifname}.service'
 
-        # Rendered client configuration files require additional settings
         config = deepcopy(self.config)
-        config['dhcp6_client_dir'] = directories['dhcp6_client_dir']
-        config['dhcp6_script_file'] = script_file
+        config['dhcpcd6_client_dir'] = directories['dhcpcd6_client_dir']
+
+        # The IA_PD config has to be a one-liner in the rendered config. Do the
+        # heavy lifting here and inject the result.
+        for _pd_id, pd in (dict_search('dhcpv6_options.pd', config) or {}).items():
+            ifaces = []
+            for i, (iface, iface_cfg) in enumerate((pd.get('interface') or {}).items()):
+                sla_id = iface_cfg.get('sla_id', i)
+                entry = f'{iface}/{sla_id}/64'
+                if 'address' in iface_cfg:
+                    entry += f'/{iface_cfg["address"]}'
+                ifaces.append(entry)
+            pd['_ia_pd_suffix'] = ' '.join(ifaces)
 
         if enable and 'disable' not in config:
-            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', config)
             render(config_file, 'dhcp-client/ipv6.j2', config)
-            render(script_file, 'dhcp-client/dhcp6c-script.j2', config, permission=0o755)
+            render(
+                hook_file, 'dhcp-client/ipv6-dhcpcd.hook.j2', config, permission=0o755
+            )
 
-            # Reload systemd unit definitions as some options are dynamically generated
+            if config.get('vrf'):
+                render(
+                    systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', config
+                )
+            elif os.path.isfile(systemd_override_file):
+                # VRF removed; drop stale override so base unit ExecStart is used
+                os.remove(systemd_override_file)
             self._cmd('systemctl daemon-reload')
 
             # We must ignore any return codes. This is required to enable
@@ -1614,12 +1633,13 @@ class Interface(Control):
                 (not is_systemd_service_active(systemd_service))):
                 return self._popen(f'systemctl restart {systemd_service}')
         else:
-            if is_systemd_service_active(systemd_service):
-                self._cmd(f'systemctl stop {systemd_service}')
-            if os.path.isfile(config_file):
-                os.remove(config_file)
-            if os.path.isfile(script_file):
-                os.remove(script_file)
+            self._cmd(f'systemctl stop {systemd_service}')
+            for file in [config_file, hook_file]:
+                if os.path.isfile(file):
+                    os.remove(file)
+            if os.path.isfile(systemd_override_file):
+                os.remove(systemd_override_file)
+                self._cmd('systemctl daemon-reload')
 
         return None
 

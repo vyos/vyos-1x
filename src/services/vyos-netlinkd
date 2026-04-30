@@ -52,23 +52,17 @@ def sigterm_handler(signo, frame):
 
 def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
     systemdV4_service = f'dhclient@{ifname}.service'
-    systemdV6_service = f'dhcp6c@{ifname}.service'
 
     # Only handle explicit UP/DOWN state transitions; ignore other kernel states.
     if operstate not in ['UP', 'DOWN']:
         return None
 
     if operstate == 'DOWN':
-        # Interface moved state to down
         if is_systemd_service_active(systemdV4_service):
             syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV4_service}...')
             cmd(f'systemctl stop {systemdV4_service}')
-        if is_systemd_service_active(systemdV6_service):
-            syslog.syslog(syslog.LOG_DEBUG, f'Stopping {systemdV6_service}...')
-            cmd(f'systemctl stop {systemdV6_service}')
 
     elif operstate == 'UP':
-        v6_restart = False
         interface_path = Section.get_config_path(ifname, delimiter='.')
 
         config_dict = op_mode_config_dict(
@@ -76,25 +70,16 @@ def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
         )
 
         if tmp := dict_search(f'{interface_path}.address', config_dict):
-            # Always (re-)start the DHCP(v6) client service. If the DHCP(v6) client
+            # Always (re-)start the DHCPv4 client service. If the DHCPv4 client
             # is already running - which could happen if the interface is re-
-            # configured in operational down state, it will have an exponential backoff
-            # time increasing while not receiving a DHCP(v6) reply.
+            # configured in operational down state, it will have an exponential
+            # backoff time increasing while not receiving a DHCP reply.
             #
-            # To make the interface instantly available, and as for a DHCP(v6) lease
+            # To make the interface instantly available, and as for a DHCP lease
             # we will re-start the service and thus cancel the backoff time.
             if 'dhcp' in tmp:
                 syslog.syslog(syslog.LOG_DEBUG, f'Restarting {systemdV4_service}...')
                 cmd(f'systemctl restart {systemdV4_service}')
-            if 'dhcpv6' in tmp:
-                v6_restart = True
-
-        if dict_search(f'{interface_path}.dhcpv6_options.pd', config_dict):
-            v6_restart = True
-
-        if v6_restart:
-            syslog.syslog(syslog.LOG_DEBUG, f'Restarting {systemdV6_service}...')
-            cmd(f'systemctl restart {systemdV6_service}')
 
     return None
 

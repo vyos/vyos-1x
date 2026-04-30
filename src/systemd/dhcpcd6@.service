@@ -1,0 +1,22 @@
+[Unit]
+Description=DHCPv6 client (dhcpcd) on %i
+Documentation=man:dhcpcd(8)
+StartLimitIntervalSec=0
+After=vyos-router.service ppp@%i.service
+ConditionPathExists=/run/dhcpcd/dhcpcd6.%i.conf
+
+[Service]
+Type=simple
+RuntimeDirectory=dhcpcd
+RuntimeDirectoryPreserve=yes
+# VRF reassignment clears IPv6 state; wait for VyOS to re-add the EUI-64
+# link-local before dhcpcd starts so dhcpcd does not race to create its own.
+ExecStartPre=/bin/sh -c 'c=0; until ip -6 addr show dev %i | grep -q "scope link" || [ $c -ge 50 ]; do sleep 0.1; c=$((c+1)); done'
+ExecStart=/usr/sbin/dhcpcd -6 -B -q -f /run/dhcpcd/dhcpcd6.%i.conf --script /etc/dhcpcd6/dhcpcd6.%i.hook %i
+WorkingDirectory=/run/dhcpcd
+TimeoutStopSec=15
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

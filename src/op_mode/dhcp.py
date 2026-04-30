@@ -628,7 +628,7 @@ def renew_client_lease(raw: bool, family: ArgFamily, interface: str):
         v = 'v6' if family == 'inet6' else ''
         print(f'Restarting DHCP{v} client on interface {interface}...')
     if family == 'inet6':
-        call(f'systemctl restart dhcp6c@{interface}.service')
+        call(f'systemctl restart dhcpcd6@{interface}.service')
     else:
         call(f'systemctl restart dhclient@{interface}.service')
 
@@ -639,7 +639,7 @@ def release_client_lease(raw: bool, family: ArgFamily, interface: str):
         v = 'v6' if family == 'inet6' else ''
         print(f'Release DHCP{v} client on interface {interface}...')
     if family == 'inet6':
-        call(f'systemctl stop dhcp6c@{interface}.service')
+        call(f'systemctl stop dhcpcd6@{interface}.service')
     else:
         call(f'systemctl stop dhclient@{interface}.service')
 

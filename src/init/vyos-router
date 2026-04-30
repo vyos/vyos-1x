@@ -445,39 +445,33 @@ EOF
     rm -f /etc/curlrc
 }
 
-# XXX: T3885 - generate persistend DHCPv6 DUID (Type4 - UUID based)
+# XXX: T3885 - generate persistent DHCPv6 DUID (Type4 - UUID based)
 gen_duid ()
 {
-    DUID_FILE="/var/lib/dhcpv6/dhcp6c_duid"
+    DUID_FILE="/var/lib/dhcpcd/duid"
     UUID_FILE="/sys/class/dmi/id/product_uuid"
     UUID_FILE_ALT="/sys/class/dmi/id/product_serial"
     if [ ! -f ${UUID_FILE} ] && [ ! -f ${UUID_FILE_ALT} ]; then
         return 1
     fi
 
+    # Do not overwrite a DUID dhcpcd has already generated
+    [ -f "${DUID_FILE}" ] && return 0
+
     # DUID is based on the BIOS/EFI UUID. We omit additional - characters
     if [ -f ${UUID_FILE} ]; then
         UUID=$(cat ${UUID_FILE} | tr -d -)
     fi
-    if [ -z ${UUID} ]; then
+    if [ -z "${UUID}" ]; then
         file_alt="$(cat ${UUID_FILE_ALT})"
         if [ -n "${file_alt}" ]; then
           UUID=$(uuidgen --sha1 --namespace @dns --name ${file_alt} | tr -d -)
         fi
     fi
-    # Add DUID type4 (UUID) information
     DUID_TYPE="0004"
 
-    # The length-information (as per RFC6355 UUID is 128 bits long) is in big-endian
-    # format - beware when porting to ARM64. The length field consists out of the
-    # UUID (128 bit + 16 bits DUID type) resulting in hex 12.
-    DUID_LEN="0012"
-    if [ "$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6 )" -eq 1 ]; then
-        # true on little-endian (x86) systems
-        DUID_LEN="1200"
-    fi
-
-    for i in $(echo -n ${DUID_LEN}${DUID_TYPE}${UUID} | sed 's/../& /g'); do
+    mkdir -p "$(dirname ${DUID_FILE})"
+    for i in $(echo -n ${DUID_TYPE}${UUID} | sed 's/../& /g'); do
         echo -ne "\x$i"
     done > ${DUID_FILE}
 }
