@@ -44,6 +44,38 @@ Pseudo-Ethernet interfaces may not work in environments that require a
 Assign a physical Ethernet interface to the specified pseudo-Ethernet interface.
 ```
 
+```{eval-rst}
+.. cfgcmd:: set interfaces pseudo-ethernet <interface> anycast-gateway
+
+   **Enable EVPN anycast gateway mode on the specified pseudo-Ethernet interface.**
+
+   In this mode, VyOS installs a local Forwarding Database (FDB) entry on the
+   pseudo-Ethernet interface's parent bridge. This ensures traffic destined
+   for the pseudo-Ethernet's anycast MAC address is terminated locally rather
+   than forwarded across the VXLAN overlay.
+
+   VyOS automatically removes the FDB entry when you disable EVPN anycast
+   gateway mode or delete the pseudo-Ethernet interface.
+
+   .. note::
+
+      The following requirements must be met to enable EVPN anycast gateway
+      mode:
+
+      * The MAC address must be explicitly configured on the pseudo-Ethernet
+        interface.
+      * The pseudo-Ethernet interface's ``source-interface`` must be a bridge
+        or bridge sub-interface (e.g., ``br0`` or ``br0.100``). VyOS always
+        installs the FDB entry on the base bridge (e.g., ``br0``), even if the
+        ``source-interface`` is a sub-interface like ``br0.100``.
+
+   Example:
+
+   .. code-block:: none
+
+      set interfaces pseudo-ethernet peth0 anycast-gateway
+```
+
 ### VLAN
 
 ```{cmdincludemd} /_include/interface-vlan-8021q.txt
