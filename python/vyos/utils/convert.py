@@ -261,3 +261,56 @@ def encode_to_base64(input_string):
 
     # Decode the base64 bytes back to a string
     return encoded_string.decode('utf-8')
+
+
+def range_str_to_list(data: str) -> list[int]:
+    """
+    Convert a string of ranges to a sorted list of unique integers
+
+    Args:
+        data (str): Comma-separated ranges, e.g. '1-3,5,7-9'
+
+    Returns:
+        Sorted list of unique integers, e.g. ``[1, 2, 3, 5, 7, 8, 9]``.
+    """
+    if not data:
+        return []
+    result = []
+    for part in data.split(','):
+        if '-' in part:
+            start, end = part.split('-')
+            result.extend(range(int(start), int(end) + 1))
+        else:
+            result.append(int(part))
+    return sorted(set(result))
+
+
+def list_to_range_str(nums: list[int]) -> str:
+    """
+    Convert a list of integers to a compact string of ranges
+
+    Args:
+        nums: List of integers, e.g. [1, 2, 3, 5, 7, 8, 9].
+              Duplicates are removed and the list is sorted internally.
+
+    Returns:
+        Compact range string, e.g. '1-3,5,7-9'.
+        Returns '' for an empty input.
+    """
+    nums = sorted(set(nums))
+    if not nums:
+        return ''
+
+    ranges = []
+    start = end = nums[0]
+
+    for n in nums[1:]:
+        if n == end + 1:
+            end = n
+        else:
+            ranges.append(str(start) if start == end else f'{start}-{end}')
+            start = end = n
+
+    ranges.append(str(start) if start == end else f'{start}-{end}')
+
+    return ','.join(ranges)

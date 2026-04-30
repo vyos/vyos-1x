@@ -16,6 +16,7 @@ set protocols ospf interface eth0.666 passive
 set protocols ospf log-adjacency-changes detail
 set protocols static route 0.0.0.0/0 next-hop 193.201.42.170 distance '130'
 set system config-management commit-revisions '100'
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system host-name 'lab-vyos-r1'
 set system login user vyos authentication encrypted-password '$6$R.OnGzfXSfl6J$Iba/hl9bmjBs0VPtZ2zdW.Snh/nHuvxUwi0R6ruypgW63iKEbicJH.uUst8xZCyByURblxRtjAC1lAnYfIt.b0'

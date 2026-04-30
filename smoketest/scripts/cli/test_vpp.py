@@ -26,7 +26,8 @@ from json import loads
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.utils.cpu import get_available_cpus
+from vyos.utils.convert import range_str_to_list
+from vyos.utils.convert import list_to_range_str
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import rc_cmd
@@ -86,12 +87,9 @@ def get_address(interface):
             return ip_address
 
 
-def get_vpp_cpu_allocation():
-    reserved_cpus = default_resource_map.get('reserved_cpu_cores')
-    # Get sorted list of available CPU IDs
-    available = sorted({cpu['cpu'] for cpu in get_available_cpus()})
-    main_core = available[reserved_cpus]  # first non-reserved CPU
-    return reserved_cpus, main_core
+def get_isolated_cpus():
+    isolated = read_file('/sys/devices/system/cpu/isolated')
+    return range_str_to_list(isolated)
 
 
 class TestVPP(VyOSUnitTestSHIM.TestCase):
@@ -133,7 +131,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
     def test_01_vpp_basic(self):
         poll_sleep = '0'
         mtu = '2500'
-        skip_cores, main_core = get_vpp_cpu_allocation()
+        isolated_cores = get_isolated_cpus()
 
         self.cli_set(base_path + ['settings', 'poll-sleep-usec', poll_sleep])
 
@@ -142,8 +140,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         config_entries = (
             f'poll-sleep-usec {poll_sleep}',
-            f'skip-cores {skip_cores}',
-            f'main-core {main_core}',
+            f'main-core {str(isolated_cores[0])}',  # first isolated core is set as main-core
             'plugin default { disable }',
             'plugin dpdk_plugin.so { enable }',
             'plugin linux_cp_plugin.so { enable }',
@@ -726,7 +723,9 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
     def test_10_vpp_cpu_cores(self):
         cpu_cores = '2'
-        skip_cores, main_core = get_vpp_cpu_allocation()
+        isolated_cpus = get_isolated_cpus()
+        main_core = str(isolated_cpus[0])  # first isolated core is set as main-core
+        corelist_workers = list_to_range_str(isolated_cpus[1 : int(cpu_cores)])
 
         # verify 'cpu-cores' are set not correctly
         # expect raise ConfigError
@@ -738,9 +737,8 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         config_entries = (
-            f'skip-cores {skip_cores}',  # reserved cpus skipped for system use
-            f'main-core {main_core}',  # first available core is set as main-core
-            f'workers {int(cpu_cores) - 1}',
+            f'main-core {main_core}',
+            f'corelist-workers {corelist_workers}',
             'dev 0000:00:00.0',
         )
 
@@ -1052,25 +1050,25 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Check if max-map-count has default auto calculated value
         # but not less than '65530'
-        self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
+        self.assertEqual(sysctl_read(['vm', 'max_map_count']), '65530')
         # The same is with: kernel.shmmax = '8589934592'
-        self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
+        self.assertEqual(sysctl_read(['kernel', 'shmmax']), '8589934592')
 
         # Change max-map-count, shmmax and check
         self.cli_set(hr_path + ['max-map-count', max_map_count])
         self.cli_set(hr_path + ['shmmax', shmmax])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('vm.max_map_count'), max_map_count)
-        self.assertEqual(sysctl_read('kernel.shmmax'), shmmax)
+        self.assertEqual(sysctl_read(['vm', 'max_map_count']), max_map_count)
+        self.assertEqual(sysctl_read(['kernel', 'shmmax']), shmmax)
 
         # We expect max-map-count and shmmax will return auto calculated values
         self.cli_delete(hr_path + ['max-map-count'])
         self.cli_delete(hr_path + ['shmmax'])
         self.cli_commit()
 
-        self.assertEqual(sysctl_read('vm.max_map_count'), '65530')
-        self.assertEqual(sysctl_read('kernel.shmmax'), '8589934592')
+        self.assertEqual(sysctl_read(['vm', 'max_map_count']), '65530')
+        self.assertEqual(sysctl_read(['kernel', 'shmmax']), '8589934592')
 
     def test_17_1_vpp_pppoe_mapping(self):
         config_file = '/run/accel-pppd/pppoe.conf'
@@ -1218,7 +1216,7 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', interface, 'vif-s', vif_s])
         self.cli_commit()
 
-    def test_18_kernel_options_hugepages(self):
+    def test_18_1_kernel_options_hugepages(self):
         default_hp_size = '2M'
         hp_size_1g = '1G'
         hp_size_2m = '2M'
@@ -1250,6 +1248,27 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' default_hugepagesz={default_hp_size}', tmp)
         self.assertIn(f' hugepagesz={hp_size_1g} hugepages={hp_count_1g}', tmp)
         self.assertIn(f' hugepagesz={hp_size_2m} hugepages={hp_count_2m}', tmp)
+
+    def test_18_2_kernel_options_cpu(self):
+        isolate_cpus = '1,2'
+
+        self.cli_set(
+            ['system', 'option', 'kernel', 'cpu', 'isolate-cpus', isolate_cpus]
+        )
+        self.cli_commit()
+
+        # Read GRUB config file for current running image
+        tmp = read_file(
+            f'{image.grub.GRUB_DIR_VYOS_VERS}/{image.get_running_image()}.cfg'
+        )
+        self.assertIn(f' isolcpus={isolate_cpus}', tmp)
+
+        # verify 'isolate-cpus' are set not correctly
+        # expect raise ConfigError
+        self.cli_set(['system', 'option', 'kernel', 'cpu', 'isolate-cpus', '1-99'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
 
     def test_19_static_arp(self):
         host = '192.0.2.10'
@@ -1453,6 +1472,46 @@ class TestVPP(VyOSUnitTestSHIM.TestCase):
 
         # Ensure that VPP process is active
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_23_vpp_acl_subinterface(self):
+        base_acl = base_path + ['acl', 'ip']
+        vlan = '200'
+        subif = f'{interface}.{vlan}'
+        acl_name = 'STATEFUL'
+        acl_tag = '10'
+        rule = '10'
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'vif', vlan])
+        self.cli_set(
+            base_acl + ['tag-name', acl_name, 'rule', rule, 'action', 'permit']
+        )
+        self.cli_set(
+            base_acl
+            + ['interface', subif, 'input', 'acl-tag', acl_tag, 'tag-name', acl_name]
+        )
+        self.cli_commit()
+
+        vpp = VPPControl()
+        subif_index = vpp.get_sw_if_index(subif)
+        self.assertIsNotNone(subif_index)
+
+        acl_index = None
+        for acl in vpp.api.acl_dump(acl_index=0xFFFFFFFF):
+            if acl.tag == acl_name:
+                acl_index = acl.acl_index
+                break
+        self.assertIsNotNone(acl_index)
+
+        acl_interfaces = [
+            entry
+            for entry in vpp.api.acl_interface_list_dump()
+            if entry.sw_if_index == subif_index and entry.count != 0
+        ]
+        self.assertEqual(len(acl_interfaces), 1)
+        self.assertEqual(acl_interfaces[0].n_input, 1)
+        self.assertEqual(
+            list(acl_interfaces[0].acls)[: acl_interfaces[0].count], [acl_index]
+        )
 
 
 if __name__ == '__main__':

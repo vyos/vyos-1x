@@ -664,6 +664,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(pool + ['static-mapping', 'dupe3'])
         self.cli_delete(pool + ['static-mapping', 'dupe4'])
 
+        # Create blank static mapping, will not be present in resulting config
+        self.cli_set(pool + ['static-mapping', 'blank'])
+
         # commit changes
         self.cli_commit()
 

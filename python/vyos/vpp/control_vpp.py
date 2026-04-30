@@ -472,73 +472,39 @@ class VPPControl:
         """
         vpp_pair = self.lcp_pair_find(kernel_name=ifname)
         if vpp_pair:
-            vpp_iface_name = vpp_pair['vpp_name_hw']
-            vpp_pair_name = vpp_pair['vpp_name_kernel']
+            vpp_iface_index = vpp_pair['vpp_index_hw']
+            vpp_pair_index = vpp_pair['vpp_index_kernel']
             self.__vpp_api_client.api.pppoe_add_del_cp(
-                dp_sw_if_index=self.get_sw_if_index(vpp_iface_name),
-                cp_sw_if_index=self.get_sw_if_index(vpp_pair_name),
+                dp_sw_if_index=vpp_iface_index,
+                cp_sw_if_index=vpp_pair_index,
                 is_add=True,
             )
 
     @_Decorators.api_call
     def get_pppoe_interface_mapping(self) -> dict:
         """
-        Parse the output of 'show pppoe control-plane binding' to build a mapping
-        between data-plane and control-plane interfaces.
+        Build a mapping between data-plane and control-plane interfaces.
 
         Returns:
-            dict: Mapping of data-plane interface names/indices to control-plane interface names/indices.
+            dict: Mapping of data-plane interface indices to control-plane interface indices.
         """
-        reply = self.cli_cmd('show pppoe control-plane binding').reply
         result = {}
-
-        deleted_re = re.compile(r'DELETED\s*\((\d+)\)')
-
-        lines = reply.strip().splitlines()
-
-        # If there are less than 2 lines, assume no PPPoE configured
-        if len(lines) < 2:
-            return result
-
-        # Skip header lines (first 2 lines)
-        for line in lines[2:]:
-            line = line.strip()
-            if not line:
-                continue
-
-            # Split into two columns by 2+ spaces
-            cols = re.split(r'\s{2,}', line, maxsplit=1)
-            if len(cols) != 2:
-                continue
-
-            # Determine key/value depending on which column has "DELETED (index)"
-            col_a, col_b = cols
-
-            match_a = deleted_re.search(col_a)
-            match_b = deleted_re.search(col_b)
-
-            key = int(match_a.group(1)) if match_a else col_a
-            value = int(match_b.group(1)) if match_b else col_b
-
-            result[key] = value
+        for binding in self.__vpp_api_client.api.pppoe_cp_binding_dump():
+            dp_index = binding.dp_sw_if_index
+            cp_index = binding.cp_sw_if_index
+            result[dp_index] = cp_index
 
         return result
 
     @_Decorators.api_call
-    def delete_pppoe_mapping(self, dp_iface: str | int, cp_iface: str | int) -> None:
+    def delete_pppoe_mapping(self, dp_index: int, cp_index: int) -> None:
         """
         Delete PPPoE mapping between data-plane and control-plane interfaces.
 
         Args:
-            dp_iface (str|int): Name or index of an interface in data-plane.
-            cp_iface (str|int): Name or index of an interface in control plane.
+            dp_index (int): Index of an interface in data-plane.
+            cp_index (int): Index of an interface in control plane.
         """
-        dp_index = dp_iface
-        if isinstance(dp_iface, str):
-            dp_index = self.get_sw_if_index(dp_iface)
-        cp_index = cp_iface
-        if isinstance(cp_iface, str):
-            cp_index = self.get_sw_if_index(cp_iface)
         self.__vpp_api_client.api.pppoe_add_del_cp(
             dp_sw_if_index=dp_index,
             cp_sw_if_index=cp_index,

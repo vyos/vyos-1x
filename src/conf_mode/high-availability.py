@@ -25,7 +25,7 @@ from ipaddress import IPv6Interface
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import node_changed
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.template import is_ipv4
@@ -59,7 +59,7 @@ def get_config(config=None):
     if conf.exists(conntrack_path):
         ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
-    if leaf_node_changed(conf, base + ['vrrp', 'snmp']):
+    if node_changed(conf, base + ['vrrp', 'snmp']):
         ha.update({'restart_required': {}})
 
     return ha
@@ -187,6 +187,15 @@ def _validate_health_check(group, group_config):
         # XXX: health check has default options so we need to remove it
         # to avoid generating useless config statements in keepalived.conf
         del group_config["health_check"]
+
+    if 'timeout' in group_config.get('health_check', {}):
+        interval = int(group_config['health_check']['interval'])
+        timeout = int(group_config['health_check']['timeout'])
+        if timeout < interval:
+            Warning(
+                f'Health check timeout ({timeout}s) is less than interval ({interval}s) '
+                f'for VRRP group "{group}", script may be killed before completion'
+            )
 
 
 def generate(ha):

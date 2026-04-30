@@ -102,3 +102,7 @@ SSH_DSA_DEPRECATION_WARNING: str = \
 'ED25519) to avoid authentication failures after the upgrade.'
 
 reference_tree_cache = '/usr/share/vyos/reftree.cache'
+
+activation_list = os.path.join(directories['config'], 'activation-list')
+activation_init = os.path.join(directories['data'], 'activation-init')
+activation_hint = os.path.join(directories['data'], '.activation_hint')

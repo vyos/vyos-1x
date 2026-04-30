@@ -28,7 +28,7 @@
   </node>
   <node name="set">
     <properties>
-      <help>Set operational options</help>
+      <help>Set parameters and behaviors</help>
     </properties>
     <children>
       <tagNode name="builtin">

@@ -25,6 +25,7 @@ set system conntrack modules pptp
 set system conntrack modules sip
 set system conntrack modules sqlnet
 set system conntrack modules tftp
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system host-name 'vyos'
 set system login user vyos authentication encrypted-password '$6$YuG5oKoRYQnbnxk$P2eZNlIwXJP82JFyFrF2g4ZoOZr6zgLHK.SDJVoqWDGefKkRrJijUZODAVMLeWU.9EGM48YtG9MwfuewWoOGE.'

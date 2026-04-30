@@ -4,6 +4,7 @@ set interfaces ethernet eth1 address '172.16.33.154/24'
 set interfaces ethernet eth1 duplex 'auto'
 set interfaces ethernet eth1 speed 'auto'
 set interfaces ethernet eth1 vrf 'red'
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system domain-name 'vyos-ci-test.net'
 set system host-name 'vyos'

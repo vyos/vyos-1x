@@ -1,0 +1,19 @@
+---
+name: Check typos
+
+on:
+  pull_request_target:
+    branches:
+      - current
+      - circinus
+      - sagitta
+    types: [opened, synchronize, edited]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-typos:
+    uses: vyos/.github/.github/workflows/check-typos.yml@current
+    secrets: inherit

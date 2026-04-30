@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="configuration">
+        <children>
+          <node name="secondary">
+            <properties>
+              <help>Show configuration synchronization information (config-sync service)</help>
+            </properties>
+            <children>
+              <node name="sync">
+                <properties>
+                  <help>Show differences between local configuration and remote VyOS instance</help>
+                </properties>
+                <!-- No source, no section, no commands -->
+                <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff</command>
+                <children>
+                  <!-- Optional source -->
+                  <node name="running">
+                    <properties>
+                      <help>Compare with local running configuration (default)</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --source="running"</command>
+                    <!-- 'running' source with section -->
+                    <children>
+                      #include <include/show-config-sync-section.xml.i>
+                    </children>
+                  </node>
+                  <node name="candidate">
+                    <properties>
+                      <help>Compare with local candidate configuration</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --source="candidate"</command>
+                    <!-- 'candidate' source with section -->
+                    <children>
+                      #include <include/show-config-sync-section.xml.i>
+                    </children>
+                  </node>
+                  <node name="saved">
+                    <properties>
+                      <help>Compare with local saved configuration</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --source="saved"</command>
+                    <!-- 'saved' source with section -->
+                    <children>
+                      #include <include/show-config-sync-section.xml.i>
+                    </children>
+                  </node>
+                  <!-- The same thing, but using the command form -->
+                  <node name="commands">
+                    <properties>
+                      <help>Show the difference as commands</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --commands</command>
+                    <children>
+                      <!-- Optional source -->
+                      <node name="running">
+                        <properties>
+                          <help>Compare with local running configuration (default)</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --commands --source="running"</command>
+                        <!-- 'running' source with section -->
+                        <children>
+                          #include <include/show-config-sync-section-commands.xml.i>
+                        </children>
+                      </node>
+                      <node name="candidate">
+                        <properties>
+                          <help>Compare with local candidate configuration</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --commands --source="candidate"</command>
+                        <!-- 'candidate' source with section -->
+                        <children>
+                          #include <include/show-config-sync-section-commands.xml.i>
+                        </children>
+                      </node>
+                      <node name="saved">
+                        <properties>
+                          <help>Compare with local saved configuration</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/config_sync.py show_sync_diff --commands --source="saved"</command>
+                        <!-- 'saved' source with section -->
+                        <children>
+                          #include <include/show-config-sync-section-commands.xml.i>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

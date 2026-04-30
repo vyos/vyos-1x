@@ -5,6 +5,7 @@
 "bridge.py",
 "cgnat.py",
 "config_mgmt.py",
+"config_sync.py",
 "conntrack.py",
 "container.py",
 "cpu.py",

@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, re, json
-# import glob
+import os
+import re
+import json
 import socket
 from typing import List
 
@@ -243,7 +244,7 @@ def restart_login_consoles(prompt_user=False, quiet=True, devices: List[str]=[])
 
     return True
 
-def is_tty(name: str) -> bool:
+def is_tty(name: str, warning=False) -> bool:
     """ Check if a given device file (e.g. /dev/ttyS0) is a TTY (teletypewriter)
     device in Linux
     """
@@ -254,4 +255,7 @@ def is_tty(name: str) -> bool:
             fd = f.fileno()
             # True if filename is a TTY
             return os.isatty(fd)
+    elif warning:
+        from vyos.base import Warning
+        Warning(f'Device "{name}" does not exist!')
     return False
