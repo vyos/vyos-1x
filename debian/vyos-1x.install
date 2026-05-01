@@ -31,6 +31,8 @@ usr/bin/vyos-config-to-commands
 usr/bin/vyos-config-to-json
 usr/bin/vyos-commands-to-config
 usr/bin/vyos-hostsd-client
+usr/bin/igos-wwan-snmp-agent
+usr/bin/igos-wwan-snmp-traps
 usr/lib
 usr/libexec/vyos/activate
 usr/libexec/vyos/completion

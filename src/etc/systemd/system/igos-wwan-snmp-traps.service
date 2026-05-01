@@ -1,0 +1,45 @@
+[Unit]
+Description=VyOS WWAN SNMP trap emitter
+Documentation=man:igos-wwan-snmp-traps(8)
+After=dbus.service igos-wwan-manager.service network-online.target
+Wants=network-online.target
+BindsTo=igos-wwan-manager.service
+# Optional service - does not block boot if missing trap target / dest unset.
+ConditionPathExists=/etc/default/igos-wwan-snmp-traps
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/igos-wwan-snmp-traps
+ExecStart=/usr/bin/igos-wwan-snmp-traps
+Restart=on-failure
+RestartSec=10
+StartLimitBurst=3
+StartLimitIntervalSec=300
+User=root
+Group=vyattacfg
+
+# Sandboxing — emitter only reads D-Bus and runs /usr/bin/snmptrap.
+ProtectHome=read-only
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+PrivateTmp=true
+NoNewPrivileges=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+
+# D-Bus access
+SupplementaryGroups=messagebus
+
+Environment=PYTHONPATH=/usr/lib/python3/dist-packages
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+
+SyslogIdentifier=igos-wwan-snmp-traps
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

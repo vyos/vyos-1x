@@ -30,17 +30,24 @@ from vyos.utils.wwan.wwan_client import WWANClient
 logger = logging.getLogger(__name__)
 
 
-# Stable machine code → illustrative SNMP trap/OID mapping.
-# The numeric values are placeholders for the future IGOS enterprise subtree.
+# Stable machine code → SNMP NOTIFICATION-TYPE OID mapping.
+# These map to NOTIFICATION-TYPEs in IGOS-WWAN-MIB under
+# igosWwanNotifications.0 ({ enterprises 44641 }.1.2.0.N).
+# Keep in sync with mibs/IGOS-WWAN-MIB.txt and
+# python/vyos/utils/wwan/snmp_traps.py::TRAP_MAP.
 ALERT_CODE_TO_SNMP_OID = {
-    'WWAN_BEARER_DOWN': '1.3.6.1.4.1.44641.100.1.1',
-    'WWAN_BEARER_UP': '1.3.6.1.4.1.44641.100.1.2',
-    'WWAN_RECONNECT_ATTEMPT': '1.3.6.1.4.1.44641.100.1.3',
-    'WWAN_SIM_FAILOVER': '1.3.6.1.4.1.44641.100.2.1',
-    'WWAN_SIM_SWITCH': '1.3.6.1.4.1.44641.100.2.2',
-    'WWAN_USAGE_WARNING': '1.3.6.1.4.1.44641.100.3.1',
-    'WWAN_USAGE_LIMIT_EXCEEDED': '1.3.6.1.4.1.44641.100.3.2',
-    'WWAN_FSM_FAILED': '1.3.6.1.4.1.44641.100.4.1',
+    # igosWwanFsmStateChange      (.1)
+    'WWAN_FSM_FAILED':            '1.3.6.1.4.1.44641.1.2.0.1',
+    'WWAN_RECONNECT_ATTEMPT':     '1.3.6.1.4.1.44641.1.2.0.1',
+    # igosWwanFailoverEvent       (.2)
+    'WWAN_SIM_FAILOVER':          '1.3.6.1.4.1.44641.1.2.0.2',
+    'WWAN_SIM_SWITCH':            '1.3.6.1.4.1.44641.1.2.0.2',
+    # igosWwanBearerUp/Down       (.4 / .5)
+    'WWAN_BEARER_UP':             '1.3.6.1.4.1.44641.1.2.0.4',
+    'WWAN_BEARER_DOWN':           '1.3.6.1.4.1.44641.1.2.0.5',
+    # igosWwanDataLimitWarning/Reached (.7 / .8)
+    'WWAN_USAGE_WARNING':         '1.3.6.1.4.1.44641.1.2.0.7',
+    'WWAN_USAGE_LIMIT_EXCEEDED':  '1.3.6.1.4.1.44641.1.2.0.8',
 }
 
 
@@ -181,7 +188,7 @@ class SnmpAlertAdapter(AlertAdapterBase):
         self,
         send_trap_func: Callable[[str, Dict[str, Any]], Any],
         *,
-        default_oid: str = '1.3.6.1.4.1.44641.100.255.1',
+        default_oid: str = '1.3.6.1.4.1.44641.1.2.0.255',
     ) -> None:
         self.send_trap_func = send_trap_func
         self.default_oid = default_oid
