@@ -16,13 +16,15 @@
 
 import re
 import argparse
-from vyos.utils.serial import find_all_ttyS_devices
+from vyos.utils.serial import find_all_ttyS_devices_without_console
 from vyos.utils.serial import find_active_ttyS_devices
 from vyos.utils.serial import find_active_ttyS_devices_with_auth_on
 from vyos.utils.serial import find_active_ttyS_devices_running_service
 
 def trim_list_from_match(full_tty_list, start_tty):
     try:
+        if len(full_tty_list) == 1 and full_tty_list[0] == start_tty:
+            return []
         index = next(i for i, item in enumerate(full_tty_list) if start_tty in item)
         return full_tty_list[index+1:]
     except StopIteration:
@@ -31,15 +33,15 @@ def trim_list_from_match(full_tty_list, start_tty):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--selector', help='Selector: all|active|auth|console-management|modbus-master|modbus-slave', required=True)
-    parser.add_argument("-g", "--greater", type=str, help="List serial with tty number greater than input")
+    parser.add_argument('-g', '--greater', type=str, help='List serial with tty number greater than input')
     args = parser.parse_args()
     final_list = []
     # Autocomplete uses runtime state rather than the config tree, as a manual
     # restart/cleanup may be needed for deleted devices.
 
-    if find_all_ttyS_devices():
+    if find_all_ttyS_devices_without_console():
         if args.selector == 'all':
-            tty_list = sorted(find_all_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
+            tty_list = sorted(find_all_ttyS_devices_without_console(), key=lambda x: int(re.search(r'\d+', x).group()))
         elif args.selector == 'active':
             tty_list = sorted(find_active_ttyS_devices(), key=lambda x: int(re.search(r'\d+', x).group()))
         elif args.selector == 'auth':

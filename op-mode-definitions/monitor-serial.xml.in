@@ -14,7 +14,7 @@
                 <script>${vyos_completion_dir}/list_serial.py --selector active</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/monitor_serial.sh "$4"</command>
+            <command>${vyos_op_scripts_dir}/monitor_serial.py "$4"</command>
             <children>
               <tagNode name="and">
                 <properties>
@@ -23,7 +23,7 @@
                     <script>${vyos_completion_dir}/list_serial.py --selector active</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/monitor_serial.sh "$4" "$6"</command>
+                <command>${vyos_op_scripts_dir}/monitor_serial.py "$4" "$6"</command>
               </tagNode>
             </children>
           </tagNode>

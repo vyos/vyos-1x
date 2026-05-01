@@ -17,10 +17,12 @@ import os, re, json
 # import glob
 import socket
 from typing import List
+from pathlib import Path
 
 from vyos.base import Warning
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import cmd
+from vyos.utils.file import read_file
 from vyos.utils.process import is_systemd_service_running
 
 GLOB_GETTY_UNITS = 'serial-getty@*.service'
@@ -31,6 +33,10 @@ UTMP_PATH = '/run/utmp'
 
 SOCKET_PATH = '/tmp/iol_perleinit'
 SERIAL_SERVICE = 'iolan-monitor.service'
+
+SERIAL_DEV_PREFIX = 'ttyS'
+SERIAL_CONFIG_PATH = Path('/run/serial')
+SERINFO_PATH = Path('/tmp/serinfo')
 
 def send_command_to_iolan(action, name):
     msg = {
@@ -56,49 +62,96 @@ def send_command_to_iolan(action, name):
 def print_global_change_warning():
     Warning('Global configuration changes have been made. To activate the new settings, run the "restart serial ..." command to restart the serial port!')
 
-def find_all_ttyS_devices():
-    tty_devices = []
-    for entry in os.listdir('/dev'):
-        if re.fullmatch(r'ttyS\d+', entry):
-            tty_devices.append(entry)
-    return sorted(tty_devices)
+def find_enabled_consoles():
+    consoles_file = Path('/proc/consoles')
+    consoles = []
 
-def find_active_ttyS_devices():
-    base_dir = '/run/serial'
-    tty_devices = []
-    if not os.path.exists(base_dir):
-        return tty_devices
+    if not consoles_file.exists():
+        return consoles
 
-    for fname in os.listdir(base_dir):
-        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+    for line in consoles_file.read_text().splitlines():
+        parts = line.split()
+        if len(parts) < 3:
             continue
 
-        path = os.path.join(base_dir, fname)
+        dev_name = parts[0]
+        if SERIAL_DEV_PREFIX not in dev_name:
+            continue
+
+        flags = parts[2].strip('()')
+        if 'E' in flags:
+            consoles.append(f'{dev_name}')
+
+    return consoles
+
+def find_all_ttyS_devices():
+    '''
+    Device files /dev/ttySx could exist without hardware
+    Use proc file to get real 8250 serial ports
+    Save sudo cat output in /tmp because of 'driver' dir permission issue
+    '''
+    tty_devices = []
+    if not SERINFO_PATH.exists():
+        serinfo = read_file('/proc/tty/driver/serial', defaultonfailure='', sudo=True)
+        if not serinfo:
+            return tty_devices
+        SERINFO_PATH.write_text(serinfo)
+
+    if not SERINFO_PATH.exists():
+        print('Error: Failed to get ttyS info')
+        return tty_devices
+
+    for line in SERINFO_PATH.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        index, driver = line.split(':', 1)
+        index = index.strip()
+        driver = driver.strip()
+
+        if 'unknown' in driver:
+            continue
+
+        tty_path = Path(f'/dev/{SERIAL_DEV_PREFIX}{index}')
+        if tty_path.exists():
+            tty_devices.append(f'{SERIAL_DEV_PREFIX}{index}')
+
+    return tty_devices
+
+def find_all_ttyS_devices_without_console():
+    console_set = set(find_enabled_consoles())
+    return [tty for tty in find_all_ttyS_devices() if tty not in console_set]
+
+def find_active_ttyS_devices():
+    tty_devices = []
+    if not SERIAL_CONFIG_PATH.exists():
+        return tty_devices
+
+    for path in SERIAL_CONFIG_PATH.iterdir():
+        if not path.name.startswith(SERIAL_DEV_PREFIX) or path.suffix != '.json':
+            continue
         try:
-            with open(path, 'r') as f:
+            with path.open('r') as f:
                 data = json.load(f)
             if 'disable' in data:
                 continue
-            tty_devices.append(os.path.splitext(fname)[0])
+            tty_devices.append(path.stem)
         except Exception as e:
             print(f'Error processing {path}: {e}')
 
     return sorted(tty_devices)
 
 def find_active_ttyS_devices_with_auth_on():
-    base_dir = '/run/serial'
     tty_devices = []
-    if not os.path.exists(base_dir):
+    if not SERIAL_CONFIG_PATH.exists():
         return tty_devices
 
-    for fname in os.listdir(base_dir):
+    for path in SERIAL_CONFIG_PATH.iterdir():
         auth = 0
-        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+        if not path.name.startswith(SERIAL_DEV_PREFIX) or path.suffix != '.json':
             continue
-
-        path = os.path.join(base_dir, fname)
         try:
-            with open(path, 'r') as f:
+            with path.open('r') as f:
                 data = json.load(f)
             if 'disable' in data:
                 continue
@@ -114,43 +167,90 @@ def find_active_ttyS_devices_with_auth_on():
             if auth == 0:
                 continue
 
-            tty_devices.append(os.path.splitext(fname)[0])
+            tty_devices.append(path.stem)
         except Exception as e:
             print(f'Error processing {path}: {e}')
 
     return sorted(tty_devices)
 
 def find_active_ttyS_devices_running_service(service):
-    base_dir = '/run/serial'
     tty_devices = []
-    if not os.path.exists(base_dir):
+    if not SERIAL_CONFIG_PATH.exists():
         return tty_devices
 
-    for fname in os.listdir(base_dir):
-        if not fname.startswith('ttyS') or not fname.endswith('.json'):
+    for path in SERIAL_CONFIG_PATH.iterdir():
+        if not path.name.startswith(SERIAL_DEV_PREFIX) or path.suffix != '.json':
             continue
-
-        path = os.path.join(base_dir, fname)
         try:
-            with open(path, 'r') as f:
+            with path.open('r') as f:
                 data = json.load(f)
             if 'disable' in data:
                 continue
             if service == 'console-management' and ('ssh-reverse' in data['service'] or 'telnet-reverse' in data['service']):
-                tty_devices.append(os.path.splitext(fname)[0])
+                tty_devices.append(path.stem)
             elif service == 'modbus-master' and 'modbus-master' in data['service']:
-                tty_devices.append(os.path.splitext(fname)[0])
+                tty_devices.append(path.stem)
             elif service == 'modbus-slave' and 'modbus-slave' in data['service']:
-                tty_devices.append(os.path.splitext(fname)[0])
+                tty_devices.append(path.stem)
             elif service == 'ppp' and 'ppp' in data['service']:
-                tty_devices.append(os.path.splitext(fname)[0])
+                tty_devices.append(path.stem)
             elif service == 'slip' and 'slip' in data['service']:
-                tty_devices.append(os.path.splitext(fname)[0])
+                tty_devices.append(path.stem)
 
         except Exception as e:
             print(f'Error processing {path}: {e}')
 
     return sorted(tty_devices)
+
+def is_ttyS(tty_name, skip_tty_err_msg=False):
+    consoles = set(find_enabled_consoles())
+    tty_devices = set(find_all_ttyS_devices_without_console())
+
+    if tty_name in consoles:
+        print(f'Error: {tty_name} is system console')
+        return False
+    if tty_name not in tty_devices:
+        if not skip_tty_err_msg:
+            print(f'Error: {tty_name} is not a valid tty')
+        return False
+
+    return True
+
+def is_valid_ttyS_range(tty_range=None, tty_start=None, tty_end=None):
+    if not tty_range:
+        if not tty_start:
+            return False
+        if not tty_end:
+            if not is_ttyS(tty_start):
+                return False
+
+    tty_max_num = int(find_all_ttyS_devices_without_console()[-1][4:])
+
+    tty_range_str = ''
+    if not tty_range:
+        tty_range = f'{tty_start}-{tty_end}'
+        tty_range_str = f'{tty_start} to {tty_end}'
+    else:
+        tty_range_str = tty_range
+
+    match = re.match(r'^ttyS(\d{1,})(?:-ttyS(\d{1,}))?$', tty_range)
+
+    if not match:
+        print(f'Error: {tty_range_str} is not a valid tty or tty range')
+        return False
+
+    tty_start_num = int(match.group(1))
+    tty_end_num = int(match.group(2)) if match.group(2) else tty_start_num
+
+    if tty_start_num > tty_end_num or tty_end_num > tty_max_num:
+        print(f'Error: {tty_range_str} is not a valid tty or tty range')
+        return False
+
+    for i in range(tty_start_num, tty_end_num + 1):
+        if not is_ttyS(f'ttyS{i}', skip_tty_err_msg=True):
+            print(f'Error: {tty_range_str} is not a valid tty or tty range')
+            return False
+    return True
 
 def get_serial_units(include_devices=[]):
     # Since we cannot depend on the current config for decommissioned ports,
