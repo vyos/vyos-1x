@@ -27,7 +27,7 @@ Some network interface cards (NICs) may not be compatible with the DPDK driver.
 
 ### DPDK interface options
 
-This section shows how to configures DPDK-specific settings for an interface.
+This section shows how to configure DPDK-specific settings for an interface.
 
 ```{cfgcmd} set vpp settings interface \<interface-name\> num-rx-queues \<value\>
 ```

@@ -29,7 +29,7 @@ set interfaces tunnel tun1 source-address '198.51.100.1'
 - IPsec:
 
 ```none
-set vpn ipsec authentication psk vyos_cisco_l id 'vyos.net’
+set vpn ipsec authentication psk vyos_cisco_l id 'vyos.net'
 set vpn ipsec authentication psk vyos_cisco_l id 'cisco.hub.net'
 set vpn ipsec authentication psk vyos_cisco_l secret 'secret'
 set vpn ipsec esp-group e1 lifetime '3600'

@@ -47,7 +47,7 @@ Administratively disable the loopback interface.
 
 ### Kernel Interface Integration
 
-Kernel interface is bounded to the VPP loopback interface for management
+Kernel interface is bound to the VPP loopback interface for management
 and application compatibility.
 
 ## IP Address Configuration

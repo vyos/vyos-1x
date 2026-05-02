@@ -12,7 +12,7 @@ lastproofread: '2026-02-02'
 using a generic Linux instance by attaching the bootable ISO file and
 installing using the `install image` command.
 
-:::{NOTE}
+:::{note}
 Previous issues have been documented with GRE/IPSEC tunneling
 using the E1000 adapter on VyOS guests. Use the VMXNET3 adapter instead.
 :::

@@ -125,7 +125,7 @@ prerequisites before enabling VPP:
   ```
 
   :::{note}
-  This option bypass the hardware validation checks for the specified
+  This option bypasses the hardware validation checks for the specified
   devices. Stability and performance are not guaranteed when using
   unsupported NICs or drivers.
   :::

@@ -7,6 +7,8 @@ lastproofread: '2021-06-29'
 
 # WAN Load Balancer examples
 
+% stop_vyoslinter
+
 ## Example 1: Distributing load evenly
 
 The setup used in this example is shown in the following diagram:
@@ -176,4 +178,6 @@ set load-balancing wan rule 5 exclude
 set load-balancing wan rule 5 inbound-interface eth+
 set load-balancing wan rule 5 destination address 10.0.0.0/8
 ```
+
+% start_vyoslinter
 

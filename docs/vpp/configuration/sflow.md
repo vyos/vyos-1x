@@ -10,7 +10,7 @@ lastproofread: '2025-09-04'
 
 # VPP sFlow Configuration
 
-VPP Dataplane in VyOS support sFlow for traffic monitoring and analysis.
+VPP Dataplane in VyOS supports sFlow for traffic monitoring and analysis.
 
 The VPP Dataplane integration works hand-in-hand with normal kernel sFlow agent, which is responsible for collecting and exporting sFlow samples. VPP itself is responsible for generating the samples.
 

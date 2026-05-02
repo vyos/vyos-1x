@@ -10,7 +10,7 @@ To make IPSec work with dynamic address on one/both sides, we will have to use
 RSA keys for authentication. They are very fast and easy to setup.
 
 First, on both routers run the operational command "generate pki key-pair
-install \<key-pair nam>>". You may choose different length than 2048 of course.
+install \<key-pair name>". You may choose different length than 2048 of course.
 
 ```none
 vyos@left# run generate pki key-pair install ipsec-LEFT

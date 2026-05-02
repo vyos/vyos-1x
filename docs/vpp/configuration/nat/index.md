@@ -5,7 +5,6 @@ lastproofread: '2026-03-05'
 (vpp-config-nat-index)=
 
 ```{include} /_include/need_improvement.txt
-
 ```
 
 # VPP NAT Configuration

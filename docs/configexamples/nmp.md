@@ -15,12 +15,16 @@ scale and expand with the needs of your network.
 First prepare our VyOS router for connection to NMP. We have to set
 up the SNMP protocol and connectivity between the router and NMP.
 
+% stop_vyoslinter
+
 ```none
 set interfaces ethernet eth0 address 'dhcp'
 set system name-server '8.8.8.8'
 set service snmp community router authorization 'test'
 set service snmp community router network '0.0.0.0/0'
 ```
+
+% start_vyoslinter
 
 
 ## Configuration 'NMP'
