@@ -94,6 +94,28 @@ def get_config(config=None):
         ),
     }
 
+    # ── SNMP trap target lookup ──────────────────────────────────────
+    # Resolve the first `service snmp trap-target` entry (v2c only) from the
+    # live tree and stash for apply()-time use.  Done here (not in apply())
+    # so the file has exactly one Config() instance — required by
+    # tests/test_configd_inspect.py::test_file_config_instance.
+    snmp_base = ['service', 'snmp', 'trap-target']
+    snmp_dest = None
+    snmp_community = None
+    if conf.exists(snmp_base):
+        targets = conf.list_nodes(snmp_base) or []
+        if targets:
+            addr = targets[0]
+            sub = snmp_base + [addr]
+            port = conf.return_value(sub + ['port']) or '162'
+            community = conf.return_value(sub + ['community']) or 'public'
+            snmp_dest = f'udp:{addr}:{port}'
+            snmp_community = community
+    wwan['_snmp_trap'] = {
+        'dest': snmp_dest,
+        'community': snmp_community,
+    }
+
     # ── IP Passthrough — Policy B coexistence check ──────────────────────
     # If the user designated a passthrough interface AND has set an explicit
     # 'interfaces ethernet <if> address ...', the FSM must NOT auto-provision
@@ -456,24 +478,14 @@ _SNMP_TRAPS_DEFAULTS_FILE = '/etc/default/igos-wwan-snmp-traps'
 _SNMP_TRAPS_UNIT = 'igos-wwan-snmp-traps.service'
 
 
-def _resolve_snmp_trap_dest():
-    """Return (dest, community) from `service snmp trap-target`, or (None, None).
+def _resolve_snmp_trap_dest(wwan):
+    """Return (dest, community) stashed by get_config(), or (None, None).
 
-    Picks the first trap-target found.  v2c only — v3 traps would need
-    snmptrap auth/priv args and are intentionally out of scope here.
+    The actual lookup happens in get_config() to keep this file at a single
+    Config() instantiation (enforced by test_configd_inspect).
     """
-    conf = Config()
-    base = ['service', 'snmp', 'trap-target']
-    if not conf.exists(base):
-        return None, None
-    targets = conf.list_nodes(base)
-    if not targets:
-        return None, None
-    addr = targets[0]
-    sub = base + [addr]
-    port = conf.return_value(sub + ['port']) or '162'
-    community = conf.return_value(sub + ['community']) or 'public'
-    return f'udp:{addr}:{port}', community
+    info = wwan.get('_snmp_trap') or {}
+    return info.get('dest'), info.get('community')
 
 
 def _sync_snmp_trap_unit(wwan):
@@ -488,7 +500,7 @@ def _sync_snmp_trap_unit(wwan):
     snmp_disabled_for_iface = _leaf_exists(lg, 'disable_snmp_monitoring')
     iface_gone = ('deleted' in wwan) or _leaf_exists(wwan, 'disable')
 
-    dest, community = _resolve_snmp_trap_dest()
+    dest, community = _resolve_snmp_trap_dest(wwan)
 
     enable = (
         dest is not None
