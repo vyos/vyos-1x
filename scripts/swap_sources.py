@@ -52,7 +52,7 @@ def parse_swap_list(path: Path) -> list:
     if not path.exists():
         return []
     stems = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
         if stripped and not stripped.startswith("#"):
             stems.append(stripped)
@@ -179,8 +179,8 @@ def do_swap(docs_dir: Path) -> None:
         exclude_lines.append(str(rel_rst))
 
     state = {"version": STATE_VERSION, "swaps": swaps}
-    state_path.write_text(json.dumps(state, indent=2))
-    _exclude_path(docs_dir).write_text("\n".join(exclude_lines) + "\n")
+    state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    _exclude_path(docs_dir).write_text("\n".join(exclude_lines) + "\n", encoding="utf-8")
 
     print(f"swap_sources: swapped {len(completed)} file(s).", file=sys.stderr)
 
@@ -197,10 +197,29 @@ def do_restore(docs_dir: Path) -> None:
     if not state_path.exists():
         return  # no-op
 
-    state = json.loads(state_path.read_text())
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise RuntimeError(
+            f"swap_sources: cannot read state file {state_path}: {exc}. "
+            f"Inspect or delete it manually."
+        ) from exc
+
+    version = state.get("version")
+    if version != STATE_VERSION:
+        raise RuntimeError(
+            f"swap_sources: state file version {version!r} does not match "
+            f"expected {STATE_VERSION!r}. Inspect {state_path} manually."
+        )
+
     swaps = state.get("swaps", [])
 
     for entry in reversed(swaps):
+        if not isinstance(entry, dict) or "md_from" not in entry or "md_to" not in entry:
+            raise RuntimeError(
+                f"swap_sources: malformed entry in {state_path}: {entry!r}. "
+                f"Inspect manually."
+            )
         md_from = docs_dir / entry["md_from"]   # original source (md-prefixed)
         md_to = docs_dir / entry["md_to"]        # current location (plain .md)
         if md_to.exists():
@@ -254,7 +273,7 @@ def do_status(docs_dir: Path) -> None:
         print("swap_sources: no active swap state.")
         return
 
-    state = json.loads(state_path.read_text())
+    state = json.loads(state_path.read_text(encoding="utf-8"))
     swaps = state.get("swaps", [])
     print(f"swap_sources: {len(swaps)} file(s) currently swapped:")
     for entry in swaps:

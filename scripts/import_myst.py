@@ -57,7 +57,10 @@ def list_myst_files(source: str) -> list[str]:
         cwd=REPO_ROOT,
     )
     if result.returncode != 0:
-        return []
+        raise SystemExit(
+            f"import_myst: git ls-tree {source!r} failed "
+            f"(exit {result.returncode}): {result.stderr.strip()}"
+        )
 
     stems = []
     for line in result.stdout.splitlines():
@@ -73,8 +76,14 @@ def list_myst_files(source: str) -> list[str]:
 
 def list_rst_files(docs_dir: Path) -> set[str]:
     """Return set of stems (relative to docs_dir, no extension) for all *.rst files."""
+    build_dir = (docs_dir / "_build").resolve()
     stems = set()
     for rst in docs_dir.rglob("*.rst"):
+        try:
+            rst.resolve().relative_to(build_dir)
+            continue  # inside _build/, skip
+        except ValueError:
+            pass
         rel = rst.relative_to(docs_dir)
         stem = str(rel)[:-4]  # strip ".rst"
         stems.add(stem)
@@ -89,8 +98,12 @@ def import_page(stem: str, md_content: bytes, docs_dir: Path, force: bool) -> bo
     - Without --force: warns and skips (returns False) if different content exists.
     - With --force: overwrites (returns True).
     - Returns True on successful write.
+
+    Refuses (raises ValueError) if *stem* would resolve outside *docs_dir*.
     """
     p = Path(stem)
+    if p.is_absolute() or ".." in p.parts:
+        raise ValueError(f"import_myst: refusing unsafe stem {stem!r}")
     name = p.name
     parent = p.parent
     if str(parent) == ".":
@@ -99,6 +112,9 @@ def import_page(stem: str, md_content: bytes, docs_dir: Path, force: bool) -> bo
         target_dir = docs_dir / parent
 
     dest = target_dir / f"md-{name}.md"
+    docs_root = docs_dir.resolve()
+    if not dest.resolve().parent.is_relative_to(docs_root):
+        raise ValueError(f"import_myst: refusing stem {stem!r} — escapes docs/")
 
     if dest.exists():
         existing = dest.read_bytes()
@@ -147,6 +163,7 @@ def do_import(
 
     imported = 0
     skipped = 0
+    would_import = 0
 
     for stem in candidate_stems:
         # Path inside the branch: docs/{stem}.md
@@ -162,7 +179,7 @@ def do_import(
 
         if dry_run:
             print(f"  (dry-run) would import {stem}")
-            imported += 1
+            would_import += 1
             continue
 
         wrote = import_page(stem, content, docs_dir, force)
@@ -171,10 +188,17 @@ def do_import(
         else:
             skipped += 1
 
-    print(
-        f"import_myst: imported {imported}, skipped {skipped}.",
-        file=sys.stderr,
-    )
+    if dry_run:
+        print(
+            f"import_myst: (dry-run) would import {would_import}, "
+            f"skipped {skipped}.",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"import_myst: imported {imported}, skipped {skipped}.",
+            file=sys.stderr,
+        )
 
 
 # ---------------------------------------------------------------------------
