@@ -399,9 +399,15 @@ def _format_detail(status: dict, interface: str) -> str:
     # Show persisted cumulative for every SIM slot we have a record for —
     # including inactive slots whose totals carry over across SIM failovers.
     per_slot = status.get('per_slot_cumulative', {}) or {}
-    if per_slot:
-        for slot_num in sorted(per_slot.keys()):
-            entry = per_slot[slot_num] or {}
+    if isinstance(per_slot, dict) and per_slot:
+        def _slot_sort_key(k):
+            try:
+                return (0, int(k))
+            except (TypeError, ValueError):
+                return (1, str(k))
+        for slot_key in sorted(per_slot.keys(), key=_slot_sort_key):
+            entry = per_slot[slot_key] or {}
+            slot_num = slot_key
             is_active = entry.get('is_active', False)
             marker = ' (active)' if is_active else ' (inactive)'
             lines.append(_section(f'Slot {slot_num}{marker} Data Usage'))

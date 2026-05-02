@@ -7476,7 +7476,7 @@ class ModemStateMachine:
                 # Only the active slot has a live session counter
                 slot_total = slot_bytes + (session_total if slot_num == active_slot else 0)
                 slot_pct = round((slot_total / slot_limit) * 100, 1) if slot_limit > 0 else 0.0
-                per_slot[slot_num] = {
+                per_slot[str(slot_num)] = {
                     'is_active': slot_num == active_slot,
                     'cumulative_bytes': slot_bytes,
                     'cumulative_plus_session': slot_total,
