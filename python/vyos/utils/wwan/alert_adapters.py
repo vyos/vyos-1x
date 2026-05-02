@@ -168,7 +168,7 @@ class MqttAlertAdapter(AlertAdapterBase):
         self.retain = bool(retain)
 
     async def on_alert(self, alert: Dict[str, Any]) -> None:
-        category = str(alert.get('category', 'modem')).strip() or 'modem'
+        category = str(alert.get('category', 'connectivity')).strip() or 'connectivity'
         source = str(alert.get('source', 'unknown')).strip() or 'unknown'
         topic = f'{self.topic_prefix}/{category}/{source}'
         payload = json.dumps(alert, separators=(',', ':'))

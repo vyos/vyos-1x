@@ -27,7 +27,7 @@ show
                     ├── monitor-alerts                      # collect live alerts for a timeout window
                     │     ├── timeout <1-600>               # monitor duration in seconds
                     │     ├── severity {info|warning|critical}
-                    │     └── category {connectivity|sim|usage|gps|time|modem}
+                    │     └── category {connectivity|sim|usage}
                     ├── sms                                 # list all SMS messages
                     │     ├── <id>                          # read specific SMS message (preferred)
                     │     └── message <id>                  # read specific SMS message
@@ -639,7 +639,7 @@ All AlertBus payloads use a normalized envelope with stable machine fields:
 | `timestamp` | string (UTC ISO8601) | Alert creation time |
 | `sequence` | integer | Monotonic sequence number |
 | `severity` | string | `info` \| `warning` \| `critical` |
-| `category` | string | `connectivity` \| `sim` \| `usage` \| `gps` \| `time` \| `modem` |
+| `category` | string | `connectivity` \| `sim` \| `usage` |
 | `source` | string | Source component (e.g. `wwan-fsm`) |
 | `code` | string | Stable machine code (e.g. `WWAN_BEARER_DOWN`) |
 | `message` | string | Human-readable message |

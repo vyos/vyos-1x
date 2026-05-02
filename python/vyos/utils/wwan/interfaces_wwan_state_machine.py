@@ -6166,24 +6166,41 @@ class ModemStateMachine:
 
         Returns per-SIM data config if available, falls back to global config.
         """
-        sim_slots = self.config.get('sim_slots', []) if self.config else []
-        active_slot = self.current_active_sim or self.config.get('primary_sim_slot', 1)
-        sim_config = next((s for s in sim_slots if s['slot'] == active_slot), {})
+        active_slot = self.current_active_sim or (
+            self.config.get('primary_sim_slot', 1) if self.config else 1)
+        return self._get_sim_data_config(active_slot)
 
-        # Per-SIM values take priority; fall back to global config then defaults
+    def _get_sim_data_config(self, slot: int) -> dict:
+        """Get data limit configuration for an arbitrary SIM slot.
+
+        Per-SIM values take priority; falls back to global config, then to
+        DEFAULT_DATA_CONFIG.  Used by both the active-SIM monitor loop and
+        the status reporter (which needs to surface per-slot config for
+        inactive slots in the show command).
+        """
+        sim_slots = self.config.get('sim_slots', []) if self.config else []
+        sim_config = next((s for s in sim_slots if s.get('slot') == slot), {})
+
+        def _fallback(key, default):
+            if self.config and key in self.config:
+                return self.config.get(key, default)
+            return default
+
         return {
-            'data_limit_size': sim_config.get('data_limit_size',
-                                              self.config.get('data_limit_size',
-                                                              DEFAULT_DATA_CONFIG['data_limit_size']) if self.config else DEFAULT_DATA_CONFIG['data_limit_size']),
-            'data_limit_action': sim_config.get('data_limit_action',
-                                                self.config.get('data_limit_action',
-                                                                DEFAULT_DATA_CONFIG['data_limit_action']) if self.config else DEFAULT_DATA_CONFIG['data_limit_action']),
-            'data_limit_warning': sim_config.get('data_limit_warning',
-                                                 self.config.get('data_limit_warning',
-                                                                 DEFAULT_DATA_CONFIG['data_limit_warning']) if self.config else list(DEFAULT_DATA_CONFIG['data_limit_warning'])),
-            'data_limit_billing_date': sim_config.get('data_limit_billing_date',
-                                                      self.config.get('data_limit_billing_date',
-                                                                      DEFAULT_DATA_CONFIG['data_limit_billing_date']) if self.config else DEFAULT_DATA_CONFIG['data_limit_billing_date']),
+            'data_limit_size': sim_config.get(
+                'data_limit_size',
+                _fallback('data_limit_size', DEFAULT_DATA_CONFIG['data_limit_size'])),
+            'data_limit_action': sim_config.get(
+                'data_limit_action',
+                _fallback('data_limit_action', DEFAULT_DATA_CONFIG['data_limit_action'])),
+            'data_limit_warning': sim_config.get(
+                'data_limit_warning',
+                _fallback('data_limit_warning',
+                          list(DEFAULT_DATA_CONFIG['data_limit_warning']))),
+            'data_limit_billing_date': sim_config.get(
+                'data_limit_billing_date',
+                _fallback('data_limit_billing_date',
+                          DEFAULT_DATA_CONFIG['data_limit_billing_date'])),
         }
 
     async def monitor_data_usage(self):
@@ -6389,6 +6406,21 @@ class ModemStateMachine:
         restarts.  The directory is created on first write by _persist_usage().
         """
         return f"/var/lib/vyos/wwan/wwan{self.interface_number}_usage.json"
+
+    def _load_all_persisted_usage(self) -> dict:
+        """Return the full per-slot usage dict from disk (no billing-cycle reset).
+
+        Used by the status reporter so that the show command can display the
+        cumulative usage of *all* SIM slots, not just the active one.  Returns
+        an empty dict if the file is missing or unreadable.
+        """
+        try:
+            path = self._usage_file_path()
+            with open(path, 'r') as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else {}
+        except (FileNotFoundError, json.JSONDecodeError, PermissionError):
+            return {}
 
     def _load_persisted_usage(self) -> int:
         """Load cumulative byte count for the current active SIM from disk.
@@ -7270,6 +7302,52 @@ class ModemStateMachine:
                       'signal_snr', 'signal_technology'):
                 status[k] = ''
 
+        # ── 6b. Serving cell info (band actually camped on) ──────────
+        # ModemManager 1.20+ exposes Modem.CellInfo.GetCellInfo() which
+        # returns serving + neighbor cell dictionaries. We extract the
+        # serving cell's band / EARFCN / cell-id. For LTE we derive the
+        # band from EARFCN if the modem doesn't report it directly.
+        for k in ('serving_cell_type', 'serving_band', 'serving_earfcn',
+                  'serving_cell_id', 'serving_tac', 'serving_physical_ci'):
+            status[k] = ''
+        try:
+            if self.proxy:
+                ci_iface = self.proxy.get_interface(
+                    "org.freedesktop.ModemManager1.Modem.CellInfo")
+                cells_raw = await ci_iface.call_get_cell_info()
+                for cell in cells_raw or []:
+                    cell_d = {}
+                    for ck, cv in cell.items():
+                        cell_d[ck] = cv.value if hasattr(cv, 'value') else cv
+                    if not cell_d.get('serving'):
+                        continue
+                    ctype = str(cell_d.get('cell-type', '')).lower()
+                    status['serving_cell_type'] = ctype
+                    status['serving_cell_id'] = str(cell_d.get('ci', ''))
+                    status['serving_tac'] = str(cell_d.get('tac', ''))
+                    status['serving_physical_ci'] = str(
+                        cell_d.get('physical-ci', ''))
+                    band_str = str(cell_d.get('band', '') or '')
+                    if ctype == 'lte':
+                        earfcn = cell_d.get('earfcn', '')
+                        status['serving_earfcn'] = str(earfcn) if earfcn != '' else ''
+                        if not band_str and earfcn != '':
+                            band_str = self._lte_earfcn_to_band(earfcn)
+                    elif ctype in ('nr5g', '5gnr'):
+                        nrarfcn = cell_d.get('nrarfcn', '')
+                        status['serving_earfcn'] = str(nrarfcn) if nrarfcn != '' else ''
+                    elif ctype == 'umts':
+                        uarfcn = cell_d.get('uarfcn', '')
+                        status['serving_earfcn'] = str(uarfcn) if uarfcn != '' else ''
+                    elif ctype == 'gsm':
+                        arfcn = cell_d.get('arfcn', '')
+                        status['serving_earfcn'] = str(arfcn) if arfcn != '' else ''
+                    status['serving_band'] = band_str
+                    break
+        except Exception:
+            # CellInfo interface unavailable (older MM) or no serving cell yet
+            pass
+
         # ── 7. IP configuration (live from interface) ────────────────────
         try:
             ip_info = await self._get_current_ip()
@@ -7368,6 +7446,49 @@ class ModemStateMachine:
             limit = status['data_limit_bytes']
             total = status['cumulative_plus_session']
             status['data_usage_percent'] = round((total / limit) * 100, 1) if limit > 0 else 0.0
+
+            # Per-slot persisted cumulative + per-slot data-limit config (all
+            # slots, not just active).  Each slot entry mirrors the fields
+            # reported for the active SIM so the show command can display
+            # symmetric details for active and inactive SIMs.
+            persisted = self._load_all_persisted_usage()
+            # Union of slots seen on disk and slots configured in CLI
+            configured_slots = {
+                s.get('slot') for s in (self.config.get('sim_slots', []) if self.config else [])
+                if isinstance(s.get('slot'), int)
+            }
+            disk_slots = set()
+            for slot_key in persisted.keys():
+                try:
+                    disk_slots.add(int(slot_key))
+                except (TypeError, ValueError):
+                    continue
+            all_slots = sorted(configured_slots | disk_slots)
+
+            active_slot = status['usage_tracking_slot']
+            session_total = status.get('session_total_bytes', 0)
+            per_slot = {}
+            for slot_num in all_slots:
+                slot_data = persisted.get(str(slot_num), {}) or {}
+                slot_bytes = int(slot_data.get('bytes', 0)) if isinstance(slot_data, dict) else 0
+                slot_cfg = self._get_sim_data_config(slot_num)
+                slot_limit = slot_cfg.get('data_limit_size', 0) or 0
+                # Only the active slot has a live session counter
+                slot_total = slot_bytes + (session_total if slot_num == active_slot else 0)
+                slot_pct = round((slot_total / slot_limit) * 100, 1) if slot_limit > 0 else 0.0
+                per_slot[slot_num] = {
+                    'is_active': slot_num == active_slot,
+                    'cumulative_bytes': slot_bytes,
+                    'cumulative_plus_session': slot_total,
+                    'session_bytes': session_total if slot_num == active_slot else 0,
+                    'data_limit_bytes': slot_limit,
+                    'data_limit_action': slot_cfg.get('data_limit_action', 'none'),
+                    'data_limit_warning': slot_cfg.get('data_limit_warning', []),
+                    'data_limit_billing_date': slot_cfg.get('data_limit_billing_date', 1),
+                    'data_usage_percent': slot_pct,
+                    'last_updated': slot_data.get('last_updated', '') if isinstance(slot_data, dict) else '',
+                }
+            status['per_slot_cumulative'] = per_slot
         except Exception:
             for k in ('cumulative_bytes', 'cumulative_plus_session',
                       'data_limit_bytes', 'data_limit_action',
@@ -7375,6 +7496,7 @@ class ModemStateMachine:
                       'data_usage_percent'):
                 status.setdefault(k, 0)
             status.setdefault('data_limit_warning', [])
+            status.setdefault('per_slot_cumulative', {})
 
         # ── 10. Failover / recovery stats ────────────────────────────────
         status['failover_count'] = self.failover_count
@@ -7621,6 +7743,48 @@ class ModemStateMachine:
             return legacy_utran[band_id]
 
         return f'band-{band_id}'
+
+    @staticmethod
+    def _lte_earfcn_to_band(earfcn) -> str:
+        """Map an LTE downlink EARFCN to a band label (e.g. EUTRAN-66).
+
+        Returns '' if the EARFCN does not fall into a known band range.
+        Reference: 3GPP TS 36.101 Table 5.7.3-1.
+        """
+        try:
+            n = int(earfcn)
+        except (TypeError, ValueError):
+            return ''
+        # (low, high, band) ranges, downlink EARFCN.
+        ranges = [
+            (0, 599, 1), (600, 1199, 2), (1200, 1949, 3), (1950, 2399, 4),
+            (2400, 2649, 5), (2650, 2749, 6), (2750, 3449, 7),
+            (3450, 3799, 8), (3800, 4149, 9), (4150, 4749, 10),
+            (4750, 4949, 11), (5010, 5179, 12), (5180, 5279, 13),
+            (5280, 5379, 14), (5730, 5849, 17), (5850, 5999, 18),
+            (6000, 6149, 19), (6150, 6449, 20), (6450, 6599, 21),
+            (6600, 7399, 22), (7500, 7699, 23), (7700, 8039, 24),
+            (8040, 8689, 25), (8690, 9039, 26), (9040, 9209, 27),
+            (9210, 9659, 28), (9660, 9769, 29), (9770, 9869, 30),
+            (9870, 9919, 31), (9920, 10359, 32),
+            (36000, 36199, 33), (36200, 36349, 34), (36350, 36949, 35),
+            (36950, 37549, 36), (37550, 37749, 37),
+            (37750, 38249, 38), (38250, 38649, 39), (38650, 39649, 40),
+            (39650, 41589, 41), (41590, 43589, 42), (43590, 45589, 43),
+            (45590, 46589, 44), (46590, 46789, 45), (46790, 54539, 46),
+            (54540, 55239, 47), (55240, 56739, 48), (56740, 58239, 49),
+            (58240, 59089, 50), (59090, 59139, 51), (59140, 60139, 52),
+            (60140, 60254, 53),
+            (65536, 66435, 65), (66436, 67335, 66), (67336, 67535, 67),
+            (67536, 67835, 68), (67836, 68335, 69), (68336, 68585, 70),
+            (68586, 68935, 71), (68936, 68985, 72), (68986, 69035, 73),
+            (69036, 69465, 74), (69466, 70315, 75), (70316, 70365, 76),
+            (70366, 70545, 85), (70546, 70595, 87), (70596, 70645, 88),
+        ]
+        for lo, hi, band in ranges:
+            if lo <= n <= hi:
+                return f'EUTRAN-{band}'
+        return ''
 
     async def update_bus_connection(self, new_bus):
         """Update D-Bus connection after ModemManager restart"""

@@ -184,6 +184,11 @@ def _raw_signal(status: dict) -> dict:
         'rsrp': status.get('signal_rsrp', ''),
         'rsrq': status.get('signal_rsrq', ''),
         'snr': status.get('signal_snr', ''),
+        'serving_band': status.get('serving_band', ''),
+        'serving_earfcn': status.get('serving_earfcn', ''),
+        'serving_cell_id': status.get('serving_cell_id', ''),
+        'serving_tac': status.get('serving_tac', ''),
+        'serving_cell_type': status.get('serving_cell_type', ''),
         'current_bands': _normalize_list_field(status.get('current_bands', [])),
     }
 
@@ -250,9 +255,12 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_section('Signal'))
     lines.append(_kv('Quality:', f"{d['signal_percent']}%"))
     lines.append(_kv('Strength:', f"{d['signal_dbm']} dBm"))
+    serving_band = status.get('serving_band', '')
+    if serving_band:
+        lines.append(_kv('Serving band:', serving_band))
     bands = d['current_bands']
     if bands:
-        lines.extend(_kv_wrapped('Active bands:', ', '.join(bands)))
+        lines.extend(_kv_wrapped('Enabled bands:', ', '.join(bands)))
 
     lines.append(_section('SMS'))
     lines.append(_kv('SMS supported:', 'yes' if d['sms_supported'] else 'no'))
@@ -343,9 +351,21 @@ def _format_signal(status: dict, interface: str) -> str:
     lines.append(_kv('RSRQ:', f"{d['rsrq']} dB" if d['rsrq'] != '' else ''))
     lines.append(_kv('SNR:', f"{d['snr']} dB" if d['snr'] != '' else ''))
 
+    if d['serving_band'] or d['serving_earfcn'] or d['serving_cell_id']:
+        lines.append(_section('Serving Cell'))
+        if d['serving_band']:
+            lines.append(_kv('Band:', d['serving_band']))
+        if d['serving_earfcn']:
+            label = 'EARFCN:' if d['serving_cell_type'] == 'lte' else 'ARFCN:'
+            lines.append(_kv(label, d['serving_earfcn']))
+        if d['serving_cell_id']:
+            lines.append(_kv('Cell ID:', d['serving_cell_id']))
+        if d['serving_tac']:
+            lines.append(_kv('TAC:', d['serving_tac']))
+
     bands = d['current_bands']
     if bands:
-        lines.append(_section('Active Bands'))
+        lines.append(_section('Enabled Bands'))
         for band in bands:
             lines.append(f'  {band}')
 
@@ -375,6 +395,33 @@ def _format_detail(status: dict, interface: str) -> str:
         lines.append(_kv('Data limit:', f'{limit:,}'))
         lines.append(_kv('Usage:', f"{status.get('data_usage_percent', 0)}%"))
         lines.append(_kv('Limit action:', status.get('data_limit_action', '')))
+
+    # Show persisted cumulative for every SIM slot we have a record for —
+    # including inactive slots whose totals carry over across SIM failovers.
+    per_slot = status.get('per_slot_cumulative', {}) or {}
+    if per_slot:
+        for slot_num in sorted(per_slot.keys()):
+            entry = per_slot[slot_num] or {}
+            is_active = entry.get('is_active', False)
+            marker = ' (active)' if is_active else ' (inactive)'
+            lines.append(_section(f'Slot {slot_num}{marker} Data Usage'))
+            slot_cum = entry.get('cumulative_bytes', 0)
+            slot_total = entry.get('cumulative_plus_session', slot_cum)
+            slot_limit = entry.get('data_limit_bytes', 0)
+            lines.append(_kv('Cumulative bytes:', f'{slot_cum:,}'))
+            if is_active:
+                lines.append(_kv('Including session:', f'{slot_total:,}'))
+            lines.append(_kv('Billing day:', entry.get('data_limit_billing_date', 1)))
+            if slot_limit:
+                lines.append(_kv('Data limit:', f'{slot_limit:,}'))
+                lines.append(_kv('Usage:', f"{entry.get('data_usage_percent', 0)}%"))
+                lines.append(_kv('Limit action:', entry.get('data_limit_action', '')))
+            warnings = entry.get('data_limit_warning') or []
+            if warnings:
+                lines.append(_kv('Warning thresholds:', ', '.join(f'{w}%' for w in warnings)))
+            last_updated = entry.get('last_updated', '')
+            if last_updated:
+                lines.append(_kv('Last updated:', last_updated))
 
     lines.append(_section('Failover History'))
     lines.append(_kv('Failover count:', status.get('failover_count', 0)))
@@ -541,8 +588,8 @@ def show_monitor_alerts(raw: bool,
     if severity and severity not in ('info', 'warning', 'critical'):
         raise ValueError('Severity must be one of: info, warning, critical')
 
-    if category and category not in ('connectivity', 'sim', 'usage', 'gps', 'time', 'modem'):
-        raise ValueError('Category must be one of: connectivity, sim, usage, gps, time, modem')
+    if category and category not in ('connectivity', 'sim', 'usage'):
+        raise ValueError('Category must be one of: connectivity, sim, usage')
 
     config = ConfigTreeQuery()
     if not config.exists(['interfaces', 'wwan', interface]):

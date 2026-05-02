@@ -138,18 +138,6 @@
                             <properties><help>Usage alerts</help></properties>
                             <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="usage"</command>
                           </leafNode>
-                          <leafNode name="gps">
-                            <properties><help>GPS alerts</help></properties>
-                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="gps"</command>
-                          </leafNode>
-                          <leafNode name="time">
-                            <properties><help>Time policy alerts</help></properties>
-                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="time"</command>
-                          </leafNode>
-                          <leafNode name="modem">
-                            <properties><help>Modem alerts</help></properties>
-                            <command>${vyos_op_scripts_dir}/show_wwan.py show_monitor_alerts --interface="$4" --category="modem"</command>
-                          </leafNode>
                         </children>
                       </node>
                     </children>

@@ -147,7 +147,7 @@ class ConfigServiceManager:
         'reconnect_attempt': ('connectivity', 'WWAN_RECONNECT_ATTEMPT'),
         'sim_failover': ('sim', 'WWAN_SIM_FAILOVER'),
         'sim_switch': ('sim', 'WWAN_SIM_SWITCH'),
-        'fsm_failed': ('modem', 'WWAN_FSM_FAILED'),
+        'fsm_failed': ('connectivity', 'WWAN_FSM_FAILED'),
         'usage_warning': ('usage', 'WWAN_USAGE_WARNING'),
         'usage_limit_exceeded': ('usage', 'WWAN_USAGE_LIMIT_EXCEEDED'),
     }
@@ -190,7 +190,7 @@ class ConfigServiceManager:
                 WWAN_ALERT_SOURCE=str(alert.get('source', 'wwan-fsm')),
                 WWAN_ALERT_TYPE=str(alert.get('type', 'event')),
                 WWAN_ALERT_CODE=str(alert.get('code', 'WWAN_EVENT')),
-                WWAN_ALERT_CATEGORY=str(alert.get('category', 'modem')),
+                WWAN_ALERT_CATEGORY=str(alert.get('category', 'connectivity')),
                 WWAN_ALERT_STATE=str(alert.get('state', 'open')),
                 WWAN_ALERT_ID=str(alert.get('id', '')),
                 WWAN_ALERT_SEVERITY=str(alert.get('severity', 'info')),
@@ -224,7 +224,7 @@ class ConfigServiceManager:
             'source': 'wwan-fsm',
             'type': 'event',
             'code': 'WWAN_EVENT',
-            'category': 'modem',
+            'category': 'connectivity',
             'severity': 'info',
             'message': '',
             'interface_number': -1,
@@ -255,7 +255,7 @@ class ConfigServiceManager:
 
         # Fallbacks if still missing
         if not base.get('category'):
-            base['category'] = 'modem'
+            base['category'] = 'connectivity'
         if not base.get('code'):
             base['code'] = 'WWAN_EVENT'
 
