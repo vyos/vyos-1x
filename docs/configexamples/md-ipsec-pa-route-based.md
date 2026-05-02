@@ -36,7 +36,7 @@ include firewall configuration.
 +---------+----------------+
 ```
 
-**Cisco:**
+**Palo Alto:**
 
 ```{eval-rst}
 +---------+-----------------+
@@ -294,7 +294,7 @@ O>* 192.168.10.0/24 [110/11] via 10.100.100.2, vti1, weight 1, 00:24:19
 O>* 192.168.11.0/24 [110/11] via 10.100.100.2, vti1, weight 1, 00:24:19
 ```
 
-### Monitoring on Cisco side
+### Monitoring on Palo Alto side
 
 IKE SAs:
 

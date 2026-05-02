@@ -55,7 +55,7 @@ set qos policy shaper vyos3 class 10 match ADDRESS10 ip source address '172.17.1
 set qos policy shaper vyos3 class 10 set-dscp 'CS4'
 set qos policy shaper vyos3 class 20 match ADDRESS20 ip source address '172.17.1.3/32'
 set qos policy shaper vyos3 class 20 set-dscp 'CS5'
-set qos policy shaper vyos3 class 30 match ADDRESS20 ip source address '172.17.1.4/32'
+set qos policy shaper vyos3 class 30 match ADDRESS30 ip source address '172.17.1.4/32'
 set qos policy shaper vyos3 class 30 set-dscp 'CS6'
 set qos policy shaper vyos3 default bandwidth '10%'
 set qos policy shaper vyos3 default ceiling '100%'

@@ -662,7 +662,7 @@ set interfaces dummy dum0 address '2001:db8:0:1::1/64'
 set interfaces ethernet eth0 address '10.1.1.2/30'
 set interfaces ethernet eth0 address '2001:db8::1/127'
 set protocols static route 0.0.0.0/0 next-hop 10.1.1.1
-set protocols static route6 ::/0 next-hop 2001:db8::*
+set protocols static route6 ::/0 next-hop 2001:db8::1
 ```
 
 - LAN2

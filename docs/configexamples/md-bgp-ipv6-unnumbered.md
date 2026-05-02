@@ -101,7 +101,7 @@ rtt min/avg/max/mdev = 0.575/0.612/0.682/0.047 ms
 vyos@vyos:~$ show ip bgp summary
 
 IPv4 Unicast Summary:
-BGP router identifier 192.168.0.1, local AS number 65020 vrf-id 0
+BGP router identifier 192.168.0.1, local AS number 64496 vrf-id 0
 BGP table version 4
 RIB entries 5, using 800 bytes of memory
 Peers 2, using 41 KiB of memory
@@ -160,7 +160,7 @@ rtt min/avg/max/mdev = 0.427/0.598/0.782/0.155 ms
 ```none
 vyos@vyos:~$ show ip bgp summary
 IPv4 Unicast Summary:
-BGP router identifier 192.168.0.2, local AS number 65021 vrf-id 0
+BGP router identifier 192.168.0.2, local AS number 64499 vrf-id 0
 BGP table version 4
 RIB entries 5, using 800 bytes of memory
 Peers 2, using 41 KiB of memory
