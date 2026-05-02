@@ -798,7 +798,7 @@ def apply(openvpn):
             VTunIf(interface).remove()
 
     # dynamically load/unload DCO Kernel extension if requested
-    dco_module = 'ovpn_dco_v2'
+    dco_module = 'ovpn'
     if 'module_load_dco' in openvpn:
         check_kmod(dco_module)
     else:

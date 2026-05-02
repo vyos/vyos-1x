@@ -24,7 +24,6 @@ modules = {
                   "qat_c62x", "qat_c62xvf", "qat_d15xx", "qat_d15xxvf",
                   "qat_dh895xcc", "qat_dh895xccvf"],
     "accel_ppp": ["ipoe", "vlan_mon"],
-    "openvpn": ["ovpn-dco-v2"]
 }
 
 class TestKernelModules(unittest.TestCase):
