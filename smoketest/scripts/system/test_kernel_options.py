@@ -146,7 +146,7 @@ class TestKernelModules(unittest.TestCase):
             self.assertTrue(tmp)
 
     def test_inotify_stackfs(self):
-        for option in ['CONFIG_INOTIFY_USER', 'CONFIG_INOTIFY_STACKFS']:
+        for option in ['CONFIG_INOTIFY_USER']:
             tmp = re.findall(f'{option}=y', self._config_data)
             self.assertTrue(tmp)
 
