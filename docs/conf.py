@@ -13,6 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import shutil
 import sys
 sys.path.append(os.path.abspath("./_ext"))
 
@@ -242,5 +243,18 @@ def _prefer_webp(app):
             app.builder.supported_image_types = ['image/webp'] + types
 
 
+def _copy_md_sources(app, exception):
+    """Copy .md source files verbatim into the HTML output tree."""
+    if exception is not None:
+        return
+    src = pathlib.Path(app.srcdir)
+    out = pathlib.Path(app.outdir)
+    for path in src.rglob("*.md"):
+        dest = out / path.relative_to(src)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+
+
 def setup(app):
     app.connect('builder-inited', _prefer_webp)
+    app.connect('build-finished', _copy_md_sources)
