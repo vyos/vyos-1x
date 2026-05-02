@@ -1733,18 +1733,39 @@ class InterfaceConfig(ServiceInterface):
             # Delegate the heavy lifting to the FSM
             raw = await self.fsm.get_comprehensive_status()
 
-            # Wrap every value in an appropriate D-Bus Variant
-            status = {}
-            for key, val in raw.items():
-                if isinstance(val, bool):
-                    status[key] = Variant('b', val)
-                elif isinstance(val, int):
-                    status[key] = Variant('x', val)       # int64 covers all sizes
-                elif isinstance(val, float):
-                    status[key] = Variant('d', val)
-                else:
-                    status[key] = Variant('s', str(val))  # fallback to string
+            # Wrap every value in an appropriate D-Bus Variant.
+            # Recursively handle nested dicts/lists so structured fields
+            # (e.g. per_slot_cumulative) survive the round-trip instead of
+            # being stringified by str().
+            def _to_variant(value):
+                if isinstance(value, dict):
+                    return Variant('a{sv}',
+                                   {k: _to_variant(v) for k, v in value.items()})
+                if isinstance(value, list):
+                    if not value:
+                        return Variant('as', [])
+                    if all(isinstance(x, str) for x in value):
+                        return Variant('as', value)
+                    if all(isinstance(x, bool) for x in value):
+                        return Variant('ab', value)
+                    if all(isinstance(x, int) and not isinstance(x, bool)
+                           for x in value):
+                        return Variant('ax', value)
+                    if all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                           for x in value):
+                        return Variant('ad', [float(x) for x in value])
+                    return Variant('av', [_to_variant(x) for x in value])
+                if isinstance(value, bool):
+                    return Variant('b', value)
+                if isinstance(value, int):
+                    return Variant('x', value)
+                if isinstance(value, float):
+                    return Variant('d', value)
+                if isinstance(value, str):
+                    return Variant('s', value)
+                return Variant('s', str(value))
 
+            status = {key: _to_variant(val) for key, val in raw.items()}
             return status
 
         except Exception as e:
