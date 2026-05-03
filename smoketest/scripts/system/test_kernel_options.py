@@ -52,7 +52,7 @@ class TestKernelModules(unittest.TestCase):
 
     def test_bridge_interface(self):
         # The bridge interface must be enabled in the OS Kernel
-        for option in ['CONFIG_BRIDGE',
+        for option in ['CONFIG_STP', 'CONFIG_BRIDGE',
                        'CONFIG_BRIDGE_IGMP_SNOOPING',
                        'CONFIG_BRIDGE_VLAN_FILTERING']:
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
