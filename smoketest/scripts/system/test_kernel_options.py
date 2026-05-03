@@ -179,6 +179,12 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
+    def test_wireguard(self):
+        options_to_check = ['CONFIG_WIREGUARD']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
     def test_arm64(self):
         # Only required on arm64 platforms
         if not IS_ARM64:
