@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.base import Warning
 from vyos.utils.process import call
@@ -65,10 +66,17 @@ def verify(relay):
             Warning('<interface> is going to be deprecated.\n'  \
                     'Please use <listen-interface> and <upstream-interface>')
 
+        for interface in relay['interface']:
+            verify_interface_exists(relay, interface, warning_only=True)
+
     if 'upstream_interface' in relay and 'listen_interface' not in relay:
         raise ConfigError('No listen-interface configured')
     if 'listen_interface' in relay and 'upstream_interface' not in relay:
         raise ConfigError('No upstream-interface configured')
+
+    for iface_type in ['upstream_interface', 'listen_interface']:
+        for interface in relay.get(iface_type, []):
+            verify_interface_exists(relay, interface, warning_only=True)
 
     return None
 
