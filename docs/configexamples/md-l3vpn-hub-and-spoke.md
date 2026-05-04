@@ -122,7 +122,7 @@ set protocols mpls ldp interface 'eth5'
 set protocols mpls ldp router-id '10.0.0.3'
 set protocols ospf area 0 network '0.0.0.0/0'
 set protocols ospf parameters abr-type 'cisco'
-set protocols ospf parameters router-id '10.0.0.3
+set protocols ospf parameters router-id '10.0.0.3'
 ```
 
 - VyOS-P2:

@@ -1,4 +1,4 @@
-# DHCP Relay trough GRE-Bridge
+# DHCP Relay through GRE-Bridge
 
 ```{eval-rst}
 | Testdate: 2023-05-11

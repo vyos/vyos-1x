@@ -29,7 +29,7 @@ please contact your ISP for more information.
 
 ```none
 set interfaces pppoe pppoe0 authentication password <YOUR PASSWORD>
-set interfaces pppoe pppoe0 authentication user <YOUR USERNAME>
+set interfaces pppoe pppoe0 authentication username <YOUR USERNAME>
 set interfaces pppoe pppoe0 service-name <YOUR SERVICENAME>
 set interfaces pppoe pppoe0 source-interface 'eth0'
 ```

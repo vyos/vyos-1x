@@ -29,7 +29,7 @@ set service snmp community router network '0.0.0.0/0'
 
 ## Configuration 'NMP'
 
-Next, you just should follow the pictures:
+Next, you should just follow the pictures:
 
 ```{image} /_static/images/nmp1.webp
 :align: center

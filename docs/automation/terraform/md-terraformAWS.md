@@ -544,8 +544,5 @@ All files related to deploying VyOS on AWS with Terraform and Ansible
 can be found in the [vyos-automation] repository.
 
 [group]: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-sg.html
-[image]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html
-[install]: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
-[link]: https://developer.hashicorp.com/terraform/intro
 [pair]: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html
 [vyos-automation]: <https://github.com/vyos/vyos-automation/tree/main/TerraformCloud/AWS_terraform_ansible_single_vyos_instance-main>

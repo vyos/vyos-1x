@@ -147,5 +147,3 @@ if not response.error:
 ```none
 response = device.config_file_load(file="/config/test300.config")
 ```
-
-[pyvyos]: https://github.com/robertoberto/pyvyos

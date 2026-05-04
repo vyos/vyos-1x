@@ -466,12 +466,12 @@ resource "google_compute_firewall" "udp_500_4500" {
   name    = "${var.goog_cm_deployment_name}-udp-500-4500"
   network = element(var.networks, 0)
 
-allow {
-  ports    = ["500", "4500"]
-  protocol = "udp"
-}
+  allow {
+    ports    = ["500", "4500"]
+    protocol = "udp"
+  }
 
-source_ranges = ["0.0.0.0/0"]
+  source_ranges = ["0.0.0.0/0"]
 
   target_tags = ["${var.goog_cm_deployment_name}-deployment"]
 }

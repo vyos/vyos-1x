@@ -76,7 +76,7 @@ fmt.Println(out.Success)
 ```none
 out, resp, err := c.Show.Do(ctx, "interfaces dummy dum1 address")
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -89,7 +89,7 @@ fmt.Printf("Data: %v\n", out.Data)
 ```none
 out, resp, err := c.Conf.Get(ctx, "interfaces dummy dum1", nil)
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -106,7 +106,7 @@ options := RetrieveOptions{
 
 out, resp, err := c.Conf.Get(ctx, "interfaces dummy dum1", options)
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -118,7 +118,7 @@ fmt.Println(out.Success)
 ```none
 out, resp, err := c.Conf.Delete(ctx, "interfaces dummy dum1")
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -131,7 +131,7 @@ fmt.Println(out.Success)
 out, resp, err := c.Conf.Save(ctx, "")
 
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -144,7 +144,7 @@ fmt.Println(out.Success)
 out, resp, err := c.Conf.Save(ctx, "/config/test300.config")
 
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -156,7 +156,7 @@ fmt.Println(out.Success)
 ```none
 out, resp, err := c.Show.Do(ctx, "system image")
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -169,7 +169,7 @@ fmt.Printf("Data: %v\n", out.Data)
 ```none
 out, resp, err := c.Generate.Do(ctx, "pki wireguard key-pair")
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -182,7 +182,7 @@ fmt.Printf("Data: %v\n", out.Data)
 ```none
 out, resp, err := c.Reset.Do(ctx, "ip bgp 192.0.2.11")
 if err != nil {
-    panic("Error: %v", err)
+    panic(fmt.Sprintf("Error: %v", err))
 }
 
 fmt.Println(out.Success)
@@ -195,5 +195,3 @@ fmt.Printf("Data: %v\n", out.Data)
 ```none
 out, resp, err := c.ConfigFile.Load(ctx, "/config/test300.config")
 ```
-
-[go-vyos]: https://github.com/ganawaj/go-vyos

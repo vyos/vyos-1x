@@ -489,7 +489,7 @@ You should now be able to see the advertised network on the other host.
 ### Duplicate configuration
 
 At this point, you now need to create the X link between all four routers.
-Use amdifferent /30 for each link.
+Use a different /30 for each link.
 
 ### Priorities
 

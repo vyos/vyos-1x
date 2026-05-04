@@ -169,7 +169,7 @@ The format of these addresses:
 - `2001:470:xxxx::/48`: The whole subnet. xxxx should come from Tunnelbroker.
 - `2001:470:xxxx:1::/64`: A subnet suitable for a LAN
 - `2001:470:xxxx:2::/64`: Another subnet
-- `2001:470:xxxx:ffff:/64`: The last usable /64 subnet.
+- `2001:470:xxxx:ffff::/64`: The last usable /64 subnet.
 
 In the above examples, 1,2,ffff are all chosen by you. You can use 1-ffff
 (1-65535).

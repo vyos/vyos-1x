@@ -149,6 +149,4 @@ $./vyos-napalm.py
 +name-server 203.0.113.8
 [edit]
 ```
-
-[napalm]: https://napalm.readthedocs.io/en/latest/base.html
 [NAPALM VyOS driver]: https://github.com/napalm-automation-community/napalm-vyos

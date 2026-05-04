@@ -6,7 +6,7 @@ lastproofread: '2024-02-21'
 
 # DMVPN Dual HUB Dual Cloud
 
-This document is to describe a basic setup to build DVMPN network with two Hubs and two clouds using DMVPN Phase3.
+This document is to describe a basic setup to build DMVPN network with two Hubs and two clouds using DMVPN Phase3.
 OSPF is used as routing protocol inside DMVPN.
 
 In this example we use VyOS 1.5 as HUBs and Spokes (HUB-1, HUB-2, SPOKE-2, SPOKE-3) and Cisco IOSv 15.5(3)M (SPOKE-1)

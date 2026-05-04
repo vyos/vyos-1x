@@ -83,7 +83,7 @@ packet is processed at the **IP Layer**:
      IPv4 and IPv6 rules, and two different sections apply:
 
      * **Output Prerouting**: ``set firewall [ipv4 | ipv6] output
-       filter ...``. As described in **Prerouting**, the system processes
+       raw ...``. As described in **Prerouting**, the system processes
        rules in this section before the connection tracking subsystem.
 
      * **Output Filter**: ``set firewall [ipv4 | ipv6] output filter ...``.
@@ -93,7 +93,7 @@ packet is processed at the **IP Layer**:
      includes:
 
      * **Source NAT**: Rules you define under ``set [nat | nat66]
-       destination...``.
+       source...``.
 ```
 
 If the interface where the packet was received is part of a bridge, the

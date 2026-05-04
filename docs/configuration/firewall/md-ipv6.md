@@ -1247,7 +1247,7 @@ Set hop limit value.
 ```{cfgcmd} set firewall ipv6 forward filter rule \<1-999999\> set connection-mark \<0-2147483647\>
 ```
 
-```{cfgcmd} set firewall ipv4 output [filter | raw] rule \<1-999999\> set connection-mark \<0-2147483647\>
+```{cfgcmd} set firewall ipv6 output [filter | raw] rule \<1-999999\> set connection-mark \<0-2147483647\>
 
 Set connection mark value.
 ```

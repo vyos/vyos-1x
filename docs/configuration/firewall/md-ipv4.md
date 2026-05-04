@@ -452,7 +452,7 @@ addresses.
 :::{code-block} none
 set firewall ipv4 name FOO rule 50 source address 192.0.2.10-192.0.2.11
 # with a '!' the rule match everything except the specified subnet
-set firewall ipv4 input filter FOO rule 51 source address !203.0.113.0/24
+set firewall ipv4 name FOO rule 51 source address !203.0.113.0/24
 :::
 ```
 
@@ -1158,33 +1158,6 @@ Time to match the defined rule.
 
 Match the time to live parameter, where 'eq' means 'equal', 'gt' means
 'greater than', and 'lt' means 'less than'.
-```
-
-```{cfgcmd} set firewall ipv4 forward filter rule \<1-999999\> recent count \<1-255\>
-```
-
-```{cfgcmd} set firewall ipv4 input filter rule \<1-999999\> recent count \<1-255\>
-```
-
-```{cfgcmd} set firewall ipv4 output filter rule \<1-999999\> recent count \<1-255\>
-```
-
-```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> recent count \<1-255\>
-```
-
-```{cfgcmd} set firewall ipv4 forward filter rule \<1-999999\> recent time \<second | minute | hour\>
-```
-
-```{cfgcmd} set firewall ipv4 input filter rule \<1-999999\> recent time \<second | minute | hour\>
-```
-
-```{cfgcmd} set firewall ipv4 output filter rule \<1-999999\> recent time \<second | minute | hour\>
-```
-
-```{cfgcmd} set firewall ipv4 name \<name\> rule \<1-999999\> recent time \<second | minute | hour\>
-
-Match when 'count' amount of connections appear within 'time'. Use these
-matching criteria to block brute-force attempts.
 ```
 
 ### Packet Modifications

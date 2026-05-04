@@ -167,7 +167,7 @@ set firewall ipv4 input filter rule 20 destination port '22'
 set firewall ipv4 input filter rule 20 protocol 'tcp'
 set firewall ipv4 input filter rule 20 source group network-group 'TRUSTED'
 
-# Input traffic: accepd dns requests only from local networks.
+# Input traffic: accept dns requests only from local networks.
 set firewall ipv4 input filter rule 25 action 'accept'
 set firewall ipv4 input filter rule 25 destination port '53'
 set firewall ipv4 input filter rule 25 protocol 'udp'

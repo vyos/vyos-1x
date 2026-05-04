@@ -345,7 +345,7 @@ remote_user=vyos
 # About tasks:
 # "Wait 300 seconds, but only start checking after 60 seconds" - try to make ssh connection every 60 seconds until 300 seconds
 # "Configure general settings for the VyOS hosts group" - make provisioning into vSphere VyOS node
-# You have to add all necessary cammans of VyOS under the block "lines:"
+# You have to add all necessary commands of VyOS under the block "lines:"
 ##############################################################################
 
 
@@ -362,7 +362,6 @@ remote_user=vyos
     - name: "Configure general settings for the VyOS hosts group"
       vyos_config:
         lines:
-          - set system name-server 192.0.2.1
           - set system name-server 192.0.2.1
         save:
           true

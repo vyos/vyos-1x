@@ -42,6 +42,8 @@ livehtml: swap
 	@trap '$(SWAP) --restore' EXIT; \
 		sphinx-autobuild --host $(AUTOHOST) --port $(AUTOPORT) \
 		--ignore '$(BUILDDIR)/**' \
+		--ignore '**/_build/**' \
+		--ignore '**/md-*' \
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 defaultvalue: export VYOS_DEFAULT=True

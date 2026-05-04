@@ -14,7 +14,7 @@ own requirements.
 
 - Bridge br0:
   : - Isolated layer 2 bridge.
-    - Accept only IPv6 communication whithin the bridge.
+    - Accept only IPv6 communication within the bridge.
 - Bridge br1:
   : - Drop all DHCP discover packets.
     - Accept all ARP packets.
@@ -212,7 +212,7 @@ set firewall bridge name br1-fwd rule 20 description 'Accept ipv4 from host'
 set firewall bridge name br1-fwd rule 20 action 'accept'
 set firewall bridge name br1-fwd rule 20 source address '10.1.1.102'
 set firewall bridge name br1-fwd rule 20 state 'new'
-  # Drop everythin else within the bridge:
+  # Drop everything else within the bridge:
 set firewall bridge name br1-fwd default-action 'drop'
 
 ### br2 - br2-fwd
@@ -357,7 +357,7 @@ Sep 17 14:28:19 kernel: [bri-NAM-br1-pre-10-D]IN=eth3 OUT= MAC=ff:ff:ff:ff:ff:ff
 And with operational mode commands, we can check rules matchers, actions, and
 counters.
 
-Bridge firewall rulset:
+Bridge firewall ruleset:
 
 ```none
 vyos@bri:~$ show firewall bridge
@@ -441,7 +441,7 @@ default  drop      all                 0        0
 vyos@bridge:~$
 ```
 
-IPv4 firewall rulset:
+IPv4 firewall ruleset:
 
 ```none
 vyos@bridge:~$ show firewall ipv4
