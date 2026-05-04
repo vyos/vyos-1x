@@ -230,6 +230,9 @@ class ModemStateMachine:
         self._failed_retry_enabled = True    # Overridden by config in _apply_parsed_configuration
         self._failed_retry_intervals = [600, 1800, 3600, 7200]  # 10, 30, 60, 120 min (carrier-friendly)
         self._failed_retry_max_interval = 7200  # Cap at 2 hr (carrier-friendly)
+        # Companion watcher: polls SimSlots every 30s while FAILED with
+        # sim-missing — MM does not signal SIM appearance in non-active slots.
+        self._sim_missing_watch_task = None
         self._failed_retry_escalation_threshold = 3  # Disable/enable cycle after N failures (0=never)
 
         # Modem removal flag — lets CancelledError handlers log the right reason
@@ -441,6 +444,12 @@ class ModemStateMachine:
         self._failed_retry_attempt = 0
         self._failed_retry_task = self._safe_create_task(
             self._failed_retry_loop(), name='failed_retry_loop')
+        # Also start a fast SIM-reinsertion watcher.  When the modem is
+        # FAILED with sim-missing, MM does not generate state changes
+        # when a SIM appears in the *non-active* slot — so we must poll
+        # SimSlots on a tighter cadence than the failed-retry backoff.
+        self._sim_missing_watch_task = self._safe_create_task(
+            self._sim_missing_watch_loop(), name='sim_missing_watch_loop')
         logger.info("Started failed-state periodic retry",
                    extra={'interface_number': self.interface_number,
                           'intervals': self._failed_retry_intervals})
@@ -453,6 +462,66 @@ class ModemStateMachine:
                        extra={'interface_number': self.interface_number,
                               'attempt_reached': self._failed_retry_attempt})
         self._failed_retry_task = None
+        watch = getattr(self, '_sim_missing_watch_task', None)
+        if watch and not watch.done():
+            watch.cancel()
+        self._sim_missing_watch_task = None
+
+    async def _sim_missing_watch_loop(self):
+        """Poll SimSlots while in FAILED with sim-missing/sim-error.
+
+        MM only signals state changes when the *active* slot's SIM
+        comes/goes.  If the user re-inserts a SIM into a non-active
+        slot, the modem stays in FAILED forever and no D-Bus signal
+        fires.  Poll SimSlots every 30s and trigger sim-missing
+        failover whenever we detect a SIM in any slot.
+        """
+        try:
+            poll_interval = 30
+            while self.machine.current_state == ModemState.FAILED.value:
+                await asyncio.sleep(poll_interval)
+                if self.machine.current_state != ModemState.FAILED.value:
+                    return
+                if self._sim_switch_in_progress or self._sim_failover_in_progress:
+                    continue
+                if not self.proxy:
+                    continue
+                try:
+                    props = self.proxy.get_interface(
+                        "org.freedesktop.DBus.Properties")
+                    state_v = await props.call_get(MODEM_INTERFACE, "State")
+                    mm_state = state_v.value
+                    if mm_state != -1:
+                        # No longer FAILED at MM level — let normal handlers run
+                        continue
+                    sfr_v = await props.call_get(
+                        MODEM_INTERFACE, "StateFailedReason")
+                    failed_reason = sfr_v.value if hasattr(sfr_v, 'value') else sfr_v
+                    if failed_reason not in (2, 3):  # not sim-missing/sim-error
+                        continue
+                    # Check whether ANY slot now has a SIM
+                    sim_slots_v = await props.call_get(
+                        MODEM_INTERFACE, "SimSlots")
+                    sim_slots = sim_slots_v.value
+                    have_sim = any(p and p != '/' for p in sim_slots)
+                    if not have_sim:
+                        continue
+                    logger.info(
+                        "sim-missing watch: SIM detected in a slot — "
+                        "triggering failover rescan",
+                        extra={'interface_number': self.interface_number,
+                               'sim_slots': list(sim_slots)})
+                    await self._handle_sim_missing_failover()
+                except Exception as e:
+                    logger.debug(
+                        f"sim-missing watch poll error: {e}",
+                        extra={'interface_number': self.interface_number})
+        except asyncio.CancelledError:
+            logger.debug("sim-missing watch loop cancelled",
+                        extra={'interface_number': self.interface_number})
+        except Exception as e:
+            logger.error(f"sim-missing watch loop error: {e}",
+                        extra={'interface_number': self.interface_number})
 
     async def _failed_retry_loop(self):
         """Periodically reattempt connection from FAILED state.
@@ -511,6 +580,34 @@ class ModemStateMachine:
                     continue
 
                 if mm_state < 6:  # DISABLED or worse — modem not ready
+                    # Special case: modem stuck in FAILED with sim-missing /
+                    # sim-error.  When the user re-inserts a SIM into the
+                    # *non-active* slot, MM does NOT change state (active
+                    # slot is still empty), so no PropertiesChanged signal
+                    # fires and the FSM would otherwise wait the full backoff
+                    # before noticing.  Re-scan SimSlots here and trigger
+                    # failover if a SIM has appeared in any slot.
+                    if mm_state == -1:
+                        try:
+                            sfr_v = await props.call_get(
+                                MODEM_INTERFACE, "StateFailedReason")
+                            failed_reason = sfr_v.value if hasattr(sfr_v, 'value') else sfr_v
+                        except Exception:
+                            failed_reason = 0
+                        if failed_reason in (2, 3):  # sim-missing / sim-error
+                            logger.info(
+                                "Failed-state retry: modem in FAILED with "
+                                "sim-missing/sim-error — rescanning SimSlots "
+                                "for re-inserted SIM",
+                                extra={'interface_number': self.interface_number,
+                                       'failed_reason': failed_reason})
+                            try:
+                                await self._handle_sim_missing_failover()
+                            except Exception as e:
+                                logger.debug(
+                                    f"sim-missing rescan failover error: {e}",
+                                    extra={'interface_number': self.interface_number})
+                            continue
                     logger.info(
                         f"Modem not ready (state {mm_state}), "
                         "deferring retry to next interval",
