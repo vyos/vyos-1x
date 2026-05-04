@@ -42,6 +42,8 @@ Cmnd_Alias HWINFO   = /usr/bin/lspci
 Cmnd_Alias FORCE_CLUSTER = /usr/share/heartbeat/hb_takeover, \
                            /usr/share/heartbeat/hb_standby
 Cmnd_Alias DIAGNOSTICS = /bin/ip vrf exec * /bin/ping *,       \
+                         /usr/bin/nping *, \
+                         /bin/ip vrf exec * /usr/bin/nping *, \
                          /bin/ip vrf exec * /bin/traceroute *, \
                          /bin/ip vrf exec * /usr/bin/mtr *, \
                          /usr/libexec/vyos/op_mode/*

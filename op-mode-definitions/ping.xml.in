@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <tagNode name="ping">
     <properties>
-      <help>Send Internet Control Message Protocol (ICMP) echo request</help>
+      <help>Send ICMP echo request or TCP connect probe</help>
       <completionHelp>
         <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
       </completionHelp>
