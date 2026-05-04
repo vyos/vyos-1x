@@ -1,0 +1,52 @@
+# VyOS
+
+> VyOS is a free, open-source network operating system based on Debian GNU/Linux.
+> It provides routing, firewall, and VPN functionality via a unified CLI using
+> `set`/`delete`/`show` command hierarchy. This documentation covers {{ release }}.
+
+VyOS configuration follows a tree structure. All configuration commands start with
+`set` (to add/change) or `delete` (to remove). Changes are staged and applied with
+`commit`. The CLI hierarchy maps directly to the documentation structure.
+
+## Quick Start
+
+- [Quick Start Guide]({{ baseurl }}quick-start.html): Minimal setup walkthrough
+- [CLI Overview]({{ baseurl }}cli.html): Command-line interface usage
+
+## Configuration
+
+- [Firewall]({{ baseurl }}configuration/firewall/index.html): Zone-based firewall, rules, groups
+- [Interfaces]({{ baseurl }}configuration/interfaces/index.html): Ethernet, bonding, bridge, VLAN, tunnel, wireless
+- [Protocols]({{ baseurl }}configuration/protocols/index.html): BGP, OSPF, IS-IS, static routing, MPLS
+- [VPN]({{ baseurl }}configuration/vpn/index.html): IPsec, OpenVPN, WireGuard, L2TP, PPTP
+- [NAT]({{ baseurl }}configuration/nat/index.html): Source NAT, destination NAT, NAT66
+- [System]({{ baseurl }}configuration/system/index.html): DNS, NTP, syslog, users, task scheduler
+- [High Availability]({{ baseurl }}configuration/highavailability/index.html): VRRP
+- [Load Balancing]({{ baseurl }}configuration/loadbalancing/index.html): WAN and reverse proxy
+- [Containers]({{ baseurl }}configuration/container/index.html): Podman-based container support
+- [PKI]({{ baseurl }}configuration/pki/index.html): Certificate management
+- [Policy]({{ baseurl }}configuration/policy/index.html): Route maps, prefix lists, access lists
+- [Traffic Policy]({{ baseurl }}configuration/trafficpolicy/index.html): QoS and shaping
+- [Service]({{ baseurl }}configuration/service/index.html): DHCP, DNS forwarding, SNMP, SSH, HTTPS API
+- [VRF]({{ baseurl }}configuration/vrf/index.html): Virtual routing and forwarding
+
+## Operations
+
+- [Operational Commands]({{ baseurl }}operation/index.html): Show, monitor, restart commands
+
+## Installation
+
+- [Installation Guide]({{ baseurl }}installation/index.html): Bare metal, virtual, cloud deployments
+
+## Automation
+
+- [Automation]({{ baseurl }}automation/index.html): Ansible, Terraform, HTTP API, NETCONF
+
+## Configuration Examples
+
+- [Blueprints]({{ baseurl }}configexamples/index.html): Real-world topology examples
+
+## Optional
+
+- [Contributing]({{ baseurl }}contributing/index.html): Development workflow
+- [VPP]({{ baseurl }}vpp/index.html): Vector Packet Processing integration

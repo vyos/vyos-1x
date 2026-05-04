@@ -217,5 +217,21 @@ def _prefer_webp(app):
             app.builder.supported_image_types = ['image/webp'] + types
 
 
+def _write_llms_txt(app, exception):
+    if exception is not None or app.builder.name != 'html':
+        return
+    from pathlib import Path
+    from jinja2 import Template
+    tpl_path = Path(app.srcdir) / '_templates' / 'llms.txt.j2'
+    out_path = Path(app.outdir) / 'llms.txt'
+    baseurl = (app.config.html_baseurl or '').rstrip('/') + '/'
+    rendered = Template(tpl_path.read_text(encoding='utf-8')).render(
+        baseurl=baseurl,
+        release=app.config.release,
+    )
+    out_path.write_text(rendered, encoding='utf-8')
+
+
 def setup(app):
     app.connect('builder-inited', _prefer_webp)
+    app.connect('build-finished', _write_llms_txt)
