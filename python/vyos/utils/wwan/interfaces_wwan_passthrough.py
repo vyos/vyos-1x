@@ -395,6 +395,15 @@ class PassthroughManager:
         lines.append("dhcp-authoritative")
         # enable Reconfigure for v6 and FORCERENEW awareness for v4
         lines.append("dhcp-rapid-commit")
+        # Skip the ICMP-echo "is this address free?" check.  In passthrough
+        # mode the carrier IP is bound to wwanN locally, so a ping from
+        # the router (sourced from the shadow address on the LAN port)
+        # routes back out wwanN and the carrier echoes it.  dnsmasq would
+        # interpret that reply as "address in use" and refuse every
+        # DISCOVER with `no address available`.  We *know* the address is
+        # free for the downstream device because we just leased it from
+        # the carrier; suppress the probe.
+        lines.append("no-ping")
 
         lease = self.cfg.lease_time
         # Choose a gateway IP for DHCPv4 option 3 / option 121 next-hop.
