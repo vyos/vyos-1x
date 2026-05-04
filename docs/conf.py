@@ -113,13 +113,13 @@ html_static_path = ['_static']
 
 html_extra_path = ['_html_extra']
 
-html_baseurl = 'https://docs.vyos.io/en/latest/'
+html_baseurl = 'https://docs.vyos.io/en/rolling/'
 
-# sphinx-sitemap: baseurl already includes /en/latest/, so skip lang+version
+# sphinx-sitemap: baseurl already includes /en/rolling/, so skip lang+version
 sitemap_url_scheme = '{link}'
 
-# sphinx-llms-txt: disable auto-generated llms.txt, keep curated one from
-# _html_extra; llms-full.txt is still auto-generated
+# sphinx-llms-txt: disable auto-generated llms.txt, keep curated render via
+# setup hook; llms-full.txt is still auto-generated
 llms_txt_file = False
 
 # Custom sidebar templates, must be a dictionary that maps document names
