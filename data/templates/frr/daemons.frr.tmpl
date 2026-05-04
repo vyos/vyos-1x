@@ -103,7 +103,7 @@ vtysh_enable=yes
 watchfrr_enable=yes
 valgrind_enable=no
 
-#watchfrr_options=""
+watchfrr_options="--timeout={{ watchfrr_timeout }}"
 
 frr_profile="{{ profile }}"
 
