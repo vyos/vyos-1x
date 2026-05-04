@@ -141,6 +141,12 @@ class InterfaceConfig(ServiceInterface):
         "pd": {},                              # Empty = disabled; populated by conf_mode
         "pd_reconciliation_interval": 10,      # Seconds between PD safety-net re-checks
 
+        # IP Passthrough (DOCSIS-modem-style) — hand carrier IP to one
+        # downstream device via dnsmasq on a designated LAN interface.
+        # Empty / enabled=False = disabled; populated by conf_mode when the
+        # user sets `interfaces wwan <if> ip-passthrough interface <lan>`.
+        "ip_passthrough": {"enabled": False},
+
         # SIM configurations - array of SIM configs
         "sim_slots": [
             {

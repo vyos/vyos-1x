@@ -13,6 +13,7 @@
 # interfaces_wwan2.py config parser.
 
 import asyncio
+import ipaddress
 import os
 import re
 import sys
@@ -93,6 +94,42 @@ def get_config(config=None):
             iface_base + ['ip-passthrough', 'interface']
         ),
     }
+
+    # ── IP passthrough conflict guard ────────────────────────────────────
+    # bind-interfaces dnsmasq instances spawned by the FSM will silently
+    # lose to (or steal from) any other DHCP/RA service running on the
+    # same LAN port.  Stash live-tree existence flags so verify() can
+    # raise a clean ConfigError instead of producing a confusing runtime
+    # race between dnsmasq, kea, and radvd/router-advert.
+    pt_iface_lookup = None
+    if wwan['_user_set']['ip_passthrough_interface']:
+        pt_iface_lookup = conf.return_value(
+            iface_base + ['ip-passthrough', 'interface']
+        )
+    wwan['_passthrough_conflicts'] = {}
+    if pt_iface_lookup:
+        wwan['_passthrough_conflicts'] = {
+            'dhcp_server': conf.exists(
+                ['service', 'dhcp-server', 'shared-network-name']
+            ) and any(
+                conf.exists(['service', 'dhcp-server', 'shared-network-name',
+                             sn, 'subnet', s, 'default-router'])
+                or pt_iface_lookup in (conf.return_values(
+                    ['service', 'dhcp-server', 'shared-network-name', sn,
+                     'subnet', s, 'listen-interface']) or [])
+                for sn in (conf.list_nodes(
+                    ['service', 'dhcp-server', 'shared-network-name']) or [])
+                for s in (conf.list_nodes(
+                    ['service', 'dhcp-server', 'shared-network-name', sn,
+                     'subnet']) or [])
+            ),
+            'dhcpv6_server': conf.exists(
+                ['service', 'dhcpv6-server', 'shared-network-name']
+            ),
+            'router_advert': conf.exists(
+                ['service', 'router-advert', 'interface', pt_iface_lookup]
+            ),
+        }
 
     # ── SNMP trap target lookup ──────────────────────────────────────
     # Resolve the first `service snmp trap-target` entry (v2c only) from the
@@ -298,22 +335,56 @@ def build_fsm_config(wwan):
         # set 'interfaces ethernet <if> address ...' on the passthrough port.
         user_eth_addrs = ipt.get('_user_eth_addresses') or []
         user_owns_eth = bool(user_eth_addrs)
+        mgmt_v4_cidr = (
+            '' if user_owns_eth
+            else _leaf(ipt, 'management_address', '192.168.200.1/24')
+        )
+        mgmt_v6_cidr = (
+            '' if user_owns_eth
+            else _leaf(ipt, 'management_address_ipv6', 'fd00:6c61:6e30::1/64')
+        )
+        # Pre-resolve bare-IP forms (no /CIDR) for use as DHCPv4 option 3
+        # router and DHCPv6 advertised gateway.  RFC-strict clients (Windows)
+        # reject leases with router=0.0.0.0, so we always supply a real IP
+        # when one is available — either FSM-owned default or the user's
+        # first ethernet address under Policy B.
+        def _bare_ip(cidr: str, want_v6: bool = False) -> str:
+            if not cidr:
+                return ''
+            try:
+                ip = ipaddress.ip_interface(cidr).ip
+            except (ValueError, TypeError):
+                return ''
+            if want_v6 and ip.version != 6:
+                return ''
+            if not want_v6 and ip.version != 4:
+                return ''
+            return str(ip)
+        if user_owns_eth:
+            mgmt_v4_ip = next(
+                (_bare_ip(a) for a in user_eth_addrs if _bare_ip(a)), '')
+            mgmt_v6_ip = next(
+                (_bare_ip(a, want_v6=True) for a in user_eth_addrs
+                 if _bare_ip(a, want_v6=True)), '')
+        else:
+            mgmt_v4_ip = _bare_ip(mgmt_v4_cidr)
+            mgmt_v6_ip = _bare_ip(mgmt_v6_cidr, want_v6=True)
         ip_passthrough = {
             'enabled': True,
             'interface': pt_iface,
             'mac': _leaf(ipt, 'mac', '') or '',
             'lease_time': _leaf_int(ipt, 'lease_time', 60),
-            # Policy B: blank out FSM defaults if the user owns the ethernet
-            'management_address': (
-                '' if user_owns_eth
-                else _leaf(ipt, 'management_address', '192.168.200.1/24')
-            ),
-            'management_address_ipv6': (
-                '' if user_owns_eth
-                else _leaf(ipt, 'management_address_ipv6',
-                           'fd00:6c61:6e30::1/64')
-            ),
+            'management_address': mgmt_v4_cidr,
+            'management_address_ipv6': mgmt_v6_cidr,
             'mgmt_owned_by_user': user_owns_eth,
+            'mgmt_v4_ip': mgmt_v4_ip,
+            'mgmt_v6_ip': mgmt_v6_ip,
+            # TCP MSS clamping on WWAN egress — ON by default, matches
+            # commercial cellular passthrough products (Cradlepoint, Peplink,
+            # Sierra, Digi).  Transparently fixes non-compliant downstream
+            # clients that ignore DHCP option 26 / RA MTU.  Disable only for
+            # PMTUD debugging.
+            'mss_clamp_enabled': not _leaf_exists(ipt, 'disable_mss_clamp'),
             # Optional user-supplied DNS override (multi-value). When set,
             # these resolvers are advertised to the downstream device in
             # place of carrier-supplied DNS. Mirrors Cradlepoint/Peplink.
@@ -454,6 +525,27 @@ def verify(wwan):
                 "ip-passthrough is mutually exclusive with pd — both "
                 "consume the bearer's IPv6 prefix.  Remove one or the "
                 "other."
+            )
+        # Conflict guard: bind-interfaces dnsmasq cannot coexist with
+        # another service trying to serve DHCP / RA on the same LAN port.
+        conflicts = wwan.get('_passthrough_conflicts', {}) or {}
+        if conflicts.get('dhcp_server'):
+            raise ConfigError(
+                "ip-passthrough conflicts with 'service dhcp-server' "
+                "on the same LAN interface — both would try to bind "
+                "UDP/67.  Disable one or the other."
+            )
+        if conflicts.get('dhcpv6_server'):
+            raise ConfigError(
+                "ip-passthrough conflicts with 'service dhcpv6-server' "
+                "— both would try to bind DHCPv6 on UDP/547.  Disable "
+                "one or the other."
+            )
+        if conflicts.get('router_advert'):
+            raise ConfigError(
+                "ip-passthrough conflicts with 'service router-advert' "
+                "on the same LAN interface — both would emit RAs.  "
+                "Disable one or the other."
             )
 
     return None

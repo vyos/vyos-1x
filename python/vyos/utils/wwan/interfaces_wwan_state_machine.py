@@ -10719,12 +10719,25 @@ class ModemStateMachine:
                 self._passthrough.update_config(pt_cfg)
                 if self._passthrough.cfg.is_active():
                     v6_plen = int(bearer_ips.get('ipv6_prefix', '128') or 128)
+                    # Bearer MTU: prefer v4 then v6 then the configured iface
+                    # MTU as fallback so the value handed downstream matches
+                    # what the carrier actually negotiated.
+                    try:
+                        bearer_mtu = int(
+                            bearer_ips.get('ipv4_mtu')
+                            or bearer_ips.get('ipv6_mtu')
+                            or self.config.get('mtu', 0)
+                            or 0
+                        )
+                    except (TypeError, ValueError):
+                        bearer_mtu = 0
                     await self._passthrough.apply(
                         carrier_v4=bearer_ips.get('ipv4'),
                         carrier_v6=bearer_ips.get('ipv6'),
                         carrier_v6_prefix=v6_plen,
                         ipv4_dns=bearer_ips.get('ipv4_dns', []),
                         ipv6_dns=bearer_ips.get('ipv6_dns', []),
+                        bearer_mtu=bearer_mtu or None,
                     )
             except Exception as pt_err:
                 logger.error("IP passthrough apply failed: %s", pt_err,

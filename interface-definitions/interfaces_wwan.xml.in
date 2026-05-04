@@ -659,6 +659,12 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="disable-mss-clamp">
+                <properties>
+                  <help>Disable TCP MSS clamping on the WWAN egress (default: enabled). MSS clamping rewrites TCP SYN segments so endpoints negotiate a segment size that fits the bearer MTU, transparently fixing oversized-frame drops for non-compliant downstream devices that ignore DHCP option 26 / RA MTU. Only disable for PMTUD debugging.</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <!-- ── Reconnection ────────────────────────────────────── -->

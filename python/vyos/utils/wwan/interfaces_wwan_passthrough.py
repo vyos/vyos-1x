@@ -72,6 +72,18 @@ class PassthroughConfig:
     management_address: str = ''    # '' if user owns ethernet
     management_address_ipv6: str = ''
     mgmt_owned_by_user: bool = False
+    # Pre-resolved bare-IP forms of the management address (without CIDR).
+    # Used as DHCPv4 option 3 (router) and option 121 next-hop so RFC-strict
+    # clients (Windows) accept the lease.  Populated by conf_mode regardless
+    # of whether mgmt is FSM-owned or user-owned.
+    mgmt_v4_ip: str = ''
+    mgmt_v6_ip: str = ''
+    # TCP MSS clamping on the WWAN egress — ON by default.  Mirrors
+    # commercial passthrough products which all clamp to PMTU so that
+    # non-compliant downstream clients (those that ignore DHCP option 26
+    # / RA MTU) do not generate oversized frames that the kernel must
+    # drop with ICMP Frag-Needed / Packet-Too-Big.
+    mss_clamp_enabled: bool = True
     # User-supplied DNS overrides.  When non-empty, these are advertised to
     # the downstream device instead of the carrier-supplied DNS list.
     # Mixed v4/v6 addresses are split internally.
@@ -91,6 +103,9 @@ class PassthroughConfig:
             management_address=str(raw.get('management_address', '') or ''),
             management_address_ipv6=str(raw.get('management_address_ipv6', '') or ''),
             mgmt_owned_by_user=bool(raw.get('mgmt_owned_by_user', False)),
+            mgmt_v4_ip=str(raw.get('mgmt_v4_ip', '') or ''),
+            mgmt_v6_ip=str(raw.get('mgmt_v6_ip', '') or ''),
+            mss_clamp_enabled=bool(raw.get('mss_clamp_enabled', True)),
             dns_servers=[str(d) for d in dns_raw if d],
         )
 
@@ -137,18 +152,16 @@ def _split_cidr(addr: str) -> tuple[str, int]:
 
 
 def _v4_pool_for(carrier_ipv4: str) -> tuple[str, str, str]:
-    """Build a one-host /30 pool around the carrier IPv4 for dnsmasq.
+    """Build a one-host pool centered on the carrier IPv4 for dnsmasq.
 
-    dnsmasq insists on a `dhcp-range` even when handing out a fixed host;
-    we point it at a /30 with the carrier address as both start and end and
-    a fake netmask.  The actual lease comes from `dhcp-host`.
+    dnsmasq insists on a `dhcp-range` even when handing out a fixed host.
+    We give it the carrier address as both start AND end so dnsmasq has
+    exactly one IP to offer regardless of where the carrier IP sits inside
+    its /30.  Netmask sent here is dnsmasq's own subnet bookkeeping; the
+    actual netmask delivered to the client is overridden via DHCP option 1.
     Returns (range_start, range_end, netmask).
     """
-    # We intentionally use 255.255.255.255 as the netmask sent in DHCP options
-    # later via dhcp-option override.  Here netmask is for dnsmasq's own
-    # subnet bookkeeping; /32 isn't accepted, so use /30 of the carrier.
-    net = ipaddress.IPv4Interface(f'{carrier_ipv4}/30').network
-    return str(net.network_address + 1), str(net.network_address + 1), '255.255.255.252'
+    return carrier_ipv4, carrier_ipv4, '255.255.255.252'
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +200,14 @@ class PassthroughManager:
         self._src_whitelist_v4_active: bool = False
         self._src_whitelist_v6_active: bool = False
 
+        # TCP MSS clamp state — one rule each (v4 and v6) on the WWAN
+        # egress interface, installed once when passthrough activates and
+        # removed at teardown.  --clamp-mss-to-pmtu auto-tracks the kernel
+        # interface MTU, so bearer MTU changes are picked up without us
+        # having to rewrite the rule.
+        self._mss_clamp_v4_active: bool = False
+        self._mss_clamp_v6_active: bool = False
+
         # Inbound forwarding state (policy routing rules + table entries)
         self._inbound_v4_addr: Optional[str] = None
         self._inbound_v6_addr: Optional[str] = None
@@ -214,7 +235,8 @@ class PassthroughManager:
     async def apply(self, carrier_v4: Optional[str], carrier_v6: Optional[str],
                     carrier_v6_prefix: int = 128,
                     ipv4_dns: Optional[list] = None,
-                    ipv6_dns: Optional[list] = None) -> None:
+                    ipv6_dns: Optional[list] = None,
+                    bearer_mtu: Optional[int] = None) -> None:
         """Apply (or update) passthrough for the given carrier addresses.
 
         Called by the FSM from `_apply_bearer_ip_configuration()` when
@@ -258,7 +280,7 @@ class PassthroughManager:
         # Render dnsmasq config + (re)start.
         await self._write_dnsmasq_conf(
             carrier_v4, carrier_v6, carrier_v6_prefix,
-            ipv4_dns or [], ipv6_dns or [],
+            ipv4_dns or [], ipv6_dns or [], bearer_mtu,
         )
         await self._start_or_reload_dnsmasq()
 
@@ -280,6 +302,13 @@ class PassthroughManager:
             await self._install_src_whitelist_v4(carrier_v4)
         if carrier_v6:
             await self._install_src_whitelist_v6(carrier_v6)
+
+        # TCP MSS clamping on WWAN egress — industry-standard fix for
+        # downstream clients that ignore DHCP option 26 / RA MTU.
+        if self.cfg.mss_clamp_enabled:
+            await self._install_mss_clamp()
+        else:
+            await self._remove_mss_clamp()
 
         # Push the new lease to the downstream device.
         if v4_changed:
@@ -311,6 +340,7 @@ class PassthroughManager:
         await self._remove_inbound_route_v6(self._inbound_v6_addr)
         await self._remove_src_whitelist_v4()
         await self._remove_src_whitelist_v6()
+        await self._remove_mss_clamp()
         self._last_v4 = None
         self._last_v6 = None
         logger.info("passthrough: torn down on %s",
@@ -321,7 +351,8 @@ class PassthroughManager:
                                   carrier_v6: Optional[str],
                                   carrier_v6_prefix: int,
                                   ipv4_dns: list,
-                                  ipv6_dns: list) -> None:
+                                  ipv6_dns: list,
+                                  bearer_mtu: Optional[int] = None) -> None:
         """Render the per-instance dnsmasq.conf."""
         lines: list[str] = []
         lines.append("# auto-generated by interfaces_wwan_passthrough.py — do not edit")
@@ -333,12 +364,24 @@ class PassthroughManager:
         lines.append(f"pid-file={self._pid_path()}")
         lines.append(f"dhcp-leasefile={self._leases_path()}")
         lines.append("port=0")  # disable DNS — DHCP/RA only
-        lines.append("log-dhcp")
+        # Quiet logging: a 60 s lease means renewals every ~30 s; log-dhcp
+        # would flood syslog.  Errors and config issues are still emitted.
+        lines.append("quiet-dhcp")
+        lines.append("quiet-dhcp6")
+        lines.append("quiet-ra")
         lines.append("dhcp-authoritative")
         # enable Reconfigure for v6 and FORCERENEW awareness for v4
         lines.append("dhcp-rapid-commit")
 
         lease = self.cfg.lease_time
+        # Choose a gateway IP for DHCPv4 option 3 / option 121 next-hop.
+        # RFC-strict clients (notably Windows) reject leases with router=
+        # 0.0.0.0, and option 121 next-hops of 0.0.0.0 are interpreted
+        # inconsistently across stacks.  Prefer the router's mgmt v4 IP
+        # (FSM-owned 192.168.200.1 by default, or the user's own ethernet
+        # address under Policy B).  Only fall back to 0.0.0.0 when the
+        # admin has explicitly removed every v4 address from the LAN port.
+        gw_v4 = self.cfg.mgmt_v4_ip or '0.0.0.0'
 
         # ── DHCPv4 ──
         if carrier_v4:
@@ -358,9 +401,9 @@ class PassthroughManager:
                 lines.append("dhcp-ignore-names")
                 lines.append("dhcp-lease-max=1")
             # Override DHCP options so the downstream device thinks it has the
-            # carrier IP with a host route, not a /30.
-            lines.append(f"dhcp-option=tag:{tag},1,255.255.255.255")  # netmask
-            lines.append(f"dhcp-option=tag:{tag},3,0.0.0.0")          # router (we are link-local proxy)
+            # carrier IP as a host (/32) with the router's mgmt IP as default.
+            lines.append(f"dhcp-option=tag:{tag},1,255.255.255.255")     # netmask /32
+            lines.append(f"dhcp-option=tag:{tag},3,{gw_v4}")             # router
             # DNS option 6 — three-tier precedence:
             #   1. user override (CLI dns-server) — wins always
             #   2. carrier-supplied resolvers from the bearer
@@ -372,19 +415,33 @@ class PassthroughManager:
                 or ['8.8.8.8', '1.1.1.1']
             )
             lines.append(f"dhcp-option=tag:{tag},6,{','.join(v4_dns)}")
-            lines.append(f"dhcp-option=tag:{tag},51,{lease}")          # lease time
-            lines.append(f"dhcp-option=tag:{tag},58,{lease // 2}")     # T1
-            lines.append(f"dhcp-option=tag:{tag},59,{(lease * 7) // 8}")  # T2
-            # Classless static route (option 121): default via 0.0.0.0 dev <if>
-            lines.append(f"dhcp-option=tag:{tag},121,0.0.0.0/0,0.0.0.0")
+            lines.append(f"dhcp-option=tag:{tag},51,{lease}")            # lease time
+            lines.append(f"dhcp-option=tag:{tag},58,{lease // 2}")       # T1
+            lines.append(f"dhcp-option=tag:{tag},59,{(lease * 7) // 8}") # T2
+            # MTU (option 26) — clamp to bearer MTU so PMTUD doesn't black-hole
+            if bearer_mtu and bearer_mtu > 0:
+                lines.append(f"dhcp-option=tag:{tag},26,{int(bearer_mtu)}")
+            # Classless static route (option 121): host route to the gateway
+            # via dev (link-only), then default via gateway.  This pattern is
+            # what Cradlepoint/Peplink emit and is accepted by Windows, macOS,
+            # iOS, Android, and Linux clients.
+            lines.append(
+                f"dhcp-option=tag:{tag},121,{gw_v4}/32,0.0.0.0,0.0.0.0/0,{gw_v4}"
+            )
 
         # ── DHCPv6 + RA ──
         if carrier_v6:
-            v6_pool = f"{carrier_v6},{carrier_v6},{lease}"
+            # Explicit /128 prefix-len: without it dnsmasq defaults to /64
+            # and the carrier prefix would be advertised as on-link, breaking
+            # routing for any v6 destination inside that /64.
+            v6_pool = f"{carrier_v6},{carrier_v6},128,{lease}"
             lines.append(f"dhcp-range=set:passthru6,{v6_pool}")
             lines.append("enable-ra")
-            # M=1 O=1 — managed + other-stateful
-            lines.append(f"ra-param={self.cfg.interface},mtu:1500,0,60")
+            # ra-param=<if>,[mtu:N,]<interval>,<lifetime>
+            # MTU advertised in RA — must match the bearer MTU or v6 PMTUD
+            # black-holes for any path that touches the bearer.
+            ra_mtu = int(bearer_mtu) if (bearer_mtu and bearer_mtu > 0) else 1500
+            lines.append(f"ra-param={self.cfg.interface},mtu:{ra_mtu},0,60")
             # DNS option 23 (DHCPv6) + RDNSS in RA — user override beats carrier
             _user_v4, user_v6 = self.cfg.split_dns()
             v6_dns = user_v6 or [d for d in (ipv6_dns or []) if d]
@@ -406,7 +463,13 @@ class PassthroughManager:
                      extra=self._log_extra)
 
     async def _start_or_reload_dnsmasq(self) -> None:
-        """Spawn dnsmasq if not running; otherwise SIGHUP to reload."""
+        """Spawn dnsmasq if not running; otherwise SIGHUP to reload.
+
+        With ``--bind-interfaces`` dnsmasq must find the listen interface
+        present AND with at least one address at startup.  If the LAN
+        interface (or its mgmt address) was just brought up, the kernel
+        may take a moment to settle — retry up to ~3 s before giving up.
+        """
         pid = self._read_pid()
         if pid and self._pid_alive(pid):
             os.kill(pid, signal.SIGHUP)
@@ -415,15 +478,27 @@ class PassthroughManager:
                         extra=self._log_extra)
             return
 
-        # Stale pidfile or never started
-        rc, _, err = await _run(
-            DNSMASQ,
-            f'--conf-file={self._conf_path()}',
-            '--keep-in-foreground=no',
-        )
-        if rc != 0:
-            logger.error("passthrough: dnsmasq failed to start: %s", err.strip(),
-                         extra=self._log_extra)
+        # Stale pidfile or never started — wait for interface readiness then start
+        last_err = ''
+        for attempt in range(6):  # 6 × 0.5 s = 3 s total
+            rc, _, err = await _run(
+                DNSMASQ,
+                f'--conf-file={self._conf_path()}',
+                '--keep-in-foreground=no',
+            )
+            if rc == 0:
+                break
+            last_err = err.strip()
+            # Common transient: "unknown interface" / "no suitable address"
+            if attempt < 5:
+                logger.debug(
+                    "passthrough: dnsmasq start attempt %d/6 failed (%s); retrying",
+                    attempt + 1, last_err, extra=self._log_extra,
+                )
+                await asyncio.sleep(0.5)
+        else:
+            logger.error("passthrough: dnsmasq failed to start after retries: %s",
+                         last_err, extra=self._log_extra)
             return
         # dnsmasq daemonises and writes its pidfile
         self._dnsmasq_pid = self._read_pid()
@@ -761,3 +836,49 @@ class PassthroughManager:
         await _run('ip6tables', '-F', chain)
         await _run('ip6tables', '-X', chain)
         self._src_whitelist_v6_active = False
+
+    # ------------------------------------------------------------------
+    # TCP MSS clamping (mangle/FORWARD)
+    #
+    # Industry-standard fix for downstream clients that ignore DHCP
+    # option 26 / RA MTU and emit oversized TCP segments.  The kernel
+    # rewrites the MSS option in SYN/SYN-ACK to fit the WWAN egress
+    # PMTU; --clamp-mss-to-pmtu auto-tracks the wwan<N> MTU so a bearer
+    # MTU change is picked up without rewriting the rule.
+    #
+    # Default ON (matches Cradlepoint/Peplink/Sierra/Digi passthrough
+    # behavior).  Disable per-interface via:
+    #   set interfaces wwan wwanN ip-passthrough disable-mss-clamp
+    # ------------------------------------------------------------------
+
+    async def _install_mss_clamp(self) -> None:
+        if not self._mss_clamp_v4_active:
+            await _run('iptables', '-t', 'mangle', '-A', 'FORWARD',
+                       '-o', self._wwan_iface,
+                       '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                       '-j', 'TCPMSS', '--clamp-mss-to-pmtu')
+            self._mss_clamp_v4_active = True
+        if not self._mss_clamp_v6_active:
+            await _run('ip6tables', '-t', 'mangle', '-A', 'FORWARD',
+                       '-o', self._wwan_iface,
+                       '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                       '-j', 'TCPMSS', '--clamp-mss-to-pmtu')
+            self._mss_clamp_v6_active = True
+        logger.info(
+            "passthrough: MSS clamp-to-PMTU active on %s (v4+v6)",
+            self._wwan_iface, extra=self._log_extra,
+        )
+
+    async def _remove_mss_clamp(self) -> None:
+        if self._mss_clamp_v4_active:
+            await _run('iptables', '-t', 'mangle', '-D', 'FORWARD',
+                       '-o', self._wwan_iface,
+                       '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                       '-j', 'TCPMSS', '--clamp-mss-to-pmtu')
+            self._mss_clamp_v4_active = False
+        if self._mss_clamp_v6_active:
+            await _run('ip6tables', '-t', 'mangle', '-D', 'FORWARD',
+                       '-o', self._wwan_iface,
+                       '-p', 'tcp', '--tcp-flags', 'SYN,RST', 'SYN',
+                       '-j', 'TCPMSS', '--clamp-mss-to-pmtu')
+            self._mss_clamp_v6_active = False

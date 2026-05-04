@@ -54,7 +54,8 @@ interfaces
         │     ├── lease-time <30-600>                     # DHCP lease seconds (default: 60)
         │     ├── management-address <ipv4/prefix>        # FSM-provisioned mgmt v4 (default: 192.168.200.1/24; Policy B: skipped if 'interfaces ethernet <if> address' is set)
         │     ├── management-address-ipv6 <ipv6/prefix>   # FSM-provisioned mgmt v6 (default: fd00:6c61:6e30::1/64; same Policy B)
-        │     └── dns-server <ipv4|ipv6> (multi)          # override DNS advertised to downstream (precedence: user > carrier > 8.8.8.8/1.1.1.1)
+        │     ├── dns-server <ipv4|ipv6> (multi)          # override DNS advertised to downstream (precedence: user > carrier > 8.8.8.8/1.1.1.1)
+        │     └── disable-mss-clamp                       # valueless — turn off TCP MSS clamp-to-PMTU on WWAN egress (on by default)
         │
         ├── mirror                                        # packet mirroring
         │     ├── ingress <interface>
@@ -481,6 +482,14 @@ set interfaces wwan wwan0 ip-passthrough management-address-ipv6 'fd00:6c61:6e30
 set interfaces wwan wwan0 ip-passthrough dns-server '1.1.1.1'
 set interfaces wwan wwan0 ip-passthrough dns-server '9.9.9.9'
 set interfaces wwan wwan0 ip-passthrough dns-server '2606:4700:4700::1111'
+
+# Optional: disable TCP MSS clamp-to-PMTU on WWAN egress.
+#   Clamping is ON BY DEFAULT — this matches Cradlepoint/Peplink/Sierra/Digi
+#   passthrough behavior and transparently fixes oversized-TCP-segment drops
+#   for downstream clients that ignore DHCP option 26 / RA MTU. The clamp
+#   uses --clamp-mss-to-pmtu so it auto-tracks the bearer MTU dynamically.
+#   Only disable for PMTUD black-hole debugging.
+# set interfaces wwan wwan0 ip-passthrough disable-mss-clamp
 ```
 
 ### Packet Mirroring
