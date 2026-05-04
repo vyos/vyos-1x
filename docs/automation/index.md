@@ -1,4 +1,4 @@
-# VyOS Automation
+# VyOS automation
 
 ```{toctree}
 :maxdepth: 2
@@ -10,7 +10,6 @@ vyos-napalm
 vyos-netmiko
 vyos-salt
 command-scripting
-cloud-init
 vyos-pyvyos
 vyos-govyos
 ```
