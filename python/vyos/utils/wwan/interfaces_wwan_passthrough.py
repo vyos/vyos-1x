@@ -212,6 +212,20 @@ class PassthroughManager:
         self._inbound_v4_addr: Optional[str] = None
         self._inbound_v6_addr: Optional[str] = None
 
+        # Shadow addresses on the LAN interface from the carrier subnet.
+        # dnsmasq will only serve a dhcp-range whose network overlaps an
+        # address present on the listening interface.  Since the carrier
+        # IP itself is leased to the downstream device (and lives on
+        # wwan<N>), the LAN port has no address in the carrier subnet
+        # otherwise — dnsmasq refuses with "no address range available".
+        # We attach an unused host from the carrier /30 (v4) and a single
+        # address from the carrier /64 (v6) with `noprefixroute` so the
+        # kernel does NOT auto-create a competing connected route that
+        # would steal the carrier-gateway next-hop from wwan<N>.
+        # Stored as 'addr/prefix' strings for symmetric add/del.
+        self._shadow_v4: Optional[str] = None  # e.g. '10.64.179.125/30'
+        self._shadow_v6: Optional[str] = None  # e.g. '2605:b100:112:136c::1/64'
+
         RUN_DIR.mkdir(parents=True, exist_ok=True)
 
     # ── path helpers ────────────────────────────────────────────────────
@@ -277,6 +291,14 @@ class PassthroughManager:
         # Ensure mgmt address is on the LAN interface (Policy B).
         await self._ensure_mgmt_address()
 
+        # Attach shadow addresses from the carrier subnets so dnsmasq
+        # finds a matching network for its dhcp-range.  Without this,
+        # dnsmasq logs "no address range available" and silently drops
+        # every DHCP/DHCPv6 request.
+        await self._ensure_shadow_addrs(
+            carrier_v4, carrier_v6, carrier_v6_prefix,
+        )
+
         # Render dnsmasq config + (re)start.
         await self._write_dnsmasq_conf(
             carrier_v4, carrier_v6, carrier_v6_prefix,
@@ -334,6 +356,7 @@ class PassthroughManager:
         and the policy-routing entries used for inbound forwarding."""
         await self._stop_dnsmasq()
         await self._remove_mgmt_address()
+        await self._remove_shadow_addrs()
         await self._unblock_v4_saddr(self._last_v4)
         await self._unblock_v6_saddr(self._last_v6)
         await self._remove_inbound_route_v4(self._inbound_v4_addr)
@@ -436,6 +459,32 @@ class PassthroughManager:
             # routing for any v6 destination inside that /64.
             v6_pool = f"{carrier_v6},{carrier_v6},128,{lease}"
             lines.append(f"dhcp-range=set:passthru6,{v6_pool}")
+            # IA_PD — offer the carrier prefix to downstream routers that
+            # request it (RFC 8415 §18.2.4: server only includes IA_PD if
+            # the client included one in its Solicit/Request, so plain hosts
+            # like Windows/Linux PCs never see this).  This matches the
+            # Cradlepoint NCOS "PD-Pass-Through" / Digi / current-Peplink
+            # behavior: a downstream router gets /128 + /N PD automatically;
+            # a single host gets only /128.
+            #
+            # The carrier prefix is delegated whole to whichever downstream
+            # device requests IA_PD.  We are free to hand out the entire
+            # carrier prefix because in passthrough mode the FSM keeps only
+            # /128 on wwan0 (point-to-point) — the prefix is not on-link
+            # anywhere on this box.  Even for /64 carriers (Bell, AT&T,
+            # most LTE) this works: the downstream router puts /128 on its
+            # WAN (from IA_NA) and the carrier /64 on its LAN (from IA_PD);
+            # IPv6 longest-prefix-match resolves the apparent overlap.  Only
+            # /128-from-carrier (no prefix at all) cannot be delegated.
+            if 0 < carrier_v6_prefix <= 64:
+                pd_net = ipaddress.ip_network(
+                    f"{carrier_v6}/{carrier_v6_prefix}", strict=False
+                )
+                pd_base = str(pd_net.network_address)
+                lines.append(
+                    f"dhcp-range=set:passthru6pd,{pd_base},{pd_base},"
+                    f"{carrier_v6_prefix},{lease}"
+                )
             lines.append("enable-ra")
             # ra-param=<if>,[mtu:N,]<interval>,<lifetime>
             # MTU advertised in RA — must match the bearer MTU or v6 PMTUD
@@ -484,7 +533,6 @@ class PassthroughManager:
             rc, _, err = await _run(
                 DNSMASQ,
                 f'--conf-file={self._conf_path()}',
-                '--keep-in-foreground=no',
             )
             if rc == 0:
                 break
@@ -576,6 +624,113 @@ class PassthroughManager:
             await _run('ip', '-6', 'addr', 'del', self.cfg.management_address_ipv6,
                        'dev', self.cfg.interface)
             self._mgmt_v6_added = False
+
+    # ── shadow addresses (dnsmasq dhcp-range matcher) ───────────────────
+    @staticmethod
+    def _pick_shadow_v4(carrier_v4: str) -> Optional[str]:
+        """Pick an unused host from the carrier /30 to attach to the LAN
+        interface so dnsmasq has a matching subnet for its dhcp-range.
+
+        Returns 'a.b.c.d/30' or None if a sensible peer cannot be found.
+        """
+        try:
+            net = ipaddress.ip_network(f'{carrier_v4}/30', strict=False)
+        except ValueError:
+            return None
+        carrier = ipaddress.ip_address(carrier_v4)
+        # /30 has exactly two host addresses (.net+1 and .net+2 in /30).
+        for host in net.hosts():
+            if host != carrier:
+                return f'{host}/{net.prefixlen}'
+        return None
+
+    @staticmethod
+    def _pick_shadow_v6(carrier_v6: str, prefix: int) -> Optional[str]:
+        """Pick a v6 host inside the carrier prefix for the LAN interface.
+
+        Uses the carrier-prefix network address + 1, unless that equals
+        the carrier IP, in which case + 2.  Returns 'addr/prefix' or None.
+        """
+        if not carrier_v6 or prefix <= 0 or prefix >= 128:
+            return None
+        try:
+            net = ipaddress.ip_network(f'{carrier_v6}/{prefix}', strict=False)
+        except ValueError:
+            return None
+        carrier = ipaddress.ip_address(carrier_v6)
+        cand = net.network_address + 1
+        if cand == carrier:
+            cand = net.network_address + 2
+        return f'{cand}/{net.prefixlen}'
+
+    async def _ensure_shadow_addrs(self, carrier_v4: Optional[str],
+                                   carrier_v6: Optional[str],
+                                   carrier_v6_prefix: int) -> None:
+        """Attach (or refresh) shadow addresses on the LAN interface.
+
+        Idempotent: if the desired shadow is already attached, no-op.  If
+        a stale shadow from a previous carrier IP is attached, replace it.
+        """
+        # ── v4 ──
+        want_v4 = self._pick_shadow_v4(carrier_v4) if carrier_v4 else None
+        if want_v4 != self._shadow_v4:
+            await self._remove_shadow_v4()
+            if want_v4:
+                rc, _, err = await _run(
+                    'ip', 'addr', 'add', want_v4,
+                    'dev', self.cfg.interface, 'noprefixroute',
+                )
+                if rc == 0:
+                    self._shadow_v4 = want_v4
+                    logger.info(
+                        "passthrough: shadow v4 %s on %s (dnsmasq subnet match)",
+                        want_v4, self.cfg.interface, extra=self._log_extra,
+                    )
+                else:
+                    logger.warning(
+                        "passthrough: failed to add shadow v4 %s on %s: %s",
+                        want_v4, self.cfg.interface, err.strip(),
+                        extra=self._log_extra,
+                    )
+
+        # ── v6 ──
+        want_v6 = (self._pick_shadow_v6(carrier_v6, carrier_v6_prefix)
+                   if carrier_v6 else None)
+        if want_v6 != self._shadow_v6:
+            await self._remove_shadow_v6()
+            if want_v6:
+                rc, _, err = await _run(
+                    'ip', '-6', 'addr', 'add', want_v6,
+                    'dev', self.cfg.interface, 'noprefixroute',
+                )
+                if rc == 0:
+                    self._shadow_v6 = want_v6
+                    logger.info(
+                        "passthrough: shadow v6 %s on %s (dnsmasq subnet match)",
+                        want_v6, self.cfg.interface, extra=self._log_extra,
+                    )
+                else:
+                    logger.warning(
+                        "passthrough: failed to add shadow v6 %s on %s: %s",
+                        want_v6, self.cfg.interface, err.strip(),
+                        extra=self._log_extra,
+                    )
+
+    async def _remove_shadow_v4(self) -> None:
+        if self._shadow_v4 and self.cfg.interface:
+            await _run('ip', 'addr', 'del', self._shadow_v4,
+                       'dev', self.cfg.interface)
+        self._shadow_v4 = None
+
+    async def _remove_shadow_v6(self) -> None:
+        if self._shadow_v6 and self.cfg.interface:
+            await _run('ip', '-6', 'addr', 'del', self._shadow_v6,
+                       'dev', self.cfg.interface)
+        self._shadow_v6 = None
+
+    async def _remove_shadow_addrs(self) -> None:
+        await self._remove_shadow_v4()
+        await self._remove_shadow_v6()
 
     # ── iptables saddr blocks (during IP swap) ──────────────────────────
     async def _block_v4_saddr(self, old_v4: Optional[str]) -> None:

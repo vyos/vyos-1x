@@ -394,9 +394,32 @@ set interfaces wwan wwan0 pd-reconciliation-interval 10
 >    DNS servers from the bearer's `Ip4Config` are advertised via DHCP
 >    option 6 (with `8.8.8.8/1.1.1.1` as a last-resort fallback if the
 >    bearer didn't provide any).
-> 3. **DHCPv6 IA_NA + RA (M=1, O=1)** offers the carrier IPv6 (`/128`) to
+> 3. **DHCPv6 IA_NA + IA_PD + RA (M=1, O=1)** offers the carrier IPv6 to
 >    the same client.  RA advertises the FSM as the default gateway with
 >    DNS via option 23, again sourced from the bearer's `Ip6Config`.
+>    Both stateful options are always offered; per RFC 8415 §18.2.4 the
+>    server only returns an IA_PD if the client requested one, so the
+>    behavior is fully automatic:
+>
+>    | Downstream device | What it asks for | What it gets |
+>    |---|---|---|
+>    | Windows / Linux / macOS PC | IA_NA only | Carrier `/128` + RA + DNS |
+>    | OpenWrt / pfSense / VyOS / Cradlepoint | IA_NA + IA_PD | Carrier `/128` + carrier prefix as PD + RA + DNS |
+>
+>    IA_PD is emitted whenever the carrier delivers any prefix `/64` or
+>    shorter.  Common cases:
+>
+>    | Carrier prefix | What gets delegated | Typical case |
+>    |---|---|---|
+>    | `/56`, `/60` | Whole carrier prefix as one PD | Enterprise / fixed-wireless |
+>    | `/64` | Whole `/64` as one PD | Most LTE / 5G mobile (Bell, AT&T, Verizon) |
+>    | `/128` (no prefix) | None — IA_NA only | Carriers that hand out a single host |
+>
+>    For the `/64` case the downstream router puts the carrier `/128` on its
+>    WAN (from IA_NA) and the carrier `/64` on its LAN (from IA_PD); IPv6
+>    longest-prefix-match resolves the apparent overlap correctly.  This
+>    matches Cradlepoint NCOS "PD-Pass-Through", Digi TransPort, and
+>    Peplink 8.3+ behavior.
 > 4. **Inbound forwarding via policy routing** — the carrier IP stays
 >    bound to `wwanN` so the router itself still has a working source
 >    for outbound traffic (ModemManager probes, NTP, DNS, etc.).  Inbound
@@ -454,7 +477,9 @@ set interfaces wwan wwan0 pd-reconciliation-interval 10
 > **Restrictions:**
 >  - The designated interface must not be in a bridge or bond.
 >  - PD (`set interfaces wwan wwan0 pd ...`) is mutually exclusive with
->    passthrough — both consume the bearer's IPv6.
+>    passthrough — both consume the bearer's IPv6.  Use passthrough's
+>    built-in IA_PD (above) to delegate the carrier prefix to the
+>    downstream router instead.
 >  - The interface should be wired (not Wi-Fi) — DHCPFORCERENEW behaviour
 >    on wireless drivers is unreliable.
 
