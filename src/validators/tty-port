@@ -1,0 +1,13 @@
+#!/usr/bin/python3
+
+import sys
+from vyos.utils.serial import is_ttyS
+
+if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        if not is_ttyS(sys.argv[1]):
+            sys.exit(1)
+    else:
+        sys.exit(2)
+
+    sys.exit(0)
