@@ -41,6 +41,25 @@ vrf
 :::
 ```
 
+```{opcmd} ping tcp \<host\> port \<port\> [count \<n\>] [interface \<ifname\>] [vrf \<name\>] [source-address \<address\>]
+
+Test TCP connectivity to a destination host and port. This is useful when
+ICMP is blocked or when you need to verify that a specific TCP service is
+reachable.
+
+The `count` option sets the number of TCP connection attempts. Use
+`interface` to send probes through a specific interface, `vrf` to run
+the test in a VRF, and `source-address` to select the local source address.
+
+Example:
+
+:::{code-block} none
+vyos@vyos:~$ ping tcp 10.1.1.1 port 443 count 3
+vyos@vyos:~$ ping tcp example.com port 80 interface eth0
+vyos@vyos:~$ ping tcp 192.0.2.10 port 179 vrf CUSTOMER source-address 192.0.2.1
+:::
+```
+
 ```{opcmd} traceroute \<destination\>
 
 Trace path to target.
