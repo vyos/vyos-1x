@@ -256,8 +256,7 @@ def _format_status(status: dict, interface: str) -> str:
     lines.append(_kv('Quality:', f"{d['signal_percent']}%"))
     lines.append(_kv('Strength:', f"{d['signal_dbm']} dBm"))
     serving_band = status.get('serving_band', '')
-    if serving_band:
-        lines.append(_kv('Serving band:', serving_band))
+    lines.append(_kv('Serving band:', serving_band or 'unavailable'))
     bands = d['current_bands']
     if bands:
         lines.extend(_kv_wrapped('Enabled bands:', ', '.join(bands)))
@@ -351,17 +350,16 @@ def _format_signal(status: dict, interface: str) -> str:
     lines.append(_kv('RSRQ:', f"{d['rsrq']} dB" if d['rsrq'] != '' else ''))
     lines.append(_kv('SNR:', f"{d['snr']} dB" if d['snr'] != '' else ''))
 
-    if d['serving_band'] or d['serving_earfcn'] or d['serving_cell_id']:
-        lines.append(_section('Serving Cell'))
-        if d['serving_band']:
-            lines.append(_kv('Band:', d['serving_band']))
-        if d['serving_earfcn']:
-            label = 'EARFCN:' if d['serving_cell_type'] == 'lte' else 'ARFCN:'
-            lines.append(_kv(label, d['serving_earfcn']))
-        if d['serving_cell_id']:
-            lines.append(_kv('Cell ID:', d['serving_cell_id']))
-        if d['serving_tac']:
-            lines.append(_kv('TAC:', d['serving_tac']))
+    # Always render the Serving Cell section with placeholders so the
+    # field is discoverable even when ModemManager (< 1.22 with QMI)
+    # doesn't surface CellInfo data for the active modem.
+    lines.append(_section('Serving Cell'))
+    lines.append(_kv('Band:', d['serving_band'] or 'unavailable'))
+    cell_type = d.get('serving_cell_type', '') or ''
+    label = 'EARFCN:' if cell_type == 'lte' else 'ARFCN:'
+    lines.append(_kv(label, d['serving_earfcn'] or 'unavailable'))
+    lines.append(_kv('Cell ID:', d['serving_cell_id'] or 'unavailable'))
+    lines.append(_kv('TAC:', d['serving_tac'] or 'unavailable'))
 
     bands = d['current_bands']
     if bands:
