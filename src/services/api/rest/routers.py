@@ -421,8 +421,8 @@ def _execute_configure_op(
                 section = c.section
 
             elif isinstance(c, BaseConfigSectionTreeModel):
-                mask = c.mask
-                config = c.config
+                mask_dict = c.mask
+                config_dict = c.config
 
             if isinstance(c, BaseConfigureModel):
                 if op == 'set':
@@ -448,9 +448,10 @@ def _execute_configure_op(
 
             elif isinstance(c, BaseConfigSectionTreeModel):
                 if op == 'set':
-                    session.set_section_tree(config)
+                    session.set_section_tree(config_dict)
                 elif op == 'load':
-                    session.load_section_tree(mask, config)
+                    config_tree = config.get_config_tree()
+                    session.load_section_tree(config_tree, mask_dict, config_dict)
                 else:
                     raise op_error
         # end for
