@@ -46,6 +46,11 @@ user {{ user }}
 {%     endfor %}
 {% endif %}
 
+{% if local_stratum is vyos_defined %}
+# Enable local reference mode
+local stratum {{ local_stratum }}
+{% endif %}
+
 # Allowed clients configuration
 {% if allow_client.address is vyos_defined %}
 {%     for address in allow_client.address %}

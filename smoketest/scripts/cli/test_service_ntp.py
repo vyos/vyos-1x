@@ -79,6 +79,18 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for pool in pools:
             self.assertIn(f'pool {pool} iburst', config)
 
+    def test_local_stratum_without_upstream_server(self):
+        stratum = '10'
+        network = '192.0.2.0/24'
+
+        self.cli_set(base_path + ['local-stratum', stratum])
+        self.cli_set(base_path + ['allow-client', 'address', network])
+        self.cli_commit()
+
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn(f'local stratum {stratum}', config)
+        self.assertIn(f'allow {network}', config)
+
     def test_clients(self):
         # Test the allowed-networks statement
         listen_address = ['127.0.0.1', '::1']
@@ -88,14 +100,6 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         networks = ['192.0.2.0/24', '2001:db8:1000::/64', '100.64.0.0', '2001:db8::ffff']
         for network in networks:
             self.cli_set(base_path + ['allow-client', 'address', network])
-
-        # Verify "NTP server not configured" verify() statement
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        servers = ['192.0.2.1', '192.0.2.2']
-        for server in servers:
-            self.cli_set(base_path + ['server', server])
 
         self.cli_commit()
 
