@@ -17,6 +17,7 @@
 #
 
 import os
+import sys
 import json
 import requests
 import urllib3
@@ -26,6 +27,9 @@ from typing import Optional, List, Tuple, Dict, Any
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.configtree import mask_inclusive
+from vyos.configtree import mask_exclusive
+from vyos.defaults import config_sync_exclusion_list
+from vyos.derivedtree import subtree_from_list_of_partial_paths
 from vyos.template import bracketize_ipv6
 
 
@@ -68,8 +72,9 @@ def post_request(
     return response
 
 
-
-def retrieve_config(sections: List[list[str]]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+def retrieve_config(
+    sections: List[list[str]], exclusions: List[list[str]]
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Retrieves the configuration from the local server.
 
     Args:
@@ -82,17 +87,31 @@ def retrieve_config(sections: List[list[str]]) -> Tuple[Dict[str, Any], Dict[str
             - config: The subtree of masked config data, as a dictionary.
     """
 
-    mask = ConfigTree('')
-    for section in sections:
-        mask.set(section)
-    mask_dict = json.loads(mask.to_json())
-
     config = Config()
     config_tree = config.get_config_tree()
-    masked = mask_inclusive(config_tree, mask)
+
+    # set inclusion mask
+    mask_in = ConfigTree('')
+    for section in sections:
+        mask_in.set(section)
+    mask_in_str = mask_in.write_internal_string()
+
+    ## set exclusion mask
+    # pass global settings, read at startup:
+    exclude_list = exclusions
+    # read local settings from Config
+    # ... exclude_list += ...
+    mask_ex = subtree_from_list_of_partial_paths(config_tree, exclude_list)
+    mask_ex_str = json.dumps(exclude_list)
+
+    masked = mask_inclusive(config_tree, mask_in)
+    masked = mask_exclusive(masked, mask_ex)
+
+    mask_dict = {'inclusive': mask_in_str, 'exclusive': mask_ex_str}
     config_dict = json.loads(masked.to_json())
 
     return mask_dict, config_dict
+
 
 def set_remote_config(
         address: str,
@@ -147,14 +166,19 @@ def is_section_revised(section: List[str]) -> bool:
     return is_node_revised(section)
 
 
-def config_sync(secondary_address: str,
-                secondary_key: str,
-                sections: List[list[str]],
-                mode: str,
-                secondary_port: int):
+def config_sync(
+    secondary_address: str,
+    secondary_key: str,
+    sections: List[list[str]],
+    mode: str,
+    secondary_port: int,
+    exclusions: List[list[str]],
+):
     """Retrieve a config section from primary router in JSON format and send it to
        secondary router
     """
+    # pylint: disable=too-many-arguments
+
     if not any(map(is_section_revised, sections)):
         return
 
@@ -163,7 +187,7 @@ def config_sync(secondary_address: str,
     )
 
     # Sync sections ("nat", "firewall", etc)
-    mask_dict, config_dict = retrieve_config(sections)
+    mask_dict, config_dict = retrieve_config(sections, exclusions)
     logger.debug(
         f"Retrieved config for sections '{sections}': {config_dict}")
 
@@ -181,7 +205,19 @@ if __name__ == '__main__':
     # Read configuration from file
     if not os.path.exists(CONFIG_FILE):
         logger.error(f"Post-commit: No config file '{CONFIG_FILE}' exists")
-        exit(0)
+        sys.exit()
+
+    try:
+        with open(config_sync_exclusion_list) as f:
+            exclude_list = json.load(f)
+    except FileNotFoundError:
+        logger.error(f"Exclusion list '{config_sync_exclusion_list}' not found")
+        sys.exit()
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error(
+            f"Failed to load config-sync exclusion list '{config_sync_exclusion_list}': {e}"
+        )
+        sys.exit()
 
     with open(CONFIG_FILE, 'r') as f:
         config_data = f.read()
@@ -198,7 +234,7 @@ if __name__ == '__main__':
 
     if not all([mode, secondary_address, secondary_key, sections]):
         logger.error("Missing required configuration data for config synchronization.")
-        exit(0)
+        sys.exit()
 
     # Generate list_sections of sections/subsections
     # [
@@ -212,4 +248,11 @@ if __name__ == '__main__':
         else:
             list_sections.append([section])
 
-    config_sync(secondary_address, secondary_key, list_sections, mode, secondary_port)
+    config_sync(
+        secondary_address,
+        secondary_key,
+        list_sections,
+        mode,
+        secondary_port,
+        exclude_list,
+    )
