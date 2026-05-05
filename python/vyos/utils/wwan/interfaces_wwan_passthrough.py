@@ -341,7 +341,7 @@ class PassthroughManager:
         if carrier_v4:
             await self._install_src_whitelist_v4(carrier_v4)
         if carrier_v6:
-            await self._install_src_whitelist_v6(carrier_v6)
+            await self._install_src_whitelist_v6(carrier_v6, carrier_v6_prefix)
 
         # TCP MSS clamping on WWAN egress — industry-standard fix for
         # downstream clients that ignore DHCP option 26 / RA MTU.
@@ -1007,7 +1007,8 @@ class PassthroughManager:
         await _run('iptables', '-X', chain)
         self._src_whitelist_v4_active = False
 
-    async def _install_src_whitelist_v6(self, carrier_v6: str) -> None:
+    async def _install_src_whitelist_v6(self, carrier_v6: str,
+                                        carrier_v6_prefix: int = 128) -> None:
         chain = self._src_chain_v6()
         if self._src_whitelist_v6_active:
             await _run('ip6tables', '-F', chain)
@@ -1016,13 +1017,27 @@ class PassthroughManager:
             await _run('ip6tables', '-I', 'FORWARD', '1',
                        '-i', self.cfg.interface, '-j', chain)
             self._src_whitelist_v6_active = True
-        await _run('ip6tables', '-A', chain, '-s', carrier_v6, '-j', 'RETURN')
+        # Whitelist the entire carrier prefix, not just the bearer's /128.
+        # Downstream clients (Windows/Linux/macOS/etc.) generate their own
+        # IID inside the /64 via SLAAC or DHCPv6 IA_NA, so any packet from
+        # an IID other than the bearer's would otherwise be dropped here.
+        # Cap prefix at /64 — anything shorter than that on the bearer is
+        # still treated as a /64 LAN scope for source filtering.
+        try:
+            net = ipaddress.ip_network(
+                f"{carrier_v6}/{min(int(carrier_v6_prefix), 64)}",
+                strict=False,
+            )
+            allowed_src = str(net)
+        except (ValueError, TypeError):
+            allowed_src = carrier_v6
+        await _run('ip6tables', '-A', chain, '-s', allowed_src, '-j', 'RETURN')
         # NDP / link-local must still be permitted for the LAN to function
         await _run('ip6tables', '-A', chain, '-s', 'fe80::/10', '-j', 'RETURN')
         await _run('ip6tables', '-A', chain, '-j', 'DROP')
         logger.info(
             "passthrough: v6 src whitelist active on %s — only %s + link-local permitted",
-            self.cfg.interface, carrier_v6, extra=self._log_extra,
+            self.cfg.interface, allowed_src, extra=self._log_extra,
         )
 
     async def _remove_src_whitelist_v6(self) -> None:
