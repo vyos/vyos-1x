@@ -20,6 +20,24 @@ function formDiv(id) {
 `
 }
 
+// Extract the snippet text from a code-block container while excluding the
+// injected .copyDiv button. On viewports below the breakpoint the visible
+// "Copy" label otherwise leaks into the clipboard via innerText.
+function extractSnippetText(container) {
+  if (!container) {
+    return ''
+  }
+  const preElement = container.querySelector('pre')
+  if (preElement) {
+    return preElement.innerText
+  }
+  // Fallback for any structure without a <pre>: clone the container,
+  // remove every .copyDiv, then read innerText off the clone.
+  const clone = container.cloneNode(true)
+  clone.querySelectorAll('.copyDiv').forEach((node) => node.remove())
+  return clone.innerText
+}
+
 $(document).ready(async function () {
   const codeSnippets = $(
     '.rst-content div[class^=highlight] div[class^=highlight], .rst-content pre.literal-block div[class^=highlight], .rst-content pre.literal-block div[class^=highlight]'
@@ -34,26 +52,31 @@ $(document).ready(async function () {
   copyButton.click(async ({
     currentTarget
   }) => {
-    // we obtain text and copy it
     const id = currentTarget.dataset.identifier
+    const divWithNeededId = $(`div[data-identifier='${id}']`)
+    // Read from the .copyDiv's parentElement (the inner .highlight div it was
+    // injected into via insertAdjacentHTML('beforeend', ...)) rather than
+    // currentTarget.offsetParent — offsetParent depends on CSS positioning
+    // and would walk past .highlight if its `position: relative` is ever
+    // dropped, picking up the wrong snippet.
+    const textToCopy = extractSnippetText(currentTarget.parentElement)
 
     try {
-      await navigator.clipboard.writeText(currentTarget.offsetParent.innerText)
+      await navigator.clipboard.writeText(textToCopy)
+      // Only flip the button into the success state when the write actually
+      // resolves — earlier versions showed "Copied!" even on failure.
+      divWithNeededId.addClass('copiedNotifier')
+      divWithNeededId.html('<span>Copied!</span>')
     } catch (error) {
-      console.log('Copiing text failed, please try again', {
-        error
-      })
+      console.error('Copying text failed, please try again', error)
+      divWithNeededId.addClass('copyFailedNotifier')
+      divWithNeededId.html('<span>Failed</span>')
     }
-
-    // we edit the copyDiv connected to copied text
-    const divWithNeededId = $(`div[data-identifier='${id}']`)
-    divWithNeededId.addClass('copiedNotifier')
-    divWithNeededId.html('<span>Copied!</span>')
 
     setTimeout(() => {
       divWithNeededId.html(innersOfCopyDiv)
       divWithNeededId.removeClass('copiedNotifier')
-
+      divWithNeededId.removeClass('copyFailedNotifier')
     }, 2000)
   })
 
@@ -64,4 +87,3 @@ $(document).ready(async function () {
   navbar.append(readTheDocsButton)
 
 });
-
