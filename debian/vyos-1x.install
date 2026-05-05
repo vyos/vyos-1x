@@ -33,6 +33,7 @@ usr/bin/vyos-commands-to-config
 usr/bin/vyos-hostsd-client
 usr/bin/igos-wwan-snmp-agent
 usr/bin/igos-wwan-snmp-traps
+usr/bin/vyos-op-run
 usr/lib
 usr/libexec/vyos/activate
 usr/libexec/vyos/completion
@@ -42,6 +43,7 @@ usr/libexec/vyos/op_mode
 usr/libexec/vyos/services
 usr/libexec/vyos/system
 usr/libexec/vyos/validators
+usr/libexec/vyos/validate-value
 usr/libexec/vyos/vyconf
 usr/libexec/vyos/*.py
 usr/libexec/vyos/*.sh

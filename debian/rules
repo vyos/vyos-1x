@@ -22,6 +22,7 @@ VYCONF_DEF := etc/vyos
 VYCONF_REFTREE_DIR := $(VYOS_LIBEXEC_DIR)/vyconf/reftree
 
 OCAML_DIR := /opt/opam/${OCAML_VERSION}
+VYOS_OCAML_TOOLS := src/ocaml/_build/install/default/bin
 
 MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 ACTIVATION_SCRIPTS_DIR := usr/libexec/vyos/activate
@@ -201,6 +202,14 @@ override_dh_auto_install: /usr/share/vyos/vyconf
 	cp $(OCAML_DIR)/bin/vyconf_cli $(DIR_LIBVYOSCONFIG)/$(VYCONF)
 	cp $(OCAML_DIR)/bin/vyconf_cli_compat $(DIR_LIBVYOSCONFIG)/$(VYCONF_BIN)
 	cp libvyosconfig/_build/libvyosconfig.so $(DIR_LIBVYOSCONFIG)/$(VYOS_LIB_DIR)/libvyosconfig.so.0
+
+	# OCaml binaries from former vyos-utils package
+	cp $(VYOS_OCAML_TOOLS)/numeric $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
+	cp $(VYOS_OCAML_TOOLS)/validate-value $(DIR)/$(VYOS_LIBEXEC_DIR)
+	cp $(VYOS_OCAML_TOOLS)/file-path $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
+	cp $(VYOS_OCAML_TOOLS)/url $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
+	cp $(VYOS_OCAML_TOOLS)/list_interfaces $(DIR)/$(VYOS_LIBEXEC_DIR)/completion
+	cp $(VYOS_OCAML_TOOLS)/vyos-op-run $(DIR)/$(VYOS_BIN_DIR)
 
 override_dh_installsystemd:
 	dh_installsystemd -pvyos-1x --name vyos-router vyos-router.service

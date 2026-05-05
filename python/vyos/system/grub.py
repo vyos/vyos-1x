@@ -16,13 +16,18 @@
 import platform
 
 from pathlib import Path
-from re import MULTILINE, compile as re_compile
+from re import MULTILINE
+from re import compile as re_compile
 from shutil import copy2
-from uuid import uuid5, NAMESPACE_URL, UUID
+from uuid import uuid5
+from uuid import NAMESPACE_URL
+from uuid import UUID
 
-from vyos.template import render
-from vyos.utils.process import cmd, rc_cmd
+from vyos.flavor import get_image_serial_console
 from vyos.system import disk
+from vyos.template import render
+from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 
 # Define variables
 GRUB_DIR_MAIN: str = '/boot/grub'
@@ -425,7 +430,7 @@ def set_console_type(console_type: str, root_dir: str = '') -> None:
     """Write default console type to GRUB configuration
 
     Args:
-        console_type (str): a default console type
+        console_type (str): GRUB default console type, e.g. tty, ttyS or ttyAMA
         root_dir (str, optional): an optional path to the root directory.
         Defaults to empty.
     """
@@ -437,10 +442,13 @@ def set_console_type(console_type: str, root_dir: str = '') -> None:
     vars_current['console_type'] = str(console_type)
     vars_write(vars_file, vars_current)
 
-def set_console_speed(console_speed: str, root_dir: str = '') -> None:
+def set_serial_console(console_type: str, console_num: str,
+                       console_speed: str, root_dir: str = '') -> None:
     """Write default console speed to GRUB configuration
 
     Args:
+        console_type (str): console device, e.g. 'ttyS' or 'ttyAMA'
+        console_num (str): console instance, e.g. '0'
         console_speed (str): default console speed
         root_dir (str, optional): an optional path to the root directory.
         Defaults to empty.
@@ -448,9 +456,13 @@ def set_console_speed(console_speed: str, root_dir: str = '') -> None:
     if not root_dir:
         root_dir = disk.find_persistence()
 
+    (default_type, default_num, default_speed) = get_image_serial_console()
+
     vars_file: str = f'{root_dir}/{CFG_VYOS_VARS}'
     vars_current: dict[str, str] = vars_read(vars_file)
-    vars_current['console_speed'] = str(console_speed)
+    vars_current['console_type'] = console_type if console_type else default_type
+    vars_current['console_num'] = console_num if console_num else default_num
+    vars_current['console_speed'] = console_speed if console_speed else default_speed
     vars_write(vars_file, vars_current)
 
 def set_kernel_cmdline_options(cmdline_options: str, version_name: str,

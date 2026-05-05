@@ -70,24 +70,24 @@ def apply(config_dict):
 
     for interface in list_diff(current_interfaces, sr_interfaces):
         # Disable processing of IPv6-SR packets
-        sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
+        sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_enabled'], '0')
 
     for interface, interface_config in sr.get('interface', {}).items():
         # Accept or drop SR-enabled IPv6 packets on this interface
         if 'srv6' in interface_config:
-            sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '1')
+            sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_enabled'], '1')
             # Define HMAC policy for ingress SR-enabled packets on this interface
             # It's a redundant check as HMAC has a default value - but better safe
             # then sorry
             tmp = dict_search('srv6.hmac', interface_config)
             if tmp == 'accept':
-                sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '0')
+                sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_require_hmac'], '0')
             elif tmp == 'drop':
-                sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '1')
+                sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_require_hmac'], '1')
             elif tmp == 'ignore':
-                sysctl_write(f'net.ipv6.conf.{interface}.seg6_require_hmac', '-1')
+                sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_require_hmac'], '-1')
         else:
-            sysctl_write(f'net.ipv6.conf.{interface}.seg6_enabled', '0')
+            sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_enabled'], '0')
 
     if config_dict and not is_systemd_service_running('vyos-configd.service'):
         FRRender().apply()

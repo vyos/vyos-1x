@@ -75,20 +75,20 @@ def apply(config_dict):
     # table_size has a default value - thus the key always exists
     size = int(dict_search('arp.table_size', opt))
     # Amount upon reaching which the records begin to be cleared immediately
-    sysctl_write('net.ipv4.neigh.default.gc_thresh3', size)
+    sysctl_write(['net', 'ipv4', 'neigh', 'default', 'gc_thresh3'], size)
     # Amount after which the records begin to be cleaned after 5 seconds
-    sysctl_write('net.ipv4.neigh.default.gc_thresh2', size // 2)
+    sysctl_write(['net', 'ipv4', 'neigh', 'default', 'gc_thresh2'], size // 2)
     # Minimum number of stored records is indicated which is not cleared
-    sysctl_write('net.ipv4.neigh.default.gc_thresh1', size // 8)
+    sysctl_write(['net', 'ipv4', 'neigh', 'default', 'gc_thresh1'], size // 8)
 
     # configure multipath
     tmp = dict_search('multipath.ignore_unreachable_nexthops', opt)
     value = '1' if (tmp != None) else '0'
-    sysctl_write('net.ipv4.fib_multipath_use_neigh', value)
+    sysctl_write(['net', 'ipv4', 'fib_multipath_use_neigh'], value)
 
     tmp = dict_search('multipath.layer4_hashing', opt)
     value = '1' if (tmp != None) else '0'
-    sysctl_write('net.ipv4.fib_multipath_hash_policy', value)
+    sysctl_write(['net', 'ipv4', 'fib_multipath_hash_policy'], value)
 
     # configure TCP options (defaults as of Linux 6.4)
     tmp = dict_search('tcp.mss.probing', opt)
@@ -101,15 +101,15 @@ def apply(config_dict):
     else:
         # Shouldn't happen
         raise ValueError("TCP MSS probing is neither 'on-icmp-black-hole' nor 'force'!")
-    sysctl_write('net.ipv4.tcp_mtu_probing', value)
+    sysctl_write(['net', 'ipv4', 'tcp_mtu_probing'], value)
 
     tmp = dict_search('tcp.mss.base', opt)
     value = '1024' if (tmp is None) else tmp
-    sysctl_write('net.ipv4.tcp_base_mss', value)
+    sysctl_write(['net', 'ipv4', 'tcp_base_mss'], value)
 
     tmp = dict_search('tcp.mss.floor', opt)
     value = '48' if (tmp is None) else tmp
-    sysctl_write('net.ipv4.tcp_mtu_probe_floor', value)
+    sysctl_write(['net', 'ipv4', 'tcp_mtu_probe_floor'], value)
 
     # During startup of vyos-router that brings up FRR, the service is not yet
     # running when this script is called first. Skip this part and wait for initial

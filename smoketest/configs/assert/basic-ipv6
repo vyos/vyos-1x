@@ -39,4 +39,5 @@ set system login user vyos authentication plaintext-password ''
 set system name-server '2001:db8::1'
 set system name-server '2001:db8::2'
 set system syslog local facility all level 'debug'
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'

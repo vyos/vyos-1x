@@ -1,0 +1,26 @@
+pull_request_rules:
+  - name: Label conflicting pull requests
+    description: Add a label to a pull request with conflict to spot it easily
+    conditions:
+      - conflict
+      - '-closed'
+    actions:
+      label:
+        toggle:
+          - conflicts
+
+commands_restrictions:
+  backport: &allowed
+    conditions:
+      - or:
+        - sender=@vyos/maintainers
+        - sender=vyosbot
+  copy: *allowed
+  dequeue: *allowed
+  queue: *allowed
+  rebase: *allowed
+  refresh: *allowed
+  requeue: *allowed
+  squash: *allowed
+  unqueue: *allowed
+  update: *allowed

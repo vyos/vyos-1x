@@ -38,8 +38,10 @@ from vyos.ifconfig import Section
 from vyos.logger import getLogger
 from vyos.template import render
 from vyos.utils.boot import boot_configuration_complete
-from vyos.utils.cpu import get_available_cpus
+from vyos.utils.convert import range_str_to_list
+from vyos.utils.convert import list_to_range_str
 from vyos.utils.dict import dict_search
+from vyos.utils.file import read_file
 from vyos.utils.kernel import check_kmod
 from vyos.utils.kernel import unload_kmod
 from vyos.utils.kernel import list_loaded_modules
@@ -62,7 +64,6 @@ from vyos.vpp.config_verify import (
     verify_vpp_buffers,
 )
 from vyos.vpp.config_resource_checks import memory
-from vyos.vpp.config_resource_checks.resource_defaults import default_resource_map
 from vyos.vpp.config_filter import iface_filter_eth
 from vyos.vpp.utils import EthtoolGDrvinfo
 from vyos.vpp.utils import cli_ethernet_with_vifs_ifaces
@@ -168,21 +169,27 @@ def _unload_module(module_name: str):
 
 
 def _configure_vpp_cpu_settings(config: dict):
-    """Configure VPP CPU settings: main-core, workers and skip-cores based on 'cpu-cores'"""
+    """Configure VPP CPU settings: main-core and corelist-workers based on 'cpu-cores'.
+
+    Reads the actually-isolated CPUs from the running kernel
+    (/sys/devices/system/cpu/isolated) and assigns:
+      - main_core: the first isolated CPU (index 0)
+      - corelist_workers: the next (cpu_cores - 1) isolated CPUs
+    """
     cpu_cores = int(config['settings']['resource_allocation']['cpu_cores'])
-    reserved_cpus = default_resource_map.get('reserved_cpu_cores')
+    # Use the system's actual isolated CPUs, not config values which may
+    # require a reboot to take effect
+    isolated = read_file('/sys/devices/system/cpu/isolated')
+    cpus_isolated = range_str_to_list(isolated)
 
-    # Get sorted list of available CPU IDs
-    available = sorted({cpu['cpu'] for cpu in get_available_cpus()})
+    if cpu_cores <= len(cpus_isolated):
+        # First isolated CPU is the VPP main thread; remaining are workers
+        config['settings']['cpu'] = {'main_core': str(cpus_isolated[0])}
 
-    if reserved_cpus < len(available):
-        main_core = available[reserved_cpus]  # first non-reserved CPU
-        config['settings']['cpu'] = {
-            'main_core': str(main_core),
-            'skip_cores': str(reserved_cpus),
-        }
         if cpu_cores > 1:
-            config['settings']['cpu']['workers'] = str(cpu_cores - 1)
+            config['settings']['cpu']['corelist_workers'] = list_to_range_str(
+                cpus_isolated[1:cpu_cores]
+            )
 
 
 def _normalize_buffers(config: dict):

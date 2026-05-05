@@ -12,12 +12,19 @@
           <help>Virtual Router Redundancy Protocol settings</help>
         </properties>
         <children>
-          <leafNode name="snmp">
+          <node name="snmp">
             <properties>
-              <valueless/>
               <help>Enable SNMP</help>
             </properties>
-          </leafNode>
+            <children>
+              <leafNode name="trap">
+                <properties>
+                  <valueless/>
+                  <help>Enable SNMP traps</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <node name="global-parameters">
             <properties>
               <help>VRRP global parameters</help>
@@ -160,6 +167,18 @@
                       <help>Health check script file</help>
                       <constraint>
                         <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Health check script timeout in seconds</help>
+                      <valueHelp>
+                        <format>u32</format>
+                        <description>Timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -383,6 +402,18 @@
                       <help>Health check script file</help>
                       <constraint>
                         <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="timeout">
+                    <properties>
+                      <help>Health check script timeout in seconds</help>
+                      <valueHelp>
+                        <format>u32</format>
+                        <description>Timeout in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
                       </constraint>
                     </properties>
                   </leafNode>

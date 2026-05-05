@@ -208,7 +208,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         # verify new configuration - only effective after reboot, but
         # a valid config file is sufficient
-        tmp = sysctl_read('net.netfilter.nf_conntrack_buckets')
+        tmp = sysctl_read(['net', 'netfilter', 'nf_conntrack_buckets'])
         self.assertIn(hash_size, tmp)
 
         # Test default value by deleting the configuration
@@ -219,7 +219,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         # verify new configuration - only effective after reboot, but
         # a valid config file is sufficient
-        tmp = sysctl_read('net.netfilter.nf_conntrack_buckets')
+        tmp = sysctl_read(['net', 'netfilter', 'nf_conntrack_buckets'])
         self.assertIn(hash_size_default, tmp)
 
     def test_conntrack_ignore(self):

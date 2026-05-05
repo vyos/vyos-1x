@@ -1,36 +1,15 @@
 #!/usr/bin/python3
 
 import sys
-import re
-from vyos.utils.serial import find_all_ttyS_devices
-
-def error(tty_range):
-    print(f'Error: {tty_range} is not a valid tty or tty range')
-    sys.exit(1)
+from vyos.utils.serial import is_valid_ttyS_range
 
 if __name__ == '__main__':
-    if len(sys.argv)>1:
-        tty_range = sys.argv[1]
-        if tty_range == "all":
+    if len(sys.argv) == 2:
+        if sys.argv[1] == 'all':
             sys.exit(0)
-        tty_max_num = int("".join(filter(str.isdigit, sorted(find_all_ttyS_devices(), key=lambda x: int(''.join(filter(str.isdigit, x))))[-1])))
 
-        if re.match('^ttyS[0-9]{1,5}-ttyS[0-9]{1,5}$', tty_range):
-            tty_start, tty_end = tty_range.split('-')
-
-            tty_start_num = int("".join(filter(str.isdigit, tty_start)))
-            tty_end_num = int("".join(filter(str.isdigit, tty_end)))
-
-            if tty_start_num > tty_end_num:
-                error(tty_range)
-            if tty_end_num > tty_max_num:
-                error(tty_range)
-        elif re.match('^ttyS[0-9]{1,5}$', tty_range):
-            if int("".join(filter(str.isdigit, tty_range))) > tty_max_num:
-                error(tty_range)
-        else:
-            error(tty_range)
-
+        if not is_valid_ttyS_range(tty_range=sys.argv[1]):
+            sys.exit(1)
     else:
         sys.exit(2)
 

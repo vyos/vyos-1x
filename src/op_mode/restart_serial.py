@@ -20,6 +20,8 @@ import vyos.opmode
 from vyos.utils.serial import restart_login_consoles as _restart_login_consoles
 from vyos.utils.serial import send_command_to_iolan
 from vyos.utils.serial import find_active_ttyS_devices
+from vyos.utils.serial import is_ttyS
+from vyos.utils.serial import is_valid_ttyS_range
 
 
 def restart_console(device_name: typing.Optional[str]):
@@ -35,6 +37,9 @@ def restart_serial_tty(device_name_start: typing.Optional[str], device_name_end:
     active_ttys = find_active_ttyS_devices()
 
     if device_name_end:
+        if not is_valid_ttyS_range(tty_start=device_name_start, tty_end=device_name_end):
+            return False
+
         ttynum_end = int(re.findall(r'\d+', device_name_end)[0])
         ttynum_start = int(re.findall(r'\d+', device_name_start)[0])
         if ttynum_end < ttynum_start:
@@ -42,16 +47,18 @@ def restart_serial_tty(device_name_start: typing.Optional[str], device_name_end:
         for i in range(ttynum_start, ttynum_end + 1):
             if f'ttyS{i}' in active_ttys:
                 send_command_to_iolan('relaunch', f'ttyS{i}')
-            _restart_login_consoles(prompt_user=True, quiet=False, devices=[f'ttyS{i}'])
+            # _restart_login_consoles(prompt_user=True, quiet=False, devices=[f'ttyS{i}'])
     else:
         if device_name_start:
+            if not is_ttyS(device_name_start):
+                return False
             if device_name_start in active_ttys:
                 send_command_to_iolan('relaunch', device_name_start)
-            _restart_login_consoles(prompt_user=True, quiet=False, devices=[device_name_start])
+            # _restart_login_consoles(prompt_user=True, quiet=False, devices=[device_name_start])
         else:
             for device in active_ttys:
                 send_command_to_iolan('relaunch', device)
-            _restart_login_consoles(prompt_user=True, quiet=False)
+            # _restart_login_consoles(prompt_user=True, quiet=False)
 
 if __name__ == '__main__':
     try:

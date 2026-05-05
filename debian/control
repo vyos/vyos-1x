@@ -75,7 +75,6 @@ Depends:
   vyatta-biosdevname,
   vyatta-cfg,
   vyos-http-api-tools,
-  vyos-utils,
 ## End of Fundamentals
 ## Python libraries used in multiple modules and scripts
   python3,

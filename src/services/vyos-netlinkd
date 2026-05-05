@@ -50,7 +50,7 @@ def sigterm_handler(signo, frame):
     sig = signal.Signals(signo)
     syslog.syslog(syslog.LOG_INFO, f'Received signal {sig.name} - shutting down...')
 
-def _handle_dhcp_events(config_dict: dict, operstate: Optional[str], ifname: str) -> None:
+def _handle_dhcp_events(operstate: Optional[str], ifname: str) -> None:
     systemdV4_service = f'dhclient@{ifname}.service'
     systemdV6_service = f'dhcp6c@{ifname}.service'
 
@@ -70,6 +70,11 @@ def _handle_dhcp_events(config_dict: dict, operstate: Optional[str], ifname: str
     elif operstate == 'UP':
         v6_restart = False
         interface_path = Section.get_config_path(ifname, delimiter='.')
+
+        config_dict = op_mode_config_dict(
+            ['interfaces'], key_mangling=('-', '_'), get_first_key=True
+        )
+
         if tmp := dict_search(f'{interface_path}.address', config_dict):
             # Always (re-)start the DHCP(v6) client service. If the DHCP(v6) client
             # is already running - which could happen if the interface is re-
@@ -123,10 +128,6 @@ def main():
                 while commit_in_progress():
                     sleep(0.250)
 
-                config_dict = op_mode_config_dict(['interfaces'],
-                                            key_mangling=('-', '_'),
-                                            get_first_key=True)
-
                 # Parse NETLINK message
                 match message['event']:
                     # Message received during interface creation or modification
@@ -146,7 +147,7 @@ def main():
                         if not match_iface(ifname):
                             continue
 
-                        _handle_dhcp_events(config_dict, operstate, ifname)
+                        _handle_dhcp_events(operstate, ifname)
 
                     # Deletion of a network link which has been previously added to the kernel
                     case 'RTM_DELLINK':

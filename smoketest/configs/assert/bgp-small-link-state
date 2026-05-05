@@ -1,0 +1,4 @@
+set protocols bgp neighbor 192.168.0.1 address-family link-state
+set protocols bgp parameters router-id '3.3.3.3'
+set protocols bgp system-as '65002'
+set protocols bgp neighbor 192.168.0.1 remote-as '65001'

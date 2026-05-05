@@ -22,9 +22,12 @@
 
 from vyos.ethtool import Ethtool
 from vyos.configtree import ConfigTree
-from vyos.system.image import is_live_boot
+from vyos.utils.activate import set_activation
+from vyos.utils.activate import is_first_installed_boot
+
 
 def activate(config: ConfigTree):
+    # pylint: disable=too-many-branches
     base = ['interfaces', 'ethernet']
 
     if not config.exists(base):
@@ -39,7 +42,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_generic_receive_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'gro'])
-        elif is_live_boot() and enabled and not fixed:
+        elif enabled and not fixed:
             config.set(base + [ifname, 'offload', 'gro'])
 
         # If GSO is enabled by the Kernel - we reflect this on the CLI. If GSO is
@@ -48,7 +51,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_generic_segmentation_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'gso'])
-        elif is_live_boot() and enabled and not fixed:
+        elif enabled and not fixed:
             config.set(base + [ifname, 'offload', 'gso'])
 
         # If LRO is enabled by the Kernel - we reflect this on the CLI. If LRO is
@@ -57,7 +60,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_large_receive_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'lro'])
-        elif is_live_boot() and enabled and not fixed:
+        elif enabled and not fixed:
             config.set(base + [ifname, 'offload', 'lro'])
 
         # If SG is enabled by the Kernel - we reflect this on the CLI. If SG is
@@ -66,7 +69,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_scatter_gather()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'sg'])
-        elif is_live_boot() and enabled and not fixed:
+        elif enabled and not fixed:
             config.set(base + [ifname, 'offload', 'sg'])
 
         # If TSO is enabled by the Kernel - we reflect this on the CLI. If TSO is
@@ -75,7 +78,7 @@ def activate(config: ConfigTree):
         enabled, fixed = eth.get_tcp_segmentation_offload()
         if configured and fixed:
             config.delete(base + [ifname, 'offload', 'tso'])
-        elif is_live_boot() and enabled and not fixed:
+        elif enabled and not fixed:
             config.set(base + [ifname, 'offload', 'tso'])
 
         # Remove deprecated UDP fragmentation offloading option
@@ -104,3 +107,8 @@ def activate(config: ConfigTree):
         if config.exists(flow_control_path):
             if not eth.check_flow_control():
                 config.delete(flow_control_path)
+
+
+def post_condition() -> None:
+    if is_first_installed_boot():
+        set_activation(__file__, 'off')

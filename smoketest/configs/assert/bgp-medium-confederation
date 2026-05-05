@@ -63,6 +63,7 @@ set protocols bgp peer-group WDC07v6 remote-as '670'
 set protocols bgp peer-group WDC07v6 update-source 'dum0'
 set protocols bgp system-as '670'
 set system config-management commit-revisions '200'
+set system console device ttyS0 kernel
 set system console device ttyS0 speed '115200'
 set system domain-name 'vyos.net'
 set system host-name 'vyos'

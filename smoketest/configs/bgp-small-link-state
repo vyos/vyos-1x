@@ -1,0 +1,104 @@
+interfaces {
+    dummy dum0 {
+        address "10.0.0.1/32"
+    }
+    ethernet eth0 {
+        address "dhcp"
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+    }
+    ethernet eth1 {
+        address "10.1.0.1/30"
+        description "r1 -> r2"
+    }
+    loopback lo {
+    }
+}
+protocols {
+    bgp {
+        neighbor 192.168.0.1 {
+            address-family {
+                link-state {
+                }
+            }
+            remote-as "65001"
+        }
+        parameters {
+            router-id "3.3.3.3"
+        }
+        system-as "65002"
+    }
+}
+service {
+    lldp {
+        interface all {
+        }
+        interface eth0 {
+            mode "disable"
+        }
+    }
+    ntp {
+        allow-client {
+            address "0.0.0.0/0"
+            address "::/0"
+        }
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+        server time3.vyos.net {
+        }
+    }
+    ssh {
+        disable-host-validation
+    }
+}
+system {
+    config-management {
+        commit-revisions "100"
+    }
+    conntrack {
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sip
+            sqlnet
+            tftp
+        }
+    }
+    host-name "r1"
+    login {
+        user vyos {
+            authentication {
+                encrypted-password "$6$MjV2YvKQ56q$QbL562qhRoyUu8OaqrXagicvcsNpF1HssCY06ZxxghDJkBCfSfTE/4FlFB41xZcd/HqYyVBuRt8Zyq3ozJ0dc."
+                plaintext-password ""
+                public-keys defaultkey {
+                    key "AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ=="
+                    type "ssh-rsa"
+                }
+            }
+        }
+    }
+    name-server "eth0"
+    syslog {
+        local {
+            facility all {
+                level "notice"
+            }
+            facility local7 {
+                level "debug"
+            }
+        }
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@6:broadcast-relay@1:cluster@2:config-management@1:conntrack@6:conntrack-sync@2:container@3:dhcp-relay@2:dhcp-server@11:dhcpv6-server@6:dns-dynamic@4:dns-forwarding@4:firewall@20:flow-accounting@3:https@7:ids@2:interfaces@34:ipoe-server@4:ipsec@14:isis@3:l2tp@9:lldp@3:mdns@1:monitoring@2:nat@8:nat66@3:nhrp@1:ntp@3:openconnect@3:openvpn@5:ospf@2:pim@1:policy@9:pppoe-server@12:pptp@5:qos@3:quagga@12:reverse-proxy@3:rip@1:rpki@2:salt@1:snmp@3:ssh@3:sstp@6:system@31:vpp@6:vrf@4:vrrp@4:vyos-accel-ppp@2:wanloadbalance@4:webproxy@2"
+// Release version: 1.5-rolling-202604141237

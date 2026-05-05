@@ -42,14 +42,14 @@
         <properties>
           <help>System serial interface name (ttyS)</help>
           <completionHelp>
-            <script>ls -1 /dev | grep ttyS</script>
+            <script>${vyos_completion_dir}/list_serial.py --selector all</script>
           </completionHelp>
           <valueHelp>
             <format>ttySxxx</format>
             <description>Regular serial interface</description>
           </valueHelp>
           <constraint>
-            <regex>(ttyS\d+)</regex>
+            <validator name="tty-port"/>
           </constraint>
         </properties>
         <children>
