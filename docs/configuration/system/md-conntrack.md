@@ -52,7 +52,7 @@ searching the connection tracking table faster. The hash table uses
 Set the maximum number of TCP half-open connections.
 ```
 
-```{cfgcmd} set system conntrack tcp loose \<enabled | disable\>
+```{cfgcmd} set system conntrack tcp loose \<enable | disable\>
 :defaultvalue:
 
 Policy to track previously established connections.
