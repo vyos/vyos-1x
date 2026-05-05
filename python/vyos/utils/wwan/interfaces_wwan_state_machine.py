@@ -10731,10 +10731,15 @@ class ModemStateMachine:
                         )
                     except (TypeError, ValueError):
                         bearer_mtu = 0
+                    try:
+                        v4_plen = int(bearer_ips.get('ipv4_prefix', 30) or 30)
+                    except (TypeError, ValueError):
+                        v4_plen = 30
                     await self._passthrough.apply(
                         carrier_v4=bearer_ips.get('ipv4'),
                         carrier_v6=bearer_ips.get('ipv6'),
                         carrier_v6_prefix=v6_plen,
+                        carrier_v4_prefix=v4_plen,
                         ipv4_dns=bearer_ips.get('ipv4_dns', []),
                         ipv6_dns=bearer_ips.get('ipv6_dns', []),
                         bearer_mtu=bearer_mtu or None,
