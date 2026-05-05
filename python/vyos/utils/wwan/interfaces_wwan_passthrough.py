@@ -445,12 +445,13 @@ class PassthroughManager:
                 lines.append(
                     f"dhcp-host={self.cfg.mac},{carrier_v4},set:{tag},{lease}"
                 )
-            else:
-                # First-MAC-wins: dnsmasq will hand out the single address in
-                # the range to whatever MAC asks first; subsequent MACs get NAK.
-                # Lock the lease via dhcp-ignore-names + max-leases
-                lines.append("dhcp-ignore-names")
-                lines.append("dhcp-lease-max=1")
+            # Note: do NOT set `dhcp-lease-max=1` here.  That option is
+            # global across the entire dnsmasq process and counts IPv4 +
+            # IPv6 IA_NA + IPv6 IA_PD leases together — with =1, once the
+            # downstream client takes the v6 NA lease, the v4 range reports
+            # "no leases left" and NAKs every DHCPDISCOVER.  First-MAC-wins
+            # for v4 is already naturally enforced by the single-IP
+            # dhcp-range above (start == end == carrier_v4).
             # Override DHCP options so the downstream device thinks it has the
             # carrier IP as a host (/32) with the router's mgmt IP as default.
             lines.append(f"dhcp-option=tag:{tag},1,255.255.255.255")     # netmask /32
