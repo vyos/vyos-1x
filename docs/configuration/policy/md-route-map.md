@@ -1,6 +1,6 @@
 # Route Map Policy
 
-Route map is a powerfull command, that gives network administrators a very
+Route map is a powerful command, that gives network administrators a very
 useful and flexible tool for traffic manipulation.
 
 ## Configuration

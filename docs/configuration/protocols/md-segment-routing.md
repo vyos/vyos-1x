@@ -91,7 +91,7 @@ the MPLS dataplane.
 
 A segment ID that contains an IP address prefix calculated by an IGP in the
 service provider core network. Prefix SIDs are globally unique, this value
-indentify it
+identify it
 ```
 
 
@@ -174,7 +174,7 @@ the MPLS dataplane.
 
 A segment ID that contains an IP address prefix calculated by an IGP in the
 service provider core network. Prefix SIDs are globally unique, this value
-indentify it
+identify it
 ```
 
 ```{cfgcmd} set protocols ospf segment-routing prefix \<address\> index \<no-php-flag | explicit-null| n-flag-clear\>

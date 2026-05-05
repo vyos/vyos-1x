@@ -410,9 +410,9 @@ i3-N305 CPU and 2x 25GbE!
 
 ### Cooling
 
-The device itself is passivly cooled, whereas the power supply has an active fan.
+The device itself is passively cooled, whereas the power supply has an active fan.
 Even if the main processor is powered off, the power supply fan is operating and
-the entire chassis draws 7.5W. During operation the chassis drew arround 38W.
+the entire chassis draws 7.5W. During operation the chassis drew around 38W.
 
 ### BIOS Settings
 

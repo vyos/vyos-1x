@@ -112,7 +112,7 @@ available. The use of PPKs in IKEv2 is described in {rfc}`8784`.
 .. cfgmod:: edit vpn authentication ppk <name>
 ```
 
-PPKs can be configued within VyOS under the `vpn ipsec authentication ppk`
+PPKs can be configured within VyOS under the `vpn ipsec authentication ppk`
 config.
 
 ```{eval-rst}
@@ -143,10 +143,10 @@ Optionally, you can require the use of PPK to have a successful connection.
 
 You can view the PPK column for information on if PPK is configured, and
 if it is in use. The output is in the format of `<configured> / <in use>`.
-The options for configured are none if not conifugred, opt if configured
+The options for configured are none if not configured, opt if configured
 but optional, and req is configured and required. The in use will show yes
 Possible values of the `configured` field are `none` if not
-conifgured, `opt` if configured but optional, and `req` is
+configured, `opt` if configured but optional, and `req` is
 configured and required. The in use will show yes
 
 ## Configuration IKE

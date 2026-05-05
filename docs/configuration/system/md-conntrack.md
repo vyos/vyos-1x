@@ -40,9 +40,9 @@ searching the connection tracking table faster. The hash table uses
 .. cfgcmd:: set system conntrack modules tftp
 
     Configure the connection tracking protocol helper modules.
-    All modules are enable by default.
+    All modules are enabled by default.
 
-    | Use `delete system conntrack modules` to deactive all modules.
+    | Use `delete system conntrack modules` to deactivate all modules.
     | Or, for example ftp, `delete system conntrack modules ftp`.
 ```
 
@@ -52,7 +52,7 @@ searching the connection tracking table faster. The hash table uses
 Set the maximum number of TCP half-open connections.
 ```
 
-```{cfgcmd} set system conntrack tcp loose \<enable | disable\>
+```{cfgcmd} set system conntrack tcp loose \<enabled | disable\>
 :defaultvalue:
 
 Policy to track previously established connections.

@@ -154,7 +154,7 @@ layout here corresponds to your access system.
 
 ## Performance
 
-As more and more routers run on Hypervisors, expecially with a {abbr}`NOS
+As more and more routers run on Hypervisors, especially with a {abbr}`NOS
 (Network Operating System)` as VyOS, it makes fewer and fewer sense to use
 static resource bindings like `smp-affinity` as present in VyOS 1.2 and
 earlier to pin certain interrupt handlers to specific CPUs.

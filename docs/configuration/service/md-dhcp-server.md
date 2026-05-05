@@ -209,7 +209,7 @@ level, i.e. for individual shared networks or subnets. See examples below.
 
 If set to ``enable`` on global level, updates for all scopes will be enabled,
 except if explicitly set to ``disable`` on the scope level. If set to ``disable``,
-updates will only be sent for scopes, where ``send-updates`` is explicity
+updates will only be sent for scopes, where ``send-updates`` is explicitly
 set to ``enable``.
 
 This model is followed for a few behavioral settings below: if the option is
@@ -579,7 +579,7 @@ NB: Kea (the DHCP server used by VyOS) is programmed to offer as many
 alternatives as it can to repeated DHCP Discover requests. Some operating
 systems (Notably Microsoft Windows) make multiple DHCP Discover requests before
 settling on an address. This particularly seems to happen when the DHCP server
-isn't set to authorative. This may explain why the address you espect isn't
+isn't set to authoritative. This may explain why the address you expect isn't
 being chosen. Wireshark is helpful in these situations.
 
 
@@ -1010,14 +1010,14 @@ A SNTP server address can be specified for DHCPv6 clients.
 To hand out individual prefixes to your clients the following configuration is
 used:
 
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> prefix-delegation prefix \<pd-prefix\> prefix-length \<lenght\>
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> prefix-delegation prefix \<pd-prefix\> prefix-length \<length\>
 
 Delegate prefixes from `<pd-prefix>` to clients in subnet `<prefix>`. Range
-is defined by `<lenght>` in bits, 32 to 64.
+is defined by `<length>` in bits, 32 to 64.
 ```
 
 
-```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> prefix-delegation prefix \<pd-prefix\> delegated-length \<lenght\>
+```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> prefix-delegation prefix \<pd-prefix\> delegated-length \<length\>
 
 Hand out prefixes of size `<length>` in bits from `<pd-prefix>` to clients
 in subnet `<prefix>` when the request for prefix delegation.
@@ -1030,7 +1030,7 @@ Exclude `<exclude-prefix>` from `<pd-prefix>`.
 ```
 ```{cfgcmd} set service dhcpv6-server shared-network-name \<name\> subnet \<prefix\> prefix-delegation prefix \<pd-prefix\> excluded-prefix-length \<length\>
 
-Define lenght of exclude prefix in `<pd-prefix>`.
+Define length of exclude prefix in `<pd-prefix>`.
 ```
 
 **Example:**

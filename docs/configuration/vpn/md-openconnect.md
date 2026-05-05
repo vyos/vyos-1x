@@ -156,7 +156,7 @@ Do you want to encrypt the private key with a passphrase? [y/N] N
 [edit]
 ```
 
-Each of the install command should be applied to the configuration and commited
+Each of the install commands should be applied to the configuration and committed
 before using under the openconnect configuration:
 
 ```none

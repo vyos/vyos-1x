@@ -375,7 +375,7 @@ used when you want to use the same AS number in your sites,
 but you can’t connect them directly.
 
    The number parameter (1-10) configures the amount of accepted
-   occurences of the system AS number in AS path.
+   occurrences of the system AS number in AS path.
 
    This command is only allowed for eBGP peers. It is not applicable
    for peer groups.

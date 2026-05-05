@@ -122,7 +122,7 @@ in our topology.
 set interface eth eth<N> address <IP ADDRESS/CIDR>
 
 # Static default route back to Core
-set procotols static route 0.0.0.0/0 next-hop <CORE IP ADDRESS>
+set protocols static route 0.0.0.0/0 next-hop <CORE IP ADDRESS>
 ```
 
 
@@ -779,7 +779,7 @@ B>* 10.0.0.0/24 [20/0] via 10.1.1.2, eth0 (vrf LAN1), weight 1, 00:45:28
 S>* 172.16.0.0/24 [1/0] via 172.16.2.2, eth1, weight 1, 00:45:32
 C>* 172.16.2.0/30 is directly connected, eth1, 00:45:39
 B>* 192.0.2.0/24 [20/0] via 10.2.2.2, eth3 (vrf Internet), weight 1, 00:45:24
-B>* 192.168.0.0/24 [20/0] via 192.168.3.2, eth2 (vrf Managment), weight 1, 00:45:27
+B>* 192.168.0.0/24 [20/0] via 192.168.3.2, eth2 (vrf Management), weight 1, 00:45:27
 B>* 198.51.100.0/24 [20/0] via 10.2.2.2, eth3 (vrf Internet), weight 1, 00:45:24
 
 # show ipv6 route vrf LAN2
@@ -787,7 +787,7 @@ B>* 198.51.100.0/24 [20/0] via 10.2.2.2, eth3 (vrf Internet), weight 1, 00:45:24
 C>* 2001:db8::2/127 is directly connected, eth1, 00:46:26
 B>* 2001:db8:0:1::/64 [20/0] via 2001:db8::1, eth0 (vrf LAN1), weight 1, 00:46:17
 S>* 2001:db8:0:2::/64 [1/0] via 2001:db8::3, eth1, weight 1, 00:46:21
-B>* 2001:db8:0:3::/64 [20/0] via 2001:db8::5, eth2 (vrf Managment), weight 1, 00:46:16
+B>* 2001:db8:0:3::/64 [20/0] via 2001:db8::5, eth2 (vrf Management), weight 1, 00:46:16
 B>* 2001:db8:1::/48 [20/0] via fe80::5200:ff:fe02:3, eth3 (vrf Internet), weight 1, 00:46:13
 B>* 2001:db8:2::/48 [20/0] via fe80::5200:ff:fe02:3, eth3 (vrf Internet), weight 1, 00:46:13
 C>* fe80::/64 is directly connected, eth1, 00:46:27

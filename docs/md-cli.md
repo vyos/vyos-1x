@@ -99,12 +99,12 @@ They should be used with extreme caution.
 \"Force\" commands force the system to perform an action that it might perform by itself at a later point.
 
 Examples:
-- `force arp request interface eth1 address 10.3.0.2` --- send a gratuitious ARP request.
+- `force arp request interface eth1 address 10.3.0.2` --- send a gratuitous ARP request.
 - `force root-partition-auto-resize` --- grow the root filesystem to the size of the system partition (this is also done on startup, but this command can do it without a reboot).
 
 #### execute
 
-\"Execute\" commands are for executing various diagnostic and auxilliary actions that the system would never perform by itself.
+\"Execute\" commands are for executing various diagnostic and auxiliary actions that the system would never perform by itself.
 
 Examples:
 - `execute wake-on-lan interface <intf> host <MAC>` --- send a Wake-On-LAN packet to a host.

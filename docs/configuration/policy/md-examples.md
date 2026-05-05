@@ -152,8 +152,8 @@ ISP's and VyOS router will respond from the same interface that the packet was
 received. Also, it used, if we want that one VPN tunnel to be through one
 provider, and the second through another.
 
-- `203.0.113.254` IP addreess on VyOS eth1 from ISP1
-- `192.168.2.254` IP addreess on VyOS eth2 from ISP2
+- `203.0.113.254` IP address on VyOS eth1 from ISP1
+- `192.168.2.254` IP address on VyOS eth2 from ISP2
 - `table 10` Routing table used for ISP1
 - `table 11` Routing table used for ISP2
 

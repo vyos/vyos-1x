@@ -162,7 +162,7 @@ to a single source IP e.g. the loopback interface.
 
 ```{cfgcmd} set service ipoe-server authentication radius source-address \<address\>
 
-Source IPv4 address used in all RADIUS server queires.
+Source IPv4 address used in all RADIUS server queries.
 ```
 
 :::{note}
@@ -244,7 +244,7 @@ in DM/CoA requests. Also DM/CoA server will bind to that address.
 
 ```{cfgcmd} set service ipoe-server authentication radius source-address \<address\>
 
-Source IPv4 address used in all RADIUS server queires.
+Source IPv4 address used in all RADIUS server queries.
 ```
 
 
@@ -292,7 +292,7 @@ will be allocated from a predefined IPv6 pool ``prefix`` whose name equals the a
 
 
 If the RADIUS server sends the attribute ``Delegated-IPv6-Prefix-Pool``, IPv6
-delegation pefix will be allocated from a predefined IPv6 pool ``delegate``
+delegation prefix will be allocated from a predefined IPv6 pool ``delegate``
 whose name equals the attribute value.
 
 
@@ -311,7 +311,7 @@ Define it in your RADIUS server.
 
 ```{cfgcmd} set service ipoe-server client-ipv6-pool \<IPv6-POOL-NAME\> prefix \<address\>  mask \<number-of-bits\>
 
-Use this comand to set the IPv6 address pool from which an IPoE client
+Use this command to set the IPv6 address pool from which an IPoE client
 will get an IPv6 prefix of your defined length (mask) to terminate the
 IPoE endpoint at their side. The mask length can be set from 48 to 128
 bit long, the default value is 64.
@@ -492,7 +492,7 @@ ipoe:
   delayed: 0
 ```
 
-## Toubleshooting
+## Troubleshooting
 
 ```none
 vyos@vyos:~$ show log ipoe-server

@@ -211,7 +211,7 @@ Set IPSec inbound match criterias, where:
 
 ```{cfgcmd} set policy route6 \<name\> rule \<n\> limit burst \<0-4294967295\>
 
-Set maximum number of packets to alow in excess of rate.
+Set maximum number of packets to allow in excess of rate.
 ```
 
 ```{cfgcmd} set policy route \<name\> rule \<n\> limit rate \<text\>
@@ -351,8 +351,8 @@ Match hop-limit parameter, where 'eq' stands for 'equal'; 'gt' stands for
 
 ### Actions
 
-When mathcing all patterns defined in a rule, then different actions can
-be made. This includes droping the packet, modifying certain data, or
+When matching all patterns defined in a rule, then different actions can
+be made. This includes dropping the packet, modifying certain data, or
 setting a different routing table.
 
 ```{cfgcmd} set policy route \<name\> rule \<n\> action drop

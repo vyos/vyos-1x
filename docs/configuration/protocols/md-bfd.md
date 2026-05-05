@@ -165,7 +165,7 @@ and use the gateway address as BFD peer destination address.
 ```{cfgcmd} set protocols static route \<subnet\> next-hop \<address\> bfd multi-hop source \<address\> profile \<profile\>
 
 Configure a static route for \<subnet\> using gateway \<address\>,
-use source address to indentify the peer when is multi-hop session
+use source address to identify the peer when is multi-hop session
 and the gateway address as BFD peer destination address.
 ```
 
@@ -178,7 +178,7 @@ and use the gateway address as BFD peer destination address.
 ```{cfgcmd} set protocols static route6 \<subnet\> next-hop \<address\> bfd multi-hop source \<address\> profile \<profile\>
 
 Configure a static route for \<subnet\> using gateway \<address\>,
-use source address to indentify the peer when is multi-hop session
+use source address to identify the peer when is multi-hop session
 and the gateway address as BFD peer destination address.
 ```
 

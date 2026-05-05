@@ -27,7 +27,7 @@ will be mandatorily defragmented.
 
 It is possible to use either Multicast or Unicast to sync conntrack traffic.
 Most examples below show Multicast, but unicast can be specified by using the
-"peer" keywork after the specified interface, as in the following example:
+"peer" keyword after the specified interface, as in the following example:
 
 {cfgcmd}`set service conntrack-sync interface eth0 peer 192.168.0.250`
 
@@ -100,8 +100,8 @@ Defaults to 225.0.0.50.
 
 ```{cfgcmd} set service conntrack-sync interface \<name\> peer \<address\>
 
-Peer to send unicast UDP conntrack sync entires to, if not using Multicast
-configuration from above above.
+Peer to send unicast UDP conntrack sync entries to, if not using Multicast
+configuration from above.
 ```
 
 
@@ -113,7 +113,7 @@ Queue size for syncing conntrack entries in MB.
 
 ```{cfgcmd} set service conntrack-sync disable-external-cache
 
-This diable the external cache and directly injects the flow-states into the
+This disables the external cache and directly injects the flow-states into the
 in-kernel Connection Tracking System of the backup firewall.
 ```
 

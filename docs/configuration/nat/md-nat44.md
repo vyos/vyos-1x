@@ -630,7 +630,7 @@ network to a source address provided by the ASP.
 
 Here we provide two examples on how to apply NAT Load Balance.
 
-First scenario: apply destination NAT for all HTTP traffic comming through
+First scenario: apply destination NAT for all HTTP traffic coming through
 interface eth0, and user 4 backends. First backend should received 30% of
 the request, second backend should get 20%, third 15% and the fourth 35%
 We will use source and destination address for hash generation.

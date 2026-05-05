@@ -41,7 +41,7 @@ own requirements.
 First, we need to configure the interfaces and bridges:
 
 ```none
-# Brige br0
+# Bridge br0
 set interfaces bridge br0 description 'Isolated L2 bridge'
 set interfaces bridge br0 member interface eth1
 set interfaces bridge br0 member interface eth2
@@ -133,7 +133,7 @@ And then create the custom rulesets:
 set firewall bridge name br0-pre rule 10 description 'Accept IPv6 traffic'
 set firewall bridge name br0-pre rule 10 action 'accept'
 set firewall bridge name br0-pre rule 10 ethernet-type 'ipv6'
-  # And drop everything else
+  # And drop everythingg else
 set firewall bridge name br0-pre default-action 'drop'
 
 ### br1 - br1-pre
@@ -149,7 +149,7 @@ set firewall bridge name br1-pre rule 10 log
 set firewall bridge name br1-pre rule 20 description 'Drop IPv6 traffic'
 set firewall bridge name br1-pre rule 20 action 'drop'
 set firewall bridge name br1-pre rule 20 ethernet-type 'ipv6'
-  # Accept everything else so it can be parsed later
+  # Accept everythingg else so it can be parsed later
 set firewall bridge name br1-pre default-action 'accept'
 
 ### br2 - br2-pre
@@ -157,7 +157,7 @@ set firewall bridge name br1-pre default-action 'accept'
 set firewall bridge name br2-pre rule 10 description 'Drop IPv6 traffic'
 set firewall bridge name br2-pre rule 10 action 'drop'
 set firewall bridge name br2-pre rule 10 ethernet-type 'ipv6'
-  # Accept everything else so it can be parsed later
+  # Accept everythingg else so it can be parsed later
 set firewall bridge name br2-pre default-action 'accept'
 ```
 
@@ -199,7 +199,7 @@ And the content of the custom rulesets:
 
 ```none
 ### br0 - br0-fwd
-  # Accept everything that wasn't dropped in prerouting
+  # Accept everythingg that wasn't dropped in prerouting
 set firewall bridge name br0-fwd default-action 'accept'
 
 ### br1 - br1-fwd
@@ -212,7 +212,7 @@ set firewall bridge name br1-fwd rule 20 description 'Accept ipv4 from host'
 set firewall bridge name br1-fwd rule 20 action 'accept'
 set firewall bridge name br1-fwd rule 20 source address '10.1.1.102'
 set firewall bridge name br1-fwd rule 20 state 'new'
-  # Drop everything else within the bridge:
+  # Drop everythingg else within the bridge:
 set firewall bridge name br1-fwd default-action 'drop'
 
 ### br2 - br2-fwd
@@ -245,7 +245,7 @@ set firewall bridge name br2-fwd rule 30 ethernet-type 'arp'
 set firewall bridge name br2-fwd rule 40 description 'Accept ipv4'
 set firewall bridge name br2-fwd rule 40 action 'accept'
 set firewall bridge name br2-fwd rule 40 ethernet-type 'ipv4'
-  # Drop everything else
+  # Drop everythingg else
 set firewall bridge name br2-fwd default-action 'drop'
 ```
 
@@ -259,7 +259,7 @@ router itself, to other local networks, and to the Internet.
 
 As a reminder, here's a link to the {doc}`firewall documentation
 </configuration/firewall/index>`, where you can find more information about
-the packet flow for traffic that comes from bridge layer and should be analized
+the packet flow for traffic that comes from bridge layer and should be analyzed
 by the IP firewall.
 
 Access to the router itself is controlled by the base chain `input`, and

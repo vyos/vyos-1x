@@ -11,7 +11,7 @@ but requires either a restart of the routing daemon, or a reboot of the system.
 Enable {abbr}`BMP (BGP Monitoring Protocol)` support.
 ```
 
-```{cfgcmd} set system frr descriptors \<numer\>
+```{cfgcmd} set system frr descriptors \<number\>
 
 This allows the operator to control the number of open file descriptors
 each daemon is allowed to start with. If the operator plans to run bgp with
