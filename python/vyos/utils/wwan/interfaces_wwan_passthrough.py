@@ -697,17 +697,33 @@ class PassthroughManager:
     async def _apply_passthrough_sysctls(self) -> None:
         """Apply ARP/rp_filter/forwarding tweaks for DOCSIS-style passthrough.
 
-        On VyOS defaults arp_filter=0, so the LAN port can answer ARPs for
-        the carrier IP (it has a route via wwan<N>), confusing the carrier's
-        PGW probe.  rp_filter=1 (strict) on wwan<N> can drop the carrier
-        gateway's reply if reverse-path picks the LAN port.  Forwarding
-        must be on (globally for v4, and on both wwan/LAN for v6 since v6
-        forwarding is per-interface gated) so the policy-routing rule that
-        diverts inbound carrier-IP packets to the LAN actually forwards
-        them rather than dropping at the IP layer.  Use:
-          - LAN: arp_ignore=2, arp_announce=2 (only answer/announce for
-            primary address, never the shadow)
-          - wwan<N>: rp_filter=2 (loose) so reverse-path checks pass
+        Passthrough deliberately puts two unrelated subnets on the LAN
+        port: the mgmt prefix (e.g. 192.168.200.0/24) and the carrier
+        shadow prefix (e.g. 10.105.235.72/30 from the bearer's /30).
+        The downstream device gets the carrier IP with a /32 mask and
+        a DHCP option-121 host route to the mgmt gateway, then ARPs
+        for the mgmt gateway with src=<carrier-IP> — i.e. cross-subnet
+        relative to the LAN port's mgmt address.
+
+        Strict ARP defaults (arp_ignore=2, arp_filter=1, arp_announce=2)
+        cause the kernel to refuse to reply to that cross-subnet ARP,
+        which manifests as "destination host unreachable" on the
+        downstream client even though IPv6 (link-local next-hop) works.
+        Relax these on the LAN port:
+          - arp_ignore=0    (reply to any local-IP ARP regardless of src)
+          - arp_filter=0    (no per-route ARP suppression)
+          - arp_announce=0  (no strict source-IP selection)
+        rp_filter=1 (strict) on wwan<N> can drop the carrier gateway's
+        reply if reverse-path picks the LAN port; same risk on the LAN
+        port for the carrier-sourced inbound packets handed off via the
+        pref-12000 policy rule, so loosen both:
+          - LAN: rp_filter=2 (loose)
+          - wwan<N>: rp_filter=2 (loose)
+        Forwarding must be on (globally for v4, and on both wwan/LAN
+        for v6 since v6 forwarding is per-interface gated) so the
+        policy-routing rule that diverts inbound carrier-IP packets to
+        the LAN actually forwards them rather than dropping at the IP
+        layer:
           - v4: net.ipv4.ip_forward=1 (global)
           - v6: forwarding=1 on all, wwan<N>, and LAN (per-interface)
 
@@ -720,8 +736,10 @@ class PassthroughManager:
         if not self.cfg.interface:
             return
         keys = [
-            (f'net.ipv4.conf.{self.cfg.interface}.arp_ignore', '2'),
-            (f'net.ipv4.conf.{self.cfg.interface}.arp_announce', '2'),
+            (f'net.ipv4.conf.{self.cfg.interface}.arp_ignore', '0'),
+            (f'net.ipv4.conf.{self.cfg.interface}.arp_filter', '0'),
+            (f'net.ipv4.conf.{self.cfg.interface}.arp_announce', '0'),
+            (f'net.ipv4.conf.{self.cfg.interface}.rp_filter', '2'),
             (f'net.ipv4.conf.{self._wwan_iface}.rp_filter', '2'),
             ('net.ipv4.ip_forward', '1'),
             ('net.ipv6.conf.all.forwarding', '1'),
@@ -748,7 +766,9 @@ class PassthroughManager:
         # Fallback defaults if snapshot is missing for any key
         defaults = {
             f'net.ipv4.conf.{self.cfg.interface}.arp_ignore': '0',
+            f'net.ipv4.conf.{self.cfg.interface}.arp_filter': '0',
             f'net.ipv4.conf.{self.cfg.interface}.arp_announce': '0',
+            f'net.ipv4.conf.{self.cfg.interface}.rp_filter': '1',
             f'net.ipv4.conf.{self._wwan_iface}.rp_filter': '1',
         }
         for key, fallback in defaults.items():
