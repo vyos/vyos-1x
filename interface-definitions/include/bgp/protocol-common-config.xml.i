@@ -1719,7 +1719,6 @@
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>
     #include <include/bgp/neighbor-graceful-restart.xml.i>
-    #include <include/bgp/neighbor-graceful-restart.xml.i>
     #include <include/bgp/neighbor-local-as.xml.i>
     #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
