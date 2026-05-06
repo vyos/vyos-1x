@@ -256,11 +256,17 @@ def _write_llms_txt(app, exception):
     if exception is not None or app.builder.name not in (
             'html', 'readthedocs'):
         return
+    if not app.config.html_baseurl:
+        # Fail loudly rather than rendering /quick-start.html etc. as a
+        # silently-broken root-relative URL — every supported branch
+        # sets html_baseurl, so a missing value is a regression.
+        raise RuntimeError(
+            'html_baseurl must be set to render llms.txt')
     from pathlib import Path
     from jinja2 import Environment, StrictUndefined
     tpl_path = Path(app.srcdir) / '_templates' / 'llms.txt.j2'
     out_path = Path(app.outdir) / 'llms.txt'
-    baseurl = (app.config.html_baseurl or '').rstrip('/') + '/'
+    baseurl = app.config.html_baseurl.rstrip('/') + '/'
     # StrictUndefined: missing template variables raise rather than
     # silently render as empty strings, so a typo in llms.txt.j2 fails
     # the build instead of shipping a half-blank llms.txt.
