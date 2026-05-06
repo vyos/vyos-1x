@@ -61,6 +61,18 @@ $(document).ready(async function () {
     // dropped, picking up the wrong snippet.
     const textToCopy = extractSnippetText(currentTarget.parentElement)
 
+    // Clear any state class left over from a previous click so a rapid
+    // success-after-failure (or vice versa) doesn't end up with both
+    // classes applied at once.
+    divWithNeededId.removeClass('copiedNotifier copyFailedNotifier')
+
+    // Cancel a pending revert timeout from a previous click so the new
+    // click's 2-second window starts clean instead of being ended early.
+    const previousTimeout = divWithNeededId.data('revertTimeout')
+    if (previousTimeout) {
+      clearTimeout(previousTimeout)
+    }
+
     try {
       await navigator.clipboard.writeText(textToCopy)
       // Only flip the button into the success state when the write actually
@@ -73,11 +85,12 @@ $(document).ready(async function () {
       divWithNeededId.html('<span>Failed</span>')
     }
 
-    setTimeout(() => {
+    const revertTimeout = setTimeout(() => {
       divWithNeededId.html(innersOfCopyDiv)
-      divWithNeededId.removeClass('copiedNotifier')
-      divWithNeededId.removeClass('copyFailedNotifier')
+      divWithNeededId.removeClass('copiedNotifier copyFailedNotifier')
+      divWithNeededId.removeData('revertTimeout')
     }, 2000)
+    divWithNeededId.data('revertTimeout', revertTimeout)
   })
 
   // we edit the button that is added by readthedocs portal
