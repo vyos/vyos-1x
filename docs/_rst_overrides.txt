@@ -1,0 +1,7 @@
+# RST override list
+# One page stem per line (relative to docs/, no extension)
+# Pages listed here will render from rst-<stem>.rst INSTEAD of <stem>.md at build time.
+#
+# Default behaviour: every page builds from its .md primary. Add a stem here
+# only if you specifically want the legacy RST version to render for that page.
+# Initially empty — MD is canonical for all migrated pages.
