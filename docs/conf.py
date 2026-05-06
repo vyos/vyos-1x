@@ -218,7 +218,8 @@ def _prefer_webp(app):
 
 
 def _write_llms_txt(app, exception):
-    if exception is not None or app.builder.name != 'html':
+    if exception is not None or app.builder.name not in (
+            'html', 'dirhtml', 'readthedocs'):
         return
     from pathlib import Path
     from jinja2 import Template
