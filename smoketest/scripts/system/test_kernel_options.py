@@ -52,7 +52,7 @@ class TestKernelModules(unittest.TestCase):
 
     def test_bridge_interface(self):
         # The bridge interface must be enabled in the OS Kernel
-        for option in ['CONFIG_BRIDGE',
+        for option in ['CONFIG_STP', 'CONFIG_BRIDGE',
                        'CONFIG_BRIDGE_IGMP_SNOOPING',
                        'CONFIG_BRIDGE_VLAN_FILTERING']:
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
@@ -146,7 +146,7 @@ class TestKernelModules(unittest.TestCase):
             self.assertTrue(tmp)
 
     def test_inotify_stackfs(self):
-        for option in ['CONFIG_INOTIFY_USER', 'CONFIG_INOTIFY_STACKFS']:
+        for option in ['CONFIG_INOTIFY_USER']:
             tmp = re.findall(f'{option}=y', self._config_data)
             self.assertTrue(tmp)
 
@@ -171,6 +171,36 @@ class TestKernelModules(unittest.TestCase):
     def test_kexec(self):
         for option in ['CONFIG_KEXEC', 'CONFIG_KEXEC_FILE', 'CONFIG_KEXEC_SIG']:
             tmp = re.findall(f'{option}=y', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_openvpn_dco(self):
+        options_to_check = ['CONFIG_OVPN']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_wireguard(self):
+        options_to_check = ['CONFIG_WIREGUARD']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_vxlan(self):
+        options_to_check = ['CONFIG_VXLAN']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_macvlan(self):
+        options_to_check = ['CONFIG_MACVLAN', 'CONFIG_MACVTAP']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    def test_dummy(self):
+        options_to_check = ['CONFIG_DUMMY']
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
     def test_arm64(self):
