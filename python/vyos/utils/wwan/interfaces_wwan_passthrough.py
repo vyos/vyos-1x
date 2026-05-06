@@ -304,6 +304,17 @@ class PassthroughManager:
             await self._flush_conntrack_v6(self._last_v6)
             await self._remove_inbound_route_v6(self._last_v6)
 
+        # Force the LAN interface admin-up before anything else: dnsmasq
+        # with --bind-interfaces refuses to start on a DOWN netdev, and
+        # `ip addr add` for the shadow / mgmt address fails silently if
+        # the kernel netdev was never set up.
+        await self._ensure_lan_link_up()
+
+        # Apply ARP / rp_filter sysctls so the LAN port and wwan<N> do
+        # not fight over the carrier IP (LAN-side ARP must be silent for
+        # the carrier subnet; wwan<N> reverse-path must be permissive).
+        await self._apply_passthrough_sysctls()
+
         # Ensure mgmt address is on the LAN interface (Policy B).
         await self._ensure_mgmt_address()
 
@@ -331,7 +342,7 @@ class PassthroughManager:
         if carrier_v4:
             await self._install_inbound_route_v4(carrier_v4)
         if carrier_v6:
-            await self._install_inbound_route_v6(carrier_v6)
+            await self._install_inbound_route_v6(carrier_v6, carrier_v6_prefix)
 
         # Install / refresh the persistent source-address whitelist on
         # FORWARD: drops any traffic from the LAN port whose source is
@@ -382,6 +393,7 @@ class PassthroughManager:
         await self._remove_src_whitelist_v4()
         await self._remove_src_whitelist_v6()
         await self._remove_mss_clamp()
+        await self._restore_passthrough_sysctls()
         self._last_v4 = None
         self._last_v6 = None
         logger.info("passthrough: torn down on %s",
@@ -412,7 +424,11 @@ class PassthroughManager:
         lines.append("quiet-dhcp6")
         lines.append("quiet-ra")
         lines.append("dhcp-authoritative")
-        # enable Reconfigure for v6 and FORCERENEW awareness for v4
+        # 2-message DHCP exchange (RFC 4039 v4 rapid-commit + RFC 8415
+        # §5.1 v6 rapid-commit).  Speeds up the initial handshake when the
+        # downstream client also supports it.  Note: this is unrelated to
+        # DHCPFORCERENEW (RFC 3203) / DHCPv6 Reconfigure (RFC 8415
+        # §18.2.11), which are emitted out-of-band on IP change.
         lines.append("dhcp-rapid-commit")
         # Skip the ICMP-echo "is this address free?" check.  In passthrough
         # mode the carrier IP is bound to wwanN locally, so a ping from
@@ -483,36 +499,46 @@ class PassthroughManager:
 
         # ── DHCPv6 + RA ──
         if carrier_v6:
-            # Explicit /128 prefix-len: without it dnsmasq defaults to /64
-            # and the carrier prefix would be advertised as on-link, breaking
-            # routing for any v6 destination inside that /64.
-            v6_pool = f"{carrier_v6},{carrier_v6},128,{lease}"
-            lines.append(f"dhcp-range=set:passthru6,{v6_pool}")
-            # IA_PD — offer the carrier prefix to downstream routers that
-            # request it (RFC 8415 §18.2.4: server only includes IA_PD if
-            # the client included one in its Solicit/Request, so plain hosts
-            # like Windows/Linux PCs never see this).  This matches the
-            # Cradlepoint NCOS "PD-Pass-Through" / Digi / current-Peplink
-            # behavior: a downstream router gets /128 + /N PD automatically;
-            # a single host gets only /128.
+            # DOCSIS-modem-equivalent IPv6 handoff:
             #
-            # The carrier prefix is delegated whole to whichever downstream
-            # device requests IA_PD.  We are free to hand out the entire
-            # carrier prefix because in passthrough mode the FSM keeps only
-            # /128 on wwan0 (point-to-point) — the prefix is not on-link
-            # anywhere on this box.  Even for /64 carriers (Bell, AT&T,
-            # most LTE) this works: the downstream router puts /128 on its
-            # WAN (from IA_NA) and the carrier /64 on its LAN (from IA_PD);
-            # IPv6 longest-prefix-match resolves the apparent overlap.  Only
-            # /128-from-carrier (no prefix at all) cannot be delegated.
+            #   * Carrier prefix ≤ /64 (the common case — Bell/AT&T/Verizon
+            #     LTE/5G all hand out /64): advertise the prefix in RA with
+            #     A=1 (SLAAC), exactly like a cable modem in passthrough.
+            #     Windows / macOS / Linux SLAAC themselves an address in
+            #     the carrier /64 and "just work" with no DHCPv6 dance.
+            #     dnsmasq's `slaac` mode also runs DHCPv6 IA_NA on the same
+            #     range for stateful clients (M=1).  The bearer's specific
+            #     /128 is still pinned via dhcp-host when a MAC is given.
+            #
+            #   * Carrier prefix == /128 (no prefix at all): IA_NA-only
+            #     fallback — there is no /64 to SLAAC into, so we hand out
+            #     just the bearer /128.
             if 0 < carrier_v6_prefix <= 64:
                 pd_net = ipaddress.ip_network(
                     f"{carrier_v6}/{carrier_v6_prefix}", strict=False
                 )
-                pd_base = str(pd_net.network_address)
+                prefix_base = str(pd_net.network_address)
+                # slaac mode: RA prefix info has A=1 (autonomous) + L=1 (on-link).
+                # dnsmasq additionally serves IA_NA from the same range so
+                # DHCPv6-only clients get a stateful lease.
                 lines.append(
-                    f"dhcp-range=set:passthru6pd,{pd_base},{pd_base},"
+                    f"dhcp-range=set:passthru6,{prefix_base},slaac,"
                     f"{carrier_v6_prefix},{lease}"
+                )
+                # IA_PD — offer the carrier prefix to downstream routers
+                # that request it (RFC 8415 §18.2.4: server only includes
+                # IA_PD if the client asked for one, so plain hosts like
+                # Windows/Linux PCs never see this).  Matches Cradlepoint
+                # NCOS "PD-Pass-Through" / Digi / current-Peplink behavior.
+                lines.append(
+                    f"dhcp-range=set:passthru6pd,{prefix_base},{prefix_base},"
+                    f"{carrier_v6_prefix},{lease}"
+                )
+            else:
+                # /128 carrier — IA_NA-only, no SLAAC possible
+                lines.append(
+                    f"dhcp-range=set:passthru6,{carrier_v6},{carrier_v6},"
+                    f"128,{lease}"
                 )
             lines.append("enable-ra")
             # ra-param=<if>,[mtu:N,]<ra-interval>,<router-lifetime>
@@ -632,6 +658,86 @@ class PassthroughManager:
             return False
         except PermissionError:
             return True
+
+    # ── LAN link-up + sysctls ──────────────────────────────────────────
+    async def _ensure_lan_link_up(self) -> None:
+        """Force the designated LAN interface admin-up.  No-op if already up."""
+        if not self.cfg.interface:
+            return
+        await _run('ip', 'link', 'set', 'dev', self.cfg.interface, 'up')
+
+    async def _apply_passthrough_sysctls(self) -> None:
+        """Apply ARP/rp_filter/forwarding tweaks for DOCSIS-style passthrough.
+
+        On VyOS defaults arp_filter=0, so the LAN port can answer ARPs for
+        the carrier IP (it has a route via wwan<N>), confusing the carrier's
+        PGW probe.  rp_filter=1 (strict) on wwan<N> can drop the carrier
+        gateway's reply if reverse-path picks the LAN port.  Forwarding
+        must be on (globally for v4, and on both wwan/LAN for v6 since v6
+        forwarding is per-interface gated) so the policy-routing rule that
+        diverts inbound carrier-IP packets to the LAN actually forwards
+        them rather than dropping at the IP layer.  Use:
+          - LAN: arp_ignore=2, arp_announce=2 (only answer/announce for
+            primary address, never the shadow)
+          - wwan<N>: rp_filter=2 (loose) so reverse-path checks pass
+          - v4: net.ipv4.ip_forward=1 (global)
+          - v6: forwarding=1 on all, wwan<N>, and LAN (per-interface)
+
+        Prior values are snapshotted into ``self._sysctl_saved`` so
+        teardown can restore them faithfully (admin may have had a
+        non-default global ip_forward setting).
+
+        Idempotent and best-effort — failures are logged but do not abort.
+        """
+        if not self.cfg.interface:
+            return
+        keys = [
+            (f'net.ipv4.conf.{self.cfg.interface}.arp_ignore', '2'),
+            (f'net.ipv4.conf.{self.cfg.interface}.arp_announce', '2'),
+            (f'net.ipv4.conf.{self._wwan_iface}.rp_filter', '2'),
+            ('net.ipv4.ip_forward', '1'),
+            ('net.ipv6.conf.all.forwarding', '1'),
+            (f'net.ipv6.conf.{self._wwan_iface}.forwarding', '1'),
+            (f'net.ipv6.conf.{self.cfg.interface}.forwarding', '1'),
+        ]
+        # Snapshot existing values so teardown is non-destructive
+        if not hasattr(self, '_sysctl_saved') or self._sysctl_saved is None:
+            self._sysctl_saved = {}
+        for key, _val in keys:
+            if key in self._sysctl_saved:
+                continue
+            rc, out, _err = await _run('sysctl', '-n', key)
+            if rc == 0:
+                self._sysctl_saved[key] = out.strip()
+        for key, val in keys:
+            await _run('sysctl', '-q', '-w', f'{key}={val}')
+
+    async def _restore_passthrough_sysctls(self) -> None:
+        """Best-effort: restore previously snapshotted sysctls on teardown."""
+        if not self.cfg.interface:
+            return
+        saved = getattr(self, '_sysctl_saved', None) or {}
+        # Fallback defaults if snapshot is missing for any key
+        defaults = {
+            f'net.ipv4.conf.{self.cfg.interface}.arp_ignore': '0',
+            f'net.ipv4.conf.{self.cfg.interface}.arp_announce': '0',
+            f'net.ipv4.conf.{self._wwan_iface}.rp_filter': '1',
+        }
+        for key, fallback in defaults.items():
+            val = saved.get(key, fallback)
+            await _run('sysctl', '-q', '-w', f'{key}={val}')
+        # For forwarding keys we only restore if we have a snapshot —
+        # otherwise leave the kernel as-is (don't risk turning off
+        # forwarding the admin had explicitly enabled).
+        for key in (
+            'net.ipv4.ip_forward',
+            'net.ipv6.conf.all.forwarding',
+            f'net.ipv6.conf.{self._wwan_iface}.forwarding',
+            f'net.ipv6.conf.{self.cfg.interface}.forwarding',
+        ):
+            if key in saved:
+                await _run('sysctl', '-q', '-w', f'{key}={saved[key]}')
+        self._sysctl_saved = {}
 
     # ── management address (Policy B) ───────────────────────────────────
     async def _ensure_mgmt_address(self) -> None:
@@ -899,6 +1005,19 @@ class PassthroughManager:
             return
         # Tear down any prior entry first
         await self._remove_inbound_route_v4(self._inbound_v4_addr)
+        # The kernel auto-creates `local <carrier_v4>/32 dev wwanN table
+        # local` when the FSM did `ip addr add` on wwan<N>.  The local
+        # table is consulted at pref 0 — *before* our rule at pref
+        # ~12000 — so without removing it every inbound packet for the
+        # carrier IP is delivered locally instead of being forwarded to
+        # the downstream device.  Drop the local entry; the address
+        # itself stays on wwan<N> so the kernel can still use it as a
+        # source for locally-originated traffic (ModemManager probes,
+        # NTP, carrier DNS, etc.).  Outbound source-selection does NOT
+        # consult the local table.
+        await _run('ip', '-4', 'route', 'del',
+                   'local', f'{carrier_v4}/32',
+                   'dev', self._wwan_iface, 'table', 'local')
         # Route in the per-FSM table
         await _run('ip', '-4', 'route', 'replace',
                    f'{carrier_v4}/32', 'dev', self.cfg.interface,
@@ -930,19 +1049,41 @@ class PassthroughManager:
         if self._inbound_v4_addr == carrier_v4:
             self._inbound_v4_addr = None
 
-    async def _install_inbound_route_v6(self, carrier_v6: str) -> None:
-        if self._inbound_v6_addr == carrier_v6:
+    async def _install_inbound_route_v6(self, carrier_v6: str,
+                                        carrier_v6_prefix: int = 128) -> None:
+        # DOCSIS-style: when the carrier delivers a usable prefix (≤ /64),
+        # route the WHOLE prefix to the LAN port — not just the bearer's
+        # /128.  Otherwise any address Windows / Linux / macOS SLAACs in
+        # the carrier /64 (which is the normal DOCSIS handoff behavior)
+        # would arrive on wwan<N> and be silently dropped because no /128
+        # entry matches.
+        if 0 < carrier_v6_prefix <= 64:
+            net = ipaddress.ip_network(
+                f"{carrier_v6}/{carrier_v6_prefix}", strict=False
+            )
+            target = f"{net.network_address}/{net.prefixlen}"
+        else:
+            target = f"{carrier_v6}/128"
+        if self._inbound_v6_addr == target:
             return
         await self._remove_inbound_route_v6(self._inbound_v6_addr)
+        # See v4 sibling for rationale: the kernel auto-installs
+        # `local <carrier_v6>/128 dev wwanN table local` when the FSM
+        # added the address; remove it so our pref-12000 rule actually
+        # diverts inbound traffic to the LAN port instead of being
+        # short-circuited by the local-table lookup at pref 0.
+        await _run('ip', '-6', 'route', 'del',
+                   'local', f'{carrier_v6}/128',
+                   'dev', self._wwan_iface, 'table', 'local')
         await _run('ip', '-6', 'route', 'replace',
-                   f'{carrier_v6}/128', 'dev', self.cfg.interface,
+                   target, 'dev', self.cfg.interface,
                    'table', str(self._table_id))
         await _run('ip', '-6', 'rule', 'add',
                    'priority', str(self._rule_prio),
                    'iif', self._wwan_iface,
-                   'to', f'{carrier_v6}/128',
+                   'to', target,
                    'lookup', str(self._table_id))
-        self._inbound_v6_addr = carrier_v6
+        self._inbound_v6_addr = target
         logger.info(
             "passthrough: inbound v6 route installed — %s arriving on %s → %s",
             carrier_v6, self._wwan_iface, self.cfg.interface,
@@ -950,15 +1091,19 @@ class PassthroughManager:
         )
 
     async def _remove_inbound_route_v6(self, carrier_v6: Optional[str]) -> None:
+        # carrier_v6 here is the cached *target* string, which may be
+        # either '<addr>/128' (legacy /128-only carriers) or
+        # '<prefix_base>/<plen>' (DOCSIS-style ≤/64 carriers).
         if not carrier_v6:
             return
+        target = carrier_v6 if '/' in carrier_v6 else f'{carrier_v6}/128'
         await _run('ip', '-6', 'rule', 'del',
                    'priority', str(self._rule_prio),
                    'iif', self._wwan_iface,
-                   'to', f'{carrier_v6}/128',
+                   'to', target,
                    'lookup', str(self._table_id))
         await _run('ip', '-6', 'route', 'del',
-                   f'{carrier_v6}/128', 'dev', self.cfg.interface,
+                   target, 'dev', self.cfg.interface,
                    'table', str(self._table_id))
         if self._inbound_v6_addr == carrier_v6:
             self._inbound_v6_addr = None

@@ -108,27 +108,53 @@ def get_config(config=None):
         )
     wwan['_passthrough_conflicts'] = {}
     if pt_iface_lookup:
-        wwan['_passthrough_conflicts'] = {
-            'dhcp_server': conf.exists(
-                ['service', 'dhcp-server', 'shared-network-name']
-            ) and any(
-                conf.exists(['service', 'dhcp-server', 'shared-network-name',
-                             sn, 'subnet', s, 'default-router'])
-                or pt_iface_lookup in (conf.return_values(
-                    ['service', 'dhcp-server', 'shared-network-name', sn,
-                     'subnet', s, 'listen-interface']) or [])
-                for sn in (conf.list_nodes(
-                    ['service', 'dhcp-server', 'shared-network-name']) or [])
+        # dhcp-server conflict: only flag when *this* LAN interface is
+        # explicitly listed as a listen-interface for some subnet.  The
+        # previous predicate also matched any subnet that simply had
+        # `default-router` set (which is true on virtually every
+        # dhcp-server config) and produced false positives.
+        dhcp_conflict = False
+        if conf.exists(['service', 'dhcp-server', 'shared-network-name']):
+            for sn in (conf.list_nodes(
+                    ['service', 'dhcp-server', 'shared-network-name']) or []):
                 for s in (conf.list_nodes(
-                    ['service', 'dhcp-server', 'shared-network-name', sn,
-                     'subnet']) or [])
-            ),
+                        ['service', 'dhcp-server', 'shared-network-name',
+                         sn, 'subnet']) or []):
+                    listen = conf.return_values(
+                        ['service', 'dhcp-server', 'shared-network-name',
+                         sn, 'subnet', s, 'listen-interface']) or []
+                    if pt_iface_lookup in listen:
+                        dhcp_conflict = True
+                        break
+                if dhcp_conflict:
+                    break
+        # Bridge / bond membership conflict: a passthrough interface
+        # MUST be a standalone wired LAN port — a bind-interfaces dnsmasq
+        # cannot serve a slave of a bridge or bond.
+        bridge_master = None
+        for br in (conf.list_nodes(['interfaces', 'bridge']) or []):
+            members = conf.list_nodes(
+                ['interfaces', 'bridge', br, 'member', 'interface']) or []
+            if pt_iface_lookup in members:
+                bridge_master = br
+                break
+        bond_master = None
+        for bn in (conf.list_nodes(['interfaces', 'bonding']) or []):
+            members = conf.list_nodes(
+                ['interfaces', 'bonding', bn, 'member', 'interface']) or []
+            if pt_iface_lookup in members:
+                bond_master = bn
+                break
+        wwan['_passthrough_conflicts'] = {
+            'dhcp_server': dhcp_conflict,
             'dhcpv6_server': conf.exists(
                 ['service', 'dhcpv6-server', 'shared-network-name']
             ),
             'router_advert': conf.exists(
                 ['service', 'router-advert', 'interface', pt_iface_lookup]
             ),
+            'bridge_master': bridge_master,
+            'bond_master': bond_master,
         }
 
     # ── SNMP trap target lookup ──────────────────────────────────────
@@ -546,6 +572,18 @@ def verify(wwan):
                 "ip-passthrough conflicts with 'service router-advert' "
                 "on the same LAN interface — both would emit RAs.  "
                 "Disable one or the other."
+            )
+        if conflicts.get('bridge_master'):
+            raise ConfigError(
+                f"ip-passthrough interface is a member of bridge "
+                f"'{conflicts['bridge_master']}' — the designated LAN "
+                f"port must be a standalone wired interface."
+            )
+        if conflicts.get('bond_master'):
+            raise ConfigError(
+                f"ip-passthrough interface is a member of bond "
+                f"'{conflicts['bond_master']}' — the designated LAN "
+                f"port must be a standalone wired interface."
             )
 
     return None
