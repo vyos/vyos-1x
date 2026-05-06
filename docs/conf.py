@@ -115,6 +115,21 @@ html_extra_path = ['_html_extra']
 
 html_baseurl = 'https://docs.vyos.io/en/latest/'
 
+_rtd_version_type = os.environ.get('READTHEDOCS_VERSION_TYPE', '')
+_github_version = (
+    os.environ.get('READTHEDOCS_GIT_COMMIT_HASH', 'current')
+    if _rtd_version_type == 'external'
+    else os.environ.get('READTHEDOCS_GIT_IDENTIFIER', 'current')
+)
+
+html_context = {
+    'display_github': True,
+    'github_user': 'vyos',
+    'github_repo': 'vyos-documentation',
+    'github_version': _github_version,
+    'conf_py_path': '/docs/',
+}
+
 # sphinx-sitemap: baseurl already includes /en/latest/, so skip lang+version
 sitemap_url_scheme = '{link}'
 
