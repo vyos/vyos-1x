@@ -40,7 +40,7 @@ $(document).ready(async function () {
     try {
       await navigator.clipboard.writeText(currentTarget.offsetParent.innerText)
     } catch (error) {
-      console.log('Copiing text failed, please try again', {
+      console.log('Copying text failed, please try again', {
         error
       })
     }

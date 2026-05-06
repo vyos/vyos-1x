@@ -13,6 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import shutil
 import sys
 sys.path.append(os.path.abspath("./_ext"))
 
@@ -66,6 +67,9 @@ autosectionlabel_prefix_document = True
 # source_suffix = ['.rst', '.md']
 source_suffix = ['.rst', '.md']
 
+myst_enable_extensions = ["colon_fence", "deflist", "fieldlist", "substitution"]
+myst_fence_as_directive = ["cfgcmd", "opcmd", "cmdincludemd"]
+
 # The master toctree document.
 master_doc = 'index'
 
@@ -85,7 +89,17 @@ gettext_uuid = False
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x']
+exclude_patterns = [
+    u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x',
+    'rst-*.rst', '**/rst-*.rst',
+]
+
+import pathlib
+_build = pathlib.Path(__file__).parent / '_build'
+if (_build / '_rst_override_state.json').exists() and (_build / '_md_exclude.txt').exists():
+    exclude_patterns.extend(
+        s for s in (line.strip() for line in (_build / '_md_exclude.txt').read_text().splitlines()) if s
+    )
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -114,6 +128,21 @@ html_static_path = ['_static']
 html_extra_path = ['_html_extra']
 
 html_baseurl = 'https://docs.vyos.io/en/rolling/'
+
+_rtd_version_type = os.environ.get('READTHEDOCS_VERSION_TYPE', '')
+_github_version = (
+    os.environ.get('READTHEDOCS_GIT_COMMIT_HASH', 'current')
+    if _rtd_version_type == 'external'
+    else os.environ.get('READTHEDOCS_GIT_IDENTIFIER', 'current')
+)
+
+html_context = {
+    'display_github': True,
+    'github_user': 'vyos',
+    'github_repo': 'vyos-documentation',
+    'github_version': _github_version,
+    'conf_py_path': '/docs/',
+}
 
 # sphinx-sitemap: baseurl already includes /en/rolling/, so skip lang+version
 sitemap_url_scheme = '{link}'
@@ -244,6 +273,19 @@ def _write_llms_txt(app, exception):
     out_path.write_text(rendered, encoding='utf-8')
 
 
+def _copy_md_sources(app, exception):
+    """Copy .md source files verbatim into the HTML output tree."""
+    if exception is not None:
+        return
+    src = pathlib.Path(app.srcdir)
+    out = pathlib.Path(app.outdir)
+    for path in src.rglob("*.md"):
+        dest = out / path.relative_to(src)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+
+
 def setup(app):
     app.connect('builder-inited', _prefer_webp)
+    app.connect('build-finished', _copy_md_sources)
     app.connect('build-finished', _write_llms_txt)
