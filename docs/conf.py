@@ -91,14 +91,14 @@ gettext_uuid = False
 # This pattern also affects html_static_path and html_extra_path .
 exclude_patterns = [
     u'_build', 'Thumbs.db', '.DS_Store', '_include/vyos-1x',
-    'md-*.md', '**/md-*.md',
+    'rst-*.rst', '**/rst-*.rst',
 ]
 
 import pathlib
 _build = pathlib.Path(__file__).parent / '_build'
-if (_build / '_swap_state.json').exists() and (_build / '_swap_exclude.txt').exists():
+if (_build / '_rst_override_state.json').exists() and (_build / '_md_exclude.txt').exists():
     exclude_patterns.extend(
-        s for s in (line.strip() for line in (_build / '_swap_exclude.txt').read_text().splitlines()) if s
+        s for s in (line.strip() for line in (_build / '_md_exclude.txt').read_text().splitlines()) if s
     )
 
 # The name of the Pygments (syntax highlighting) style to use.
