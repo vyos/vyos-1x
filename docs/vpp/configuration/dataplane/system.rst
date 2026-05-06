@@ -9,6 +9,7 @@ VyOS Configuration for VPP
 ##########################
 
 .. _vpp_config_hugepages:
+.. _vpp-config-hugepages:
 
 Hugepages
 =========
