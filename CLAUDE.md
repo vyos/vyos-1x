@@ -31,18 +31,27 @@ Output: `docs/_build/html/`.
 
 ## Tests
 
+`tests/test_swap_sources.py` imports `swap_sources` from `scripts/`, which is
+not on `PYTHONPATH` by default. Run from the `tests/` directory:
+
 ```bash
-pytest tests/                      # all tests
-pytest tests/test_swap_sources.py  # single test file
+cd tests
+PYTHONPATH=../scripts python -m pytest                    # all tests
+PYTHONPATH=../scripts python -m pytest test_swap_sources.py  # single file
 ```
 
 ## Lint (vale)
 
 ```bash
+# Lint everything
 docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs \
   -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
-  vyos/vyos-documentation vale .              # all files
-docker run ... vale path/to/page.rst          # single file
+  vyos/vyos-documentation vale .
+
+# Lint a single file (substitute the real path)
+docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs \
+  -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
+  vyos/vyos-documentation vale path/to/page.rst
 ```
 
 ## Branches and versions
@@ -74,7 +83,7 @@ Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR t
 - MyST extensions: `colon_fence`, `deflist`, `fieldlist`, `substitution`.
 - `myst_fence_as_directive = ["cfgcmd", "opcmd", "cmdincludemd"]` — MyST fences with these names get parsed as if they were RST directives. This is how command pages stay format-portable.
 - Custom Sphinx extensions live in `docs/_ext/`:
-  - `vyos.py` — defines the `cfgcmd`, `opcmd`, `cmdinclude` directives that drive command coverage tracking.
+  - `vyos.py` — defines the `cfgcmd`, `opcmd`, `cmdinclude`, `cmdincludemd`, `cfgcmdlist`, and `opcmdlist` directives plus the `cfgcmd`/`opcmd` roles that drive command coverage tracking.
   - `testcoverage.py` — reads VyOS XML command definitions and exposes coverage stats.
   - `releasenotes.py`, `autosectionlabel.py` — release-notes builder and label-prefix tweak.
 
@@ -100,7 +109,7 @@ Running `make html` runs the swap automatically (it's a no-op when the override 
 
 ### Command directives
 
-`.. cfgcmd::`, `.. opcmd::`, and `.. cmdinclude::` are the VyOS-specific Sphinx directives. They are tracked for command coverage — do **not** convert them to plain `.. code-block::`. In MyST, the same directives are written as fenced blocks: ` ```{cfgcmd} set system ... ` (the `myst_fence_as_directive` config makes this work).
+`.. cfgcmd::`, `.. opcmd::`, and `.. cmdinclude::` are the VyOS-specific Sphinx directives in RST. They are tracked for command coverage — do **not** convert them to plain `.. code-block::`. In MyST the same directives are written as fenced blocks: ` ```{cfgcmd} set system ... ` (enabled by `myst_fence_as_directive`). The MyST include directive is named `cmdincludemd` (not `cmdinclude`) so that template parsing follows MyST rules in MD pages and RST rules in RST pages — pick `cmdinclude` in `.rst`, `cmdincludemd` in `.md`.
 
 ## Source conventions
 
@@ -153,7 +162,7 @@ Allowed MAC ranges: `00-53-00`–`00-53-FF` (unicast), `90-10-00`–`90-10-FF` (
 .. start_vyoslinter
 ```
 
-In MyST `.md` files use the comment form: `% stop_vyoslinter` / `% start_vyoslinter`. In `.txt` template files (included via `{include}` or `cmdincludemd`) keep the RST form: `.. stop_vyoslinter` / `.. start_vyoslinter`.
+In MyST `.md` files use the comment form `% stop_vyoslinter` / `% start_vyoslinter` for top-level Markdown content. Inside `{eval-rst}` blocks (where the embedded content is parsed as RST) keep the RST form `.. stop_vyoslinter` / `.. start_vyoslinter` — the linter scans the source line literally and only the form that matches the surrounding parser is recognized. Likewise, `.txt` template files (included via `{include}` or `cmdincludemd`) keep the RST form.
 
 Markers must always come in pairs. Indentation may match the surrounding directive (indented inside a block) or sit at column 0 (top-level) — both are valid.
 
