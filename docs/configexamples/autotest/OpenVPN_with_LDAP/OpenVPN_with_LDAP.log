@@ -373,7 +373,7 @@ See the timeout setting options in the Network Debug and Troubleshooting Guide.
 2023-05-11 14:39:54,941 p=69617 u=rob n=ansible | [WARNING]: To ensure idempotency and correct diff the input configuration lines should be similar to how they appear if present in the running configuration on device including the indentation
 
 2023-05-11 14:39:54,943 p=69617 u=rob n=ansible | changed: [ovpn-server]
-2023-05-11 14:39:54,954 p=69617 u=rob n=ansible | TASK [eve-ng-lab-test : generate openvpn client conifg] *************************************************************************************************************************************************************************
+2023-05-11 14:39:54,954 p=69617 u=rob n=ansible | TASK [eve-ng-lab-test : generate openvpn client config] *************************************************************************************************************************************************************************
 2023-05-11 14:39:54,977 p=69617 u=rob n=ansible | skipping: [eveng]
 2023-05-11 14:39:54,985 p=69617 u=rob n=ansible | skipping: [vyos-oobm]
 2023-05-11 14:39:54,996 p=69617 u=rob n=ansible | skipping: [client]

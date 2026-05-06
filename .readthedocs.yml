@@ -8,6 +8,11 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.10"
+  jobs:
+    pre_build:
+      - python3 scripts/swap_sources.py --swap
+    post_build:
+      - python3 scripts/swap_sources.py --restore
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
