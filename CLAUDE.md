@@ -11,7 +11,7 @@ A small swap mechanism exists for the rare case where a maintainer needs to rend
 ## Build
 
 ```bash
-# Docker (recommended — bundles all deps incl. vale)
+# Docker (recommended — bundles Sphinx and the MyST/RTD plugin set)
 docker build -t vyos/vyos-documentation docker
 docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs \
   -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
@@ -40,19 +40,14 @@ PYTHONPATH=../scripts python -m pytest                    # all tests
 PYTHONPATH=../scripts python -m pytest test_swap_sources.py  # single file
 ```
 
-## Lint (vale)
+## Lint
 
-```bash
-# Lint everything
-docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs \
-  -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
-  vyos/vyos-documentation vale .
-
-# Lint a single file (substitute the real path)
-docker run --rm -it -v "$(pwd)":/vyos -w /vyos/docs \
-  -e GOSU_UID=$(id -u) -e GOSU_GID=$(id -g) \
-  vyos/vyos-documentation vale path/to/page.rst
-```
+The repo doesn't ship a local lint config or pin a linter binary. CI runs
+`vyoslinter` (`doc-linter.py` from the `vyos/.github` repo, via the
+`lint-doc.yml` workflow) on changed files only — see the CI section
+below. For local checks, manually grep for the rules in
+[Source conventions](#source-conventions) (line length, address space,
+suppression markers).
 
 ## Branches and versions
 
@@ -82,10 +77,11 @@ Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR t
 - `source_suffix = ['.rst', '.md']` — both formats build into the same site.
 - MyST extensions: `colon_fence`, `deflist`, `fieldlist`, `substitution`.
 - `myst_fence_as_directive = ["cfgcmd", "opcmd", "cmdincludemd"]` — MyST fences with these names get parsed as if they were RST directives. This is how command pages stay format-portable.
-- Custom Sphinx extensions live in `docs/_ext/`:
-  - `vyos.py` — defines the `cfgcmd`, `opcmd`, `cmdinclude`, `cmdincludemd`, `cfgcmdlist`, and `opcmdlist` directives plus the `cfgcmd`/`opcmd` roles that drive command coverage tracking.
-  - `testcoverage.py` — reads VyOS XML command definitions and exposes coverage stats.
-  - `releasenotes.py`, `autosectionlabel.py` — release-notes builder and label-prefix tweak.
+- Custom modules live in `docs/_ext/` (only files listed in `extensions = [...]` in `conf.py` are actual Sphinx extensions; the others are support scripts loaded ad hoc):
+  - `vyos.py` (Sphinx extension, registered as `vyos`) — defines the `cfgcmd`, `opcmd`, `cmdinclude`, `cmdincludemd`, `cfgcmdlist`, `opcmdlist` directives and `cfgcmd`/`opcmd` roles that drive command coverage tracking.
+  - `autosectionlabel.py` (Sphinx extension, registered as `autosectionlabel`) — connects to `doctree-read` to register sections as labels.
+  - `testcoverage.py` — standalone helper that reads VyOS XML command definitions and exposes coverage stats; not a Sphinx extension.
+  - `releasenotes.py` — standalone release-notes/changelog generator script; not a Sphinx extension.
 
 ### RST override mechanism
 
