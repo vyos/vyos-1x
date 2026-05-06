@@ -1687,6 +1687,41 @@
         </leafNode>
       </children>
     </node>
+    <node name="update-delay">
+      <properties>
+        <help>BGP update-delay read-only mode</help>
+      </properties>
+      <children>
+        <leafNode name="max-delay">
+          <properties>
+            <help>Maximum delay before exiting read-only mode</help>
+            <valueHelp>
+              <format>u32:0</format>
+              <description>Disable feature</description>
+            </valueHelp>
+            <valueHelp>
+              <format>u32:1-3600</format>
+              <description>Delay in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 0-3600"/>
+            </constraint>
+          </properties>
+        </leafNode>
+        <leafNode name="establish-wait">
+          <properties>
+            <help>Time to wait for peers to reach Established state before determining expected peers</help>
+            <valueHelp>
+              <format>u32:1-3600</format>
+              <description>Wait time in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-3600"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </node>
 <tagNode name="peer-group">

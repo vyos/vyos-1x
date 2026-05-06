@@ -478,6 +478,20 @@ def verify(config_dict):
         if not {'idle', 'interval', 'probes'} <= set(bgp['parameters']['tcp_keepalive']):
             raise ConfigError('TCP keepalive incomplete - idle, keepalive and probes must be set')
 
+    # Validate BGP update-delay: 'establish-wait' requires 'max-delay' and must not exceed it
+    if dict_search('parameters.update_delay', bgp) != None:
+        update_delay = dict_search('parameters.update_delay.max_delay', bgp)
+        establish_wait = dict_search('parameters.update_delay.establish_wait', bgp)
+        if establish_wait is not None:
+            if update_delay is None:
+                raise ConfigError(
+                    'BGP update-delay establish-wait requires max-delay to be set!'
+                )
+            if int(establish_wait) > int(update_delay):
+                raise ConfigError(
+                    'BGP update-delay establish-wait cannot be greater than max-delay!'
+                )
+
     # Address Family specific validation
     if 'address_family' in bgp:
         for afi, afi_config in bgp['address_family'].items():
