@@ -54,6 +54,16 @@ $(document).ready(async function () {
   }) => {
     const id = currentTarget.dataset.identifier
     const divWithNeededId = $(`div[data-identifier='${id}']`)
+
+    // Per-click request token. Rapid re-clicks queue multiple writeText
+    // promises; without this guard, an older promise resolving later
+    // can overwrite the newer click's UI (or have its timeout fire on
+    // the new state). Each click increments the token, captures the
+    // local copy, and bails out of any UI/timeout work if the captured
+    // token no longer matches the current one.
+    const requestId = (divWithNeededId.data('copyRequestId') || 0) + 1
+    divWithNeededId.data('copyRequestId', requestId)
+
     // Read from the .copyDiv's parentElement (the inner .highlight div it was
     // injected into via insertAdjacentHTML('beforeend', ...)) rather than
     // currentTarget.offsetParent — offsetParent depends on CSS positioning
@@ -75,17 +85,20 @@ $(document).ready(async function () {
 
     try {
       await navigator.clipboard.writeText(textToCopy)
+      if (divWithNeededId.data('copyRequestId') !== requestId) return
       // Only flip the button into the success state when the write actually
       // resolves — earlier versions showed "Copied!" even on failure.
       divWithNeededId.addClass('copiedNotifier')
       divWithNeededId.html('<span>Copied!</span>')
     } catch (error) {
+      if (divWithNeededId.data('copyRequestId') !== requestId) return
       console.error('Copying text failed, please try again', error)
       divWithNeededId.addClass('copyFailedNotifier')
       divWithNeededId.html('<span>Failed</span>')
     }
 
     const revertTimeout = setTimeout(() => {
+      if (divWithNeededId.data('copyRequestId') !== requestId) return
       divWithNeededId.html(innersOfCopyDiv)
       divWithNeededId.removeClass('copiedNotifier copyFailedNotifier')
       divWithNeededId.removeData('revertTimeout')
