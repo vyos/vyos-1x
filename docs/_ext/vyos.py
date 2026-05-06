@@ -364,18 +364,8 @@ class CmdInclude(SphinxDirective):
                     line = re.sub('{{\s?var' + str(i) + '\s?}}',value,line)
             new_include_lines.append(line)
         
-        if hasattr(self.state, '_renderer'):
-            self.state._renderer.nested_render_text(''.join(new_include_lines), self.lineno)
-            return []
-        from docutils.statemachine import ViewList
-        from docutils import nodes
-        content = ''.join(new_include_lines)
-        vl = ViewList()
-        for i, line in enumerate(content.splitlines(keepends=False)):
-            vl.append(line, include_file[1], i)
-        node = nodes.Element()
-        self.state.nested_parse(vl, self.content_offset, node, match_titles=True)
-        return node.children
+        self.state._renderer.nested_render_text(''.join(new_include_lines), self.lineno)
+        return []
 
 
 class CfgcmdlistDirective(Directive):
