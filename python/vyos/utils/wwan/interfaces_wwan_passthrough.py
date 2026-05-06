@@ -55,7 +55,25 @@ PASSTHRU_TABLE_BASE = 200
 # table lookup priority (32766) to take effect.
 PASSTHRU_RULE_PRIO_BASE = 12000
 
+# New priority for the kernel `local` table once passthrough is active.
+# By default the kernel installs `local` at pref 0 — *before* every user
+# rule — so a packet arriving on wwan<N> destined for the carrier IP is
+# delivered locally instead of being matched by our pref-12000 forwarding
+# rule.  We move `local` to pref 32765 (just before `main` at 32766) so
+# user rules fire first.  This is the same approach used by OpenWrt mwan3,
+# Cradlepoint NCOS, and most cellular CPE vendors implementing IP
+# Passthrough.  It does NOT affect normal forwarding: any packet that
+# does not match a passthrough rule still hits `local` and gets the same
+# treatment as before, just at a slightly later priority.
+PASSTHRU_LOCAL_TABLE_PRIO = 32765
+
 _DHCP_RELEASE2_WARNED = False
+# Module-level: have we already swapped the kernel `local` table from
+# pref 0 to pref PASSTHRU_LOCAL_TABLE_PRIO?  Tracked across all
+# PassthroughManager instances in this process so multiple WWAN FSMs do
+# not fight each other.  Bumped to 1 on first swap; only the instance
+# that observed the rising edge (0→1) will restore on teardown.
+_LOCAL_TABLE_SWAP_REFCOUNT = 0
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +245,11 @@ class PassthroughManager:
         self._inbound_v4_addr: Optional[str] = None
         self._inbound_v6_addr: Optional[str] = None
 
+        # True iff *this* instance performed the kernel-local-table
+        # priority swap (from pref 0 → PASSTHRU_LOCAL_TABLE_PRIO).  Only
+        # the instance that flipped the bit restores it on teardown.
+        self._owns_local_table_swap: bool = False
+
         # Shadow addresses on the LAN interface from the carrier subnet.
         # dnsmasq will only serve a dhcp-range whose network overlaps an
         # address present on the listening interface.  Since the carrier
@@ -339,6 +362,10 @@ class PassthroughManager:
         # arrive on wwan<N> are forwarded out the LAN interface to the
         # downstream device, while the address itself stays bound to wwan
         # (so locally-originated traffic still has a valid source).
+        # Bump the kernel `local` table out of pref 0 first so our rule
+        # at pref 12000 actually fires (otherwise `local` short-circuits
+        # the lookup and packets are delivered to the router).
+        await self._swap_local_table_priority()
         if carrier_v4:
             await self._install_inbound_route_v4(carrier_v4)
         if carrier_v6:
@@ -390,6 +417,7 @@ class PassthroughManager:
         await self._unblock_v6_saddr(self._last_v6)
         await self._remove_inbound_route_v4(self._inbound_v4_addr)
         await self._remove_inbound_route_v6(self._inbound_v6_addr)
+        await self._restore_local_table_priority()
         await self._remove_src_whitelist_v4()
         await self._remove_src_whitelist_v6()
         await self._remove_mss_clamp()
@@ -999,6 +1027,83 @@ class PassthroughManager:
     # routed to the LAN device.  Locally-originated traffic (which doesn't
     # match `iif wwan<N>`) still hits the local table and the carrier IP
     # remains usable as a source.
+
+    async def _swap_local_table_priority(self) -> None:
+        """Move the kernel `local` table from pref 0 to a high pref.
+
+        This is the canonical fix for the "passthrough rule never fires"
+        problem: by default `local` sits at pref 0 — *before* any user
+        rule — so any packet arriving on wwan<N> with dst == carrier IP
+        is matched locally and delivered to the router instead of being
+        forwarded to the downstream device.  Moving `local` to pref
+        ``PASSTHRU_LOCAL_TABLE_PRIO`` (32765) makes user rules fire
+        first while still leaving `local` consulted for everything else.
+
+        Idempotent and refcounted: only the first PassthroughManager
+        instance that sees the rising edge (refcount 0→1) actually
+        performs the rule swap; subsequent calls just bump the count.
+        """
+        global _LOCAL_TABLE_SWAP_REFCOUNT
+        if self._owns_local_table_swap:
+            return
+        if _LOCAL_TABLE_SWAP_REFCOUNT > 0:
+            # Another instance already did the swap — just join the
+            # refcount so we do not double-restore on teardown.
+            _LOCAL_TABLE_SWAP_REFCOUNT += 1
+            self._owns_local_table_swap = True
+            return
+
+        # Inspect current state.  If pref 0 `local` is missing (someone
+        # else already moved it manually, or a previous run left it
+        # moved), do not try to delete it; just record that we joined.
+        for family_flag in ('-4', '-6'):
+            rc, out, _ = await _run('ip', family_flag, 'rule', 'show')
+            if rc != 0:
+                continue
+            has_pref0_local = any(
+                line.lstrip().startswith('0:') and 'lookup local' in line
+                for line in out.splitlines()
+            )
+            if has_pref0_local:
+                # Add the new high-pref entry first, then drop pref 0,
+                # so there is never a window with no `local` lookup.
+                await _run('ip', family_flag, 'rule', 'add',
+                           'pref', str(PASSTHRU_LOCAL_TABLE_PRIO),
+                           'lookup', 'local')
+                await _run('ip', family_flag, 'rule', 'del',
+                           'pref', '0', 'lookup', 'local')
+
+        _LOCAL_TABLE_SWAP_REFCOUNT += 1
+        self._owns_local_table_swap = True
+        logger.info(
+            "passthrough: moved kernel `local` table pref 0 → %d",
+            PASSTHRU_LOCAL_TABLE_PRIO, extra=self._log_extra,
+        )
+
+    async def _restore_local_table_priority(self) -> None:
+        """Inverse of _swap_local_table_priority — only acts when the
+        last passthrough instance tears down."""
+        global _LOCAL_TABLE_SWAP_REFCOUNT
+        if not self._owns_local_table_swap:
+            return
+        self._owns_local_table_swap = False
+        _LOCAL_TABLE_SWAP_REFCOUNT -= 1
+        if _LOCAL_TABLE_SWAP_REFCOUNT > 0:
+            return
+        if _LOCAL_TABLE_SWAP_REFCOUNT < 0:
+            # Defensive: never let it go negative.
+            _LOCAL_TABLE_SWAP_REFCOUNT = 0
+
+        for family_flag in ('-4', '-6'):
+            await _run('ip', family_flag, 'rule', 'add',
+                       'pref', '0', 'lookup', 'local')
+            await _run('ip', family_flag, 'rule', 'del',
+                       'pref', str(PASSTHRU_LOCAL_TABLE_PRIO),
+                       'lookup', 'local')
+        logger.info(
+            "passthrough: restored kernel `local` table to pref 0",
+            extra=self._log_extra,
+        )
 
     async def _install_inbound_route_v4(self, carrier_v4: str) -> None:
         if self._inbound_v4_addr == carrier_v4:
