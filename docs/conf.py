@@ -220,15 +220,24 @@ def _prefer_webp(app):
 
 
 def _write_llms_txt(app, exception):
+    # Skip dirhtml: the curated template encodes `.html` URLs (e.g.
+    # `quick-start.html`), which don't exist under `dirhtml` output
+    # (`quick-start/index.html`). Production publishes via the html /
+    # readthedocs builders, so dirhtml output would just be misleading.
     if exception is not None or app.builder.name not in (
-            'html', 'dirhtml', 'readthedocs'):
+            'html', 'readthedocs'):
         return
     from pathlib import Path
-    from jinja2 import Template
+    from jinja2 import Environment, StrictUndefined
     tpl_path = Path(app.srcdir) / '_templates' / 'llms.txt.j2'
     out_path = Path(app.outdir) / 'llms.txt'
     baseurl = (app.config.html_baseurl or '').rstrip('/') + '/'
-    rendered = Template(tpl_path.read_text(encoding='utf-8')).render(
+    # StrictUndefined: missing template variables raise rather than
+    # silently render as empty strings, so a typo in llms.txt.j2 fails
+    # the build instead of shipping a half-blank llms.txt.
+    env = Environment(undefined=StrictUndefined, keep_trailing_newline=True)
+    template = env.from_string(tpl_path.read_text(encoding='utf-8'))
+    rendered = template.render(
         baseurl=baseurl,
         release=app.config.release,
     )
