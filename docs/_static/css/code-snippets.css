@@ -77,7 +77,7 @@
   margin-bottom: 0;
 }
 
-.copyDiv.copyFailedNotifier {
+.highlight > .copyDiv.copyFailedNotifier {
   background-color: #b3261e;
 }
 
