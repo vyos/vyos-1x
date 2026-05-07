@@ -60,12 +60,12 @@
     <script type="text/javascript" charset="utf8" src="{{ pathto("_static/js/codecopier.js", True) }}"></script>
     <script type="text/javascript" charset="utf8" src="{{ pathto("_static/js/sidebar.js", True) }}"></script>
     <script type="text/javascript" charset="utf8" src="{{ pathto("_static/js/footer.js", True) }}"></script>
-    </script>
 {% endblock %}
 
 {% block body %}
     {# GTM noscript fallback #}
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ gtm_id }}"
-                      height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+                      height="0" width="0" style="display:none;visibility:hidden"
+                      title="Google Tag Manager"></iframe></noscript>
     {{ super() }}
 {% endblock %}
