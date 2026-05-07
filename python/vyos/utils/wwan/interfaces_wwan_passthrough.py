@@ -395,7 +395,13 @@ class PassthroughManager:
             ipv4_dns or [], ipv6_dns or [], bearer_mtu,
             carrier_v4_prefix,
         )
-        await self._start_or_reload_dnsmasq()
+        # If the carrier IP changed in either family the dhcp-range
+        # changed too, so a hard restart is required — SIGHUP would not
+        # re-read the main config and dnsmasq would keep serving the old
+        # range (and silently drop every DISCOVER on the new subnet).
+        await self._start_or_reload_dnsmasq(
+            force_restart=(v4_changed or v6_changed),
+        )
 
         # Install policy-routing so inbound packets to the carrier IP that
         # arrive on wwan<N> are forwarded out the LAN interface to the
@@ -645,15 +651,31 @@ class PassthroughManager:
         logger.debug("passthrough: wrote %s", self._conf_path(),
                      extra=self._log_extra)
 
-    async def _start_or_reload_dnsmasq(self) -> None:
+    async def _start_or_reload_dnsmasq(self, force_restart: bool = False) -> None:
         """Spawn dnsmasq if not running; otherwise SIGHUP to reload.
 
         With ``--bind-interfaces`` dnsmasq must find the listen interface
         present AND with at least one address at startup.  If the LAN
         interface (or its mgmt address) was just brought up, the kernel
         may take a moment to settle — retry up to ~3 s before giving up.
+
+        When ``force_restart`` is True, the running instance (if any) is
+        killed and a fresh process is spawned.  This is REQUIRED whenever
+        ``dhcp-range`` changes — dnsmasq's SIGHUP handler does NOT
+        re-read the main config file (only ``/etc/hosts``, ``/etc/ethers``
+        and ``--dhcp-hostsfile``/``--addn-hosts``), so on a carrier IP
+        change the new dhcp-range would otherwise be ignored and every
+        DHCPDISCOVER would be silently dropped because the old range
+        no longer matches any address on the LAN interface.
         """
         pid = self._read_pid()
+        if force_restart and pid and self._pid_alive(pid):
+            logger.info(
+                "passthrough: dhcp-range changed — restarting dnsmasq pid=%s",
+                pid, extra=self._log_extra,
+            )
+            await self._stop_dnsmasq()
+            pid = None
         if pid and self._pid_alive(pid):
             os.kill(pid, signal.SIGHUP)
             self._dnsmasq_pid = pid
