@@ -28,6 +28,7 @@
     <constraintErrorMessage>Preference must be between 0 and 255</constraintErrorMessage>
   </properties>
 </leafNode>
+#include <include/dhcp/log-level.xml.i>
 <tagNode name="shared-network-name">
   <properties>
     <help>DHCPv6 shared network name</help>

@@ -93,7 +93,11 @@ def get_config(config=None):
         return None
 
     dhcpv6 = conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True
+        base,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_recursive_defaults=True,
     )
 
     # add vrf context if present
