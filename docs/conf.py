@@ -264,7 +264,7 @@ def _write_llms_txt(app, exception):
             'html', 'readthedocs'):
         return
     if not app.config.html_baseurl:
-        # Fail loudly rather than rendering /quick-start.html etc. as a
+        # Fail loudly rather than rendering /quick-start.md etc. as a
         # silently-broken root-relative URL — every supported branch
         # sets html_baseurl, so a missing value is a regression.
         raise RuntimeError(
