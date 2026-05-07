@@ -103,8 +103,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         try:
             tmp = cmd('grep -i kea /var/log/messages | tail -n 100')
         except OSError:
-            tmp = "No relevant log entries"
-        self.assertTrue(process_named_running(PROCESS_NAME), msg=f'Service not running, log: {tmp}')
+            tmp = 'No relevant log entries'
+        self.assertTrue(
+            process_named_running(PROCESS_NAME), msg=f'Service not running, log: {tmp}'
+        )
 
     def test_dhcp_single_pool_range(self):
         shared_net_name = 'SMOKE-1'
@@ -114,7 +116,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_1_start = inc_ip(subnet, 40)
         range_1_stop = inc_ip(subnet, 50)
 
-        self.setup_single_pool_range(range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name)
+        self.setup_single_pool_range(
+            range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+        )
 
         # commit changes
         self.cli_commit()
@@ -149,14 +153,14 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             obj,
             ['Dhcp4', 'shared-networks', 0, 'user-context'],
             'enable-ping-check',
-            True
+            True,
         )
 
         self.verify_config_value(
             obj,
             ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'user-context'],
             'enable-ping-check',
-            True
+            True,
         )
 
         # Verify options
@@ -191,7 +195,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.verify_service_running()
 
-    def setup_single_pool_range(self, range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name):
+    def setup_single_pool_range(
+        self, range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+    ):
         self.cli_set(base_path + ['listen-interface', interface])
         self.cli_set(base_path + ['shared-network-name', shared_net_name, 'ping-check'])
 
@@ -223,34 +229,82 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_1_start = inc_ip(subnet, 40)
         range_1_stop = inc_ip(subnet, 50)
 
-        self.setup_single_pool_range(range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name)
+        self.setup_single_pool_range(
+            range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+        )
 
-        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet, 'client-class', 'test'])
+        self.cli_set(
+            base_path
+            + [
+                'shared-network-name',
+                shared_net_name,
+                'subnet',
+                subnet,
+                'client-class',
+                'test',
+            ]
+        )
 
         # check validate() - Client class referenced that doesn't exist yet
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_delete(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet, 'client-class', 'test'])
+        self.cli_delete(
+            base_path
+            + [
+                'shared-network-name',
+                shared_net_name,
+                'subnet',
+                subnet,
+                'client-class',
+                'test',
+            ]
+        )
 
-        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet, 'range', '0', 'client-class', 'test'])
+        self.cli_set(
+            base_path
+            + [
+                'shared-network-name',
+                shared_net_name,
+                'subnet',
+                subnet,
+                'range',
+                '0',
+                'client-class',
+                'test',
+            ]
+        )
 
         # check validate() - Client class referenced that doesn't exist yet
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'subnet', subnet, 'client-class', 'test'])
+        self.cli_set(
+            base_path
+            + [
+                'shared-network-name',
+                shared_net_name,
+                'subnet',
+                subnet,
+                'client-class',
+                'test',
+            ]
+        )
 
         client_class = base_path + ['client-class', 'test']
 
         # Test that invalid hex is rejected
-        self.cli_set(client_class + ['relay-agent-information', 'circuit-id', '0xHELLOWORLD'])
+        self.cli_set(
+            client_class + ['relay-agent-information', 'circuit-id', '0xHELLOWORLD']
+        )
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
         self.cli_delete(client_class + ['relay-agent-information', 'circuit-id'])
-        self.cli_set(client_class + ['relay-agent-information', 'remote-id', '0xHELLOWORLD'])
+        self.cli_set(
+            client_class + ['relay-agent-information', 'remote-id', '0xHELLOWORLD']
+        )
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
@@ -269,8 +323,12 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(client_class + ['relay-agent-information', 'remote-id'])
 
         # Test hex strings
-        self.cli_set(client_class + ['relay-agent-information', 'circuit-id', '0x666f6f'])
-        self.cli_set(client_class + ['relay-agent-information', 'remote-id', '0x626172'])
+        self.cli_set(
+            client_class + ['relay-agent-information', 'circuit-id', '0x666f6f']
+        )
+        self.cli_set(
+            client_class + ['relay-agent-information', 'remote-id', '0x626172']
+        )
 
         self.cli_commit()
 
@@ -279,20 +337,21 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     def check_client_class_in_config(self):
         config = read_file(KEA4_CONF)
         obj = loads(config)
+        self.verify_config_value(obj, ['Dhcp4', 'client-classes', 0], 'name', 'test')
         self.verify_config_value(
-            obj, ['Dhcp4', 'client-classes', 0], 'name', 'test'
+            obj,
+            ['Dhcp4', 'client-classes', 0],
+            'test',
+            'relay4[1].hex == 0x666f6f and relay4[2].hex == 0x626172',
         )
         self.verify_config_value(
-            obj, ['Dhcp4', 'client-classes', 0], 'test',
-            'relay4[1].hex == 0x666f6f and relay4[2].hex == 0x626172'
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4', 0], 'client-class', 'test'
         )
         self.verify_config_value(
-            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4', 0], 'client-class',
-            'test'
-        )
-        self.verify_config_value(
-            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools', 0],
-            'client-class', 'test'
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'pools', 0],
+            'client-class',
+            'test',
         )
         # Check for running process
         self.verify_service_running()
@@ -306,9 +365,22 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         range_1_stop = inc_ip(subnet, 50)
         unifi_controller = '10.0.0.10'
 
-        self.setup_single_pool_range(range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name)
+        self.setup_single_pool_range(
+            range_0_start, range_0_stop, range_1_start, range_1_stop, shared_net_name
+        )
 
-        self.cli_set(base_path + ['shared-network-name', shared_net_name, 'option', 'vendor-option', 'ubiquiti', 'unifi-controller', unifi_controller])
+        self.cli_set(
+            base_path
+            + [
+                'shared-network-name',
+                shared_net_name,
+                'option',
+                'vendor-option',
+                'ubiquiti',
+                'unifi-controller',
+                unifi_controller,
+            ]
+        )
 
         self.cli_commit()
 
@@ -323,7 +395,11 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_object(
             obj,
             ['Dhcp4', 'shared-networks', 0, 'option-data'],
-            {'name': 'ubnt', 'space': 'vendor-encapsulated-options-space', 'data': unifi_controller},
+            {
+                'name': 'ubnt',
+                'space': 'vendor-encapsulated-options-space',
+                'data': unifi_controller,
+            },
         )
         self.verify_service_running()
 
@@ -363,15 +439,14 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['option', 'bootfile-server', bootfile_server])
         self.cli_set(pool + ['option', 'wpad-url', wpad])
         self.cli_set(pool + ['option', 'server-identifier', server_identifier])
-        self.cli_set(
-            pool + ['option', 'capwap-controller', capwap_access_controller]
-        )
+        self.cli_set(pool + ['option', 'capwap-controller', capwap_access_controller])
 
         static_route = '10.0.0.0/24'
         static_route_nexthop = '192.0.2.1'
 
         self.cli_set(
-            pool + ['option', 'static-route', static_route, 'next-hop', static_route_nexthop]
+            pool
+            + ['option', 'static-route', static_route, 'next-hop', static_route_nexthop]
         )
         self.cli_set(pool + ['option', 'ipv6-only-preferred', ipv6_only_preferred])
         self.cli_set(pool + ['option', 'time-zone', 'Europe/London'])
@@ -1258,7 +1333,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         shared_net_name = 'SMOKE-1DDNS'
 
         range_0_start = inc_ip(subnet, 10)
-        range_0_stop  = inc_ip(subnet, 20)
+        range_0_stop = inc_ip(subnet, 20)
 
         self.cli_set(base_path + ['listen-interface', interface])
 
@@ -1272,17 +1347,103 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(ddns + ['update-on-renew', 'enable'])
 
         self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'algorithm', 'sha256'])
-        self.cli_set(ddns + ['tsig-key', 'domain-lan-updates', 'secret', 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='])
+        self.cli_set(
+            ddns
+            + [
+                'tsig-key',
+                'domain-lan-updates',
+                'secret',
+                'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
+            ]
+        )
         self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'algorithm', 'sha256'])
-        self.cli_set(ddns + ['tsig-key', 'reverse-0-168-192', 'secret', 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='])
-        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'dns-server', '1', 'address', '192.168.0.1'])
-        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'dns-server', '2', 'address', '100.100.0.1'])
-        self.cli_set(ddns + ['forward-domain', 'domain.lan', 'key-name', 'domain-lan-updates'])
-        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '1', 'address', '192.168.0.1'])
-        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '1', 'port', '1053'])
-        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '2', 'address', '100.100.0.1'])
-        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'dns-server', '2', 'port', '1153'])
-        self.cli_set(ddns + ['reverse-domain', '0.168.192.in-addr.arpa', 'key-name', 'reverse-0-168-192'])
+        self.cli_set(
+            ddns
+            + [
+                'tsig-key',
+                'reverse-0-168-192',
+                'secret',
+                'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
+            ]
+        )
+        self.cli_set(
+            ddns
+            + [
+                'forward-domain',
+                'domain.lan',
+                'dns-server',
+                '1',
+                'address',
+                '192.168.0.1',
+            ]
+        )
+        self.cli_set(
+            ddns
+            + [
+                'forward-domain',
+                'domain.lan',
+                'dns-server',
+                '2',
+                'address',
+                '100.100.0.1',
+            ]
+        )
+        self.cli_set(
+            ddns + ['forward-domain', 'domain.lan', 'key-name', 'domain-lan-updates']
+        )
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'dns-server',
+                '1',
+                'address',
+                '192.168.0.1',
+            ]
+        )
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'dns-server',
+                '1',
+                'port',
+                '1053',
+            ]
+        )
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'dns-server',
+                '2',
+                'address',
+                '100.100.0.1',
+            ]
+        )
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'dns-server',
+                '2',
+                'port',
+                '1153',
+            ]
+        )
+        self.cli_set(
+            ddns
+            + [
+                'reverse-domain',
+                '0.168.192.in-addr.arpa',
+                'key-name',
+                'reverse-0-168-192',
+            ]
+        )
 
         shared = base_path + ['shared-network-name', shared_net_name]
 
@@ -1290,7 +1451,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(shared + ['dynamic-dns-update', 'conflict-resolution', 'enable'])
         self.cli_set(shared + ['dynamic-dns-update', 'ttl-percent', '75'])
 
-        pool = shared + [ 'subnet', subnet]
+        pool = shared + ['subnet', subnet]
 
         self.cli_set(pool + ['subnet-id', '1'])
 
@@ -1301,7 +1462,9 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['dynamic-dns-update', 'generated-prefix', 'myfunnyprefix'])
         self.cli_set(pool + ['dynamic-dns-update', 'qualifying-suffix', 'suffix.lan'])
         self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-set', 'xXyYzZ'])
-        self.cli_set(pool + ['dynamic-dns-update', 'hostname-char-replacement', '_xXx_'])
+        self.cli_set(
+            pool + ['dynamic-dns-update', 'hostname-char-replacement', '_xXx_']
+        )
 
         self.cli_commit()
 
@@ -1314,9 +1477,19 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Verify global DDNS parameters in the main config file
         self.verify_config_value(
             obj,
-            ['Dhcp4'], 'dhcp-ddns',
-            {'enable-updates': True, 'server-ip': '127.0.0.1', 'server-port': 53001, 'sender-ip': '', 'sender-port': 0,
-                'max-queue-size': 1024, 'ncr-protocol': 'UDP', 'ncr-format': 'JSON'})
+            ['Dhcp4'],
+            'dhcp-ddns',
+            {
+                'enable-updates': True,
+                'server-ip': '127.0.0.1',
+                'server-port': 53001,
+                'sender-ip': '',
+                'sender-port': 0,
+                'max-queue-size': 1024,
+                'ncr-protocol': 'UDP',
+                'ncr-format': 'JSON',
+            },
+        )
 
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-send-updates', True)
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-use-conflict-resolution', True)
@@ -1326,56 +1499,118 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.verify_config_value(obj, ['Dhcp4'], 'ddns-update-on-renew', True)
 
         # Verify scoped DDNS parameters in the main config file
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-send-updates', True)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-use-conflict-resolution', True)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks'], 'ddns-ttl-percent', 0.75)
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks'], 'name', shared_net_name
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks'], 'ddns-send-updates', True
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks'], 'ddns-use-conflict-resolution', True
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks'], 'ddns-ttl-percent', 0.75
+        )
 
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-send-updates', True)
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-generated-prefix', 'myfunnyprefix')
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-qualifying-suffix', 'suffix.lan')
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'hostname-char-set', 'xXyYzZ')
-        self.verify_config_value(obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'hostname-char-replacement', '_xXx_')
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'subnet', subnet
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'id', 1
+        )
+        self.verify_config_value(
+            obj, ['Dhcp4', 'shared-networks', 0, 'subnet4'], 'ddns-send-updates', True
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4'],
+            'ddns-generated-prefix',
+            'myfunnyprefix',
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4'],
+            'ddns-qualifying-suffix',
+            'suffix.lan',
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4'],
+            'hostname-char-set',
+            'xXyYzZ',
+        )
+        self.verify_config_value(
+            obj,
+            ['Dhcp4', 'shared-networks', 0, 'subnet4'],
+            'hostname-char-replacement',
+            '_xXx_',
+        )
 
         # Verify keys and domains configuration in the D2 config
         self.verify_config_object(
             d2_obj,
             ['DhcpDdns', 'tsig-keys'],
-            {'name': 'domain-lan-updates', 'algorithm': 'HMAC-SHA256', 'secret': 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ=='}
+            {
+                'name': 'domain-lan-updates',
+                'algorithm': 'HMAC-SHA256',
+                'secret': 'SXQncyBXZWRuZXNkYXkgbWFoIGR1ZGVzIQ==',
+            },
         )
         self.verify_config_object(
             d2_obj,
             ['DhcpDdns', 'tsig-keys'],
-            {'name': 'reverse-0-168-192', 'algorithm': 'HMAC-SHA256', 'secret': 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ=='}
+            {
+                'name': 'reverse-0-168-192',
+                'algorithm': 'HMAC-SHA256',
+                'secret': 'VGhhbmsgR29kIGl0J3MgRnJpZGF5IQ==',
+            },
         )
 
-        self.verify_config_value(d2_obj, ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0], 'name', 'domain.lan')
-        self.verify_config_value(d2_obj, ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0], 'key-name', 'domain-lan-updates')
+        self.verify_config_value(
+            d2_obj,
+            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0],
+            'name',
+            'domain.lan',
+        )
+        self.verify_config_value(
+            d2_obj,
+            ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0],
+            'key-name',
+            'domain-lan-updates',
+        )
         self.verify_config_object(
             d2_obj,
             ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0, 'dns-servers'],
-            {'ip-address': '192.168.0.1'}
-            )
+            {'ip-address': '192.168.0.1'},
+        )
         self.verify_config_object(
             d2_obj,
             ['DhcpDdns', 'forward-ddns', 'ddns-domains', 0, 'dns-servers'],
-            {'ip-address': '100.100.0.1'}
-            )
+            {'ip-address': '100.100.0.1'},
+        )
 
-        self.verify_config_value(d2_obj, ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0], 'name', '0.168.192.in-addr.arpa')
-        self.verify_config_value(d2_obj, ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0], 'key-name', 'reverse-0-168-192')
+        self.verify_config_value(
+            d2_obj,
+            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0],
+            'name',
+            '0.168.192.in-addr.arpa',
+        )
+        self.verify_config_value(
+            d2_obj,
+            ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0],
+            'key-name',
+            'reverse-0-168-192',
+        )
         self.verify_config_object(
             d2_obj,
             ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0, 'dns-servers'],
-            {'ip-address': '192.168.0.1', 'port': 1053}
-            )
+            {'ip-address': '192.168.0.1', 'port': 1053},
+        )
         self.verify_config_object(
             d2_obj,
             ['DhcpDdns', 'reverse-ddns', 'ddns-domains', 0, 'dns-servers'],
-            {'ip-address': '100.100.0.1', 'port': 1153}
-            )
+            {'ip-address': '100.100.0.1', 'port': 1153},
+        )
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
