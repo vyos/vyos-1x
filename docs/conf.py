@@ -147,6 +147,7 @@ html_context = {
     'github_repo': 'vyos-documentation',
     'github_version': _github_version,
     'conf_py_path': '/docs/',
+    'gtm_id': os.environ.get('GTM_ID', ''),
 }
 
 # sphinx-sitemap: baseurl already includes /en/rolling/, so skip lang+version
