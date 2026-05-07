@@ -27,7 +27,7 @@ work in 1.4+.
   [`vyos/vyos1x-config`](https://github.com/vyos/vyos1x-config).
 - Build: Debian packaging via `debhelper` + `dh-python`. Build dependencies are
   in `debian/control` (for example: `protobuf-compiler`, `libpcre2-dev`,
-  `libffi-dev`, `python3-vici`, `python3-fastapi`, ...).
+  `libffi-dev`, `python3-vici`, `python3-fastapi`,...).
 - Tests: `nose2` (`nose2.cfg`), Python `pylint`, and ruff (`ruff.toml`).
 - Runtime smoketests are located under `smoketest/`. These tests are used by
   `vyos-build` when assembling and testing ISO images.
@@ -68,7 +68,7 @@ Smoketests (`smoketest/`) run inside the QEMU harness invoked by
   `scripts/transclude-template`).
 - `op-mode-definitions/` - op-mode XML.
 - `data/templates/` - Jinja2 input templates for third-party services consumed
-  by VyOS (FRR, strongSwan, nftables, dnsmasq, ...).
+  by VyOS (FRR, strongSwan, nftables, dnsmasq,...).
 - `libvyosconfig/` - C wrapper; source of the `libvyosconfig0` Debian package.
 - `smoketest/` - `nose2` CLI smoketests.
 - `schema/`, `mibs/`, `debian/`, `scripts/`.
