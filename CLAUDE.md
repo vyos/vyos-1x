@@ -87,10 +87,19 @@ Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR t
 
 For pages that have been migrated from RST to MyST:
 
-- `docs/<page>.md` — canonical MD source (primary).
-- `rst-<basename>.rst` — preserved RST sibling living next to `<page>.md` (e.g. for `docs/automation/cloud-init.md`, the override sits at `docs/automation/rst-cloud-init.rst`). The `rst-` prefix attaches to the basename in the same directory, not to the path stem. Excluded from the build by `exclude_patterns` in `conf.py`.
-- `docs/_rst_overrides.txt` — list of page stems that should render from `rst-<page>.rst` instead of `<page>.md`. Empty by default; pages listed here have their RST temporarily activated for the build.
-- `scripts/swap_sources.py` — CLI for `--swap` (apply overrides), `--restore`, `--dry-run`, `--status`. Build-time state lands in `docs/_build/_rst_override_state.json` and `docs/_build/_md_exclude.txt` (gitignored).
+- `docs/<subdir>/<page>.md` — canonical MD source (primary).
+- `docs/<subdir>/rst-<page>.rst` — preserved RST sibling kept around as an override
+  option. The `rst-` prefix applies only to the **filename**, not the directory, so
+  `configuration/firewall/zone` maps to `docs/configuration/firewall/rst-zone.rst`
+  (not `docs/rst-configuration/firewall/zone.rst`). Excluded from the build by
+  `exclude_patterns` in `conf.py`.
+- `docs/_rst_overrides.txt` — one stem per line, relative to `docs/` (e.g.
+  `configuration/firewall/zone`). Pages listed here render from
+  `rst-<page>.rst` instead of `<page>.md`. Empty by default.
+- `scripts/swap_sources.py` — CLI for `--swap` (apply overrides), `--restore`,
+  `--dry-run`, `--status`. Build-time state lands in
+  `docs/_build/_rst_override_state.json` and `docs/_build/_md_exclude.txt`
+  (gitignored).
 
 For pages that have NOT been migrated:
 
