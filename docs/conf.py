@@ -283,6 +283,10 @@ def _write_llms_txt(app, exception):
         loader=FileSystemLoader(str(tpl_dir)),
         undefined=StrictUndefined,
         keep_trailing_newline=True,
+        # Plain-text template (not HTML), so HTML autoescape is not
+        # appropriate. Setting autoescape=False explicitly to silence
+        # bandit/ruff S701 and document the intent.
+        autoescape=False,
     )
     template = env.get_template('llms.txt.j2')
     rendered = template.render(
