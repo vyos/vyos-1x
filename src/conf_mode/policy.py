@@ -170,20 +170,18 @@ def verify(config_dict):
                     mask_len = int(rule_config['prefix'].split('/')[1])
                     ge = dict_search('ge', rule_config)
                     le = dict_search('le', rule_config)
-                    ge = int(ge) if ge is not None else None
-                    le = int(le) if le is not None else None
 
-                    if ge is not None and ge < mask_len:
+                    if ge and int(ge) < mask_len:
                         raise ConfigError(
                             f'{policy_hr} {instance} rule {rule}: "ge" ({ge}) must be >= '
                             f'prefix length ({mask_len})'
                         )
-                    if le is not None and le < mask_len:
+                    if le and int(le) < mask_len:
                         raise ConfigError(
                             f'{policy_hr} {instance} rule {rule}: "le" ({le}) must be >= '
                             f'prefix length ({mask_len})'
                         )
-                    if ge is not None and le is not None and ge > le:
+                    if ge and le and int(ge) > int(le):
                         raise ConfigError(
                             f'{policy_hr} {instance} rule {rule}: "ge" ({ge}) must be <= '
                             f'"le" ({le})'
