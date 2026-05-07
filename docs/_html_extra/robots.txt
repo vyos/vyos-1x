@@ -33,4 +33,4 @@ Allow: /
 User-agent: Perplexity-User
 Allow: /
 
-Sitemap: https://docs.vyos.io/sitemap.xml
+Sitemap: https://docs.vyos.io/en/rolling/sitemap.xml
