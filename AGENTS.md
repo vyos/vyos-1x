@@ -61,14 +61,15 @@ One long-lived branch per VyOS release line. Branch names are constellations sor
 | `equuleus` | 1.3.x (legacy) |
 | `crux` | 1.2.x (legacy) |
 
-PRs target `current`. After merge, request backports via Mergify comments on the PR:
+PRs target `current`. After merge, request backports via a **post-merge comment** on the PR:
 
-```
+```text
 @Mergifyio backport circinus
 @Mergifyio backport sagitta
 ```
 
-Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR template has a `## Backport` section to declare intent.
+Mergify only reads commands from **PR comments** — mentions in the PR body are ignored.
+Mergify is configured at the org level (no `.mergify.yml` in the repo). The PR template has a `## Backport` section to declare intent, but that does not trigger the backport; the comment does.
 
 ## Architecture
 
@@ -240,3 +241,21 @@ serves and crawlers skip the redirect hop.
 - **Sphinx build** — runs on Read the Docs for every PR; preview URL appears as a check.
 - **CLA check** — contributors must sign the VyOS CLA before merge.
 - **Conflict check** — fails the PR if it doesn't merge cleanly into base.
+
+### Bot review workflow
+
+Two bots run at separate stages — do not mix them:
+
+| Bot | When to trigger | How |
+|-----|-----------------|-----|
+| **Copilot** | **Draft PRs only** | Comment `@copilot review` |
+| **CodeRabbit** | **Ready-for-review PRs only** | Comment `@coderabbitai review` (auto-reviews are disabled on this repo) |
+
+Workflow:
+1. Open PR as draft (`gh pr create --draft`).
+2. Iterate; when complete, comment `@copilot review`.
+3. Address Copilot threads, re-request after each fix round until Copilot is silent.
+4. Flip to ready (`gh pr ready <num>`), then comment `@coderabbitai review`.
+5. Address CodeRabbit threads the same way.
+
+Never trigger `@copilot review` on a ready-for-review PR.
